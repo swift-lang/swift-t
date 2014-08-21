@@ -1,0 +1,2086 @@
+
+////
+Swift/T guide, asciidoc format
+http://www.mcs.anl.gov/exm/local/guides/stc.html
+////
+
+:numbered:
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+= Swift/T Guide
+v0.6.1, July 2014
+
+[red]*This page is obsolete: go to: http://www.swift-lang.org/Swift-T*
+
+The Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.
+
+== Support
+
+An overview of Swift/T may be found at the ExM project site:
+
+https://sites.google.com/site/exmcomputing
+
+The Swift/T user discussion mailing list is found here:
+
+http://lists.mcs.anl.gov/mailman/listinfo/exm-user
+
+== Installation
+Writing and running Swift/Turbine programs requires multiple packages.
+This section provides generic instructions for installing Swift/T
+on a range of systems.  We first cover locating and/or installing
+prerequisite software packages, then we cover building Swift/T
+from a source package.
+
+The link:turbine-sites.html[Turbine Sites Guide]
+is a accompanying resource for configuration settings and preinstalled software
+for specific systems.
+
+=== Installation of Prerequisites
+
+1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
++
+** On compute clusters, an MPI will almost certainly be pre-installed
+** Many operating systems provide packages with MPI implementations
+  that are usable, but often outdated.
+  E.g. the +mpich2+ package on Debian/Ubuntu.
+** See http://www.mpich.org[MPICH Guides] for information on installing the
+  latest version of MPICH.
+** Other MPI implementations are <<Build_configuration, supported>> as well.
++
+Swift/T attempts to use MPI 3.0 functionality by default.  If you
+are using an MPI implementation that does not support the MPI 3.0 standard,
+you must set +MPI_VERSION=2+ (if using the +exm-setup.zsh+ build process),
+or provide the +--enable-mpi-2+ configure option (if using
+the manual build process).
++
+2. Install or locate Tcl 8.6.
++
+* Tcl is available through the package manager on many systems.
+   You may need to install an additional Tcl development package
+   in addition to the standard tcl package,
+   e.g. +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu systems.
+* Source distributions are available at the http://www.tcl.tk[Tcl web site]
++
+3. Install or locate SWIG
++
+* You can check if SWIG is installed by running +swig -version+
+* SWIG is available through the package manager on many systems.
+* Source distributions are available at
+   the http://swig.org[SWIG web site]
+
+=== Installation of Swift/T from Source
+
+Once you have found all prerequisites, we can continue with building
+Swift/T from source.
+
+1. Obtain the Swift/T source package
++
+----
+wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.5.0.tar.gz
+----
++
+Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
+for other packages
++
+2. Unpack and enter package directory
++
+----
+tar xfz exm-trunk.tar.gz
+cd exm-trunk
+----
++
+3. Edit the settings file: +exm-settings.sh+
++
+At a minimum, you must set the install directory with +EXM_PREFIX+.
+On a standard system, no further configuration may be needed.
+In many cases, however, you will need to modify additional
+configuration settings so that all prerequisites can
+be correctly located and configured (see Section
+<<Build_configuration, Build configuration>>).
++
+A range of other settings are also available here:
+enabling/disabling features, debug or optimized builds, etc.
++
+TIP: Save your +exm-settings.sh+ when you download a new package
++
+4. Run the setup script
++
+----
+./exm-setup.zsh
+----
++
+If +exm-setup.zsh+ does not succeed on your system, see Section
+<<Build_configuration, Build configuration>> below.
++
+TIP: if you want more control than +exm-setup.zsh+ provides, you can
+    build Swift/T with the
+    <<Manual_build_configuration, manual configure/make workflow>>.
++
+5. Add Turbine and STC to your paths
++
+----
+PATH=${PATH}:/path/to/exm-install/turbine/bin
+PATH=${PATH}:/path/to/exm-install/stc/bin
+----
+
+== Usage
+
+Swift code is conventionally written in +\*.swift+ files.  Turbine
+code is stored in Tcl files +*.tcl+.  After writing the Swift program
++program.swift+, run:
+----
+stc program.swift
+----
+
+This will compile the program to +program.tcl+.  A second, optional
+argument may be given as an alternate output file name.
+
+Then, to run the program, use Turbine:
+
+----
+turbine -n 4 program.tcl
+----
+
+See the <<Turbine,Turbine section>> for more information about
+running the program.
+
+[[stc_arguments]]
+STC accepts the following arguments:
+
++-A _name_=_value_+:: Set a command-line argument at
+compile-time. This may be found at runtime using the Swift
+<<argv,argument processing>> library. This option enables these
+arguments to be treated as compile-time constants for optimization.
++-D _macro_=_value_+:: Define a C preprocessor macro.
++-E+:: Just run the C preprocessor: do not compile the program.  The
+output goes into the STC output file (the second file name argument).
++-I+:: Add a directory to the import and include search path.
++-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>.
++-j+:: Set the location of the +java+ executable.
++-p+:: Disable the C preprocessor.
++-u+:: Only compile if output file is not up-to-date.
++-v+:: Output version number and exit.
++-V+:: Verbose output.
+
+STC runs as a Java program.  You may use +-j+ to set the Java VM
+executable.  This Java VM must be compatible with the +javac+ used to
+compile STC.
+
+By default, STC runs the user script through the C preprocessor
+(+cpp+), enabling arbitrary macro processing, etc.  The +-D+, +-E+,
++-I+, and +-p+ options are relevant to this feature.
+
+Additional arguments for advanced users/developers:
+
++-C+:: Specify an output file for STC internal representation
++-l+:: Specify log file for STC debug log
++-L+:: Specify log file for more verbose STC debug log
++-T+:: Enable a specific optimization.  See <<Optimizations>>
++-t+:: Disable a specific compiler optimization.  See <<Optimizations>>
+
+== Program structure
+
+Swift programs are composed of _composite_ functions.  These
+share syntax with C-like languages.  The program starts in +main()+.
+The following is a complete Swift program:
+
+----
+main
+{}
+----
+
+STC input is preprocessed by +cpp+, the C preprocessor.
+
+Hello world is written as:
+
+----
+import io;
+main
+{
+  printf("Hello world");
+}
+----
+
+The newline is supplied by +printf()+.
+
+Swift programs eventually call _leaf_ functions, which are the primary
+way to do work.  From the perspective of the Swift script, they are
+atomic operations that wait for input variables and set output
+variables.  They may be implemented as native code functions or
+external application programs.
+
+== Comments
+
+Swift supports C/C++-style comments:
+
+----
+// This is a comment
+/* This is a
+comment */
+/** Also a
+comment */
+----
+
+Additionally, if the preprocessor is disabled, single-line comments
+starting with # are supported:
+----
+# This will work if source file is not preprocessed
+----
+
+== Modules
+
+Swift has a module system that allows you to import function and variable
+definitions into your source file.  Importing a module will import all
+function and variable definitions from that module into your program.
+----
+import io;
+import mypackage.mymodule;
+----
+
+The mechanisms for locating source files is as follows:
+
+* STC searches a list of directories in order to find a Swift source
+  file in the correct directory with the correct name.
+* The standard library is always first on the search path,
+    and the current working directory is last.
+* Additional directories can be added with the +-I+ option to STC.
+* Swift source files must have a +.swift+ suffix.  E.g. +import io;+
+  looks for a file called +io.swift+.
+* In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
+  then, it looks for +mymodule.swift+ in subdirectory +mypackage+.
+
+
+The alternative +#include+ statement textually includes an entire
+file using the C preprocessor at the point of the statement.
+Note that +#include+ will only work if the preprocessor is enabled
+on the current file.  In contrast to +import+, +#include+ will run the
+C preprocessor on any included modules.  +import+ is recommended over
++#include+ unless the imported module requires preprocessing.
+----
+#include <mypackage/mymodule.swift>
+----
+
+== Dataflow evaluation
+
+Swift expressions are evaluated in _dataflow_ order:
+
+----
+int z1,z2;
+int y;
+int x = f(y);
+y = g(2);
+z1 = h(x,y,1);
+z2 = h(x,y,2);
+int output = r(z1,z2);
+----
+
+This allows code to execute as concurrently as possible, limited
+only by data availability.  In this example, +g()+ runs first, because it
+is dependent only on a literal.  When +y+ is set, +f()+ runs, setting
++x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
+are set, allowing +r()+ to run.
+
+Variables may be assigned only once.  Multiple assignment is often
+detected at compile time, and will always be detected at run time,
+resulting in a run time error.  If variable is not assigned,
+expressions that depend on the variable cannot execute.  If the variable
+is never assigned during the course of program execution, these
+expressions will never execute.  Upon program completion, Swift/T will
+report the error and print debug information about any unexecuted
+expressions and identifiers of corresponding unassigned variables.
+
+== Composite functions
+
+Swift code is written in composite functions.  The composite function
++main+ is required.
+
+Composite functions have the form:
+
+----
+[(<output list>)] function_name [(<input list>)]
+{
+  statement;
+  statement;
+  ...
+}
+----
+
+An empty input or output list may be omitted or written as +()+.
+
+The output list may have more than one entry.  Thus, assignments
+may be written as:
+----
+x1, x2 = f(i1, i2);
+// or equivalently:
+(x1, x2) = f(i1, i2);
+----
+
+== Types
+
+Swift provides a similar range of primitive types to many other
+programming languages.  Files are a primitive type in Swift, unlike
+in many other languages, and have a number of special characteristics
+that merit special mention.
+Two basic kinds of data structure are provided: arrays and structs.
+
+=== Primitive types
+
+Swift has the conventional types:
+
++string+:: A complete string (not an array of characters).
++int+:: A 64-bit integer.
++float+:: A 64-bit (double-precision) floating point number.
++boolean+:: A boolean (true/false).
++file+:: A file (see Section Files).
++blob+:: External byte data (see Section Blobs).
+
+Literals for these types use conventional syntax:
+
+* +int+ literals are written as decimal numbers, e.g. +-1234+
+* +float+ literals are written as decimal numbers with a decimal point,
+    e.g +5493.352+ or +1.0+.
+    Scientific notation may be used,
+    as in +2.3e-2+ which is equivalent to +0.023+.
+    The literals +NaN+ and +inf+ may be used.  In some contexts +int+
+    literals are promoted automatically to +float+.
+* +boolean+ literals +true+ and +false+ may be used.
+* +string+ literals are enclosed in double quotes, with a range of escape
+    sequences supported:
+** +\\+ for a single backslash
+** +\"+ for a quote
+** +\n+ for newline
+** +\t+ for tab
+** +\a+ (alarm)
+** +\b+ (backspace)
+** +\f+ (form feed)
+** +\r+ (carriage return)
+** +\v+ (vertical tab)
+** octal escape codes, e.g. +\001+
+** hexadecimal escape codes, e.g. +\xf2+
+** For more information: http://en.wikipedia.org/wiki/US-ASCII#ASCII_control_code_chart[ASCII control codes].
+* Multi-line strings may be used in two syntaxes:
+** Python-style:
++
+----
+string s =
+"""
+line data 1
+line data 2
+""";
+----
++
+** Asciidoc-style: like Python-style but use 4 dashes instead of 3 quotes.
+** *Note:* Multi-line strings are somewhat incompatible with the C preprocessor:
+            if you try to compile a Swift program using multi-line strings with
+            the preprocessor enabled, you will likely see warnings or strange
+            behavior.  To disable the C preprocessor, use the +-p+ option
+            to STC.
+
+=== Files
+
+A file is a first-class entity in Swift that in many ways can be treated
+as any other variable.  The main difference is that a file can be
+*mapped* to path in a filesystem.  Assigning to a mapped file variable
+results in a file being created in the file system at the specified path.
+File paths can be arbitrary Swift expressions of type +string+.  Absolute
+paths or relative paths are specified, with relative paths interpreted
+relative to the path in which turbine was run.
+File variables can also be initialized with data from a pre-existing
+file using the +input_file+ function.  File paths are relative to the
+working directory for Turbine.
+
+For example, if +/home/user/in.txt+ is a file with some data in it,
+the following Swift program will copy the file to +/home/user/out.txt+.
+----
+main
+{
+  file x = input_file("/home/user/in.txt");
+  file y <"/home/user/out.txt">; // Declare a mapped file
+  y = x; // Do the copy
+}
+----
+
+
+A range of functions to work with files are provided in the
++files+ library module.
+
+----
+// Initialize an array of files from a range of files on disk with glob
+file f[] = glob("directory/*.txt");
+
+// Read the contents of a file with read
+string filename = "in.txt";
+string contents = read(input_file(filename));
+trace("Contents of " + filename + ":\n" + contents);
+
+// Write directly to a file with write
+file tmp = write("first line\nsecond line");
+
+// Find the name of a file with filename
+trace("Temporary filename is: " + filename(tmp));
+----
+
+Temporary files are created as necessary if unmapped files are
+written to.  For example, the file +tmp+ in the above code snippet.
+This feature is implemented by calling GNU +mktemp+ with suffix
++.turbine+; thus, the directory is set with environment variable
++TMPDIR+ which defaults to +/tmp+.
+
+Currently Swift/T assumes that the file system is shared among
+all nodes.
+
+[NOTE]
+======
+The syntax
+----
+file f<"f.txt"> = g();
+----
+is allowed but
+----
+file f<"f.txt">=g();
+----
+results in a parse error: the +>=+ sequence is tokenized as
+_greater-than-or-equal-to_.
+======
+
+=== Blobs
+
+Blobs represent raw byte data.  They are primarily used to pass
+data to and from native code libraries callable from Swift.  They are
+like Swift strings but may contain arbitrary data.
+
+Swift provides multiple builtin functions to create blobs, convert
+blobs to and from Swift types, and pass blobs to leaf functions.
+
+=== Arrays
+
+Arrays can be declared with empty square brackets:
+
+----
+int A[];
+----
+
+Arrays with empty square brackets have integer indices.  It is
+also possible to declare integers with other index types, such as
+strings:
+
+----
+string dict[string];
+----
+
+They are dynamically sized, expanding each time an item is inserted at
+a new index.  Arrays are indexed using square brackets.
+----
+int A[string];
+int B[];
+B = function_returning_array();
+A["zero"] = B[0];
+A["one"] = B[1];
+----
+
+Each array index can only be assigned to once.
+
+A given array variable must be assigned either _in toto_ (as a whole)
+or _in partes_ (piece by piece).  In this example, +B+ is assigned in toto
+and +A+ is assigned in partes.  Code that attempts to do both is in error.
+
+Arrays may be used as inputs or outputs of functions.
+
+Arrays are part of Swift dataflow semantics. An array is closed
+when all possible insertions to it are complete.
+----
+(int B[]) f(int j)
+{
+  int A[];
+  A = subroutine_function(1);
+
+  // Error: A has already been assigned in toto:
+  A[3] = 4;
+
+  // OK: assigning to output variable
+  B = subroutine_function(2);
+}
+
+----
+
+Array literals may be expressed using the range operator:
+----
+int start = 0;
+int stop = 10;
+int step = 2;
+// Array of length 10:
+int A[] = [start:stop];
+// Array of length 5, containing only even numbers:
+int B[] = [start:stop:step];
+----
+
+Array literals may also be expressed with list syntax:
+----
+int C[] = [4,5,6];
+----
+
+=== Nested arrays
+Swift allows arrays of arrays: nested arrays.  They can be declared and
+assigned as follows:
+
+----
+// An array of arrays of files with string keys
+file A[string][string];
+A["foo"]["bar"] = input_file("test.txt");
+A["foo"]["qux"] = input_file("test2.txt");
+----
+
+*Note:* there is currently a limitation in assignment of nested arrays
+that a given array can only be assigned at a single "index level".  If
++A+ is a 2D array, for example, then you cannot mix assignments specifying
+one index (e.g. +A[i] = ...+) with assignments specifying three indices
+(e.g. +A[i][j] = ...+).
+
+=== Structs
+
+In Swift, structs are defined with the +type+ keyword.  They define
+a new type.
+
+----
+type person
+{
+  string name;
+  int age;
+  int events[];
+}
+----
+
+Structs are accessed with the +.+ syntax:
+
+----
+person p;
+p.name = "Abe";
+p.age = 90;
+----
+
+It is possible to have arrays of structs, with some restriction on
+how they can be assigned.  Each struct in the array must be assigned
+_in toto_ (as a whole).  For example, the following code is valid:
+
+----
+person people[], p1, p2;
+
+p1.name = "Thelma";
+p1.age = 31;
+
+p2.name = "Louise";
+p2.age = 29;
+
+people[0] = p1;
+people[1] = p2;
+----
+
+However, attempting to assign the structs in the following way is
+currently unsupported:
+----
+people[2].name = "Abe";  // Not supported!
+people[2].age = 90;      // Not supported!
+----
+
+=== Defining new types
+
+Swift has two ways to define new types based on existing types.
+
+The first is +typedef+, which creates a new name for the type.
+The new type and the existing type will be completely interchangeable,
+since they are simply different names for the same underlying type.
+The new type name simply serves to improve readability or documentation.
+
+----
+typedef newint int;
+
+main {
+  // We can freely convert between int and newint
+  newint x = 1;
+  int y = x;
+  newint z = y;
+}
+----
+
+The second is with +type+, which creates a new type that is a
+specialization of an existing type.  That is, it is a distinct
+type that is not interchangeable.  A specialized type can be
+converted into the original type, but the reverse transformation is
+not possible.  This means that you can write functions that are more
+strictly typechecked, for example, only accepted particular types of
+file.
+
+*Note:* This feature is immature, so you will have a higher probability
+of encountering compiler bugs or limitations.
+
+----
+
+typedef sorted_file file;
+app (sorted_file out) sort (file i) {
+  "/usr/bin/sort" "-o" out i
+}
+
+// uniq utility requires sorted input
+app (file o) unique (sorted_file i) {
+  "/usr/bin/uniq" i @stdout=o
+}
+
+main {
+  file unsorted = input_file("input.txt");
+  sorted_file sorted <"sorted.txt"> = sort(unsorted);
+  file u <"unique.txt"> = unique(sorted);
+
+  // Can convert from sorted_file to file
+  file result2 = sort(unsorted);
+
+  // This would cause a type error
+  // sorted_file not_sorted = unsorted;
+}
+----
+
+=== Global Constants
+
+Swift supports a basic feature for defining globally visible constants.  You
+can use the +global const+ statement at the top level of the program.  The
+syntax only supports literals of scalar types: e.g. integer literals, floating
+point literals and string literals.
+
+----
+global const string hello = "Hello World";
+global const float pi_approx = 3.142;
+global const int ONE = 1;
+
+main () {
+  trace(hello, pi_approx, ONE);
+}
+----
+
+*Note:* global constants provide no performance benefit compared with
+variables initialized to constant values at optimization levels +O1+
+or greater.
+
+*Note:* better support is planned in future for more flexible support for
+global variables and code.
+
+== Control structures
+
+Swift provides control structures that may be placed as statements
+inside a composite function.
+
+=== Conditionals
+
+==== If statement
+
+If statements have the form:
+
+----
+if (<condition>)
+{
+  statement;
+  ...
+}
+else
+{
+  statement;
+  ...
+}
+----
+
+As required by dataflow processing, neither branch of the conditional can
+execute until the value of the condition expression is available.
+
+==== Switch statement
+
+----
+int a = 20;
+switch (a)
+{
+  case 1:
+    int c;
+    c = a + a;
+    b = a + 1;
+  case 20:
+    b = 1;
+  case 2000:
+    b = 2;
+  default:
+    b = 2102 + 2420;
+}
+printf("b: %i\n", b);
+----
+
+*Note:* there is no fall-through between cases in switch statements.
+
+=== Iteration
+
+Iteration is performed with the +foreach+ and +for+ statements.
+
+==== Foreach loop
+
+The +foreach+ loop allows for parallel iteration over an array:
+
+----
+string A[];
+foreach value, index in A
+{
+  printf("A[%i] = %s\n", index, value);
+}
+----
+
+The +index+ and +value+ variables are automatically declared.  The
++index+ variable may be omitted from the syntax.
+
+A special case of the foreach loop occurs when combined with the
+array range operator.  This is the idiomatic way to iterate over
+a range of integer values in Swift. The STC compiler has special
+handling for this case that avoids constructing an array.
+
+----
+foreach i in [start:stop:step] {
+    ...
+}
+----
+
+==== For loop
+
+The +for+ loop allows for sequential iteration.  This example
+implements a counter based on the return values of a function that
+accepts integers:
+
+----
+int N = 100;
+int count = 0;
+for (int i = 0; i < N; i = i+1, count = count+c)
+{
+  int c;
+  if (condition_function(i))
+  {
+    c = 1;
+  }
+  else
+  {
+    c = 0;
+  }
+}
+----
+
+The general form is:
+----
+for ( <initializer> ; <condition> ; <updates> )
+{
+  statement;
+  ...
+}
+----
+
+The initializer is executed first, once.  The initializer is a
+comma-separated list of statements.  The body statements are then
+executed.  Then, the assignments are performed, formatted as a
+comma-separated list.  Each is a special assignment in which the
+left-hand-side is the variable in the _next_ iteration of the loop,
+while the right-hand-side is the variable in the _previous_ loop
+iteration.  Then, the condition is checked for loop exit.  If the loop
+continues, the body is executed again, etc.
+
+*Performance Tip:* use the +foreach+ loop instead of +for+ if your
+loop iterations are independent and can be executed in parallel.
+
+=== Explicit data-dependent execution
+
+In general, execution ordering in Swift/T is implicit and driven by
+data dependencies.  In some cases it is useful to add explicit data
+dependencies, for example if you want to print a message to indicate
+that variable was assigned.  It is possible for the programmer to
+express additional execution ordering using two constructs: the +wait+
+statement and the +\=>+ chaining operator.
+
+In a wait statement, a block of code is executed after
+one or more variables are closed.
+----
+x = f();
+y = g();
+wait (x) {
+  trace("x is closed!");
+}
+wait(x, y) {
+  trace("x and y are closed!");
+}
+----
+
+The chaining operator chains statements together so that a
+statement only executes after the previous statement's output
+value is closed.  This is
+a more concise way to express dependencies than the +wait+ statement.
+----
+sleep(1) =>
+  x = f() =>
+  int y = g() =>
+  trace("DONE!");
+----
+
+Chaining is based on the *output values*
+of a statement.  In the simple case of a function call +f() \=> ...+,
+the output values are the output values of the function.  In the
+case of and assignment +x = f() \=> ...+ or a declaration,
++int y = g() \=> ...+, then the next statement is dependent on
+the assigned values, or the declared values.  Some functions such
+as +sleep+ have +void+ output values so that they can be used
+in this fashion.
+
+=== Scoping blocks
+
+Arbitrary scoping blocks may be used.  In this example, two different
+variables, both represented by +b+, are assigned different values.
+
+----
+{
+  int b;
+  b = 1;
+}
+{
+  int b;
+  b = 2;
+}
+----
+
+== Operators
+
+The following binary arithmetic operators on numbers are defined:
+
++&#43;+ (plus), +-+ (minus), +\*+ (times), +/+ (divide),
++%/+ (integer divide), +%%+ (modulus), +**+ (power)
+
++&&+ (boolean and), +||+ (boolean or),
++==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
++>=+ (greater than or equal to), +&lt;=+ (less than or equal to)
+
++xor()+ is a builtin function.
+
+Swift boolean operators are not short-circuited (to allow maximal
+concurrency).  For conditional execution, use an +if+ statement.
+
+The following unary operators are defined:
+
++-+ (negate), +!+ (boolean not)
+
+String concatenation is also performed with +&#43;+ (plus).  +==+ and
++!=+ may also be used on strings.  Operator +s1/s2+ is equivalent to
++s1&#43;"/"&#43;s2+.
+
+== Standard library
+
+Each category of function is shown with the required import
+statement, if necessary.
+
+Functions that accept an input of any type are denoted +anything+.
+Functions that accept variable numbers of arguments are denoted with
+ellipsis +...+.
+
+A function that accepts more than one type is denoted as +f(int|string)+.
+
+If a function is described below an *Import:* label, be sure to
++import+ that package.
+
+=== General
+
++xor(boolean,boolean) -> boolean+:: Exclusive logical or
++make_void() -> void+:: Create a void value
++size(A[]) -> int+:: Obtain the size of array +A+
++contains(A[], key) -> boolean+:: Test that future +A[key]+ exists.
+This function blocks until +A+ is closed.  Consumers of +A[key]+ may
+block again until +A[key]+ is stored.
+
+=== Type conversion
+
++fromint(int)     -> string+:: Convert integer to string
++toint(string)    -> int+::    Convert string to integer
++fromfloat(float) -> string+:: Convert float to string
++tofloat(string)  -> float+::  Convert string to float
++itof(int)        -> float+::  Convert integer to float
++repr(*)          -> string+:: Convert any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
++array_repr(*[])  -> string[]+:: Convert array of any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
+
+=== Output
+
++trace(anything, anything, ...)+:: Report the value of any variable
+
+*Import:* +io+
+
++printf(string format, int|float|string|boolean...)+::
+As +printf()+ in C
+
+=== String functions
+
++strcat(string,string)+: Concatenation
+
+*Import:* +string+
+
++substring(string s, int start, int length) -> string+::
+Obtain substring of given string +s+ starting at character +start+ and of
+length +length+
+
++find(string s, string substring, int start_index, int end_index) -> int+::
+Find the index of the first occurence of the string +substring+ within
+the string +s+ between the indices +start_index+ and +end_index+. Here
+an index of +-1+ passed to +end_index+ results in +end_index+ being
+treated as the length of the string +s+. +find+ returns +-1+ in case
+there is no occurence of +substring+ in +s+ in the specified range.
+
++string_count(string s, string substring, int start_index, int end_index) -> int+::
+Counts the occurences of the string +substring+ within the string +s+
+between the indices +start_index+ and +end_index+. Here an index of
++-1+ passed to +end_index+ results in +end_index+ being treated as the
+length of the string +s+
+
++is_int(string s) -> boolean+::
+Returns true if string +s+ is a number, else false.
+
++replace(string s, string substring, string rep_string, int start_index) -> string+::
+Obtain the string created by replacing the first occurence of the
+string +substring+ within string +s+, after the index +start_index+,
+with the string +rep_string+. In case there is no such occurence of
+the string +substring+ in string +s+, the original string +s+ is
+returned unmodified.
+
++replace_all(string s, string substring, string rep_string, int start_index) -> string+::
+Obtain the string created by replacing all the occurences of the
+string +substring+ within string +s+, after the index +start_index+,
+with the string +rep_string+. In case no such occurence of +substring+
+exists in +s+, the original string +s+ is returned unmodified.
+
++split(string s, string delimiter) -> string[]+::
+Tokenize string +s+ with given delimiter
+
++trim(string s) -> string+::
+Remove leading and trailing whitespace from +s+
+
++strlen(string) -> int+::
+Obtain the length of the given string
+
++hash(string) -> int+::
+Hash the string to a 32-bit integer
+
++sprintf(string format, int|float|string|boolean...)+::
+As +sprintf()+ in C
+
++string_join(string A[], string separator) -> string+::
+Join strings in +A+ with given separator.  The separator may be the
+empty string
+
+=== Math
+
++max|min_integer(int,int) -> int+:: Obtain maximum or minimum integer,
+respectively
++max|min_float(float,float) -> float+:: Obtain maximum or minimum float,
+respectively
++pow_integer(int b,int x)+:: Obtain b^x^
++pow_float(float b,float x)+:: Obtain b^x^
+
+*Import:* +math+
+
++floor(float) -> int+:: Round down
++ceil(float) -> int+:: Round up
++round(float) -> int+:: Round nearest
++log(float) -> float+:: Natural logarithm
++exp(float) -> float+:: Natural exponentiation: e^i^
++sqrt(float) -> float+:: Square root
++is_nan(float) -> boolean+:: Check for NaN
++abs_integer(int) -> int+:: Absolute value
++abs_float(float) -> float+:: Absolute value
+
+*Import:* +random+
+
++random() -> float+:: Obtain random number
+
++randint(int start, int end)+::
+Obtain random integer from +start+, inclusive, to +end+, exclusive
+
+*Import:* stats
+
++sum_integer(int[]) -> int+:: Sum
++avg(int|float[]) -> float+:: Average
+
+=== System
+
+*Import:* +sys+
+
++getenv(string) -> string+:: Obtain an environment variable
+
+[[argv]]
+==== Command line
+
+Consider this command line:
+
+ turbine -l -n 3 program.tcl -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt
+
+The arguments to +program.tcl+ are just the tokens after +program.tcl+
+
++args() -> string+::
+
+Obtain all arguments as single string
++
+E.g., +"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"+
+
+The remaining functions are convenience functions oriented around
+Swift conventions.  Under these conventions, the example command above
+has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
+thing2"+, and +help+. The command has _unflagged_ arguments
++file2.txt+ and +file4.txt+
+
++argc()+::
+Get count of unflagged arguments
+
++argv(string)+::
+_(argument-value)_
+Given a string, returns the flagged argument with that key:
++
++argv("a") -> file1.txt+
++
+In addition to regular run-time arguments, the STC _compile-time
+arguments_ feature allows +argv()+ arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the +-A
+_name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
+argument is re-specified at run-time, an error will occur.
+
++argp(int)+::
+_(argument-positional)_
+Given an integer, returns the unflagged argument at that index:
++
++argp(2) -> file4.txt+
++
+Given 0, returns the program name,
++
++argp(0) -> /path/to/program.tcl+
+
++argv_accept(string...)+::
+
+If program is given flagged command line arguments not contained in given
+list, abort.
+E.g., +argv_accept("x")+ would cause program failure at run time
+
++argv_contains(string) -> boolean+::
+
+Test if the command line contains the given flagged argument:
++
++argv_contains("v") -> true+
+
+==== Debugging
+
+*Import:* +assert+
+
++assert(boolean condition, string message)+::
+If condition is false, report +message+ and exit immediately.
+
+[[Turbine_information]]
+==== Turbine information
+
++adlb_servers()    -> int+:: Number of ADLB servers
++turbine_workers() -> int+:: Number of Turbine workers
+
+=== Files
+
++filename(file) -> string+::   Obtain the name of a file
++input(string) -> file+:: Obtain a +file+.  At run time, the
+filesystem is checked for the given file name
++input_file(string) -> file+:: Alias for +input()+
++input_url(string) -> file+:: Obtain a +file+.  Some
+automatic operations and optimizations are disabled
++urlname(file) -> string+::   Obtain the name of a file created with
++input_url()+
+
+*Import:* +files+
+
++read(file) -> string+::   Read file as a string
++write(string) -> file+::  Write string to file
+
++file_lines(file) -> string[]+::
+Reads the whole file, returning each line as a separate entry in the
+output array.  Comments with +#+ are excised, leading and trailing
+whitespace is trimmed, and blank lines are omitted.
+
++glob(string) -> file[]+:: Perform glob operation, returning files
+that match.  Available glob symbols include:
++
+* +*+: any character sequence (including the zero-length sequence)
+* +?+: any character
+* +[chars]+: any of the given characters
+* +\x+: character +x+
+* +{a,b,c,...}+ any of +a+, +b+, +c+, etc.
+
+=== Blobs
+
+*Import:* +blob+
+
++blob_size(blob) -> int+:: Obtain the size of a blob in bytes.
+
++blob_null() -> blob+:: Obtain an empty blob of size 0.
+
++blob_from_string(string) -> blob+:: Convert a string into a blob.
+
++string_from_blob(blob) -> string+:: Convert a blob into a string.  If
+the blob is not NULL-terminated, this function appends the
+NULL-terminator.
+
++blob_from_floats(float[]) -> blob+:: Convert an array of Swift floats
+(implemented as doubles) to blob containing the C-formatted array of
+doubles .
+
++blob_from_floats(blob) -> float[]+:: Convert blob containing the
+C-formatted array of doubles to an array of Swift floats
+(implemented as doubles).
+
++blob_from_ints(int i[]) -> blob+:: Convert blob containing the
+C-formatted array of ints to an array of Swift ints (implemented
+as 64-bit integers).
+
++blob_from_file(file) -> blob+:: Reads whole file, returning it as a
+blob.
+
+[[library_location]]
+=== Location
+
+See the section about <<location,location>>.
+
++location_from_rank(int) -> location+:: Convert the rank integer to a
++location+ variable compatible with +@location+.
+
++random_worker() -> location+:: Obtain a worker at random.
+
++hostmap_list() -> string[]+:: Obtain the whole hostmap.
+
++hostmap_one(string) -> location+:: Lookup the string as a host in the
+hostmap and return one rank running on that host.
+
++hostmap_one_worker(string) -> location+:: Lookup the string as a host
+in the hostmap and return one worker rank running on that host.
+
+== Defining leaf functions
+
+In typical Swift applications, the computationally intensive parts of
+the application are not written in the Swift language.  Rather, the
+work is done by _leaf functions_ that are _composed_ together with
+Swift code.  Leaf functions may be extension or app functions.
+
+The Swift runtime, Turbine, is built on Tcl, a language which intends
+to makes it easy to call C/C\+\+/Fortran functions.  The builtin
+functions mentioned above are implemented as extension functions in
+Tcl, which may wrap C/C++/Fortran functions.
+
+=== Swift extension functions
+
+Currently we support Tcl extension functions, where a function is
+implemented as a Tcl function.  Tcl has good support for wrapping
+native C/C\++ functions, so this provides an indirect way to call
+C/C++ functions from Swift.
+
+Several components are required to implement a Swift native code function:
+
+-  Tcl bindings to your function.
+-  The requisite files required to build a Tcl package
+   (e.g +pkgIndex.tcl+)
+-  Swift declarations for the function that specify the type of the
+   function and the Tcl implementation.
+
+==== Simple Tcl fragment example
+
+In this example, the Swift program will simply use Tcl to output a
+string:
+
+----
+() my_output (string s) "turbine" "0.0" [
+  "puts <<s>>"
+];
+
+main {
+  my_output("HELLO");
+}
+----
+
++puts+ is the Tcl builtin for screen output, like +puts()+ in C.
+
+The above definition has, from left to right, the output arguments
+(none), the name of the new Swift function, input arguments, the name
+of the Tcl package containing the file (here, none, so we use
++turbine+), and the minimum version of that package (here, 0.0).
+
+We tell the compiler how to call our Tcl function using inline
+Tcl code as a template with variable names surrounded by +<< >>+
+indicating where variables should be substituted.
+
+==== Simple Tcl package example
+
+In this first example we will implement a trivial Tcl extension function
+that doubles an integer.  Here is the Tcl code that will go in
++myextension.tcl+:
+
+----
+namespace eval myextension {
+  proc double { x } {
+    return [ expr $x * 2 ]
+  }
+}
+----
+
+Here is the Swift function definition that will go in +myextension.swift+:
+----
+@pure
+(int o) double (int i) "myextension" "0.0.1" [
+  "set <<o>> [ myextension::double <<i>> ]"
+];
+----
+
+We can also tell the Swift compiler a little about the function so
+that it can better optimize your programs.  For example, +double+ has
+no side-effects and produces the same result each time for the same
+arguments (i.e. is deterministic), so we can annotate it as a +@pure+
+function.
+
+If your function has a long running time and should be dispatched to a
+worker process for execution, then you need to label the function as a
+worker function, for example:
+
+----
+@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set <<o>> [ pkg::process <<i>> ]"
+];
+----
+
+Tcl code is conventionally placed into _packages_.  In this example,
++myextension.tcl+ would be part of the package.
+
+More information about building Tcl packages may be found
+http://www.tcl.tk/man/tcl8.5/TclCmd/pkgMkIndex.htm[here].  Ultimately,
+you produce a +pkgIndex.tcl+ file that contains necessary information
+about the package.
+
+To ensure that Swift can find your package, use
+----
+stc -r <package directory> ...
+----
+or set +TURBINE_USER_LIB+ at run time.
+
+* *Tip:* advanced users can also create <<mkstatic,standalone executables>>
+     with compiled code and Tcl code for the extension directly linked in.
+
+==== Swift/Tcl data type mapping
+
+If you are defining Tcl functions in the way above with inline
+Tcl code, Swift types are mapped to Tcl types in the following way:
+
+* +int+/+float+/+string+/+bool+ are converted to the standard
+  Tcl representations.
+* blobs are represented as a Tcl list with first element a pointer
+  to the data, the second element the length of the data, and if
+  the blob was loaded from the ADLB data store, a third element
+  which is the ADLB ID of the blob.
+* files are represented as a list, with the first element the
+  file path, and the second element a reference count
+* arrays are represented by Tcl dictionaries with keys and values
+  represented according to their type.
+* bags are represented by Tcl lists with elements in an arbitrary
+  order.
+* output voids are set automatically.
+
+==== Calling native libraries from Swift
+
+The first step is to test that you can successfully call your
+C/C++/Fortran function from a test Tcl script.  If so, you will then
+be able to use the Swift->Tcl techniques to call it from Swift.
+
+A popular tool to automate Tcl->C bindings is
+http://www.swig.org[SWIG], which will wrap your C/C++ functions and
+help you produce a Tcl package suitable for use by Swift.
+
+To call Fortran functions, first wrap your code with
+http://fortwrap.sourceforge.net[FortWrap].  Then, use SWIG to produce
+Tcl bindings.
+
+==== Writing custom Tcl interfaces
+
+It is possible to write a Tcl wrapper function that is
+directly passed references to data in Swift's global data store.  In
+this case your function must manually retrieve/store data from/to the
+global distributed data store.  In this case, you do not use the STC
+Tcl argument substitution syntax (+<<++i++>>+).
+
+Consider this custom Swift->Tcl binding:
+----
+(int o) complex_function (int arr[]) "pkg" "0.0.1" "complex";
+----
+
+This function jumps into Tcl function +complex+, which must
+perform its own data dependency management.
+
+See the link:leaf.html[Swift/T Leaf Function Guide] for more
+information about this process.
+
+[[app_functions]]
+=== App functions
+
+App functions are functions that are implemented as command-line
+programs.  These command-line programs can be brought into a Swift
+program as functions with typed inputs and outputs.
+An app function definition comprises:
+
+* The standard components of a Swift function declaration: input and
+    output arguments and the function name.  Note that the output
+    variable types are restricted to individual +file+#s#.
+* The command line, which comprises an initial string which is the
+    executable to run, and then a series of arguments which are
+    the command-line arguments to pass to the program.
+
+App arguments can be:
+
+* Literals such as numbers or strings.
+* File variables (passed as file paths).
+* Other variables, which are converted to string arguments.
+    Arrays (including multi-dimensional arrays) are expanded to
+    multiple arguments.
+* Arbitrary expressions surrounded by parentheses.
+
+Standard input, output and error can be redirected to files via
++@stdin=+, +@stdout=+, and +@stderr=+ expressions.  If used, these should point
+to a +file+.
+
+Here is an example of an app function that joins multiple files
+with the +cat+ utility:
+----
+import files;
+
+app (file out) cat (file inputs[]) {
+  "/bin/cat" inputs @stdout=out
+}
+
+main {
+  file joined <"joined.txt"> = cat(glob("*.txt"));
+}
+----
+
+Here is an example of an app function that sleeps for an arbitrary
+amount of time:
+----
+
+app (void signal) sleep (int secs) {
+  "/bin/sleep" secs
+}
+
+main {
+  foreach time in [1:5] {
+    void signal = sleep(time);
+    // Wait on output signal so that trace occurs after sleep
+    wait(signal) {
+      trace("Slept " + fromint(time));
+    }
+  }
+}
+----
+
+=== External scripting support
+
+==== Calling Python
+
+You can evaluate arbitrary Python code from within Swift/T.  For
+example, you can perform processing with a Python library.
+Once you have that working, you can use Swift/T to coordinate
+concurrent calls to that library.
+
+Consider the following Swift script:
+
+----
+import io;
+import python;
+
+main {
+  i = python("print(\"python works\")\nrepr(2+2)");
+  printf("i: %s", i);
+}
+----
+
+This simply evaluates the Python code line by line. The last line must
+return a Python string to Swift, in this case, the Python string
++&#39;4&#39;+.  The expected output is shown below:
+
+----
+python works
+i: 4
+----
+
+Swift multi-line strings may be used to enter more complex Python code
+without the explicit use of +\n+.
+
+Additionally, you can call Python libraries such as
+http://www.numpy.org[Numpy] if available on your system.  The
+following code adds matrices _I~3~_ + _I~3~_ using Numpy arrays.
+
+----
+import io;
+import python;
+import string;
+
+global const string numpy = "from numpy import *\n\n";
+
+typedef matrix string;
+
+(matrix A) eye(int n)
+{
+  string command = sprintf("repr(eye(%i))", n);
+  string code = numpy+command;
+  matrix t = python(code);
+  A = replace_all(t, "\n", "", 0);
+}
+
+(matrix R) add(matrix A1, matrix A2)
+{
+  string command = sprintf("repr(%s+%s)", A1, A2);
+  string code = numpy+command;
+  matrix t = python(code);
+  R = replace_all(t, "\n", "", 0);
+}
+
+main
+{
+  matrix A1 = eye(3);
+  matrix A2 = eye(3);
+  matrix sum = add(A1, A2);
+  printf("2*eye(3)=%s", sum);
+}
+----
+
+An Python script template is created that imports Numpy and performs
+some simple calculations.  This code is represented in a Swift string.
+The template is filled in by the Swift call to +sprintf()+.  Then, the
+code is passed to Python for evaluation.  The output is:
+
+----
+2*eye(3)=array([[ 2.,  0.,  0.],
+                [ 0.,  2.,  0.],
+                [ 0.,  0.,  2.]])
+----
+
+NOTE: To use this, Turbine must be configured with Python enabled
+ before compiling, by setting +ENABLE_PYTHON=1+
+ in +exm-settings.sh+, or by providing the +--enable-python+ argument
+ to +configure+.  This feature is implemented by linking to Python
+ as a shared library, enabling better performance than calling the
+ +python+ program (which may be done by using a normal Swift
+ <<app_functions,app function>>).  Error messages for minor coding
+ mistakes may be badly mangled and refer to missing Python symbols-
+ refer to the first error in the Python stack trace.
+
+==== Calling R
+
+Consider the following Swift script:
+----
+import io;
+import string;
+import R;
+
+global const string template =
+"""
+  x <- %i
+  a <- x+100
+  cat("the answer is: ", a, "\\n")
+  a
+""";
+
+main
+{
+  code = sprintf(template, 4);
+  s = R(code);
+  printf("the answer was: %i", s);
+}
+----
+
+An http://www.r-project.org[R language] script template is placed in a
+Swift string.  The template is filled in with the value 4 by the Swift
+call to +sprintf()+ (note the +%i+ conversion specifier).  Then, the
+code is passed to R for evaluation.  The output is:
+
+----
+the answer is:  104
+the answer was: 104
+----
+
+As coded here, both R and Swift report the value of +a+.
+
+NOTE: To use this, Turbine must be configured with R enabled
+ before compiling, by setting +ENABLE_R=1+
+ in +exm-settings.sh+, or by providing the +--enable-r+ argument
+ to +configure+.  This feature is implemented by linking to R as a shared
+ library, enabling better performance than calling the +R+ program
+ (which may be done by using a normal Swift <<app_functions,app
+ function>>).  When installing R, be sure to include the +devel+
+ package.  When installing R from source, configure with
+ +--enable-R-shlib+. You may need to set the environment variable
+ +R_HOME+ to the directory containing the R installation.  For the APT
+ package, this is +/usr/lib/R+.
+
+==== Calling Julia
+
+Consider the following Swift script:
+----
+import io;
+import julia;
+import string;
+import sys;
+
+main {
+  start = clock();
+  f =
+"""
+begin
+ f(x) = begin
+          sleep(1)
+          x+1
+        end
+ f(%s)
+end
+""";
+  s1 = julia(sprintf(f, 1));
+  s2 = julia(sprintf(f, 2));
+  s3 = julia(sprintf(f, 3));
+  printf("julia results: %s %s %s", s1, s2, s3);
+  wait (s1, s2, s3) {
+    printf("duration: %0.2f", clock()-start);
+  }
+}
+----
+
+In this example, a http://julialang.org[Julia] script is placed in
+string +f+.  It is parameterized three times by +sprintf()+.  Each
+Julia invocation runs concurrently (if enough processes are provided
+to Swift/T).
+
+NOTE: To use this, Turbine must be configured with Julia enabled
+ before compiling, by  providing the +--enable-julia+ argument
+ to +configure+.  This feature is implemented by linking to Julia
+ as a shared library, enabling better performance than calling the
+ +julia+ program (which may be done by using a normal Swift
+ <<app_functions,app function>>).
+
+[[annotations]]
+== Annotations
+
+Swift/T supports many annotations to influence the behavior of the
+run.
+
+=== Priority
+
+Leaf tasks resulting from Swift dataflow may be prioritized by using
+the +@priority+ annotation:
+
+----
+foreach i in [0:n-1] {
+  @priority=i f(i);
+}
+----
+
+In this case, +f()+ will operate on higher values of +i+ first.
+Priority is best-effort; it is local to the ADLB server.
+
+This annotation is applied to the leaf task call.
+
+[[location]]
+=== Location
+
+Leaf tasks resulting from Swift dataflow may be assigned to a given
+processor by using the +@location+ annotation:
+
+----
+foreach i in [0:n-1] {
+  location L = location_from_rank(i);
+  @location=L f(i);
+}
+----
+
+In this case, each +f(i)+ will execute on a different worker.
+
+This annotation is applied to the leaf task call.
+
+==== Hostmap
+
+At startup, by default, Turbine obtains all hostnames used in the run
+and builds up a data structure called the hostmap to map hostnames to
+ranks.  You may combine the location features with the hostmap
+features to send work to assigned hostnames.  See the
+<<library_location,Location library>> for usage.  The hostmap may be
+<<env_hostmap_debug,debugged>> or <<env_hostmap_disable,disabled>>.
+
+=== Dispatch
+
+This simply dispatches tasks to the given process type: +WORKER+ or
++SERVER+. By default, work executes on a +SERVER+.
+
+----
+@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set <<o>> [ pkg::process <<i>> ]"
+];
+----
+
+Swift/T builtin functions (+strcat()+, arithmetic, etc.) are typically
+implemented in this way as tasks that execute on the server.  User
+work should be performed on workers to keep servers free to process
+dataflow.
+
+This annotation is applied to the leaf task definition.
+
+////
+
+=== Work types
+
+Tim?
+
+////
+
+[[Optimizations]]
+== Optimizations
+STC performs a range of compiler optimizations that can significantly
+speed up most Swift programs.  The optimization level can be controlled
+by the +-O+ command line option.  The default optimization
+level +-O2+, or the increased optimization level +-O3+ are usually
+the best choices.  Some applications benefit markedly from +-O3+,
+while others do not, and compile times can increase slightly.
+
+----
+# No optimizations at all (not recommended)
+stc -O0 example.swift example.tcl
+
+# Basic optimizations (not recommended)
+stc -O1 example.swift example.tcl
+
+# Standard optimizations (recommended)
+stc example.swift example.tcl
+# OR
+stc -O2 example.swift example.tcl
+
+# All optimizations (also recommended)
+stc -O3 example.swift example.tcl
+----
+
+Individual optimizations can be toggled on using +-T <opt name>+
+or off with +-t <opt name>+, but this typically is only useful for
+debugging.  You can find an up-to-date list of optimizations in
+the stc command-line help:
+
+----
+stc -h
+----
+
+[[Turbine]]
+== Running in Turbine
+
+The following describes how to run Turbine programs.
+
+=== Architecture
+
+Turbine runs as an MPI program consisting of many processes.  Turbine
+programs are ADLB programs.  Thus, they produce and execute discrete
+tasks that are distributed and load balanced at run time.
+
+Each process runs in a _mode_: _worker_, or _server_.
+
+Workers:: Evaluate the Swift logic. Produce tasks. Execute tasks.
+Servers:: Distributes tasks. Manages data.
+
+Typical Swift programs perform compute-intensive work in leaf
+functions that execute on workers.
+Execution of the Swift logic is split and distributed among workers.
+
+Servers distribute tasks in a scalable, load balanced manner.  They
+also store Swift data (integers, strings, etc.).
+
+=== Concurrency
+
+The available concurrency and efficiency in your Swift script is
+limited by the following factors:
+
+* The available concurrency in the Swift logic.  Sequential
+  dependencies will be evaluated sequentially.  +foreach+ loops and
+  branching function calls may be evaluated concurrently
+* The number of workers available to process leaf functions
+  concurrently
+* The number of servers available to control the Turbine run.
+  Adding more servers can improve performance for applications with
+  small tasks or complex data dependencies but ties up processes
+
+=== Invocation
+
+The form of a Turbine invocation for STC-generated
++program.tcl+ is:
+
+----
+turbine <turbine arguments> <program.tcl> <program arguments>
+----
+
+The program arguments are available to Swift (<<argv>>).
+
+Turbine accepts the following arguments:
+
++-f <file>+:: Provide a machine file to +mpiexec+
++-h+:: Print a help message
++-l+:: Enable +mpiexec -l+ ranked output formatting
++-n <procs>+:: The total number of Turbine MPI processes
++-v+:: Report the Turbine version number
++-V+:: Make the Turbine launch script verbose
++-x+:: Use turbine_sh launcher with compiled-in libraries instead of tclsh
+       (reduces number of files that must be read from file system)
++-X+:: In place of of program.tcl, run standalone Turbine executable
+        (e.g. created by <<mkstatic,mkstatic.tcl>>)
+
+The user controls the Turbine run time configuration through
+environment variables:
+
++ADLB_SERVERS+:: Number of ADLB servers
+
+The remaining processes are workers.  These values are available to
+Swift (<<Turbine_information, Turbine information>>).
+
++TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
+logging, assuming logging was not disabled at configure time.  Logging
+goes to tandard output by default.
+
++TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
+standard output.
+
++TURBINE_LOG_RANKS=1+:: Using +turbine -l+ or equivalent prepend the
+MPI rank number to each output line.  This works with typical MPICH or
+OpenMPI systems, however, this is not available on some systems, so
+set this to emulate the rank output on such systems.
+
++ADLB_PRINT_TIME=1+:: Enable a short report of total elapsed time (via
++MPI_Wtime()+)
+
++ADLB_PERF_COUNTERS=1+::
+Enable performance counters (printed at end of execution).  The
+link:internals.html[Swift/T internals guide] has information
+about interpreting the output.
+
++ADLB_EXHAUST_TIME+::
+Time in seconds taken by ADLB task servers to shut down.  May include
+a decimal point.  Default 0.1 .  Setting this lower will reduce
+delay in detection exhaustion.  Setting this higher will reduce
+overhead due to failed exhaust checks.  The default setting is
+almost always adequate.
+
++ADLB_REPORT_LEAKS=1+::
+Enable reporting of any unfreed data in ADLB data store at end of
+execution.
+
++ADLB_TRACE=true+::
++ADLB_DEBUG=true+::
+To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
+with it enabled)
+
++TURBINE_LAUNCH_OPTIONS+::
+Provide other arguments to +mpiexec+, such as a machine file, etc.
+
++TURBINE_SRAND+::
+If unset or empty, the random number generator seed will be set to the
+process rank for each process, giving reproducible results.  If set to
+an integer +seed+, the random number generator seed for each process
+will be set to +seed+ + +rank+.
++
+For non-reproducible random results, use the following shell commands:
++
+----
+export TURBINE_SRAND=$( date +%s )
+turbine ...
+----
++
+The seed is recorded in the log.
+
++ADLB_DEBUG_RANKS=1+:: Enable a report showing the rank and hostname
+of each process.  This allows you to determine whether your process
+layout on a given machine is as intended.
+
+anchor:env_hostmap_debug[]
+
++ADLB_DEBUG_HOSTMAP=1+:: Enable a report showing the hostmap, which
+maps hostnames to ranks for use with the location functionality.
+
+anchor:env_hostmap_disable[]
+
++ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
+(avoiding some communication overhead).
+
++VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>.
+
++GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.
+
+[[Build_configuration]]
+=== Build configuration
+
+The following describes how to run Swift/T programs in Turbine
+on more complex systems.
+
+==== Build troubleshooting
+
+If +exm-setup.zsh+ does not succeed, you may need to change how it
+tries to configure and compile Swift/T.
+
+Troubleshooting a build problem can require a few steps.  The first
+step is to determine why the build failed.  +exm-setup.zsh+ will usually
+report the step at which configuration failed.  For example, if it was unable
+to locate a valid Tcl install, it will report this.  Then  you can try
+these steps to resolve the problem:
+
+1. If your system is covered by the link:turbine-sites.html[Sites Guide],
+   check to see if the problem and solution are described there.
+2. Inspect +exm-settings.sh+ settings related to the reported problem.
+  For example, if locating a Tcl install failed, setting
+  the +TCL_INSTALL+ and +TCL_VERSION+ variables to the correct location
+  and version may help.
+3. If the options in +exm-settings.sh+ do not give sufficient control to
+  fix the problem, you may need to manually configure some components
+  of Swift/T, as described in the next section.
+
+[[Manual_build_configuration]]
+==== Manual configuration
++exm-setup.zsh+ and +exm-settings.sh+ provide a convenient way to install
+Swift/T. However, this method does not allow full control over
+the configuration.  Swift/T is built with standard Ant (Java) and
+Autotools/Makefile (C,Tcl) techniques.  You can more directly control
+the configuration when building through the arguments to +ant+ or
++configure+.
+
+To perform the installation using +configure+/+make+, simply untar the
+distribution package and do:
+
+----
+cd c-utils
+./configure ...
+make install
+
+cd ../lb
+./configure ...
+make install
+
+cd ../turbine
+./configure ...
+make install
+
+cd ../stc
+ant install -Ddist.dir=... -Dturbine.home=...
+----
+
+* You may use +./configure --help+ and the
+  link:turbine-sites.html[Sites Guide] for further options.
+
+==== Non-standard MPI locations
+Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.
+
+You can modify these settings in +exm-settings.sh+ to more precisely
+define locations of MPI resources:
+
+----
+EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a
+----
+
+If you are following the manual build process, configure Turbine with:
+----
+ --enable-custom --with-mpi-include=/path/to/mpi.h/include
+                 --with-mpi-lib-dir=/path/to/mpi_lib/lib
+                 --with-mpi-lib-name=funny.mpi.a
+----
+
+
+=== Performance enhancements
+
+1. Disable logging/debugging via environment
+2. Disable logging/debugging at configure/compile time
++
+** Configure c-utils with +--disable-log+
++
+3. Specify +EXM_OPT_BUILD=1+ in +exm-settings.sh+ or configure everything
+    with +--enable-fast+.  This disables assertions and other checks
+4. When making performance measurements, always subtract 0.1 seconds
+   (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
+   due to the ADLB shutdown protocol, which does not start until the
+   system is idle for that amount of time.
+5. Reduce the number of program files that must be read off the
+   filesystem.  This is particularly useful for parallel file systems
+   and large scale applications.  In increasing order of effectiveness,
+   you can:
+** use the turbine_sh launcher in place of tclsh in submit script,
+   or by specifying the +-x+ argument to +turbine+
+** Use <<mkstatic,mkstatic.tcl>> to create a standalone executable with
+   the Tcl main script and Tcl library code compiled in, and compiled
+   code statically linked.
+
+[[mkstatic]]
+=== Building standalone executables with mkstatic.tcl
+It is possible to build a fully self-contained executable, including
+all Tcl scripts and compiled code, provided that all dependencies support
+static linking.  If not, it is also possible to build an executable with
+a subset of Tcl scripts and code linked in, providing some performance
+benefits.
+
+The provided +mkstatic.tcl+ utility can produce a C source
+file with Tcl scripts bundled in, which can then be compiled and linked
+with a C compiler.  This is a multi-step process that can be automated
+as part of your build process.
+
+NOTE: Ensure that static versions of the +c-utils+, +lb+, and +turbine+ libraries
+   were built, typically with a +.a+ suffix, e.g. +libadlb.a+.  These
+   are created by default, unless you specified +DISABLE_STATIC=0+ or
+   +--disable-static+.  To build a fully standalone
+   executable, you will also need to build a static version of Tcl
+   (with the +--disable-shared+ configure option), and static versions
+   of any other libraries your own code needs to link with, such
+   as your MPI distribution or application code.
+
+1. Compile your Swift script
++
+----
+stc my.swift
+----
++
+producing the Turbine Tcl script +my.tcl+.
+
+2. Create a manifest file, e.g. +my.manifest+.  This file describes the
+   resources to be bundled, including the STC-generated code and any
+   user libraries.
++
+To do this, make a copy of +scripts/mkstatic/example.manifest+ from
+the Turbine installation directory.  This file contains examples and
+descriptions of all the the possible settings.
+Note that an empty
+manifest file corresponds to the +turbine_sh+ utility, which is a
+replacement for +tclsh+ with required Turbine libraries statically
+linked in.
+For a simple Swift program with no user Tcl libraries,
+you only need to set +main_script = my.tcl+.
+
+3. Invoke +mkstatic.tcl+ (found under +scripts/mkstatic/mkstatic.tcl+ in
+   the Turbine installation) to translate your Tcl script to a C main
+   program (e.g., +my_main.c+) with Tcl source code included.
+   The minimal invocation is
++
+----
+mkstatic.tcl my.manifest -c my_main.c
+----
++
+You will likely wish to include Tcl system libraries with
++--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6+.
+The Tcl system library directory can be identified by the fact that
+it contains the file +init.tcl+.  This directory must be specified
+with a special flag so that +mkstatic.tcl+ can correctly replace
+the regular Tcl initialization process.
++
+You can include additional libraries and packages with
++--include-lib /home/example/tcl-lib/+.  Any +.tcl+ or +.tm+ source files
+in the directory will be included.  Source-only packages can
+generally be completely linked into the executable, but if a package
+loads shared libraries, only the +pkgIndex.tcl+ file will be linked
+into the executable.  A package with compiled code can be converted to
+support static linking by specifying a package init function, plus
+static library or object files in the manifest file.
++
+4. Link together the compiled C main program with user libraries and
+  Swift/T libraries to produce a final executable.  The details of the
+  process vary depending on the compiler and system: we assume GCC.
+  You will need to provide the correct flags to link in all libraries
+  required by Swift/T or your own user code.
+** *User code:* you must identify the libraries used by your application
+  and ensure link flags are provided.  If linking static libraries, ensure
+  that any indirect dependencies of these libraries are also linked.
+** *Swift/T system:* The Turbine distribution includes a helper script,
+  +turbine-build-config.sh+, that can be sourced to obtain linker flags
+  for Swift/T dependencies.
+** *Link order:* In the case of static linking, if *libA* depends on *libB*,
+  then the +-lA+ flag must precede +-lB+ on the command line.  To
+  actually do the linking, there are two further cases to consider:
+*** If building a fully static executable, you can
+  provide the +-static+ flag, plus all object files, plus +-L+
+  and +-l+ flags for all required library directories and libraries.
++
+----
+gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...
+----
++
+*** If you are building an executable that depends on one or more shared
+  libraries, you will need to provide the +-dynamic+ flag, and then
+  ensure that static libraries are linked statically.  If a shared
+  version of a library is available, +gcc+ will use that in preference
+  to a static version.  You can override this behaviour by specifying
+  +-Wl,-Bstatic+ on the command line before the flags for the libraries
+  you wish to statically link, then +-Wl,-Bdynamic+ to reset to
+  dynamic linking for any libraries after those.
+
+We have described the most commonly-used options.  A full list of options
+and descriptions can be obtained by invoking +mkstatic.tcl -h+.
+Additional options include:
+
++--main-script+:: Specify Tcl main script (overrides manifest file)
++-r+:: Specify non-standard variable prefix for C code
++-v+:: Print verbose messages
++--deps+:: Generate Makefile include for generating C file
++--ignore-no-manifest+:: Pretend empty manifest present
+
+[[debugging]]
+=== Debugging Swift/T runs
+
+Applying the debugger allows you to debug native code linked to Swift/T
+from a normal debugger.  This will allow you to step through your code
+(and the Swift/T run time libraries).
+
+* When using Swift/T dynamically with Tcl packages (the default), you
+  need to attach to the +tclsh+ process.  This process loads your
+  native code and calls into it.
+* When using +mkstatic+, you generate a complete executable.  You can
+  debug this in the normal method for debugging MPI programs.
+
+[[valgrind]]
+==== Valgrind
+
+The Swift/T launcher scripts support http://valgrind.org[valgrind].
+Simply set the environment variable +VALGRIND+ to the valgrind command
+you wish to use.  A suppressions file is distributed with Turbine to
+ignore known issues.  (Swift/T is valgrind-clean but there are some
+issues in Tcl.)
+
+----
+export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
+turbine program.tcl
+----
+
+[[gdb]]
+==== GDB
+
+The Turbine library provides a convenient attachment mechanism
+compatible with debuggers like GDB, Eclipse, etc.  You attach to a
+Turbine execution by using the +GDB_RANK+ variable:
+
+----
+$ export GDB_RANK=0
+$ turbine program.tcl
+Waiting for gdb: rank: 0 pid: 23274
+...
+----
+
+Rank 0, running in process +23274+, has blocked (in a loop) and is
+waiting for the debugger to attach.  When you attach, set the variable
++t=1+ to break out of the loop.  Then you can debug normally.
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////
