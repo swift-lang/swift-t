@@ -306,7 +306,7 @@ xlb_workq_get(int target, int type)
 
   if (wu->target >= 0)
   {
-    xlb_workq_remove_soft_targeted(type, target, wu);
+    xlb_workq_remove_soft_targeted(type, wu->target, wu);
   }
 
   return wu;
