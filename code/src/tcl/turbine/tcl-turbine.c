@@ -300,6 +300,7 @@ struct rule_opts
   int work_type;
   int target;
   int parallelism;
+  adlb_put_flags flags;
 };
 
 static inline void rule_set_opts_default(struct rule_opts* opts,
@@ -316,13 +317,15 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
 /**
    usage:
    rule [ list inputs ] action [ name ... ] [ work_type ... ]
-                                   [ target ... ] [ parallelism ... ]
+                             [ target ... ] [ parallelism ... ]
+                             [ soft_target ... ]
              keyword args are optional
    DEFAULTS: name=<first token of action plus output list>
              type=TURBINE_ACTION_WORK
              target=TURBINE_RANK_ANY
              parallelism=1
    The name is just for debugging
+   soft_target will enable soft targeting mode and specify the target rank
  */
 static int
 Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
@@ -344,7 +347,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   assert(action);
   action_len++; // Include null terminator
 
-  struct rule_opts opts = {NULL, 0, 0, 0};
+  struct rule_opts opts = {NULL, 0, 0, 0, ADLB_DEFAULT_PUT_FLAGS};
 
   if (objc > BASIC_ARGS)
   {
@@ -370,7 +373,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   adlb_code ac = ADLB_Dput(action, action_len, opts.target,
         adlb_comm_rank, opts.work_type, ADLB_curr_priority,
-        opts.parallelism, opts.name,
+        opts.parallelism, opts.flags, opts.name,
         input_list, inputs, input_pair_list, input_pairs);
   TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
 
@@ -502,6 +505,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
+        opts->flags.soft_target = false;
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
@@ -519,6 +523,17 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         {
           opts->work_type = t;
         }
+        return TCL_OK;
+      }
+      break;
+    case 's':
+      if (strcmp(k, "soft_target") == 0)
+      {
+        int t;
+        rc = Tcl_GetIntFromObj(interp, val, &t);
+        TCL_CHECK_MSG(rc, "target argument must be integer");
+        opts->target = t;
+        opts->flags.soft_target = true;
         return TCL_OK;
       }
       break;

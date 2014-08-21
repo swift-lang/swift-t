@@ -789,13 +789,13 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
-                                                        <parallelism>
+                    <parallelism> [<soft target>]
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(6);
+  TCL_CONDITION(objc == 6 || objc == 7, "Expected 5 or 6 arguments");
 
   int target_rank;
   int work_type;
@@ -808,13 +808,20 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[4], &priority);
   Tcl_GetIntFromObj(interp, objv[5], &parallelism);
 
+  adlb_put_flags flags = ADLB_DEFAULT_PUT_FLAGS;
+  if (objc == 7)
+  {
+    int tmp;
+    Tcl_GetIntFromObj(interp, objv[6], &tmp);
+    flags.soft_target = (tmp != 0);
+  }
+
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
              target_rank, work_type, cmd, priority);
 
-  // int ADLB_Put(void *work_buf, int work_len, int reserve_rank,
-  //              int answer_rank, int work_type, int work_prio)
+
   int rc = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
-                    work_type, priority, parallelism);
+                    work_type, priority, parallelism, flags);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
@@ -838,8 +845,9 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i", work_type, cmd, priority);
 
+  adlb_put_flags flags = ADLB_DEFAULT_PUT_FLAGS;
   int rc = ADLB_Put(cmd, cmd_len+1, ADLB_RANK_ANY, adlb_comm_rank,
-                    work_type, priority, 1);
+                    work_type, priority, 1, flags);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
