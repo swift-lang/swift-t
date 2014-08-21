@@ -58,6 +58,10 @@ typedef struct
   int parallelism;
   /** Additional flags */
   adlb_put_flags flags;
+
+  /** Pointer for internal use */
+  void *__internal;
+
   /** Bulk work unit data 
       Payload kept contiguous with data to save memory allocation */
   unsigned char payload[]; 
@@ -89,6 +93,7 @@ static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
   wu->length = length;
   wu->parallelism = parallelism;
   wu->flags = flags;
+  wu->__internal = NULL;
 }
 
 /*

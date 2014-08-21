@@ -51,7 +51,11 @@
 // minimum percentage imbalance to trigger steal if stealers queue not empty
 #define XLB_STEAL_IMBALANCE 0.1
 
-#define XLB_MIN_PRIORITY INT_MIN
+#define XLB_SOFT_TARGET_PRIORITY_PENALTY -65536
+
+
+static void
+xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu);
 
 /** Uniquify work units on this server */
 static xlb_work_unit_id unique = 1;
@@ -209,10 +213,31 @@ xlb_workq_add(xlb_work_unit* wu)
 
     if (wu->flags.soft_target)
     {
+      // Soft-targeted work has reduced priority compared with non-targeted work
+      int base_priority = wu->priority;
+      int modified_priority;
+      if (base_priority < INT_MIN - XLB_SOFT_TARGET_PRIORITY_PENALTY)
+      {
+        // Avoid underflow
+        modified_priority = INT_MIN;
+      }
+      else
+      {
+        modified_priority = base_priority - XLB_SOFT_TARGET_PRIORITY_PENALTY;
+      }
+
       // Add duplicate entry
+      TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
+
       struct rbtree* T = &parallel_work[wu->type];
-      TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -wu->priority);
-      rbtree_add(T, XLB_MIN_PRIORITY, wu);
+      struct rbtree_node *N = malloc(sizeof(struct rbtree_node));
+      ADLB_MALLOC_CHECK(N);
+
+      N->key = -modified_priority;
+      N->data = wu;
+      wu->__internal = N; // Store entry to node to allow deletion later
+
+      rbtree_add_node(T, N);
     }
 
     if (xlb_perf_counters_enabled)
@@ -241,7 +266,13 @@ pop_targeted(heap_t* H, int target)
 
   if (result->flags.soft_target)
   {
-    // TODO: remove from non-targeted
+    // Matching entry was added in typed for soft targeted
+    struct rbtree_node *typed_node = result->__internal;
+    assert(typed_node != NULL);
+
+    rbtree_remove_node(&typed_work[result->type], typed_node);
+    free(typed_node);
+    result->__internal = NULL;
   }
 
   return result;
@@ -273,12 +304,39 @@ xlb_workq_get(int target, int type)
   DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
   free(node);
 
-  if (wu->target < 0)
+  if (wu->target >= 0)
   {
-    // TODO: remove entry from targeted heap
+    xlb_workq_remove_soft_targeted(type, target, wu);
   }
 
   return wu;
+}
+
+/*
+ * Remove entry from targeted queue for soft targeted task.
+ * type: type of work
+ * target: target of work
+ * wu: the work unit pointer
+ */
+static void
+xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
+{
+  assert(target >= 0);
+  assert(wu != NULL);
+  assert(wu->flags.soft_target);
+  // Remove entry from targeted heap
+  heap_t* H = &targeted_work[targeted_work_ix(target, type)];
+  for (uint32_t i = 0; i < H->size; i++)
+  {
+    heap_entry_t *entry = &H->array[i];
+    if (entry->val == wu)
+    {
+      heap_del_entry(H, i);
+      break;
+    }
+  }
+  // Should have been found
+  assert(false);
 }
 
 /** Struct for user data during rbtree iterator search */
@@ -372,8 +430,8 @@ xlb_workq_steal_type(struct rbtree *q, int num,
     xlb_work_unit *wu = (xlb_work_unit*) node->data;
     free(node);
 
-    if (wu->target < 0) {
-      // TODO: update for soft targeted
+    if (wu->target >= 0) {
+      xlb_workq_remove_soft_targeted(wu->type, wu->target, wu);
     }
 
     adlb_code code = cb.f(cb.data, wu);
