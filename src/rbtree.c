@@ -284,6 +284,7 @@ void
 rbtree_add_node(struct rbtree* target,
                 struct rbtree_node* node)
 {
+  node->parent = node->left = node->right = NULL;
   rbtree_add_node_impl(target, node);
 }
 
