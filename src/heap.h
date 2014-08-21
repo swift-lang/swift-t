@@ -196,7 +196,7 @@ static inline void heap_sift_down(heap_t *heap, heap_ix_t i) {
 }
 
 /*
- * Remove the root of the heap and 
+ * Remove the root of the heap
  */
 static inline void heap_del_root(heap_t *heap)
 {
@@ -207,6 +207,21 @@ static inline void heap_del_root(heap_t *heap)
     /* put last element up the top */
     heap->array[0] = heap->array[heap->size];
     heap_sift_down(heap, 0);
+  }
+}
+
+/*
+ * Remove any entry of the heap
+ */
+static inline void heap_del_entry(heap_t *heap, heap_ix_t i)
+{
+  /* Shrink by one */
+  heap->size--;
+
+  if (heap->size > 0) {
+    /* put last element up the top */
+    heap->array[i] = heap->array[heap->size];
+    heap_sift_down(heap, i);
   }
 }
 
