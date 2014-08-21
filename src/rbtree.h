@@ -64,6 +64,9 @@ void rbtree_init(struct rbtree* target);
  */
 bool rbtree_add(struct rbtree* target, rbtree_key_t key, void* data);
 
+/**
+   Add a node.  Key and value must be initialized
+ */
 void rbtree_add_node(struct rbtree* target, struct rbtree_node* node);
 
 struct rbtree_node* rbtree_search_node(struct rbtree* target,
