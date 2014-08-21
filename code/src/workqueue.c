@@ -229,14 +229,14 @@ xlb_workq_add(xlb_work_unit* wu)
       // Add duplicate entry
       TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
 
-      struct rbtree* T = &parallel_work[wu->type];
+      struct rbtree* T = &typed_work[wu->type];
       struct rbtree_node *N = malloc(sizeof(struct rbtree_node));
       ADLB_MALLOC_CHECK(N);
 
       N->key = -modified_priority;
       N->data = wu;
       wu->__internal = N; // Store entry to node to allow deletion later
-
+      
       rbtree_add_node(T, N);
     }
 
@@ -336,7 +336,7 @@ xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
     if (entry->val == wu)
     {
       heap_del_entry(H, i);
-      break;
+      return;
     }
   }
   // Should have been found
