@@ -99,7 +99,7 @@ namespace eval turbine {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
        lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
-       store_void [ get_file_status $f ]
+       store_void [ get_file_status $file_handle ]
     }
 
     # store file and update local file var refcounts

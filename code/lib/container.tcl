@@ -168,6 +168,10 @@ namespace eval turbine {
               set i 0
               dict for { key val } $cval {
                 set val_id [ lindex $val_ids $i ]
+                if { $val_type == "file_ref" } {
+                  set val_id [ file_handle_from_td $val_id 0 ]
+                  lset val_ids $i $val_id
+                }
 
                 # build inner data structure
                 build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
@@ -207,6 +211,10 @@ namespace eval turbine {
               set i 0
               foreach val $cval {
                 set val_id [ lindex $val_list $i ]
+                if { $val_type == "file_ref" } {
+                  set val_id [ file_handle_from_td $val_id 0 ]
+                  lset val_ids $i $val_id
+                }
 
                 # build inner data structure
                 build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
@@ -220,6 +228,9 @@ namespace eval turbine {
           }
           # Store values all at once
           adlb::store $id multiset $val_type $val_list $write_decr
+        }
+        file {
+          store_file $id cval
         }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {
