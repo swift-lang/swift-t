@@ -324,7 +324,11 @@ xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
   assert(target >= 0);
   assert(wu != NULL);
   assert(wu->flags.soft_target);
-  // Remove entry from targeted heap
+  /*
+   * Remove entry from targeted heap.
+   * We do a linear search, which is potentially expensive, but will
+   * will only require checking many entries if the rank has many
+   * hard-targeted tasks enqueued */
   heap_t* H = &targeted_work[targeted_work_ix(target, type)];
   for (uint32_t i = 0; i < H->size; i++)
   {
