@@ -1581,7 +1581,8 @@ the +@prio+ annotation:
 
 ----
 foreach i in [0:n-1] {
-  @prio=i f(i);
+  @prio=i f(i);         // or
+  int j = @prio=i f(i);
 }
 ----
 
