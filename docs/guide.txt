@@ -1577,16 +1577,17 @@ run.
 === Priority
 
 Leaf tasks resulting from Swift dataflow may be prioritized by using
-the +@priority+ annotation:
+the +@prio+ annotation:
 
 ----
 foreach i in [0:n-1] {
-  @priority=i f(i);
+  @prio=i f(i);
 }
 ----
 
 In this case, +f()+ will operate on higher values of +i+ first.
-Priority is best-effort; it is local to the ADLB server.
+Priority is best-effort; it is local to the ADLB server.  The values
+of +i+ may be any Swift integer. 
 
 This annotation is applied to the leaf task call.
 
