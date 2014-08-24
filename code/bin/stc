@@ -283,13 +283,16 @@ report_version()
   exit 0
 }
 
-while getopts "A:d:D:EhI:j:l:L:pt:T:O:C:r:uvVx" OPTION
+while getopts "A:C:d:D:Ef:F:hI:j:L:pO:r:uvVx" OPTION
 do
   case ${OPTION}
     in
     A)
       STC_ARGS+="-A${OPTARG}"
       ;;
+    C) verbose "IC Output: ${OPTARG}"
+       COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
+       ;;
     d) DEBUG_PORT=${OPTARG}
       verbose "DEBUG_PORT: ${DEBUG_PORT}"
       ;;
@@ -308,30 +311,23 @@ do
       ;;
     j) JVM=${OPTARG}
       ;;
-    l) LOGFILE=${OPTARG}
-      verbose "LOGFILE: ${LOGFILE}"
-      ;;
     L) LOGFILE=${OPTARG}
-      verbose "LOGFILE: ${LOGFILE} trace enabled"
-      LOGTRACE=true
+      verbose "LOGFILE: ${LOGFILE}"
       ;;
     p) PREPROCESS=false
       ;;
     r)
       add_rpath ${OPTARG}
       ;;
-    t) verbose "TURNOFF: ${OPTARG}"
+    f) verbose "TURNOFF: ${OPTARG}"
       disable_opt ${OPTARG}
       ;;
-    T) verbose "TURNON: ${OPTARG}"
+    F) verbose "TURNON: ${OPTARG}"
       enable_opt ${OPTARG}
       ;;
     O)
        set_opt_level $OPTARG
       ;;
-    C) verbose "IC Output: ${OPTARG}"
-       COMPILER_OPTS+="-Dstc.ic.output-file=${OPTARG}"
-       ;;
     u) STC_ARGS+="-u"
       ;;
     v)
