@@ -45,21 +45,20 @@ namespace eval turbine {
         set n [ llength $elems ]
         log "swift_array_build: elems: $n var_type: $var_type"
 
+        set result [ dict create ]
         if { $var_type == "file" } {
-            set result [ dict create ] 
-            set type "file_ref"
+            # set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
-                
                 dict append result $i [ create_local_file_ref $elem 1 ]
             }
         } else { 
-            set result [ dict create ]
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
                 dict append result $i $elem
             }
         }
+        return $result
     }
 
     # build array by inserting items into a container starting at 0
