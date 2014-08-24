@@ -28,8 +28,6 @@ turbine: $(TURBINE)
 
 package: $(PACKAGE) libs
 
-libs: $(TCL_TURBINE_LIBS)
-
 USE_MAC = @USE_MAC@
 
 INSTALL_PREFIX  = @prefix@
@@ -113,6 +111,8 @@ endif
 ifeq ($(ENABLE_STATIC),1)
   TCL_TURBINE_LIBS += $(TCL_TURBINE_A)
 endif
+
+libs: $(TCL_TURBINE_LIBS)
 
 PACKAGE_ARTIFACTS += $(TCL_TURBINE_LIBS)
 
