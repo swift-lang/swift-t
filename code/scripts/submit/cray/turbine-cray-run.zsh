@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE-APRUN-RUN
-# Creates a APRUN run file and runs it on the given program
+# TURBINE-CRAY-RUN
+# Creates an APRUN run file and runs it on the given program
 
 # usage:
-#  turbine-aprun-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
+#  turbine-cray-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
 #                        [-x] [-X]
 #                           <SCRIPT> [<ARG>]*
 #
@@ -88,11 +88,11 @@ then
 fi
 
 # Filter the template to create the PBS submit script
-TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
-TURBINE_APRUN=${TURBINE_OUTPUT}/turbine-aprun.sh
+TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
+TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
 
 mkdir -pv ${TURBINE_OUTPUT}
-touch ${TURBINE_APRUN}
+touch ${TURBINE_CRAY}
 
 m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
 
