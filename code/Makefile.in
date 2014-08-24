@@ -489,9 +489,9 @@ $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(E) mv "$(@).tmp" $(@)
 
 $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
-	$(Q) " MKHDR $(@)"
+	$(Q) "  MKHDR		$(@)"
 	$(E) $(F2A_MKHDR) -v turbine_lib_src $(STATIC_PKG_RESOURCE_C) > $(@).tmp
-	mv "$(@).tmp" $(@)
+	$(E) mv "$(@).tmp" $(@)
 
 # Regular .o compilation rule generates .o files
 
