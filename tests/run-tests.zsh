@@ -28,7 +28,7 @@ ADDTL_STC_ARGS=()
 LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
-while getopts "cCDek:n:p:P:VO:t:T:alo:" OPTION
+while getopts "cCDek:n:p:P:VO:f:F:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -64,11 +64,11 @@ do
       # don't run tests that match one of the patterns
       SKIP_PATTERNS+=${OPTARG}
       ;;
-    t)
-      ADDTL_STC_ARGS+="-t${OPTARG}"
+    f)
+      ADDTL_STC_ARGS+="-f${OPTARG}"
       ;;
-    T)
-      ADDTL_STC_ARGS+="-T${OPTARG}"
+    F)
+      ADDTL_STC_ARGS+="-F${OPTARG}"
       ;;
     V)
       VERBOSE=1
