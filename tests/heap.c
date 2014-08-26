@@ -17,8 +17,16 @@
 #include <stdio.h>
 
 // Cf. heap.h
-#define HEAP_SKIP_ASSERTS
+#undef HEAP_SKIP_ASSERTS
 #include "heap.h"
+
+void heap_del_val(heap_t *h, void *val) {
+  for (int i = 0; i < h->size; i++) {
+    if (h->array[i].val == val) {
+      heap_del_entry(h, i);
+    }
+  }
+}
 
 int main() {
   heap_t h;
@@ -66,5 +74,35 @@ int main() {
   heap_init_empty(&h);
   heap_add(&h, 1, (void*)1234);
   assert(h.malloced_size > 0 && h.array != NULL);
+  heap_clear(&h);
+
+  // Test heap_del_entry
+  heap_init_empty(&h);
+  heap_add(&h, 2, (void*)2);
+  heap_add(&h, 3, (void*)3);
+  heap_add(&h, 1, (void*)1);
+  heap_add(&h, 0, (void*)0);
+  heap_add(&h, -1, (void*)1);
+  heap_add(&h, 4, (void*)4);
+  heap_add(&h, 5, (void*)5);
+  heap_add(&h, 6, (void*)6);
+  assert(heap_root_val(&h) == (void*)1);
+  heap_del_entry(&h, 0);
+  assert(heap_root_val(&h) == (void*)0);
+  heap_del_val(&h, (void*)6);
+  heap_del_val(&h, (void*)3);
+  assert(heap_root_val(&h) == (void*)0);
+  heap_del_root(&h);
+  assert(heap_root_val(&h) == (void*)1);
+  heap_del_root(&h);
+  assert(heap_root_val(&h) == (void*)2);
+  heap_del_root(&h);
+  assert(heap_root_val(&h) == (void*)4);
+  heap_del_root(&h);
+  assert(heap_root_val(&h) == (void*)5);
+  heap_del_val(&h, (void*)5);
+  assert(h.size == 0);
+  heap_clear(&h);
+
   printf("DONE\n");
 }
