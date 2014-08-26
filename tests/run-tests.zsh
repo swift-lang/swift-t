@@ -182,15 +182,14 @@ compile_test()
     ARGS=$(cat ${STC_ARGS})
   fi
 
-  STC_LOG_FLAG=-l
   if (( VERBOSE ))
   then
     # Enable trace-level logging
-    STC_LOG_FLAG=-L
+    export STC_LOG_TRACE=true
   fi
 
   pushd $STC_TESTS_DIR
-  ${STC} ${STC_LOG_FLAG} ${STC_LOG_FILE} \
+  ${STC} -L ${STC_LOG_FILE} \
       -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} ${ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
@@ -238,16 +237,16 @@ run_test()
     then
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
       if ! source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT}
-      then 
+      then
         return $TEST_SETUP_FAIL
       fi
     fi
-    
+
     print "running:   $( basename ${TCL_FILE} )"
 
-    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} 
+    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     CODE=${?}
-    if (( CODE != TEST_OK )) 
+    if (( CODE != TEST_OK ))
     then
       (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
       return $TEST_TRUE_FAIL
@@ -297,7 +296,7 @@ run_test()
       print "Unfilled data dependencies for work!"
       return $TEST_TRUE_FAIL
     fi
-    
+
     LEAK_FOUND=0
 
     # Check for leaks
@@ -416,7 +415,7 @@ report_stats_and_exit()
   print "hard failed tests: ${#HARD_FAILED_TESTS} (${HARD_FAILED_TESTS})"
   print "leaky tests: ${#LEAKY_TESTS} (${LEAKY_TESTS})"
   print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
-  
+
   exit ${EXIT_CODE}
 }
 
@@ -449,15 +448,6 @@ do
     break
   fi
 
-  if (( RUN_DISABLED == 1 ))
-  then
-    :
-  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
-  then
-    DISABLED_TESTS+=${TEST_NAME}
-    continue
-  fi
-
   if [[ ${#PATTERNS} > 0 ]]
   then
     PATTERN_MATCH=0
@@ -475,7 +465,16 @@ do
       continue
     fi
   fi
-  
+
+  if (( RUN_DISABLED == 1 ))
+  then
+    :
+  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+  then
+    DISABLED_TESTS+=${TEST_NAME}
+    continue
+  fi
+
   if [[ ${#SKIP_PATTERNS} > 0 ]]
   then
     PATTERN_MATCH=0
@@ -512,7 +511,7 @@ do
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
     if [ ${#STC_OPT_LEVELS} -gt 1 ]
     then
-      # Disambiguate test output if running multiple opt levels at same 
+      # Disambiguate test output if running multiple opt levels at same
       # time so it's not overwritten
       TEST_OUT_PATH+=".O${OPT_LEVEL}"
     fi
@@ -573,7 +572,7 @@ do
       fi
     fi
     report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
-   
+
     CLEANUP_SCRIPT=${TEST_PATH}.cleanup.sh
     CLEANUP_OUTPUT=${TEST_PATH}.cleanup.out
     if [ -f "${CLEANUP_SCRIPT}" ]

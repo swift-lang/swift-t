@@ -391,7 +391,7 @@ then
   FLAGS+="-Dstc.log.file=${LOGFILE}"
 fi
 
-if [[ ${LOGTRACE} = true ]]
+if [[ ${STC_LOG_TRACE} = true ]]
 then
   FLAGS+="-Dstc.log.trace=true"
 fi
