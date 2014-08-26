@@ -1,24 +1,29 @@
 import location;
+import assert;
 
 @dispatch=CONTROL
-f(int i) "turbine" "0.0.1" [
-  "puts \"HELLO <<i>>\""
+(int rank) f(int i) "turbine" "0.0.1" [
+  "set <<rank>> [ adlb::rank ] ; puts \"HELLO <<i>>\""
 ];
 
 
 @dispatch=WORKER
-g(int i) "turbine" "0.0.1" [
-  "puts \"HELLO <<i>>\""
+(int rank) g(int i) "turbine" "0.0.1" [
+  "set <<rank>> [ adlb::rank ] ; puts \"HELLO <<i>>\""
 ];
 
 main {
-  @location=location_from_rank(random_engine())
-  f(0);
+  foreach i in [1:50] {
+    int engine_rank = random_engine();
+    assertEqual(@location=location_from_rank(engine_rank)f(0),
+                engine_rank, "f(0)"); 
 
-  f(1);
+    f(1);
+    
+    int worker_rank = random_worker();
+    assertEqual(@location=location_from_rank(worker_rank)g(2),
+                worker_rank, "g(2)");
 
-  @location=location_from_rank(random_worker())
-  g(2);
-
-  g(3);
+    g(3);
+  }
 }
