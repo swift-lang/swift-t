@@ -1300,8 +1300,10 @@ public class  ExprWalker {
     }
     if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
-      Arg target = props.getWithDefault(TaskPropKey.LOCATION);
-      realInputs.add(VarRepr.backendArg(target));
+      Arg location = props.getWithDefault(TaskPropKey.LOCATION);
+      realInputs.add(VarRepr.backendArg(location));
+      Arg softLocation = props.getWithDefault(TaskPropKey.SOFT_LOCATION);
+      realInputs.add(VarRepr.backendArg(softLocation));
     }
 
     // Other code always creates sync wrapper

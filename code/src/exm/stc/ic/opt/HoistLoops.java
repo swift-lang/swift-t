@@ -373,7 +373,7 @@ public class HoistLoops implements OptimizerPass {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
             !((WaitStatement)c).hasExplicit() &&
-            Location.isAnyLocation(((WaitStatement)c).targetLocation(), true)) {
+            Location.isAnyLocation(((WaitStatement)c).targetLocation().location, true)) {
       // Don't hoist through wait statements that have explicit
       // ordering constraints or locations.
       // TODO: Could relax this assumption for target locations for basic operations

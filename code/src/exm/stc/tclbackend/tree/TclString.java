@@ -15,6 +15,7 @@
  */
 package exm.stc.tclbackend.tree;
 
+import java.util.Arrays;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -23,7 +24,7 @@ public class TclString extends Expression
 {
   public static final TclTree EMPTY = new TclString("", false);
   private final StringBuilder sb;
-  
+
   public TclString(String string, boolean escape)
   {
     this.sb = new StringBuilder();
@@ -34,14 +35,14 @@ public class TclString extends Expression
     }
   }
 
-  /** 
-     Convenience constructor: unescaped Tcl string 
+  /**
+     Convenience constructor: unescaped Tcl string
    */
   public TclString(String string)
   {
     this(string, false);
   }
-  
+
   /**
    * Create a string from the expressions, with two modes:
    *  LIST_STRING: spaces are inserted between expressions and expressions
@@ -69,6 +70,11 @@ public class TclString extends Expression
     }
   }
 
+
+  public TclString(ExprContext mode, Expression ...exprs) {
+    this(Arrays.asList(exprs), mode);
+  }
+
   @Override
   public void appendTo(StringBuilder outSb, ExprContext mode)
   {
@@ -84,12 +90,12 @@ public class TclString extends Expression
       outSb.append(this.sb);
     }
   }
-  
+
   @Override
   public boolean supportsStringList() {
     return false;
   }
-  
+
   /**
    * See http://tmml.sourceforge.net/doc/tcl/Tcl.html
    * for information about Tcl escape sequences
@@ -101,7 +107,7 @@ public class TclString extends Expression
     tclEscapeString(unescaped, escaped);
     return escaped.toString();
   }
-  
+
   private static void tclEscapeString(String unescaped, StringBuilder escaped) {
     for (int i = 0; i < unescaped.length(); i++) {
       char c = unescaped.charAt(i);

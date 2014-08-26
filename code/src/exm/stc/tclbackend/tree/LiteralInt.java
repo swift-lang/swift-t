@@ -19,11 +19,11 @@ public class LiteralInt extends Expression {
 
   public static final Expression TRUE = new LiteralInt(1);
   public static final Expression FALSE = new LiteralInt(0);
-  
+
   public static final Expression ZERO = new LiteralInt(0);
   public static final Expression ONE = new LiteralInt(1);
   public static final Expression TWO = new LiteralInt(2);
-  
+
   private final long value;
 
   public LiteralInt(long value) {
@@ -38,7 +38,16 @@ public class LiteralInt extends Expression {
   public static Expression boolValue(boolean val) {
     return val ? TRUE : FALSE;
   }
-  
+
+  public long value() {
+    return value;
+  }
+
+  public boolean boolValue() {
+    return value != 0;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (this == o)
       return true;

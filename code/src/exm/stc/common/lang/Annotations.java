@@ -35,7 +35,7 @@ public class Annotations {
   public static final String FN_DEPRECATED = "deprecated";
   public static final String FN_CHECKPOINT = "checkpoint";
   public static final String FN_SUPPRESS = "suppress";
-  
+
   // Options for @suppress
   public static enum Suppression {
     UNUSED_OUTPUT,
@@ -48,8 +48,9 @@ public class Annotations {
 
   public static final String FNCALL_PAR = "par";
   public static final String FNCALL_LOCATION = "location";
+  public static final String FNCALL_SOFT_LOCATION = "soft_location";
   public static final String FNCALL_PRIO = "prio";
-  
+
   public static final String LOOP_UNROLL = "unroll";
   public static final String LOOP_SPLIT_DEGREE = "splitdegree";
   public static final String LOOP_LEAF_DEGREE = "leafdegree";

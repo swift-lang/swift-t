@@ -22,8 +22,10 @@ import java.util.TreeMap;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types.FunctionType;
@@ -35,14 +37,16 @@ public class FunctionCall {
   private final List<SwiftAST> args;
   private final FunctionType type;
   private final Map<TaskPropKey, SwiftAST> annotationExprs;
-  
+  private final boolean softLocation;
+
   private FunctionCall(String function, List<SwiftAST> args,
-                       FunctionType type, Map<TaskPropKey, SwiftAST> annotationExprs) {
-    super();
+                       FunctionType type, Map<TaskPropKey, SwiftAST> annotationExprs,
+                       boolean softLocation) {
     this.function = function;
     this.args = args;
     this.type = type;
     this.annotationExprs = annotationExprs;
+    this.softLocation = softLocation;
   }
 
   public String function() {
@@ -56,29 +60,20 @@ public class FunctionCall {
   public FunctionType type() {
     return type;
   }
-  
+
   public Map<TaskPropKey, SwiftAST> annotations() {
     return Collections.unmodifiableMap(annotationExprs);
   }
 
-  private static TaskPropKey getPropKey(Context context, SwiftAST tag)
-        throws InvalidAnnotationException {
-    assert(tag.getType() == ExMParser.ID);
-    String annotName = tag.getText();
-    if (annotName.equals(Annotations.FNCALL_PAR)) {
-      return  TaskPropKey.PARALLELISM;
-    } else if (annotName.equals(Annotations.FNCALL_PRIO)) {
-      return  TaskPropKey.PRIORITY;
-    } else if (annotName.equals(Annotations.FNCALL_LOCATION)) {
-      return TaskPropKey.LOCATION;
-    } else {
-      throw new InvalidAnnotationException(context, "function call",
-                                           annotName, false);
-    }
+  /**
+   * @return whether the location should be interpreted as a soft location
+   */
+  public boolean softLocation() {
+    return softLocation;
   }
 
   public static FunctionCall fromAST(Context context, SwiftAST tree,
-          boolean doWarn) throws UndefinedFunctionException, InvalidAnnotationException {
+          boolean doWarn) throws UserException {
     assert(tree.getChildCount() >= 2);
     SwiftAST fTree = tree.child(0);
     String f;
@@ -94,25 +89,53 @@ public class FunctionCall {
       assert(fTree.getType() == ExMParser.ID);
       f = fTree.getText();
     }
-    
-    SwiftAST arglist = tree.child(1); 
-    
+
+    SwiftAST arglist = tree.child(1);
+
     FunctionType ftype = context.lookupFunction(f);
     if (ftype == null) {
       throw UndefinedFunctionException.unknownFunction(context, f);
     }
-    
+
     Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
+    boolean softLocation = false;
     for (SwiftAST annTree: tree.children(2)) {
       assert(annTree.getType() == ExMParser.CALL_ANNOTATION);
       assert(annTree.getChildCount() == 2);
       SwiftAST tag = annTree.child(0);
       SwiftAST expr = annTree.child(1);
-      TaskPropKey propKey = getPropKey(context, tag);
-      annotations.put(propKey, expr);
+      assert(tag.getType() == ExMParser.ID);
+      String annotName = tag.getText();
+      if (annotName.equals(Annotations.FNCALL_PAR)) {
+        putAnnotationNoDupes(context, annotations, TaskPropKey.PARALLELISM,
+                             expr);
+      } else if (annotName.equals(Annotations.FNCALL_PRIO)) {
+        putAnnotationNoDupes(context, annotations, TaskPropKey.PRIORITY, expr);
+      } else if (annotName.equals(Annotations.FNCALL_LOCATION)) {
+        putAnnotationNoDupes(context, annotations, TaskPropKey.LOCATION, expr);
+      } else if (annotName.equals(Annotations.FNCALL_SOFT_LOCATION)) {
+        putAnnotationNoDupes(context, annotations, TaskPropKey.LOCATION, expr);
+        softLocation = true;
+        if (!Settings.getBoolean(Settings.SOFT_TARGET)) {
+          throw new UserException(context, "Soft targeting not enabled");
+        }
+      } else {
+        throw new InvalidAnnotationException(context, "function call",
+                                             annotName, false);
+      }
     }
-    
-    return new FunctionCall(f, arglist.children(), ftype, annotations);
+
+    return new FunctionCall(f, arglist.children(), ftype, annotations, softLocation);
+  }
+
+  private static void putAnnotationNoDupes(Context context,
+      Map<TaskPropKey, SwiftAST> annotations, TaskPropKey key, SwiftAST expr)
+          throws UserException {
+    SwiftAST prev = annotations.put(key, expr);
+    if (prev != null) {
+      throw new UserException(context, "Duplicate function call annotation: " +
+                    key.toString().toLowerCase() + " defined multiple times");
+    }
   }
 
 }

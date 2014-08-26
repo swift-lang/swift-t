@@ -120,7 +120,7 @@ public class Pipeline extends FunctionOptimizerPass {
           compatible = false;
         } else if (w.isParallel()) {
           compatible = false;
-        } else if (!Location.isAnyLocation(w.targetLocation(), true)) {
+        } else if (!Location.isAnyLocation(w.targetLocation().location, true)) {
           // TODO: this is overly conservative, could check location of
           // this block
           compatible = false;

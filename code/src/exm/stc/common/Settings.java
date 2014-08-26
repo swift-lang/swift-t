@@ -110,6 +110,8 @@ public class Settings
 
   public static final String AUTO_DECLARE = "stc.auto-declare";
 
+  public static final String SOFT_TARGET = "stc.soft-target";
+
   public static final String INPUT_FILENAME = "stc.input_filename";
   public static final String OUTPUT_FILENAME = "stc.output_filename";
   public static final String STC_HOME = "stc.stc_home";
@@ -195,6 +197,7 @@ public class Settings
     defaults.setProperty(ENABLE_REFCOUNTING, "true");
     defaults.setProperty(ENABLE_CHECKPOINTING, "true");
     defaults.setProperty(AUTO_DECLARE, "true");
+    defaults.setProperty(SOFT_TARGET, "false");
     defaults.setProperty(PROFILE_STC, "false");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
@@ -344,6 +347,7 @@ public class Settings
     getBoolean(ENABLE_REFCOUNTING);
     getBoolean(ENABLE_CHECKPOINTING);
     getBoolean(AUTO_DECLARE);
+    getBoolean(SOFT_TARGET);
     getBoolean(COMPILER_DEBUG);
     getBoolean(PROFILE_STC);
     getBoolean(USE_C_PREPROCESSOR);

@@ -33,10 +33,12 @@ import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.Expression;
+import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
+import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
 import exm.stc.tclbackend.tree.TclTarget;
@@ -179,6 +181,7 @@ class Turbine {
   private static final Token RULE_KEYWORD_PAR = new Token("parallelism");
   private static final Token RULE_KEYWORD_TYPE = new Token("type");
   private static final Token RULE_KEYWORD_TARGET = new Token("target");
+  private static final Token RULE_KEYWORD_SOFT_TARGET = new Token("soft_target");
 
   // Async task execution
   private static final Token ASYNC_EXEC_COASTER =
@@ -704,7 +707,8 @@ class Turbine {
 
     args.add(new TclList(inputs)); // vars to block in
     args.add(TclUtil.tclStringAsList(action)); // Tcl string to execute
-    ruleAddKeywordArgs(type, props.target, props.parallelism, args);
+    ruleAddKeywordArgs(type, props.target, props.softTarget,
+                       props.parallelism, args);
 
     res.add(new Command(ruleCmd, args));
 
@@ -714,21 +718,32 @@ class Turbine {
   }
 
   public static List<Expression> ruleKeywordArgs(TclTarget target,
-          Expression parallelism) {
-    return ruleKeywordArgs(null, target, parallelism);
+          Expression softTarget, Expression parallelism) {
+    return ruleKeywordArgs(null, target, softTarget, parallelism);
   }
 
   public static List<Expression> ruleKeywordArgs(ExecTarget type,
-          TclTarget target, Expression parallelism) {
+          TclTarget target, Expression softTarget, Expression parallelism) {
     ArrayList<Expression> res = new ArrayList<Expression>();
-    ruleAddKeywordArgs(type, target, parallelism, res);
+    ruleAddKeywordArgs(type, target, softTarget, parallelism, res);
     return res;
   }
 
   private static void ruleAddKeywordArgs(ExecTarget type, TclTarget target,
-          Expression parallelism, List<Expression> args) {
+          Expression softTarget, Expression parallelism,
+          List<Expression> args) {
     if (!target.rankAny) {
-      args.add(RULE_KEYWORD_TARGET);
+      Expression targetKey;
+      if (softTarget instanceof LiteralInt) {
+        targetKey = ((LiteralInt)softTarget).boolValue() ?
+            RULE_KEYWORD_SOFT_TARGET : RULE_KEYWORD_TARGET;
+      } else {
+        // Need to know runtime value
+        targetKey = TclExpr.ternary(softTarget,
+              new TclString(ExprContext.VALUE_STRING, RULE_KEYWORD_SOFT_TARGET),
+              new TclString(ExprContext.VALUE_STRING, RULE_KEYWORD_TARGET));
+      }
+      args.add(targetKey);
       args.add(target.toTcl());
     }
 
@@ -824,9 +839,23 @@ class Turbine {
         par = LiteralInt.ONE;
       }
 
+      List<Expression> putArgs = new ArrayList<Expression>();
+      putArgs.add(props.target.toTcl());
+      putArgs.add(adlbWorkTypeVal(targetContext));
+      putArgs.add(task);
+      putArgs.add(priorityVar);
+      putArgs.add(par);
+
+      try {
+        if (Settings.getBoolean(Settings.SOFT_TARGET)) {
+          putArgs.add(props.softTarget);
+        }
+      } catch (InvalidOptionException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+
       // Use put, which takes more arguments
-      res.add(new Command(ADLB_PUT, props.target.toTcl(),
-              adlbWorkTypeVal(targetContext), task, priorityVar, par));
+      res.add(new Command(ADLB_PUT, putArgs));
       return res;
     }
   }
@@ -957,16 +986,19 @@ class Turbine {
 
   public static class RuleProps {
     public static final RuleProps DEFAULT = new RuleProps(TclTarget.RANK_ANY,
-            null, null);
+            LiteralInt.FALSE, null, null);
 
     public final TclTarget target;
+    public final Expression softTarget; // cannot be null;
     public final Expression parallelism; // can be null
     public final Expression priority; // can be null
 
-    public RuleProps(TclTarget target, Expression parallelism,
-            Expression priority) {
+    public RuleProps(TclTarget target, Expression softTarget,
+            Expression parallelism, Expression priority) {
       assert (target != null);
+      assert (softTarget != null);
       this.target = target;
+      this.softTarget = softTarget;
       this.parallelism = parallelism;
       this.priority = priority;
     }
@@ -1012,7 +1044,8 @@ class Turbine {
     args.add(new TclList(depthExprs));
     args.add(new TclList(isFileExprs));
     args.add(TclUtil.tclStringAsList(action));
-    ruleAddKeywordArgs(mode, props.target, props.parallelism, args);
+    ruleAddKeywordArgs(mode, props.target, props.softTarget,
+                       props.parallelism, args);
     res.add(new Command(DEEPRULE, args));
 
     if (props.priority != null)
