@@ -1520,6 +1520,8 @@ public class TurbineGenerator implements CompilerBackend {
     // Properties can be null
     Arg priority = props.get(TaskPropKey.PRIORITY);
     TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOCATION));
+    Expression softTarget = argToExpr(
+        props.getWithDefault(TaskPropKey.SOFT_LOCATION));
     Expression parExpr = TclUtil.argToExpr(props.get(TaskPropKey.PARALLELISM),
                                            true);
 
@@ -1529,7 +1531,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> funcArgs = new ArrayList<Expression>();
     funcArgs.add(oList);
     funcArgs.add(iList);
-    funcArgs.addAll(Turbine.ruleKeywordArgs(target, parExpr));
+    funcArgs.addAll(Turbine.ruleKeywordArgs(target, softTarget, parExpr));
     Command c = new Command(tclFunction, funcArgs);
     pointAdd(c);
 
@@ -1593,9 +1595,15 @@ public class TurbineGenerator implements CompilerBackend {
     Expression priority = TclUtil.argToExpr(
                     props.get(TaskPropKey.PRIORITY), true);
     TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOCATION));
+
+    Arg softTargetArg = props.getWithDefault(TaskPropKey.SOFT_LOCATION);
+    assert(Types.isBoolVal(softTargetArg));
+    Expression softTarget = argToExpr(softTargetArg);
+
     Expression parallelism = TclUtil.argToExpr(
                       props.get(TaskPropKey.PARALLELISM), true);
-    RuleProps ruleProps = new RuleProps(target, parallelism, priority);
+
+    RuleProps ruleProps = new RuleProps(target, softTarget, parallelism, priority);
     return ruleProps;
   }
 

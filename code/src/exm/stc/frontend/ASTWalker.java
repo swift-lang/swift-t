@@ -1853,7 +1853,11 @@ public class ASTWalker {
     Var loc = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
     backendInArgs.add(loc);
+    Var softLoc = new Var(Types.V_BOOL, Var.VALUEOF_VAR_PREFIX + "soft_location",
+        Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
+    backendInArgs.add(softLoc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
+    props.put(TaskPropKey.SOFT_LOCATION, softLoc.asArg());
 
 
     syncFilePos(context, tree);

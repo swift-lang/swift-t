@@ -37,6 +37,7 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.Location;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -1169,6 +1170,7 @@ public class ICContinuations {
     public final LoopContinue continueInst;
   }
 
+
   public static class NestedBlock extends Continuation {
     private final Block block;
 
@@ -1256,6 +1258,22 @@ public class ICContinuations {
     public boolean isNoop() {
       return block.isEmpty();
     }
+  }
+
+
+  public static class TargetLocation {
+    public static final TargetLocation ANY =
+        new TargetLocation(Location.ANY_LOCATION, Arg.FALSE);
+    public final Arg location;
+    public final Arg softTarget; // Whether soft targeting
+
+    public TargetLocation(Arg location, Arg softTarget) {
+      assert(location.type().assignableTo(Types.V_LOCATION));
+      assert(Types.isBoolVal(softTarget));
+      this.location = location;
+      this.softTarget = softTarget;
+    }
+
   }
 
   /**
@@ -1417,8 +1435,9 @@ public class ICContinuations {
     /**
      * @return target location.  Non-null.
      */
-    public Arg targetLocation() {
-      return props.getWithDefault(TaskPropKey.LOCATION);
+    public TargetLocation targetLocation() {
+      return new TargetLocation(props.getWithDefault(TaskPropKey.LOCATION),
+                                props.getWithDefault(TaskPropKey.SOFT_LOCATION));
     }
 
     @Override

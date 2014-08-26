@@ -1027,6 +1027,12 @@ public class STCMiddleEnd {
           Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
       realInArgs.add(location);
       props.put(TaskPropKey.LOCATION, location.asArg());
+
+      Var softLocation = new Var(Types.V_BOOL,
+          Var.VALUEOF_VAR_PREFIX + "soft_location",
+          Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
+      realInArgs.add(softLocation);
+      props.put(TaskPropKey.SOFT_LOCATION, softLocation.asArg());
     }
 
     Function fn = new Function(wrapperName, realInArgs, outArgs,

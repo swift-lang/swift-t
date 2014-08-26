@@ -45,12 +45,7 @@ import exm.stc.ic.tree.Opcode;
  */
 public class ReorderInstructions extends FunctionOptimizerPass {
 
-  // If true, try to move multiple instructions.  Requires more processing
-  // but in some cases will expose more opportunities for reduction
-  private final boolean aggressive;
-
-  public ReorderInstructions(boolean aggressive) {
-    this.aggressive = aggressive;
+  public ReorderInstructions() {
   }
 
   @Override

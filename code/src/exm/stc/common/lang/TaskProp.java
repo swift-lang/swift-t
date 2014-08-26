@@ -15,9 +15,9 @@ import exm.stc.frontend.Context;
 public class TaskProp {
   public static class TaskProps extends TreeMap<TaskPropKey, Arg> {
     private static final long serialVersionUID = 1L;
-    
+
     /**
-     * Called to assert that bad types didn't make it past typechecking 
+     * Called to assert that bad types didn't make it past typechecking
      */
     public void assertInternalTypesValid() {
       for (TaskPropKey key: this.keySet()) {
@@ -30,7 +30,7 @@ public class TaskProp {
         }
       }
     }
-    
+
     @Override
     public TaskProps clone() {
       return (TaskProps)super.clone();
@@ -46,11 +46,13 @@ public class TaskProp {
       if (val != null) {
         return val;
       }
-      
+
       // Return default
       switch (key) {
         case LOCATION:
           return Location.ANY_LOCATION;
+        case SOFT_LOCATION:
+          return Arg.FALSE; // Default is hard location targeting
         default:
           throw new STCRuntimeError("Unknown default value for "
               + key);
@@ -72,7 +74,7 @@ public class TaskProp {
       return res;
     }
   }
-  
+
   /**
    * Keys identifying the task properties
    */
@@ -80,27 +82,30 @@ public class TaskProp {
     PRIORITY,
     PARALLELISM,
     LOCATION,
+    SOFT_LOCATION, /* Boolean flag for soft or hard location constraint */
   }
-  
+
   /** Required types for properties at language level */
   private static final Map<TaskPropKey, Type> frontendTypeMap = initFrontendTypeMap();
-  
+
   /** Required types for properties internally */
   private static final Map<TaskPropKey, Type> internalTypeMap = initInternalTypeMap();
-  
+
   private static Map<TaskPropKey, Type> initFrontendTypeMap() {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.F_INT);
     res.put(TaskPropKey.PARALLELISM, Types.F_INT);
     res.put(TaskPropKey.LOCATION, Types.F_LOCATION);
+    res.put(TaskPropKey.SOFT_LOCATION, Types.F_BOOL);
     return res;
   }
-  
+
   private static Map<TaskPropKey, Type> initInternalTypeMap() {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.V_INT);
     res.put(TaskPropKey.PARALLELISM, Types.V_INT);
     res.put(TaskPropKey.LOCATION, Types.V_LOCATION);
+    res.put(TaskPropKey.SOFT_LOCATION, Types.V_BOOL);
     return res;
   }
 
@@ -109,7 +114,7 @@ public class TaskProp {
     Type exp = frontendTypeMap.get(key);
     if (!actual.assignableTo(exp)) {
       String msg = "Expected task property " + key.toString().toLowerCase()
-              + " to have type " + exp.typeName() 
+              + " to have type " + exp.typeName()
               + " but had type " + actual.typeName();
       throw new TypeMismatchException(context, msg);
     }

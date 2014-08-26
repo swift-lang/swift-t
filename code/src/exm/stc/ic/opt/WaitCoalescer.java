@@ -52,6 +52,7 @@ import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.TargetLocation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -345,7 +346,8 @@ public class WaitCoalescer implements OptimizerPass {
    * @return
    */
   private boolean compatibleContexts(ExecContext c1, ExecContext c2,
-                        Arg location1, Arg location2, Arg par1, Arg par2) {
+      TargetLocation location1, TargetLocation location2,
+      Arg par1, Arg par2) {
     if (!c1.equals(c2)) {
       return false;
     }
@@ -353,17 +355,28 @@ public class WaitCoalescer implements OptimizerPass {
     return compatibleLocPar(location1, location2, par1, par2);
   }
 
-  private boolean compatibleLocPar(Arg location1, Arg location2, Arg par1,
-          Arg par2) {
+  /**
+   * Check if two contexts are exactly equivalent.  This is
+   * somewhat conservative and will reject cases where the
+   * contexts don't match exactly.
+   * @param location1
+   * @param location2
+   * @param par1
+   * @param par2
+   * @return
+   */
+  private boolean compatibleLocPar(TargetLocation location1,
+      TargetLocation location2, Arg par1, Arg par2) {
     Logger logger = Logging.getSTCLogger();
     if (logger.isTraceEnabled()) {
       logger.trace("compatibleLocPar(" + location1 + " " + location2 +
                     " " + par1 + " " + par2 + ")");
     }
-    boolean targeted1 = !Location.isAnyLocation(location1, true);
-    boolean targeted2 = !Location.isAnyLocation(location2, true);
+    boolean targeted1 = !Location.isAnyLocation(location1.location, true);
+    boolean targeted2 = !Location.isAnyLocation(location2.location, true);
     if (targeted1 && targeted2) {
-      if (!location1.equals(location2)) {
+      if (!location1.location.equals(location2.location) ||
+          !location1.softTarget.equals(location2.softTarget)) {
         return false;
       }
     } else if (targeted1 || targeted2) {
@@ -591,7 +604,7 @@ public class WaitCoalescer implements OptimizerPass {
           wait.removeWaitVars(mergedWaitVars, allRecursive, retainExplicit);
 
           boolean compatible = compatibleContexts(execCx,
-              wait.childContext(execCx), null, wait.targetLocation(),
+              wait.childContext(execCx), TargetLocation.ANY, wait.targetLocation(),
               null, wait.parallelism());
           if (compatible &&
               wait.getWaitVars().isEmpty() &&
