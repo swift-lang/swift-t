@@ -198,6 +198,24 @@ coaster_configure(void **context, const char *config,
       (int)config_len, config, coaster_last_err_info());
   COASTER_CHECK(crc, TURBINE_EXEC_OOM);
 
+#ifdef ENABLE_DEBUG_COASTER
+  int count;
+  const char **keys;
+  size_t *key_lens;
+  coaster_settings_keys(cx->settings, &keys, &key_lens, &count);
+  DEBUG_COASTER("Coaster settings (%d key-value pairs:", count);
+  for (int i = 0; i < count; i++) {
+    const char *val;
+    size_t val_len;
+    coaster_settings_get(cx->settings, keys[i], key_lens[i],
+          &val, &val_len);
+    DEBUG_COASTER("Key: %.*s=%.*s", (int)key_lens[i], keys[i],
+                  (int)val_len, val);
+  }
+  free(keys);
+  free(key_lens);
+#endif
+
   const char *service_url = getenv(COASTER_ENV_SERVICE_URL);
 
   if (service_url == NULL)
