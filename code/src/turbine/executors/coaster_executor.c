@@ -51,6 +51,7 @@
 #define COASTER_SETTING_JOB_MANAGER "jobManager"
 
 // Default configured job manager
+// TODO: need to free
 const char *coaster_default_job_manager;
 size_t coaster_default_job_manager_len;
 
@@ -229,17 +230,32 @@ coaster_configure(void **context, const char *config,
   memcpy(cx->service_url, service_url, service_url_len);
   cx->service_url_len = service_url_len;
 
+  const char *job_manager;
+  size_t job_manager_len;
   crc = coaster_settings_get(cx->settings, COASTER_SETTING_JOB_MANAGER,
-       strlen(COASTER_SETTING_JOB_MANAGER), &coaster_default_job_manager,
-       &coaster_default_job_manager_len);
+       strlen(COASTER_SETTING_JOB_MANAGER), &job_manager,
+       &job_manager_len);
   COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
 
-  if (coaster_default_job_manager != NULL) {
-    // Don't pass job manager along
+  if (job_manager != NULL)
+  {
+    char *tmp = malloc(job_manager_len + 1);
+    EXEC_MALLOC_CHECK(tmp);
+    memcpy(tmp, job_manager, job_manager_len + 1);
+
+    coaster_default_job_manager = tmp;
+    coaster_default_job_manager_len = job_manager_len;
+
+    // Don't pass job manager along with other settings
     crc = coaster_settings_remove(cx->settings,
         COASTER_SETTING_JOB_MANAGER,
         strlen(COASTER_SETTING_JOB_MANAGER));
     COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+  }
+  else
+  {
+    coaster_default_job_manager = NULL;
+    coaster_default_job_manager_len = 0;
   }
   DEBUG_COASTER("Default jobManager: %.*s",
         (int)coaster_default_job_manager_len,
