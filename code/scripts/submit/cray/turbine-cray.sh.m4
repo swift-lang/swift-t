@@ -24,7 +24,10 @@ changecom(`dnl')#!/bin/bash -e
 define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N Swift
-#PBS -q getenv(QUEUE)
+ifelse(getenv(PROJECT), `',,
+#PBS -A getenv(PROJECT))
+ifelse(getenv(QUEUE), `',,
+#PBS -q getenv(QUEUE))
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
