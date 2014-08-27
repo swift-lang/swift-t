@@ -591,9 +591,12 @@ public class  ExprWalker {
       openedWait = true;
       callContext = new LocalContext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
-        Var value = retrieveToVar(callContext,
-                                            x.val2);
+        Var value = retrieveToVar(callContext, x.val2);
         propVals.put(x.val1, value.asArg());
+      }
+
+      if (f.softLocation()) {
+        propVals.put(TaskPropKey.SOFT_LOCATION, Arg.TRUE);
       }
     }
 
