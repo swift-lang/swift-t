@@ -15,7 +15,7 @@ app (file o) hostname() {
 }
 
 main {
-  foreach i in [1:50] {
+  foreach i in [1:500] {
     string host1 = extract_hostname(hostname());
     string host2 = extract_hostname(@soft_location=hostmap_one_worker(host1) hostname());
     printf("Hostname %i: %s", i, host2);
