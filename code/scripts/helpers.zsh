@@ -86,7 +86,6 @@ crash()
   done
   shift $(( OPTIND-1 ))
 
-  shift
   MSG="${*}"
   bail ${CODE} ${MSG}
   exit ${CODE}
