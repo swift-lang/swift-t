@@ -209,8 +209,7 @@ coaster_configure(void **context, const char *config,
   memcpy(cx->service_url, service_url, service_url_len);
   cx->service_url_len = service_url_len;
 
-  const char *coaster_default_job_manager =
-        getenv(COASTER_ENV_JOB_MANAGER);
+  coaster_default_job_manager = getenv(COASTER_ENV_JOB_MANAGER);
   if (coaster_default_job_manager != NULL) {
     coaster_default_job_manager_len =
           strlen(coaster_default_job_manager);
