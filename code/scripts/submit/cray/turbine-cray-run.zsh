@@ -94,9 +94,9 @@ TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
 mkdir -pv ${TURBINE_OUTPUT}
 touch ${TURBINE_CRAY}
 
-m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
+m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
 
-print "wrote: ${TURBINE_APRUN}"
+print "wrote: ${TURBINE_CRAY}"
 
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
@@ -109,7 +109,8 @@ done
 
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
-qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh | \
+set -x
+qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   read JOB_ID
 EXITCODE=${?}
 # Return exit code from qsub
