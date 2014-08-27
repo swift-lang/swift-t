@@ -356,9 +356,8 @@ namespace eval turbine {
     proc check_can_execute { exec_names } {
         variable n_workers_by_type
         foreach exec_name $exec_names {
-            set n_workers [ dict get $n_workers_by_type $exec_name ]
-
-            if { $n_workers == "" || $n_workers < 1 } {
+            if { ( ! [ dict exists $n_workers_by_type $exec_name ] ) ||
+                 [ dict get $n_workers_by_type $exec_name ] <= 0 } {
               error "Executor $exec_name has no assigned workers"
             }
         }

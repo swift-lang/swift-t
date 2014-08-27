@@ -30,7 +30,7 @@ bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 
 dummy_exp=100
 dummy_count=$(grep -q -c -F "DUMMY TASK rank: 1" ${OUTPUT})
-if [ $dummy_count -ne $dummy_exp ]
+if [ "$dummy_count" -ne $dummy_exp ]
 then
   echo "Dummy tasks: expected $dummy_act actual $dummy_count"
   exit 1
@@ -38,7 +38,7 @@ fi
 
 noop_exp=100
 noop_count=$(grep -q -c -F "Launched task: NOOP TASK rank: 1" ${OUTPUT})
-if [ $noop_count -ne $noop_exp ]
+if [ "$noop_count" -ne $noop_exp ]
 then
   echo "Noop tasks: expected $noop_act actual $noop_count"
   exit 1
