@@ -147,3 +147,6 @@ then
   print "done: ${INIT_SCRIPT}"
 fi
 
+## Local Variables: 
+## mode: sh
+## End:
