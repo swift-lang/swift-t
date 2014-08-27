@@ -218,7 +218,7 @@ static inline void heap_del_entry(heap_t *heap, heap_ix_t i)
   /* Shrink by one */
   heap->size--;
 
-  if (heap->size > 0) {
+  if (i != heap->size) {
     /* put last element up the top */
     heap->array[i] = heap->array[heap->size];
     heap_sift_down(heap, i);

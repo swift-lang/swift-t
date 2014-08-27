@@ -102,6 +102,13 @@ int main() {
   assert(heap_root_val(&h) == (void*)5);
   heap_del_val(&h, (void*)5);
   assert(h.size == 0);
+
+  // Regression test for case of deleting last entry in heap
+  heap_add(&h, 1, (void*)1);
+  heap_add(&h, 0, (void*)0);
+  heap_del_entry(&h, 1);
+  assert(heap_root_val(&h) == (void*)0);
+
   heap_clear(&h);
 
   printf("DONE\n");
