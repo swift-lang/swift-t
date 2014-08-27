@@ -9,7 +9,7 @@ import io;
 
 
 main() {
-  int N = 100;
+  int N = 500;
   int target_rank = random_worker();
   location target = location_from_rank(target_rank);
 
