@@ -112,7 +112,7 @@ done
 # Read all output from qsub
 QSUB_OUT=""
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
-  while read T ; do QSUB_OUT+=${T} ; done 
+  while read T ; do QSUB_OUT+="${T} " ; done 
 # Store exit code from qsub:
 EXITCODE=${pipestatus[1]}
 
@@ -130,6 +130,7 @@ fi
 if (( EXITCODE ))
 then
   print "qsub failed!"
+  echo ${QSUB_OUT_ARRAY} | fmt -w 60
   exit ${EXITCODE}
 fi
 
