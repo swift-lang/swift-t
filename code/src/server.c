@@ -563,8 +563,8 @@ workers_idle(void)
 
   assert(blocked+shutdown <= xlb_my_workers);
 
-  // TRACE("workers_idle(): workers blocked:   %i\n", blocked);
-  // TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
+  DEBUG("workers_idle(): workers blocked:   %i\n", blocked);
+  DEBUG("workers_idle(): workers shutdown: %i\n", shutdown);
 
   if (blocked+shutdown == xlb_my_workers)
     return true;
@@ -615,6 +615,7 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
 
     if (check_attempt == xlb_idle_check_attempt)
     {
+      DEBUG("Idle check: not idle because already saw attempt number");
       // We sent work to another server since the master started checking
       // for idleness
       return false;
@@ -625,12 +626,18 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
   }
 
   if (! workers_idle())
+  {
+    DEBUG("Idle check: a worker is not idle");
     // A worker is busy...
     return false;
+  }
 
   if (xlb_have_pending_notifs())
+  {
+    DEBUG("Idle check: pending notifications");
     // Notifications can create more work...
     return false;
+  }
 
   /*
    * TODO:

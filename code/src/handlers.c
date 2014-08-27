@@ -607,15 +607,19 @@ static adlb_code attempt_match_work(int type, int putter,
   {
     CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
     worker = xlb_requestqueue_matches_target(target, type);
+    if (worker == ADLB_RANK_NULL && soft_target)
+    {
+      // Try to send to alternate target
+      worker = xlb_requestqueue_matches_type(type);
+    }
     if (worker == ADLB_RANK_NULL)
     {
       return ADLB_NOTHING;
     }
-    assert(worker == target);
+    assert(soft_target || worker == target);
   }
-  
-  
-  if (!targeted || soft_target) {
+  else
+  {
     worker = xlb_requestqueue_matches_type(type);
     if (worker == ADLB_RANK_NULL)
     {

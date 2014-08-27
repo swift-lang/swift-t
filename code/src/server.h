@@ -109,5 +109,11 @@ xlb_map_to_server(int rank)
   return w + xlb_workers;
 }
 
+__attribute__((always_inline))
+static inline int
+xlb_worker_maps_to_server(int worker_rank, int server_rank) {
+  return (worker_rank % xlb_servers) + xlb_workers == server_rank;
+}
+
 
 #endif

@@ -75,6 +75,9 @@ static int targeted_work_entries(int work_types, int my_workers)
   return work_types * my_workers;
 }
 
+/*
+ * Return targeted work index, or -1 if not targeted to current server.
+ */
 __attribute__((always_inline))
 static inline int targeted_work_ix(int rank, int type)
 {
@@ -207,9 +210,17 @@ xlb_workq_add(xlb_work_unit* wu)
   else
   {
     // Targeted task
-    heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
-    bool b = heap_add(H, -wu->priority, wu);
-    CHECK_MSG(b, "out of memory expanding heap");
+    if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
+    {
+      heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+      bool b = heap_add(H, -wu->priority, wu);
+      CHECK_MSG(b, "out of memory expanding heap");
+    }
+    else
+    {
+      // All non-soft-targeted tasks should only be on matching server
+      assert(wu->flags.soft_target);
+    }
 
     if (wu->flags.soft_target)
     {
@@ -324,6 +335,11 @@ xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
   assert(target >= 0);
   assert(wu != NULL);
   assert(wu->flags.soft_target);
+  if (!xlb_worker_maps_to_server(target, xlb_comm_rank))
+  {
+    return;
+  }
+
   /*
    * Remove entry from targeted heap.
    * We do a linear search, which is potentially expensive, but will
