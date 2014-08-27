@@ -549,6 +549,102 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 == Cray
 
+=== Titan
+
+Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility. 
+
+==== Public installation
+
+*As of:* 8/27/2014 
+
+* Swift/T trunk - 8/27/2013
+* Turbine: +/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh+
+* STC: +/lustre/atlas2/mat049/proj-shared/sfw/compute/stc/bin/stc+
+* SWIG: +/lustre/atlas2/mat049/proj-shared/sfw/swig-3.0.2+
+* Tcl:  +/lustre/atlas2/mat049/proj-shared/sfw/tcl-8.6.2+
+
+==== Submitting jobs
+
+Titan requires that user output goes to a Lustre file system.  Set a
+soft link like this so that Turbine output goes to Lustre: 
+
+----
+mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+cd ~ 
+ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+----
+
+Or, you may set +TURBINE_OUTPUT+ <<variables,manually>>.
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is: 
+
+---- 
+#PBS -l nodes=32
+----
+
++PPN+ is handled by setting the +-n+ argument.
+
+The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+export PROJECT=MAT049
+export QUEUE=debug
+export TITAN=true 
+turbine-aprun-run.zsh -n 32 helloworld.tcl
+----
+
+These environment variables may be placed in your +-s+ 
+<<options,settings file>>. 
+
+==== Build procedure
+
+*As of:* 8/27/2014
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+----
+
+==== Submitting jobs
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is: 
+
+---- 
+#PBS -l nodes=32
+----
+
++PPN+ is handled by setting the +-n+ argument.
+
+The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+export QUEUE=normal 
+export TITAN=true 
+export PPN=32 
+turbine-aprun-run.zsh -n 32 helloworld.tcl
+----
+
+These environment variables may be placed in your
+<<settings_file,settings file>>. 
+
 === Blue Waters
 
 Blue Waters is a Cray XE6/XK7 at the University of Illinois at
@@ -596,6 +692,7 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 ----
 
 ==== Submitting jobs
+
 Submitting jobs on Blue Waters is largely the same with with other Cray
 systems. One difference is that the size of the job is specified using a
 different notation.
@@ -613,7 +710,6 @@ it as follows (for a single node/32 processes per node):
 ----
 QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl
 ----
-
 
 ==== Installing from source
 
