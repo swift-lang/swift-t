@@ -109,11 +109,23 @@ done
 
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
-set -x
+# Read all output from qsub
+QSUB_OUT=""
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
-  read JOB_ID
-EXITCODE=${?}
-# Return exit code from qsub
+  while read T ; do QSUB_OUT+=${T} ; done 
+# Store exit code from qsub:
+EXITCODE=${pipestatus[1]}
+
+# Break output into words:
+QSUB_OUT_ARRAY=( ${=QSUB_OUT} )
+# Did we get a job number? 
+if [[ ${QSUB_OUT_ARRAY[1]} != <-> ]] 
+then
+  print "received invalid job ID from qsub!"
+  print "received:"
+  echo ${QSUB_OUT_ARRAY} | fmt -w 60
+  exit 1
+fi
 
 if (( EXITCODE ))
 then
@@ -121,6 +133,7 @@ then
   exit ${EXITCODE}
 fi
 
+JOB_ID=${QSUB_OUT}
 declare JOB_ID
 print ${JOB_ID} > ${TURBINE_OUTPUT}/jobid.txt
 
