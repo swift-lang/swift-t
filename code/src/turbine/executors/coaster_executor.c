@@ -36,7 +36,6 @@
 /* Environment variable names
    TODO: final config mechanism */
 #define COASTER_ENV_SERVICE_URL "COASTER_SERVICE_URL"
-#define COASTER_ENV_JOB_MANAGER "COASTER_JOB_MANAGER"
 #define COASTER_ENV_CLIENT_SLOTS "COASTER_CLIENT_SLOTS"
 
 #define COASTER_DEFAULT_SERVICE_URL "127.0.0.1:53001"
@@ -47,6 +46,9 @@
   - Memory/CPU overhead of managing many jobs
  */
 #define COASTER_DEFAULT_CLIENT_SLOTS 1024
+
+/* Settings keys */
+#define COASTER_SETTING_JOB_MANAGER "jobManager"
 
 // Default configured job manager
 const char *coaster_default_job_manager;
@@ -209,12 +211,17 @@ coaster_configure(void **context, const char *config,
   memcpy(cx->service_url, service_url, service_url_len);
   cx->service_url_len = service_url_len;
 
-  coaster_default_job_manager = getenv(COASTER_ENV_JOB_MANAGER);
+  crc = coaster_settings_get(cx->settings, COASTER_SETTING_JOB_MANAGER,
+       strlen(COASTER_SETTING_JOB_MANAGER), &coaster_default_job_manager,
+       &coaster_default_job_manager_len);
+  COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+
   if (coaster_default_job_manager != NULL) {
-    coaster_default_job_manager_len =
-          strlen(coaster_default_job_manager);
-  } else {
-    coaster_default_job_manager_len = 0;
+    // Don't pass job manager along
+    crc = coaster_settings_remove(cx->settings,
+        COASTER_SETTING_JOB_MANAGER,
+        strlen(COASTER_SETTING_JOB_MANAGER));
+    COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
   }
   DEBUG_COASTER("Default jobManager: %.*s",
         (int)coaster_default_job_manager_len,
