@@ -551,11 +551,11 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 === Titan
 
-Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility. 
+Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 ==== Public installation
 
-*As of:* 8/27/2014 
+*As of:* 8/27/2014
 
 * Swift/T trunk - 8/27/2013
 * Turbine: +/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh+
@@ -566,11 +566,11 @@ Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 ==== Submitting jobs
 
 Titan requires that user output goes to a Lustre file system.  Set a
-soft link like this so that Turbine output goes to Lustre: 
+soft link like this so that Turbine output goes to Lustre:
 
 ----
 mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
-cd ~ 
+cd ~
 ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
 ----
 
@@ -578,25 +578,26 @@ Or, you may set +TURBINE_OUTPUT+ <<variables,manually>>.
 
 Titan requires the submit script to specify job size using different
 directives to other Cray systems.  It does not support the +#PBS -l ppn:+
-directive. The correct directive is: 
+directive. The correct directive is:
 
----- 
+----
 #PBS -l nodes=32
 ----
 
 +PPN+ is handled by setting the +-n+ argument.
 
 The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
-it as follows (for a single node/32 processes per node):
+it as follows (for a 2 nodes, 32 processes per node):
 ----
 export PROJECT=MAT049
 export QUEUE=debug
-export TITAN=true 
-turbine-aprun-run.zsh -n 32 helloworld.tcl
+export TITAN=true
+export PPN=32
+turbine-aprun-run.zsh -n 64 helloworld.tcl
 ----
 
-These environment variables may be placed in your +-s+ 
-<<options,settings file>>. 
+These environment variables may be placed in your +-s+
+<<options,settings file>>.
 
 ==== Build procedure
 
@@ -625,9 +626,9 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 
 Titan requires the submit script to specify job size using different
 directives to other Cray systems.  It does not support the +#PBS -l ppn:+
-directive. The correct directive is: 
+directive. The correct directive is:
 
----- 
+----
 #PBS -l nodes=32
 ----
 
@@ -636,14 +637,14 @@ directive. The correct directive is:
 The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
 it as follows (for a single node/32 processes per node):
 ----
-export QUEUE=normal 
-export TITAN=true 
-export PPN=32 
+export QUEUE=normal
+export TITAN=true
+export PPN=32
 turbine-aprun-run.zsh -n 32 helloworld.tcl
 ----
 
 These environment variables may be placed in your
-<<settings_file,settings file>>. 
+<<settings_file,settings file>>.
 
 === Blue Waters
 
@@ -947,7 +948,7 @@ turbine program.tcl
 == Mac OS X
 
 Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
-other single system.  
+other single system.
 
 * SWIG: You may use SWIG from source or the MacPorts +swig-tcl+ package
 * MPI: You may use any MPI implementation
