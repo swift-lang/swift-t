@@ -1489,6 +1489,8 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   coaster_job *job;
   coaster_rc crc;
 
+  DEBUG_COASTER("Coaster jobManager: %.*s", (int)job_manager_len,
+                 job_manager);
   crc = coaster_job_create(executable, (size_t)executable_len, argc,
                 argv, arg_lens, job_manager, job_manager_len, &job);
   TCL_CONDITION(crc == COASTER_SUCCESS, "Error constructing coaster job: "

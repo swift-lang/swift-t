@@ -217,6 +217,9 @@ coaster_configure(void **context, const char *config,
   } else {
     coaster_default_job_manager_len = 0;
   }
+  DEBUG_COASTER("Default jobManager: %.*s",
+        (int)coaster_default_job_manager_len,
+                 coaster_default_job_manager);
 
   *context = cx;
   return TURBINE_SUCCESS;
