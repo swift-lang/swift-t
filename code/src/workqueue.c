@@ -27,7 +27,7 @@
    If the target is ANY, it is indexed by prioritized_work
    If the target is not ANY, it is indexed by targeted_work
       If soft_target is set, it is also indexed in prioritized work
-      with the minimum priority
+      with a reduced priority
  */
 
 #include <assert.h>
