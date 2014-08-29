@@ -1376,6 +1376,7 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     free(bufs[i].payload);
   }
+  free(bufs);
 
   return TCL_OK;
 }
