@@ -173,7 +173,7 @@ noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
   {
     if (!s->tasks[i].active)
     {
-      DEBUG_TURBINE("Noop task assigned to slot %i\n", i);
+      DEBUG_EXECUTOR("Noop task assigned to slot %i\n", i);
       s->tasks[i].callbacks = callbacks;
       s->tasks[i].active = true;
       found_slot = true;
@@ -207,7 +207,7 @@ choose_completed(noop_state *state, turbine_completed_task *completed)
     int slot = rand() % state->slots.total;
     if (state->tasks[slot].active)
     {
-      DEBUG_TURBINE("Noop task in slot %i completed\n", slot);
+      DEBUG_EXECUTOR("Noop task in slot %i completed\n", slot);
       state->tasks[slot].active = false;
       completed->success = true;
       completed->callbacks = state->tasks[slot].callbacks;

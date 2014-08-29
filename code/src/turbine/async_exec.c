@@ -252,7 +252,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
   assert(payload_buffers != NULL);
   assert(nbuffers >= 1);
   if (nbuffers > TURBINE_ASYNC_EXEC_MAX_REQS) {
-    DEBUG_TURBINE("More buffers than can use: %i vs. %i", nbuffers,
+    DEBUG_EXECUTOR("More buffers than can use: %i vs. %i", nbuffers,
           TURBINE_ASYNC_EXEC_MAX_REQS);
     nbuffers = TURBINE_ASYNC_EXEC_MAX_REQS;
   }
@@ -304,7 +304,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
                      poll, max_tasks, &something_happened);
       if (ec == TURBINE_EXEC_SHUTDOWN)
       {
-        DEBUG_TURBINE("Shutdown: terminating async executor loop for %s",
+        DEBUG_EXECUTOR("Shutdown: terminating async executor loop for %s",
                       exec->name);
         break;
       }
@@ -358,14 +358,14 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   int extra_reqs = desired_reqs - reqs->nreqs;
   bool idle = (reqs->nreqs == 0);
 
-  DEBUG_TURBINE("get_tasks: executor=%s adlb_work_type=%i poll=%s "
+  DEBUG_EXECUTOR("get_tasks: executor=%s adlb_work_type=%i poll=%s "
                 "max_tasks=%i max_reqs=%i nreqs=%i extra_reqs=%i head=%i",
                 executor->name, adlb_work_type, poll ? "true" : "false",
                 max_tasks, reqs->max_reqs, reqs->nreqs, extra_reqs, reqs->head);
 
   if (extra_reqs > 0)
   {
-    DEBUG_TURBINE("Issuing %i more requests for work type %i",
+    DEBUG_EXECUTOR("Issuing %i more requests for work type %i",
                   extra_reqs, adlb_work_type);
 
     // Use temporary arrays to get contiguous items
@@ -390,12 +390,12 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
 
   *got_tasks = false;
 
-  DEBUG_TURBINE("reqs->tail=%i reqs->head=%i", reqs->tail, reqs->head);
+  DEBUG_EXECUTOR("reqs->tail=%i reqs->head=%i", reqs->tail, reqs->head);
   while (reqs->nreqs > 0)
   {
     MPI_Comm tmp_comm;
     adlb_get_req *req = &reqs->requests[reqs->tail];
-    DEBUG_TURBINE("Check request %i", reqs->tail);
+    DEBUG_EXECUTOR("Check request %i", reqs->tail);
     int work_len, answer_rank, type_recved;
     if (poll)
     {
@@ -407,7 +407,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       if (ac == ADLB_SHUTDOWN)
       {
         // Unlikely to get this, but handle correctly anyway
-        DEBUG_TURBINE("Unexpected shutdown after test");
+        DEBUG_EXECUTOR("Unexpected shutdown after test");
         return TURBINE_EXEC_SHUTDOWN;
       }
       else if (ac == ADLB_NOTHING)
@@ -422,7 +422,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
                           &tmp_comm);
       if (ac == ADLB_SHUTDOWN)
       {
-        DEBUG_TURBINE("Async executor loop for %s got shutdown signal",
+        DEBUG_EXECUTOR("Async executor loop for %s got shutdown signal",
                       executor->name);
         return TURBINE_EXEC_SHUTDOWN;
       }
@@ -434,7 +434,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
 
     int cmd_len = work_len - 1;
     void *work = reqs->buffers[reqs->tail].payload;
-    DEBUG_TURBINE("RUN (buffer %i): {%s} (length %i)\n",
+    DEBUG_EXECUTOR("RUN (buffer %i): {%s} (length %i)\n",
                   reqs->tail, (char*)work, cmd_len);
     rc = Tcl_EvalEx(interp, work, cmd_len, 0);
     if (rc != TCL_OK)
@@ -515,7 +515,7 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     EXEC_CHECK(ec);
   }
 
-  DEBUG_TURBINE("check_tasks: executor=%s poll=%s ncompleted=%i",
+  DEBUG_EXECUTOR("check_tasks: executor=%s poll=%s ncompleted=%i",
                 executor->name, poll ? "true" : "false", ncompleted);
 
   for (int i = 0; i < ncompleted; i++)
