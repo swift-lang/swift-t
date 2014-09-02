@@ -1329,6 +1329,8 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   turbine_code tc;
 
+  adlb_payload_buf *bufs = NULL;
+
   const char *exec_name = Tcl_GetString(objv[1]);
 
   turbine_executor *exec = turbine_get_async_exec(exec_name, NULL);
@@ -1363,18 +1365,23 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
     buffer_count = max_slots;
   }
 
-  adlb_payload_buf *bufs = malloc(sizeof(adlb_payload_buf) *
+  bufs = malloc(sizeof(adlb_payload_buf) *
                                   (size_t)buffer_count);
   TCL_MALLOC_CHECK(bufs);
 
+  // Initialize to allow cleanup
   for (int i = 0; i < buffer_count; i++)
   {
+    bufs[i].payload = NULL;
+  }
 
+  for (int i = 0; i < buffer_count; i++)
+  {
     // Maintain separate buffers from xfer, since xfer may be
     // used in code that we call.
 
     bufs[i].payload = malloc((size_t)buffer_size);
-    TCL_MALLOC_CHECK(bufs[i].payload);
+    TCL_MALLOC_CHECK_GOTO(bufs[i].payload, cleanup);
     bufs[i].size = buffer_size;
   }
 
@@ -1382,18 +1389,29 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                                   bufs, buffer_count);
 
   if (tc == TURBINE_ERROR_EXTERNAL)
-    // turbine_async_worker_loop() has added the error info
-   return TCL_ERROR;
-  else
-    TCL_CONDITION(tc == TURBINE_SUCCESS, "Unknown worker error!");
-
-  for (int i = 0; i < buffer_count; i++)
   {
-    free(bufs[i].payload);
+    // turbine_async_worker_loop() has added the error info
+   rc = TCL_ERROR;
+   goto cleanup;
   }
-  free(bufs);
+  else
+  {
+    TCL_CONDITION_GOTO(tc == TURBINE_SUCCESS, cleanup,
+                       "Unknown worker error!");
+  }
 
-  return TCL_OK;
+  rc = TCL_OK;
+cleanup:
+  if (bufs != NULL)
+  {
+    for (int i = 0; i < buffer_count; i++)
+    {
+      free(bufs[i].payload);
+    }
+    free(bufs);
+  }
+
+  return rc;
 }
 
 /*

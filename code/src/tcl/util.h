@@ -214,6 +214,9 @@ Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
 #define TCL_MALLOC_CHECK(ptr) \
   TCL_CONDITION(ptr != NULL, "Allocating memory failed")
 
+#define TCL_MALLOC_CHECK_GOTO(ptr, label) \
+  TCL_CONDITION_GOTO(ptr != NULL, label, "Allocating memory failed")
+
 /* Helper functions for specific int types */
 static inline Tcl_Obj *Tcl_NewADLBInt(adlb_int_t val)
 {
