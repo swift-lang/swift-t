@@ -43,7 +43,6 @@
 /* Environment variable names
    TODO: final config mechanism */
 #define COASTER_ENV_SERVICE_URL "COASTER_SERVICE_URL"
-#define COASTER_ENV_CLIENT_SLOTS "COASTER_CLIENT_SLOTS"
 
 #define COASTER_DEFAULT_SERVICE_URL "127.0.0.1:53001"
 /*
@@ -56,6 +55,7 @@
 
 /* Settings keys */
 #define COASTER_SETTING_JOB_MANAGER "jobManager"
+#define COASTER_SETTING_SLOTS "maxParallelTasks"
 
 // Default configured job manager
 // TODO: need to free
@@ -179,23 +179,6 @@ coaster_configure(void **context, const char *config,
   coaster_context *cx = malloc(sizeof(coaster_context));
   EXEC_MALLOC_CHECK(cx);
 
-  cx->total_slots = COASTER_DEFAULT_CLIENT_SLOTS;
-  const char *slots_str = getenv(COASTER_ENV_CLIENT_SLOTS);
-  if (slots_str != NULL) {
-    char *end;
-    long slots_val = strtol(slots_str, &end, 10);
-    turbine_condition(end != slots_str && end[0] == '\0',
-        TURBINE_ERROR_INVALID, "Slots setting in environment var %s "
-        "was not integer: \"%s\"", COASTER_ENV_CLIENT_SLOTS, slots_str);
-
-    turbine_condition(slots_val >= 1 && slots_val <= INT_MAX,
-        TURBINE_ERROR_INVALID, "Slots setting in environment var %s "
-        "was not positive int value: %li", COASTER_ENV_CLIENT_SLOTS,
-        slots_val);
-
-    cx->total_slots = (int)slots_val;
-  }
-
   coaster_rc crc = coaster_settings_create(&cx->settings);
   COASTER_CHECK(crc, TURBINE_EXEC_OOM);
 
@@ -250,6 +233,7 @@ coaster_configure(void **context, const char *config,
     EXEC_MALLOC_CHECK(tmp);
     memcpy(tmp, job_manager, job_manager_len + 1);
 
+    // TODO: would be neater to store this in state
     coaster_default_job_manager = tmp;
     coaster_default_job_manager_len = job_manager_len;
 
@@ -267,6 +251,33 @@ coaster_configure(void **context, const char *config,
   DEBUG_COASTER("Default jobManager: %.*s",
         (int)coaster_default_job_manager_len,
                  coaster_default_job_manager);
+
+  cx->total_slots = COASTER_DEFAULT_CLIENT_SLOTS;
+  const char *slots_str;
+  size_t slots_str_len;
+  crc = coaster_settings_get(cx->settings, COASTER_SETTING_SLOTS,
+       strlen(COASTER_SETTING_SLOTS), &slots_str, &slots_str_len);
+  COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+
+  if (slots_str != NULL) {
+    char *end;
+    long slots_val = strtol(slots_str, &end, 10);
+    turbine_condition(end != slots_str && end[0] == '\0',
+        TURBINE_ERROR_INVALID, "%s value was not integer: \"%s\"",
+        COASTER_SETTING_SLOTS, slots_str);
+
+    turbine_condition(slots_val >= 1 && slots_val <= INT_MAX,
+        TURBINE_ERROR_INVALID, "%s setting was not positive int value: "
+        "%li", COASTER_SETTING_SLOTS, slots_val);
+
+    cx->total_slots = (int)slots_val;
+    // Don't pass job manager along with other settings
+    crc = coaster_settings_remove(cx->settings,
+        COASTER_SETTING_SLOTS, strlen(COASTER_SETTING_SLOTS));
+    COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+  }
+
+  DEBUG_COASTER("Max slots: %i", cx->total_slots);
 
   *context = cx;
   return TURBINE_SUCCESS;
