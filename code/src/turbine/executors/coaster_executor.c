@@ -33,6 +33,13 @@
         "Error in Coaster execution: %s (%s)",                        \
         coaster_last_err_info(), coaster_rc_string(__crc)); }
 
+#define COASTER_CHECK_GOTO(crc, err_rc, var, label) {                 \
+  coaster_rc __crc = (crc);                                           \
+  turbine_cond_goto(__crc == COASTER_SUCCESS, (err_rc),               \
+        var, label,                                                   \
+        "Error in Coaster execution: %s (%s)",                        \
+        coaster_last_err_info(), coaster_rc_string(__crc)); }
+
 /* Environment variable names
    TODO: final config mechanism */
 #define COASTER_ENV_SERVICE_URL "COASTER_SERVICE_URL"
@@ -273,23 +280,50 @@ coaster_start(void *context, void **state)
   coaster_state *s = malloc(sizeof(coaster_state));
   EXEC_MALLOC_CHECK(s);
 
+  turbine_exec_code ec;
+  bool started = false;
+  bool active_tasks_init = false;
+
   s->context = cx;
 
   s->slots.used = 0;
   s->slots.total = cx->total_slots;
 
-  table_lp_init(&s->active_tasks, ACTIVE_TASKS_INIT_CAPACITY);
+  active_tasks_init = table_lp_init(&s->active_tasks,
+                         ACTIVE_TASKS_INIT_CAPACITY);
+  turbine_cond_goto(active_tasks_init, TURBINE_EXEC_OOM, ec, error,
+                    "Could not init coaster table")
+
 
   coaster_rc crc = coaster_client_start(cx->service_url,
                         cx->service_url_len, &s->client);
-  COASTER_CHECK(crc, TURBINE_EXEC_OTHER);
+  COASTER_CHECK_GOTO(crc, TURBINE_EXEC_OTHER, ec, error);
+
+  started = true;
 
   // Setup service config
   crc = coaster_apply_settings(s->client, cx->settings, &s->config);
-  COASTER_CHECK(crc, TURBINE_EXEC_OTHER);
+  COASTER_CHECK_GOTO(crc, TURBINE_EXEC_OTHER, ec, error);
 
   *state = s;
+
   return TURBINE_EXEC_SUCCESS;
+
+error:
+  if (started)
+  {
+    coaster_stop(s);
+  }
+  else
+  {
+    // Just free - didn't start
+    if (active_tasks_init)
+    {
+      table_lp_free_callback(&s->active_tasks, false, NULL);
+    }
+    free(s);
+  }
+  return ec;
 }
 
 static turbine_exec_code

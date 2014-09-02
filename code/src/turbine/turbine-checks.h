@@ -53,6 +53,15 @@
        return code;                                         \
     }}
 
+#define turbine_cond_goto(condition, code, var, label, format, args...) \
+  { if (! (condition))                                      \
+    {                                                       \
+       TURBINE_ERR_PRINTF("CONDITION FAILED: %s:%i\n", __FILE__, __LINE__);   \
+       TURBINE_ERR_PRINTF(format "\n", ## args);                             \
+       var = (code);                                         \
+       goto label;                                           \
+    }}
+
 #define TURBINE_MALLOC_CHECK(p) { \
   if ((p) == NULL) { \
     TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
