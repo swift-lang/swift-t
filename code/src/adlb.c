@@ -124,7 +124,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm,
                     xlb_get_req_impl *req_impl);
 static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
-                    xlb_get_req_impl *req, bool blocking);
+        xlb_get_req_impl *req, bool blocking, bool free_on_shutdown);
 static adlb_code xlb_get_req_cancel(adlb_get_req *req,
                              xlb_get_req_impl *impl);
 static adlb_code xlb_get_req_release(adlb_get_req* req,
@@ -1014,7 +1014,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
     ADLB_CHECK(ac);
 
     // Note: ignore ADLB_SHUTDOWN, handle when testing handle
-    ac = xlb_aget_progress(&reqs[0], req_impl, true);
+    ac = xlb_aget_progress(&reqs[0], req_impl, true, false);
     ADLB_CHECK(ac);
   }
 
@@ -1041,7 +1041,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
                     xlb_get_req_impl *req_impl)
 {
   adlb_code ac;
-  ac = xlb_aget_progress(req, req_impl, false);
+  ac = xlb_aget_progress(req, req_impl, false, true);
   ADLB_CHECK(ac);
 
   if (ac == ADLB_NOTHING || ac == ADLB_SHUTDOWN)
@@ -1065,6 +1065,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
   Make progress on get request.
 
   blocking: if true, don't return until completed
+  free_on_shutdown: if true, deallocate request on shutdown
 
   Returns ADLB_SUCCESS if completed, ADLB_NOTHING if not complete,
     ADLB_ERROR if error encountered, ADLB_SHUTDOWN on shutdown
@@ -1073,7 +1074,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
   In this situation subsequent requests may be matched to wrong thing.
  */
 static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
-              xlb_get_req_impl *req, bool blocking)
+        xlb_get_req_impl *req, bool blocking, bool free_on_shutdown)
 {
   int rc;
   while (req->ncomplete < req->ntotal)
@@ -1106,9 +1107,13 @@ static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
     if (mpireq_num == XLB_GET_RESP_HDR_IX &&
         req->hdr.code != ADLB_SUCCESS)
     {
-      /* E.g. shutdown or error */
-      adlb_code ac = xlb_get_req_cancel(req_handle, req);
-      ADLB_CHECK(ac);
+      if (req->hdr.code != ADLB_SHUTDOWN ||
+          free_on_shutdown)
+      {
+        /* E.g. shutdown or error */
+        adlb_code ac = xlb_get_req_cancel(req_handle, req);
+        ADLB_CHECK(ac);
+      }
 
       return req->hdr.code;
     }
@@ -1189,7 +1194,7 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   ac = xlb_block_worker(true);
   ADLB_CHECK(ac);
 
-  ac = xlb_aget_progress(req, req_impl, true);
+  ac = xlb_aget_progress(req, req_impl, true, true);
   ADLB_CHECK(ac);
   if (ac == ADLB_SHUTDOWN)
   {
