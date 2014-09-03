@@ -46,18 +46,14 @@ typedef struct
   int type;
   /** Rank that put this work unit */
   int putter;
-  /** Priority */
-  int priority;
   /** Answer rank: application-specific field */
   int answer;
   /** If set, worker rank that should receive this */
   int target;
   /** Length of item */
   int length;
-  /** Number of processes required to run this task */
-  int parallelism;
   /** Additional flags */
-  adlb_put_flags flags;
+  adlb_put_opts opts;
 
   /** Pointer for internal use */
   void *__internal;
@@ -81,18 +77,16 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
 
 /** Initialize work unit fields, aside from payload */
 static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
-      int putter, int priority, int answer, int target_rank, int length,
-      int parallelism, adlb_put_flags flags)
+      int putter, int answer, int target_rank, int length,
+      adlb_put_opts opts)
 {
   wu->id = xlb_workq_unique();
   wu->type = type;
   wu->putter = putter;
-  wu->priority = priority;
   wu->answer = answer;
   wu->target = target_rank;
   wu->length = length;
-  wu->parallelism = parallelism;
-  wu->flags = flags;
+  wu->opts = opts;
   wu->__internal = NULL;
 }
 

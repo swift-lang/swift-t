@@ -63,10 +63,10 @@ static adlb_code notify_local(int target, const char *payload, int length,
                               int work_type)
 {
   int answer_rank = -1;
-  int work_prio = 1;
+  adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
+  opts.priority = 1;
   adlb_code rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
-               work_prio, answer_rank, target, ADLB_DEFAULT_PUT_FLAGS,
-               payload, length);
+               answer_rank, target, opts, payload, length);
   ADLB_CHECK(rc);
   return ADLB_SUCCESS;
 }
@@ -76,15 +76,15 @@ static adlb_code notify_nonlocal(int target, int server,
                         int work_type)
 {
   int answer_rank = -1;
-  int work_prio = 1;
+  adlb_put_opts opts;
+  opts.priority = 1;
   adlb_code rc;
   if (xlb_am_server)
   {
     rc = xlb_sync(server);
     ADLB_CHECK(rc);
   }
-  rc = ADLB_Put(payload, length, target, answer_rank, work_type,
-                work_prio, 1, ADLB_DEFAULT_PUT_FLAGS);
+  rc = ADLB_Put(payload, length, target, answer_rank, work_type, opts);
   ADLB_CHECK(rc);
   return ADLB_SUCCESS;
 }

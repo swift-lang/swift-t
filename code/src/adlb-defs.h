@@ -70,13 +70,14 @@ typedef struct {
  * Flags for Put functions
  */
 typedef struct {
-  /**
-   Enable soft targeted
-   */
-  bool soft_target;
-} adlb_put_flags;
+  int priority; // Task priority
+  int parallelism; // Task parallelism
+  bool soft_target; // Enable soft targeting mode
+} adlb_put_opts;
 
-static const adlb_put_flags ADLB_DEFAULT_PUT_FLAGS = {
+static const adlb_put_opts ADLB_DEFAULT_PUT_OPTS = {
+    .priority = 0,
+    .parallelism = 1,
     .soft_target = false,
 };
 

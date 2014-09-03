@@ -106,13 +106,12 @@ setup_mpe_events(int num_types, int* types)
 
 adlb_code
 ADLB_Put(const void *work_buf, int work_len, int reserve_rank,
-         int answer_rank, int work_type, int work_prio,
-         int parallelism, adlb_put_flags flags)
+         int answer_rank, int work_type, adlb_put_opts opts)
 {
   MPE_LOG(xlb_mpe_wkr_put_start);
 
   adlb_code rc = ADLBP_Put(work_buf, work_len, reserve_rank, answer_rank,
-                     work_type, work_prio, parallelism, flags);
+                     work_type, opts);
 
   MPE_LOG(xlb_mpe_wkr_put_end);
 
@@ -120,15 +119,14 @@ ADLB_Put(const void *work_buf, int work_len, int reserve_rank,
 }
 
 adlb_code ADLB_Dput(const void* payload, int length, int target,
-        int answer, int type, int priority, int parallelism,
-        adlb_put_flags flags, const char *name,
+        int answer, int type, adlb_put_opts opts, const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
   MPE_LOG(xlb_mpe_wkr_dput_start);
 
   adlb_code rc = ADLBP_Dput(payload, length, target, answer,
-                     type, priority, parallelism, flags, name,
+                     type, opts, name,
                      wait_ids, wait_id_count, wait_id_subs, wait_id_sub_count);
 
   MPE_LOG(xlb_mpe_wkr_dput_end);

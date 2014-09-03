@@ -123,9 +123,8 @@ static inline adlb_code send_parallel_work(int *workers,
 
 static inline adlb_code send_no_work(int worker);
 
-static adlb_code put(int type, int putter, int priority, int answer,
-         int target, int length, int parallelism, adlb_put_flags flags,
-         const void *data);
+static adlb_code put(int type, int putter, int answer, int target,
+      int length, adlb_put_opts opts, const void *data);
 
 static inline adlb_code attempt_match_work(int type, int putter,
       int priority, int answer, int target, bool soft_target,
@@ -294,8 +293,8 @@ handle_put(int caller)
 #endif
   const void *inline_data = p->has_inline_data ? p->inline_data : NULL;
   adlb_code rc;
-  rc = put(p->type, p->putter, p->priority, p->answer, p->target,
-           p->length, p->parallelism, p->flags, inline_data);
+  rc = put(p->type, p->putter, p->answer, p->target,
+           p->length, p->opts, inline_data);
   ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
@@ -355,8 +354,8 @@ handle_dput(int caller)
   xlb_work_unit *work = work_unit_alloc((size_t)p->length);
   ADLB_MALLOC_CHECK(work);
 
-  xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
-                     p->target, p->length, p->parallelism, p->flags);
+  xlb_work_unit_init(work, p->type, caller, p->answer,
+                     p->target, p->length, p->opts);
 
   if (inline_data == NULL)
   {
@@ -397,7 +396,7 @@ handle_dput(int caller)
   }
 
   // Update performance counters
-  xlb_task_data_count(p->type, p->target >= 0, p->parallelism > 1,
+  xlb_task_data_count(p->type, p->target >= 0, p->opts.parallelism > 1,
                       !ready);
 
   MPE_LOG(xlb_mpe_svr_dput_end);
@@ -409,19 +408,19 @@ handle_dput(int caller)
   inline_data: if task data already available here, otherwise NULL
  */
 static adlb_code
-put(int type, int putter, int priority, int answer, int target,
-    int length, int parallelism, adlb_put_flags flags, const void *inline_data)
+put(int type, int putter, int answer, int target, int length,
+    adlb_put_opts opts, const void *inline_data)
 {
   adlb_code code;
   MPI_Status status;
   assert(length >= 0);
 
-  if (parallelism <= 1)
+  if (opts.parallelism <= 1)
   {
     // Try to match to a worker immediately for single-worker task
     adlb_code matched = attempt_match_work(type, putter,
-        priority, answer, target, flags.soft_target, length,
-        parallelism, inline_data);
+        opts.priority, answer, target, opts.soft_target, length,
+        opts.parallelism, inline_data);
     if (matched == ADLB_SUCCESS)
       // Redirected ok
       return ADLB_SUCCESS;
@@ -453,12 +452,12 @@ put(int type, int putter, int priority, int answer, int target,
     WAIT(&req, &status);
   }
 
-  DEBUG("work unit: x%i %s ", parallelism, work->payload);
+  DEBUG("work unit: x%i %s ", opts.parallelism, work->payload);
 
-  if (parallelism > 1)
+  if (opts.parallelism > 1)
   {
     code = attempt_match_par_work(type, answer, work->payload, length,
-                                  parallelism);
+                                  opts.parallelism);
     if (code == ADLB_SUCCESS)
     {
       // Successfully sent out task
@@ -468,8 +467,7 @@ put(int type, int putter, int priority, int answer, int target,
     ADLB_CHECK(code);
   }
 
-  xlb_work_unit_init(work, type, putter, priority, answer, target,
-                length, parallelism, flags);
+  xlb_work_unit_init(work, type, putter, answer, target, length, opts);
   code = xlb_workq_add(work);
   ADLB_CHECK(code);
 
@@ -488,7 +486,7 @@ xlb_put_work_unit(xlb_work_unit *work)
 
   int target = work->target;
   int type = work->type;
-  if (work->parallelism <= 1)
+  if (work->opts.parallelism <= 1)
   {
     // Try to match to a worker
     bool targeted = (target >= 0);
@@ -521,7 +519,7 @@ xlb_put_work_unit(xlb_work_unit *work)
   else
   {
     code = attempt_match_par_work(type, work->answer,
-            work->payload, work->length, work->parallelism);
+            work->payload, work->length, work->opts.parallelism);
     if (code == ADLB_SUCCESS)
     {
       // Successfully sent out task
@@ -538,7 +536,7 @@ xlb_put_work_unit(xlb_work_unit *work)
 
   // Store this work unit on this server
   DEBUG("server storing work...");
-  DEBUG("work unit: x%i %s ", work->parallelism, work->payload);
+  DEBUG("work unit: x%i %s ", work->opts.parallelism, work->payload);
 
   code = xlb_workq_add(work);
   ADLB_CHECK(code);
@@ -546,8 +544,8 @@ xlb_put_work_unit(xlb_work_unit *work)
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_put_targeted_local(int type, int putter, int priority,
-      int answer, int target, adlb_put_flags flags,
+adlb_code xlb_put_targeted_local(int type, int putter,
+      int answer, int target, adlb_put_opts opts,
       const void* payload, int length)
 {
   assert(xlb_map_to_server(target) == xlb_comm_rank);
@@ -566,7 +564,8 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
   if (worker != ADLB_RANK_NULL)
   {
     xlb_work_unit_id wuid = xlb_workq_unique();
-    rc = send_work(target, wuid, type, answer, payload, length, 1);
+    rc = send_work(target, wuid, type, answer, payload, length,
+                   opts.parallelism);
     ADLB_CHECK(rc);
   }
   else
@@ -574,8 +573,8 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
     xlb_work_unit *work = work_unit_alloc((size_t)length);
     memcpy(work->payload, payload, (size_t)length);
 
-    xlb_work_unit_init(work, type, putter, priority, answer, target,
-                       length, 1, flags);
+    xlb_work_unit_init(work, type, putter, answer, target,
+                       length, opts);
     DEBUG("xlb_put_targeted_local(): server storing work...");
     xlb_workq_add(work);
   }
@@ -943,7 +942,7 @@ static adlb_code
 send_parallel_work_unit(int *workers, xlb_work_unit *wu)
 {
   return send_parallel_work(workers, wu->id, wu->type, wu->answer,
-        wu->payload, wu->length, wu->parallelism);
+        wu->payload, wu->length, wu->opts.parallelism);
 }
 
 static inline adlb_code send_parallel_work(int *workers,
@@ -968,7 +967,7 @@ static inline adlb_code
 send_work_unit(int worker, xlb_work_unit* wu)
 {
   return send_work(worker, wu->id, wu->type, wu->answer,
-                     wu->payload, wu->length, wu->parallelism);
+                   wu->payload, wu->length, wu->opts.parallelism);
 }
 
 /**

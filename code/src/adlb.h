@@ -70,12 +70,12 @@ adlb_code ADLB_Hostmap_list(char* output, unsigned int max,
   @param priority: priority of task
   @param parallelism: number of ranks to execute task
               (1 for serial tasks, > 1 for parallel tasks)
-  @param flags: additional flags
+  @param opts: additional options
  */
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
-                    int type, int priority, int parallelism, adlb_put_flags flags);
+                    int type, adlb_put_opts opts);
 adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
-                   int type, int priority, int parallelism, adlb_put_flags flags);
+                   int type, adlb_put_opts opts);
 
 /*
   Put a data-dependent task into the global task queue.  The task will
@@ -88,13 +88,11 @@ adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
   @param wait_id_sub_count: length of wait_id_subs array
  */
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
-        int answer, int type, int priority, int parallelism,
-        adlb_put_flags flags, const char *name,
+        int answer, int type, adlb_put_opts opts, const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 adlb_code ADLB_Dput(const void* payload, int length, int target,
-        int answer, int type, int priority, int parallelism,
-        adlb_put_flags flags, const char *name,
+        int answer, int type, adlb_put_opts opts, const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 

@@ -193,13 +193,11 @@ const char* xlb_get_tag_name(int tag);
 struct packed_put
 {
   int type;
-  int priority;
   int putter;
   int answer;
   int target;
   int length;
-  int parallelism;
-  adlb_put_flags flags;
+  adlb_put_opts opts;
   bool has_inline_data;
   char inline_data[]; /* Put small tasks here */
 };
@@ -215,13 +213,11 @@ struct packed_put
 struct packed_dput
 {
   int type;
-  int priority;
   int putter;
   int answer;
   int target;
   int length;
-  int parallelism;
-  adlb_put_flags flags;
+  adlb_put_opts opts;
   int id_count;
   int id_sub_count;
 #ifndef NDEBUG
@@ -487,13 +483,11 @@ struct packed_notify_hdr
 struct packed_steal_work
 {
   int type;
-  int priority;
   int putter;
   int answer;
   int target;
   int length;
-  int parallelism;
-  adlb_put_flags flags;
+  adlb_put_opts opts;
 };
 
 /**
@@ -557,12 +551,10 @@ xlb_pack_steal_work(struct packed_steal_work* p, xlb_work_unit* wu)
 {
   p->answer = wu->answer;
   p->length = wu->length;
-  p->priority = wu->priority;
   p->putter = wu->putter;
   p->target = wu->target;
   p->type = wu->type;
-  p->parallelism = wu->parallelism;
-  p->flags = wu->flags;
+  p->opts = wu->opts;
 }
 
 /** Member count of enum adlb_tag */

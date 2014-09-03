@@ -494,7 +494,7 @@ adlb_put_target_server(int target, int *to_server)
 }
 
 static inline adlb_code
-adlb_put_check_params(int target, int type, int parallelism)
+adlb_put_check_params(int target, int type, adlb_put_opts opts)
 {
   CHECK_MSG(target == ADLB_RANK_ANY ||
             (target >= 0 && target < xlb_workers),
@@ -503,7 +503,7 @@ adlb_put_check_params(int target, int type, int parallelism)
   CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
-  CHECK_MSG(mpi_version >= 3 || parallelism == 1,
+  CHECK_MSG(mpi_version >= 3 || opts.parallelism == 1,
             "ADLB_Put(): "
             "parallel tasks not supported for MPI version %i",
             mpi_version);
@@ -512,7 +512,7 @@ adlb_put_check_params(int target, int type, int parallelism)
 
 adlb_code
 ADLBP_Put(const void* payload, int length, int target, int answer,
-          int type, int priority, int parallelism, adlb_put_flags flags)
+          int type, adlb_put_opts opts)
 {
   MPI_Status status;
   MPI_Request request;
@@ -520,9 +520,9 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   int response;
 
   DEBUG("ADLB_Put: target=%i x%i %.*s",
-        target, parallelism, length, (char*) payload);
+        target, opts.parallelism, length, (char*) payload);
 
-  rc = adlb_put_check_params(target, type, parallelism);
+  rc = adlb_put_check_params(target, type, opts);
   ADLB_CHECK(rc);
 
   /** Server to contact */
@@ -544,13 +544,11 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   assert(p_size <= XLB_XFER_SIZE);
   struct packed_put *p = (struct packed_put*)xlb_xfer;
   p->type = type;
-  p->priority = priority;
   p->putter = xlb_comm_rank;
   p->answer = answer;
   p->target = target;
   p->length = length;
-  p->parallelism = parallelism;
-  p->flags = flags;
+  p->opts = opts;
   p->has_inline_data = inline_data_len > 0;
   if (p->has_inline_data)
   {
@@ -590,8 +588,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 }
 
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
-        int answer, int type, int priority, int parallelism,
-        adlb_put_flags flags, const char *name,
+        int answer, int type, adlb_put_opts opts, const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count,
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
@@ -601,9 +598,9 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   adlb_code rc;
 
   DEBUG("ADLB_Dput: target=%i x%i %.*s",
-        target, parallelism, length, (char*) payload);
+        target, opts.parallelism, length, (char*) payload);
 
-  rc = adlb_put_check_params(target, type, parallelism);
+  rc = adlb_put_check_params(target, type, opts);
   ADLB_CHECK(rc);
 
   /** Server to contact */
@@ -623,13 +620,11 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
 
   struct packed_dput *p = (struct packed_dput*)xlb_xfer;
   p->type = type;
-  p->priority = priority;
   p->putter = xlb_comm_rank;
   p->answer = answer;
   p->target = target;
   p->length = length;
-  p->parallelism = parallelism;
-  p->flags = flags;
+  p->opts = opts;
   p->has_inline_data = inline_data_len > 0;
   p->id_count = wait_id_count;
   p->id_sub_count = wait_id_sub_count;

@@ -181,26 +181,26 @@ adlb_code
 xlb_workq_add(xlb_work_unit* wu)
 {
   DEBUG("xlb_workq_add(): %"PRId64": x%i %s",
-        wu->id, wu->parallelism, (char*) wu->payload);
+        wu->id, wu->opts.parallelism, (char*) wu->payload);
 
-  if (wu->target < 0 && wu->parallelism == 1)
+  if (wu->target < 0 && wu->opts.parallelism == 1)
   {
     // Untargeted single-process task
     TRACE("xlb_workq_add(): single-process");
     struct rbtree* T = &typed_work[wu->type];
-    rbtree_add(T, -wu->priority, wu);
+    rbtree_add(T, -wu->opts.priority, wu);
     if (xlb_perf_counters_enabled)
     {
       xlb_task_counters[wu->type].single_enqueued++;
     }
   }
-  else if (wu->parallelism > 1)
+  else if (wu->opts.parallelism > 1)
   {
     // Untargeted parallel task
     TRACE("xlb_workq_add(): parallel task: %p", wu);
     struct rbtree* T = &parallel_work[wu->type];
-    TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->priority);
-    rbtree_add(T, -wu->priority, wu);
+    TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->opts.priority);
+    rbtree_add(T, -wu->opts.priority, wu);
     xlb_workq_parallel_task_count++;
     if (xlb_perf_counters_enabled)
     {
@@ -213,19 +213,19 @@ xlb_workq_add(xlb_work_unit* wu)
     if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
     {
       heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
-      bool b = heap_add(H, -wu->priority, wu);
+      bool b = heap_add(H, -wu->opts.priority, wu);
       CHECK_MSG(b, "out of memory expanding heap");
     }
     else
     {
       // All non-soft-targeted tasks should only be on matching server
-      assert(wu->flags.soft_target);
+      assert(wu->opts.soft_target);
     }
 
-    if (wu->flags.soft_target)
+    if (wu->opts.soft_target)
     {
       // Soft-targeted work has reduced priority compared with non-targeted work
-      int base_priority = wu->priority;
+      int base_priority = wu->opts.priority;
       int modified_priority;
       if (base_priority < INT_MIN - XLB_SOFT_TARGET_PRIORITY_PENALTY)
       {
@@ -275,7 +275,7 @@ pop_targeted(heap_t* H, int target)
     heap_clear(H);
   }
 
-  if (result->flags.soft_target)
+  if (result->opts.soft_target)
   {
     // Matching entry was added in typed for soft targeted
     struct rbtree_node *typed_node = result->__internal;
@@ -334,7 +334,7 @@ xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
 {
   assert(target >= 0);
   assert(wu != NULL);
-  assert(wu->flags.soft_target);
+  assert(wu->opts.soft_target);
   if (!xlb_worker_maps_to_server(target, xlb_comm_rank))
   {
     return;
@@ -412,22 +412,22 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
 {
   xlb_work_unit* wu = node->data;
   struct pop_parallel_data* data = user_data;
+  int parallelism = wu->opts.parallelism;
 
   TRACE("pop_parallel_cb(): wu: %p %"PRId64" x%i",
-        wu, wu->id, wu->parallelism);
-  assert(wu->parallelism > 0);
+        wu, wu->id, parallelism);
+  assert(parallelism > 0);
 
-  int ranks[wu->parallelism];
-  bool found =
-      xlb_requestqueue_parallel_workers(data->type, wu->parallelism,
+  int ranks[parallelism];
+  bool found = xlb_requestqueue_parallel_workers(data->type, parallelism,
                                         ranks);
   if (found)
   {
     data->wu = wu;
     data->node = node;
-    data->ranks = malloc((size_t)wu->parallelism * sizeof(int));
+    data->ranks = malloc((size_t)parallelism * sizeof(int));
     valgrind_assert(data->ranks != NULL);
-    memcpy(data->ranks, ranks, (size_t)wu->parallelism * sizeof(int));
+    memcpy(data->ranks, ranks, (size_t)parallelism * sizeof(int));
     return true;
   }
   return false;
@@ -549,7 +549,7 @@ wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 {
   xlb_work_unit *wu = (xlb_work_unit*)v;
   // Free soft targeted via typed work
-  if (!wu->flags.soft_target)
+  if (!wu->opts.soft_target)
   {
     xlb_work_unit_free(wu);
   }

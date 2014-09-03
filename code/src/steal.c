@@ -334,14 +334,14 @@ steal_payloads(int target, int count,
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
     if (!discard) {
-      xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
+      xlb_work_unit_init(work, wus[i].type, wus[i].putter,
                     wus[i].answer, wus[i].target, wus[i].length,
-                    wus[i].parallelism, wus[i].flags);
+                    wus[i].opts);
       xlb_workq_add(work);
     } else {
       xlb_work_unit_free(work);
     }
-    if (wus[i].parallelism > 1)
+    if (wus[i].opts.parallelism > 1)
     {
       par++;
     }
