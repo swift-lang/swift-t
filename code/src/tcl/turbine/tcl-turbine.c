@@ -299,8 +299,7 @@ struct rule_opts
   char* name;
   int work_type;
   int target;
-  int parallelism;
-  adlb_put_flags flags;
+  adlb_put_opts opts;
 };
 
 static inline void rule_set_opts_default(struct rule_opts* opts,
@@ -347,7 +346,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   assert(action);
   action_len++; // Include null terminator
 
-  struct rule_opts opts = {NULL, 0, 0, 0, ADLB_DEFAULT_PUT_FLAGS};
+  struct rule_opts opts = {NULL, 0, 0, ADLB_DEFAULT_PUT_OPTS};
 
   if (objc > BASIC_ARGS)
   {
@@ -370,10 +369,10 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                 "pairs:\n in rule: %s inputs: \"%s\"",
                 opts.name, Tcl_GetString(objv[1]));
 
+  opts.opts.priority = ADLB_curr_priority;
 
   adlb_code ac = ADLB_Dput(action, action_len, opts.target,
-        adlb_comm_rank, opts.work_type, ADLB_curr_priority,
-        opts.parallelism, opts.flags, opts.name,
+        adlb_comm_rank, opts.work_type, opts.opts, opts.name,
         input_list, inputs, input_pair_list, input_pairs);
   TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
 
@@ -397,7 +396,7 @@ rule_set_opts_default(struct rule_opts* opts,
   }
   opts->work_type = TURBINE_ADLB_WORK_TYPE_WORK;
   opts->target = TURBINE_RANK_ANY;
-  opts->parallelism = 1;
+  opts->opts.parallelism = 1;
 }
 
 static inline void
@@ -494,7 +493,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         int t;
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "parallelism argument must be integer");
-        opts->parallelism = t;
+        opts->opts.parallelism = t;
         return TCL_OK;
       }
       break;
@@ -505,7 +504,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-        opts->flags.soft_target = false;
+        opts->opts.soft_target = false;
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
@@ -533,7 +532,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-        opts->flags.soft_target = true;
+        opts->opts.soft_target = true;
         return TCL_OK;
       }
       break;

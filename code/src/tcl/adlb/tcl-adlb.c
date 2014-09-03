@@ -799,21 +799,19 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int target_rank;
   int work_type;
-  int priority;
-  int parallelism;
+  adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   Tcl_GetIntFromObj(interp, objv[1], &target_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
   int cmd_len;
   char* cmd = Tcl_GetStringFromObj(objv[3], &cmd_len);
-  Tcl_GetIntFromObj(interp, objv[4], &priority);
-  Tcl_GetIntFromObj(interp, objv[5], &parallelism);
+  Tcl_GetIntFromObj(interp, objv[4], &opts.priority);
+  Tcl_GetIntFromObj(interp, objv[5], &opts.parallelism);
 
-  adlb_put_flags flags = ADLB_DEFAULT_PUT_FLAGS;
   if (objc == 7)
   {
     int tmp;
     Tcl_GetIntFromObj(interp, objv[6], &tmp);
-    flags.soft_target = (tmp != 0);
+    opts.soft_target = (tmp != 0);
   }
 
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
@@ -821,7 +819,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 
   int rc = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
-                    work_type, priority, parallelism, flags);
+                    work_type, opts);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
@@ -841,13 +839,13 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[1], &work_type);
   int cmd_len;
   char* cmd = Tcl_GetStringFromObj(objv[2], &cmd_len);
-  int priority = ADLB_curr_priority;
+
+  adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
+  opts.priority = ADLB_curr_priority;
 
   DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i", work_type, cmd, priority);
-
-  adlb_put_flags flags = ADLB_DEFAULT_PUT_FLAGS;
   int rc = ADLB_Put(cmd, cmd_len+1, ADLB_RANK_ANY, adlb_comm_rank,
-                    work_type, priority, 1, flags);
+                    work_type, opts);
 
   ASSERT(rc == ADLB_SUCCESS);
   return TCL_OK;
