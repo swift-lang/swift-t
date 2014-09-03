@@ -356,7 +356,6 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   int desired_reqs = (max_tasks < reqs->max_reqs) ?
                       max_tasks : reqs->max_reqs;
   int extra_reqs = desired_reqs - reqs->nreqs;
-  bool idle = (reqs->nreqs == 0);
 
   DEBUG_EXECUTOR("get_tasks: executor=%s adlb_work_type=%i poll=%s "
                 "max_tasks=%i max_reqs=%i nreqs=%i extra_reqs=%i head=%i",
@@ -376,7 +375,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       tmp_bufs[i] = reqs->buffers[(reqs->head + i) % reqs->max_reqs];
     }
 
-    ac = ADLB_Amget(adlb_work_type, extra_reqs, idle, tmp_bufs, tmp_reqs);
+    ac = ADLB_Amget(adlb_work_type, extra_reqs, !poll, tmp_bufs, tmp_reqs);
     EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_OTHER,
                           "Error getting work from ADLB");
 
@@ -525,9 +524,6 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     fail_cb = completed[i].callbacks.failure.code;
     cb = (completed[i].success) ? succ_cb : fail_cb;
 
-    DEBUG_EXECUTOR("Task %i: success: %s callback: %s",
-        i, completed[i].success ? "true" : "false",
-        cb == NULL ?  NULL : Tcl_GetString(cb));
     if (cb != NULL)
     {
       int rc = Tcl_EvalObjEx(interp, cb, 0);
