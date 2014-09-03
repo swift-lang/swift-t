@@ -1077,6 +1077,19 @@ static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
         xlb_get_req_impl *req, bool blocking, bool free_on_shutdown)
 {
   int rc;
+  assert(req->in_use);
+
+  if (req->ncomplete > XLB_GET_RESP_HDR_IX &&
+      free_on_shutdown &&
+      req->hdr.code == ADLB_SHUTDOWN)
+  {
+    // Handle previously deferred shutdown
+    adlb_code ac = xlb_get_req_cancel(req_handle, req);
+    ADLB_CHECK(ac);
+
+    return ADLB_SHUTDOWN;
+  }
+
   while (req->ncomplete < req->ntotal)
   {
     int mpireq_num = req->ncomplete;
@@ -1184,10 +1197,10 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
 
   ac = xlb_aget_test(req, length, answer, type_recvd, comm, req_impl);
   ADLB_CHECK(ac);
-  if (ac == ADLB_SUCCESS)
+  if (ac != ADLB_NOTHING)
   {
-    // Completed already!
-    return ADLB_SUCCESS;
+    // Completed - may be success, shutdown, etc
+    return ac;
   }
 
   // Get ready to block
