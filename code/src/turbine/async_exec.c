@@ -411,6 +411,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       }
       else if (ac == ADLB_NOTHING)
       {
+        DEBUG_EXECUTOR("Poll tasks: no work received");
         return TURBINE_EXEC_SUCCESS;
       }
       assert(ac == ADLB_SUCCESS);
@@ -500,6 +501,8 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
             bool *task_completed)
 {
   turbine_exec_code ec;
+  DEBUG_EXECUTOR("check_tasks: executor=%s poll=%s",
+                executor->name, poll ? "true" : "false");
 
   turbine_completed_task completed[COMPLETED_BUFFER_SIZE];
   int ncompleted = COMPLETED_BUFFER_SIZE; // Pass in size
