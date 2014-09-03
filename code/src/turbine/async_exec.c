@@ -525,6 +525,9 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     fail_cb = completed[i].callbacks.failure.code;
     cb = (completed[i].success) ? succ_cb : fail_cb;
 
+    DEBUG_EXECUTOR("Task %i: success: %s callback: %s",
+        i, completed[i].success ? "true" : "false",
+        cb == NULL ?  NULL : Tcl_GetString(cb));
     if (cb != NULL)
     {
       int rc = Tcl_EvalObjEx(interp, cb, 0);
