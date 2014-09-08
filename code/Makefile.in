@@ -69,12 +69,15 @@ ifeq ($(USE_MAC),no)
 	endif
 
 	SO_SUFFIX = so
+	LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 	MAC_FLAT =
 	MAC_NAME =
 else
 # 	Mac
 	STD = -std=gnu99
 	SO_SUFFIX = dylib
+        # OS X linker does not support export-dynamic
+	LD_EXEC_SYMBOL_EXPORT =
 	MAC_FLAT = -Wl,-flat_namespace
 	MAC_NAME = -install_name $(INSTALL_LIB)/libtclturbine.dylib
 	SHARED = -dynamiclib $(MAC_FLAT)
@@ -499,12 +502,6 @@ $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
 
 executables: $(TURBINE_EXECUTABLES)
 
-# Export Tcl API symbols to link with dynamically loaded modules.
-# Needed to support dynamically loading Tcl modules from our binary
-# NOTE: can prevent symbols being re-exported from libraries, e.g.
-#	-Wl,--exclude-libs,c
-LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
-
 # Rule to build C source file based on manifest
 # Also create deps file so it can be correctly recreated upon change.
 %.c: %.manifest %.manifest.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
@@ -520,6 +517,8 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 # Currently builds a dynamically linked executable
 # Link statically where possible by adding static libs explicitly.
 #   Static libs must be compiled with -fPIC or -fPIE
+#
+# Need to export Tcl API symbols to link with dynamically loaded modules.
 $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK X	$(@)"
 	$(E) $(CC) $(LDFLAGS) $(SHARED) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
