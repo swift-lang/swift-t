@@ -3,9 +3,7 @@
 
 == Overview
 
-The official documentation is at:
-
-https://sites.google.com/site/exmproject/development/parser---usage#TOC-Test-suite
+Each test has to compile and run or else it fails
 
 We compile each Swift script to the corresponding Tcl script, then run
 Turbine on it.
@@ -18,6 +16,41 @@ turbine -n 3 100-test.tcl
 ----
 
 This creates stc logs, intermediate code, and output files.
+
+== Invocation
+
+Available arguments:
+
++-c+:: Continue after failure
++-k <SKIP>+:: Skip the first SKIP tests
++-n <COUNT>+:: Run only COUNT tests
++-O <VALUE>+:: Use stc -O VALUE
++-p <PATTERN>+:: Run only tests with name containing string PATTERN
++-f <OPTION>+:: Use stc -f OPTION
++-F <OPTION>+:: Use stc -F OPTION
++-v+ Verbose: turn on set -x to debug run-tests.zsh itself
+
+== Supporting files 
+
+* Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
+  create input files, etc.  Must return exit code 0 or test fails.
+* Check script: TEST.check.sh: Is run after STC and Turbine.  Can
+  check outputs, remove files, etc.  Must return exit code 0 or test
+  fails.  E.g., can examine TEST.out for correctness Expected output:
+* TEST.exp: Each line of this file must be in TEST.out or test fails.
+* TEST.args: Arguments for run time
+
+== Tokens
+
+Included in comments in TEST.swift to modify test behavior
+
+NOTE: Tests that do not run should be linked to issues in exm-issues
+
+* SKIP-THIS-TEST: Skips test THIS-TEST-SHOULD-NOT-COMPILE: If
+  TEST.swift compiles, test fails.  Used to test for Swift code that
+  STC should reject.  
+* THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails. 
+  Used to test for Swift logic that should crash Turbine
 
 == Numbering
 
@@ -50,6 +83,11 @@ The tests are numbered for lexical sorting by shell glob.
         960: Updateables
         970: PIPS snippets
         980: RDCEP snippets
+
+== Adding a test
+
+Simply create tests/TEST.swift and run-tests.zsh should find it.
+Optionally add setup script, check script, expected output.
 
 == Clean
 
