@@ -28,7 +28,7 @@ Available arguments:
 +-p <PATTERN>+:: Run only tests with name containing string PATTERN
 +-f <OPTION>+:: Use stc -f OPTION
 +-F <OPTION>+:: Use stc -F OPTION
-+-v+ Verbose: turn on set -x to debug run-tests.zsh itself
++-V+ Verbose: turn on set -x to debug run-tests.zsh itself
 
 == Supporting files 
 
