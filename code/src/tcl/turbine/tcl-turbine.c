@@ -1572,40 +1572,6 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 }
 
-#if 0
-// Currently unused
-static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
-      Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens)
-{
-  int rc;
-
-  Tcl_Obj **objs;
-  rc = Tcl_ListObjGetElements(interp, list, count, &objs);
-  TCL_CHECK(rc);
-
-  if (*count > 0)
-  {
-    *strs = malloc(sizeof((*strs)[0]) * (size_t)*count);
-    TCL_MALLOC_CHECK(*strs);
-    *str_lens = malloc(sizeof((*str_lens)[0]) * (size_t)*count);
-    TCL_MALLOC_CHECK(*str_lens);
-
-    for (int i = 0; i < *count; i++)
-    {
-      int tmp_len;
-      (*strs)[i] = Tcl_GetStringFromObj(objs[i], &tmp_len);
-      (*str_lens)[i] = (size_t)tmp_len;
-    }
-  }
-  else
-  {
-    *strs = NULL;
-    *str_lens = NULL;
-  }
-  return TCL_OK;
-}
-#endif
-
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, coaster_staging_mode staging_mode,
