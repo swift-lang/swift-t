@@ -42,6 +42,8 @@ namespace eval turbine {
 
         global WORK_TYPE
 
+        leader_hook 
+
         c::worker_loop $WORK_TYPE($mode) $keyword_args
     }
 
@@ -113,5 +115,13 @@ namespace eval turbine {
         } else {
           return ""
         }
+    }
+
+    proc leader_hook { } { 
+        if { [ turbine::c::leader_comm ] == [ adlb::comm_null ] } { 
+            # I am not a leader
+            return 
+        }
+        # debug "Leader"
     }
 }
