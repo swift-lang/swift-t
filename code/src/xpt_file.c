@@ -196,8 +196,10 @@ static adlb_code flush_buffers(xlb_xpt_state *state)
   assert(is_init(state));
   assert(state->buffer_used <= XLB_XPT_BUFFER_SIZE);
   assert(state->curr_block_pos < XLB_XPT_BLOCK_SIZE);
-  DEBUG("Flushing buffers: %zu bytes at file offset %llu", state->buffer_used,
-          (long long unsigned)xpt_file_offset(state, false));
+
+  DEBUG("Flushing buffers: %zu bytes at file offset %llu",
+            (size_t)(state->buffer_used),
+            (long long unsigned) xpt_file_offset(state, false));
 
   const unsigned char *buf_pos = state->buffer;
   xpt_block_pos_t buf_left = state->buffer_used;
@@ -419,7 +421,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
   char *buf_pos = (char*)buffer;
   xpt_block_pos_t val_remaining = (xpt_block_pos_t)val_len;
   DEBUG("Reading val %zu bytes @ offset %llu of current file",
-        val_remaining , (long long unsigned) val_offset);
+        (size_t) val_remaining , (long long unsigned) val_offset);
   while (val_remaining > 0)
   {
     xpt_file_pos_t read_offset = ((xpt_file_pos_t)block) * XLB_XPT_BLOCK_SIZE + block_pos;
@@ -427,8 +429,8 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
     xpt_block_pos_t to_read = block_left < val_remaining ?
                               block_left : val_remaining;
 
-    DEBUG("Read val chunk: %zu bytes @ %llu", to_read,
-          (long long unsigned)read_offset);
+    DEBUG("Read val chunk: %zu bytes @ %llu",
+          (size_t) to_read, (long long unsigned) read_offset);
 
     if (to_read > 0)
     {
