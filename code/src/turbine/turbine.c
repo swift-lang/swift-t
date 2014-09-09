@@ -25,13 +25,17 @@
  * */
 
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <adlb.h>
 
@@ -48,7 +52,8 @@
 #include "cache.h"
 #include "turbine.h"
 
-MPI_Comm turbine_task_comm = MPI_COMM_NULL;
+MPI_Comm turbine_task_comm   = MPI_COMM_NULL;
+MPI_Comm turbine_leader_comm = MPI_COMM_NULL;
 
 /**
    Has turbine_init() been called successfully?
@@ -128,7 +133,8 @@ turbine_init(int amserver, int rank, int size)
     mpi_rank = rank;
     initialized = true;
 
-    bool b = setup_cache();
+    bool b;
+    b = setup_cache();
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 
@@ -167,6 +173,8 @@ setup_cache()
 
   return true;
 }
+
+
 
 void
 turbine_version(version* output)

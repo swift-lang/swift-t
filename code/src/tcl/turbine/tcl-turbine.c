@@ -1020,6 +1020,16 @@ Turbine_TaskRank_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_LeaderComm_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  MPI_Comm leaders = ADLB_GetComm_leaders();
+  Tcl_Obj* result = Tcl_NewLongObj(leaders);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
 Turbine_TaskSize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
@@ -1565,6 +1575,8 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 }
 
+#if 0
+// Currently unused
 static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens)
 {
@@ -1595,6 +1607,7 @@ static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
   return TCL_OK;
 }
+#endif
 
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -1741,6 +1754,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("cache_store", Turbine_Cache_Store_Cmd);
   COMMAND("task_comm",   Turbine_TaskComm_Cmd);
   COMMAND("task_rank",   Turbine_TaskRank_Cmd);
+  COMMAND("leader_comm", Turbine_LeaderComm_Cmd);
   COMMAND("task_size",   Turbine_TaskSize_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);

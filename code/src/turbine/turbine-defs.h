@@ -78,6 +78,8 @@ typedef enum
   TURBINE_ERROR_ADLB,
   /** Error in when calling external task */
   TURBINE_ERROR_EXTERNAL,
+  /** Error when doing internal I/O */
+  TURBINE_ERROR_IO,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
 } turbine_code;
