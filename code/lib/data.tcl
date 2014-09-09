@@ -435,6 +435,10 @@ namespace eval turbine {
 
     # Free local blob
     proc free_local_blob { blob } {
+        if { [ string length $blob ] == 0 } { 
+            puts "WARNING: free_local_blob: received nothing!"
+            return 
+        }
       if { [ llength $blob ] == 3 } {
         debug [ format "free_local_blob: \[%x %d %s\]" \
                     [ lindex $blob 0 ] [ lindex $blob 1 ] \
