@@ -1,5 +1,5 @@
 
-= ExM Parser Test Suite
+= STC Test Suite
 
 == Overview
 
