@@ -23,7 +23,7 @@
 
 # Defaults:
 # Number of processes
-PROCS=3
+PROCS=2
 # Use MPI rank line prefixing?
 LINE_PREFIX_ENABLED=0
 LINE_PREFIX=
