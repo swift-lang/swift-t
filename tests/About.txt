@@ -38,7 +38,8 @@ Available arguments:
   check outputs, remove files, etc.  Must return exit code 0 or test
   fails.  E.g., can examine TEST.out for correctness Expected output:
 * TEST.exp: Each line of this file must be in TEST.out or test fails.
-* TEST.args: Arguments for run time
+* TEST.args: Arguments for run time, passed to user Swift program
+* TEST.stcargs: Arguments for STC, used to modify STC behavior
 
 == Tokens
 
