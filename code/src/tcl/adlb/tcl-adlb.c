@@ -5222,6 +5222,17 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage: adlb:comm_null
+ */
+static int
+ADLB_GetCommNull_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(MPI_COMM_NULL));
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -5398,6 +5409,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
   COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
   COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
+  COMMAND("comm_null", ADLB_GetCommNull_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
