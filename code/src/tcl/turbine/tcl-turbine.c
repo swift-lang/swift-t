@@ -120,7 +120,7 @@ static void set_namespace_constants(Tcl_Interp* interp);
 
 static int log_setup(int rank);
 
-static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
 
 static int
@@ -1501,7 +1501,7 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   size_t *arg_lens;
   coaster_stage_entry *stageins, *stageouts;
 
-  rc = tcllist_to_strings(interp, objv, objv[2], &argc, &argv, &arg_lens);
+  rc = turbine_tcllist_to_strings(interp, objv, objv[2], &argc, &argv, &arg_lens);
   TCL_CHECK(rc);
 
   const char *stdin_s = NULL, *stdout_s = NULL, *stderr_s = NULL;
@@ -1575,9 +1575,7 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 }
 
-#if 0
-// Currently unused
-static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens)
 {
   int rc;
@@ -1607,7 +1605,6 @@ static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
   return TCL_OK;
 }
-#endif
 
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
