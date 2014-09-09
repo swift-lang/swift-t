@@ -323,11 +323,11 @@ do
     r)
       add_rpath ${OPTARG}
       ;;
-    f) verbose "TURNOFF: ${OPTARG}"
-      disable_opt ${OPTARG}
-      ;;
-    F) verbose "TURNON: ${OPTARG}"
+    f) verbose "TURNON: ${OPTARG}"
       enable_opt ${OPTARG}
+      ;;
+    F) verbose "TURNOFF: ${OPTARG}"
+      diable_opt ${OPTARG}
       ;;
     O)
        set_opt_level $OPTARG
