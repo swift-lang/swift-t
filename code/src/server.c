@@ -561,10 +561,12 @@ workers_idle(void)
   int blocked = xlb_requestqueue_nblocked();
   int shutdown = list_i_size(&workers_shutdown);
 
-  assert(blocked+shutdown <= xlb_my_workers);
+  //TRACE("workers_idle(): workers blocked:   %i\n", blocked);
+  //TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
 
-  DEBUG("workers_idle(): workers blocked:   %i\n", blocked);
-  DEBUG("workers_idle(): workers shutdown: %i\n", shutdown);
+  assert(blocked <= xlb_my_workers);
+  assert(shutdown <= xlb_my_workers);
+  assert(blocked + shutdown <= xlb_my_workers);
 
   if (blocked+shutdown == xlb_my_workers)
     return true;
