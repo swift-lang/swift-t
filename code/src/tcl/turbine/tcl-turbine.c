@@ -120,6 +120,9 @@ static void set_namespace_constants(Tcl_Interp* interp);
 
 static int log_setup(int rank);
 
+static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
+      Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
+
 static int
 worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
                     Tcl_Obj *dict, int *buffer_count, int *buffer_size);
