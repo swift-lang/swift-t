@@ -34,9 +34,9 @@ OPTIONS
        Disable preprocessing via CPP
     -r
        Add an RPATH for a Swift/T extension
-    -F <option name>
-         toggle compiler option on
     -f <option name>
+         toggle compiler option on
+    -F <option name>
          toggle compiler option off
     -u
          Only compile if target is not up-to-date
