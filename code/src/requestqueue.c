@@ -190,6 +190,7 @@ merge_request(request *R, int rank, int type, int count, bool blocking)
   if (blocking)
   {
     assert(!R->blocking); // Shouldn't already be blocked
+    R->blocking = true;
     nblocked++;
   }
 
