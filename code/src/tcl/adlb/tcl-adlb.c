@@ -655,8 +655,24 @@ static int
 ADLB_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_comm_rank));
+  int result = -1;
+  if (objc == 1)
+  {
+    TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
+    result = adlb_comm_rank;
+  }
+  else if (objc == 2)
+  {
+    int comm_int;
+    int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+    TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+    MPI_Comm comm = (MPI_Comm) comm_int;
+    MPI_Comm_rank(comm, &result);
+  }
+  else
+    TCL_RETURN_ERROR("requires 1 or 2 arguments!");
+
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
   return TCL_OK;
 }
 

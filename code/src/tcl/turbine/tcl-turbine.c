@@ -1735,6 +1735,22 @@ Turbine_CopyTo_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+  int comm_int;
+  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
+  MPI_Comm comm = (MPI_Comm) comm_int;
+  char* s  = Tcl_GetString(objv[2]);
+
+  turbine_io_bcast(comm, &s);
+
+  return TCL_OK;
+}
+
 /**
    Called when Tcl loads this extension
  */
@@ -1787,6 +1803,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("coaster_register", Coaster_Register_Cmd);
   COMMAND("coaster_run", Coaster_Run_Cmd);
 
+  COMMAND("bcast",   Turbine_Bcast_Cmd);
   COMMAND("copy_to", Turbine_CopyTo_Cmd);
 
   Tcl_Namespace* turbine =

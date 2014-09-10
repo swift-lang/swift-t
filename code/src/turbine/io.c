@@ -21,9 +21,32 @@
 #include <log.h>
 #include <tools.h>
 
+#include "src/util/mpi-tools.h"
 #include "src/turbine/io.h"
 
 #define EXM_MPIIO_FILE_CHUNK_SIZE 40*1024*1024
+
+bool
+turbine_io_bcast(MPI_Comm comm, char** s)
+{
+  int rc;
+  int mpi_rank;
+  MPI_Comm_rank(comm, &mpi_rank);
+
+  int length;
+  if (mpi_rank == 0)
+    length = strlen(*s)+1;
+
+  rc = MPI_Bcast(&length, 1, MPI_INT, 0, comm);
+  MPI_ASSERT(rc);
+
+  if (mpi_rank != 0)
+    *s = malloc(length);
+  rc = MPI_Bcast(*s, length, MPI_CHAR, 0, comm);
+  MPI_ASSERT(rc);
+
+  return true;
+}
 
 static bool
 bcast_size(MPI_Comm comm, const char* filename, MPI_Offset* file_size)
@@ -45,7 +68,7 @@ bcast_size(MPI_Comm comm, const char* filename, MPI_Offset* file_size)
   }
 
   rc = MPI_Bcast(file_size, sizeof(MPI_Offset), MPI_BYTE, 0, comm);
-  assert(rc == MPI_SUCCESS);
+  MPI_ASSERT(rc);
 
   return true;
 }
