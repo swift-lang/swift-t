@@ -122,6 +122,10 @@ namespace eval turbine {
             # I am not a leader
             return 
         }
-        # debug "Leader"
+        global env
+        if [ info exists env(TURBINE_LEADER_HOOK) ] {
+            log "TURBINE_LEADER_HOOK: $env(TURBINE_LEADER_HOOK)"
+            eval $env(TURBINE_LEADER_HOOK)
+        }
     }
 }

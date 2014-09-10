@@ -18,6 +18,7 @@ ifeq ($(USE_MPE),1)
 endif
 
 TEST_SRC_C += $(DIR)/mpi-io-1.c
+TEST_SRC_C += $(DIR)/mpi-io-2.c
 
 TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/adlb-noop.tcl           \
