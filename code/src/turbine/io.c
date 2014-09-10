@@ -115,8 +115,9 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
 
   // Open files
   MPI_File fd_in;
-  rc = MPI_File_open(comm, name_in, MPI_MODE_RDONLY, MPI_INFO_NULL,
-                     &fd_in);
+  // Cast only needed for MPI-2
+  rc = MPI_File_open(comm, (char*) name_in, MPI_MODE_RDONLY,
+                     MPI_INFO_NULL, &fd_in);
   if (rc != MPI_SUCCESS)
   {
     log_printf("Could not open: %s\n", name_in);
