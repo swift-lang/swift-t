@@ -123,10 +123,17 @@ fi
 ENV_LIST=${env}
 export ENV_LIST
 
+if (( ${EXEC_SCRIPT} == 0 )) 
+then 
+  COMMAND="${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
+else 
+  COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
+fi
+
 # Launch it
 if [[ ${MODE} == "cluster" ]]
 then
-  export COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
+  export COMMAND
   m4 ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
      ${TURBINE_OUTPUT}/turbine-cobalt.sh
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
@@ -140,7 +147,7 @@ then
        --jobname "Swift" \
        ${TURBINE_OUTPUT}/turbine-cobalt.sh | \
     read JOB_ID
-else
+else # Blue Gene
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
        -q ${QUEUE}             \
