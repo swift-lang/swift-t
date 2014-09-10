@@ -40,7 +40,7 @@ typedef struct {
   int fd; // File descriptor for file being written
   xpt_block_num_t curr_block; // Number of current block
   xpt_file_pos_t curr_block_start; // Offset of current block in file
-  xpt_block_pos_t curr_block_pos; // Position in current block that has been written
+  xpt_block_pos_t curr_block_pos; // Write position in current block 
   unsigned char *buffer; // buffer of size XLB_XPT_BUFFER_SIZE
   xpt_block_pos_t buffer_used; // Amount of buffer currently used
 } xlb_xpt_state;
@@ -70,19 +70,23 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state);
 
 /* Write a checkpoint record.
   val_offset: offset of value record in file. */
-adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
-                int val_len, xlb_xpt_state *state, xpt_file_pos_t *val_offset);
+adlb_code
+xlb_xpt_write(const void *key, int key_len,
+              const void *val, int val_len,
+              xlb_xpt_state *state, xpt_file_pos_t *val_offset);
 
 /* Read a checkpoint value from the file being written, 
    The value offset must match that returned by xlb_xpt_write.
    buffer must be at least val_len in size 
    if file is null, indicates current checkpoint file being written,
       otherwise open previously written file. */
-adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
+adlb_code
+xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
                 int val_len, void *buffer);
 
 /* Read a checkpoint value from a file open for reading */
-adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, xpt_file_pos_t val_offset,
+adlb_code
+xlb_xpt_read_val_r(xlb_xpt_read_state *state, xpt_file_pos_t val_offset,
                 int val_len, void *buffer);
 
 /* Flush checkpoint writes */
@@ -91,14 +95,16 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state);
 /* Open existing checkpoint file.  Defaults to reading checkpoints
    from rank 0. This can be changed with a call to xlb_xpt_read_select.
  */
-adlb_code xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename);
+adlb_code
+xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename);
 
 /* Close checkpoint read file */
 adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state);
 
-/* Start reading the checkpoint stream of the specified rank. Called after
-  the checkpoint file has been opened */
-adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank);
+/* Start reading the checkpoint stream of the specified rank.
+   Called after the checkpoint file has been opened */
+adlb_code
+xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank);
 
 /* Read a checkpoint entry.
 

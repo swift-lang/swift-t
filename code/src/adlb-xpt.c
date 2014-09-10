@@ -46,8 +46,8 @@ static double last_flush_time;
  */
 
 static inline adlb_code xpt_reload_rank(const char *filename,
-        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank,
-        adlb_xpt_load_rank_stats *stats);
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer,
+        xpt_rank_t rank, adlb_xpt_load_rank_stats *stats);
 
 static adlb_code xpt_check_flush(void);
 
@@ -316,7 +316,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
   buffer.data = malloc((size_t)buffer.length);
   ADLB_MALLOC_CHECK(buffer.data);
 
-  const uint32_t ranks = read_state->ranks;
+  const xpt_rank_t ranks = read_state->ranks;
   stats->ranks = ranks;
   stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
   ADLB_MALLOC_CHECK(stats->rank_stats);
@@ -329,7 +329,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
   {
     DEBUG("Reloading checkpoints from %s for rank %i\n", filename, rank);
     adlb_xpt_load_rank_stats *rstats = &stats->rank_stats[rank];
-    rc = xpt_reload_rank(filename, read_state, &buffer, (uint32_t)rank,
+    rc = xpt_reload_rank(filename, read_state, &buffer, (xpt_rank_t)rank,
                          rstats);
     if (rc != ADLB_SUCCESS)
     {
@@ -355,8 +355,8 @@ cleanup_exit:
   index.  This function may realloc the provided buffer.
  */
 static inline adlb_code xpt_reload_rank(const char *filename,
-        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank,
-        adlb_xpt_load_rank_stats *stats)
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer,
+        xpt_rank_t rank, adlb_xpt_load_rank_stats *stats)
 {
   stats->loaded = true;
   stats->valid = 0;
