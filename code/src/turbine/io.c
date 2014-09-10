@@ -44,7 +44,7 @@ bcast_size(MPI_Comm comm, const char* filename, MPI_Offset* file_size)
     *file_size = s.st_size;
   }
 
-  rc = MPI_Bcast(file_size, sizeof(MPI_Offset), MPI_BYTE, 0, MPI_COMM_WORLD);
+  rc = MPI_Bcast(file_size, sizeof(MPI_Offset), MPI_BYTE, 0, comm);
   assert(rc == MPI_SUCCESS);
 
   return true;
@@ -63,7 +63,6 @@ copy_destination(const char* name_in, const char* name_out)
     // If this is a directory: copy file name
     if (S_ISDIR(s.st_mode))
     {
-      printf("dir\n");
       char* tmp1 = strdup(name_in);
       char* name = basename(tmp1);
       rc = asprintf(&new_name, "%s/%s", name_out, name);
@@ -88,11 +87,10 @@ copy_destination(const char* name_in, const char* name_out)
     target = name_out;
   }
 
-  printf("opening: %s\n", target);
   FILE* fd_out = fopen(target, "w");
   if (fd_out == NULL)
   {
-    printf("could not write to: %s", target);
+    log_printf("could not write to: %s", target);
     return NULL;
   }
 
@@ -117,8 +115,8 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
 
   // Open files
   MPI_File fd_in;
-  rc = MPI_File_open(MPI_COMM_WORLD, name_in, MPI_MODE_RDONLY,
-                     MPI_INFO_NULL, &fd_in);
+  rc = MPI_File_open(comm, name_in, MPI_MODE_RDONLY, MPI_INFO_NULL,
+                     &fd_in);
   if (rc != MPI_SUCCESS)
   {
     log_printf("Could not open: %s\n", name_in);
@@ -127,8 +125,6 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
 
   FILE* fd_out = copy_destination(name_in, name_out);
   if (fd_out == NULL) return false;
-
-  printf("size: %llu\n", file_size);
 
   // Do the copy
   MPI_Status status;
