@@ -24,17 +24,17 @@
 
 // #define MPI_CHECK(rc) { if (rc != MPI_SUCCESS)
 
-#define MPI_ASSERT(rc)				\
-  { if (rc != MPI_SUCCESS) {			\
-      printf("MPI_ASSERT FAILED\n");		\
-      exit(1);					\
+#define MPI_ASSERT(rc)				                \
+  { if (rc != MPI_SUCCESS) {			                \
+      printf("MPI_ASSERT FAILED: %s:%i\n", __FILE__, __LINE__);	\
+      exit(1);					                \
     }}
 
 
-#define MPI_ASSERT_MSG(rc,msg)		 \
-  { if (rc != MPI_SUCCESS) {		 \
-      printf("MPI_ASSERT: %s\n", msg);   \
-      exit(1);				 \
+#define MPI_ASSERT_MSG(rc,msg)		                          \
+  { if (rc != MPI_SUCCESS) {		                          \
+      printf("MPI_ASSERT: %s:%i: %s\n", __FILE__, __LINE__, msg); \
+      exit(1);				                          \
     }}
 
 #endif
