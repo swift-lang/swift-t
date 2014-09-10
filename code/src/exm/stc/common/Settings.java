@@ -197,7 +197,7 @@ public class Settings
     defaults.setProperty(ENABLE_REFCOUNTING, "true");
     defaults.setProperty(ENABLE_CHECKPOINTING, "true");
     defaults.setProperty(AUTO_DECLARE, "true");
-    defaults.setProperty(SOFT_TARGET, "false");
+    defaults.setProperty(SOFT_TARGET, "true");
     defaults.setProperty(PROFILE_STC, "false");
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
