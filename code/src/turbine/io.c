@@ -164,7 +164,7 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
     MPI_Get_count(&status, MPI_BYTE, &r);
     assert(r == chunk);
     rc = fwrite(buffer, chunk, 1, fd_out);
-    assert(rc != 0);
+    assert(rc == chunk);
     total += r;
   }
 
