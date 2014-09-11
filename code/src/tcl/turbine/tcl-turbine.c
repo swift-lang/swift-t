@@ -1751,17 +1751,12 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   MPI_Comm comm = (MPI_Comm) comm_int;
   char* name  = Tcl_GetString(objv[3]);
 
-  printf("name: %s\n", name);
-
   // Switch on bcast root
   char* s;
   int rank;
   MPI_Comm_rank(comm, &rank);
   if (rank == root)
-  {
     s = (char*) Tcl_GetVar(interp, name, EMPTY_FLAG);
-    printf("s: %s\n", s);
-  }
 
   // Execute
   int length;
