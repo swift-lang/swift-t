@@ -27,10 +27,4 @@ export PROCS=2
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || test_result 1
 
-SIZE=$( grep -c "size: 16" ${OUTPUT} )
-(( ${SIZE} == 2 )) || test_result 1
-
-R=$( grep -c "r: 8" ${OUTPUT} )
-(( ${R} == 2 )) || test_result 1
-
 test_result 0
