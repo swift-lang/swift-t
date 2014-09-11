@@ -1004,39 +1004,8 @@ static int
 Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
+  TCL_ARGS(1);
   Tcl_Obj* result = Tcl_NewLongObj(turbine_task_comm);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-Turbine_TaskRank_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
-{
-  int rank;
-  MPI_Comm_rank(turbine_task_comm, &rank);
-  Tcl_Obj* result = Tcl_NewIntObj(rank);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-Turbine_LeaderComm_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm leaders = ADLB_GetComm_leaders();
-  Tcl_Obj* result = Tcl_NewLongObj(leaders);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-Turbine_TaskSize_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
-{
-  int size;
-  MPI_Comm_size(turbine_task_comm, &size);
-  Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -1802,9 +1771,6 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("cache_retrieve", Turbine_Cache_Retrieve_Cmd);
   COMMAND("cache_store", Turbine_Cache_Store_Cmd);
   COMMAND("task_comm",   Turbine_TaskComm_Cmd);
-  COMMAND("task_rank",   Turbine_TaskRank_Cmd);
-  COMMAND("leader_comm", Turbine_LeaderComm_Cmd);
-  COMMAND("task_size",   Turbine_TaskSize_Cmd);
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);

@@ -1,5 +1,5 @@
 
-set comm [ turbine::c::leader_comm ]
+set comm [ adlb::comm_leaders ]
 
 puts HOWDY
 

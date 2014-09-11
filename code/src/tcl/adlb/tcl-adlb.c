@@ -648,12 +648,28 @@ ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  int rc;
+  int comm_int;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
+  MPI_Comm comm = (MPI_Comm) comm_int;
+
+  rc = MPI_Barrier(comm);
+  ASSERT(rc == MPI_SUCCESS);
+  return TCL_OK;
+}
+
 /**
    usage: no args, returns MPI rank
 */
 static int
-ADLB_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
-              int objc, Tcl_Obj *const objv[])
+ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
 {
   int result = -1;
   if (objc == 1)
@@ -673,6 +689,23 @@ ADLB_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("requires 1 or 2 arguments!");
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+  return TCL_OK;
+}
+
+static int
+ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2)
+  int comm_int;
+  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+  MPI_Comm comm = (MPI_Comm) comm_int;
+
+  int size;
+  MPI_Comm_size(comm, &size);
+  Tcl_Obj* result = Tcl_NewIntObj(size);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
@@ -5248,6 +5281,26 @@ ADLB_GetCommNull_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_GetCommLeaders_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  MPI_Comm leaders = ADLB_GetComm_leaders();
+  Tcl_Obj* result = Tcl_NewLongObj(leaders);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+ADLB_GetCommWorkers_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  MPI_Comm workers = ADLB_GetComm_workers();
+  Tcl_Obj* result = Tcl_NewLongObj(workers);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 /**
    usage: adlb::fail
  */
@@ -5353,7 +5406,11 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("init",      ADLB_Init_Cmd);
   COMMAND("declare_struct_type", ADLB_Declare_Struct_Type_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);
-  COMMAND("rank",      ADLB_Rank_Cmd);
+  COMMAND("rank",      ADLB_CommRank_Cmd);
+  COMMAND("size",      ADLB_CommSize_Cmd);
+  COMMAND("comm_workers", ADLB_GetCommWorkers_Cmd);
+  COMMAND("comm_leaders", ADLB_GetCommLeaders_Cmd);
+  COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
   COMMAND("size",      ADLB_Size_Cmd);

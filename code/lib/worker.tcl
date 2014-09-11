@@ -42,7 +42,7 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        leader_hook 
+        leader_hook
 
         c::worker_loop $WORK_TYPE($mode) $keyword_args
     }
@@ -117,10 +117,10 @@ namespace eval turbine {
         }
     }
 
-    proc leader_hook { } { 
-        if { [ turbine::c::leader_comm ] == [ adlb::comm_null ] } { 
+    proc leader_hook { } {
+        if { [ adlb::comm_leaders ] == [ adlb::comm_null ] } {
             # I am not a leader
-            return 
+            return
         }
         global env
         if [ info exists env(TURBINE_LEADER_HOOK) ] {
