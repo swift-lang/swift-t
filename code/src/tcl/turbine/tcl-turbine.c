@@ -1739,6 +1739,7 @@ static int
 Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
+  // Unpack
   TCL_ARGS(3);
   int comm_int;
   int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
@@ -1746,8 +1747,12 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   MPI_Comm comm = (MPI_Comm) comm_int;
   char* s  = Tcl_GetString(objv[2]);
 
-  turbine_io_bcast(comm, &s);
+  // Execute
+  int length;
+  turbine_io_bcast(comm, &s, &length);
 
+  // Return
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(s, length));
   return TCL_OK;
 }
 

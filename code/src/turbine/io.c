@@ -27,24 +27,25 @@
 #define EXM_MPIIO_FILE_CHUNK_SIZE 40*1024*1024
 
 bool
-turbine_io_bcast(MPI_Comm comm, char** s)
+turbine_io_bcast(MPI_Comm comm, char** s, int* length)
 {
   int rc;
   int mpi_rank;
   MPI_Comm_rank(comm, &mpi_rank);
+  int bytes;
 
-  int length;
   if (mpi_rank == 0)
-    length = strlen(*s)+1;
+    bytes = strlen(*s)+1;
 
-  rc = MPI_Bcast(&length, 1, MPI_INT, 0, comm);
+  rc = MPI_Bcast(&bytes, 1, MPI_INT, 0, comm);
   MPI_ASSERT(rc);
-
   if (mpi_rank != 0)
-    *s = malloc(length);
-  rc = MPI_Bcast(*s, length, MPI_CHAR, 0, comm);
+    *s = malloc(bytes);
+
+  rc = MPI_Bcast(*s, bytes, MPI_CHAR, 0, comm);
   MPI_ASSERT(rc);
 
+  *length = bytes-1;
   return true;
 }
 
