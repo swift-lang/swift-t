@@ -1740,19 +1740,36 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   // Unpack
-  TCL_ARGS(3);
+  TCL_ARGS(4);
+  int rc;
   int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
+  int root;
+  rc = Tcl_GetIntFromObj(interp, objv[2], &root);
+  TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[2]));
   MPI_Comm comm = (MPI_Comm) comm_int;
-  char* s  = Tcl_GetString(objv[2]);
+  char* name  = Tcl_GetString(objv[3]);
+
+  printf("name: %s\n", name);
+
+  // Switch on bcast root
+  char* s;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+  if (rank == root)
+  {
+    s = (char*) Tcl_GetVar(interp, name, EMPTY_FLAG);
+    printf("s: %s\n", s);
+  }
 
   // Execute
   int length;
   turbine_io_bcast(comm, &s, &length);
 
   // Return
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(s, length));
+  if (rank != root)
+    Tcl_SetVar(interp, name, s, EMPTY_FLAG);
   return TCL_OK;
 }
 
