@@ -327,7 +327,7 @@ do
       enable_opt ${OPTARG}
       ;;
     F) verbose "TURNOFF: ${OPTARG}"
-      diable_opt ${OPTARG}
+      disable_opt ${OPTARG}
       ;;
     O)
        set_opt_level $OPTARG
