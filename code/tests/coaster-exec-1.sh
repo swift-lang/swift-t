@@ -43,7 +43,7 @@ fi
 "${START_SVC}" -conf "${SVC_CONF}"
 
 export COASTER_SERVICE_URL="127.0.0.1:53363"
-export TURBINE_COASTER_CONFIG=""
+export TURBINE_COASTER_CONFIG="provider=local"
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 TURBINE_RC=${?}
@@ -56,7 +56,7 @@ grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
 coaster_exp=100
 coaster_count=$(grep -q -c -F "COASTER task output set:" ${OUTPUT})
-if [ $coaster_count -ne $coaster_exp ]
+if [ "$coaster_count" -ne "$coaster_exp" ]
 then
   echo "Coaster tasks: expected $coaster_act actual $coaster_count"
   exit 1

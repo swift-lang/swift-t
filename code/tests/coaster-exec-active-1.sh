@@ -55,7 +55,7 @@ echo "Killing service ${COASTER_SVC_PID} and immediate children"
 for child_pid in $(ps -ef| awk '$3 == '${COASTER_SVC_PID}' { print $2 }')
 do
   echo "Killing process $pid"
-  kill -9 $child_pid
+  kill $child_pid
 done
 
 kill ${COASTER_SVC_PID}
@@ -67,7 +67,7 @@ grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
 coaster_exp=100
 coaster_count=$(grep -q -c -F "COASTER task output set:" ${OUTPUT})
-if [ $coaster_count -ne $coaster_exp ]
+if [ "$coaster_count" -ne "$coaster_exp" ]
 then
   echo "Coaster tasks: expected $coaster_act actual $coaster_count"
   exit 1
