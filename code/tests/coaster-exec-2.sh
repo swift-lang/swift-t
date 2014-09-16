@@ -24,34 +24,45 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 PROCS=3
 export TURBINE_COASTER_WORKERS=1
 
-START_SVC=start-coaster-service
-STOP_SVC=stop-coaster-service
+COASTER_SVC=coaster-service
 SVC_CONF="$(dirname $0)/coaster-exec-local.conf"
 
-#TODO: assumes start-coaster-service on path
-if ! which $START_SVC &> /dev/null ; then
-  echo "${START_SVC} not on path"
+#TODO: assumes coaster-service on path
+if ! which $COASTER_SVC &> /dev/null ; then
+  echo "${COASTER_SVC} not on path"
   exit 1
 fi
 
-if ! which $STOP_SVC &> /dev/null ; then
-  echo "${STOP_SVC} not on path"
-  exit 1
-fi
-
-"${STOP_SVC}" -conf "${SVC_CONF}"
-"${START_SVC}" -conf "${SVC_CONF}"
+source "${SVC_CONF}"
+"${COASTER_SVC}" -nosec -port ${SERVICE_PORT} &
+COASTER_SVC_PID=$!
 
 # Reduce heartbeat interval to catch bugs in heartbeat
 export COASTER_HEARTBEAT_INTERVAL=1
 
 export COASTER_SERVICE_URL="127.0.0.1:53363"
-export TURBINE_COASTER_CONFIG=""
+export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=64"
 
-bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-TURBINE_RC=${?}
+# Delay to allow service to start up
+sleep 0.5
 
-"${STOP_SVC}" -conf "${SVC_CONF}"
+if bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+then
+  TURBINE_RC=0
+else
+  TURBINE_RC=$?
+  echo "TURBINE FAILED: ${TURBINE_RC}"
+fi
+
+echo "Killing service ${COASTER_SVC_PID} and immediate children"
+for child_pid in $(ps -ef| awk '$3 == '${COASTER_SVC_PID}' { print $2 }')
+do
+  echo "Killing process $pid"
+  kill $child_pid
+done
+
+kill ${COASTER_SVC_PID}
+wait || true
 
 [[ ${TURBINE_RC} == 0 ]] || test_result 1
 
@@ -59,7 +70,7 @@ grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
 coaster_exp=100
 coaster_count=$(grep -q -c -F "COASTER task output set:" ${OUTPUT})
-if [ $coaster_count -ne $coaster_exp ]
+if [ "$coaster_count" -ne "$coaster_exp" ]
 then
   echo "Coaster tasks: expected $coaster_act actual $coaster_count"
   exit 1

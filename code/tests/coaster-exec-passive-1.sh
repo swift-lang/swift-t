@@ -24,42 +24,31 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 PROCS=3
 export TURBINE_COASTER_WORKERS=1
 
-COASTER_SVC=coaster-service
+START_SVC=start-coaster-service
+STOP_SVC=stop-coaster-service
 SVC_CONF="$(dirname $0)/coaster-exec-local.conf"
 
-#TODO: assumes coaster-service on path
-if ! which $COASTER_SVC &> /dev/null ; then
-  echo "${COASTER_SVC} not on path"
+#TODO: assumes start-coaster-service on path
+if ! which $START_SVC &> /dev/null ; then
+  echo "${START_SVC} not on path"
   exit 1
 fi
 
-source "${SVC_CONF}"
-"${COASTER_SVC}" -nosec -port ${SERVICE_PORT} &
-COASTER_SVC_PID=$!
-
-export COASTER_SERVICE_URL="${IPADDR}:${SERVICE_PORT}"
-export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4"
-
-# Delay to allow service to start up
-sleep 0.5
-
-if bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-then
-  TURBINE_RC=0
-else
-  TURBINE_RC=$?
-  echo "TURBINE FAILED: ${TURBINE_RC}"
+if ! which $STOP_SVC &> /dev/null ; then
+  echo "${STOP_SVC} not on path"
+  exit 1
 fi
 
-echo "Killing service ${COASTER_SVC_PID} and immediate children"
-for child_pid in $(ps -ef| awk '$3 == '${COASTER_SVC_PID}' { print $2 }')
-do
-  echo "Killing process $pid"
-  kill $child_pid
-done
+"${STOP_SVC}" -conf "${SVC_CONF}"
+"${START_SVC}" -conf "${SVC_CONF}"
 
-kill ${COASTER_SVC_PID}
-wait || true
+export COASTER_SERVICE_URL="127.0.0.1:53363"
+export TURBINE_COASTER_CONFIG="provider=local"
+
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+TURBINE_RC=${?}
+
+"${STOP_SVC}" -conf "${SVC_CONF}"
 
 [[ ${TURBINE_RC} == 0 ]] || test_result 1
 
