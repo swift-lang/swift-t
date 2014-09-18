@@ -80,7 +80,7 @@ The tests are numbered for lexical sorting by shell glob.
         790: External scripting languages (R, Python)
 800::       Error outputs
 900::       Apps??? Formerly advanced constructs
-        900: More for loops- move to 400?
+        900: MapReduce
         910: iterate - move to 400?
         920: wait() {}
         940: Globals
