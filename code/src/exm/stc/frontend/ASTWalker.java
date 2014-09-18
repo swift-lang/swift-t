@@ -1472,6 +1472,11 @@ public class ASTWalker {
       pos++;
     }
 
+    // Define function, also detect duplicates here
+    context.defineFunction(function, ft);
+    FunctionType backendFT = VarRepr.backendFnType(ft);
+    backend.defineBuiltinFunction(function, backendFT, inlineTcl, impl);
+
     // Register as foreign function
     context.getForeignFunctions().addForeignFunction(function);
 
@@ -1490,10 +1495,6 @@ public class ASTWalker {
       isTargetable = true;
       context.setFunctionProperty(function, FnProp.TARGETABLE);
     }
-
-    context.defineFunction(function, ft);
-    FunctionType backendFT = VarRepr.backendFnType(ft);
-    backend.defineBuiltinFunction(function, backendFT, inlineTcl, impl);
 
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
