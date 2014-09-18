@@ -30,7 +30,7 @@ Available arguments:
 +-F <OPTION>+:: Use stc -F OPTION
 +-V+ Verbose: turn on set -x to debug run-tests.zsh itself
 
-== Supporting files 
+== Supporting files
 
 * Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
   create input files, etc.  Must return exit code 0 or test fails.
@@ -49,8 +49,8 @@ NOTE: Tests that do not run should be linked to issues in exm-issues
 
 * SKIP-THIS-TEST: Skips test THIS-TEST-SHOULD-NOT-COMPILE: If
   TEST.swift compiles, test fails.  Used to test for Swift code that
-  STC should reject.  
-* THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails. 
+  STC should reject.
+* THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails.
   Used to test for Swift logic that should crash Turbine
 
 == Numbering
@@ -62,6 +62,9 @@ The tests are numbered for lexical sorting by shell glob.
 200::       Conditionals, recursion, expressions
 300::       Arrays, structs
 400::       For loops
+        400: foreach
+        410: if
+        420: for
         480: Key functions on arrays
 500::       Types
         560: files
@@ -71,6 +74,7 @@ The tests are numbered for lexical sorting by shell glob.
 700::       STC standard library
         700: strings
         710: argc/argv
+        729: math
         730: stdio
         780: MPE
         790: External scripting languages (R, Python)
@@ -84,6 +88,7 @@ The tests are numbered for lexical sorting by shell glob.
         960: Updateables
         970: PIPS snippets
         980: RDCEP snippets
+        990: NAMD
 
 == Adding a test
 
@@ -93,3 +98,7 @@ Optionally add setup script, check script, expected output.
 == Clean
 
 Use ./clean.sh to clean up files created by the test suite
+
+# Local Variables:
+# mode: doc;
+# End:
