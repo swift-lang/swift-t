@@ -1,5 +1,5 @@
 
-//COMPILE-ONLY-TEST
+// COMPILE-ONLY-TEST
 // Regression test for bug passing updateablefloats
 main {
   updateable_float x = 1.0;
