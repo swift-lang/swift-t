@@ -400,7 +400,6 @@ public class TypeChecker {
 
   private static TypeMismatchException argumentTypeException(Context context,
       int argPos, Type expType, Type actType, String errContext) {
-    new Exception().printStackTrace();
     return new TypeMismatchException(context, "Expected argument " +
         (argPos + 1) + " to have one of the following types: "
         + expType.typeName() + ", but had type: " + actType.typeName()

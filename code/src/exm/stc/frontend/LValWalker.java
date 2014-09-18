@@ -624,6 +624,10 @@ public class LValWalker {
     Type elemType = Types.containerElemType(bag);
 
     boolean bagRef = Types.isBagRef(bag);
+
+    // Must be writable ref
+    assert(!bagRef || Types.isRef(bag, true));
+
     boolean elemRef = Types.isRefTo(elem, elemType);
     boolean openWait1 = bagRef || elemRef;
 
@@ -659,7 +663,7 @@ public class LValWalker {
         // Dereference and use in place of old var
         Var derefedElem = varCreator.createTmpAlias(context, elemType);
         exprWalker.retrieveRef(VarRepr.backendVar(derefedElem),
-                               VarRepr.backendVar(elem), true);
+                               VarRepr.backendVar(elem), false);
         elem = derefedElem;
       }
     }
