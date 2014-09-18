@@ -1334,7 +1334,8 @@ public class TurbineOp extends Instruction {
     assert(decrRead.isImmediateInt());
 
     if (acquireWrite > 0) {
-      assert(Types.isAssignableRefTo(src.type(), dst.type(), true));
+      assert(Types.isAssignableRefTo(src.type(), dst.type(), true)) :
+            src + " " + dst + " r: " + acquireRead + " w: " + acquireWrite;
     } else {
       assert(Types.isAssignableRefTo(src.type(), dst.type()));
     }
