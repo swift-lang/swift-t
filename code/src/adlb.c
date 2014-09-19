@@ -2255,8 +2255,8 @@ ADLB_Fail(int code)
 void
 ADLB_Abort(int code)
 {
-  printf("ADLB_Abort(%i)\n", code);
-  printf("MPI_Abort(%i)\n", code);
+  printf("ADLB: In ADLB_Abort(%i)\n", code);
+  printf("ADLB: Calling MPI_Abort(%i)\n", code);
   MPI_Abort(MPI_COMM_WORLD, code);
 }
 
