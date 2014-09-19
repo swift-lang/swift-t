@@ -397,7 +397,7 @@ namespace eval turbine {
             SERVER  { adlb::server }
             WORK  { standard_worker $rules $startup_cmd }
             default {
-              custom_worker $rules $startup_cmd $mode 
+              custom_worker $rules $startup_cmd $mode
             }
         }
     }
@@ -488,7 +488,6 @@ namespace eval turbine {
         } else {
             puts "CAUGHT ERROR:"
             puts $::errorInfo
-            puts "CALLING adlb::abort"
             adlb::abort
         }
     }
