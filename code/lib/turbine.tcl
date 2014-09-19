@@ -500,7 +500,7 @@ namespace eval turbine {
         puts ""
         puts "$language: $msg"
         puts ""
-        puts "$language: killing MPI job..."
+        puts "$language: Aborting MPI job..."
         adlb::abort
     }
 
