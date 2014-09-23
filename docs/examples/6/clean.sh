@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-rm -f *.tic *.o *.mod *snip*
+rm -f *.tic *.o *.so *.mod *snip*
 rm -fv CppWrappers.*    \
        FortFuncs.cpp    \
        FortFuncs.h      \
