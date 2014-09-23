@@ -242,17 +242,19 @@
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
     <mkdir dir="${dist.dir}/lib"/>
-    <copy file="turbine-version.txt" todir="${dist.dir}"/>
-    <copy file="help.txt" todir="${dist.dir}"/>
-    <copy file="etc/version.txt" todir="${dist.dir}/etc"/>
-    <copy file="source.txt" todir="${dist.dir}/etc"/>
-    <copy file="bin/stc" todir="${dist.dir}/bin"/>
+    <copy file="bin/stc"         todir="${dist.dir}/bin"/>
+    <copy file="bin/swift-t"     todir="${dist.dir}/bin"/>
     <copy file="conf/stc-env.sh" todir="${dist.dir}/conf"/>
+    <copy file="help.txt"        todir="${dist.dir}"/>
+    <copy file="etc/version.txt" todir="${dist.dir}/etc"/>
+    <copy file="source.txt"      todir="${dist.dir}/etc"/>
+    <copy file="turbine-version.txt" todir="${dist.dir}"/>
 
     <copy todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
     </copy>
-    <chmod file="${dist.dir}/bin/stc" perm="ugo+x"/>
+    <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
+    <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>
   </target>
 
   <available property="build.dir.exists" file="${build.dir}"/>
