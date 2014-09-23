@@ -189,6 +189,30 @@ blobutils_cast_int_to_const_dbl_ptr(int i)
 }
 
 int*
+blobutils_cast_long_to_int_ptr(long l)
+{
+  return (int*) (size_t) l;
+}
+
+const int*
+blobutils_cast_long_to_const_int_ptr(long l)
+{
+  return (const int*) (size_t) l;
+}
+
+double*
+blobutils_cast_long_to_dbl_ptr(long l)
+{
+  return (double*) (size_t) l;
+}
+
+const double*
+blobutils_cast_long_to_const_dbl_ptr(long l)
+{
+  return (const double*) (size_t) l;
+}
+
+int*
 blobutils_cast_to_int_ptr(void* p)
 {
   return (int*) p;

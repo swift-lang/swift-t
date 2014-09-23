@@ -184,6 +184,15 @@ const int*    blobutils_cast_int_to_const_int_ptr(int i);
 /** DOCD(blobutils_cast_int_to_const_dbl_ptr i, +int+ to +const double*+.) */
 const double* blobutils_cast_int_to_const_dbl_ptr(int i);
 
+/** DOCD(blobutils_cast_long_to_int_ptr i, +long+ to +int*+.) */
+      int*    blobutils_cast_long_to_int_ptr      (long l);
+/** DOCD(blobutils_cast_long_to_const_int_ptr i, +long+ to +const int*+.) */
+const int*    blobutils_cast_long_to_const_int_ptr(long l);
+/** DOCD(blobutils_cast_long_to_dbl_ptr i, +long+ to +double*+.) */
+      double* blobutils_cast_long_to_dbl_ptr      (long l);
+/** DOCD(blobutils_cast_long_to_const_dbl_ptr i, +long+ to +const double*+.) */
+const double* blobutils_cast_long_to_const_dbl_ptr(long l);
+
 /** DOCD(blobutils_cast_to_int_ptr p, +void*+ to +int*+.) */
 int* blobutils_cast_to_int_ptr(void* p);
 /** DOCD(blobutils_cast_to_int64_ptr p, +void*+ to +int64_t*+.) */

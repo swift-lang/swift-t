@@ -57,7 +57,7 @@ namespace eval turbine {
 
   proc floats_from_blob_impl { blob } {
     set s       [ blobutils_sizeof_float ]
-    set p      [ blobutils_cast_int_to_dbl_ptr [ lindex $blob 0 ] ]
+    set p      [ blobutils_cast_long_to_dbl_ptr [ lindex $blob 0 ] ]
     set length [ lindex $blob 1 ]
 
     set n [ expr {$length / $s} ]
@@ -74,7 +74,7 @@ namespace eval turbine {
   # n: number of columns
   proc matrix_from_blob_fortran_impl { L m n } {
     set s       [ blobutils_sizeof_float ]
-    set p       [ blobutils_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
+    set p       [ blobutils_cast_long_to_dbl_ptr [ lindex $L 0 ] ]
     set length  [ lindex $L 1 ]
     
     set result  [ dict create ]
@@ -155,7 +155,7 @@ namespace eval turbine {
 
       blobutils_zeroes_float [ blobutils_cast_to_dbl_ptr $p ] $N
 
-      return [ list [ blobutils_cast_to_int $p ] $length ]
+      return [ list [ blobutils_cast_to_long $p ] $length ]
   }
 
   proc turbine_run_output_blob { outputs b } {
