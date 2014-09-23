@@ -515,7 +515,7 @@ do
       # time so it's not overwritten
       TEST_OUT_PATH+=".O${OPT_LEVEL}"
     fi
-    TCL_FILE=${TEST_OUT_PATH}.tcl
+    TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
     STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
