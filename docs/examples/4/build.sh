@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/bin/bash -eu
+
+set -x
 
 TURBINE=$( which turbine )
 TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
