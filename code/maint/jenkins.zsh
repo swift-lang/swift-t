@@ -42,7 +42,8 @@ make V=1
 
 make V=1 install
 
-make test_results
+# This is allowed to fail- we scan for output below
+make test_results || true
 
 cd tests
 SUITE_RESULT="result_aggregate.xml"
