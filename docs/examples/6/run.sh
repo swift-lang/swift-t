@@ -1,2 +1,2 @@
-export TURBINE_USER_LIB=$PWD
-turbine prog-swift.tcl
+make
+swift-t -r $PWD prog-swift.swift
