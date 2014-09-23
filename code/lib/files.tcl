@@ -532,7 +532,7 @@ namespace eval turbine {
             $::turbine::WORK \
             [ list blob_read_body $result $src ]
     }
-    proc blob_read_body { result input } {
+    proc blob_read_body { result src } {
 	set val [ retrieve_decr_file $src ]
 	set input_name [ dict get $val path ]
 
