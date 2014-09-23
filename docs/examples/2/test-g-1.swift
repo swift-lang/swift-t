@@ -4,4 +4,5 @@
 
 main {
   int sum = g(2, 3);
+  printf("Swift: sum: %i", sum);
 }
