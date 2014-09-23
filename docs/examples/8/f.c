@@ -11,6 +11,7 @@ f(MPI_Comm comm, int k)
   int task_rank, task_size;
   MPI_Comm_rank(comm, &task_rank);
   MPI_Comm_size(comm, &task_size);
+  printf("In f(): rank: %i/%i\n", task_rank, task_size);
   MPI_Barrier(comm);
   sleep(task_rank);
   MPI_Barrier(comm);
