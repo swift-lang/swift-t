@@ -127,7 +127,7 @@ USER_FUNC=$(echo "${1}" | awk -F: '{print $2}') #field after colon
 USER_HEADER=$2
 USER_SWIFT=$3
 
-export USER_LEAF=${USER_SOURCE%.*}_wrap
+export USER_LEAF=${USER_SOURCE%.*}_leaf
 # Capitalize first letter of symbol
 #       - required for Tcl extension init function
 export USER_LEAF_INIT=${USER_LEAF^}_Init
@@ -243,7 +243,7 @@ sed 's/mainapp/(int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap"/
 (( $STATIC == 1 )) && PIC=""
 
 #step 6. call stc
-message "running STC: user-code.swift -> user-code.tcl"
+message "running STC: user-code.swift -> user-code.tic"
 action $STC -u -j $(\which java) -F checkpointing -r ${PWD} user-code.swift
 
 #step 7. Build user library
