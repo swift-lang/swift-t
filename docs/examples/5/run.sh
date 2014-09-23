@@ -1,2 +1,2 @@
-export TURBINE_USER_LIB=$PWD
-turbine prog-swift.tcl
+#!/bin/sh -eu
+sh -eu ./test-main.sh
