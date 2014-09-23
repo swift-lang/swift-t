@@ -1,3 +1,3 @@
 #!/bin/sh
 
-rm -fv test-f.tcl
+rm -fv test-f.tcl pkgIndex.tcl
