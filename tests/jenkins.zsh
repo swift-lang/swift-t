@@ -32,6 +32,12 @@ check_error()
 }
 
 pwd
+
+print
+printf "DATE: "
+date "+%m/%d/%Y %I:%M%p"
+print
+
 TESTS_SKIP=0
 TESTS_TOTAL=-1 # May set to -1 to run all
 INSTALL_ROOT=/tmp/exm-install
@@ -40,8 +46,8 @@ STC=${INSTALL_ROOT}/stc
 MPICH=/tmp/mpich-install
 export PATH=${MPICH}/bin:${TURBINE}/bin:${STC}/bin:${PATH}
 # print -l ${path}
-which stc
-which turbine
+print "Using STC:     $( which stc )"
+print "Using Turbine: $( which turbine )"
 turbine -v
 
 cd tests
