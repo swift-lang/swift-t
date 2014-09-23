@@ -1,5 +1,5 @@
-#include "swift-main.h"
+#include "main.h"
 int main(int argc, char* argv[]) {
-  swift_main(argc, argv);
+  leaf_main(argc, argv);
   return 0;
 }
