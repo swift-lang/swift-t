@@ -24,7 +24,7 @@
 #include "src/util/mpi-tools.h"
 #include "src/turbine/io.h"
 
-#define EXM_MPIIO_FILE_CHUNK_SIZE 40*1024*1024
+#define TURBINE_IO_FILE_CHUNK_SIZE 40*1024*1024
 
 bool
 turbine_io_bcast(MPI_Comm comm, char** s, int* length)
@@ -128,13 +128,14 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
                   const char* name_out)
 {
   int rc;
-  MPI_Offset file_size;
 
+  // Set up file size
+  MPI_Offset file_size;
   bool result = bcast_size(comm, name_in, &file_size);
   if (!result) return result;
 
   // Allocate buffer
-  static int chunk_max = EXM_MPIIO_FILE_CHUNK_SIZE;
+  static int chunk_max = TURBINE_IO_FILE_CHUNK_SIZE;
   void* buffer = malloc(chunk_max);
 
   // Open files
@@ -157,14 +158,13 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
   while (total < file_size)
   {
     int chunk = min_integer(chunk_max, file_size-total);
-    memset(buffer, '\0', chunk_max);
     rc = MPI_File_read_all(fd_in, buffer, chunk, MPI_BYTE, &status);
     assert(rc == MPI_SUCCESS);
     int r;
     MPI_Get_count(&status, MPI_BYTE, &r);
     assert(r == chunk);
     rc = fwrite(buffer, chunk, 1, fd_out);
-    assert(rc == chunk);
+    assert(rc == 1);
     total += r;
   }
 
