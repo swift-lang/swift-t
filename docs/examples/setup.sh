@@ -8,4 +8,4 @@
 TURBINE_HOME=$( cd $( dirname $( which turbine ) )/.. ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/turbine-build-config.sh
 export TCL_INCLUDE_SPEC
-export BLAS=${HOME}/Downloads/BLAS/BLAS.a
+export BLAS=${BLAS:-${HOME}/Downloads/BLAS/BLAS.a}
