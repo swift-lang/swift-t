@@ -29,14 +29,7 @@ PROGRAM=$1
 #SBATCH --nodes=esyscmd(`printf $NODES')
 #SBATCH --ntasks-per-node=esyscmd(`printf $PPN')
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
-then
-  echo "Could not find Turbine in PATH!"
-  exit 1
-fi
-
-export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
 TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
 EXEC_SCRIPT=getenv(EXEC_SCRIPT)

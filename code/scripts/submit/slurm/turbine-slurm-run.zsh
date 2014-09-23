@@ -27,14 +27,7 @@
 
 PROGRAM=$1
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
-then
-  print "Could not find Turbine in PATH!"
-  return 1
-fi
-
-export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/helpers.zsh
 if [[ ${?} != 0 ]]

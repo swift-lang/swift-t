@@ -59,14 +59,7 @@ fi
 #SBATCH --time=${WALLTIME}
 #SBATCH --nodes=${NODES}
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
-then
-  echo "turbine not found in PATH!"
-  exit 1
-fi
-
-TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+export TURBINE_HOME=$( cd "$( dirname "$0" )/../../.." ; /bin/pwd )
 
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "PROGRAM:      ${PROGRAM}"

@@ -27,14 +27,7 @@
 #    WALLTIME: The PBS walltime as HH:MM:SS (default 15min)
 # Then, run sbatch <options> turbine-slurm.sh
 
-TURBINE=$( which turbine )
-if [[ ${?} != 0 ]]
-then
-  print "Could not find Turbine in PATH!"
-  return 1
-fi
-
-export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+export TURBINE_HOME=$( cd "$( dirname "$0" )/../../.." ; /bin/pwd )
 
 source ${TURBINE_HOME}/scripts/helpers.zsh
 if [[ ${?} != 0 ]]

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TURBINE_HOME=$( cd $( dirname $( which turbine ) )/.. ; /bin/pwd )
+TURBINE_HOME=$( cd "$( dirname "$0" )/.." ; /bin/pwd )
 if [ ${?} != 0 ]
 then
   echo "Could not find Turbine!"
