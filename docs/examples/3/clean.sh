@@ -1,5 +1,6 @@
 #!/bin/sh
 
 # Remove generated files
-rm -fv *.o *.x *.so adlb.clog2
-rm -fv test-b.tcl test-b-simple.tcl pkgIndex.tcl b_wrap.c
+rm -f input.data
+rm -f *.o *.x *.so *.tic adlb.clog2
+rm -f test-b.tcl test-b-simple.tcl pkgIndex.tcl b_wrap.c

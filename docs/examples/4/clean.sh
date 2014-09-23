@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # Remove generated files
-rm -fv *.o *.x *.so adlb.clog2
-rm -fv test-mvm.tcl pkgIndex.tcl mvm_wrap.c
-rm -fv FortFuncs.cpp FortFuncs.h FortranMatrix.h FortWrap.h
-rm -fv FortFuncs_wrap.cxx InterfaceDefs.h
-
+rm -f *.o *.x *.so adlb.clog2 *.data
+rm -f test-mvm.tcl pkgIndex.tcl mvm_wrap.c
+rm -f FortFuncs.cpp FortFuncs.h FortranMatrix.h FortWrap.h
+rm -f FortFuncs_wrap.cxx InterfaceDefs.h

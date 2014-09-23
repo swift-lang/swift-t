@@ -2,7 +2,7 @@
 
 cd $( dirname $0 )
 
-for D in {1..7}
+for D in {1..9}
 do
   cd ${D}
   echo "clean: ${D}"
