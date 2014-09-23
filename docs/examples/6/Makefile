@@ -8,7 +8,7 @@ TCL_VERSION = 8.6
 
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 
-CXXFLAGS = -I $(TCL)/include -fPIC -g
+CXXFLAGS = -I . $(TCL_INCLUDE_SPEC) -fPIC -g
 
 ### FORTWRAP
 
