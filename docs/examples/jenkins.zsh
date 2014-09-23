@@ -20,7 +20,7 @@ then
   do
     gfortran -fPIC -c ${f}
   done
-  gfortran -o BLAS.a *.o
+  ar cr BLAS.a *.o
   popd
 fi
 
