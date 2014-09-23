@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
-rm make-package.tcl pkgIndex.tcl
-rm ex2_wrap.* extension.*
-rm *.tic
-rm user-code.swift
-rm swift_main.c
+rm -f make-package.tcl pkgIndex.tcl
+rm -f ex2_wrap.* extension.*
+rm -f *.tic *.o *.so *.x
+rm -f user-code.swift
+rm -f swift_main.c
