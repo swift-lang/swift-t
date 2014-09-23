@@ -375,7 +375,9 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       tmp_bufs[i] = reqs->buffers[(reqs->head + i) % reqs->max_reqs];
     }
 
-    ac = ADLB_Amget(adlb_work_type, extra_reqs, !poll, tmp_bufs, tmp_reqs);
+    // Block if not polling and new request is head
+    bool block = !poll && reqs->nreqs == 0;
+    ac = ADLB_Amget(adlb_work_type, extra_reqs, block, tmp_bufs, tmp_reqs);
     EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_OTHER,
                           "Error getting work from ADLB");
 
