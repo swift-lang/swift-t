@@ -6,13 +6,15 @@ C_UTILS=/tmp/exm-install/c-utils
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
-path+=( $MPICH/bin $TURBINE/bin $STC/bin )
+path+=( ${MPICH}/bin ${TURBINE}/bin ${STC}/bin )
 
 # Build BLAS
-if [[ ! -f blas.tgz ]]
+export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a
+if [[ ! -f ${BLAS} ]]
 then
-  mkdir -p /tmp/blas-build
-  pushd /tmp/blas-build
+  mkdir -p /tmp/exm-blas-build
+  pushd /tmp/exm-blas-build
+  rm -fv blas.tgz
   wget http://www.netlib.org/blas/blas.tgz
   tar xfz blas.tgz
   cd BLAS
@@ -24,9 +26,18 @@ then
   popd
 fi
 
-ls /tmp/blas-build
+# Get FortWrap
+if [[ ! -f /tmp/exm-fortwrap/fortwrap-1.0.4/fortwrap.py ]]
+then
+  mkdir -p /tmp/exm-fortwrap
+  pushd /tmp/exm-fortwrap
+  wget http://downloads.sourceforge.net/project/fortwrap/fortwrap-1.0.4/fortwrap-1.0.4.tar.gz
+  tar xfz fortwrap-1.0.4.tar.gz
+  popd
+fi
+path+=/tmp/exm-fortwrap/fortwrap-1.0.4
 
-export BLAS=/tmp/blas-build/BLAS/BLAS.a
+ls /tmp/blas-build
 
 print HI
 ./run.sh
