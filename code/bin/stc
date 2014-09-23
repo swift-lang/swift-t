@@ -356,7 +356,7 @@ shift $(( OPTIND-1 ))
 
 # After shifting out the options we are left with the file names
 INPUT=$1
-# This is optional (defaults to stdout)
+# This is optional (STC Java implementation defaults to *.tic)
 OUTPUT=$2
 
 if [[ -z ${OPTLEVEL} ]]

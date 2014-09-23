@@ -369,7 +369,7 @@ public class Main {
       } else {
         prefix = infile;
       }
-      outputFilename = prefix + ".tcl";
+      outputFilename = prefix + ".tic";
     }
     return new File(outputFilename);
   }

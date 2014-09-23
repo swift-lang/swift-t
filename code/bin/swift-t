@@ -32,36 +32,47 @@ do
   # Note: We make heavy use of the rarely-used ;& in the following
   case ${OPTION} in
 
-    # Swift/T arguments: 
-    h) usage ; exit 0 ;; 
-    v) report_version ;; 
-    V) (( ++VERBOSE )) 
-       if (( VERBOSE == 2 )) ; then set -x ; fi ;; 
+    # Swift/T arguments:
+    h) usage ; exit 0 ;;
+    v) report_version ;;
+    V) (( ++VERBOSE ))
+       if (( VERBOSE == 2 )) ; then set -x ; fi ;;
     # STC arguments:
-    A) ;& d) ;& D) ;& E) ;& I) ;& 
-    j) ;& L) ;& O) ;& p) ;& r) 
-      STC_OPTS+=( -${OPTION} ${OPTARG} ) 
+    A) ;& d) ;& D) ;& E) ;& I) ;&
+    j) ;& L) ;& O) ;& p) ;& r)
+      STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
     # Turbine arguments
-    l) ;& m) ;& n) 
-      TURBINE_OPTS+=( -${OPTION} ${OPTARG} ) 
+    l) ;& m) ;& n)
+      TURBINE_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
     # Turbine pass-through
-    t) 
+    t)
       FLAG=${OPTARG%:*}
       ARG=${OPTARG#*:}
-      TURBINE_OPTS+=( -${FLAG} ${ARG} ) 
+      TURBINE_OPTS+=( -${FLAG} ${ARG} )
       ;;
-    
+
     # Errors
-    *) 
+    *)
       # ZSH prints an error message
       exit 1
   esac
 done
 shift $(( OPTIND - 1 ))
+
+# Handle temp file creation across platforms
+# Always has suffix *.tic
+make_temp()
+{
+  PROGRAM_DIR=$1
+  NAME=$2
+  # Linux:
+  mktemp --suffix .tic ${PROGRAM_DIR}/swift-t-${NAME}.XXX
+  # Mac?
+}
 
 # Set up STC file arguments
 DELETE_PROGRAM_TCL=0
@@ -71,14 +82,14 @@ then
   PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
   PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
   NAME=${PROGRAM_FILE%.swift}.tcl
-  PROGRAM_TCL=$( mktemp ${PROGRAM_DIR}/swift-t-${NAME}.XXX )
+  PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
   DELETE_PROGRAM_TCL=1
 elif [[ ${#*} == 2 ]]
 then
   PROGRAM_SWIFT=$1
   PROGRAM_TCL=$2
 else
-  usage 
+  usage
   exit 1
 fi
 
