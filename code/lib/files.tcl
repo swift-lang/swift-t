@@ -534,7 +534,7 @@ namespace eval turbine {
     }
     proc blob_read_body { result src } {
 	set val [ retrieve_decr_file $src ]
-	set input_name [ dict get $val path ]
+	set input_name [ local_file_path $val ]
 
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"
