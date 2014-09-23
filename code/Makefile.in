@@ -152,8 +152,8 @@ CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 
 # Separate different types of CFLAGS
-INCLUDES := 
-DEFINES  := 
+INCLUDES :=
+DEFINES  :=
 
 # Set includes
 INCLUDES += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
@@ -411,7 +411,7 @@ DEPCC = gcc
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
              $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
-	     $(INCLUDES) $(DEFINES) 
+	     $(INCLUDES) $(DEFINES)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -649,6 +649,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADER
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
+	$(E) ln -fsv $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
