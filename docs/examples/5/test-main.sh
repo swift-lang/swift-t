@@ -1,2 +1,2 @@
-genleaf -v main.c main.h prog-swift.swift
+genleaf -v main.c main.h test-main.swift
 swift-t -r $PWD user-code.swift
