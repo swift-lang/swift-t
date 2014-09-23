@@ -6,8 +6,14 @@ STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
 path+=( $MPICH/bin $TURBINE/bin $STC/bin )
 
-set -u
+set -eu
 set -x
+
+# Print a message on stderr to avoid putting it in the Jenkins XML
+message()
+{
+  print -u 2 ${*}
+}
 
 check_error()
 {
@@ -51,12 +57,9 @@ inspect_results()
   print "<testsuites>"
   for result in *.result
   do
-    grep "ERROR" ${result} > /dev/null
-    CODE=${?}
-
-    if (( CODE == 0 ))
+    if grep "ERROR" ${result} > /dev/null
     then
-      # We found ERROR
+      message "Found ERROR in ${result}"
       print "    <testcase name=\"${result}\" >"
       print "        <failure type=\"generic\">"
       print "Result file contents:"
