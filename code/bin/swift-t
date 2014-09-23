@@ -68,8 +68,10 @@ DELETE_PROGRAM_TCL=0
 if [[ ${#*} == 1 ]]
 then
   PROGRAM_SWIFT=$1
-  NAME=${PROGRAM_SWIFT%.swift}.tcl
-  PROGRAM_TCL=$( mktemp swift-t-${NAME}.XXX )
+  PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
+  PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
+  NAME=${PROGRAM_FILE%.swift}.tcl
+  PROGRAM_TCL=$( mktemp ${PROGRAM_DIR}/swift-t-${NAME}.XXX )
   DELETE_PROGRAM_TCL=1
 elif [[ ${#*} == 2 ]]
 then
@@ -80,14 +82,24 @@ else
   exit 1
 fi
 
-verbose()
+message()
 {
   (( VERBOSE )) && print ${*}
+}
+
+verbose()
+{
+  message ${*}
   ${*}
 }
 
+message "Swift/T"
+
 # Run STC & Turbine
+message "Compiling: ${PROGRAM_SWIFT}"
+message "       to: ${PROGRAM_TCL}"
 verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+message "Running:   ${PROGRAM_TCL}"
 verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL}
 
 # Clean up
