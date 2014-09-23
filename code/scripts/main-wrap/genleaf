@@ -5,16 +5,24 @@
 # Generate leaf function, given a C/C++ source
 # user-code.c --> user-leaf.tcl
 
+if ! TARGET=$( readlink $0 )
+then
+  TARGET=$0
+fi
+
+export GENLEAF_HOME=$( cd $( dirname $TARGET ) ; /bin/pwd )
+
+# Defaults:
+# File extension (c or cc (for C++))
+LANG=c
+MACHINE=vanilla-gcc
+MAIN=0
 # If not 0, include this list of dynamic objects
 OBJLISTFILE=0
 # If 1, do static build
 export STATIC=0
 # Verbosity (0-3)
 VERBOSE=0
-# File extension (c or cc (for C++))
-LANG=c
-
-MAIN=0
 
 show_machine_files()
 {
@@ -26,17 +34,18 @@ usage()
 {
   echo "genleaf: usage:"
   echo
-  printf "\t\t genleaf <OPTIONS> <MACHINE> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
+  printf "\t\t genleaf <OPTIONS> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
   echo
   printf "\t where: \n"
   printf "\t\t MACHINE     is the machine type\n"
   printf "\t\t USER_SOURCE is a *.c file\n"
-  printf "\t\t FUNCNAME is a user function other than main (feature under development)\n"
+  printf "\t\t FUNCNAME is a user function other than main\n"
   printf "\t\t USER_HEADER is the corresponding *.h file\n"
   printf "\t\t USER_SWIFT  is the input Swift file\n"
   echo
   printf "\t options: \n"
   printf "\t\t -h            \t Show usage guide.\n"
+  printf "\t\t -m <MACHINE>  \t Use a specific machine file (default: vanilla)"
   printf "\t\t -s <MANIFEST> \t Do a static build with the provided manifest file.\n"
   printf "\t\t -v            \t Increase verbosity.  May be given up to thrice.\n"
   echo
@@ -56,13 +65,11 @@ crash()
   exit 1
 }
 
-export GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
-
 while getopts "f:hs:vx:" OPTION
 do
   case $OPTION in
-    f) 
-      OBJLISTFILE=$OPTARG 
+    f)
+      OBJLISTFILE=$OPTARG
       ;;
     h)
       usage
@@ -76,7 +83,7 @@ do
     v)
       VERBOSE=$(( VERBOSE + 1 ))
       ;;
-    x) 
+    x)
       LANG=$OPTARG
       ;;
     *)
@@ -106,7 +113,7 @@ action()
   $*
 }
 
-if (( ${#*} != 4 ))
+if (( ${#*} != 3 ))
 then
   echo "genleaf requires 4 arguments."
   echo "genleaf received ${#*} arguments!"
@@ -115,11 +122,10 @@ then
   exit 1
 fi
 
-MACHINE=$1
-USER_SOURCE=$(echo "${2}" | awk -F: '{print $1}') #field before colon
-USER_FUNC=$(echo "${2}" | awk -F: '{print $2}') #field after colon
-USER_HEADER=$3
-USER_SWIFT=$4
+USER_SOURCE=$(echo "${1}" | awk -F: '{print $1}') #field before colon
+USER_FUNC=$(echo "${1}" | awk -F: '{print $2}') #field after colon
+USER_HEADER=$2
+USER_SWIFT=$3
 
 export USER_LEAF=${USER_SOURCE%.*}_wrap
 # Capitalize first letter of symbol
@@ -138,7 +144,7 @@ CXXFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g"
 COMPILER=$CC
 FLAGS=$CFLAGS
 if [[ $LANG == "cc" ]]
-then 
+then
   COMPILER=$CXX
   FLAGS=$CXXFLAGS
 fi
@@ -149,7 +155,7 @@ do
   [[ -f $f ]] || crash "File not found:" $f
 done
 
-if [[ ! -d $TCL_HOME ]] 
+if [[ ! -d $TCL_HOME ]]
 then
   crash "Could not find TCL_HOME: $TCL_HOME"
 fi
@@ -238,7 +244,7 @@ sed 's/mainapp/(int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap"/
 
 #step 6. call stc
 message "running STC: user-code.swift -> user-code.tcl"
-action $STC -u -j $(\which java) -t checkpointing -r ${PWD} user-code.swift
+action $STC -u -j $(\which java) -F checkpointing -r ${PWD} user-code.swift
 
 #step 7. Build user library
 # a. compile user-leaf.c
@@ -252,10 +258,10 @@ action $COMPILER $FLAGS -c -o extension.o extension.$LANG
 MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
 
 # Slurp shared object list if necessary
-if [[ $OBJLISTFILE != 0 ]] 
+if [[ $OBJLISTFILE != 0 ]]
 then
   OBJLIST=( $( cat $OBJLISTFILE ) )
-else 
+else
   OBJLIST=""
 fi
 
@@ -284,7 +290,7 @@ else
     $( $MKSTATIC $MANIFEST --link-flags ) \
     -L $ADLB_HOME/lib -ladlb \
     -L $C_UTILS_HOME/lib -lexmcutils \
-    -l m -l dl -pthread 
+    -l m -l dl -pthread
 
     # -L $ADLB_HOME/lib -l adlb \
     # -L $C_UTILS_HOME/lib -l exmcutils \
