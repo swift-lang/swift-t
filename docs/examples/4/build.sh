@@ -4,11 +4,6 @@ TURBINE=$( which turbine )
 TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-set -x
-
-BLAS="$HOME/Downloads/BLAS/blas_LINUX.a"
-TCL_INCLUDE=${TCL}/include
-
 # Wrap the Fortran in C++
 fortwrap.py --array-as-ptr --no-vector --no-fmat mvm.f
 # Wrap the C++ in Tcl
