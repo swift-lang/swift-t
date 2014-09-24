@@ -13,7 +13,7 @@ PATH=${STC}/bin:${PATH}
 
 which mpicc
 which mpiexec
-cat ${TURBINE}/scripts/turbine-build-config.sh
+# cat ${TURBINE}/scripts/turbine-build-config.sh
 
 # Build BLAS
 export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a

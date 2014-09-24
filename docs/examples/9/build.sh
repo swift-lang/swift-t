@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
