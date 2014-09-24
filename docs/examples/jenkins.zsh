@@ -6,9 +6,14 @@ C_UTILS=/tmp/exm-install/c-utils
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
-path+=( ${MPICH}/bin ${TURBINE}/bin ${STC}/bin )
 
-turbine -v
+PATH=${MPICH}/bin:${PATH}
+PATH=${TURBINE}/bin
+PATH=${STC}/bin:${PATH}
+
+which mpicc
+which mpiexec
+
 
 cat ${TURBINE}/scripts/turbine-build-config.sh
 
