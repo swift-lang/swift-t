@@ -1,3 +1,6 @@
+
+// SKIP-THIS-TEST
+
 import assert;
 import files;
 
