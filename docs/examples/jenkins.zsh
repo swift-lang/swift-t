@@ -9,13 +9,18 @@ MPICH=/tmp/mpich-install
 
 ls /tmp
 ls $MPICH
+ls $MPICH/bin
 
 PATH=${MPICH}/bin:${PATH}
 PATH=${TURBINE}/bin
 PATH=${STC}/bin:${PATH}
 
+echo $PATH
+
+
 which mpicc
 which mpiexec
+
 
 
 cat ${TURBINE}/scripts/turbine-build-config.sh
