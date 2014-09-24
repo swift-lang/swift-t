@@ -15,7 +15,7 @@ sed -i '11i#include "FortFuncs.h"' FortFuncs_wrap.cxx
 
 # Compile everything
 g++      -c -fPIC -I . FortFuncs.cpp
-g++      -c -fPIC -I ${TCL_INCLUDE} FortFuncs_wrap.cxx
+g++      -c -fPIC ${TCL_INCLUDE_SPEC} FortFuncs_wrap.cxx
 gfortran -c -fPIC mvm.f
 
 # Build the shared object
