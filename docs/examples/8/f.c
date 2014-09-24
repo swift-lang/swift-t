@@ -8,6 +8,7 @@
 double
 f(MPI_Comm comm, int k)
 {
+  printf("f()\n");
   int task_rank, task_size;
   MPI_Comm_rank(comm, &task_rank);
   MPI_Comm_size(comm, &task_size);
