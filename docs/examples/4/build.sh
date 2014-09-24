@@ -1,7 +1,5 @@
 #!/bin/bash -eu
 
-set -x
-
 TURBINE=$( which turbine )
 TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
 source ${TURBINE_HOME}/scripts/turbine-config.sh
