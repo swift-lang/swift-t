@@ -105,6 +105,7 @@ do
     TURBINE_OUTPUT=${T_swift%.swift}.out
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
+      message "files: " $( ls ${T_swift%.swift}* )
       print "Turbine output from ${T_name}:"
       xml_escape ${TURBINE_OUTPUT}
     fi
