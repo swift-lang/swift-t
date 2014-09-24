@@ -48,7 +48,7 @@ prog-f90.o: prog-f90.f90 func.o
 
 ### Programs:
 
-LIBS = 	-L $(TCL)/lib -l tcl$(TCL_VERSION) -lgfortran \
+LIBS = $(TCL_LIB_SPEC) -lgfortran \
 		-Wl,-rpath -Wl,$(TCL)/lib
 
 prog-f90: $(OBJS) prog-f90.o func.o
