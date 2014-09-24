@@ -10,6 +10,8 @@ path+=( ${MPICH}/bin ${TURBINE}/bin ${STC}/bin )
 
 turbine -v
 
+cat ${TURBINE}/scripts/turbine-build-config.sh
+
 # Build BLAS
 export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a
 if [[ ! -f ${BLAS} ]]
