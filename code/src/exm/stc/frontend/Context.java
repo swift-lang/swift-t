@@ -138,6 +138,7 @@ public abstract class Context {
     DefInfo def = lookupDef(name);
     if (def != null) {
       String loc = buildLocationString(def.file, def.line, def.col, false);
+      System.err.println("DOUBLEDEFINE\n");
       throw new DoubleDefineException(this, def.kind.humanReadable() +
           " called " + name + " already defined at " + loc);
     }
