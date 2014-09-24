@@ -7,6 +7,9 @@ TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
 
+ls /tmp
+ls $MPICH
+
 PATH=${MPICH}/bin:${PATH}
 PATH=${TURBINE}/bin
 PATH=${STC}/bin:${PATH}
