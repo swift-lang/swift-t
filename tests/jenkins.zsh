@@ -38,16 +38,6 @@ printf "DATE: "
 date "+%m/%d/%Y %I:%M%p"
 print
 
-print
-printf "PWD: ${PWD}"
-print
-
-ls
-
-print
-print "I am: $0"
-print
-
 TESTS_SKIP=0
 TESTS_TOTAL=-1 # May set to -1 to run all
 INSTALL_ROOT=/tmp/exm-install
