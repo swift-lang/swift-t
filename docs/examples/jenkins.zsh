@@ -8,6 +8,8 @@ STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
 path+=( ${MPICH}/bin ${TURBINE}/bin ${STC}/bin )
 
+turbine -v
+
 # Build BLAS
 export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a
 if [[ ! -f ${BLAS} ]]
