@@ -37,6 +37,7 @@ then
 fi
 
 EXEC_SCRIPT=${EXEC_SCRIPT:-0}
+TURBINE_STATIC_EXEC=${TURBINE_STATIC_EXEC:-0}
 if (( EXEC_SCRIPT ))
 then
   # Run script directly
