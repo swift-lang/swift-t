@@ -42,6 +42,8 @@ print
 printf "PWD: ${PWD}"
 print
 
+ls
+
 print
 print "I am: $0"
 print
