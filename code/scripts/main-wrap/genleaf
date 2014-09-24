@@ -137,8 +137,8 @@ MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 source $MACHINE_FILE
 
 FLAGS=${FLAGS:-}
-CFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g $STD"
-CXXFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g"
+CFLAGS+=" $FLAGS $TCL_INCLUDE_SPEC $PIC -g $STD"
+CXXFLAGS+=" $FLAGS $TCL_INCLUDE_SPEC $PIC -g"
 
 # The compiler to use for user code
 COMPILER=$CC
