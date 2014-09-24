@@ -83,6 +83,9 @@ do
     STC_OUTPUT=${T_swift%.swift}.stc.out
     STC_ERROR=${T_swift%.swift}.stc.err
 
+    print "STC output/error:"
+    cat ${STC_OUTPUT} ${STC_ERROR}
+
     # STC directives
     print "STC directives from ${T_swift}:"
     grep "THIS-TEST" ${T_swift}
