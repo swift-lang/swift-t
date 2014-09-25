@@ -40,6 +40,8 @@ fi
 
 print "<testsuites>"
 
+# T is the basename of the Swift script
+
 while read line
 do
   # message "line: $line"
@@ -51,6 +53,7 @@ do
   then
     a=( ${=line} )
     T_swift=${a[2]}
+    T=${T_swift%.swift}
     if [[ ${a[3]} = "at" ]]
     then
       T_opt=${a[4]}
@@ -80,8 +83,11 @@ do
     print "  <testcase name=\"${T_name}\" >"
     print "     <failure type=\"generic\">"
 
-    STC_OUTPUT=${T_swift%.swift}.stc.out
-    STC_ERROR=${T_swift%.swift}.stc.err
+    print 'T*'
+    print ${T}*
+
+    STC_OUTPUT=${T}.stc.out
+    STC_ERROR=${T}.stc.err
 
     print "STC output/error:"
     cat ${STC_OUTPUT} ${STC_ERROR}
