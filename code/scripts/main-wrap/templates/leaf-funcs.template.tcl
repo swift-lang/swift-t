@@ -4,13 +4,13 @@
 #generate Tcl leaf function for non-main
 
 cat << EOF > ${USER_LEAF}.tcl
-namespace eval leaf_main {
+namespace eval main_leaf {
 
-    proc leaf_main_wrap { rc A } {
-	deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A" type $::turbine::WORK
+    proc main_leaf_wrap { rc A } {
+	deeprule \$A 1 0 "main_leaf::main_leaf_wrap_impl \$rc \$A" type $::turbine::WORK
     }
 
-    proc leaf_main_wrap_impl { rc A } {
+    proc main_leaf_wrap_impl { rc A } {
 
         set length [ adlb::container_size \$A ]
         set tds [ adlb::enumerate \$A dict all 0 ]

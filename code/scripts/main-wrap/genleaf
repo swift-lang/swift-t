@@ -229,7 +229,7 @@ m4 $GENLEAF_HOME/templates/make-package.template.tcl > make-package.tcl
 #step 4. Generate user leaf *.tcl
 if (( $MAIN == 1 )) ; then
   message "creating: ${USER_LEAF}.tcl"
-  m4 $GENLEAF_HOME/templates/leaf-main.template.tcl > ${USER_LEAF}.tcl
+  m4 $GENLEAF_HOME/templates/main-leaf.template.tcl > ${USER_LEAF}.tcl
 else
   crash "We only support main functions!"
 fi

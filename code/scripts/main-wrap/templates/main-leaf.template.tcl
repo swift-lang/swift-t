@@ -1,5 +1,7 @@
 
-# Define convenience macros
+# generated from main-leaf.template.tcl
+
+# dnl Define convenience macros
 changecom(`dnl')
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
