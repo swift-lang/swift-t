@@ -1267,7 +1267,7 @@ To ensure that Swift can find your package, use
 ----
 stc -r <package directory> ...
 ----
-or set +TURBINE_USER_LIB+ at run time.
+or set +SWIFT_PATH+ at run time.
 
 * *Tip:* advanced users can also create <<mkstatic,standalone executables>>
      with compiled code and Tcl code for the extension directly linked in.
@@ -1588,7 +1588,7 @@ foreach i in [0:n-1] {
 
 In this case, +f()+ will operate on higher values of +i+ first.
 Priority is best-effort; it is local to the ADLB server.  The values
-of +i+ may be any Swift integer. 
+of +i+ may be any Swift integer.
 
 This annotation is applied to the leaf task call.
 
@@ -1751,6 +1751,16 @@ Swift (<<Turbine_information, Turbine information>>).
 +TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
 logging, assuming logging was not disabled at configure time.  Logging
 goes to tandard output by default.
+
++SWIFT_PATH+::
++TURBINE_PATH+::
+
+Space-separated list of Swift/T extension (Tcl) package locations.
+Either variable name may be used.
+
++TURBINE_USER_LIB+::
+
+Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
