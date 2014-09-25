@@ -12,5 +12,5 @@ pkg_version = 0.1
 
 main_script = staticapp-bundled-1.tcl
 
-bundled_file = staticapp-bundled-1.data1
-bundled_file = staticapp-bundled-1.data2
+bundled_file = staticapp-bundled-1.1.data
+bundled_file = staticapp-bundled-1.2.data
