@@ -45,7 +45,7 @@ usage()
   echo
   printf "\t options: \n"
   printf "\t\t -h            \t Show usage guide.\n"
-  printf "\t\t -m <MACHINE>  \t Use a specific machine file (default: vanilla)"
+  printf "\t\t -m <MACHINE>  \t Use a specific machine file (default: vanilla)\n"
   printf "\t\t -s <MANIFEST> \t Do a static build with the provided manifest file.\n"
   printf "\t\t -v            \t Increase verbosity.  May be given up to thrice.\n"
   echo
