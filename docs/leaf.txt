@@ -407,24 +407,28 @@ case that the Swift program will construct an array of strings to pass
 to the C code.  The C program is minimally modified by
 renaming its +main()+ function and calling that from Swift/T.
 
-Consider the user code (+swift-main.c+):
+Consider the user code (+main.c+):
 ----
-include::examples/5/swift-main.c[]
+include::examples/5/main.c[]
 ----
-This is essentially a simple C program except that its +main()+ function
-has been renamed to +swift_main()+.  Also, the header +swift-main.h+
-has been created to allow the Swift/T framework to call this code.
 The function essentially acts like +/bin/echo+, reporting its
 arguments.
 
-An example C wrapper to call this function is as follows (+prog-c.c+):
+Consider the user code (+main_leaf.c+):
 ----
-include::examples/5/prog-c.c[]
+include::examples/5/main_leaf.c[]
 ----
 
-The equivalent Swift code is as follows (+prog-swift.swift+):
+This is essentially the same program except that its +main()+ function
+has been renamed to +swift_main()+.  Also, the header +swift-main.h+
+has been created to allow the Swift/T framework to call this code.
+
+The Swift/T distribution comes with functionality to make this easy to
+call.  The key program is +genleaf+.
+
+The equivalent Swift code is as follows (+test-main.swift+):
 ----
-include::examples/5/prog-swift.swift[]
+include::examples/5/test-main.swift[]
 ----
 
 The Swift version defines the extension function symbol +swift_main+,
@@ -434,11 +438,14 @@ then calls it with the given array of strings.  The "exit code"
 This example may be compiled and run (from C, Tcl, and Swift) by using
 the provided Makefile.
 
-The above process is semi-automated by the +genleaf+ script. The script takes a C program and a header file as input and produces the required Tcl-C extension and Tcl leaf function. It also produces a simple source Swift and stc-compiled Tcl code ready to be run via +turbine+. Invoke +genleaf+ as follows:
+The above process is semi-automated by the +genleaf+ script. The
+script takes a C program and a header file as input and produces the
+required Tcl-C extension and Tcl leaf function. It also produces a
+simple source Swift and stc-compiled Tcl code ready to be run via
++turbine+. Invoke +genleaf+ as follows (+test-main.sh+):
 
 ----
-./genleaf ex2.c ex2.h
-turbine user-code.tcl
+include::examples/5/test-main.sh[]
 ----
 
 === Complete example 6: Calling Fortran with +argc/argv+
