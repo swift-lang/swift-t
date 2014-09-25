@@ -1,8 +1,12 @@
-#!/bin/zsh -e
+#!/bin/zsh
 
 # MAKE-STC-DOCS
 # 1) Extracts snippets for code samples
 # 2) Runs asciidoc
+
+set -eu
+
+cd $( dirname $0 )
 
 # Extract snippet from file.
 snip()
@@ -74,6 +78,8 @@ uptodate()
   return ${CODE}
 }
 
+{ sed 's/^/> /' examples/3/test-b-build.sh
+  cat          examples/3/test-b-run.sh   } > examples/3/test-b.sh
 snip 1 examples/6/func.f90
 snip 1 examples/6/prog-f90.f90
 snip 1 examples/6/prog-swift.swift

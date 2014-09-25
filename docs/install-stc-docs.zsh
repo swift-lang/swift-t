@@ -1,10 +1,18 @@
 #!/bin/zsh -e
 
+# INSTALL STC DOCS
+
+# Builds and installs STC docs.
+# Note: This just copies everything to the Swift WWW directory.
+# You still have to commit it there.
+# Edit DEST
+
 STC_DOCS=$( dirname $0 )
 cd ${STC_DOCS}
 
 ./make-stc-docs.zsh
 
-DEST=wozniak@login.mcs.anl.gov:/mcs/web/research/projects/exm/local/guides
+DEST=${HOME}/proj/swift-www/Swift-T
 
-rsync *.html examples.tar.gz *.png ${DEST}
+cp -uv examples.tar.gz ${DEST}/downloads
+cp -uv *.html *.png ${DEST}
