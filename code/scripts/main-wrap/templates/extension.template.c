@@ -22,7 +22,7 @@ static int getenv_nospace(USER_LEAF)_extension(ClientData cdata, Tcl_Interp *int
     argv[i] = Tcl_GetString(objv[i]);
 
   // Call the user function:
-  int rc = leaf_main(argc, argv);
+  int rc = main_leaf(argc, argv);
 
   // Return the exit code as the Tcl return code:
   Tcl_Obj* result = Tcl_NewIntObj(rc);
@@ -39,7 +39,7 @@ extern "C"
 int getenv_nospace(USER_LEAF)_Init(Tcl_Interp* interp) {
   int rc;
 
-  Tcl_PkgProvide(interp, "leaf_main", "0.0");
+  Tcl_PkgProvide(interp, "main_leaf", "0.0");
 
   Tcl_CreateObjCommand(interp,
                        "getenv_nospace(USER_LEAF)_extension",
@@ -47,4 +47,3 @@ int getenv_nospace(USER_LEAF)_Init(Tcl_Interp* interp) {
                        NULL, NULL);
   return TCL_OK;
 }
-
