@@ -130,7 +130,11 @@ The Tcl package is represented in a file that must be called
 via the +TCLLIBPATH+ variable.  (This is similar to +LD_LIBRARY_PATH+,
 Java's +CLASSPATH+, Python's +PYTHONPATH+, etc.).
 
-NOTE: +TCLLIBPATH+ is space-separated (which makes for easier Tcl processing).
+NOTE: +TCLLIBPATH+ is space-separated (which makes for easier Tcl
+processing).
+
+NOTE: +TCLLIBPATH+ is modified by Turbine.  To expose a Tcl package to
+Swift/T, set +SWIFT_PATH+.
 
 We create +pkgIndex.tcl+ from the shell:
 ----
@@ -299,7 +303,7 @@ function.  This is performed in +b.tcl+:
 include::examples/3/b.tcl[]
 ----
 Thus, Swift calls the Tcl wrapper, which calls the C function.
-Additional information about blobs is found in the 
+Additional information about blobs is found in the
 link:blob.html[Blob Utilities Guide].
 
 ////
@@ -336,6 +340,9 @@ using SWIG.
 This example will demonstrate multiplying +y=A*x+ using Swift to call
 a user Fortran library, which in turn calls the BLAS function
 +dgemv+.  This demonstrates the generality of our model.
+
+In these scripts, you must have the BLAS archive.  Change the
+appropriate shell variable to point to this file.
 
 [latex]
 \begin{equation*}
