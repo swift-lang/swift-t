@@ -1,5 +1,5 @@
 
-ABOUT.TXT: STC docs
+= STC Docs: About.txt
 
 To build and install everything, run:
 
@@ -23,3 +23,11 @@ You can clean up the asciidoc-generated HTML and images with ./clean-html.sh
 The examples directories contain clean.sh scripts for cleanup.  These
 may be used before TGZ generation or SVN operations.
 
+To just build the simple docs, see build.sh/build.mk .
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////
