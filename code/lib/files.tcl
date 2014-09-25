@@ -539,7 +539,7 @@ namespace eval turbine {
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"
         blobutils_read $input_name $blob
-        set ptr [ blobutils_cast_to_int \
+        set ptr [ blobutils_cast_to_long \
                       [ turbine_blob_pointer_get $blob ] ]
         set length [ turbine_blob_length_get  $blob ]
         log "blob_read: length: $length"
