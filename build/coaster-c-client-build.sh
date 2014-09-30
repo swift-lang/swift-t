@@ -29,12 +29,23 @@ if (( EXM_OPT_BUILD )); then
   : # Not available yet
 fi
 
-if [ -f Makefile ]; then
-  make distclean
+if (( MAKE_CLEAN )); then
+  if [ -f Makefile ]; then
+    make distclean
+  fi
 fi
 
-./autogen.sh
+if (( RUN_AUTOTOOLS )); then
+  ./autogen.sh
+fi
 
-./configure --prefix=${COASTER_INSTALL} ${EXTRA_ARGS}
+if (( CONFIGURE )); then
+  ./configure --prefix=${COASTER_INSTALL} ${EXTRA_ARGS}
+fi
+
+if (( MAKE_CLEAN )); then
+  make clean
+fi
+
 make -j ${MAKE_PARALLELISM}
 make install
