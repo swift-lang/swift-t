@@ -19,12 +19,13 @@ report_version()
   exit 0
 }
 
+PROGRAM_TCL=0
 VERBOSE=0
 
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hvV"
-STC_CHARS="A:C:d:D:Ef:F:I:j:L:O:pr:"
-TURBINE_CHARS="lm:n:"
+STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:"
+TURBINE_CHARS="e:lm:n:s:"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -38,14 +39,14 @@ do
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
     # STC arguments:
-    A) ;& d) ;& D) ;& E) ;& I) ;&
+    A) ;& d) ;& D) ;& I) ;&
     j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
     # Turbine arguments
-    l) ;& m) ;& n)
-      TURBINE_OPTS+=( -${OPTION} ${OPTARG} )
+    e) ;& l) ;& m) ;& n) ;& s)
+      TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
     # Turbine pass-through
@@ -55,8 +56,14 @@ do
       TURBINE_OPTS+=( -${FLAG} ${ARG} )
       ;;
 
+    # swift-t arguments
+    o)
+      PROGRAM_TCL=${OPTARG}
+      ;;
+
     # Errors
     *)
+      print error
       # ZSH prints an error message
       exit 1
   esac
@@ -74,23 +81,20 @@ make_temp()
   # Mac?
 }
 
+PROGRAM_SWIFT=$1
+shift
+ARGS=( ${*} )
+
 # Set up STC file arguments
 DELETE_PROGRAM_TCL=0
-if [[ ${#*} == 1 ]]
+if [[ ${PROGRAM_TCL} == "" ]]
 then
-  PROGRAM_SWIFT=$1
   PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
   PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
   NAME=${PROGRAM_FILE%.swift}.tcl
   PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
   DELETE_PROGRAM_TCL=1
-elif [[ ${#*} == 2 ]]
-then
-  PROGRAM_SWIFT=$1
-  PROGRAM_TCL=$2
-else
-  usage
-  exit 1
+  shift 1
 fi
 
 message()
@@ -111,7 +115,7 @@ message "Compiling: ${PROGRAM_SWIFT}"
 message "       to: ${PROGRAM_TCL}"
 verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
 message "Running:   ${PROGRAM_TCL}"
-verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL}
+verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
 
 # Clean up
 (( DELETE_PROGRAM_TCL )) && rm ${PROGRAM_TCL}
