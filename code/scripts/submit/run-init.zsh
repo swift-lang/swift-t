@@ -53,6 +53,7 @@ env=()
 # Get options
 while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
  do
+  declare OPTION
   case ${OPTION}
    in
     C)
@@ -72,6 +73,7 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
       ;;
     s) SETTINGS=${OPTARG}
+      declare SETTINGS
       ;;
     t) WALLTIME=${OPTARG}
       ;;
@@ -97,6 +99,12 @@ then
   set -x
 fi
 
+if [[ ${PROCS} != <-> ]]
+then
+  print "PROCS must be an integer: you set PROCS=${PROCS}"
+  return 1
+fi
+
 export SCRIPT=$1
 checkvar SCRIPT
 shift
@@ -104,8 +112,13 @@ export ARGS="${*}"
 
 if [[ ${SETTINGS} != 0 ]]
 then
-  declare SETTINGS
-  source ${SETTINGS}
+  print "sourcing: ${SETTINGS}"
+  if ! source ${SETTINGS}
+  then
+    print "script failed: ${SETTINGS}"
+    return 1
+  fi
+  print "done: ${SETTINGS}"
 fi
 
 [[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
@@ -147,6 +160,6 @@ then
   print "done: ${INIT_SCRIPT}"
 fi
 
-## Local Variables: 
+## Local Variables:
 ## mode: sh
 ## End:
