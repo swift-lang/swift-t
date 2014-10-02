@@ -53,7 +53,6 @@ env=()
 # Get options
 while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
  do
-  declare OPTION
   case ${OPTION}
    in
     C)
@@ -73,7 +72,6 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
       ;;
     s) SETTINGS=${OPTARG}
-      declare SETTINGS
       ;;
     t) WALLTIME=${OPTARG}
       ;;
