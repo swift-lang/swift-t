@@ -652,7 +652,7 @@ static int
 ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(1);
+  TCL_ARGS(2);
   int rc;
   int comm_int;
   rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
