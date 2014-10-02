@@ -42,6 +42,8 @@
 #                  Cobalt qsub uses -n <nodes>
 # (We follow the mpiexec convention.)
 
+print "TURBINE-COBALT SCRIPT"
+
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
@@ -69,7 +71,6 @@ TURBINE_DEBUG=${TURBINE_DEBUG:-1}
 ADLB_DEBUG=${ADLB_DEBUG:-1}
 N=${N:-0}
 
-declare SCRIPT_NAME
 # declare MODE
 
 if [[ ${MODE} == "cluster" ]]
@@ -110,7 +111,7 @@ fi
 # Round NODES up for extra processes
 NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
-declare NODES
+declare PROCS NODES PPN
 
 if [[ ${CHANGE_DIRECTORY} == "" ]]
 then
@@ -123,10 +124,10 @@ fi
 ENV_LIST=${env}
 export ENV_LIST
 
-if (( ${EXEC_SCRIPT} == 0 )) 
-then 
+if (( ${EXEC_SCRIPT} == 0 ))
+then
   COMMAND="${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
-else 
+else
   COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
 fi
 
