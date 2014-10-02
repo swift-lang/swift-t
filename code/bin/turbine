@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,10 @@ VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
 
-while getopts "f:hlm:n:vVxX" OPTION
+# Scheduler script options (for PBS, Cobalt, etc.)
+SCHED_OPTS=()
+
+while getopts "f:hlm:n:vVxXC:d:e:i:o:s:t:" OPTION
 do
   case ${OPTION} in
     f)
@@ -64,6 +67,10 @@ do
       ;;
     x)
       EXEC_SCRIPT=1
+      ;;
+    # Pass through to scheduler script:
+    C) ;& d) ;& e) ;& i) ;& o) ;& s) ;& t)
+      SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     \?)
       # Bash already reported an error
@@ -165,14 +172,9 @@ then
   which ${TURBINE_LAUNCHER}
 fi
 
-if [[ -n ${MACHINE_MODE} ]]
-then
-  MACHINE_ARGS=""
-  MACHINE_ARGS+="-n ${PROCS} "
-  (( VERBOSE )) && MACHINE_ARGS+="-V "
-  (( TURBINE_STATIC_EXEC )) && MACHINE_ARGS+="-X "
-  (( EXEC_SCRIPT )) && MACHINE_ARGS+="-x "
-  FOUND=0
+check_machine()
+{
+  # Confirm that we have a script for this machine type
   for M in $( ls ${TURBINE_HOME}/scripts/submit )
   do
     [[ ${MACHINE_MODE} == ${M} ]] && FOUND=1
@@ -182,10 +184,28 @@ then
     echo "No such machine: ${MACHINE_MODE}"
     exit 1
   fi
-  ${TURBINE_HOME}/scripts/submit/${MACHINE_MODE}/turbine-${MACHINE_MODE}-run.zsh ${MACHINE_ARGS} ${PROGRAM} ${ARGS}
+}
+
+if [[ -n ${MACHINE_MODE} ]]
+then
+  # Use a scheduler script...
+  check_machine
+  # Copy in all Turbine arguments:
+  MACHINE_ARGS=()
+  MACHINE_ARGS+=( -n ${PROCS} )
+  (( VERBOSE )) && MACHINE_ARGS+=( -V )
+  (( TURBINE_STATIC_EXEC )) && MACHINE_ARGS+=( -X )
+  (( EXEC_SCRIPT )) && MACHINE_ARGS+=( -x )
+  FOUND=0
+  # Construct the scheduler script name
+  RUN_SCRIPT_NAME=${MACHINE_MODE}/turbine-${MACHINE_MODE}-run.zsh
+  RUN_SCRIPT=${TURBINE_HOME}/scripts/submit/${RUN_SCRIPT_NAME}
+  # Call the scheduler script:
+  ${RUN_SCRIPT} ${MACHINE_ARGS} ${SCHED_OPTS} ${PROGRAM} ${ARGS}
   exit ${?}
 fi
 
-# Allow user to insert valgrind
+# Just use mpiexec right now
+# Allows user to insert valgrind
 ${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
