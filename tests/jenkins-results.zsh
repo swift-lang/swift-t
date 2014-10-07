@@ -58,7 +58,7 @@ do
     then
       T_opt=${a[4]}
     else
-      T_opt=default
+      T_opt="default"
     fi
     T_name="${T_swift}@${T_opt}"
   elif [[ $line == running:* ]]
@@ -86,8 +86,11 @@ do
     print 'T*'
     print ${T}*
 
-    STC_OUTPUT=${T}.stc.out
-    STC_ERROR=${T}.stc.err
+    O_PART=""
+    [[ ${T_opt} != "default" ]] && O_PART=".${T_opt}"
+
+    STC_OUTPUT=${T}${O_PART}.stc.out
+    STC_ERROR=${T}${O_PART}.stc.err
 
     print "STC output/error:"
     cat ${STC_OUTPUT} ${STC_ERROR}
@@ -108,16 +111,15 @@ do
     print
 
     # stdout from failed run
-    TURBINE_OUTPUT=${T_swift%.swift}.out
+    TURBINE_OUTPUT=${T}${O_PART}.out
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
-      message "files: " $( ls ${T_swift%.swift}* )
       print "Turbine output from ${T_name}:"
       xml_escape ${TURBINE_OUTPUT}
     fi
 
     # All output from failed run check
-    TURBINE_CHECK=${T_swift%.swift}.check.out
+    TURBINE_CHECK=${T}${O_PART}.check.out
     if [[ -f ${TURBINE_CHECK} ]]
     then
       print "Turbine check output from ${T_name}:"
