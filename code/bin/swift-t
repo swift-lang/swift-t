@@ -91,6 +91,12 @@ PROGRAM_SWIFT=$1
 shift
 ARGS=( ${*} )
 
+if [[ ! -r ${PROGRAM_SWIFT} ]]
+then
+  print "Could not read: ${PROGRAM_SWIFT}"
+  exit 1
+fi
+
 # Set up STC file arguments
 DELETE_PROGRAM_TCL=0
 if [[ ${PROGRAM_TCL} == "" ]]
