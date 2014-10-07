@@ -53,7 +53,7 @@ namespace eval turbine {
         set turbine_argc 0
         set turbine_argv [ dict create ]
         set turbine_argp [ list ]
-        set turbine_args $::argv
+        set turbine_args [ join $::argv " " ]
 
         # Set Tcl program name at argv(0)
         lappend turbine_argp $turbine_program
