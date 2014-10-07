@@ -19,7 +19,7 @@ report_version()
   exit 0
 }
 
-PROGRAM_TCL=0
+PROGRAM_TCL=""
 VERBOSE=0
 
 # Process all flags: split among this script, STC, or Turbine
@@ -81,6 +81,12 @@ make_temp()
   # Mac?
 }
 
+if [[ ${#*} == 0 ]]
+then
+  usage
+  return 1
+fi
+
 PROGRAM_SWIFT=$1
 shift
 ARGS=( ${*} )
@@ -94,7 +100,6 @@ then
   NAME=${PROGRAM_FILE%.swift}.tcl
   PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
   DELETE_PROGRAM_TCL=1
-  shift 1
 fi
 
 message()
