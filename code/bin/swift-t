@@ -97,7 +97,7 @@ if [[ ${PROGRAM_TCL} == "" ]]
 then
   PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
   PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
-  NAME=${PROGRAM_FILE%.swift}.tcl
+  NAME=${PROGRAM_FILE%.swift}
   PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
   DELETE_PROGRAM_TCL=1
 fi
@@ -123,4 +123,8 @@ message "Running:   ${PROGRAM_TCL}"
 verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
 
 # Clean up
-(( DELETE_PROGRAM_TCL )) && rm ${PROGRAM_TCL}
+if (( DELETE_PROGRAM_TCL ))  
+then
+  message "Removing: ${PROGRAM_TCL}"
+  rm ${PROGRAM_TCL}
+fi
