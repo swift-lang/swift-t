@@ -220,7 +220,6 @@ run_test()
   # Export output filenames for check script
   export TURBINE_OUTPUT STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
 
-
   # Get test command-line arguments
   if [ -r ${ARGS_FILE} ]
   then
@@ -230,8 +229,11 @@ run_test()
   # Run the test from within the test directory
   pushd $STC_TESTS_DIR
 
+  local V=""
+  (( VERBOSE )) && V="-V"
+
   # Run in subshell to allow setting environment variables without
-  # affecting other tests.  Return values 0=OK, 1=TEST FAILED, 2=SETUP FAILED
+  # affecting other tests.  Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
   (
     if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
     then
@@ -243,8 +245,8 @@ run_test()
     fi
 
     print "running:   $( basename ${TCL_FILE} )"
-
-    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
+    
+    ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     CODE=${?}
     if (( CODE != TEST_OK ))
     then
