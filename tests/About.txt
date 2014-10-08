@@ -24,11 +24,11 @@ Available arguments:
 +-c+:: Continue after failure
 +-k <SKIP>+:: Skip the first SKIP tests
 +-n <COUNT>+:: Run only COUNT tests
-+-O <VALUE>+:: Use stc -O VALUE
++-O <VALUE>+:: Use +stc -O VALUE+
 +-p <PATTERN>+:: Run only tests with name containing string PATTERN
-+-f <OPTION>+:: Use stc -f OPTION
-+-F <OPTION>+:: Use stc -F OPTION
-+-V+ Verbose: turn on set -x to debug run-tests.zsh itself
++-f <OPTION>+:: Use +stc -f OPTION+
++-F <OPTION>+:: Use +stc -F OPTION+
++-V+ Verbose: turn on +set -x+ to debug +run-tests.zsh+ itself
 
 == Supporting files
 
@@ -61,34 +61,37 @@ The tests are numbered for lexical sorting by shell glob.
 100::       Basic function calls, errors
 200::       Conditionals, recursion, expressions
 300::       Arrays, structs
-400::       For loops
-        400: foreach
-        410: if
-        420: for
-        480: Key functions on arrays
-500::       Types
-        560: files
-        580: foreach
-        590: blobs
+400::       For 
+*        400: foreach
+*        410: if
+*        420: for
+*        480: Key functions on arrays
+500::       Types 
+*        560: files
+*        580: foreach
+*        590: blobs
 600::       User builtins, interesting CPP uses
 700::       STC standard library
-        700: strings
-        710: argc/argv
-        729: math
-        730: stdio
-        780: MPE
-        790: External scripting languages (R, Python)
+*        700: strings
+*        710: argc/argv
+*        729: math
+*        730: stdio
+*        740: Misc. libraries
+*        750: Pragmas
+*        760: Advanced I/O
+*        780: MPE
+*        790: External scripting languages (R, Python)
 800::       Error outputs
-900::       Apps??? Formerly advanced constructs
-        900: MapReduce
-        910: iterate - move to 400?
-        920: wait() {}
-        940: Globals
-        950: Stats
-        960: Updateables
-        970: PIPS snippets
-        980: RDCEP snippets
-        990: NAMD
+900::       Apps (Formerly advanced constructs)
+*        900: MapReduce
+*        910: iterate - move to 400?
+*        920: wait() {}
+*        940: Globals
+*        950: Stats
+*        960: Updateables
+*        970: PIPS snippets
+*        980: RDCEP snippets
+*        990: NAMD
 
 == Adding a test
 
