@@ -1,5 +1,5 @@
 
-            /*
+/*
  * Copyright 2013 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,8 @@
  *
  *  Created on: Oct 26, 2012
  *      Author: wozniak
+ *
+ * Red-black tree
  */
 
 #ifndef RBTREE_H
