@@ -93,7 +93,6 @@ max_uint64(uint64_t i1, uint64_t i2)
   return i2;
 }
 
-
 #define bool2string(b) (b ? "true" : "false" )
 
 /**
@@ -143,11 +142,13 @@ random_draw(float* p, int length)
   return ix;
 }
 
-/** Called when the check_msg() condition fails */
-void check_msg_impl(const char* format, ...);
+void crash(const char* format, ...);
 
-/** Nice vargs error check and message */
-#define check_msg(condition, format, args...)  \
+/** Called when the assert_msg() condition fails */
+void assert_msg_impl(const char* format, ...);
+
+/** Nice vargs assert with message */
+#define assert_msg(condition, format, args...)  \
     { if (!(condition))                          \
        check_msg_impl(format, ## args);        \
     }
@@ -162,7 +163,7 @@ void valgrind_assert_failed(const char *file, int line);
 
 /** Called when the valgrind_assert_msg() condition fails */
 void valgrind_assert_failed_msg(const char *file, int line,
-                           const char* format, ...);
+                                const char* format, ...);
 
 /**
    VALGRIND_ASSERT
@@ -255,5 +256,15 @@ void print_longs(long* A, int count);
    Read a whole file into a newly allocated string
  */
 char* slurp(const char* filename);
+
+#define UNUSED __attribute__((unused))
+
+/** Nice vargs error check and message */
+#define check_msg(condition, format, args...) \
+    { if (!(condition))                       \
+       printf(format, ## args);               \
+       fflush(NULL);                          \
+       return false;                          \
+    }
 
 #endif

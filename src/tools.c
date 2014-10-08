@@ -55,11 +55,21 @@ array_length(void** array)
 
 static const int buffer_size = 2*1024;
 
+void
+crash(const char* format, ...)
+{
+  va_list ap;
+  va_start(ap, format);
+  vprintf(format, ap);
+  va_end(ap);
+  exit(EXIT_FAILURE);
+}
+
 /**
    We bundle everything into one big printf for MPI
  */
 void
-check_msg_impl(const char* format, ...)
+assert_msg_impl(const char* format, ...)
 {
   char buffer[buffer_size];
   int count = 0;
