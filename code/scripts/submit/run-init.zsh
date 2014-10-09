@@ -25,6 +25,22 @@ set -e
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
+turbine_log()
+# Fills in turbine.log file after job completion
+{
+  print "JOB:               ${JOB_ID}"
+  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
+  print "WORK_DIRECTORY:    ${WORK_DIRECTORY}"
+  print "HOSTNAME:          $( hostname -d )"
+  print "SUBMITTED:         $( date_nice )"
+  print "PROCS:             ${PROCS}"
+  print "PPN:               ${PPN}"
+  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
+  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
+  print "WALLTIME:          ${WALLTIME}"
+  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
+}
+
 # Defaults:
 CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
@@ -130,7 +146,22 @@ if [[ ${PROCS} == 0 ]]
   exit 1
 fi
 
-RUN=$( date_path )
+# Handle TURBINE_OUTPUT_FORMAT
+# Default format is e.g., 2006/10/13/14/26/12 
+TURBINE_OUTPUT_FORMAT=${TURBINE_OUTPUT_FORMAT:-%Y/%m/%d/%H/%M/%S}
+if [[ ${TURBINE_OUTPUT_FORMAT} == *%Q* ]]
+then
+  # Create a unique directory by substituting on %Q
+  TURBINE_OUTPUT_PAD=${TURBINE_OUTPUT_PAD:-3}
+  integer -Z ${TURBINE_OUTPUT_PAD} i=0
+  while true
+  do
+    D=${TURBINE_OUTPUT_FORMAT/\%Q/${i}}
+    [[ ! -d ${TURBINE_OUTPUT_ROOT}/${D} ]] && break
+  done
+fi
+
+RUN=$( date +${TURBINE_OUTPUT_FORMAT} )
 
 # Create the directory in which to run
 if (( ! ${+TURBINE_OUTPUT} ))
