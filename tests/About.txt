@@ -22,12 +22,17 @@ This creates stc logs, intermediate code, and output files.
 Available arguments:
 
 +-c+:: Continue after failure
++-C+:: Compile only
++-D+:: Run disabled tests 
++-e+:: Show error outputs from tests
++-f <OPTION>+:: Use +stc -f OPTION+
++-F <OPTION>+:: Use +stc -F OPTION+
 +-k <SKIP>+:: Skip the first SKIP tests
++-l+:: Enable Turbine data leak check
 +-n <COUNT>+:: Run only COUNT tests
 +-O <VALUE>+:: Use +stc -O VALUE+
 +-p <PATTERN>+:: Run only tests with name containing string PATTERN
-+-f <OPTION>+:: Use +stc -f OPTION+
-+-F <OPTION>+:: Use +stc -F OPTION+
++-P <PATTERN>+:: Skip tests with name containing string PATTERN
 +-V+ Verbose: turn on +set -x+ to debug +run-tests.zsh+ itself
 
 == Supporting files
