@@ -4,6 +4,8 @@
 
 # See About.txt for notes
 
+set -eu
+
 # Test error codes
 TEST_OK=0
 TEST_TRUE_FAIL=1 # Failure in actual test
@@ -244,14 +246,18 @@ run_test()
       fi
     fi
 
-    print "running:   $( basename ${TCL_FILE} )"
-    
-    ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
-    CODE=${?}
+    # RUN IT
+    print "running:   $( basename ${TCL_FILE} )"    
+    if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
+    then
+      CODE=${TEST_OK}
+    else
+      CODE=${TEST_TRUE_FAIL}
+    fi
     if (( CODE != TEST_OK ))
     then
       (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
-      return $TEST_TRUE_FAIL
+      return ${TEST_TRUE_FAIL}
     fi
 
     if [ ! -z "${TURBINE_XPT_FILE}" ]
@@ -263,7 +269,7 @@ run_test()
       CODE=${?}
       if (( CODE != TEST_OK ))
       then
-        return $TEST_TRUE_FAIL
+        return ${TEST_TRUE_FAIL}
       fi
 
       # Test reload from checkpoint file
@@ -432,6 +438,7 @@ DISABLED_TESTS=()
 # Setup signal handler for early termination
 trap "report_stats_and_exit 1" SIGHUP SIGINT SIGTERM
 
+# Loop over all tests
 for (( i=1 ; i<=SWIFT_FILE_TOTAL ; i++ ))
 do
   SWIFT_FILE=${SWIFT_FILES[i]}
@@ -553,13 +560,18 @@ do
     then
       if (( COMPILE_ONLY ))
       then
-          EXIT_CODE=$TEST_OK
+        EXIT_CODE=$TEST_OK
       elif grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
       then
-          EXIT_CODE=$TEST_OK
+        EXIT_CODE=$TEST_OK
       else
-          run_test
-          EXIT_CODE=${?}
+        # RUN IT
+        if run_test
+        then
+          EXIT_CODE=$TEST_OK
+        else
+          EXIT_CODE=$TEST_TRUE_FAIL
+        fi
       fi
     fi
 
