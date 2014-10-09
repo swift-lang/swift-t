@@ -1038,7 +1038,7 @@ thing2"+, and +help+. The command has _unflagged_ arguments
 +argc()+::
 Get count of unflagged arguments
 
-+argv(string)+::
++argv(string, [default])+::
 _(argument-value)_
 Given a string, returns the flagged argument with that key:
 +
@@ -1050,6 +1050,10 @@ time.  This allows a specialized, optimized version of code to be
 compiled for a particular set of arguments.  See the +-A
 _name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
 argument is re-specified at run-time, an error will occur.
++ 
+If argument +a+ is not provided, the +default+ value is used.  So: 
++
++argv("b", "f4.txt") -> "f4.txt"+
 
 +argp(int)+::
 _(argument-positional)_
