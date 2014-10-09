@@ -298,6 +298,9 @@ ifeq ($(HAVE_COASTER),1)
 	LIBS += -L$(COASTER_LIB) -lcoasterclient
 endif
 
+# HDF5 variables are blank if HDF5 is not enabled
+LIBS += @HDF5_LDFLAGS@ @HDF5_LIBS@
+
 # If we are using libtcl*.a, need to always include these libraries
 # TODO: would also be needed if we're doing full static link
 ifeq ($(strip $(TCL_LIB_SO)),)
