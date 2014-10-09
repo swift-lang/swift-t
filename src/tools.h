@@ -144,6 +144,8 @@ random_draw(float* p, int length)
 
 void crash(const char* format, ...);
 
+// #define UNUSED __attribute__((unused))
+
 /** Called when the assert_msg() condition fails */
 void assert_msg_impl(const char* format, ...);
 
@@ -152,6 +154,14 @@ void assert_msg_impl(const char* format, ...);
     { if (!(condition))                          \
        check_msg_impl(format, ## args);        \
     }
+
+/** Nice vargs error check and message */
+#define check_msg(condition, format, args...) \
+    { if (!(condition)) {                     \
+       printf(format, ## args);               \
+       fflush(NULL);                          \
+       return false;                          \
+    } }
 
 /**
    Substitute for assert(): handles unused variables under NDEBUG
@@ -256,15 +266,5 @@ void print_longs(long* A, int count);
    Read a whole file into a newly allocated string
  */
 char* slurp(const char* filename);
-
-#define UNUSED __attribute__((unused))
-
-/** Nice vargs error check and message */
-#define check_msg(condition, format, args...) \
-    { if (!(condition))                       \
-       printf(format, ## args);               \
-       fflush(NULL);                          \
-       return false;                          \
-    }
 
 #endif
