@@ -159,18 +159,7 @@ fi
 declare JOB_ID
 
 # Fill in log
-{
-  print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
-  print "WORK_DIRECTORY:    ${WORK_DIRECTORY}"
-  print "HOSTNAME:          $( hostname -d )"
-  print "SUBMITTED:         $( date_nice )"
-  print "PROCS:             ${PROCS}"
-  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
-  print "WALLTIME:          ${WALLTIME}"
-  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
-} >> ${LOG_FILE}
+turbine_log >> ${LOG_FILE}
 
 # Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
