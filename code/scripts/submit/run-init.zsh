@@ -153,15 +153,17 @@ if [[ ${TURBINE_OUTPUT_FORMAT} == *%Q* ]]
 then
   # Create a unique directory by substituting on %Q
   TURBINE_OUTPUT_PAD=${TURBINE_OUTPUT_PAD:-3}
-  integer -Z ${TURBINE_OUTPUT_PAD} i=0
+  integer -Z ${TURBINE_OUTPUT_PAD} i=1
   while true
   do
     D=${TURBINE_OUTPUT_FORMAT/\%Q/${i}}
-    [[ ! -d ${TURBINE_OUTPUT_ROOT}/${D} ]] && break
+    TRY=${TURBINE_OUTPUT_ROOT}/${D}
+    [[ ! -d ${TRY} ]] && break
+    (( i++ ))
   done
 fi
 
-RUN=$( date +${TURBINE_OUTPUT_FORMAT} )
+RUN=$( date +${D} )
 
 # Create the directory in which to run
 if (( ! ${+TURBINE_OUTPUT} ))
@@ -196,7 +198,7 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-cp ${SCRIPT} ${TURBINE_OUTPUT}
+cp -v ${SCRIPT} ${TURBINE_OUTPUT}
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
