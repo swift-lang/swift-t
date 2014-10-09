@@ -1,5 +1,7 @@
 #!/bin/zsh -f
 
+set -eu
+
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
 # turbine must be in your PATH or in TURBINE
 #         or installed in TURBINE_HOME or TURBINE_INSTALL
@@ -47,7 +49,7 @@ then
   exit 1
 fi
 
-if [[ ${TURBINE_HOME} != "" ]]
+if (( ${+TURBINE_HOME} ))
 then
   TURBINE=${TURBINE_HOME}/bin/turbine
   if [[ ! -x ${TURBINE} ]]
@@ -58,7 +60,7 @@ then
   fi
 fi
 
-if [[ ${TURBINE_INSTALL} != "" ]]
+if (( ${+TURBINE_INSTALL} ))
 then
   TURBINE=${TURBINE_INSTALL}/bin/turbine
   if [[ ! -x ${TURBINE} ]]
@@ -70,31 +72,24 @@ then
 fi
 
 # Look for Turbine in PATH
-if [[ ${TURBINE} == "" ]]
-  then
+if (( ! ${+TURBINE} ))
+then
   TURBINE=$( which turbine )
 fi
 
 # Allow user to override these from environment
-ENGINES=${TEST_TURBINE_ENGINES:-1}
-SERVERS=${TEST_ADLB_SERVERS:-1}
+export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
 WORKERS=${TEST_ADLB_WORKERS:-1}
 
-PROCS=$(( ENGINES + SERVERS + WORKERS ))
+PROCS=$(( ADLB_SERVERS + WORKERS ))
 
 # Setup environment variables to get info out of ADLB
 export ADLB_PERF_COUNTERS=${ADLB_PERF_COUNTERS:-true}
 export ADLB_PRINT_TIME=true
 
-# Setup environment vars for Turbine size
-export TURBINE_ENGINES=${ENGINES}
-export ADLB_SERVERS=${SERVERS}
-
 # Run Turbine:
 TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
-EXITCODE=${?}
-[[ ${EXITCODE} != 0 ]] && exit ${EXITCODE}
 
 # Valgrind-related checks:
 grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
