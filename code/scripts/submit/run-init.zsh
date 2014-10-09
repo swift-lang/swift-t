@@ -148,30 +148,32 @@ fi
 
 # Handle TURBINE_OUTPUT_FORMAT
 # Default format is e.g., 2006/10/13/14/26/12 
-TURBINE_OUTPUT_FORMAT=${TURBINE_OUTPUT_FORMAT:-%Y/%m/%d/%H/%M/%S}
-if [[ ${TURBINE_OUTPUT_FORMAT} == *%Q* ]]
-then
-  # Create a unique directory by substituting on %Q
-  TURBINE_OUTPUT_PAD=${TURBINE_OUTPUT_PAD:-3}
-  integer -Z ${TURBINE_OUTPUT_PAD} i=1
-  while true
-  do
-    D=${TURBINE_OUTPUT_FORMAT/\%Q/${i}}
-    TRY=${TURBINE_OUTPUT_ROOT}/${D}
-    [[ ! -d ${TRY} ]] && break
-    (( i++ ))
-  done
-fi
-
-RUN=$( date +${D} )
+turbine_output_format()
+{
+  TURBINE_OUTPUT_FORMAT=${TURBINE_OUTPUT_FORMAT:-%Y/%m/%d/%H/%M/%S}
+  local S=$( date +${TURBINE_OUTPUT_FORMAT} )
+  if [[ ${S} == *%Q* ]]
+  then
+    # Create a unique directory by substituting on %Q
+    TURBINE_OUTPUT_PAD=${TURBINE_OUTPUT_PAD:-3}
+    integer -Z ${TURBINE_OUTPUT_PAD} i=1
+    while true
+    do
+      local D=${S/\%Q/${i}}
+      local TRY=${TURBINE_OUTPUT_ROOT}/${D}
+      [[ ! -d ${TRY} ]] && break
+      (( i++ ))
+    done
+  fi
+  print ${TRY}
+}
 
 # Create the directory in which to run
 if (( ! ${+TURBINE_OUTPUT} ))
 then
-  export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
-else
-  export TURBINE_OUTPUT
+  export TURBINE_OUTPUT=$( turbine_output_format )
 fi
+export TURBINE_OUTPUT
 declare TURBINE_OUTPUT
 
 # All output from job, including error stream
