@@ -1086,6 +1086,10 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+m4_include([m4/ax_lib_hdf5.m4])
+AX_LIB_HDF5()
+echo "HDF5 support: ${with_hdf5}"
+
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
 
 ENABLE_BGP=0
