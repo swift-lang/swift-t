@@ -106,7 +106,6 @@ echo "TURBINE_WORKERS: ${TURBINE_WORKERS}"
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo
 
-# Be sure we are in an accessible directory
 cd ${TURBINE_OUTPUT}
 
 echo "TCLSH:        ${TCLSH}"
