@@ -652,7 +652,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADER
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
-	$(E) ln -fsv $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
+	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
