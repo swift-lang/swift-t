@@ -39,7 +39,7 @@ date "+%m/%d/%Y %I:%M%p"
 print
 
 TESTS_SKIP=0
-TESTS_TOTAL=10 # May set to -1 to run all
+TESTS_TOTAL=-1 # May set to -1 to run all
 INSTALL_ROOT=/tmp/exm-install
 TURBINE=${INSTALL_ROOT}/turbine
 STC=${INSTALL_ROOT}/stc

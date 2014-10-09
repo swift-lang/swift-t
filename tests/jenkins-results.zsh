@@ -83,8 +83,9 @@ do
     print "  <testcase name=\"${T_name}\" >"
     print "     <failure type=\"generic\">"
 
-    print 'T*'
-    print ${T}*
+    ## List files for test T:
+    # print 'T*'
+    # print ${T}*
 
     O_PART=""
     [[ ${T_opt} != "default" ]] && O_PART=".${T_opt}"
