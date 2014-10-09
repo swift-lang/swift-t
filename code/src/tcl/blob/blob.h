@@ -299,4 +299,13 @@ void blobutils_turbine_run_output_blob(ptrdiff_t output,
  */
 void* blobutils_strdup(char* s);
 
+/**
+   DOCD(blobutils_hdf_write output dataset blob,
+        `Write +blob+ to HDF file with name given in +output+
+         in dataset +dataset+.
+         Returns +true+ on success, else +false+.')
+ */
+bool blobutils_hdf_write(const char* output, const char* dataset,
+                          turbine_blob* blob);
+
 #endif

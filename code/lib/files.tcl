@@ -38,7 +38,7 @@ namespace eval turbine {
       adlb::declare_struct_type 1 file_ref \
                 [ list file ref is_mapped integer ]
     }
-    
+
     # usage: <name> <is_mapped> [<create props>]
     # is_mapped: if true, file mapping will be set;
     #            if false, temporary file can be generated
@@ -53,7 +53,7 @@ namespace eval turbine {
         set v $u
         return $u
     }
-    
+
     proc file_handle_from_td { td is_mapped } {
       return [ dict create file $td is_mapped $is_mapped ]
     }
@@ -73,7 +73,7 @@ namespace eval turbine {
         set result [ lindex $file_handle 0 ]
         return $result
     }
-    
+
     proc get_file_td { file_handle } {
       return [ dict get $file_handle file ]
     }
@@ -94,7 +94,7 @@ namespace eval turbine {
     proc is_file_mapped { file_handle } {
       return [ dict get $file_handle is_mapped ]
     }
-  
+
     proc store_file_from_local { file_handle local_f_varname } {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
@@ -110,7 +110,7 @@ namespace eval turbine {
       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
 
       set value [ dict create path [ local_file_path $local_f ] ]
-      
+
       if { $set_filename } {
         set id [ get_file_td $file_handle ]
         log "store: <$id>=$value"
@@ -148,7 +148,7 @@ namespace eval turbine {
     proc retrieve_decr_file { file_handle {cachemode CACHED} } {
       return [ retrieve_file $file_handle $cachemode 1 ]
     }
-    
+
     proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
         return [ adlb::create $id file_ref $read_refcount \
@@ -192,7 +192,7 @@ namespace eval turbine {
         debug "acquire_file_ref: <$id>=$result"
         return $result
     }
-    
+
     # get the filename from the file handle
     proc filename2 { out in } {
       set file_handle [ lindex $in 0 ]
@@ -363,7 +363,7 @@ namespace eval turbine {
       set srcpath [ local_file_path $src ]
       file copy -force $srcpath $dstpath
     }
-    
+
     proc dereference_file { v r } {
         rule $r "dereference_file_body {$v} $r" \
             name "dereference_file"
@@ -379,7 +379,7 @@ namespace eval turbine {
     proc mktemp {} {
         global env
         # TODO: re-add this argument (#364): --suffix=.turbine
-        if [ string equal $env(TURBINE_MAC) "no" ] { 
+        if [ string equal $env(TURBINE_MAC) "no" ] {
             set result [ exec mktemp --suffix=.turbine ]
         } else {
             set result [ exec mktemp -t turbine.XXXXXX ]
@@ -554,6 +554,19 @@ namespace eval turbine {
         upvar $local_file_name local_file
         blobutils_write [ local_file_path $local_file ] $b
         delete_turbine_blob $b
+    }
+
+    proc blob_hdf_write_local { local_file_name entry blob } {
+        set ptr    [ lindex $blob 0 ]
+        set length [ lindex $blob 1 ]
+        set b [ blobutils_create $ptr $length ]
+        upvar $local_file_name local_file
+        set name [ local_file_path $local_file ]
+        set rc [ blobutils_hdf_write $name $entry $b ]
+        delete_turbine_blob $b
+        if { ! $rc } {
+            turbine_error "HDF write failed to: $name"
+        }
     }
 
     proc file_lines { result input } {

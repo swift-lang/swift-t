@@ -30,6 +30,12 @@
 #include <tools.h>
 #include "src/tcl/blob/blob.h"
 
+#include "config.h"
+
+#if HAVE_HDF5
+#include <hdf5.h>
+#endif
+
 turbine_blob*
 blobutils_make_test(void)
 {
@@ -406,3 +412,55 @@ blobutils_strdup(char* s)
   char * t = strdup(s);
   return t;
 }
+
+#if HAVE_HDF5
+bool
+blobutils_hdf_write(const char* output, const char* dataset,
+                    turbine_blob* blob)
+{
+  printf("hdf_write\n");
+
+  int n = blob->length / sizeof(double);
+
+  hsize_t count[1];
+  count[0] = n;
+  hsize_t offset[1];
+  offset[0] = 0;
+  hsize_t* stride = NULL;
+  hsize_t* block = NULL;
+
+  hsize_t dimsm[1];
+  dimsm[0] = n;
+
+  hid_t memspace_id = H5Screate_simple(1, dimsm, NULL);
+
+  hid_t file_id = H5Fcreate(output, H5F_ACC_TRUNC,
+                            H5P_DEFAULT, H5P_DEFAULT);
+  check_msg(file_id >= 0, "Could not write HDF to: %s\n", output);
+
+  hid_t dataspace_id = H5Screate_simple(1, dimsm, NULL);
+
+  hid_t dataset_id = H5Dcreate(file_id, dataset, H5T_IEEE_F64BE,
+                               dataspace_id,
+                               H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+  herr_t status;
+  status = H5Sselect_hyperslab(dataspace_id, H5S_SELECT_SET,
+                               offset, stride, count, block);
+  check_msg(status >= 0, "H5Sselect_hyperslab() failed.")
+  status = H5Dwrite(dataset_id, H5T_NATIVE_DOUBLE, memspace_id,
+                    dataspace_id, H5P_DEFAULT, blob->pointer);
+  check_msg(status >= 0, "H5Dwrite() failed.")
+
+  return true;
+}
+#else // No HDF
+bool
+blobutils_hdf_write(const char* output, const char* dataset,
+                    turbine_blob* blob)
+{
+  printf("Turbine not compiled with HDF!\n");
+  return false;
+}
+#endif // HAVE_HDF
+

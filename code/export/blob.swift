@@ -44,8 +44,8 @@
 @pure @dispatch=WORKER
 (blob o) blob_read(file f) "turbine" "0.0.2" "blob_read";
 @pure @dispatch=WORKER
-(file f) blob_write(blob o) "turbine" "0.0.2"
-  [ "turbine::blob_write_local <<f>> <<o>>" ];
+(file f) blob_write(blob b) "turbine" "0.0.2"
+  [ "turbine::blob_write_local <<f>> <<b>>" ];
 @pure
 (blob o) blob_zeroes_float(int n)
 "turbine" "0.2.0"
@@ -53,6 +53,10 @@
 
 turbine_run_output_blob(blob b)
 "turbine" "0.4.0" "turbine_run_output_blob";
+
+@pure @dispatch=WORKER
+(file f) blob_hdf_write(string dataset, blob b) "turbine" "0.6.0"
+  [ "turbine::blob_hdf_write_local <<f>> <<dataset>> <<b>>" ];
 
 // Not Yet Implemented:
 @pure
