@@ -1053,7 +1053,7 @@ argument is re-specified at run-time, an error will occur.
 + 
 If argument +a+ is not provided, the +default+ value is used.  So: 
 +
-+argv("b", "f4.txt") -> "f4.txt"+
++argv("b", "f0.txt") -> "f0.txt"+
 
 +argp(int)+::
 _(argument-positional)_
