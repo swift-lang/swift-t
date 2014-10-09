@@ -96,7 +96,7 @@ TURBINE_WORKERS=$(( ${PROCS} - ${ADLB_SERVERS} ))
 
 # Log the parameters
 echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "SCRIPT:      ${SCRIPT} ${ARGS}"
+echo "SCRIPT:       ${SCRIPT} ${ARGS}"
 echo "PROCS:        ${PROCS}"
 echo "NODES:        ${NODES}"
 echo "PPN:          ${PPN}"

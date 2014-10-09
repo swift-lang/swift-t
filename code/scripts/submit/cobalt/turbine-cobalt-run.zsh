@@ -50,17 +50,6 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
-# Log file for turbine-cobalt settings
-LOG_FILE=${TURBINE_OUTPUT}/turbine.log
-# All output from job, including error stream
-OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
-
-print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
-SCRIPT_NAME=$( basename ${SCRIPT} )
-cp ${SCRIPT} ${TURBINE_OUTPUT}
-
-JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
 # Turbine-specific environment (with defaults)
 ADLB_SERVERS=${ADLB_SERVERS:-1}
 TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))

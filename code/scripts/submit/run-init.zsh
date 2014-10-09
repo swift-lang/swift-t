@@ -158,6 +158,17 @@ then
   print "done: ${INIT_SCRIPT}"
 fi
 
+# Log file for turbine-cobalt settings
+LOG_FILE=${TURBINE_OUTPUT}/turbine.log
+# All output from job, including error stream
+OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
+
+print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
+SCRIPT_NAME=$( basename ${SCRIPT} )
+cp ${SCRIPT} ${TURBINE_OUTPUT}
+
+JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
+
 ## Local Variables:
 ## mode: sh
 ## End:

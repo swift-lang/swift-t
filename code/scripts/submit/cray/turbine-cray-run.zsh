@@ -58,14 +58,8 @@ fi
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
-# Set SCRIPT_NAME, make PROGRAM an absolute path
-export SCRIPT_NAME=$( basename ${SCRIPT} )
-pushd $( dirname ${SCRIPT} ) >& /dev/null
-SCRIPT_DIR=$( /bin/pwd )
-popd >& /dev/null
-SCRIPT=${SCRIPT_DIR}/${SCRIPT_NAME}
-
 checkvars SCRIPT PPN TURBINE_OUTPUT WALLTIME
+export SCRIPT=${TURBINE_OUTPUT}/${SCRIPT}
 declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME QUEUE
 
 # Round NODES up for extra processes
