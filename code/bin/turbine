@@ -138,7 +138,7 @@ fi
 shift $(( OPTIND-1 ))
 PROGRAM=$1
 shift
-ARGS=${*}
+ARGS=( ${*} )
 
 if [[ ${PROGRAM} == "" ]]
 then
