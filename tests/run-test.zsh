@@ -92,8 +92,7 @@ TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
 
 # Valgrind-related checks:
-grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
-if [[ ${?} == 0 ]]
+if grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
 then
   print "run-test: valgrind detected error: ${PROGRAM}"
   exit 1
