@@ -16,6 +16,7 @@
 
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,116 +26,123 @@
 // Work unit type
 #define CMDLINE 0
 
-int main(int argc, char *argv[])
-{
-  FILE *fp;
-  int rc, i, done;
-  char c, cmdbuffer[1024];
+char cmdbuffer[1024];
+int quiet = 1;
 
-  int am_server, am_debug_server;
-  int num_servers, use_debug_server, aprintf_flag;
-  MPI_Comm app_comm;
-  int my_world_rank, my_app_rank;
+static void
+put_commands(int argc, char** argv)
+{
+  if (argc != 2)
+  {
+    printf("usage: %s <filename>\n", argv[0]);
+    ADLB_Fail(-1);
+  }
+
+  printf("command file is %s\n", argv[1]);
+
+  FILE* fp = fopen(argv[1], "r");
+  if (fp == NULL)
+  {
+    printf("could not open command file\n");
+    ADLB_Fail(-1);
+  }
+
+  while (fgets(cmdbuffer,1024,fp) != NULL)
+  {
+    cmdbuffer[strlen(cmdbuffer)] = '\0';
+    if (!quiet) printf("command = %s\n", cmdbuffer);
+
+    if (cmdbuffer[0] != '#')
+    {
+      /* put command into adlb here */
+      int rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, ADLB_RANK_ANY,
+                    -1, CMDLINE, ADLB_DEFAULT_PUT_OPTS);
+      printf("put cmd, rc = %d\n", rc);
+    }
+  }
+  printf("\nall commands submitted\n");
+}
+
+static void
+worker_loop(void)
+{
+  int work_type,work_len, answer_rank;
+  while (true)
+  {
+    printf("Getting a command\n");
+    MPI_Comm task_comm;
+    int rc = ADLB_Get(CMDLINE,
+                      cmdbuffer, &work_len, &answer_rank, &work_type,
+                      &task_comm);
+
+    if (rc == ADLB_SHUTDOWN)
+    {
+      printf("All jobs done\n");
+      break;
+    }
+    /* printf("executing command line :%s:\n", cmdbuffer); */
+    rc = system(cmdbuffer);
+    if (rc != 0)
+      printf("WARNING: COMMAND: (%s) EXIT CODE: %i\n",
+             cmdbuffer, rc);
+  }
+}
+
+int
+main(int argc, char *argv[])
+{
+  int rc;
+
+  int am_server;
 
   int num_types = 1;
-  int type_vect[2] = {CMDLINE};
+  int type_vect[2] = { CMDLINE };
 
-  int work_type,  work_len,
-    answer_rank;
 
-  int quiet = 1;
-
-  double start_time, end_time;
-
-  printf("HELLO!\n");
-  fflush(NULL);
+  printf("batcher...\n");
 
   rc = MPI_Init( &argc, &argv );
   assert(rc == MPI_SUCCESS);
 
+  int my_world_rank, worker_rank;
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
 
-  aprintf_flag = 0;		/* no output from adlb itself */
-  num_servers = 1;		/* one server should be enough */
-  use_debug_server = 0;		/* default: no debug server */
-  rc = ADLB_Init(num_servers, 1, type_vect, &am_server, 
-                  MPI_COMM_WORLD, &app_comm);
-  if ( !am_server ) /* application process */
-  {
-    MPI_Comm_rank( app_comm, &my_app_rank );
-  }
+  int num_servers = 1;
 
-  rc = MPI_Barrier( MPI_COMM_WORLD );
-  start_time = MPI_Wtime();
+  MPI_Comm worker_comm;
+  rc = ADLB_Init(num_servers, num_types, type_vect, &am_server,
+                  MPI_COMM_WORLD, &worker_comm);
+  if (! am_server)
+    // worker rank
+    MPI_Comm_rank(worker_comm, &worker_rank);
 
-  if ( am_server )
+  MPI_Barrier(MPI_COMM_WORLD);
+  double start_time = MPI_Wtime();
+
+  if (am_server )
   {
+    // server rank
     ADLB_Server(3000000);
   }
   else
-  {                                 /* application process */
-    if ( my_app_rank == 0 ) {  /* if master app, read and put cmds */
+  {
+    // worker rank
+    if (worker_rank == 0)
+      // master worker: read and put commands
+      put_commands(argc, argv);
 
-      if (argc != 2) {
-	printf("usage: %s <filename>\n", argv[0]);
-	ADLB_Fail(-1);
-      }
-      else
-	printf("command file is %s\n", argv[1]);
+    // All application processes, including the master worker,
+    // execute this loop:
+    worker_loop();
 
-      fp = fopen(argv[1], "r");
-      if (fp == NULL) {
-	printf("could not open command file\n");
-	ADLB_Fail(-1);
-      }
-
-      while (fgets(cmdbuffer,1024,fp) != NULL) {
-	cmdbuffer[strlen(cmdbuffer)] = '\0';
-        if (!quiet)
-          printf("command = %s\n", cmdbuffer);
-
-	if (cmdbuffer[0] != '#') {
-	  /* put command into adlb here */
-	  rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, ADLB_RANK_ANY,
-	                -1, CMDLINE, 1, 1);
-	  printf("put cmd, rc = %d\n", rc);
-	}
-      }
-      printf("\nall commands submitted\n");
-    }
-    /* all application processes, including the application master,
-       execute this loop */
-
-    done = 0;
-    while (!done)
+    if (worker_rank == 0)
     {
-      printf("Getting a command\n");
-      MPI_Comm task_comm;
-      rc = ADLB_Get(CMDLINE,
-                    cmdbuffer, &work_len, &answer_rank, &work_type,
-                    &task_comm);
-
-      if ( rc == ADLB_SHUTDOWN )
-      {
-	printf("All jobs done\n");
-	break;
-      }
-      /* printf("executing command line :%s:\n", cmdbuffer); */
-      rc = system( cmdbuffer );
-      if (rc != 0)
-        printf("WARNING: COMMAND: (%s) EXIT CODE: %i\n",
-               cmdbuffer, rc);
-    }
-
-    if (my_app_rank == 0)
-    {
-      end_time = MPI_Wtime();
+      double end_time = MPI_Wtime();
       printf("TOOK: %.3f\n", end_time-start_time);
     }
   }
 
   ADLB_Finalize();
   MPI_Finalize();
-
   return(0);
 }
