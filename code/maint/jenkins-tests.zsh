@@ -2,6 +2,9 @@
 
 # Jenkins script - run Turbine test suite
 
+MPICH=/tmp/mpich-install
+TURBINE=/tmp/exm-install/turbine
+
 path+=( $MPICH/bin $TURBINE/bin )
 
 set -eu
