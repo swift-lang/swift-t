@@ -2,6 +2,8 @@
 
 # Jenkins script - build only
 
+print JENKINS.ZSH
+
 MPICH=/tmp/mpich-install
 C_UTILS=/tmp/exm-install/c-utils
 ADLB=/tmp/exm-install/lb
