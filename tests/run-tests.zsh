@@ -260,7 +260,7 @@ run_test()
       return ${TEST_TRUE_FAIL}
     fi
 
-    if [ ! -z "${TURBINE_XPT_FILE}" ]
+    if (( ${+TURBINE_XPT_FILE} ))
     then
       print "rerunning with checkpoint: ${TURBINE_XPT_FILE}"
       export TURBINE_XPT_RELOAD="${TURBINE_XPT_FILE}"
