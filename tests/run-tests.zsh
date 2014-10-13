@@ -598,7 +598,7 @@ do
       fi
     fi
   done
-  (( TESTS_RUN++ ))
+  TESTS_RUN=$(( TESTS_RUN+1 ))
 done
 
 report_stats_and_exit 0
