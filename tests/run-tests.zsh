@@ -191,12 +191,16 @@ compile_test()
   fi
 
   pushd $STC_TESTS_DIR
-  ${STC} -L ${STC_LOG_FILE} \
+  if ${STC} -L ${STC_LOG_FILE} \
       -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} ${ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
             > ${STC_OUT_FILE} 2> ${STC_ERR_FILE}
-  EXIT_CODE=${?}
+  then
+    EXIT_CODE=0
+  else
+    EXIT_CODE=1
+  fi
   popd
 }
 
@@ -223,9 +227,9 @@ run_test()
   export TURBINE_OUTPUT STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
 
   # Get test command-line arguments
-  if [ -r ${ARGS_FILE} ]
+  if [[ -r ${ARGS_FILE} ]]
   then
-    read ARGS < ${ARGS_FILE}
+    ARGS=( $( < ${ARGS_FILE} ) ) 
   fi
 
   # Run the test from within the test directory
@@ -359,14 +363,13 @@ run_test()
     local LINE_MISSING=false
     while read line
     do
-      grep -q "${line}" "${TURBINE_OUTPUT}"
-      if  (( $? != 0 ))
+      if ! grep -q "${line}" "${TURBINE_OUTPUT}"
       then
         print "'${line}' wasn't present in output"
         LINE_MISSING=true
       fi
-    done <  ${EXP_OUTPUT}
-    if [ $LINE_MISSING = true ]; then
+    done < ${EXP_OUTPUT}
+    if [[ $LINE_MISSING == "true" ]]; then
       return $TEST_TRUE_FAIL
     fi
   fi
