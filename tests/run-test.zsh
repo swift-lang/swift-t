@@ -35,7 +35,7 @@ shift $(( OPTIND-1 ))
 PROGRAM=$1
 OUTPUT=$2
 shift 2
-ARGS=${*}
+ARGS=( ${*} )
 
 if [[ ${PROGRAM} == "" ]]
 then
