@@ -1,6 +1,8 @@
 
 // Cf. 594-blob-write
 
+// SKIP-THIS-TEST uses HDF
+
 import blob;
 import io;
 
