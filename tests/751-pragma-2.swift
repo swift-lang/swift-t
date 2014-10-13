@@ -1,8 +1,12 @@
-import io;
+
 /*
  * Test that we can define new work types and use them for foreign
  * functions.
  */
+
+// SKIP-THIS-TEST until we can define a correct worker
+
+import io;
 
 pragma worktypedef a_new_work_type;
 
