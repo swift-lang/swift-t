@@ -19,7 +19,8 @@ set -eu
             --with-mpi=$MPICH        \
             --with-c-utils=$C_UTILS  \
             --with-adlb=$ADLB        \
-            --with-hdf5=no
+            --with-hdf5=no           \
+            --disable-static-pkg
 make clean
 
 make V=1
