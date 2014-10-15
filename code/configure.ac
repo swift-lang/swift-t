@@ -226,8 +226,6 @@ AC_ARG_WITH(launcher,
     ])
 
 # Set MPI_DIR with respect to an mpicc in PATH
-echo USE_MPI_DIR $USE_MPI_DIR
-echo ENABLE_CUSTOM_MPI $ENABLE_CUSTOM_MPI
 if [[ ${USE_MPI_DIR} == 0 ]]
 then
    # Last chance to configure MPI: look for mpiexec in PATH
@@ -280,8 +278,7 @@ fi
 
 AC_ARG_WITH(mpi-include,
     AS_HELP_STRING([--with-mpi-include],
-                   [directory containing MPI header (mpi.h).
-                    Set to SKIP to skip the MPI version check.]),
+                   [directory containing MPI header (mpi.h).]),
     [
         USE_MPI_INCLUDE=${withval}
     ],
