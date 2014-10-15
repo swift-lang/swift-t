@@ -31,7 +31,7 @@ echo "MKSTATIC_TMPDIR=${MKSTATIC_TMPDIR}"
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || test_result 1
 
-for f in ${THIS%.sh}.data*
+for f in ${THIS%.sh}.*.data
 do
   dst="${MKSTATIC_TMPDIR}/$(basename $f)"
   if [ ! -f "$dst" ]
