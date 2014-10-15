@@ -27,6 +27,7 @@
 
 #include <inttypes.h>
 #include <limits.h>
+#include <sys/utsname.h>
 
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
@@ -74,30 +75,30 @@ c_utils_hash_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Hostname_Cmd(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  struct utsname u;
+  int rc = uname(&u);
+  assert(rc == 0);
+  Tcl_Obj* result = Tcl_NewStringObj(u.nodename, -1);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 /**
    Shorten object creation lines.  c_utils:: namespace is prepended
  */
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "c_utils::" tcl_function, c_function, \
                          NULL, NULL);
-/**
-   Called when Tcl loads this extension
- */
-int DLLEXPORT
-Tclcutils_Init(Tcl_Interp *interp)
-{
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
-    return TCL_ERROR;
-
-  if (Tcl_PkgProvide(interp, "c_utils", "0.1") == TCL_ERROR)
-    return TCL_ERROR;
-
-  return TCL_OK;
-}
 
 void
 tcl_c_utils_init(Tcl_Interp* interp)
 {
   COMMAND("heapsize", c_utils_heapsize_Cmd);
   COMMAND("hash",     c_utils_hash_Cmd);
+  COMMAND("hostname", Hostname_Cmd);
 }
