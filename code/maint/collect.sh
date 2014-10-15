@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# COLLECT.SH
+
 # Take the single-word tokens from the given *.d files
 # one per line in an output file
 

@@ -196,7 +196,9 @@ MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 INCLUDES += -I $(MPI_INCLUDE)
 MPI_LIB :=
 ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
-  MPI_LIB += -L$(MPI_LIB_DIR)
+  ifneq ($(MPI_LIB_DIR),)
+    MPI_LIB += -L$(MPI_LIB_DIR)
+  endif
 endif
 MPI_LIB_FLAGS = @USE_MPI_LIB_SPEC@
 MPI_LIB += $(MPI_LIB_FLAGS)
@@ -313,7 +315,9 @@ RPATHS :=
 RPATHS += -Wl,-rpath -Wl,$(INSTALL_LIB)
 RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
 RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
-RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
+ifneq ($(MPI_LIB_DIR),)
+	RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
+endif
 RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 ifeq ($(ENABLE_MPE),1)
 	RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
@@ -410,10 +414,15 @@ deps: $(DEPS)
 # Assume we always have gcc for deps processing
 DEPCC = gcc
 
+# Avoid dependency mpi.h if we don't know where it is:
+ifeq ($(MPI_INCLUDE),0)
+	DEP_DROP = -d mpi.h
+endif
+
 %.d: %.c
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
-             $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
+             $(DEP_DROP) $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
 	     $(INCLUDES) $(DEFINES)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
