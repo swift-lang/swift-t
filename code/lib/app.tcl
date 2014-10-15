@@ -28,8 +28,27 @@ namespace eval turbine {
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
     set start [ clock milliseconds ]
-    if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } ] } {
-      turbine_error "external command failed: $cmd $args"
+    if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
+             results options ] } {
+      set details [ dict get $options -errorcode ]
+      set einfo [ dict get $options -errorinfo ]
+      set ecmd [ list $cmd {*}$args ]
+      if { [ lindex $details 0 ] == "CHILDSTATUS" } {
+        # Child process failed
+        set epid [ lindex $details 1 ]
+        set ecode [ lindex $details 2 ]
+        turbine_error "external process $epid failed with exit code $ecode\
+            while executing '$ecmd'"
+      } elseif { [ lindex $details 0 ] == "POSIX" } {
+        set posixcode [ lindex $details 1 ]
+        set posixinfo [ lindex $details 2 ]
+        turbine_error "could not launch external command: '$ecmd'\
+          error code: $posixcode error info: '$posixinfo'"
+      } else {
+        turbine_error "external command failed in unexpected way: '$cmd $args'\
+          details: $details error info: '$einfo'"
+
+      }
     }
     set stop [ clock milliseconds ]
     set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
