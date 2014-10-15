@@ -1,4 +1,3 @@
-#!/bin/sh
 dirname=`dirname $0`
 testdir=`cd $dirname; pwd`
 

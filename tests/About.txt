@@ -39,6 +39,9 @@ Available arguments:
 
 * Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
   create input files, etc.  Must return exit code 0 or test fails.
+  This is sourced by the test script in a zsh subshell in such a way
+  that any environment variables set will be available for STC and
+  Turbine when running that test.
 * Check script: TEST.check.sh: Is run after STC and Turbine.  Can
   check outputs, remove files, etc.  Must return exit code 0 or test
   fails.  E.g., can examine TEST.out for correctness Expected output:

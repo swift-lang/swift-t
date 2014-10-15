@@ -1,5 +1,3 @@
-#!/bin/bash
-
 COASTER_SVC=coaster-service
 SVC_CONF="$(dirname $0)/695-app-coasters.coaster.conf"
 

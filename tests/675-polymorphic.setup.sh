@@ -1,5 +1,3 @@
-#!/bin/sh
-
 #Create file that test expects
 
 echo "HELLO" > tmp1.txt
