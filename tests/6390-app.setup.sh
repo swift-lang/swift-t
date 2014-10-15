@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 dirname=`dirname $0`
 testdir=`cd $dirname; pwd`
 
