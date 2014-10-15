@@ -65,7 +65,7 @@ AR_SUFFIX=a
 
 DPKG_ARCH=
 # Debian distros may put in architecture-specific subdirectory
-if which dpkg-architecture > /dev/null
+if which dpkg-architecture > /dev/null 2>&1
 then
   DPKG_ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
@@ -171,7 +171,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-echo "CHECK ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
+echo "checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 fi
@@ -180,7 +180,8 @@ AC_SUBST(USE_LIBCUTILS_A)
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 # The "launcher" is used by job submission systems to launch jobs
-# Usually a path to mpiexec- schedulers are handled by their scripts
+# Usually a path to mpiexec
+# Note: schedulers are handled by turbine/scripts/submit/*
 USE_LAUNCHER=0
 USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
@@ -206,7 +207,8 @@ AC_ARG_WITH(mpi,
 # In custom-mpi, the user will optionally specify MPI directories below
 AC_ARG_ENABLE(custom-mpi,
     AS_HELP_STRING([--enable-custom-mpi],
-                   [Select MPI include and lib separately]),
+                   [Select MPI include and lib separately,
+                    do not use mpicc]),
     [
         ENABLE_CUSTOM_MPI=1
         USE_MACHINE=custom
@@ -224,10 +226,12 @@ AC_ARG_WITH(launcher,
     ])
 
 # Set MPI_DIR with respect to an mpicc in PATH
+echo USE_MPI_DIR $USE_MPI_DIR
+echo ENABLE_CUSTOM_MPI $ENABLE_CUSTOM_MPI
 if [[ ${USE_MPI_DIR} == 0 ]]
 then
    # Last chance to configure MPI: look for mpiexec in PATH
-   program=$( which mpicc )
+   program=$( which mpicc 2> /dev/null)
    if [[ ${?} == 0 ]]
    then
        AC_MSG_RESULT([PATH contains: ${program}])
@@ -255,7 +259,7 @@ fi
 if [[ ${USE_LAUNCHER} == 0 ]]
 then
     # Try to set launcher based on PATH
-    program=$( which mpiexec )
+    program=$( which mpiexec 2> /dev/null )
     if [[ ${?} != 0 ]]
     then
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
@@ -276,7 +280,8 @@ fi
 
 AC_ARG_WITH(mpi-include,
     AS_HELP_STRING([--with-mpi-include],
-                   [directory containing MPI header (mpi.h)]),
+                   [directory containing MPI header (mpi.h).
+                    Set to SKIP to skip the MPI version check.]),
     [
         USE_MPI_INCLUDE=${withval}
     ],
@@ -313,11 +318,23 @@ AC_ARG_WITH(mpi-lib-extra,
     ],
     [])
 
+# Allow user to disable MPI checks (useful on Cray)
+ENABLE_MPI_CHECKS=yes
+AC_ARG_ENABLE(mpi-checks,
+    AC_HELP_STRING([--disable-mpi-checks],
+                   [Turbine checks for mpi.h and MPI libs to obtain
+                    the MPI version and enforce sanity.  This flag
+                    disables these checks.]),
+    [ ENABLE_MPI_CHECKS=${enableval} ])
+
 # Now check MPI settings
 
+if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+then
+
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
-              [],
-              [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
+                [],
+                [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
 
 MPI_LIB_FOUND=0
 
@@ -364,7 +381,9 @@ if (( ! MPI_LIB_FOUND ))
 then
   AC_MSG_ERROR([Could not find MPI library in any alternative locations])
 fi
+fi
 
+# Set MPI options
 
 USE_MPI_LIB_SPEC="-l${USE_MPI_LIB_NAME}"
 for extra_lib in ${MPI_EXTRA_LIBS}
@@ -401,6 +420,8 @@ then
   done
 fi
 
+if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+then
 if (( ! MPI_LIB_FOUND ))
 then
   AC_MSG_ERROR([Could not find MPI library:
@@ -408,6 +429,7 @@ then
                    MPI may not be installed at this
                    location or library may not
                    have been built.])
+fi
 fi
 
 # Write out MPI settings
@@ -425,6 +447,9 @@ AC_SUBST(USE_MPI_LIB_EXTRA_A)
 MPI_IMPL=unknown
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
+
+if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+then
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
    MPI_H=${USE_MPI_INCLUDE}/mpi.h
@@ -437,7 +462,6 @@ then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
-   MPI_LINE_OUTPUT_FLAG=
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
      LINE_PREFIX="-tag-output"
@@ -450,6 +474,7 @@ then
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
+fi # ENABLE_MPI_CHECKS==yes
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
@@ -1089,8 +1114,8 @@ AC_SUBST(USE_XLC)
 m4_include([m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 echo "HDF5 support: ${with_hdf5}"
-if [[ ${with_hdf5} == "no" ]] 
-then  
+if [[ ${with_hdf5} == "no" ]]
+then
     echo "HDF5 is only required if you need Turbine's HDF features."
 fi
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
