@@ -207,5 +207,5 @@ fi
 
 # Just use mpiexec right now
 # Allows user to insert valgrind
-${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCHER} ${OPTIONS} ${=VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
