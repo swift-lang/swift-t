@@ -192,20 +192,6 @@ MPE_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "mpe::" tcl_function, c_function, \
                          NULL, NULL);
-/**
-   Called when Tcl loads this extension
- */
-int DLLEXPORT
-Tclmpe_Init(Tcl_Interp *interp)
-{
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
-    return TCL_ERROR;
-
-  if (Tcl_PkgProvide(interp, "MPE", "0.1") == TCL_ERROR)
-    return TCL_ERROR;
-
-  return TCL_OK;
-}
 
 void
 tcl_mpe_init(Tcl_Interp* interp)
