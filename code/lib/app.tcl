@@ -16,7 +16,21 @@
 # Functions for launching external apps
 
 namespace eval turbine {
+
   namespace export unpack_args exec_external poll_mock async_exec_coaster
+
+  variable app_initialized
+  variable app_retry
+
+  proc app_init { } {
+    variable app_initialized
+    variable app_retries
+    if { [ info exists app_initialized ] } return
+
+    set app_initialized 1
+    getenv_integer TURBINE_APP_RETRIES 0 app_retries
+  }
+
   # Run external application
   # cmd: executable to run
   # kwopts: keyword options.  Valid are:
@@ -24,20 +38,29 @@ namespace eval turbine {
   # args: command line args as strings
   proc exec_external { cmd kwopts args } {
 
+    app_init
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
-    set start [ clock milliseconds ]
-    if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
-               results options ] } {        
-      app_error $options $cmd {*}$args 
+    variable app_retries
+    set tries 0
+    while { true } {
+      set start [ clock milliseconds ]
+      if { ! [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
+                 results options ] } {
+        # No error: success
+        break
+      }
+      set retry [ expr $tries < $app_retries ]
+      app_error $retry $options $cmd {*}$args
+      incr tries
     }
     set stop [ clock milliseconds ]
     set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
     log "shell command duration: $duration"
   }
 
-  proc app_error { options cmd args } { 
+  proc app_error { retry options cmd args } {
     set details [ dict get $options -errorcode ]
     set einfo [ dict get $options -errorinfo ]
     set ecmd [ list $cmd {*}$args ]
@@ -45,16 +68,21 @@ namespace eval turbine {
       # Child process failed
       set epid [ lindex $details 1 ]
       set ecode [ lindex $details 2 ]
-      turbine_error "external process $epid failed with exit code $ecode\
+      set msg "external process $epid failed with exit code $ecode\
             while executing '$ecmd'"
     } elseif { [ lindex $details 0 ] == "POSIX" } {
       set posixcode [ lindex $details 1 ]
       set posixinfo [ lindex $details 2 ]
-      turbine_error "could not launch external command: '$ecmd'\
+      set msg "could not launch external command: '$ecmd'\
           error code: $posixcode error info: '$posixinfo'"
     } else {
-      turbine_error "external command failed in unexpected way: '$cmd $args'\
+      set msg "external command failed in unexpected way: '$cmd $args'\
           details: $details error info: '$einfo'"
+    }
+    if { $retry } {
+      log "$msg : retrying"
+    } else {
+      turbine_error $msg
     }
   }
 
