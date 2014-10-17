@@ -125,6 +125,12 @@ blobutils_cast_to_ptrptr(void* p)
   return (void**) p;
 }
 
+char*
+blobutils_cast_to_string(void* p)
+{
+  return (char*) p;
+}
+
 char**
 blobutils_cast_to_char_ptrptr(void* p)
 {

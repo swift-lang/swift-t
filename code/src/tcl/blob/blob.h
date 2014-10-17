@@ -161,6 +161,8 @@ void* blobutils_cast_int64_to_ptr(int64_t i);
 
 /** DOCD(blobutils_cast_to_ptrptr p, Integer to +void**+.) */
 void** blobutils_cast_to_ptrptr(void* p);
+/** DOCD(blobutils_cast_to_string p, +void*+ to +char**+.) */
+char* blobutils_cast_to_string(void* p);
 /** DOCD(blobutils_cast_to_char_ptrptr p, Integer to +char**+.) */
 char** blobutils_cast_to_char_ptrptr(void* p);
 /** DOCD(blobutils_cast_to_ptrptr s, +char*+ to +void*+.) */
