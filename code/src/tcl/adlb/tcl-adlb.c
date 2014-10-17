@@ -665,7 +665,7 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: no args, returns MPI rank
+   usage: returns MPI rank in given comm or, by default, adlb_comm
 */
 static int
 ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
