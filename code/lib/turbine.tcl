@@ -406,7 +406,7 @@ namespace eval turbine {
     # I.e. that shouldn't include a stacktrace
     proc turbine_error { args } {
         global tcl_version
-        set msg [ join $args "" ]
+        set msg [ join $args ]
         if { $tcl_version >= 8.6 } {
             throw {TURBINE ERROR} $msg
         } else {

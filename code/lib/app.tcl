@@ -80,7 +80,7 @@ namespace eval turbine {
     variable app_retries
     set retry [ expr $tries < $app_retries ]
     if { ! $retry } {
-      turbine_error $msg
+      turbine_error $msg on: [ c_utils::hostname ]
     }
     app_retry $msg $tries
   }
@@ -89,7 +89,7 @@ namespace eval turbine {
     # Retry:
     variable app_retries
     variable app_backoff
-    log "$msg: retries: $tries/$app_retries"
+    log "$msg: retries: $tries/$app_retries on: [ c_utils::hostname ]"
     set delay [ expr { $app_backoff * pow(2, $tries) * rand() } ]
     after [ expr round(1000 * $delay) ]
   }
