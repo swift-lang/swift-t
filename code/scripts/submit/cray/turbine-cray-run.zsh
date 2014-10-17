@@ -59,8 +59,8 @@ fi
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
 checkvars SCRIPT PPN TURBINE_OUTPUT WALLTIME
-export SCRIPT=${TURBINE_OUTPUT}/${SCRIPT}
-declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME QUEUE
+export SCRIPT
+declare SCRIPT PPN TURBINE_OUTPUT WALLTIME QUEUE
 
 # Round NODES up for extra processes
 export NODES=$(( PROCS/PPN ))

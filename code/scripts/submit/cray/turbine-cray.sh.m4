@@ -87,7 +87,7 @@ export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
 # Output header
-echo "Turbine: turbine-aprun.sh"
+echo "Turbine: turbine-cray.sh"
 date "+%m/%d/%Y %I:%M%p"
 echo
 
@@ -111,17 +111,21 @@ cd ${TURBINE_OUTPUT}
 echo "TCLSH:        ${TCLSH}"
 echo
 
-echo "JOB OUTPUT:"
-echo
+SCRIPT_NAME=$( basename ${SCRIPT} )
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
-    # USER: Set aprun parameters to agree with PBS -l settings
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT} ${ARGS}
+    echo "JOB OUTPUT:"
+    echo
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
-    # USER: Set aprun parameters to agree with PBS -l settings
     # Stream output to file for immediate viewing
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT} ${ARGS} \
+    echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
             2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
+
+# Local Variables:
+# mode: m4
+# End:
