@@ -647,7 +647,8 @@ EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) $(SCRIPTS_SUBMIT) )
 
-install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS)
+install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) \
+             $(TURBINE_HEADERS) $(TURBINE_EXECUTABLES)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
