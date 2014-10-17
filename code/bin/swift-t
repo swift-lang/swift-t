@@ -25,7 +25,7 @@ VERBOSE=0
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hvV"
 STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:"
-TURBINE_CHARS="e:lm:n:s:"
+TURBINE_CHARS="e:lm:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -45,7 +45,7 @@ do
       ;;
 
     # Turbine arguments
-    e) ;& l) ;& m) ;& n) ;& s)
+    e) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
@@ -129,7 +129,7 @@ message "Running:   ${PROGRAM_TCL}"
 verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
 
 # Clean up
-if (( DELETE_PROGRAM_TCL ))  
+if (( DELETE_PROGRAM_TCL ))
 then
   message "Removing: ${PROGRAM_TCL}"
   rm ${PROGRAM_TCL}
