@@ -167,7 +167,7 @@ turbine_output_format()
     done
     print ${TRY}
   else
-    print ${S}
+    print ${TURBINE_OUTPUT_ROOT}/${S}
   fi
 }
 
