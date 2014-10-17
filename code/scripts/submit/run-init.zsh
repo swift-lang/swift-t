@@ -146,8 +146,9 @@ if [[ ${PROCS} == 0 ]]
   exit 1
 fi
 
-# Handle TURBINE_OUTPUT_FORMAT
-# Default format is e.g., 2006/10/13/14/26/12 
+# Prints a TURBINE_OUTPUT directory
+# Handles TURBINE_OUTPUT_FORMAT
+# Default format is e.g., 2006/10/13/14/26/12
 turbine_output_format()
 {
   TURBINE_OUTPUT_FORMAT=${TURBINE_OUTPUT_FORMAT:-%Y/%m/%d/%H/%M/%S}
@@ -164,8 +165,10 @@ turbine_output_format()
       [[ ! -d ${TRY} ]] && break
       (( i++ ))
     done
+    print ${TRY}
+  else
+    print ${S}
   fi
-  print ${TRY}
 }
 
 # Create the directory in which to run
