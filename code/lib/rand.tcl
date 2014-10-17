@@ -33,17 +33,15 @@ namespace eval turbine {
     proc init_rng {} {
         global env
         set rank [ adlb::rank ]
-        if { [ info exists env(TURBINE_SRAND) ] &&
-             [ string length $env(TURBINE_SRAND) ] > 0 } {
+
+        if { [ getenv_integer TURBINE_SRAND x s ] } {
             if { $rank == 0 } {
-                log "TURBINE_SRAND: $env(TURBINE_SRAND)"
+                log "TURBINE_SRAND: $s"
             }
-            check_str_int $env(TURBINE_SRAND)
-            set seed [ expr {$env(TURBINE_SRAND) + $rank} ]
         } else {
-            set seed $rank
+            set s 0
         }
-        expr srand($seed)
+        expr srand($s + $rank)
     }
 
     # called with 0 args, returns a random float in [0.0, 1.0)
@@ -81,3 +79,8 @@ namespace eval turbine {
         return [ expr {(int(rand() * $range)) + $lo} ]
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:
