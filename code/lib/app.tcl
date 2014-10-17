@@ -29,7 +29,7 @@ namespace eval turbine {
 
     set start [ clock milliseconds ]
     if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
-             results options ] } {
+             results options ] } {        
       set details [ dict get $options -errorcode ]
       set einfo [ dict get $options -errorinfo ]
       set ecmd [ list $cmd {*}$args ]
@@ -178,3 +178,8 @@ namespace eval turbine {
   }
 
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 2
+# End:
