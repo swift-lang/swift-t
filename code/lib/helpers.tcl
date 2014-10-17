@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+# HELPERS.TCL
+# Tcl helpers that do not refer to Turbine features
+
 # Shutdown Tcl if condition does not hold
 proc assert { condition msg } {
     if { ! [ uplevel 1 "expr $condition" ] } {
@@ -53,11 +56,11 @@ proc empty { args } {
 }
 
 # Sometimes it is confusing when an error message reports blankness
-proc something { x } { 
-    if { [ string length [ string trim $x ] ] == 0 } { 
+proc something { x } {
+    if { [ string length [ string trim $x ] ] == 0 } {
         return "(nothing)"
-    } 
-    return $x 
+    }
+    return $x
 }
 
 # Given: enum E { T1 T2 }
