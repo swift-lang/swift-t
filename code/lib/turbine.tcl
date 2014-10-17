@@ -539,15 +539,21 @@ namespace eval turbine {
       }
     }
 
+    # Get environment variable or assign default
+    # Result goes into upvar on output
+    # Asserts it is an integer
+    # Returns 0 if used default, else 1
     proc getenv_integer { key dflt output } {
         global env
         upvar $output result
         if { [ info exists env($key) ] } {
             if { [ string is integer $env($key) ] } {
                 if { [ string length $env($key) ] == 0 } {
-                    set result 0
+                    set result $dflt
+                    return 0
                 } else {
                     set result $env($key)
+                    return 1
                 }
             } else {
                 turbine_error \
@@ -556,6 +562,7 @@ namespace eval turbine {
             }
         } else {
             set result $dflt
+            return 0
         }
     }
 }
