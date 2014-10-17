@@ -40,13 +40,13 @@ namespace eval turbine {
 
     app_init
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
-    log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
     variable app_retries
     variable app_backoff 
     set tries 0
     set backoff $app_backoff
     while { true } {
+      log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
       set start [ clock milliseconds ]
       if { ! [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
                  results options ] } {
