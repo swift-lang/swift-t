@@ -41,10 +41,7 @@ namespace eval turbine {
     app_init
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
 
-    variable app_retries
-    variable app_backoff 
     set tries 0
-    set backoff $app_backoff
     while { true } {
       log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
       set start [ clock milliseconds ]
@@ -53,10 +50,7 @@ namespace eval turbine {
         # No error: success
         break
       }
-      set retry [ expr $tries < $app_retries ]
-      app_error $retry $options $cmd {*}$args
-      after [ expr round(1000 * $backoff) ]
-      set backoff [ expr $backoff * 2 ]
+      app_error $tries $options $cmd {*}$args
       incr tries
     }
     set stop [ clock milliseconds ]
@@ -64,7 +58,7 @@ namespace eval turbine {
     log "shell command duration: $duration"
   }
 
-  proc app_error { retry options cmd args } {
+  proc app_error { tries options cmd args } {
     set details [ dict get $options -errorcode ]
     set einfo [ dict get $options -errorinfo ]
     set ecmd [ list $cmd {*}$args ]
@@ -83,11 +77,21 @@ namespace eval turbine {
       set msg "external command failed in unexpected way: '$cmd $args'\
           details: $details error info: '$einfo'"
     }
-    if { $retry } {
-      log "$msg : retrying"
-    } else {
+    variable app_retries
+    set retry [ expr $tries < $app_retries ]
+    if { ! $retry } {
       turbine_error $msg
     }
+    app_retry $msg $tries
+  }
+
+  proc app_retry { msg tries } {
+    # Retry:
+    variable app_retries
+    variable app_backoff
+    log "$msg: retries: $tries/$app_retries"
+    set delay [ expr { $app_backoff * pow(2, $tries) * rand() } ]
+    after [ expr round(1000 * $delay) ]
   }
 
   # Set specified vars in outer scope for stdin, stdout and stderr
