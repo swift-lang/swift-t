@@ -22,11 +22,13 @@ namespace eval turbine {
   proc app_init { } {
     variable app_initialized
     variable app_retries
+    variable app_backoff
 
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRIES 0 app_retries
+    set app_backoff 0.1
   }
 
   # Run external application
@@ -41,7 +43,9 @@ namespace eval turbine {
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
     variable app_retries
+    variable app_backoff 
     set tries 0
+    set backoff $app_backoff
     while { true } {
       set start [ clock milliseconds ]
       if { ! [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
@@ -51,6 +55,8 @@ namespace eval turbine {
       }
       set retry [ expr $tries < $app_retries ]
       app_error $retry $options $cmd {*}$args
+      after [ expr round(1000 * $backoff) ]
+      set backoff [ expr $backoff * 2 ]
       incr tries
     }
     set stop [ clock milliseconds ]
