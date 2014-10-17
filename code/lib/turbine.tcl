@@ -404,8 +404,9 @@ namespace eval turbine {
 
     # Signal error that is caused by problem in user code
     # I.e. that shouldn't include a stacktrace
-    proc turbine_error { msg } {
+    proc turbine_error { args } {
         global tcl_version
+        set msg [ join $args "" ]
         if { $tcl_version >= 8.6 } {
             throw {TURBINE ERROR} $msg
         } else {
@@ -538,6 +539,25 @@ namespace eval turbine {
       }
     }
 
+    proc getenv_integer { key dflt output } {
+        global env
+        upvar $output result
+        if { [ info exists env($key) ] } {
+            if { [ string is integer $env($key) ] } {
+                if { [ string length $env($key) ] == 0 } {
+                    set result 0
+                } else {
+                    set result $env($key)
+                }
+            } else {
+                turbine_error \
+                    "Environment variable $key must be an integer. " \
+                    "Value: '$env($key)'"
+            }
+        } else {
+            set result $dflt
+        }
+    }
 }
 
 # Local Variables:
