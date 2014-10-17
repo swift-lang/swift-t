@@ -19,12 +19,10 @@ namespace eval turbine {
 
   namespace export unpack_args exec_external poll_mock async_exec_coaster
 
-  variable app_initialized
-  variable app_retry
-
   proc app_init { } {
     variable app_initialized
     variable app_retries
+
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
