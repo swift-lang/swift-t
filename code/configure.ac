@@ -382,7 +382,7 @@ fi
 
 # Set MPI options
 
-if [[ ${USE_MPI_LIB_NAME} != "" ]]
+if [[ -z ${USE_MPI_LIB_NAME} ]]
 then
     USE_MPI_LIB_SPEC="-l${USE_MPI_LIB_NAME}"
 fi
