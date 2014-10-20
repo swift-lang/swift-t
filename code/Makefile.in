@@ -533,7 +533,7 @@ executables: $(TURBINE_EXECUTABLES)
 # Need to export Tcl API symbols to link with dynamically loaded modules.
 $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK X	$(@)"
-	$(E) $(CC) $(LDFLAGS) $(SHARED) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
+	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
