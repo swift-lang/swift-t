@@ -106,12 +106,15 @@ done
 # Read all output from qsub
 QSUB_OUT=""
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
-  while read T ; do QSUB_OUT+="${T} " ; done 
+  while read T ; do QSUB_OUT+="${T} " ; done
 
+# Did we get a job number?
 # Break output into words:
 QSUB_OUT_ARRAY=( ${=QSUB_OUT} )
-# Did we get a job number? 
-if [[ ${QSUB_OUT_ARRAY[1]} != <-> ]] 
+QSUB_OUT_WORD1=${QSUB_OUT_ARRAY[1]}
+# Chop off anything after a dot
+QSUB_OUT_WORD1_PFX=${QSUB_OUT_WORD1%.*}
+if [[ ${QSUB_OUT_WORD1_PFX} != <-> ]]
 then
   print "received invalid job ID from qsub!"
   print "received:"
