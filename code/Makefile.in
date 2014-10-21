@@ -5,6 +5,14 @@ ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
 ENABLE_STATIC_PKG = @ENABLE_STATIC_PKG@
 
+CC = @CC@
+CFLAGS := @CFLAGS@
+LDFLAGS := @LDFLAGS@
+
+# Separate different types of CFLAGS
+INCLUDES :=
+DEFINES  :=
+
 PACKAGE = lib/pkgIndex.tcl
 
 # Components of enabled Tcl packages (libraries, index files, etc)
@@ -58,6 +66,11 @@ ifeq ($(USE_MAC),no)
 		STD = -std=gnu99
 		SHARED = -shared
 		WARNS = -Wall $(WARN_CONVERSION)
+#               LD flags for executables:
+#               Use shared libraries by default
+#               This is usually the default in Linux but is not the
+#               default on Cray machines
+		LDXFLAGS = -Bdynamic
 	else
 #       	Using XLC
 		PIC = -qpic
@@ -146,14 +159,6 @@ else # V=2
   E=
 endif
 endif
-
-CC = @CC@
-CFLAGS := @CFLAGS@
-LDFLAGS := @LDFLAGS@
-
-# Separate different types of CFLAGS
-INCLUDES :=
-DEFINES  :=
 
 # Set includes
 INCLUDES += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
@@ -533,7 +538,8 @@ executables: $(TURBINE_EXECUTABLES)
 # Need to export Tcl API symbols to link with dynamically loaded modules.
 $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK X	$(@)"
-	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
+	$(E) $(CC) $(LDFLAGS) $(LDXFLAGS) $(LD_EXEC_SYMBOL_EXPORT) \
+        $(<) \
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
