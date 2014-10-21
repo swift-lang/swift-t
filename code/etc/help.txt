@@ -3,7 +3,7 @@ USAGE
      turbine [<opts>*] <program> [<args>*]
 
 DESCRIPTION
-    
+
      Run a Turbine program.
 
      By default <program> is assumed to be a Tcl script, but if -x is
@@ -23,8 +23,8 @@ OPTIONS
   -n <procs>
       set number of processes
 
-  -x 
-     program is an executable rather than tcl script 
+  -x
+     program is an executable rather than tcl script
 
   -X
       use statically linked Turbine library
@@ -36,9 +36,6 @@ OPTIONS
       make this script verbose
 
 ENVIRONMENT
-
-   TURBINE_ENGINES
-                         number of Turbine engines
 
    ADLB_SERVERS
                          number of ADLB servers
@@ -58,4 +55,3 @@ ENVIRONMENT
 SEE ALSO
 
    http://www.mcs.anl.gov/exm/local/guides/swift.html
-
