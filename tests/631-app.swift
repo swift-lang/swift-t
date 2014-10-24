@@ -6,7 +6,7 @@ app (file out) f (file inp, string s, int i) {
 main {
     file x = input_file("helloworld.txt");
     file y <"631-outfile.txt">;
-    y = f(x, "sfds", 1);
+    y = f(x, "some text", 1);
     wait (y) {
         trace("DONE");
     }

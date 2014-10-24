@@ -12,7 +12,7 @@ fi
 
 contents=`cat "${OUT}"`
 exp_contents='Hello World
-hello sfds
+hello some text
 1'
 
 if [ "$contents" = "${exp_contents}" ] ; then
