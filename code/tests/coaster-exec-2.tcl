@@ -13,7 +13,7 @@
 # limitations under the License
 
 # Test Coaster executor - basic sanity test
-# NOTE: currently requires coaster service to be started (TODO)
+# NOTE: requires coaster service to be started
 
 package require turbine 0.5.0
 
