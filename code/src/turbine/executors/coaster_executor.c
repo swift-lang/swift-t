@@ -57,11 +57,6 @@
 #define COASTER_SETTING_JOB_MANAGER "jobManager"
 #define COASTER_SETTING_SLOTS "maxParallelTasks"
 
-// Default configured job manager
-// TODO: need to free
-const char *coaster_default_job_manager;
-size_t coaster_default_job_manager_len;
-
 /*
   Coaster context info, e.g. configuration that remains constant
   over entire run.
@@ -69,6 +64,8 @@ size_t coaster_default_job_manager_len;
 typedef struct {
   char *service_url;
   size_t service_url_len;
+  char *default_job_manager;
+  size_t default_job_manager_len;
   int total_slots;
   coaster_settings *settings;
 } coaster_context;
@@ -229,13 +226,11 @@ coaster_configure(void **context, const char *config,
 
   if (job_manager != NULL)
   {
-    char *tmp = malloc(job_manager_len + 1);
-    EXEC_MALLOC_CHECK(tmp);
-    memcpy(tmp, job_manager, job_manager_len + 1);
+    cx->default_job_manager = malloc(job_manager_len + 1);
+    EXEC_MALLOC_CHECK(cx->default_job_manager);
+    memcpy(cx->default_job_manager, job_manager, job_manager_len + 1);
 
-    // TODO: would be neater to store this in state
-    coaster_default_job_manager = tmp;
-    coaster_default_job_manager_len = job_manager_len;
+    cx->default_job_manager_len = job_manager_len;
 
     // Don't pass job manager along with other settings
     crc = coaster_settings_remove(cx->settings,
@@ -245,12 +240,12 @@ coaster_configure(void **context, const char *config,
   }
   else
   {
-    coaster_default_job_manager = NULL;
-    coaster_default_job_manager_len = 0;
+    cx->default_job_manager = NULL;
+    cx->default_job_manager_len = 0;
   }
   DEBUG_COASTER("Default jobManager: %.*s",
-        (int)coaster_default_job_manager_len,
-                 coaster_default_job_manager);
+        (int)cx->default_job_manager_len,
+             cx->default_job_manager);
 
   cx->total_slots = COASTER_DEFAULT_CLIENT_SLOTS;
   const char *slots_str;
@@ -408,6 +403,24 @@ coaster_free(void *context)
     free(cx->service_url);
     free(cx);
   }
+
+  return TURBINE_EXEC_SUCCESS;
+}
+
+turbine_code
+coaster_default_job_manager(const turbine_executor *exec,
+       const char **job_manager, size_t *job_manager_len)
+{
+  assert(exec != NULL);
+  coaster_state *s = exec->state;
+  turbine_condition(s != NULL, TURBINE_ERROR_INVALID,
+        "Invalid state for coaster executor");
+  coaster_context *cx = s->context;
+  turbine_condition(cx != NULL, TURBINE_ERROR_INVALID,
+        "Invalid state for coaster executor");
+
+  *job_manager = cx->default_job_manager;
+  *job_manager_len = cx->default_job_manager_len;
 
   return TURBINE_EXEC_SUCCESS;
 }
