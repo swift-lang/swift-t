@@ -53,6 +53,7 @@
 #include "src/turbine/cache.h"
 #include "src/turbine/worker.h"
 #include "src/turbine/io.h"
+#include "src/turbine/sync_exec.h"
 
 #include "src/turbine/async_exec.h"
 #include "src/turbine/executors/noop_executor.h"
@@ -1111,6 +1112,29 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
+              int objc, Tcl_Obj *const objv[])
+{
+  char cmd[16*1024];
+  char* p = &cmd[0];
+  for (int i = 1; i < objc; i++)
+  {
+    char* s = Tcl_GetString(objv[i]);
+    if (s[0] == '>' || s[0] == '<' || strcmp(s,"2>") == 0)
+      append(p, "%s ", s);
+    else
+      append(p, "\"%s\" ", s);
+  }
+
+  int exitcode;
+  exec_system(cmd, &exitcode);
+  if (exitcode != 0)
+    return TCL_ERROR;
+
+  return TCL_OK;
+}
+
 /*
   Extract IDs and ID/Sub pairs
 
@@ -1775,6 +1799,8 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
   COMMAND("check_str_int", Turbine_StrInt_Cmd);
+
+  COMMAND("sync_exec", Sync_Exec_Cmd);
 
   COMMAND("async_exec_names", Async_Exec_Names_Cmd);
   COMMAND("async_exec_configure", Async_Exec_Configure_Cmd);

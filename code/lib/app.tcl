@@ -39,13 +39,17 @@ namespace eval turbine {
   proc exec_external { cmd kwopts args } {
 
     app_init
-    setup_redirects $kwopts stdin_src stdout_dst stderr_dst
+
+    show cmd kwopts args
+
+    setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
 
     set tries 0
     while { true } {
       log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
       set start [ clock milliseconds ]
-      if { ! [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } \
+      if { ! [ catch { c::sync_exec $cmd {*}$args \
+                           < $stdin_src > $stdout_dst 2> $stderr_dst } \
                  results options ] } {
         # No error: success
         break
@@ -96,7 +100,8 @@ namespace eval turbine {
 
   # Set specified vars in outer scope for stdin, stdout and stderr
   # based on parameters present in provided dictionary
-  proc setup_redirects { kwopts stdin_var stdout_var stderr_var } {
+  # For use of Tcl's exec command
+  proc setup_redirects_tcl { kwopts stdin_var stdout_var stderr_var } {
     #FIXME: strange behaviour can happen if user args have e.g "<"
     # or ">" or "|" at start
     upvar 1 $stdin_var stdin_src
@@ -120,6 +125,36 @@ namespace eval turbine {
       set dst [ dict get $kwopts stderr ]
       ensure_directory_exists2 $dst
       set stderr_dst "2>$dst"
+    }
+  }
+
+  # Set specified vars in outer scope for stdin, stdout and stderr
+  # based on parameters present in provided dictionary
+  # For use of Turbine's C-based sync_exec command
+  proc setup_redirects_c { kwopts stdin_var stdout_var stderr_var } {
+    #FIXME: strange behaviour can happen if user args have e.g "<"
+    # or ">" or "|" at start
+    upvar 1 $stdin_var stdin_src
+    upvar 1 $stdout_var stdout_dst
+    upvar 1 $stderr_var stderr_dst
+
+    # Default to sending stdout/stderr to process stdout/stderr
+    set stdin_src "/dev/stdin"
+    set stdout_dst "/dev/stdout"
+    set stderr_dst "/dev/stderr"
+
+    if { [ dict exists $kwopts stdin ] } {;
+      set stdin_src "[ dict get $kwopts stdin ]"
+    }
+    if { [ dict exists $kwopts stdout ] } {
+      set dst [ dict get $kwopts stdout ]
+      ensure_directory_exists2 $dst
+      set stdout_dst "$dst"
+    }
+    if { [ dict exists $kwopts stderr ] } {
+      set dst [ dict get $kwopts stderr ]
+      ensure_directory_exists2 $dst
+      set stderr_dst "$dst"
     }
   }
 

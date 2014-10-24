@@ -7,6 +7,7 @@ TURBINE_SRC += $(DIR)/run.c
 TURBINE_SRC += $(DIR)/worker.c
 TURBINE_SRC += $(DIR)/services.c
 TURBINE_SRC += $(DIR)/async_exec.c
+TURBINE_SRC += $(DIR)/sync_exec.c
 TURBINE_SRC += $(DIR)/executors/noop_executor.c
 TURBINE_SRC += $(DIR)/io.c
 
