@@ -1148,6 +1148,9 @@ else
      touch system-libs.txt
 fi
 
+echo
+echo "Preparing config files: please wait..."
+
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
         src/turbine/module.mk
