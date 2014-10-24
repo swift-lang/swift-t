@@ -511,10 +511,36 @@ check_completed(coaster_state *state, turbine_completed_task *completed,
       crc = coaster_job_status_code(job, &status);
       COASTER_CHECK(crc, TURBINE_EXEC_OTHER);
 
-      // TODO: some way to get back info about cause of failure?
-      // TODO: some way to pass job info to callback
-      completed[job_count].success = (status == COASTER_STATUS_COMPLETED);
-      completed[job_count].callbacks = task->callbacks;
+      turbine_completed_task *comp = &completed[job_count];
+
+      comp->success = (status == COASTER_STATUS_COMPLETED);
+      comp->callbacks = task->callbacks;
+
+      comp->vars_len = 1;
+      comp->vars = malloc(sizeof(comp->vars[0]) *
+                          (size_t)comp->vars_len);
+      EXEC_MALLOC_CHECK(comp->vars);
+
+      comp->vars[0].name = "coaster_job_result";
+      comp->vars[0].free_name = false;
+      comp->vars[0].val = Tcl_NewDictObj();
+
+      if (comp->success)
+      {
+        // TODO: fill dict with job status info for callback
+        // Only include most recent status
+        // * timestamp
+        // * message (optional)
+      }
+      else
+      {
+        // TODO: fill dict with info about cause of failure?
+        // Only include most recent status
+        // * code (error code)
+        // * timestamp
+        // * message (optional)
+        // * exception (optional)
+      }
       job_count++;
 
       crc = coaster_job_free(job);

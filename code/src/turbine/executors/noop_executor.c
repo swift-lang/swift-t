@@ -211,6 +211,8 @@ choose_completed(noop_state *state, turbine_completed_task *completed)
       state->tasks[slot].active = false;
       completed->success = true;
       completed->callbacks = state->tasks[slot].callbacks;
+      completed->vars = NULL;
+      completed->vars_len = 0;
       break;
     }
   }

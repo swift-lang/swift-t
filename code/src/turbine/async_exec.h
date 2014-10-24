@@ -20,7 +20,6 @@
 
 #ifndef __ASYNC_EXEC_H
 #define __ASYNC_EXEC_H
-
 #include "src/turbine/turbine-defs.h"
 
 #include <tcl.h>
@@ -49,6 +48,7 @@ typedef struct turbine_executor turbine_executor;
   Reference counts on objects will be incremented on task launch
   and decremented once task finishes.
  */
+
 typedef struct {
   Tcl_Obj *code;
 } turbine_task_callback;

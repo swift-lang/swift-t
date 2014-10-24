@@ -105,6 +105,10 @@ static turbine_exec_code
 check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
             bool *task_completed);
 
+static turbine_code
+run_callback(Tcl_Interp *interp, turbine_executor *executor,
+             turbine_completed_task *task, Tcl_Obj *cb);
+
 static void
 stop_executors(turbine_executor *executors, int nexecutors);
 
@@ -239,7 +243,7 @@ turbine_async_exec_max_slots(const turbine_executor *exec, int *max)
   ec = exec->max_slots(exec->context, max);
   TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
            "error determining max slots for executor %s", exec->name);
-   
+
   return TURBINE_SUCCESS;
 }
 
@@ -502,6 +506,7 @@ static turbine_exec_code
 check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
             bool *task_completed)
 {
+  turbine_code tc;
   turbine_exec_code ec;
   DEBUG_EXECUTOR("check_tasks: executor=%s poll=%s",
                 executor->name, poll ? "true" : "false");
@@ -529,15 +534,8 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     fail_cb = completed[i].callbacks.failure.code;
     cb = (completed[i].success) ? succ_cb : fail_cb;
 
-    if (cb != NULL)
-    {
-      int rc = Tcl_EvalObjEx(interp, cb, 0);
-      if (rc != TCL_OK)
-      {
-        callback_error(interp, executor, rc, cb);
-        return TURBINE_ERROR_EXTERNAL;
-      }
-    }
+    tc = run_callback(interp, executor, &completed[i], cb);
+    turbine_check(tc);
 
     if (succ_cb != NULL)
     {
@@ -553,6 +551,60 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
   return TURBINE_EXEC_SUCCESS;
 }
 
+static turbine_code
+run_callback(Tcl_Interp *interp, turbine_executor *executor,
+             turbine_completed_task *task, Tcl_Obj *cb)
+{
+  int rc;
+  if (cb != NULL)
+  {
+    for (int i = 0; i < task->vars_len; i++)
+    {
+      char *name = task->vars[i].name;
+      Tcl_Obj *val = task->vars[i].val;
+      assert(name != NULL);
+      assert(val != NULL);
+
+      Tcl_Obj *name_obj = Tcl_NewStringObj(name, -1);
+      Tcl_Obj *obj = Tcl_ObjSetVar2(interp, name_obj, NULL, val, 0);
+      turbine_condition(obj != NULL, TURBINE_ERROR_UNKNOWN,
+          "Error setting variable: %s = %s", name, Tcl_GetString(val));
+
+      task->vars[i].val = NULL; // Can't use elsewhere
+    }
+
+    rc = Tcl_EvalObjEx(interp, cb, 0);
+
+    for (int i = 0; i < task->vars_len; i++)
+    {
+      char *name = task->vars[i].name;
+
+      rc = Tcl_UnsetVar(interp, name, 0);
+      turbine_condition(rc == TCL_OK, TURBINE_ERROR_UNKNOWN,
+          "Error unsetting variable: %s", name);
+      if (task->vars[i].free_name)
+      {
+        free(name);
+        task->vars[i].name = 0;
+      }
+    }
+
+    if (task->vars != NULL)
+    {
+      free(task->vars);
+      task->vars = NULL;
+      task->vars_len = 0;
+    }
+
+    if (rc != TCL_OK)
+    {
+      callback_error(interp, executor, rc, cb);
+      return TURBINE_ERROR_EXTERNAL;
+    }
+  }
+
+  return TURBINE_SUCCESS;
+}
 
 static void
 stop_executors(turbine_executor *executors, int nexecutors)

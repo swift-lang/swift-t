@@ -26,13 +26,34 @@
 
 #include "src/turbine/async_exec.h"
 
+typedef struct turbine_task_callback_var turbine_task_callback_var;
+
 /*
   Represent state of a completed task
  */
 typedef struct {
   bool success;
   turbine_task_callbacks callbacks;
+
+  /*
+    Variables to set while callback is running, can be NULL/0.
+   */
+  turbine_task_callback_var *vars;
+  int vars_len;
 } turbine_completed_task;
+
+struct turbine_task_callback_var {
+  /*
+    Variable name, can be freed after use
+   */
+  char *name;
+  bool free_name;
+
+  /*
+    Variable value, reference count will be decremented after use.
+   */
+  Tcl_Obj *val;
+};
 
 /*
   Error codes used for communicating error status from generic executor
