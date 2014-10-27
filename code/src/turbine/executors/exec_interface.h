@@ -26,6 +26,13 @@
 
 #include "src/turbine/async_exec.h"
 
+/*
+  Turbine context we're running in.
+ */
+typedef struct {
+  Tcl_Interp *interp;
+} turbine_context;
+
 typedef struct turbine_task_callback_var turbine_task_callback_var;
 
 /*
@@ -88,27 +95,29 @@ typedef struct {
   Input is a single string, which can be interpreted in an
   executor-specific way
  */
-typedef turbine_exec_code (*turbine_exec_configure)(void **context,
-                           const char *config, size_t config_len);
+typedef turbine_exec_code (*turbine_exec_configure)(turbine_context tcx,
+            void **context, const char *config, size_t config_len);
 
 /*
   Start: start executor before running tasks.
                Passed context pointer.
                Should initialize state pointer
  */
-typedef turbine_exec_code (*turbine_exec_start)(void *context,
-                                               void **state);
+typedef turbine_exec_code (*turbine_exec_start)(turbine_context tcx,
+            void *context, void **state);
 
 /*
   Stop: stop started executor
  */
-typedef turbine_exec_code (*turbine_exec_stop)(void *state);
+typedef turbine_exec_code (*turbine_exec_stop)(turbine_context tcx,
+            void *state);
 
 /*
   Free: free memory for stopped executor.  Executor may or may not
         have been started or configured
  */
-typedef turbine_exec_code (*turbine_exec_free)(void *context);
+typedef turbine_exec_code (*turbine_exec_free)(turbine_context tcx,
+            void *context);
 
 /*
   Waiting: called on an executor with active tasks.
@@ -118,31 +127,31 @@ typedef turbine_exec_code (*turbine_exec_free)(void *context);
   ncompleted: input/output, set to array size by caller,
               set to actual number complted by callee
  */
-typedef turbine_exec_code (*turbine_exec_wait)(void *state,
-          turbine_completed_task *completed, int *ncompleted);
+typedef turbine_exec_code (*turbine_exec_wait)(turbine_context tcx,
+          void *state, turbine_completed_task *completed, int *ncompleted);
 
 /*
   Polling: periodically called on an executor with active tasks.
            updates completed with completed task info.
            Arguments same as wait
  */
-typedef turbine_exec_code (*turbine_exec_poll)(void *state,
-          turbine_completed_task *completed, int *ncompleted);
+typedef turbine_exec_code (*turbine_exec_poll)(turbine_context tcx,
+          void *state, turbine_completed_task *completed, int *ncompleted);
 
 /*
   Slots: fill in counts of slots.
   May be called any time after start.
   If maximum slots is unlimited or unknown, should be set to -1
  */
-typedef turbine_exec_code (*turbine_exec_slots)(void *state,
-                                  turbine_exec_slot_state *slots);
+typedef turbine_exec_code (*turbine_exec_slots)(turbine_context tcx,
+          void *state, turbine_exec_slot_state *slots);
 /*
   Max_slots: determine maximum number of slots according to config
   May be called any time after configuration.
   If maximum slots is unlimited or unknown, should be set to -1
  */
-typedef turbine_exec_code (*turbine_exec_max_slots)(void *context,
-                                                    int *max);
+typedef turbine_exec_code (*turbine_exec_max_slots)(turbine_context tcx,
+          void *context, int *max);
 
 /*
   Structure with all information about registered executor.

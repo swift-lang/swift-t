@@ -240,9 +240,9 @@ turbine_code_tostring(char* output, turbine_code code)
 }
 
 void
-turbine_finalize(void)
+turbine_finalize(Tcl_Interp *interp)
 {
   turbine_cache_finalize();
-  turbine_async_exec_finalize();
+  turbine_async_exec_finalize(interp);
 }
 

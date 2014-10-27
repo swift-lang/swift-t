@@ -40,28 +40,30 @@ typedef struct noop_state {
 } noop_state;
 
 static turbine_exec_code
-noop_configure(void **context, const char *config, size_t config_len);
+noop_configure(turbine_context tcx, void **context,
+    const char *config, size_t config_len);
 
 static turbine_exec_code
-noop_start(void *context, void **state);
+noop_start(turbine_context tcx, void *context, void **state);
 
-static turbine_exec_code noop_stop(void *state);
+static turbine_exec_code noop_stop(turbine_context tcx, void *state);
 
-static turbine_exec_code noop_free(void *context);
-
-static turbine_exec_code
-noop_wait(void *state, turbine_completed_task *completed,
-          int *ncompleted);
+static turbine_exec_code noop_free(turbine_context tcx, void *context);
 
 static turbine_exec_code
-noop_poll(void *state, turbine_completed_task *completed,
-          int *ncompleted);
+noop_wait(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted);
 
 static turbine_exec_code
-noop_slots(void *state, turbine_exec_slot_state *slots);
+noop_poll(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted);
 
 static turbine_exec_code
-noop_max_slots(void *context, int *max);
+noop_slots(turbine_context tcx, void *state,
+    turbine_exec_slot_state *slots);
+
+static turbine_exec_code
+noop_max_slots(turbine_context tcx, void *context, int *max);
 
 static void
 init_noop_executor(turbine_executor *exec)
@@ -95,14 +97,15 @@ noop_executor_register(void)
 }
 
 static turbine_exec_code
-noop_configure(void **context, const char *config, size_t config_len)
+noop_configure(turbine_context tcx, void **context,
+    const char *config, size_t config_len)
 {
   *context = NOOP_CONTEXT; 
   return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
-noop_start(void *context, void **state)
+noop_start(turbine_context tcx, void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
   noop_state *s = malloc(sizeof(noop_state)); 
@@ -121,7 +124,7 @@ noop_start(void *context, void **state)
 }
 
 static turbine_exec_code
-noop_stop(void *state)
+noop_stop(turbine_context tcx, void *state)
 {
   noop_state *s = state;
   for (int i = 0; i < s->slots.total; i++)
@@ -150,7 +153,7 @@ noop_stop(void *state)
 }
 
 static turbine_exec_code
-noop_free(void *context)
+noop_free(turbine_context tcx, void *context)
 {
   // Don't need to do anything
   return TURBINE_EXEC_SUCCESS;
@@ -248,8 +251,8 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
 
 
 static turbine_exec_code
-noop_wait(void *state, turbine_completed_task *completed,
-          int *ncompleted)
+noop_wait(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted)
 {
   noop_state *s = state;
   if (s->slots.used > 0)
@@ -267,8 +270,8 @@ noop_wait(void *state, turbine_completed_task *completed,
 }
 
 static turbine_exec_code
-noop_poll(void *state, turbine_completed_task *completed,
-          int *ncompleted)
+noop_poll(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted)
 {
   noop_state *s = state;
   if (s->slots.used > 0 && rand() > (RAND_MAX / 5))
@@ -284,14 +287,15 @@ noop_poll(void *state, turbine_completed_task *completed,
 }
 
 static turbine_exec_code
-noop_slots(void *state, turbine_exec_slot_state *slots)
+noop_slots(turbine_context tcx, void *state,
+    turbine_exec_slot_state *slots)
 {
   *slots = ((noop_state*)state)->slots;
   return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
-noop_max_slots(void *context, int *max)
+noop_max_slots(turbine_context tcx, void *context, int *max)
 {
   assert(context == NOOP_CONTEXT);
   *max = NOOP_EXEC_SLOTS;

@@ -64,7 +64,7 @@ void turbine_version(version* output);
  */
 int turbine_code_tostring(char* output, turbine_code code);
 
-void turbine_finalize(void);
+void turbine_finalize(Tcl_Interp *interp);
 
 turbine_code turbine_run(MPI_Comm comm, char* script_file,
                          int argc, char** argv, char* output);

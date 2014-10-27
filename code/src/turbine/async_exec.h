@@ -63,7 +63,7 @@ typedef struct {
 
 turbine_code turbine_async_exec_initialize(void);
 
-turbine_code turbine_async_exec_finalize(void);
+turbine_code turbine_async_exec_finalize(Tcl_Interp *interp);
 
 /*
   Enumerate names of async executors.
@@ -88,15 +88,16 @@ turbine_executor *
 turbine_get_async_exec(const char *name, bool *started);
 
 turbine_code
-turbine_configure_exec(turbine_executor *exec, const char *config,
-                       size_t config_len);
+turbine_configure_exec(Tcl_Interp *interp, turbine_executor *exec,
+                       const char *config, size_t config_len);
 
 /*
  * Can be called after configuration.
  * max: upper bound on slots, or -1 if unknown/unlimited
  */
 turbine_code
-turbine_async_exec_max_slots(const turbine_executor *exec, int *max);
+turbine_async_exec_max_slots(Tcl_Interp *interp,
+            const turbine_executor *exec, int *max);
 
 /*
   Start an async worker loop.

@@ -102,15 +102,16 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
           bool poll, int max_tasks, bool *got_tasks);
 
 static turbine_exec_code
-check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
+check_tasks(turbine_context tcx, turbine_executor *executor, bool poll,
             bool *task_completed);
 
 static turbine_code
-run_callback(Tcl_Interp *interp, turbine_executor *executor,
+run_callback(turbine_context tcx, turbine_executor *executor,
              turbine_completed_task *task, Tcl_Obj *cb);
 
 static void
-stop_executors(turbine_executor *executors, int nexecutors);
+stop_executors(turbine_context tcx, turbine_executor *executors,
+               int nexecutors);
 
 static void
 launch_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
@@ -219,14 +220,16 @@ turbine_get_async_exec(const char *name, bool *started)
 }
 
 turbine_code
-turbine_configure_exec(turbine_executor *exec, const char *config,
-                       size_t config_len)
+turbine_configure_exec(Tcl_Interp *interp, turbine_executor *exec,
+                       const char *config, size_t config_len)
 {
   assert(exec != NULL);
   turbine_exec_code ec;
 
+  turbine_context tcx = { interp };
+
   assert(exec->configure != NULL);
-  ec = exec->configure(&exec->context, config, config_len);
+  ec = exec->configure(tcx, &exec->context, config, config_len);
   TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error configuring executor %s", exec->name);
 
@@ -234,13 +237,15 @@ turbine_configure_exec(turbine_executor *exec, const char *config,
 }
 
 turbine_code
-turbine_async_exec_max_slots(const turbine_executor *exec, int *max)
+turbine_async_exec_max_slots(Tcl_Interp *interp,
+            const turbine_executor *exec, int *max)
 {
   assert(exec->max_slots != NULL);
-
   turbine_exec_code ec;
 
-  ec = exec->max_slots(exec->context, max);
+  turbine_context tcx = { interp };
+
+  ec = exec->max_slots(tcx, exec->context, max);
   TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
            "error determining max slots for executor %s", exec->name);
 
@@ -264,6 +269,8 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
   turbine_exec_code ec;
   turbine_code tc;
 
+  turbine_context tcx = { interp };
+
   tc = turbine_service_init();
   turbine_check(tc);
 
@@ -282,7 +289,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
   assert(exec->start != NULL);
   bool must_start = !exec->started;
   if (must_start) {
-    ec = exec->start(exec->context, &exec->state);
+    ec = exec->start(tcx, exec->context, &exec->state);
     TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                  "error starting executor %s", exec->name);
 
@@ -293,7 +300,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
   {
     turbine_exec_slot_state slots;
     bool something_happened = false;
-    ec = exec->slots(exec->state, &slots);
+    ec = exec->slots(tcx, exec->state, &slots);
     TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error getting executor slot count %s", exec->name);
 
@@ -316,7 +323,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
                "error getting tasks for executor %s", exec->name);
     }
     // Update count in case work added
-    ec = exec->slots(exec->state, &slots);
+    ec = exec->slots(tcx, exec->state, &slots);
     TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error getting executor slot count %s", exec->name);
 
@@ -324,7 +331,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
     {
       // Need to do non-blocking check if we want to request more work
       bool poll = (slots.used < slots.total);
-      ec = check_tasks(interp, exec, poll, &something_happened);
+      ec = check_tasks(tcx, exec, poll, &something_happened);
       TURBINE_EXEC_CHECK(ec, TURBINE_ERROR_EXTERNAL);
     }
 
@@ -338,7 +345,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
 
   if (must_start)
   {
-    stop_executors(exec, 1);
+    stop_executors(tcx, exec, 1);
   }
 
   turbine_service_finalize();
@@ -503,7 +510,7 @@ callback_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
                   unmodified otherwise
  */
 static turbine_exec_code
-check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
+check_tasks(turbine_context tcx, turbine_executor *executor, bool poll,
             bool *task_completed)
 {
   turbine_code tc;
@@ -515,12 +522,12 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
   int ncompleted = COMPLETED_BUFFER_SIZE; // Pass in size
   if (poll)
   {
-    ec = executor->poll(executor->state, completed, &ncompleted);
+    ec = executor->poll(tcx, executor->state, completed, &ncompleted);
     EXEC_CHECK(ec);
   }
   else
   {
-    ec = executor->wait(executor->state, completed, &ncompleted);
+    ec = executor->wait(tcx, executor->state, completed, &ncompleted);
     EXEC_CHECK(ec);
   }
 
@@ -534,7 +541,7 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     fail_cb = completed[i].callbacks.failure.code;
     cb = (completed[i].success) ? succ_cb : fail_cb;
 
-    tc = run_callback(interp, executor, &completed[i], cb);
+    tc = run_callback(tcx, executor, &completed[i], cb);
     turbine_check(tc);
 
     if (succ_cb != NULL)
@@ -552,10 +559,12 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
 }
 
 static turbine_code
-run_callback(Tcl_Interp *interp, turbine_executor *executor,
+run_callback(turbine_context tcx, turbine_executor *executor,
              turbine_completed_task *task, Tcl_Obj *cb)
 {
   int rc;
+  Tcl_Interp *interp = tcx.interp;
+
   if (cb != NULL)
   {
     for (int i = 0; i < task->vars_len; i++)
@@ -607,13 +616,14 @@ run_callback(Tcl_Interp *interp, turbine_executor *executor,
 }
 
 static void
-stop_executors(turbine_executor *executors, int nexecutors)
+stop_executors(turbine_context tcx, turbine_executor *executors,
+               int nexecutors)
 {
   for (int i = 0; i < nexecutors; i++) {
     turbine_executor *exec = &executors[i];
     assert(exec->stop != NULL);
 
-    turbine_exec_code ec = exec->stop(exec->state);
+    turbine_exec_code ec = exec->stop(tcx, exec->state);
     if (ec != TURBINE_EXEC_SUCCESS)
     {
       // Only warn about error
@@ -624,22 +634,23 @@ stop_executors(turbine_executor *executors, int nexecutors)
   }
 }
 
-static void exec_free_cb(const char *key, void *val)
-{
-  turbine_executor *exec_ptr = val;
-  assert(exec_ptr->free != NULL);
-
-  exec_ptr->free(exec_ptr->context);
-  free((void*)exec_ptr->name); // We allocate memory when we copied executor
-  free(exec_ptr);
-}
-
 turbine_code
-turbine_async_exec_finalize(void)
+turbine_async_exec_finalize(Tcl_Interp *interp)
 {
+  turbine_context tcx = { interp };
+
   if (executors_table_init)
   {
-    table_free_callback(&executors, false, exec_free_cb);
+    // Free all executors
+    TABLE_FOREACH(&executors, item)
+    {
+      turbine_executor *executor = item->data;
+      assert(executor->free != NULL);
+      executor->free(tcx, executor->context);
+    }
+
+    // Free table entries
+    table_free_callback(&executors, false, NULL);
 
     executors_table_init = false;
   }

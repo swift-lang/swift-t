@@ -87,12 +87,6 @@
 #define TURBINE_EXEC_CHECK(ec, tc) { \
   if ((ec) != TURBINE_EXEC_SUCCESS) return (tc); }
 
-#define EXEC_ADLB_CONDITION(cond, err_code, fmt, args...) { \
-  if (!(cond)) { \
-      TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
-      TURBINE_ERR_PRINTF(fmt "\n", ##args); \
-      return (err_code); }}
-
 #define EXEC_ADLB_CHECK_MSG(code, err_code, fmt, args...) { \
   if ((code) == ADLB_ERROR) { \
       TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
@@ -112,5 +106,8 @@
       TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
       TURBINE_ERR_PRINTF(fmt "\n", ##args); \
       return (err_code); }}
+
+#define EXEC_TCL_CHECK(rc, code) { \
+  if ((rc) != TCL_OK) return (code); }
 
 #endif // __TURBINE_CHECKS_H

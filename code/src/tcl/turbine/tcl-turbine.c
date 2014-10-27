@@ -1015,7 +1015,7 @@ static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
-  turbine_finalize();
+  turbine_finalize(interp);
   return TCL_OK;
 }
 
@@ -1308,7 +1308,7 @@ Async_Exec_Configure_Cmd(ClientData cdata, Tcl_Interp* interp,
   turbine_executor *exec = turbine_get_async_exec(exec_name, NULL);
   TCL_CONDITION(exec != NULL, "Executor %s not registered", exec_name);
 
-  tc = turbine_configure_exec(exec, config, (size_t)config_len);
+  tc = turbine_configure_exec(interp, exec, config, (size_t)config_len);
   TCL_CONDITION(tc == TURBINE_SUCCESS,
       "Could not configure executor %s", exec_name);
 
@@ -1359,7 +1359,7 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                 buffer_count, buffer_size, exec_name);
 
   int max_slots;
-  tc = turbine_async_exec_max_slots(exec, &max_slots);
+  tc = turbine_async_exec_max_slots(interp, exec, &max_slots);
   TCL_CONDITION(tc == TURBINE_SUCCESS, "Executor error in %s getting "
                                        "max slots!", exec_name);
 

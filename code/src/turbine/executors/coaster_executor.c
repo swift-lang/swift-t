@@ -101,35 +101,37 @@ typedef struct coaster_state {
 #define ACTIVE_TASKS_INIT_CAPACITY 32
 
 static turbine_exec_code
-coaster_configure(void **context, const char *config,
-                  size_t config_len);
+coaster_configure(turbine_context tcx, void **context,
+    const char *config, size_t config_len);
 
 static turbine_exec_code
-coaster_start(void *context, void **state);
+coaster_start(turbine_context tcx, void *context, void **state);
 
-static turbine_exec_code coaster_stop(void *state);
+static turbine_exec_code coaster_stop(turbine_context tcx, void *state);
 static turbine_exec_code
 coaster_cleanup_active(coaster_state *state);
 
-static turbine_exec_code coaster_free(void *context);
+static turbine_exec_code coaster_free(turbine_context tcx, void *context);
 
 static turbine_exec_code
-coaster_wait(void *state, turbine_completed_task *completed,
-          int *ncompleted);
+coaster_wait(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted);
 
 static turbine_exec_code
-coaster_poll(void *state, turbine_completed_task *completed,
-          int *ncompleted);
+coaster_poll(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted);
 
 static turbine_exec_code
-coaster_slots(void *state, turbine_exec_slot_state *slots);
+coaster_slots(turbine_context tcx, void *state,
+    turbine_exec_slot_state *slots);
 
 static turbine_exec_code
-coaster_max_slots(void *context, int *max);
+coaster_max_slots(turbine_context tcx, void *context, int *max);
 
 static turbine_exec_code
-check_completed(coaster_state *state, turbine_completed_task *completed,
-               int *ncompleted, bool wait_for_completion);
+check_completed(turbine_context tcx, coaster_state *state,
+    turbine_completed_task *completed, int *ncompleted,
+    bool wait_for_completion);
 
 static turbine_exec_code
 init_coaster_executor(turbine_executor *exec)
@@ -170,8 +172,8 @@ coaster_executor_register(void)
 }
 
 static turbine_exec_code
-coaster_configure(void **context, const char *config,
-                  size_t config_len)
+coaster_configure(turbine_context tcx, void **context,
+    const char *config, size_t config_len)
 {
   coaster_context *cx = malloc(sizeof(coaster_context));
   EXEC_MALLOC_CHECK(cx);
@@ -279,7 +281,7 @@ coaster_configure(void **context, const char *config,
 }
 
 static turbine_exec_code
-coaster_start(void *context, void **state)
+coaster_start(turbine_context tcx, void *context, void **state)
 {
   assert(context != NULL);
   coaster_context *cx = context;
@@ -318,7 +320,7 @@ coaster_start(void *context, void **state)
 error:
   if (started)
   {
-    coaster_stop(s);
+    coaster_stop(tcx, s);
   }
   else
   {
@@ -333,7 +335,7 @@ error:
 }
 
 static turbine_exec_code
-coaster_stop(void *state)
+coaster_stop(turbine_context tcx, void *state)
 {
   coaster_state *s = state;
 
@@ -395,7 +397,7 @@ coaster_cleanup_active(coaster_state *state)
 }
 
 static turbine_exec_code
-coaster_free(void *context)
+coaster_free(turbine_context tcx, void *context)
 {
   coaster_context *cx = context;
   if (cx != NULL) {
@@ -470,10 +472,12 @@ coaster_execute(Tcl_Interp *interp, const turbine_executor *exec,
 }
 
 static turbine_exec_code
-check_completed(coaster_state *state, turbine_completed_task *completed,
-               int *ncompleted, bool wait_for_completion)
+check_completed(turbine_context tcx, coaster_state *state,
+    turbine_completed_task *completed, int *ncompleted,
+    bool wait_for_completion)
 {
   coaster_rc crc;
+  int tcl_rc;
   int completed_size = *ncompleted;
   assert(completed_size >= 1);
   int job_count = 0; // Number of completed jobs we returned
@@ -521,9 +525,7 @@ check_completed(coaster_state *state, turbine_completed_task *completed,
                           (size_t)comp->vars_len);
       EXEC_MALLOC_CHECK(comp->vars);
 
-      comp->vars[0].name = "coaster_job_result";
-      comp->vars[0].free_name = false;
-      comp->vars[0].val = Tcl_NewDictObj();
+      Tcl_Obj *result_dict = Tcl_NewDictObj();
 
       if (comp->success)
       {
@@ -531,6 +533,11 @@ check_completed(coaster_state *state, turbine_completed_task *completed,
         // Only include most recent status
         // * timestamp
         // * message (optional)
+        
+        tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                          Tcl_NewStringObj("test", 4),
+                          Tcl_NewStringObj("test", 4));
+        EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
       }
       else
       {
@@ -542,6 +549,10 @@ check_completed(coaster_state *state, turbine_completed_task *completed,
         // * exception (optional)
       }
       job_count++;
+
+      comp->vars[0].name = "coaster_job_result";
+      comp->vars[0].free_name = false;
+      comp->vars[0].val = result_dict;
 
       crc = coaster_job_free(job);
       COASTER_CHECK(crc, TURBINE_EXEC_OTHER);
@@ -565,15 +576,16 @@ check_completed(coaster_state *state, turbine_completed_task *completed,
  * Assume that at least one task is in system
  */
 static turbine_exec_code
-coaster_wait(void *state, turbine_completed_task *completed,
-          int *ncompleted)
+coaster_wait(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted)
 {
   coaster_state *s = state;
 
   EXEC_CONDITION(s->slots.used, TURBINE_EXEC_INVALID,
                 "Cannot wait if no active coaster tasks");
 
-  turbine_exec_code ec = check_completed(s, completed, ncompleted, true);
+  turbine_exec_code ec = check_completed(tcx, state, completed,
+                                         ncompleted, true);
   EXEC_CHECK_MSG(ec, "error checking for completed tasks in Coaster "
                      "executor");
 
@@ -581,13 +593,14 @@ coaster_wait(void *state, turbine_completed_task *completed,
 }
 
 static turbine_exec_code
-coaster_poll(void *state, turbine_completed_task *completed,
-          int *ncompleted)
+coaster_poll(turbine_context tcx, void *state,
+    turbine_completed_task *completed, int *ncompleted)
 {
   coaster_state *s = state;
   if (s->slots.used > 0)
   {
-    turbine_exec_code ec = check_completed(s, completed, ncompleted, false);
+    turbine_exec_code ec = check_completed(tcx, s,
+                    completed, ncompleted, false);
     EXEC_CHECK_MSG(ec, "error checking for completed tasks in Coaster "
                        "executor");
   }
@@ -599,14 +612,15 @@ coaster_poll(void *state, turbine_completed_task *completed,
 }
 
 static turbine_exec_code
-coaster_slots(void *state, turbine_exec_slot_state *slots)
+coaster_slots(turbine_context tcx, void *state,
+    turbine_exec_slot_state *slots)
 {
   *slots = ((coaster_state*)state)->slots;
   return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
-coaster_max_slots(void *context, int *max) {
+coaster_max_slots(turbine_context tcx, void *context, int *max) {
   assert(context != NULL);
   *max = ((coaster_context*)context)->total_slots;
   return TURBINE_EXEC_SUCCESS;
