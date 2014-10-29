@@ -647,6 +647,10 @@ turbine_async_exec_finalize(Tcl_Interp *interp)
       turbine_executor *executor = item->data;
       assert(executor->free != NULL);
       executor->free(tcx, executor->context);
+      // Can safely cast since we allocated memory
+      free((char*)executor->name);
+      free(executor);
+      item->data = NULL;
     }
 
     // Free table entries

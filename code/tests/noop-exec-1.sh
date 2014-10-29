@@ -45,7 +45,7 @@ then
 fi
 
 noop_completions=$(
-    grep 'NOOP: [0-9]* completed' tests/noop-exec-1.out |
+    grep 'NOOP: [0-9]* completed' ${OUTPUT} |
     sed 's/^.* NOOP: \([0-9]*\) completed.*$/\1/' |
     awk '{ sum += $1 } END { print sum }')
 
@@ -55,7 +55,7 @@ then
   exit 1
 fi
 
-noop_result_ok=$(grep -c -F 'noop_task_result OK' tests/noop-exec-1.out)
+noop_result_ok=$(grep -c -F 'noop_task_result OK' ${OUTPUT})
 
 if [ $noop_result_ok -ne $noop_exp ]
 then
