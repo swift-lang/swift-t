@@ -550,7 +550,7 @@ check_completed(turbine_context tcx, coaster_state *state,
       }
       job_count++;
 
-      comp->vars[0].name = "coaster_job_result";
+      comp->vars[0].name = "coaster_task_result";
       comp->vars[0].free_name = false;
       comp->vars[0].val = result_dict;
 

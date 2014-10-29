@@ -51,7 +51,15 @@ noop_completions=$(
 
 if [ $noop_completions -ne $noop_exp ]
 then
-  echo "Noop completions: expected $noop_act actual $noop_completions"
+  echo "Noop completions: expected $noop_exp actual $noop_completions"
+  exit 1
+fi
+
+noop_result_ok=$(grep -c -F 'noop_task_result OK' tests/noop-exec-1.out)
+
+if [ $noop_result_ok -ne $noop_exp ]
+then
+  echo "Noop result ok: expected $noop_exp but got $noop_result_ok"
   exit 1
 fi
 

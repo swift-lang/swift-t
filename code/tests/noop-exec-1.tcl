@@ -18,6 +18,21 @@ package require turbine 0.5.0
 
 set NOOP_WORK_TYPE 1
 
+proc noop_task { x i } {
+  turbine::noop_exec_run "NOOP TASK rank: [ adlb::rank ]" \
+      "noop_task_callback $x $i \$noop_task_result"
+}
+
+proc noop_task_callback { x i result } {
+  turbine::store_integer $x $i
+  set exp "noop_task_result"
+  if { $result == $exp } {
+    puts "noop_task_result OK"
+  } {
+    error "Expected noop_task_result to equal \"$exp\" but got \"$result\""
+  }
+}
+
 proc main {} {
   global NOOP_WORK_TYPE
 
@@ -29,9 +44,7 @@ proc main {} {
 
     # Add a task to the noop executor
     turbine::allocate x integer
-    turbine::rule "" "\
-      turbine::noop_exec_run \"NOOP TASK rank: \[ adlb::rank \]\" \
-        \"turbine::store_integer $x $i\"" type $NOOP_WORK_TYPE
+    turbine::rule "" "noop_task $x $i" type $NOOP_WORK_TYPE
 
     turbine::rule [ list $x ] "puts \"NOOP task output set: $i\"; \
                                turbine::read_refcount_decr $x"

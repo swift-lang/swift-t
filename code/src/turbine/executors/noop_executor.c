@@ -202,7 +202,7 @@ noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
 
 // Choose a random completed task
 static void
-choose_completed(noop_state *state, turbine_completed_task *completed)
+choose_completed(noop_state *state, turbine_completed_task *comp)
 {
   assert(state->slots.used > 0);
   while (true)
@@ -212,10 +212,16 @@ choose_completed(noop_state *state, turbine_completed_task *completed)
     {
       DEBUG_EXECUTOR("Noop task in slot %i completed\n", slot);
       state->tasks[slot].active = false;
-      completed->success = true;
-      completed->callbacks = state->tasks[slot].callbacks;
-      completed->vars = NULL;
-      completed->vars_len = 0;
+      comp->success = true;
+      comp->callbacks = state->tasks[slot].callbacks;
+      comp->vars = malloc(sizeof(comp->vars[0]) * 1);
+      comp->vars_len = 1;
+
+      // Add a dummy variable to test callback
+      comp->vars[0].name = strdup("noop_task_result"); // Test freeing
+      comp->vars[0].free_name = true;
+      comp->vars[0].val = Tcl_NewStringObj("noop_task_result", -1);
+
       break;
     }
   }
