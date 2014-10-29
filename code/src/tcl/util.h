@@ -234,6 +234,8 @@ static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
   return Tcl_NewLongObj((long)ptr);
 }
 
+#define Tcl_NewConstString(str) Tcl_NewStringObj((str), strlen(str))
+
 /**
  * Attempt to extract int of appropriate width for ADLB
  * interp: if non-NULL, leave error message here

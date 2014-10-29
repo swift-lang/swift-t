@@ -17,6 +17,7 @@
 
 #include "src/turbine/executors/exec_interface.h"
 
+#include "src/tcl/util.h"
 #include "src/turbine/turbine-checks.h"
 #include "src/util/debug.h"
 
@@ -512,12 +513,12 @@ check_completed(turbine_context tcx, coaster_state *state,
                     "No matching entry for job id %"PRId64, job_id);
 
       coaster_job_status status;
-      crc = coaster_job_status_code(job, &status);
+      crc = coaster_job_get_status(job, &status);
       COASTER_CHECK(crc, TURBINE_EXEC_OTHER);
 
       turbine_completed_task *comp = &completed[job_count];
 
-      comp->success = (status == COASTER_STATUS_COMPLETED);
+      comp->success = (status.code == COASTER_STATUS_COMPLETED);
       comp->callbacks = task->callbacks;
 
       comp->vars_len = 1;
@@ -525,28 +526,58 @@ check_completed(turbine_context tcx, coaster_state *state,
                           (size_t)comp->vars_len);
       EXEC_MALLOC_CHECK(comp->vars);
 
+      // Dict with most recent job status info
       Tcl_Obj *result_dict = Tcl_NewDictObj();
 
-      if (comp->success)
+      tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                        Tcl_NewConstString("timestamp"),
+                        Tcl_NewWideIntObj(status.timestamp));
+      EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
+
+      Tcl_Obj *msg_obj;
+      if (status.message != NULL)
       {
-        // TODO: fill dict with job status info for callback
-        // Only include most recent status
-        // * timestamp
-        // * message (optional)
-        
-        tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
-                          Tcl_NewStringObj("test", 4),
-                          Tcl_NewStringObj("test", 4));
-        EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
+        msg_obj = Tcl_NewStringObj(status.message,
+                                   (int)status.message_len);
       }
       else
       {
-        // TODO: fill dict with info about cause of failure?
-        // Only include most recent status
-        // * code (error code)
-        // * timestamp
-        // * message (optional)
-        // * exception (optional)
+        msg_obj = Tcl_NewConstString("");
+      }
+
+      tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                        Tcl_NewConstString("message"),
+                        msg_obj);
+      EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
+
+      tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                        Tcl_NewConstString("timestamp"),
+                        Tcl_NewWideIntObj(status.timestamp));
+      EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
+
+      if (!comp->success)
+      {
+        // Exception and status code info for error
+        tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                          Tcl_NewConstString("status_code"),
+                          Tcl_NewIntObj(status.code));
+        EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
+
+        Tcl_Obj *exc_obj;
+        if (status.exception != NULL)
+        {
+          exc_obj = Tcl_NewStringObj(status.exception,
+                                     (int)status.exception_len);
+        }
+        else
+        {
+          exc_obj = Tcl_NewConstString("");
+        }
+
+        tcl_rc = Tcl_DictObjPut(tcx.interp, result_dict,
+                          Tcl_NewConstString("message"),
+                          exc_obj);
+        EXEC_TCL_CHECK(tcl_rc, TURBINE_EXEC_OTHER);
       }
       job_count++;
 
