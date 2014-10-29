@@ -563,6 +563,7 @@ run_callback(turbine_context tcx, turbine_executor *executor,
              turbine_completed_task *task, Tcl_Obj *cb)
 {
   int rc;
+  turbine_code tc;
   Tcl_Interp *interp = tcx.interp;
 
   if (cb != NULL)
@@ -583,36 +584,43 @@ run_callback(turbine_context tcx, turbine_executor *executor,
     }
 
     rc = Tcl_EvalObjEx(interp, cb, 0);
-
-    for (int i = 0; i < task->vars_len; i++)
-    {
-      char *name = task->vars[i].name;
-
-      rc = Tcl_UnsetVar(interp, name, 0);
-      turbine_condition(rc == TCL_OK, TURBINE_ERROR_UNKNOWN,
-          "Error unsetting variable: %s", name);
-      if (task->vars[i].free_name)
-      {
-        free(name);
-        task->vars[i].name = 0;
-      }
-    }
-
-    if (task->vars != NULL)
-    {
-      free(task->vars);
-      task->vars = NULL;
-      task->vars_len = 0;
-    }
-
     if (rc != TCL_OK)
     {
       callback_error(interp, executor, rc, cb);
-      return TURBINE_ERROR_EXTERNAL;
+      tc = TURBINE_ERROR_EXTERNAL;
+      goto cleanup;
+    }
+
+  }
+
+  tc = TURBINE_SUCCESS;
+cleanup:
+  for (int i = 0; i < task->vars_len; i++)
+  {
+    char *name = task->vars[i].name;
+
+    if (cb != NULL)
+    {
+      rc = Tcl_UnsetVar(interp, name, 0);
+      turbine_condition(rc == TCL_OK, TURBINE_ERROR_UNKNOWN,
+          "Error unsetting variable: %s", name);
+    }
+
+    if (task->vars[i].free_name)
+    {
+      free(name);
+      task->vars[i].name = 0;
     }
   }
 
-  return TURBINE_SUCCESS;
+  if (task->vars != NULL)
+  {
+    free(task->vars);
+    task->vars = NULL;
+    task->vars_len = 0;
+  }
+
+  return tc;
 }
 
 static void

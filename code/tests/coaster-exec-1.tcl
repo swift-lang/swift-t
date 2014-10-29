@@ -22,16 +22,30 @@ set COASTER_WORK_TYPE 1
 proc coaster_task { x i } {
   turbine::coaster_run "echo" [ list Hello World ] \
           [ list ] [ list ] [ dict create ] \
-          "coaster_task_success $x $i" "coaster_task_fail"
+          "coaster_task_success $x $i \$coaster_task_result" \
+          "coaster_task_fail \$coaster_task_result"
+  puts "Submitted $x $i"
 }
 
-proc coaster_task_success { x i } {
-  puts "coaster_task_success $x $i"
+proc coaster_task_success { x i result } {
+  set timestamp [ dict get $result timestamp ]
+  
+  if { ! [ string is wideinteger -strict $timestamp ] } {
+    error "Expected timestamp to be integer: $timestamp"
+  }
+  
+  set msg [ dict get $result "message" ]
+  if { $msg != "" } {
+    error "Unexpected message for task $x $i: $msg"
+  }
+  
+  puts "coaster_task_success $x $i $timestamp"
+
   turbine::store_integer $x $i
 }
 
-proc coaster_task_fail { } {
-  puts "coaster_task_fail"
+proc coaster_task_fail { result } {
+  puts "coaster_task_fail $result"
 }
 
 proc main {} {
