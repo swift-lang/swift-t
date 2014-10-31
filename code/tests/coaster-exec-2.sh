@@ -40,8 +40,8 @@ COASTER_SVC_PID=$!
 # Reduce heartbeat interval to catch bugs in heartbeat
 export COASTER_HEARTBEAT_INTERVAL=1
 
-export COASTER_SERVICE_URL="127.0.0.1:53363"
 export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=64"
+TURBINE_COASTER_CONFIG+=",coasterServiceURL=127.0.0.1:53363"
 
 # Delay to allow service to start up
 sleep 0.5

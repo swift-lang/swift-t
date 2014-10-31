@@ -41,10 +41,6 @@
         "Error in Coaster execution: %s (%s)",                        \
         coaster_last_err_info(), coaster_rc_string(__crc)); }
 
-/* Environment variable names
-   TODO: final config mechanism */
-#define COASTER_ENV_SERVICE_URL "COASTER_SERVICE_URL"
-
 #define COASTER_DEFAULT_SERVICE_URL "127.0.0.1:53001"
 /*
   TODO: what is sensible default?  Potential factors:
@@ -55,6 +51,7 @@
 #define COASTER_DEFAULT_CLIENT_SLOTS 1024
 
 /* Settings keys */
+#define COASTER_SETTING_SERVICE_URL "coasterServiceURL"
 #define COASTER_SETTING_JOB_MANAGER "jobManager"
 #define COASTER_SETTING_SLOTS "maxParallelTasks"
 
@@ -172,10 +169,65 @@ coaster_executor_register(void)
   return TURBINE_SUCCESS;
 }
 
+/*
+  Remove setting from settings and copy to value.
+  val: Set to value, or copy of default_val if not present.
+       Caller is responsible for freeing.
+  default_val: default value, can be NULL.
+ */
+static turbine_exec_code
+extract_setting(coaster_settings *settings,
+          const char *key, size_t key_len,
+          char **val, size_t *val_len,
+          const char *default_val, size_t default_val_len,
+          bool remove)
+{
+  coaster_rc crc;
+
+  const char *tmp_val;
+  size_t tmp_val_len;
+
+  crc = coaster_settings_get(settings, key, key_len,
+                             &tmp_val, &tmp_val_len);
+  COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+
+  if (tmp_val == NULL)
+  {
+    tmp_val = default_val;
+    tmp_val_len = default_val_len;
+  }
+
+  if (tmp_val == NULL)
+  {
+    *val = NULL;
+    *val_len = 0;
+  }
+  else
+  {
+    *val = malloc(tmp_val_len + 1);
+    EXEC_MALLOC_CHECK(*val);
+
+    memcpy(*val, tmp_val, tmp_val_len);
+    (*val)[tmp_val_len] = '\0';
+    *val_len = tmp_val_len;
+  }
+
+  if (remove)
+  {
+    crc = coaster_settings_remove(settings, key, key_len);
+    COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
+  }
+
+  return TURBINE_EXEC_SUCCESS;
+}
+
+
 static turbine_exec_code
 coaster_configure(turbine_context tcx, void **context,
     const char *config, size_t config_len)
 {
+  turbine_exec_code ec;
+
   coaster_context *cx = malloc(sizeof(coaster_context));
   EXEC_MALLOC_CHECK(cx);
 
@@ -207,45 +259,19 @@ coaster_configure(turbine_context tcx, void **context,
   free(key_lens);
 #endif
 
-  const char *service_url = getenv(COASTER_ENV_SERVICE_URL);
+  ec = extract_setting(cx->settings, COASTER_SETTING_SERVICE_URL,
+      strlen(COASTER_SETTING_SERVICE_URL), &cx->service_url,
+      &cx->service_url_len, COASTER_DEFAULT_SERVICE_URL,
+      strlen(COASTER_DEFAULT_SERVICE_URL), true);
+  EXEC_CHECK(ec);
+  DEBUG_COASTER("Service URL: %.*s",
+        (int)cx->service_url_len, cx->service_url);
 
-  if (service_url == NULL)
-  {
-    service_url = COASTER_DEFAULT_SERVICE_URL;
-  }
+  ec = extract_setting(cx->settings, COASTER_SETTING_JOB_MANAGER,
+      strlen(COASTER_SETTING_JOB_MANAGER), &cx->default_job_manager,
+      &cx->default_job_manager_len, NULL, 0, true);
+  EXEC_CHECK(ec);
 
-  size_t service_url_len = strlen(service_url);
-  cx->service_url = malloc(service_url_len);
-  EXEC_MALLOC_CHECK(cx->service_url);
-  memcpy(cx->service_url, service_url, service_url_len);
-  cx->service_url_len = service_url_len;
-
-  const char *job_manager;
-  size_t job_manager_len;
-  crc = coaster_settings_get(cx->settings, COASTER_SETTING_JOB_MANAGER,
-       strlen(COASTER_SETTING_JOB_MANAGER), &job_manager,
-       &job_manager_len);
-  COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
-
-  if (job_manager != NULL)
-  {
-    cx->default_job_manager = malloc(job_manager_len + 1);
-    EXEC_MALLOC_CHECK(cx->default_job_manager);
-    memcpy(cx->default_job_manager, job_manager, job_manager_len + 1);
-
-    cx->default_job_manager_len = job_manager_len;
-
-    // Don't pass job manager along with other settings
-    crc = coaster_settings_remove(cx->settings,
-        COASTER_SETTING_JOB_MANAGER,
-        strlen(COASTER_SETTING_JOB_MANAGER));
-    COASTER_CHECK(crc, TURBINE_ERROR_INVALID);
-  }
-  else
-  {
-    cx->default_job_manager = NULL;
-    cx->default_job_manager_len = 0;
-  }
   DEBUG_COASTER("Default jobManager: %.*s",
         (int)cx->default_job_manager_len,
              cx->default_job_manager);

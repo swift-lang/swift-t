@@ -42,8 +42,7 @@ fi
 "${STOP_SVC}" -conf "${SVC_CONF}"
 "${START_SVC}" -conf "${SVC_CONF}"
 
-export COASTER_SERVICE_URL="127.0.0.1:53363"
-export TURBINE_COASTER_CONFIG="provider=local"
+export TURBINE_COASTER_CONFIG="provider=local,coasterServiceURL=127.0.0.1:53363"
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 TURBINE_RC=${?}

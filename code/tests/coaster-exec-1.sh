@@ -37,8 +37,7 @@ source "${SVC_CONF}"
 "${COASTER_SVC}" -nosec -port ${SERVICE_PORT} &
 COASTER_SVC_PID=$!
 
-export COASTER_SERVICE_URL="${IPADDR}:${SERVICE_PORT}"
-export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4"
+export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4,coasterServiceURL=${IPADDR}:${SERVICE_PORT}"
 
 # Delay to allow service to start up
 sleep 0.5
