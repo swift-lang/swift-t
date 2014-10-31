@@ -1358,7 +1358,6 @@ Alternative work-types include custom user-defined work types,
 along with tasks for external executors such as Coasters or GeMTC
 for remote command-line and GPU tasks respectively. 
 It is also possible to define custom types of CPU leaf functions.
-////
 
 ==== Custom work types
 For some applications, it is useful to be able to divide up
@@ -1479,10 +1478,37 @@ app (file out) echo (string args[]) {
 }
 ----
 
-The prerequisites 
+Running a Swift/T script with Coasters function requires
+a few steps to set up all components:
 
-To run a Swift/T script with Coasters function, you must:
-# 
+* Before starting, you must have Swift/T compiled with Coaster
+  support, and the coaster service from Swift/K installed.
+* Before running your Swift/T script, start a Coaster service
+  from the shell, for example:
+----
+export WORKER_MODE=local
+export IPADDR=127.0.0.1
+export SERVICE_PORT=53363
+export JOBSPERNODE=4
+export LOGDIR=/home/user/swift-logs
+export WORKER_LOG_DIR=/home/user/swift-logs
+
+coaster-service -nosec -port ${SERVICE_PORT}
+----
+* Coaster configuration must be set in the the TURBINE_COASTER_CONFIG
+  environment variable, for example:
+----
+export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4,coasterServiceURL=${IPADDR}:${SERVICE_PORT}"
+----
+* Once the Coaster service is running and TURBINE_COASTER_CONFIG is set,
+  you can run your Swift/T program in the normal way, and any coaster app
+  tasks will be dispatched to the Coaster service for execution.
+
+Supporting configuration keys are:
+* TODO
+
+For more information on configuring and using Coasters, please refer
+to the http://swift-lang.org/docs/[Swift/K documentation].
 
 === External scripting support
 
