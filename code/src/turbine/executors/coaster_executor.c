@@ -43,12 +43,17 @@
 
 #define COASTER_DEFAULT_SERVICE_URL "127.0.0.1:53001"
 /*
-  TODO: what is sensible default?  Potential factors:
-  - Imbalance between Coaster clients?
-  - Imbalance if Coaster clients connected to different services?
-  - Memory/CPU overhead of managing many jobs
+  Default is nearest power-of-two to Swift/K default of 201
+  Tuning depends on multiple potential factors:
+  - We want the coaster service queue full and resources busy,
+    to maximise throughput
+  - In the case of multiple coaster clients, we don't want one "greedy"
+    client taking all the work and causing imbalance.
+  - Furthermore, if the clients can be connected to different services in
+    future, we want to avoid imbalance even more.
+  - There is some memory/CPU overhead associated with managing many jobs
  */
-#define COASTER_DEFAULT_CLIENT_SLOTS 1024
+#define COASTER_DEFAULT_MAX_PARALLELISM 256
 
 /* Settings keys */
 #define COASTER_SETTING_SERVICE_URL "coasterServiceURL"
@@ -276,7 +281,7 @@ coaster_configure(turbine_context tcx, void **context,
         (int)cx->default_job_manager_len,
              cx->default_job_manager);
 
-  cx->total_slots = COASTER_DEFAULT_CLIENT_SLOTS;
+  cx->total_slots = COASTER_DEFAULT_MAX_PARALLELISM;
   const char *slots_str;
   size_t slots_str_len;
   crc = coaster_settings_get(cx->settings, COASTER_SETTING_SLOTS,
