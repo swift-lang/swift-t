@@ -1693,7 +1693,6 @@ NOTE: To use this, Turbine must be configured with Julia enabled
  +julia+ program (which may be done by using a normal Swift
  <<app_functions,app function>>).
 
-////
 
 [[annotations]]
 == Function call annotations
