@@ -14,8 +14,14 @@ COASTER_SVC_PID=$!
 # Delay to allow service to start up
 sleep 0.5
 
-export COASTER_SERVICE_URL="${IPADDR}:${SERVICE_PORT}"
+COASTER_SERVICE_URL="${IPADDR}:${SERVICE_PORT}"
 export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=64"
+TURBINE_COASTER_CONFIG+=",coasterServiceURL=${COASTER_SERVICE_URL}"
 
 # Need at least one worker
 export TURBINE_COASTER_WORKERS=1
+
+# Need at least two workers for additional work types
+if [[ -z "${TEST_ADLB_WORKERS-}" || "$TEST_ADLB_WORKERS" -lt 2 ]] ; then
+  export TEST_ADLB_WORKERS=2
+fi
