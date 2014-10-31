@@ -70,6 +70,9 @@ MPI_VERSION=3
 # Enable task execution through Coasters C interface
 # COASTER_INSTALL=/path/to/coaster-c-client
 
+# Install location for Swift/K (for combined T & K package)
+# SWIFTK_INSTALL=${EXM_PREFIX}/swift-k
+
 # Enable MPE support
 # ENABLE_MPE=1
 
