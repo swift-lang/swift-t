@@ -135,6 +135,9 @@ LB_SRC=${EXM_SRC_ROOT}/lb/code
 TURBINE_SRC=${EXM_SRC_ROOT}/turbine/code
 STC_SRC=${EXM_SRC_ROOT}/stc/code
 
+# Source subdirectory for external dependencies, if desired
+#COASTER_SRC=
+
 # Install subdirectories. Modify to match your layout if needed
 LB_INSTALL=${EXM_PREFIX}/lb
 C_UTILS_INSTALL=${EXM_PREFIX}/c-utils

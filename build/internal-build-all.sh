@@ -26,6 +26,17 @@ echo "================"
 ${THISDIR}/lb-build.sh
 popd
 
+if [ ! -z "$COASTER_SRC" -a ! -z "$COASTER_INSTALL" ]
+then
+  pushd ${COASTER_SRC}
+  echo
+  echo "Building Coaster C Client"
+  pwd
+  echo "========================="
+  ${THISDIR}/coaster-c-client-build.sh
+  popd
+fi
+
 pushd ${TURBINE_SRC}
 echo
 echo "Building Turbine"
