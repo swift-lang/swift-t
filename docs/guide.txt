@@ -1328,6 +1328,77 @@ perform its own data dependency management.
 See the link:leaf.html[Swift/T Leaf Function Guide] for more
 information about this process.
 
+=== Dispatch and work types
+
+Each worker in Swift/T is devoted to executing a single type of work.
+There is a default work type that encompasses Swift/T script logic and
+CPU tasks.
+
+There are two subtypes of the default work type that are treated
+differently by the Swift/T optimizer.  +CONTROL+, the default,
+is intended for functions that run for a short duration, for example
+builtin functions such as +strcat()+, arithmetic.
++WORKER+, the second subtype,
+is intended for functions that perform more computation and I/O,
+which may keep a worker busy for a while.  Swift/T may bundle
+together multiple +CONTROL+ tasks to reduce overhead, but will
+keep +WORKER+ tasks separate to increase parallelism.
+
+The work type is specified with a +@dispatch+ annotation above
+leaf function definitions.
+
+----
+@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set <<o>> [ pkg::process <<i>> ]"
+];
+----
+
+Alternative work-types include custom user-defined work types,
+along with tasks for external executors such as Coasters or GeMTC
+for remote command-line and GPU tasks respectively. 
+It is also possible to define custom types of CPU leaf functions.
+////
+
+==== Custom work types
+For some applications, it is useful to be able to divide up
+CPU workers into multiple categories that execute different
+kinds of work.  For these scenarios, Swift/T provides the
+ability to define custom work types.
+
+This sample program illustrates how to define a custom work
+type +foo_work+ and define a function, +hello1+, which executes
+on a +foo_work+ worker.  For comparison, we also include +hello2+,
+which uses the default work type.
+
+----
+pragma worktypedef foo_work;
+
+@dispatch=foo_work
+hello1 (string name) "turbine" "0.0" [
+  "puts [ format {Hello %s} <<msg>> ]"
+];
+
+hello2 (string name) "turbine" "0.0" [
+  "puts [ format {Hello %s} <<msg>> ]"
+]
+
+main () {
+  // Hello Foo will be printed on a foo_work worker
+  hello1("Foo");
+
+  // Hello Bar will be printed on a regular worker
+  hello2("Bar");
+}
+----
+
+In order to run the above script, we need to ensure that
+a worker is allocated to execute +foo_work+ tasks.  This is
+achieved by setting the environment variable +TURBINE_FOO_WORK_WORKERS+
+to the desired number of workers.  The Swift/T workers are then divided
+between default workers and +foo_work+ workers.
+
+
 [[app_functions]]
 === App functions
 
@@ -1388,6 +1459,30 @@ main {
   }
 }
 ----
+
+=== Remote job execution with Coasters
+
+*Note:* Swift/T and Coasters integration is a work in progress
+and is currently best suited for advanced users.
+Planned future changes will make it easier to install and use.
+
+Swift/T supports execution of command-line +app+ functions on
+a wide range of clusters, clouds, and grids with the
+Coaster executor.  In order for an app function to be executed
+through coasters, the annotation +@dispatch=COASTER+ must be
+added to the app function definition:
+
+----
+@dispatch=COASTER
+app (file out) echo (string args[]) {
+  "echo" args @stdout=out
+}
+----
+
+The prerequisites 
+
+To run a Swift/T script with Coasters function, you must:
+# 
 
 === External scripting support
 
@@ -1572,11 +1667,13 @@ NOTE: To use this, Turbine must be configured with Julia enabled
  +julia+ program (which may be done by using a normal Swift
  <<app_functions,app function>>).
 
-[[annotations]]
-== Annotations
+////
 
-Swift/T supports many annotations to influence the behavior of the
-run.
+[[annotations]]
+== Function call annotations
+
+Swift/T supports many annotations to influence the behavior of function
+calls.
 
 === Priority
 
@@ -1621,33 +1718,6 @@ ranks.  You may combine the location features with the hostmap
 features to send work to assigned hostnames.  See the
 <<library_location,Location library>> for usage.  The hostmap may be
 <<env_hostmap_debug,debugged>> or <<env_hostmap_disable,disabled>>.
-
-=== Dispatch
-
-This simply dispatches tasks to the given process type: +WORKER+ or
-+SERVER+. By default, work executes on a +SERVER+.
-
-----
-@dispatch=WORKER
-(int o) process (int i) "pkg" "0.0.1" [
-  "set <<o>> [ pkg::process <<i>> ]"
-];
-----
-
-Swift/T builtin functions (+strcat()+, arithmetic, etc.) are typically
-implemented in this way as tasks that execute on the server.  User
-work should be performed on workers to keep servers free to process
-dataflow.
-
-This annotation is applied to the leaf task definition.
-
-////
-
-=== Work types
-
-Tim?
-
-////
 
 [[Optimizations]]
 == Optimizations
@@ -1751,6 +1821,22 @@ environment variables:
 
 The remaining processes are workers.  These values are available to
 Swift (<<Turbine_information, Turbine information>>).
+
++TURBINE_<type>_WORKERS+:: Number of workers of specified type.
+
+Any workers not allocated to specific types are general-purpose workers
+that execute Swift/T control code and CPU-based tasks.  There must
+be at least one leftover worker to serve as a general-purpose worker.
+
+Valid work types include:
+
+* +TURBINE_COASTER_WORKERS+:: for Coaster workers.
+* A work type defined with +pragma worktypedef+ in Swift.
+  E.g. if you define +pragma worktypedef a_new_work_type;" in Swift,
+  the environment variable is +TURBINE_A_NEW_WORK_TYPE_WORKERS+.
+
+Generally you will need to allocate workers for any work type used in
+your Swift program.
 
 +TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
 logging, assuming logging was not disabled at configure time.  Logging
