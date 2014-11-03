@@ -1504,8 +1504,19 @@ export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4,coasterServic
   you can run your Swift/T program in the normal way, and any coaster app
   tasks will be dispatched to the Coaster service for execution.
 
-Supporting configuration keys are:
-* TODO
+Configuration keys include:
+
++coasterServiceURL+:: the url of the coaster service to submit tasks through,
+      e.g. +localhost:63001+.  Default is +127.0.0.1:53001+.
++jobManager+:: the Coaster job manager the service should use to submit tasks.
+      E.g. to execute jobs locally, the job manager can be set to +local+
+      and to execute jobs on resources managed through a batch scheduler such
+      as PBS or Slurm, the job manager should be set to +pbs+, +slurm+, or
+      the appropriate scheduler.
++maxParallelTasks+:: the maximum number of concurrent tasks per Coaster
+      worker.  Default is 256.
+Other settings:: additional configuration keys are passed through to the
+      Coaster service.
 
 For more information on configuring and using Coasters, please refer
 to the http://swift-lang.org/docs/[Swift/K documentation].
