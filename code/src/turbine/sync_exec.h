@@ -11,6 +11,11 @@
 
 #include <stdbool.h>
 
+
+/**
+   Substitute for Tcl exec due to issue on the Cray
+*/
+
 bool exec_system(const char* cmd, int* exitcode);
 
 #endif

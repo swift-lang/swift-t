@@ -14,7 +14,7 @@
 bool
 exec_system(const char* cmd, int* exitcode)
 {
-  printf("exec_system: %s\n", cmd);
+  // printf("exec_system: %s\n", cmd);
 
   int rc = system(cmd);
   *exitcode = rc;

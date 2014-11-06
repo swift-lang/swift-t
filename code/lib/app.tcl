@@ -36,11 +36,11 @@ namespace eval turbine {
   # kwopts: keyword options.  Valid are:
   #         stdout=file stderr=file
   # args: command line args as strings
+  # Note: We use sync_exec instead of the Tcl exec command due to 
+  # an issue on the Cray.  Implemented in sync_exec.c
   proc exec_external { cmd kwopts args } {
 
     app_init
-
-    show cmd kwopts args
 
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
 
