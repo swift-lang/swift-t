@@ -122,24 +122,28 @@ crash()
 
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
 STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
-STC=""
-for D in ${STC_TRIES}
-do
-  if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
-    then
-    STC=${D}/bin/stc
-    break
+
+if [[ -z ${STC} ]]
+then
+  STC=""
+  for D in ${STC_TRIES}
+  do
+    if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
+      then
+      STC=${D}/bin/stc
+      break
+    fi
+  done
+  if [[ ${STC} == "" ]]
+  then
+    STC=$( which stc )
+    [[ ${?} != 0 ]] && STC=""
   fi
-done
-if [[ ${STC} == "" ]]
-then
-  STC=$( which stc )
-  [[ ${?} != 0 ]] && STC=""
-fi
-if [[ ${STC} == "" ]]
-then
-  print "Could not find STC!"
-  exit 1
+  if [[ ${STC} == "" ]]
+  then
+    print "Could not find STC!"
+    exit 1
+  fi
 fi
 print "using stc: ${STC}\n"
 
@@ -152,7 +156,7 @@ then
 fi
 
 source ${STC_ENV}
-export TURBINE_INSTALL # needed by run-test.zsh
+export TURBINE_INSTALL TURBINE_HOME # needed by run-test.zsh
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
