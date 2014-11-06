@@ -64,17 +64,24 @@ echo "using CC=$( which ${CC} )"
 # Checks for programs
 AC_PROG_CC
 
+AC_TYPE_INT32_T
 AC_TYPE_INT64_T
+AC_TYPE_UINT32_T
+AC_TYPE_OFF_T
+AC_TYPE_PID_T
+AC_TYPE_SSIZE_T
 
 # Checks for functions
-AC_CHECK_FUNCS([memset pow stpcpy strdup strtol uname])
+AC_CHECK_FUNCS([memchr memmove memset pow stpcpy strdup strtol uname])
+AC_CHECK_FUNCS([strerror])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 
 # Checks for headers
 # Note: Mac OS does not have malloc.h
-AC_CHECK_HEADERS([inttypes.h limits.h malloc.h memory.h stddef.h])
+AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h memory.h ])
+AC_CHECK_HEADERS([stddef.h])
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AC_HEADER_STDBOOL
 
@@ -243,6 +250,7 @@ if [[ ${XLB_ENABLE_XPT} == yes ]]
 then
   ENABLE_ZLIB=0
   ZLIB_HOME=0
+  AC_FUNC_FSEEKO
   m4_include([m4/ax_check_zlib.m4])
   AX_CHECK_ZLIB([ENABLE_ZLIB=1],
                 AC_MSG_ERROR([Could not find zlib! (required for checkpoint)]))
