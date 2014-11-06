@@ -233,7 +233,13 @@ function set_opt_level() {
 
 help()
 {
-  cat ${STC_HOME}/help.txt
+  printf "STC HELP\n\n"
+  # These options are available in the swift-t interface:
+  cat ${STC_HOME}/etc/help-options-1.txt   
+  # These options are not available in the swift-t interface:
+  cat ${STC_HOME}/etc/help-options-2.txt   
+  # These are details about compiler flag terms
+  cat ${STC_HOME}/etc/help-option-terms.txt
   echo
   report_optimizations
   exit 0
@@ -277,17 +283,17 @@ lookup_java()
 
 report_version()
 {
-  print "STC: Swift-Turbine Compiler"
+  printf "STC: Swift-Turbine Compiler "
+  cat ${STC_HOME}/etc/version.txt
   printf "\t for Turbine: "
-  cat ${STC_HOME}/turbine-version.txt
-  print "TURBINE_INSTALL=${TURBINE_INSTALL}"
-  print "TURBINE_HOME=${TURBINE_HOME}"
+  cat ${STC_HOME}/etc/turbine-version.txt
+  print "Using Turbine in: ${TURBINE_HOME}"
   lookup_java
-  print "Using Java: ${JVM}"
+  print "Using Java VM:    ${JVM}"
   exit 0
 }
 
-while getopts "A:C:d:D:Ef:F:hI:j:L:pO:r:uvVx" OPTION
+while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uvVx" OPTION
 do
   case ${OPTION}
     in
@@ -329,6 +335,9 @@ do
     F) verbose "TURNOFF: ${OPTARG}"
       disable_opt ${OPTARG}
       ;;
+    o)
+      OUTPUT=${OPTARG}
+      ;;
     O)
        set_opt_level $OPTARG
       ;;
@@ -356,8 +365,12 @@ shift $(( OPTIND-1 ))
 
 # After shifting out the options we are left with the file names
 INPUT=$1
-# This is optional (STC Java implementation defaults to *.tic)
-OUTPUT=$2
+if [[ ${#*} > 1 ]] 
+then
+  # This is optional (STC Java implementation defaults to *.tic)
+  # OUTPUT may have been set by stc -o
+  OUTPUT=$2
+fi
 
 if [[ -z ${OPTLEVEL} ]]
 then
