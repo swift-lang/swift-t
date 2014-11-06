@@ -235,9 +235,9 @@ help()
 {
   printf "STC HELP\n\n"
   # These options are available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-1.txt   
+  cat ${STC_HOME}/etc/help-options-1.txt
   # These options are not available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-2.txt   
+  cat ${STC_HOME}/etc/help-options-2.txt
   # These are details about compiler flag terms
   cat ${STC_HOME}/etc/help-option-terms.txt
   echo
@@ -365,7 +365,7 @@ shift $(( OPTIND-1 ))
 
 # After shifting out the options we are left with the file names
 INPUT=$1
-if [[ ${#*} > 1 ]] 
+if [[ ${#*} > 1 ]]
 then
   # This is optional (STC Java implementation defaults to *.tic)
   # OUTPUT may have been set by stc -o
@@ -400,7 +400,7 @@ do
   CLASSPATH+=":${STC_HOME}/lib/$lib.jar"
 done
 
-TURBINE_VERSION=$( < ${STC_HOME}/turbine-version.txt )
+TURBINE_VERSION=$( < ${STC_HOME}/etc/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
 if [[ ${LOGFILE} != "" ]]
