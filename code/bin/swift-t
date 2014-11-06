@@ -3,15 +3,46 @@
 STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 STC=${STC_HOME}/bin/stc
 source ${STC_HOME}/conf/stc-env.sh
-TURBINE=${TURBINE_INSTALL}/bin/turbine
+TURBINE=${TURBINE_HOME}/bin/turbine
 
 STC_OPTS=()
 TURBINE_OPTS=()
 
 usage()
 {
-  print "Swift/T usage:"
+  print "swift-t: Use 'swift-t -h' for help."
 }
+
+help()
+{
+  printf "Swift/T HELP\n\n"
+  printf "\t swift-t <options> <program.swift>\n\n"
+  printf "\t Compiles program.swift with STC and runs it with Turbine\n"
+  printf "\t You may provide STC and/or Turbine options\n\n"
+  # These options are available in the swift-t interface:
+  printf  "STC OPTIONS\n\n"
+  cat ${STC_HOME}/etc/help-options-1.txt   
+  # These options are only available in the swift-t interface:
+  cat ${STC_HOME}/etc/help-options-3.txt   
+  # These are details about Turbine features accessible from swift-t
+  print 
+  printf "TURBINE OPTIONS\n\n"
+  cat ${TURBINE_HOME}/etc/help-options-1.txt
+  print
+  cat ${TURBINE_HOME}/etc/help-env.txt
+  print
+  # These are details about compiler flag terms
+  cat ${STC_HOME}/etc/help-option-terms.txt
+  print
+  print "You may want to run STC and Turbine individually."
+  print "Use 'stc -h' to see STC help and optimization list" 
+  print "Use 'turbine -h' to see Turbine help" 
+  print 
+  cat ${STC_HOME}/etc/help-footer.txt
+  print
+  exit 0
+}
+
 
 report_version()
 {
@@ -23,9 +54,9 @@ PROGRAM_TCL=""
 VERBOSE=0
 
 # Process all flags: split among this script, STC, or Turbine
-SWIFT_T_CHARS="hvV"
-STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:"
-TURBINE_CHARS="e:lm:n:s:xX"
+SWIFT_T_CHARS="ht:vV"
+STC_CHARS="A:C:d:D:f:F:I:j:L:o:O:pr:"
+TURBINE_CHARS="e:i:lm:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -34,18 +65,18 @@ do
   case ${OPTION} in
 
     # Swift/T arguments:
-    h) usage ; exit 0 ;;
+    h) help ; exit 0 ;;
     v) report_version ;;
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
     # STC arguments:
     A) ;& d) ;& D) ;& I) ;&
-    j) ;& L) ;& O) ;& p) ;& r)
+    j) ;& L) ;& o) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
     # Turbine arguments
-    e) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
+    e) ;& i) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
@@ -56,15 +87,10 @@ do
       TURBINE_OPTS+=( -${FLAG} ${ARG} )
       ;;
 
-    # swift-t arguments
-    o)
-      PROGRAM_TCL=${OPTARG}
-      ;;
-
     # Errors
     *)
-      print error
       # ZSH prints an error message
+      usage
       exit 1
   esac
 done

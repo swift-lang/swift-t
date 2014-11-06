@@ -8,6 +8,8 @@
        Eclipse generates class files in build/
        This Ant script puts them in classes/
        The ones in classes/ are the ones used in the output jar file
+
+       Use -Dlf=true to get per-file output (list-files)
   -->
 
   <!-- Locations of jars and ANTLR grammar file -->
@@ -224,7 +226,7 @@
     <copy file="conf/stc-env.sh.template" toFile="conf/stc-env.sh"
           overwrite="true">
       <filterset>
-        <filter token="TURBINE_INSTALL" value="${turbine.home}"/>
+        <filter token="TURBINE_HOME" value="${turbine.home}"/>
       </filterset>
     </copy>
   </target>
@@ -242,15 +244,17 @@
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
     <mkdir dir="${dist.dir}/lib"/>
-    <copy file="bin/stc"         todir="${dist.dir}/bin"/>
-    <copy file="bin/swift-t"     todir="${dist.dir}/bin"/>
-    <copy file="conf/stc-env.sh" todir="${dist.dir}/conf"/>
-    <copy file="help.txt"        todir="${dist.dir}"/>
-    <copy file="etc/version.txt" todir="${dist.dir}/etc"/>
-    <copy file="source.txt"      todir="${dist.dir}/etc"/>
-    <copy file="turbine-version.txt" todir="${dist.dir}"/>
+    <copy verbose="${lf}" file="bin/stc"         todir="${dist.dir}/bin"/>
+    <copy verbose="${lf}" file="bin/swift-t"     todir="${dist.dir}/bin"/>
+    <copy verbose="${lf}" file="conf/stc-env.sh" todir="${dist.dir}/conf"/>
+    <copy verbose="${lf}" todir="${dist.dir}/etc">
+          <fileset dir="etc" includes="help*.txt"/>
+    </copy>
+    <copy verbose="${lf}" file="etc/version.txt" todir="${dist.dir}/etc"/>
+    <copy verbose="${lf}" file="source.txt"      todir="${dist.dir}/etc"/>
+    <copy verbose="${lf}" file="etc/turbine-version.txt" todir="${dist.dir}/etc"/>
 
-    <copy todir="${dist.dir}/lib">
+    <copy verbose="${lf}" todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
     </copy>
     <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
