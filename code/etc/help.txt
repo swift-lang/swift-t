@@ -11,47 +11,25 @@ DESCRIPTION
 
 OPTIONS
 
-  -f <file>
-     provide a machine file
-
-  -h
-      help
-
-  -l
-      enable MPI line numbering
-
-  -n <procs>
-      set number of processes
-
-  -x
-     program is an executable rather than tcl script
-
-  -X
-      use statically linked Turbine library
-
-  -v
-      report version number
-
-  -V
-      make this script verbose
-
-ENVIRONMENT
-
-   ADLB_SERVERS
-                         number of ADLB servers
-
-   TURBINE_LOG=0
-                         disable log
-
-   TURBINE_DEBUG=0
-                         disable Turbine debugging (if enabled)
-
-   ADLB_DEBUG=0
-                         disable ADLB debugging (if enabled)
-
-   TURBINE_LAUNCH_OPTS
-                         provide additional arguments to mpiexec
+   -e <variable>:<value> 
+          Set an environment variable 
+   -f <file>
+          Provide an MPI machine file
+   -h
+          help
+   -l
+          enable MPI line numbering
+   -n <procs>
+          Set total number of processes
+   -x
+          Program is an executable rather than Tcl (*.tic) script
+   -X
+          Use statically linked Turbine library
+   -v
+          Report version number
+   -V
+          Make this script verbose
 
 SEE ALSO
 
-   http://www.mcs.anl.gov/exm/local/guides/swift.html
+   http://web.ci.uchicago.edu/~wozniak/swift-www/Swift-T/guide.html#Turbine

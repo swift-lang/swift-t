@@ -13,9 +13,9 @@
 #define TURBINE_VERSION "@TURBINE_VERSION@"
 
 /** Required ADLB version */
-#define ADLB_REQUIRED_VERSION "0.4.0"
+#define ADLB_REQUIRED_VERSION "0.5.0"
 
 /** Required c-utils version */
-#define C_UTILS_REQUIRED_VERSION "0.3.0"
+#define C_UTILS_REQUIRED_VERSION "0.3.2"
 
 #endif

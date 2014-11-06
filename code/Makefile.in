@@ -671,7 +671,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) \
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) etc/help*.txt         $(INSTALL_ETC)
 	@echo
 	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
@@ -683,17 +683,17 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) \
 
 ### Autoconf sanity:
 
-configure: setup.sh
+configure: bootstrap
 	@echo
-	@echo "Configuration is not up to date (setup.sh)!"
-	@echo "Run ./setup.sh and ./configure again."
+	@echo "Configuration is not up to date (bootstrap)!"
+	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@exit 1
 
 Makefile: configure.ac
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
-	@echo "Run ./setup.sh and ./configure again."
+	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@exit 1
 

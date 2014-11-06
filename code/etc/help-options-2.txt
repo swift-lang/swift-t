@@ -1,0 +1,8 @@
+   -f <file>
+          Provide an MPI machine file
+   -h
+          help
+   -v
+          Report version number
+   -V
+          Make this script verbose

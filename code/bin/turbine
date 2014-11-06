@@ -118,7 +118,16 @@ fi
 
 print_help()
 {
-  cat ${TURBINE_HOME}/etc/help.txt
+  cat ${TURBINE_HOME}/etc/help-header.txt
+  # These options are available from swift-t
+  printf "OPTIONS\n\n"
+  cat ${TURBINE_HOME}/etc/help-options-1.txt
+  # These options are not available from swift-t
+  cat ${TURBINE_HOME}/etc/help-options-2.txt
+  print 
+  cat ${TURBINE_HOME}/etc/help-env.txt
+  print
+  cat ${TURBINE_HOME}/etc/help-footer.txt
 }
 
 if (( PRINT_HELP ))

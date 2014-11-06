@@ -1,0 +1,16 @@
+TURBINE RUNTIME ENVIRONMENT
+
+   ADLB_SERVERS
+                         number of ADLB servers
+
+   TURBINE_LOG=0
+                         disable log
+
+   TURBINE_DEBUG=0
+                         disable Turbine debugging (if enabled)
+
+   ADLB_DEBUG=0
+                         disable ADLB debugging (if enabled)
+
+   TURBINE_LAUNCH_OPTS
+                         provide additional arguments to mpiexec
