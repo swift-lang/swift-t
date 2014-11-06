@@ -43,10 +43,11 @@ AC_HEADER_STDBOOL
 # Checks for typedefs, structures, and compiler characteristics
 AC_C_INLINE
 AC_TYPE_PID_T
+AC_TYPE_INT64_T
+AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
-AC_TYPE_UINT8_T
-AC_TYPE_INT64_T
+AC_TYPE_UINT64_T
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
 
@@ -54,7 +55,7 @@ AC_TYPE_SIZE_T
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
 AC_CHECK_FUNCS([floor gettimeofday memchr memmove])
-AC_CHECK_FUNCS([strchr strdup strnlen])
+AC_CHECK_FUNCS([strchr strdup strnlen strtol])
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 

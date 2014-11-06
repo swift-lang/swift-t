@@ -56,17 +56,17 @@ exmcutils: $(EXM_CUTILS_LIBS)
 
 ### Autoconf sanity:
 
-configure: setup.sh
+configure: autogen.sh
 	@echo
-	@echo "Configuration is not up to date (setup.sh)!"
-	@echo "Run ./setup.sh and ./configure again."
+	@echo "Configuration is not up to date (bootstrap)!"
+	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@exit 1
 
 Makefile: configure.ac Makefile.in
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
-	@echo "Run ./setup.sh and ./configure again."
+	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@exit 1
 
