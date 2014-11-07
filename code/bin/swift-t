@@ -1,8 +1,14 @@
 #!/bin/zsh -efu
 
+# Exit codes: (cf. ExitCode.java)
+EXIT_ERROR_SCRIPT=6
+
 STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 STC=${STC_HOME}/bin/stc
-source ${STC_HOME}/conf/stc-env.sh
+STC_ENV="$STC_HOME/conf/stc-env.sh"
+
+source "$STC_HOME/scripts/stc-config.sh"
+
 TURBINE=${TURBINE_HOME}/bin/turbine
 
 STC_OPTS=()
