@@ -147,16 +147,12 @@ then
 fi
 print "using stc: ${STC}\n"
 
-STC_ENV="$(dirname $(dirname ${STC} ))/conf/stc-env.sh"
+STC_HOME="$(dirname $(dirname ${STC} ))"
+STC_ENV="$STC_HOME/conf/stc-env.sh"
 
-if [ ! -f "${STC_ENV}" ]
-then
-  echo "Expected file ${STC_ENV} to exist"
-  exit 1
-fi
+source "$STC_HOME/scripts/stc-config.sh"
 
-source ${STC_ENV}
-export TURBINE_INSTALL TURBINE_HOME # needed by run-test.zsh
+export TURBINE_HOME # needed by run-test.zsh
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 

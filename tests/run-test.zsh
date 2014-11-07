@@ -3,8 +3,8 @@
 set -eu
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
-# turbine must be in your PATH or in TURBINE
-#         or installed in TURBINE_HOME or TURBINE_INSTALL
+# TURBINE_HOME must be set to a valid Turbine install, or turbine must be
+# in the path
 # Set VALGRIND=/path/to/valgrind to run valgrind (Turbine feature)
 
 # Defaults:
@@ -60,23 +60,17 @@ then
   fi
 fi
 
-if (( ${+TURBINE_INSTALL} ))
-then
-  TURBINE=${TURBINE_INSTALL}/bin/turbine
-  if [[ ! -x ${TURBINE} ]]
-  then
-    print "Bad TURBINE_INSTALL!"
-    print "Not executable: ${TURBINE}"
-    exit 1
-  fi
-fi
-
 # Look for Turbine in PATH
 if (( ! ${+TURBINE} ))
 then
   TURBINE=$( which turbine )
+  if [[ ! -x ${TURBINE} ]]
+  then
+    print "Could not locate turbine on path"
+    exit 1
+  fi
 fi
-
+  
 # Allow user to override these from environment
 export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
 WORKERS=${TEST_ADLB_WORKERS:-1}
