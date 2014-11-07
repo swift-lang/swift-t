@@ -23,10 +23,10 @@ fi
 
 if (( RUN_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
-  ./setup.sh
+  ./bootstrap
 elif [ ! -f configure ]; then
   # Attempt to run autotools
-  ./setup.sh
+  ./bootstrap
 fi
 
 if (( EXM_DEBUG_BUILD )); then

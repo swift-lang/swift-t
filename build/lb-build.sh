@@ -15,10 +15,10 @@ if (( SVN_UPDATE )); then
 fi
 
 if (( RUN_AUTOTOOLS )); then
-  ./setup.sh
+  ./bootstrap
 elif [ ! -f configure ]; then
   # Attempt to run autotools
-  ./setup.sh
+  ./bootstrap
 fi
 
 EXTRA_ARGS=

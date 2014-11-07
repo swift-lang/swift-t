@@ -17,9 +17,9 @@ if (( SVN_UPDATE )); then
 fi
 
 if (( RUN_AUTOTOOLS )); then
-  ./setup.sh
+  ./bootstrap
 elif [ ! -f configure ]; then
-  ./setup.sh
+  ./bootstrap
 fi
 
 EXTRA_ARGS=
