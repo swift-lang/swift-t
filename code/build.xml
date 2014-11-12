@@ -253,6 +253,7 @@
     <copy verbose="${lf}" file="etc/version.txt" todir="${dist.dir}/etc"/>
     <copy verbose="${lf}" file="source.txt"      todir="${dist.dir}/etc"/>
     <copy verbose="${lf}" file="etc/turbine-version.txt" todir="${dist.dir}/etc"/>
+    <copy verbose="${lf}" file="scripts/stc-config.sh" todir="${dist.dir}/scripts"/>
 
     <copy verbose="${lf}" todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
