@@ -41,20 +41,29 @@ print
 TESTS_SKIP=0
 TESTS_TOTAL=-1 # May set to -1 to run all
 INSTALL_ROOT=/tmp/exm-install
-TURBINE=${INSTALL_ROOT}/turbine
-STC=${INSTALL_ROOT}/stc
-MPICH=/tmp/mpich-install
-export PATH=${MPICH}/bin:${TURBINE}/bin:${STC}/bin:${PATH}
+TURBINE_INSTALL=${INSTALL_ROOT}/turbine
+STC_INSTALL=${INSTALL_ROOT}/stc
+MPICH_INSTALL=/tmp/mpich-install
+
+# MPI
+export PATH=${MPICH_INSTALL}/bin:${PATH}
+
+# Specify STC and Turbine for run-tests.zsh
+export STC=${STC_INSTALL}/bin/stc
+export TURBINE_HOME=${TURBINE_INSTALL}
+
 # print -l ${path}
-print "Using STC:     $( which stc )"
-print "Using Turbine: $( which turbine )"
-turbine -v
+
+print "Using STC:         ${STC}"
+print "Using TURBINE:     ${TURBINE_INSTALL}"
+print "Using MPI install: ${MPICH_INSTALL}"
+${TURBINE_HOME}/bin/turbine -v
+
 
 cd tests
 
-export TURBINE_HOME=${TURBINE}
 export ADLB_PERF_COUNTERS=0
-source ./run-tests.zsh -O0 -O1 -O2 -O3 \
+./run-tests.zsh -O0 -O1 -O2 -O3 \
       -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
