@@ -77,11 +77,15 @@ AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
 # We trust the user's install and omit AC_PROG_INSTALL
 
+# Note that the zlib check is too smart- if you provide a
+# broken location for --with-zlib, it will find a different one!
+# This is problematic on cross-compiled systems (like BG/Q).
 ENABLE_ZLIB=0
 m4_include([m4/ax_check_zlib.m4])
 AX_CHECK_ZLIB([ENABLE_ZLIB=1],
    AC_MSG_ERROR([Could not find zlib: use --with-zlib or --without-zlib.
-                 Note that HDF also requires zlib.]))
+                 Note that Swift/Turbine checkpointing and HDF
+                 both require zlib and can both be disabled.]))
 CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
