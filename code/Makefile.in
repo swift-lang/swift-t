@@ -241,6 +241,9 @@ USE_JULIA  = @USE_JULIA@
 HAVE_COASTER = @HAVE_COASTER@
 USE_COASTER  = @USE_COASTER@
 
+# Record ZLIB setting in comments for debugging:
+# ENABLE_ZLIB: @ENABLE_ZLIB@
+
 CFLAGS += $(STD)
 CFLAGS += -g
 CFLAGS += $(WARNS)
@@ -269,7 +272,8 @@ ifeq ($(HAVE_COASTER),1)
 	INCLUDES += -I $(USE_COASTER)/include
 endif
 
-CFLAGS += $(DEFINES) $(INCLUDES)
+HDF5_CPPFLAGS = @HDF5_CPPFLAGS@
+CFLAGS += $(DEFINES) $(INCLUDES) $(HDF5_CPPFLAGS)
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
@@ -306,7 +310,8 @@ ifeq ($(HAVE_COASTER),1)
 endif
 
 # HDF5 variables are blank if HDF5 is not enabled
-LIBS += @HDF5_LDFLAGS@ @HDF5_LIBS@
+HDF5_LINK_FLAGS = @HDF5_LDFLAGS@ @HDF5_LIBS@
+LIBS += $(HDF5_LINK_FLAGS)
 
 # If we are using libtcl*.a, need to always include these libraries
 # TODO: would also be needed if we're doing full static link
@@ -428,7 +433,7 @@ endif
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
              $(DEP_DROP) $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
-	     $(INCLUDES) $(DEFINES)
+	     $(INCLUDES) $(HDF5_CPPFLAGS) $(DEFINES)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -653,8 +658,8 @@ EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) $(SCRIPTS_SUBMIT) )
 
-install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) \
-             $(TURBINE_HEADERS)
+install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
+              $(TURBINE_HEADERS) $(SCRIPTS) $(SCRIPTS_SUBMIT)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
