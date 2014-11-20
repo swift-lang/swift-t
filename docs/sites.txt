@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.6.1, August 2014
+v0.7.0, November 2014
 
 ////
 
@@ -122,7 +122,7 @@ it with the job submission program (e.g., +qsub+).
 
 PBS:: +turbine-pbs-run.zsh+
 Cobalt:: +turbine-cobalt-run.zsh+
-Cray/APRUN:: +turbine-aprun-run.zsh+ (PBS with Cray's +aprun+)
+Cray/APRUN:: +turbine-cray-run.zsh+ (PBS with Cray's +aprun+)
 SLURM:: +turbine-slurm-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
@@ -130,24 +130,33 @@ Each script accepts input via environment variables and command-line options.
 A typical invocation is:
 
 ----
-stc program.swift
-turbine-pbs-run.zsh -n 96 -s settings.sh program.tcl
+swift-t -m pbs -n 96 -s settings.sh program.swift
 ----
 
-where +program.tcl+ is the output of STC and +settings.sh+ contains:
+or:
+
+----
+stc program.swift
+turbine-pbs-run.zsh -n 96 -s settings.sh program.tic
+----
+
+which are equivalent. 
+
++program.tic+ is the output of STC and +settings.sh+ contains:
 ----
 export QUEUE=bigqueue
 export PPN=8
 ----
 
-which would run +program.tcl+ in 96 MPI processes on 12 nodes (8
+which would run +program.tic+ in 96 MPI processes on 12 nodes (8
 processes per node), submitted by PBS to queue +bigqueue+.
 
 [[variables]]
 === Turbine scheduler variables
 
 For scheduled systems, Turbine accepts a common set of environment
-variables.
+variables.  These may be placed in +settings.sh+ or set by the user in
+any other way.  
 
 +PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
@@ -195,7 +204,7 @@ system scheduler.
 
 +-X+:: Run standalone Turbine executable
         (created by link:swift.html#mkstatic[mkstatic.tcl]) instead of
-        +program.tcl+.
+        +program.tic+.
 
 === Turbine output directory
 
@@ -208,9 +217,9 @@ The user program will be copied to +TURBINE_OUTPUT+ before submission.
 Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
 
 TIP: When running on a big HPC machine, it may be difficult to get STC
-(a Java-based program) running.  STC output (+program.tcl+) is
+(a Java-based program) running.  STC output (+program.tic+) is
 platform-independent.  You may run STC to develop and debug your
-script on your local workstation, then simply copy +program.tcl+ to
+script on your local workstation, then simply copy +program.tic+ to
 the big machine for execution.  Just make sure that the STC and
 Turbine versions are compatible (the same release number).
 
@@ -229,7 +238,7 @@ To run, simply build a MPI hosts file and pass that to Turbine, which
 will pass it to +mpiexec+.
 
 ----
-turbine -l -n 3 -f hosts.txt program.tcl
+turbine -l -n 3 -f hosts.txt program.tic
 ----
 
 === MCS compute servers
@@ -240,7 +249,7 @@ Operates as a generic cluster (see above).
 ----
 echo crush.mcs.anl.gov >  hosts.txt
 echo crank.mcs.anl.gov >> hosts.txt
-turbine -l -n 3 -f hosts.txt program.tcl
+turbine -l -n 3 -f hosts.txt program.tic
 ----
 
 ==== Public installation
@@ -276,7 +285,7 @@ heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
 +
 ----
 export TURBINE_LAUNCH_OPTS='-f hosts.txt'
-turbine -l -n 4 program.tcl
+turbine -l -n 4 program.tic
 ----
 +
 . Run as many jobs as desired on the allocation
@@ -302,7 +311,7 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 To run:
 
 ----
-srun ~wozniak/Public/turbine-0.1.1/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tcl
+srun ~wozniak/Public/turbine-0.1.1/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tic
 ----
 
 ==== Build procedure
@@ -348,7 +357,7 @@ To run:
 export MODE=cluster
 export QUEUE=pubnet
 export PROJECT=...
-turbine-cobalt-run.zsh -n 3 program.tcl
+turbine-cobalt-run.zsh -n 3 program.tic
 ----
 
 ==== Build procedure
@@ -370,7 +379,7 @@ cluster at ANL.  It uses PBS.
 To run:
 ----
 export QUEUE=batch
-~wozniak/Public/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tcl
+~wozniak/Public/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
 ----
 
 See the <<variables,Turbine scheduler variables>> and
@@ -410,7 +419,7 @@ similar way.
 To run:
 
 ----
-~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
+~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic
 ----
 
 ===== Build procedure
@@ -490,7 +499,7 @@ See the script header for usage.
 ----
 export MODE=BGQ
 export QUEUE=<queue_name>
-turbine-cobalt-run.zsh -n 3 program.tcl
+turbine-cobalt-run.zsh -n 3 program.tic
 ----
 
 The normal Turbine environment variables are honored, plus the
@@ -511,7 +520,7 @@ Add to +PATH+:
 export MODE=BGQ
 export QUEUE=...
 export PROJECT=...
-turbine-cobalt-run.zsh -n 3 program.tcl
+turbine-cobalt-run.zsh -n 3 program.tic
 ----
 
 ===== Build procedure
@@ -942,7 +951,7 @@ module load swift-t
 To run:
 ----
 export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
-turbine program.tcl
+turbine program.tic
 ----
 
 == Mac OS X
