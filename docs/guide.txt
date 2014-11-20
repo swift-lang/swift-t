@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.6.1, July 2014
+v0.7.0, November 2014
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -80,7 +80,7 @@ Swift/T from source.
 1. Obtain the Swift/T source package
 +
 ----
-wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.5.0.tar.gz
+wget http://www.swift-lang.org/Swift-T/downloads/exm-0.7.0.tar.gz
 ----
 +
 Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
@@ -130,13 +130,14 @@ PATH=${PATH}:/path/to/exm-install/stc/bin
 == Usage
 
 Swift code is conventionally written in +\*.swift+ files.  Turbine
-code is stored in Tcl files +*.tcl+.  After writing the Swift program
+code is stored in Tcl files with extension +*.tic+ (for Turbine
+Intermediate Code).  After writing the Swift program
 +program.swift+, run:
 ----
 stc program.swift
 ----
 
-This will compile the program to +program.tcl+.  A second, optional
+This will compile the program to +program.tic+.  A second, optional
 argument may be given as an alternate output file name.
 
 Then, to run the program, use Turbine:
@@ -144,6 +145,18 @@ Then, to run the program, use Turbine:
 ----
 turbine -n 4 program.tcl
 ----
+
+You may compile and run in one step with: 
+
+----
+swift-t -n 4 program.swift
+----
+
+In this case, +program.tic+ is created in a temporary file and then
+deleted after execution.  
+
++swift-t+ accepts arguments for both STC and Turbine.
+Provide +-h+ to any tool (+swift-t+, +stc+, +turbine+) to obtain help.
 
 See the <<Turbine,Turbine section>> for more information about
 running the program.
