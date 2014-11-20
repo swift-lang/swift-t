@@ -104,7 +104,7 @@ Each of the systems below follows this basic outline.
 On simpler systems, use the +turbine+ program.  This is a small shell
 script wrapper that configures Turbine and essentially runs:
 ----
-mpiexec tclsh program.tcl
+mpiexec tclsh program.tic
 ----
 
 On more complex, scheduled systems, users do not invoke +mpiexec+
