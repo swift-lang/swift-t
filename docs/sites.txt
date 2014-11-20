@@ -490,16 +490,16 @@ See the script header for usage.
 
 ===== Public installation
 
-*As of:* 0.4.0 - 07/29/2013
+*As of:* 0.7.0 - 11/20/2014
 
-* STC: +~wozniak/Public/stc-bgq/bin/stc+
-* Turbine: +~wozniak/Public/turbine-bgq/scrips/submit/cobalt/turbine-cobalt-run.zsh+
+* STC: +~wozniak/Public/sfw/stc/bin+ 
+* Turbine (optional): +~wozniak/Public/sfw/turbine/scripts/submit/turbine-cobalt-run.zsh+ 
 * Run as:
 +
 ----
 export MODE=BGQ
-export QUEUE=<queue_name>
-turbine-cobalt-run.zsh -n 3 program.tic
+export QUEUE=default
+swift-t -m cobalt -n 2 program.tic
 ----
 
 The normal Turbine environment variables are honored, plus the
