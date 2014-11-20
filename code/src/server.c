@@ -57,7 +57,7 @@ int xlb_my_workers;
 /** Track time of last action */
 double xlb_time_last_action;
 
-/** 
+/**
    Assign serial numbers to idle check attempts.  This solves a corner
    case with the idle check logic.  Suppose three servers: A, B, C.  A
    is the master.
@@ -151,7 +151,7 @@ xlb_server_init()
   adlb_code code;
 
   xlb_server_shutting_down = false;
-  
+
   // Add up xlb_my_workers:
   // printf("SERVER for ranks: ");
   xlb_my_workers = 0;
@@ -177,7 +177,7 @@ xlb_server_init()
   mm_set_max(mm_default, 10*MB);
   xlb_handlers_init();
   xlb_time_last_action = MPI_Wtime();
-  
+
   code = xlb_sync_init();
   ADLB_CHECK(code);
   
@@ -339,7 +339,7 @@ serve_several()
       // If we reach max backoff, exit
       if (!again)
         break;
-      
+
       if (slept)
         exit_points += xlb_loop_sleep_points;
       else
@@ -396,7 +396,7 @@ xlb_handle_pending_syncs(void)
     ADLB_CHECK(rc);
   }
   ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
-  
+
   return ADLB_SUCCESS;
 }
 
@@ -581,7 +581,7 @@ static void shutdown_all_servers(void);
    Master server uses this to check for shutdown condition
    @return true when idle
  */
-static inline bool 
+static inline bool
 check_idle()
 {
   assert(master_server());
@@ -677,7 +677,7 @@ servers_idle()
   // First fill in counts from this server
   xlb_requestqueue_type_counts(request_counts, xlb_types_size);
   xlb_workq_type_counts(work_counts, xlb_types_size);
-  
+
   adlb_code rc;
   bool all_idle = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
