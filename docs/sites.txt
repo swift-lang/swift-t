@@ -486,9 +486,25 @@ See the script header for usage.
 
 === Blue Gene/Q
 
-==== Vesta
+==== Mira/Cetus
 
-===== Public installation
+*As of:* 0.7.0 - 11/20/2014
+
+Add to +PATH+:
+
+* STC: +~wozniak/Public/ppc64/stc/bin+
+* Turbine (optional): +~wozniak/Public/ppc64/turbine/scripts/submit/cobalt+
+
+* Run as:
++
+----
+export MODE=BGQ
+export QUEUE=...
+export PROJECT=...
+swift-t -m cobalt -n 3 program.tic
+----
+
+==== Vesta
 
 *As of:* 0.7.0 - 11/20/2014
 
@@ -505,27 +521,9 @@ swift-t -m cobalt -n 2 program.tic
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
-==== Mira/Cetus
+==== Build procedure
 
-*As of:* 0.5.0 - 4/4/2014
-
-Add to +PATH+:
-* STC: +~wozniak/Public/ppc64/stc/bin+
-* Turbine:
-+~wozniak/Public/ppc64/turbine/scripts/submit/cobalt+
-
-* Run as:
-+
-----
-export MODE=BGQ
-export QUEUE=...
-export PROJECT=...
-turbine-cobalt-run.zsh -n 3 program.tic
-----
-
-===== Build procedure
-
-*As of:* 0.5.0 - 4/4/2014
+*As of:* 0.7.0 - 11/20/2014
 
 *Tcl:*
 
@@ -538,11 +536,20 @@ You may get errors that say +wrong digit+.  This is apparently a bgxlc
 bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
-Put +/bgsys/drivers/V1R2M1/ppc64/comm/bin/gcc+ in your +PATH+.
-
-* Compile c-utils with +CC=/usr/bin/gcc+
-* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc+
-* Configure Turbine with +CC=/usr/bin/gcc --disable-static --with-tcl=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12 --with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm --with-mpi-lib-name=mpich-gcc+
+* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
+* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
+* Configure Turbine with:
++
+----
+CC=mpixlc
+--disable-static 
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12 
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+----
 
 *External scripting:*
 
