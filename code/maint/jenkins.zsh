@@ -12,6 +12,7 @@ path+=( $MPICH/bin $TURBINE/bin )
 
 set -eu
 
+rm -rf autom4te.cache
 ./setup.sh
 
 ./configure --prefix=$TURBINE        \
