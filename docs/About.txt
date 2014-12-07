@@ -1,0 +1,20 @@
+
+= Turbine Sites Guide
+
+Currently served at: http://swift-lang.org/Swift-T/.html
+
+Create a soft link to sfw/stc/trunk/docs/swift.css
+
+Edit downloads.txt 
+
+Run ./build.sh to make downloads.html
+
+Preview in local browser
+
+Commit downloads.txt (to ExM repo)
+
+Copy downloads.html to https://svn.ci.uchicago.edu/svn/vdl2/www/Swift-T
+
+Commit downloads.html (to VDL2 repo)
+
+Install with push_to.sh or wait for auto-install
