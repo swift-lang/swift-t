@@ -21,7 +21,7 @@ PATH=/tmp/mpich-install/bin:$PATH
 which mpicc
 mpicc -show
 
-./setup.sh
+./bootstrap
 mkdir -p /tmp/exm-install
 ./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb --with-c-utils=/tmp/exm-install/c-utils
 make clean
