@@ -13,7 +13,7 @@ path+=( $MPICH/bin $TURBINE/bin )
 set -eu
 
 rm -rf autom4te.cache
-./setup.sh
+./bootstrap
 
 ./configure --prefix=$TURBINE        \
             --with-tcl=/usr          \
