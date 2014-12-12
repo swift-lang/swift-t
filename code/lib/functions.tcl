@@ -107,17 +107,32 @@ namespace eval turbine {
         range_work $result $start_value $end_value 1
     }
 
-    proc rangestep { result inputs } {
+    proc range_float { result inputs } {
+        set start [ lindex $inputs 0 ]
+        set end [ lindex $inputs 1 ]
+        rule [ list $start $end ] "range_float_body $result $start $end" \
+              type $turbine::CONTROL name "range_float-$result"
+    }
+
+    proc range_float_body { result start end } {
+
+        set start_value [ retrieve_decr_float $start ]
+        set end_value   [ retrieve_decr_float $end ]
+
+        range_float_work $result $start_value $end_value 1.0
+    }
+
+    proc range_step { result inputs } {
         # Assume that there was a container slot opened
         # that can be owned by range
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
         rule [ list $start $end $step ] \
-            "rangestep_body $result $start $end $step" type $turbine::CONTROL
+            "range_step_body $result $start $end $step" type $turbine::CONTROL
     }
 
-    proc rangestep_body { result start end step } {
+    proc range_step_body { result start end step } {
 
         set start_value [ retrieve_decr_integer $start ]
         set end_value   [ retrieve_decr_integer $end ]
@@ -126,9 +141,33 @@ namespace eval turbine {
         range_work $result $start_value $end_value $step_value
     }
 
+    proc range_float_step { result inputs } {
+        # Assume that there was a container slot opened
+        # that can be owned by range
+        set start [ lindex $inputs 0 ]
+        set end [ lindex $inputs 1 ]
+        set step [ lindex $inputs 2 ]
+        rule [ list $start $end $step ] \
+            "range_float_step_body $result $start $end $step" type $turbine::CONTROL
+    }
+
+    proc range_float_step_body { result start end step } {
+
+        set start_value [ retrieve_decr_float $start ]
+        set end_value   [ retrieve_decr_float $end ]
+        set step_value   [ retrieve_decr_float $step ]
+
+        range_float_work $result $start_value $end_value $step_value
+    }
+
     proc range_work { result start end step } {
         set kv_dict [ build_range_dict $start $end $step ]
         array_kv_build $result $kv_dict 1 integer integer
+    }
+
+    proc range_float_work { result start end step } {
+        set kv_dict [ build_range_float_dict $start $end $step ]
+        array_kv_build $result $kv_dict 1 integer float
     }
 
     proc build_range_dict { start end step } {
@@ -138,6 +177,27 @@ namespace eval turbine {
             dict append kv_dict $k $v
             incr k
         }
+        return $kv_dict
+    }
+
+    proc build_range_float_dict { start end step } {
+        set kv_dict [ dict create ]
+        set k 0
+
+        while { 1 } {
+          # Compute in this way to avoid cumulative rounding errors
+          set v [ expr {$start + $k * $step} ]
+
+          if { $v <= $end } {
+            dict append kv_dict $k $v
+            puts "APPEND $k $v"
+          } else {
+            break
+          }
+
+          incr k
+        }
+
         return $kv_dict
     }
 

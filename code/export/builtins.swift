@@ -80,8 +80,14 @@ type external void;
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range"
   [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> 1 ]" ];
 @pure @implements=range_step
-(int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
+(int res[]) range_step(int start, int end, int step) "turbine" "0.0.2" "range_step"
   [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> <<step>> ]" ];
+@pure @implements=range_float
+(float res[]) range_float(float start, float end) "turbine" "0.0.2" "range_float"
+  [ "set <<res>> [ turbine::build_range_float_dict <<start>> <<end>> 1.0 ]" ];
+@pure @implements=range_float_step
+(float res[]) range_float_step(float start, float end, float step) "turbine" "0.0.2" "range_float_step"
+  [ "set <<res>> [ turbine::build_range_float_dict <<start>> <<end>> <<step>> ]" ];
 @pure @implements=size
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
 @pure @implements=contains
