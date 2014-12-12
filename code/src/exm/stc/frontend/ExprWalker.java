@@ -833,10 +833,20 @@ public class  ExprWalker {
       Var stepV = eval(context, ar.getStep(), rangeType,  false, null);
 
       inArgs = Arrays.asList(startV, endV, stepV);
-      fn = SpecialFunction.RANGE_STEP;
+      if (Types.isInt(rangeType)) {
+        fn = SpecialFunction.RANGE_STEP;
+      } else {
+        assert(Types.isFloat(rangeType));
+        fn = SpecialFunction.RANGE_FLOAT_STEP;
+      }
     } else {
       inArgs = Arrays.asList(startV, endV);
-      fn = SpecialFunction.RANGE;
+      if (Types.isInt(rangeType)) {
+        fn = SpecialFunction.RANGE;
+      } else {
+        assert(Types.isFloat(rangeType));
+        fn = SpecialFunction.RANGE_FLOAT;
+      }
     }
     String impl = context.getForeignFunctions().findSpecialImpl(fn);
     if (impl == null) {
