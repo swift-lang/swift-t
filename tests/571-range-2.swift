@@ -1,4 +1,5 @@
 import assert;
+import io;
 
 main {
 
@@ -10,4 +11,8 @@ main {
   assertEqual(size(x), 2, "len(x)");
 
   trace(repr(x));
+
+  foreach y in [1.0:10.0] {
+    printf("y=%f", y);
+  }
 }
