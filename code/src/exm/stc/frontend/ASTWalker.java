@@ -871,7 +871,7 @@ public class ASTWalker {
                                           throws UserException {
     ArrayRange range = ArrayRange.fromAST(context, loop.getArrayVarTree());
     Type rangeType = range.rangeType(context);
-    assert(rangeType.equals(Types.F_INT)) : "Only support int ranges so far";
+
 
     /* Just evaluate all of the expressions into futures and rely
      * on constant folding in IC to clean up where possible

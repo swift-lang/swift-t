@@ -51,7 +51,7 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
  */
 public class ForeachLoops {
   public static final String indent = ICUtil.indent;
-  
+
   public abstract static class AbstractForeachLoop extends AbstractLoop {
     protected final String loopName;
     protected Var loopVar;
@@ -64,18 +64,18 @@ public class ForeachLoops {
     /** Increments that should happen before loop spawn.  Each
      * increment is multiplied by the number of loop iterations */
     protected final List<RefCount> startIncrements;
-    
+
     /**
      * Increments that should happen before loop spawn.
      * Each increment is a constant amount independent of iterations.
      * This is useful because we can piggyback ops on the normal start increments
      */
     protected final MultiMap<Var, RefCount> constStartIncrements;
-    
-    
+
+
     /** Decrements that should happen at end of loop body (once per iteration) */
     protected final List<RefCount> endDecrements;
-    
+
     public AbstractForeachLoop(Block loopBody, String loopName, Var loopVar,
         Var loopCounterVar, int splitDegree, int leafDegree, int desiredUnroll,
         boolean unrolled,
@@ -83,7 +83,7 @@ public class ForeachLoops {
         List<RefCount> startIncrements,
         MultiMap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements, boolean emptyLoop) {
-      super(loopBody, passedVars, keepOpenVars, emptyLoop);      
+      super(loopBody, passedVars, keepOpenVars, emptyLoop);
       this.loopName = loopName;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;
@@ -95,20 +95,20 @@ public class ForeachLoops {
       this.constStartIncrements = constStartIncrements.clone();
       this.endDecrements = new ArrayList<RefCount>(endDecrements);
     }
-    
+
     public List<RefCount> getStartIncrements() {
       return Collections.unmodifiableList(startIncrements);
     }
-    
+
     public ListIterator<RefCount> startIncrementIterator() {
       return startIncrements.listIterator();
     }
-    
+
     public void addStartIncrement(RefCount incr) {
       startIncrements.add(incr);
     }
-    
-    public void addConstantStartIncrement(Var v, RefCountType t, Arg amount) {    
+
+    public void addConstantStartIncrement(Var v, RefCountType t, Arg amount) {
       // Check to see if already present
       List<RefCount> prev = constStartIncrements.get(v);
       ListIterator<RefCount> it = prev.listIterator();
@@ -121,19 +121,19 @@ public class ForeachLoops {
           return;
         }
       }
-      
+
       // If we didn't have it already
       constStartIncrements.put(v, new RefCount(v, t, amount));
     }
-    
+
     public List<RefCount> getEndDecrements() {
       return Collections.unmodifiableList(endDecrements);
     }
-    
+
     public void addEndDecrement(RefCount decr) {
       endDecrements.add(decr);
     }
-    
+
     public void prettyPrintIncrs(StringBuilder sb) {
       if (!startIncrements.isEmpty()) {
         sb.append(" #beforeperiter[");
@@ -155,9 +155,9 @@ public class ForeachLoops {
 
     /**
      * Try to piggyback constant incrs/decrs from outside continuation.
-     * 
+     *
      * Called repeatedly until it returns null.
-     * 
+     *
      * @param increments
      * @param type
      * @param dir whether to piggyback decrements or increments
@@ -184,13 +184,13 @@ public class ForeachLoops {
     }
 
     /**
-     * Constant iteration count 
+     * Constant iteration count
      * @return -1 if iter count not known, otherwise iteration count
      */
     public long constIterCount() {
       return -1;
     }
-    
+
 
     protected Collection<Var> abstractForeachRequiredVars(boolean forDeadCodeElim) {
       Collection<Var> res = new ArrayList<Var>();
@@ -210,7 +210,7 @@ public class ForeachLoops {
         res.add(rc.var);
       }
     }
-    
+
 
     private void addRefCountVars2(Collection<Var> res,
         Collection<? extends Collection<RefCount>> refcounts) {
@@ -232,7 +232,7 @@ public class ForeachLoops {
         Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<RefCount> startIncrements, 
+        List<RefCount> startIncrements,
         MultiMap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements, boolean emptyBody) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
@@ -250,8 +250,8 @@ public class ForeachLoops {
         List<RefCount> endDecrements) {
       this(new Block(BlockType.FOREACH_BODY, null), loopName,
           container, loopVar, loopCounterVar,
-          splitDegree, leafDegree, containerClosed, 
-          passedVars, keepOpenVars, startIncrements, 
+          splitDegree, leafDegree, containerClosed,
+          passedVars, keepOpenVars, startIncrements,
           constStartIncrements, endDecrements, true);
     }
 
@@ -259,7 +259,7 @@ public class ForeachLoops {
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(), loopName,
         container, loopVar, loopCounterVar, splitDegree, leafDegree,
-        containerClosed, passedVars, keepOpenVars, startIncrements, 
+        containerClosed, passedVars, keepOpenVars, startIncrements,
         constStartIncrements, endDecrements, false);
     }
 
@@ -269,10 +269,10 @@ public class ForeachLoops {
     }
 
     @Override
-    public boolean isAsync() { 
+    public boolean isAsync() {
       return !containerClosed || splitDegree > 0;
     }
-    
+
     @Override
     public boolean spawnsSingleTask() {
       return false;
@@ -294,7 +294,7 @@ public class ForeachLoops {
         return regularPassed;
       } else {
         // Need to pass in container too
-        List<PassedVar> res = 
+        List<PassedVar> res =
             new ArrayList<PassedVar>(regularPassed.size() + 1);
         res.add(new PassedVar(container, false));
         return res;
@@ -313,7 +313,7 @@ public class ForeachLoops {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startForeachLoop(loopName, container, loopVar, loopCounterVar,
-                splitDegree, leafDegree, containerClosed, 
+                splitDegree, leafDegree, containerClosed,
                 passedVars, startIncrements, constStartIncrements);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(splitDegree, containerClosed, endDecrements);
@@ -348,7 +348,7 @@ public class ForeachLoops {
       if (renames.containsKey(container)) {
         container = renames.get(container).getVar();
       }
-      
+
       if (mode == RenameMode.REPLACE_VAR) {
         if (renames.containsKey(loopVar)) {
           loopVar = renames.get(loopVar).getVar();
@@ -416,13 +416,13 @@ public class ForeachLoops {
       // Handle optional loop counter var
       if (o.loopCounterVar != null) {
         if (this.loopCounterVar != null) {
-          renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));    
+          renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
         } else {
           this.loopCounterVar = o.loopCounterVar;
         }
       }
       o.renameVars(function, renames, RenameMode.REPLACE_VAR, true);
-      
+
       fuseIntoAbstract(o, insertAtTop);
     }
 
@@ -481,9 +481,14 @@ public class ForeachLoops {
           passedVars, keepOpenVars, startIncrements,
           constStartIncrements, endDecrements, emptyBody);
       assert(Types.isIntVal(loopVar));
-      assert(start.isImmediateInt());
-      assert(end.isImmediateInt());
-      assert(increment.isImmediateInt());
+      if (start.isImmediateInt()) {
+        assert(end.isImmediateInt());
+        assert(increment.isImmediateInt());
+      } else {
+        assert(start.isImmediateFloat());
+        assert(end.isImmediateFloat());
+        assert(increment.isImmediateFloat());
+      }
       this.start = start;
       this.end = end;
       this.increment = increment;
@@ -493,7 +498,7 @@ public class ForeachLoops {
     public RangeLoop clone() {
       return clone(true);
     }
-    
+
     public RangeLoop clone(boolean cloneLoopBody) {
       Block newLoopBody;
       if (cloneLoopBody) {
@@ -517,7 +522,7 @@ public class ForeachLoops {
     public boolean isAsync() {
       return splitDegree > 0;
     }
-    
+
     @Override
     public boolean spawnsSingleTask() {
       return false;
@@ -527,7 +532,7 @@ public class ForeachLoops {
     public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       return Collections.emptyList();
     }
-    
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startRangeLoop(loopName, loopVar, loopCounterVar, start, end, increment,
@@ -563,12 +568,12 @@ public class ForeachLoops {
     }
 
     @Override
-    public void replaceConstructVars_(Map<Var, Arg> renames, 
+    public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
       start = renameRangeArg(start, renames);
       end = renameRangeArg(end, renames);
       increment = renameRangeArg(increment, renames);
-      
+
       if (mode == RenameMode.REPLACE_VAR) {
         if (renames.containsKey(loopVar)) {
           loopVar = renames.get(loopVar).getVar();
@@ -599,7 +604,7 @@ public class ForeachLoops {
           res.add(o.getVar());
         }
       }
-      
+
       res.addAll(abstractForeachRequiredVars(forDeadCodeElim));
       return res;
     }
@@ -615,29 +620,51 @@ public class ForeachLoops {
     public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
                            boolean keepExplicitDependencies) {
       // Could inline loop if there is only one iteration...
+      int iterCount = -1; // Negative if unknown
       if (start.isIntVal() && end.isIntVal()) {
         long startV = start.getIntLit();
         long endV = end.getIntLit();
-        boolean singleIter = false;
-        if (endV < startV) {
-          // Doesn't run - return empty block
-          return new Block(BlockType.FOREACH_BODY, this);
-        } else if (endV == startV) {
-          singleIter = true;
-        } else if (increment.isIntVal()) {
-          long incV = increment.getIntLit();
-          if (startV + incV > endV) {
-            singleIter = true;
-          }
+        Long startPlusIncr = null;
+        if (increment.isIntVal()) {
+          startPlusIncr = startV + increment.getIntLit();
         }
 
-        if (singleIter) {
-          this.loopBody.addVariable(loopVar);
-          this.loopBody.addInstructionFront(ICInstructions.valueSet(loopVar, start));
-          return this.loopBody;
+        iterCount = iterCount(startV, endV, startPlusIncr);
+      } else if (start.isFloatVal() && end.isFloatVal()) {
+        Double startV = start.getFloatLit();
+        Double endV = end.getFloatLit();
+        Double startPlusIncr = null;
+        if (increment.isFloatVal()) {
+          startPlusIncr = startV + increment.getFloatLit();
         }
+
+        iterCount = iterCount(startV, endV, startPlusIncr);
+      }
+
+      if (iterCount == 0) {
+        return new Block(BlockType.FOREACH_BODY, this);
+      } else if (iterCount == 1) {
+        this.loopBody.addVariable(loopVar);
+        this.loopBody.addInstructionFront(ICInstructions.valueSet(loopVar, start));
+        return this.loopBody;
       }
       return null;
+    }
+
+    private <T extends Comparable<T>> int iterCount(T start, T end, T startPlusIncr) {
+      int comparison = end.compareTo(start);
+      if (comparison < 0) {
+        // Doesn't run
+        return 0;
+      } else if (comparison == 0) {
+        return 1;
+      } else if (startPlusIncr != null) {
+        if (end.compareTo(startPlusIncr) < 0) {
+          // Runs only once
+          return 1;
+        }
+      }
+      return -1; // Unknown
     }
 
     @Override
@@ -678,7 +705,7 @@ public class ForeachLoops {
       start = newVals[0];
       end = newVals[1];
       increment = newVals[2];
-      
+
       if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
         long iters = (end.getIntLit() - start.getIntLit()) /
                       increment.getIntLit() + 1;
@@ -698,7 +725,7 @@ public class ForeachLoops {
       } else if (this.start.isIntVal() && this.end.isIntVal() &&
           this.end.getIntLit() < this.start.getIntLit()) {
         return true;
-      } else { 
+      } else {
         return false;
       }
     }
@@ -717,7 +744,7 @@ public class ForeachLoops {
     }
 
     // Return value indicating no unrolling
-    private static final Pair<Boolean, List<Continuation>> NO_UNROLL = 
+    private static final Pair<Boolean, List<Continuation>> NO_UNROLL =
                                   Pair.create(false, Collections.<Continuation>emptyList());
     @Override
     public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
@@ -725,7 +752,7 @@ public class ForeachLoops {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       boolean expandLoops = isExpandLoopsEnabled();
       boolean fullUnroll = isFullUnrollEnabled();
-      
+
       if (!this.unrolled && this.desiredUnroll > 1) {
         // Unroll explicitly marked loops
         if (this.loopCounterVar != null) {
@@ -743,16 +770,16 @@ public class ForeachLoops {
           if (iterCount <= getUnrollMaxIters(true)) {
             long extraInstructions = instCount * (iterCount - 1);
             if (extraInstructions <= getUnrollMaxExtraInsts(true)) {
-              return Pair.create(true, doUnroll(logger, function, outerBlock, 
+              return Pair.create(true, doUnroll(logger, function, outerBlock,
                                  (int)iterCount));
             }
           }
-        } 
+        }
         if (!fullUnroll) {
           logger.trace("Full unrolled not enabled");
           return NO_UNROLL;
         }
-        
+
         if (this.unrolled) {
           // Don't do extra unrolling unless we're just expanding a small loop
           return NO_UNROLL;
@@ -776,7 +803,7 @@ public class ForeachLoops {
         throw new STCRuntimeError(e.getMessage());
       }
     }
-    
+
     private boolean isFullUnrollEnabled() {
       try {
         return Settings.getBoolean(Settings.OPT_FULL_UNROLL);
@@ -784,8 +811,8 @@ public class ForeachLoops {
         throw new STCRuntimeError(e.getMessage());
       }
     }
-    
-    
+
+
     private int getUnrollMaxIters(boolean fullExpand) {
       try {
         if (fullExpand) {
@@ -797,19 +824,19 @@ public class ForeachLoops {
         throw new STCRuntimeError(e.getMessage());
       }
     }
-    
+
     private int getUnrollMaxExtraInsts(boolean fullExpand) {
       try {
         if (fullExpand) {
           return Settings.getInt(Settings.OPT_EXPAND_LOOP_THRESHOLD_INSTS);
         } else {
-          return Settings.getInt(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS); 
+          return Settings.getInt(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS);
         }
       } catch (InvalidOptionException e) {
         throw new STCRuntimeError(e.getMessage());
       }
     }
-    
+
     /**
      * Unroll a loop by splitting into two loops, one short one
      * with original stride, and another with a long stride
@@ -821,15 +848,15 @@ public class ForeachLoops {
      *
      *  range_loop [start : unroll_end : big_step]
      *  range_loop [remainder_start  : end : step]
-     *  
+     *
      */
-    private List<Continuation> doUnroll(Logger logger, String function, 
+    private List<Continuation> doUnroll(Logger logger, String function,
                                         Block outerBlock, int unrollFactor) {
-      logger.debug("Unrolling range loop " + this.loopName 
+      logger.debug("Unrolling range loop " + this.loopName
                         + " " + desiredUnroll + " times ");
-      
+
       String vPrefix = Var.VALUEOF_VAR_PREFIX + loopName;
-      String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr"); 
+      String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr");
       VarProvenance prov = VarProvenance.optimizerTmp();
       Var bigIncr = new Var(Types.V_INT, bigStepName, Alloc.LOCAL,
                   DefType.LOCAL_COMPILER, prov);
@@ -857,7 +884,7 @@ public class ForeachLoops {
       outerBlock.addVariable(remainder);
       outerBlock.addVariable(remainderStart);
       outerBlock.addVariable(unrollEnd);
-      
+
       // Generate the code for calculations here.  Constant folding will
       // clean up later in special cases where values known
       // unroll_end = end - (end - start + 1 % big_step)
@@ -885,12 +912,12 @@ public class ForeachLoops {
       unrolled.increment = bigIncr.asArg();
       unrolled.unrolled = true;
       unrolled.leafDegree = Math.max(1, unrolled.leafDegree / unrollFactor);
-      
+
       // clone body of unrolled multiple times
       Block orig = this.loopBody;
       Arg oldIncr = this.increment;
       Var lastIterLoopVar = null;
-      
+
       for (int i = 0; i < unrollFactor; i++) {
         // Put everything in nested block to avoid var shadowing (We uniquify
         // the varnames later, but need to avoid shadowing for that to work)
@@ -929,14 +956,14 @@ public class ForeachLoops {
         return -1;
       }
     }
-    
+
     private long calcIterations(long startV, long endV, long incV) {
       long diff = (endV - startV + 1);
       // Number of loop iterations
       long iters = ( (diff - 1) / incV ) + 1;
       return iters;
     }
-    
+
     public boolean fuseable(RangeLoop o) {
       // Make sure loop bounds line up, but also annotations since we
       // want to respect any user annotations
@@ -947,7 +974,7 @@ public class ForeachLoops {
           && this.splitDegree == o.splitDegree
           && (this.loopCounterVar == null) == (o.loopCounterVar == null);
     }
-    
+
     /**
      * Fuse the other loop into this loop
      */
@@ -958,7 +985,7 @@ public class ForeachLoops {
       if (loopCounterVar != null)
         renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
       o.renameVars(function, renames, RenameMode.REPLACE_VAR, true);
-     
+
       this.fuseIntoAbstract(o, insertAtTop);
     }
 
