@@ -123,7 +123,7 @@ crash()
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
 STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
 
-if [[ -z ${STC} ]]
+if (( ! ${+STC} ))
 then
   STC=""
   for D in ${STC_TRIES}
