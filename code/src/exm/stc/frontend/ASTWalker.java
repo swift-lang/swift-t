@@ -870,16 +870,17 @@ public class ASTWalker {
   private void foreachRange(Context context, ForeachLoop loop)
                                           throws UserException {
     ArrayRange range = ArrayRange.fromAST(context, loop.getArrayVarTree());
-    range.typeCheck(context);
+    Type rangeType = range.rangeType(context);
+    assert(rangeType.equals(Types.F_INT)) : "Only support int ranges so far";
 
     /* Just evaluate all of the expressions into futures and rely
      * on constant folding in IC to clean up where possible
      */
-    Var start = exprWalker.eval(context, range.getStart(), Types.F_INT, false, null);
-    Var end = exprWalker.eval(context, range.getEnd(), Types.F_INT, false, null);
+    Var start = exprWalker.eval(context, range.getStart(), rangeType, false, null);
+    Var end = exprWalker.eval(context, range.getEnd(), rangeType, false, null);
     Var step;
     if (range.getStep() != null) {
-      step = exprWalker.eval(context, range.getStep(), Types.F_INT, false, null);
+      step = exprWalker.eval(context, range.getStep(), rangeType, false, null);
     } else {
       // Inefficient but constant folding will clean up
       step = exprWalker.assignToVar(context, Arg.ONE, false);
