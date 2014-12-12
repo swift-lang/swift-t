@@ -820,18 +820,17 @@ public class  ExprWalker {
   private void arrayRange(Context context, SwiftAST tree, Var oVar,
       Map<String, String> renames) throws UserException {
     assert(Types.isArray(oVar.type()));
-    assert(Types.isInt(oVar.type().memberType()));
     ArrayRange ar = ArrayRange.fromAST(context, tree);
-    ar.typeCheck(context);
+    Type rangeType = ar.rangeType(context);
 
-    Var startV = eval(context, ar.getStart(), Types.F_INT,
-                      false, null);
-    Var endV = eval(context, ar.getEnd(), Types.F_INT,
-        false, null);
+    assert(rangeType.assignableTo(oVar.type().memberType()));
+
+    Var startV = eval(context, ar.getStart(), rangeType, false, null);
+    Var endV = eval(context, ar.getEnd(), rangeType, false, null);
     List<Var> inArgs;
     SpecialFunction fn;
     if (ar.getStep() != null) {
-      Var stepV = eval(context, ar.getStep(), Types.F_INT,  false, null);
+      Var stepV = eval(context, ar.getStep(), rangeType,  false, null);
 
       inArgs = Arrays.asList(startV, endV, stepV);
       fn = SpecialFunction.RANGE_STEP;

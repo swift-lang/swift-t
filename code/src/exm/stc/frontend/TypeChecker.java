@@ -154,9 +154,9 @@ public class TypeChecker {
     case ExMParser.ARRAY_RANGE: {
       // Check the arguments for type validity
       ArrayRange ar = ArrayRange.fromAST(context, tree);
-      ar.typeCheck(context);
+      Type rangeType = ar.rangeType(context);
       // Type is always the same: an array of integers
-      return new ExprType(ArrayType.sharedArray(Types.F_INT, Types.F_INT));
+      return new ExprType(ArrayType.sharedArray(Types.F_INT, rangeType));
     }
     case ExMParser.ARRAY_ELEMS:
     case ExMParser.ARRAY_KV_ELEMS: {
