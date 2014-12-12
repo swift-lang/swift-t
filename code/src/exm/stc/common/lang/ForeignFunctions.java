@@ -42,7 +42,7 @@ public class ForeignFunctions {
    */
   public static enum SpecialFunction {
     INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL,
-    SIZE, CONTAINS, RANGE, RANGE_STEP, ARGV;
+    SIZE, CONTAINS, RANGE, RANGE_STEP, RANGE_FLOAT, RANGE_FLOAT_STEP, ARGV;
 
     /** List of functions that will initialize output mapping */
     public static final SpecialFunction INITS_OUTPUT_MAPPING[] = new
