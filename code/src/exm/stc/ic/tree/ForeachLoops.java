@@ -658,7 +658,7 @@ public class ForeachLoops {
         if (increment.isFloatVal()) {
           double incrV = increment.getFloatLit();
           iterCount = Math.max(0,
-                              (long)Math.floor((endV - startV) / incrV) + 1);
+                              (long)Math.floor((endV - startV + incrV) / incrV));
         } else {
           iterCount = iterCountUnknownIncr(startV, endV);
         }
