@@ -480,11 +480,13 @@ public class ForeachLoops {
           desiredUnroll, unrolled,
           passedVars, keepOpenVars, startIncrements,
           constStartIncrements, endDecrements, emptyBody);
-      assert(Types.isIntVal(loopVar));
-      if (start.isImmediateInt()) {
+
+      if (Types.isIntVal(loopVar)) {
+        assert(start.isImmediateInt());
         assert(end.isImmediateInt());
         assert(increment.isImmediateInt());
       } else {
+        assert(Types.isFloatVal(loopVar));
         assert(start.isImmediateFloat());
         assert(end.isImmediateFloat());
         assert(increment.isImmediateFloat());
@@ -554,9 +556,8 @@ public class ForeachLoops {
 
       sb.append(" = " + start.toString() + " to " + end.toString() + " ");
 
-      if (!increment.isIntVal() || increment.getIntLit() != 1) {
-          sb.append("incr " + increment.toString() + " ");
-      }
+      sb.append("incr " + increment.toString() + " ");
+
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
       prettyPrintIncrs(sb);
       sb.append(" /* ");
@@ -619,27 +620,8 @@ public class ForeachLoops {
     @Override
     public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
                            boolean keepExplicitDependencies) {
-      // Could inline loop if there is only one iteration...
-      int iterCount = -1; // Negative if unknown
-      if (start.isIntVal() && end.isIntVal()) {
-        long startV = start.getIntLit();
-        long endV = end.getIntLit();
-        Long startPlusIncr = null;
-        if (increment.isIntVal()) {
-          startPlusIncr = startV + increment.getIntLit();
-        }
-
-        iterCount = iterCount(startV, endV, startPlusIncr);
-      } else if (start.isFloatVal() && end.isFloatVal()) {
-        Double startV = start.getFloatLit();
-        Double endV = end.getFloatLit();
-        Double startPlusIncr = null;
-        if (increment.isFloatVal()) {
-          startPlusIncr = startV + increment.getFloatLit();
-        }
-
-        iterCount = iterCount(startV, endV, startPlusIncr);
-      }
+      // Could inline loop if one or zero iterations...
+      long iterCount = constIterCount();
 
       if (iterCount == 0) {
         return new Block(BlockType.FOREACH_BODY, this);
@@ -651,18 +633,47 @@ public class ForeachLoops {
       return null;
     }
 
-    private <T extends Comparable<T>> int iterCount(T start, T end, T startPlusIncr) {
-      int comparison = end.compareTo(start);
-      if (comparison < 0) {
+    /**
+     * @return iteration count if known
+     */
+    @Override
+    public long constIterCount() {
+      long iterCount = -1; // Negative if unknown
+
+      // Need to know bounds at least
+      if (start.isIntVal() && end.isIntVal()) {
+        long startV = start.getIntLit();
+        long endV = end.getIntLit();
+        if (increment.isIntVal()) {
+          long incrV = increment.getIntLit();
+          iterCount = Math.max(0, (endV - startV + incrV) / incrV);
+        } else {
+          // Don't know increment, but might be able to bound
+          iterCount = iterCountUnknownIncr(startV, endV);
+        }
+
+      } else if (start.isFloatVal() && end.isFloatVal()) {
+        double startV = start.getFloatLit();
+        double endV = end.getFloatLit();
+        if (increment.isFloatVal()) {
+          double incrV = increment.getFloatLit();
+          iterCount = Math.max(0,
+                              (long)Math.floor((endV - startV) / incrV) + 1);
+        } else {
+          iterCount = iterCountUnknownIncr(startV, endV);
+        }
+      }
+
+      return iterCount;
+    }
+
+    private <T extends Comparable<T>> int iterCountUnknownIncr(T start, T end) {
+      int comparison = start.compareTo(end);
+      if (comparison > 0) {
         // Doesn't run
         return 0;
       } else if (comparison == 0) {
         return 1;
-      } else if (startPlusIncr != null) {
-        if (end.compareTo(startPlusIncr) < 0) {
-          // Runs only once
-          return 1;
-        }
       }
       return -1; // Unknown
     }
@@ -672,11 +683,11 @@ public class ForeachLoops {
       // Shift loop variable to body and inline loop body
       this.loopBody.addVariable(loopVar);
       this.loopBody.addInstructionFront(
-          Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
+            ICInstructions.valueSet(this.loopVar, start));
       if (loopCounterVar != null) {
         this.loopBody.addVariable(loopCounterVar);
-        this.loopBody.addInstructionFront(Builtin.createLocal(
-                     BuiltinOpcode.COPY_INT, loopCounterVar, Arg.createIntLit(0)));
+        this.loopBody.addInstructionFront(
+            ICInstructions.valueSet(loopCounterVar, Arg.createIntLit(0)));
       }
       block.insertInline(loopBody);
       block.removeContinuation(this);
@@ -692,7 +703,7 @@ public class ForeachLoops {
         if (old.kind == ArgKind.VAR) {
           Arg replacement = knownConstants.get(old.getVar());
           if (replacement != null) {
-            assert(replacement.isIntVal());
+            assert(replacement.type().assignableTo(oldVals[i].type()));
             anyChanged = true;
             newVals[i] = replacement;
           } else {
@@ -706,10 +717,10 @@ public class ForeachLoops {
       end = newVals[1];
       increment = newVals[2];
 
-      if (start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
-        long iters = (end.getIntLit() - start.getIntLit()) /
-                      increment.getIntLit() + 1;
-        if (iters <= leafDegree) {
+      long iterCount = constIterCount();
+
+      if (iterCount >= 0) {
+        if (iterCount <= leafDegree) {
           // Don't need to split
           splitDegree = -1;
         }
@@ -722,8 +733,7 @@ public class ForeachLoops {
     public boolean isNoop() {
       if (this.loopBody.isEmpty()) {
         return true;
-      } else if (this.start.isIntVal() && this.end.isIntVal() &&
-          this.end.getIntLit() < this.start.getIntLit()) {
+      } else if (constIterCount() == 0) {
         return true;
       } else {
         return false;
@@ -752,6 +762,14 @@ public class ForeachLoops {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       boolean expandLoops = isExpandLoopsEnabled();
       boolean fullUnroll = isFullUnrollEnabled();
+
+      if (!Types.isIntVal(start)) {
+        /*
+         * TODO: only unroll integer ranges now - don't want to deal with
+         * floating point rounding issues
+         */
+        return NO_UNROLL;
+      }
 
       if (!this.unrolled && this.desiredUnroll > 1) {
         // Unroll explicitly marked loops
@@ -945,23 +963,6 @@ public class ForeachLoops {
         lastIterLoopVar = currIterLoopVar;
       }
       return Collections.<Continuation>singletonList(unrolled);
-    }
-
-    @Override
-    public long constIterCount() {
-      if ( start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
-        return calcIterations(start.getIntLit(), end.getIntLit(),
-                              increment.getIntLit());
-      } else {
-        return -1;
-      }
-    }
-
-    private long calcIterations(long startV, long endV, long incV) {
-      long diff = (endV - startV + 1);
-      // Number of loop iterations
-      long iters = ( (diff - 1) / incV ) + 1;
-      return iters;
     }
 
     public boolean fuseable(RangeLoop o) {

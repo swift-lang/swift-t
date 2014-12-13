@@ -883,7 +883,14 @@ public class ASTWalker {
       step = exprWalker.eval(context, range.getStep(), rangeType, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = exprWalker.assignToVar(context, Arg.ONE, false);
+      Arg defaultStep;
+      if (Types.isInt(rangeType)) {
+        defaultStep = Arg.ONE;
+      } else{
+        assert(Types.isFloat(rangeType));
+        defaultStep = Arg.createFloatLit(1.0);
+      }
+      step = exprWalker.assignToVar(context, defaultStep, false);
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
