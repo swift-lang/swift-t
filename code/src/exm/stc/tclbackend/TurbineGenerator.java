@@ -146,6 +146,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERSLEFT = "tcltmp:itersleft";
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
   private static final String TCLTMP_ITERS = "tcltmp:iters";
+  private static final String TCLTMP_FLOAT_RANGE_ITER = "tcltmp:float_range_iter";
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
   private static final String TCLTMP_SKIP = "tcltmp:skip";
@@ -2929,24 +2930,85 @@ public class TurbineGenerator implements CompilerBackend {
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
       MultiMap<Var, RefCount> constIncrs) {
-    assert(start.isImmediateInt());
-    assert(end.isImmediateInt());
-    assert(increment.isImmediateInt());
-    assert(Types.isIntVal(loopVar));
     if (countVar != null) {
+      // TODO
       throw new STCRuntimeError("Backend doesn't support counter var in range " +
-      		                      "loop yet");
-
+                                "loop yet");
     }
+
+    if (start.isImmediateInt()) {
+      assert(Types.isIntVal(loopVar));
+      String loopVarName = prefixVar(loopVar);
+      startIntRangeLoop(loopName, loopVarName, start, end, increment,
+          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+    } else {
+      assert(start.isImmediateFloat());
+      startFloatRangeLoop(loopName, loopVar, start, end, increment,
+          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+    }
+
+  }
+
+  private void startFloatRangeLoop(String loopName, Var loopVar,
+      Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs) {
+    assert(start.isImmediateFloat());
+    assert(end.isImmediateFloat());
+    assert(increment.isImmediateFloat());
+
+    assert(Types.isFloatVal(loopVar));
+
     Expression startE = argToExpr(start);
     Expression endE = argToExpr(end);
     Expression incrE = argToExpr(increment);
 
+    // Iterate over integers to get the index of each float
+    Value iterLimitVar = new Value(TCLTMP_ITERSTOTAL);
 
+    pointAdd(new SetVariable(iterLimitVar.variable(),
+        new TclExpr(
+            TclExpr.exprFn(TclExpr.INT_CONV, TclExpr.group(
+                TclExpr.exprFn(TclExpr.FLOOR, TclExpr.group(
+                    TclExpr.group(endE, TclExpr.MINUS, startE,
+                                  TclExpr.PLUS, incrE),
+                    TclExpr.DIV, incrE)
+                 )
+             )), TclExpr.MINUS, LiteralInt.ONE)));
+
+    Value dummyLoopVar = new Value(TCLTMP_FLOAT_RANGE_ITER);
+
+    startIntRangeLoop2(loopName, dummyLoopVar.variable(),
+        LiteralInt.ZERO, iterLimitVar, LiteralInt.ONE,
+        splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+
+    // TODO: need pass in values?
+    // Compute real float loop var
+    pointAdd(new SetVariable(prefixVar(loopVar),
+        new TclExpr(startE, TclExpr.PLUS, incrE, TclExpr.TIMES, dummyLoopVar)));
+  }
+
+  private void startIntRangeLoop(String loopName, String loopVarName,
+      Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
+      List<PassedVar> passedVars, List<RefCount> perIterIncrs,
+      MultiMap<Var, RefCount> constIncrs) {
+    assert(start.isImmediateInt());
+    assert(end.isImmediateInt());
+    assert(increment.isImmediateInt());
+
+    startIntRangeLoop2(loopName, loopVarName,
+        argToExpr(start), argToExpr(end), argToExpr(increment),
+        splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+  }
+
+  private void startIntRangeLoop2(String loopName, String loopVarName,
+      Expression start, Expression end, Expression incr,
+      int splitDegree, int leafDegree, List<PassedVar> passedVars,
+      List<RefCount> perIterIncrs, MultiMap<Var, RefCount> constIncrs) {
     if (!perIterIncrs.isEmpty()) {
       // Increment references by # of iterations
       pointAdd(new SetVariable(TCLTMP_ITERSTOTAL,
-                       rangeItersLeft(startE, endE, incrE)));
+                       rangeItersLeft(start, end, incr)));
 
       Value itersTotal = Value.numericValue(TCLTMP_ITERSTOTAL);
       handleRefcounts(constIncrs, perIterIncrs, itersTotal, false);
@@ -2954,11 +3016,11 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (splitDegree > 0) {
       startRangeSplit(loopName, passedVars, perIterIncrs,
-              splitDegree, leafDegree, startE, endE, incrE);
-      startRangeLoopInner(loopName, loopVar,
+              splitDegree, leafDegree, start, end, incr);
+      startRangeLoopInner(loopName, loopVarName,
           TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V, TCLTMP_RANGE_INC_V);
     } else {
-      startRangeLoopInner(loopName, loopVar, startE, endE, incrE);
+      startRangeLoopInner(loopName, loopVarName, start, end, incr);
     }
   }
 
@@ -2972,10 +3034,9 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private void startRangeLoopInner(String loopName, Var loopVar,
+  private void startRangeLoopInner(String loopName, String loopVarName,
           Expression startE, Expression endE, Expression incrE) {
     Sequence loopBody = new Sequence();
-    String loopVarName = prefixVar(loopVar);
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointAdd(tclLoop);
     pointPush(loopBody);
