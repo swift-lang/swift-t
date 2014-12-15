@@ -880,6 +880,7 @@ public class ASTWalker {
     Var end = exprWalker.eval(context, range.getEnd(), rangeType, false, null);
     Var step;
     if (range.getStep() != null) {
+
       step = exprWalker.eval(context, range.getStep(), rangeType, false, null);
     } else {
       // Inefficient but constant folding will clean up
@@ -892,6 +893,7 @@ public class ASTWalker {
       }
       step = exprWalker.assignToVar(context, defaultStep, false);
     }
+
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
 

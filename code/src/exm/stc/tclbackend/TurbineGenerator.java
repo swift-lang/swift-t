@@ -2970,7 +2970,7 @@ public class TurbineGenerator implements CompilerBackend {
         new TclExpr(
             TclExpr.exprFn(TclExpr.INT_CONV, TclExpr.group(
                 TclExpr.exprFn(TclExpr.FLOOR, TclExpr.group(
-                    TclExpr.group(endE, TclExpr.MINUS, startE,
+                    TclExpr.paren(endE, TclExpr.MINUS, startE,
                                   TclExpr.PLUS, incrE),
                     TclExpr.DIV, incrE)
                  )
