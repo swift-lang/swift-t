@@ -2942,7 +2942,7 @@ public class TurbineGenerator implements CompilerBackend {
       startIntRangeLoop(loopName, loopVarName, start, end, increment,
           splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
     } else {
-      assert(start.isImmediateFloat());
+      assert(start.isImmediateFloat()) : "Invalid range loop type " + start.type();
       startFloatRangeLoop(loopName, loopVar, start, end, increment,
           splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
     }
@@ -2978,9 +2978,13 @@ public class TurbineGenerator implements CompilerBackend {
 
     Value dummyLoopVar = new Value(TCLTMP_FLOAT_RANGE_ITER);
 
+    // Passed vars plus variables used in calculation
+    List<PassedVar> passedVars2 = PassedVar.mergeLists(passedVars,
+                      PassedVar.fromArgs(false, start, increment));
+
     startIntRangeLoop2(loopName, dummyLoopVar.variable(),
         LiteralInt.ZERO, iterLimitVar, LiteralInt.ONE,
-        splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+        splitDegree, leafDegree, passedVars2, perIterIncrs, constIncrs);
 
     // TODO: need pass in values?
     // Compute real float loop var
