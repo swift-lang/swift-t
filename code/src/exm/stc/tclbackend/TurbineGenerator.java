@@ -147,6 +147,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
   private static final String TCLTMP_ITERS = "tcltmp:iters";
   private static final String TCLTMP_FLOAT_RANGE_ITER = "tcltmp:float_range_iter";
+  private static final String TCLTMP_FLOAT_RANGE_ITERMAX = "tcltmp:float_range_itermax";
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
   private static final String TCLTMP_SKIP = "tcltmp:skip";
@@ -2964,7 +2965,7 @@ public class TurbineGenerator implements CompilerBackend {
     Expression incrE = argToExpr(increment);
 
     // Iterate over integers to get the index of each float
-    Value iterLimitVar = new Value(TCLTMP_ITERSTOTAL);
+    Value iterLimitVar = new Value(TCLTMP_FLOAT_RANGE_ITERMAX);
 
     pointAdd(new SetVariable(iterLimitVar.variable(),
         new TclExpr(
