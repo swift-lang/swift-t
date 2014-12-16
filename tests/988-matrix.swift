@@ -1,6 +1,3 @@
-
-// SKIP-THIS-TEST : issue 757
-
 import blob;
 import matrix;
 
