@@ -553,20 +553,25 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
     }
   }
 
-  if (any_applied && !apply_all)
+  if (apply_all)
+  {
+    // All changes applied - discard everything
+    xlb_refc_changes_free(c);
+  }
+  else if (any_applied)
   {
     // Cleanup any empty entries, unless we applied all, in which case
     // we can throw everything away
     adlb_code ac = xlb_refc_cleanup(c, true);
     ADLB_CHECK(ac);
+
+    // Free memory if none present
+    if (c->count == 0)
+    {
+      xlb_refc_changes_free(c);
+    }
   }
 
-  // Free memory if none present
-  if (c->count == 0)
-  {
-    // Remove all from list
-    xlb_refc_changes_free(c);
-  }
 
   return ADLB_SUCCESS;
 }
