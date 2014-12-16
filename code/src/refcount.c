@@ -26,15 +26,15 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
   if (!xlb_read_refcount_enabled)
     change.read_refcount = 0;
 
-  DEBUG("server->server refcount <%"PRId64"> r += %i w += %i", id,
-        change.read_refcount, change.write_refcount);
-  
   if (ADLB_REFC_IS_NULL(change))
     return ADLB_DATA_SUCCESS;
 
   int server = ADLB_Locate(id);
   if (server == xlb_comm_rank)
   {
+    DEBUG("server %i local refcount <%"PRId64"> r += %i w += %i",
+        xlb_comm_rank, id, change.read_refcount, change.write_refcount);
+
     dc = xlb_data_reference_count(id, change, XLB_NO_ACQUIRE, NULL,
                                   notifs);
     DATA_CHECK(dc);
@@ -46,6 +46,9 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
      * response or notification to come back - might as well have the
      * other server do the work as this one
      */
+    DEBUG("server->server %i->%i local refcount <%"PRId64"> "
+        "r += %i w += %i", xlb_comm_rank, server,
+        id, change.read_refcount, change.write_refcount);
     adlb_code code = xlb_sync_refcount(server, id, change);
     DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
   }
@@ -59,12 +62,12 @@ adlb_data_code xlb_incr_refc_local(adlb_datum_id id, adlb_refc change,
   adlb_data_code dc = xlb_data_reference_count(id, change,
                            XLB_NO_ACQUIRE, NULL, &notifs);
   DATA_CHECK(dc);
-  
+
   // handle notifications here if needed
   adlb_code rc = xlb_notify_all(&notifs);
   check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
       "Error processing notifications for <%"PRId64">", id);
-  
+
   return ADLB_DATA_SUCCESS;
 }
 
@@ -90,13 +93,13 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, false, false, 
+      dc = xlb_multiset_cleanup(d->MULTISET, false, false,
             release_read, release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
-      dc = xlb_struct_cleanup(d->STRUCT, false, 
+      dc = xlb_struct_cleanup(d->STRUCT, false,
           release_read, release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;
@@ -106,7 +109,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       TRACE("xlb_incr_referand: <%"PRId64">", d->REF.id);
       dc = xlb_update_refc_id(d->REF.id, &d->REF.read_refs,
          &d->REF.write_refs, release_read, release_write,
-         to_acquire.refcounts, changes); 
+         to_acquire.refcounts, changes);
       DATA_CHECK(dc);
       break;
     default:
@@ -186,7 +189,7 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
           (int)release_read, (int)release_write,
           to_acquire.read_refcount, to_acquire.write_refcount);
 
-  // Number we acquired 
+  // Number we acquired
   int read_acquired, write_acquired;
   // Remainder change that needs to be applied
   int read_remainder, write_remainder;
