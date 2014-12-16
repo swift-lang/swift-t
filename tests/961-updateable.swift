@@ -10,12 +10,11 @@ main {
     assertEqual(y, 444, "adding updateable and future");
     wait (y) {
       x <incr> := 1;
-      // Sleep to make sure above increment occurs
-      void signal = sleep(1);
-      wait (signal) {
-          assertEqual(x, 124, "incremented x");
+      // Wait to make sure above increment occurs
+      wait (x) {
+          assertEqual(x, 124.0, "incremented x");
           float z = x + 100;
-          assertEqual(z, 224, "z");
+          assertEqual(z, 224.0, "z");
       }
     }
 }
