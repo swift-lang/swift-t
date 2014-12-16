@@ -1,6 +1,4 @@
 
-// SKIP-THIS-TEST missing package? 
-
 import io;
 import sys;
 
