@@ -1,4 +1,6 @@
-#!/bin/zsh -efu
+#!/bin/zsh 
+
+set -efu
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
@@ -57,11 +59,12 @@ report_version()
 }
 
 PROGRAM_TCL=""
+CHECK_DATES=0
 VERBOSE=0
 
 # Process all flags: split among this script, STC, or Turbine
-SWIFT_T_CHARS="ht:vV"
-STC_CHARS="A:C:d:D:f:F:I:j:L:o:O:pr:"
+SWIFT_T_CHARS="ho:t:vV"
+STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
 TURBINE_CHARS="e:i:lm:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
@@ -75,9 +78,12 @@ do
     v) report_version ;;
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
+    o) PROGRAM_TCL=${OPTARG} ;; 
+    u) CHECK_DATES=1 ;;
+
     # STC arguments:
     A) ;& d) ;& D) ;& I) ;&
-    j) ;& L) ;& o) ;& O) ;& p) ;& r)
+    j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
@@ -129,17 +135,6 @@ then
   exit 1
 fi
 
-# Set up STC file arguments
-DELETE_PROGRAM_TCL=0
-if [[ ${PROGRAM_TCL} == "" ]]
-then
-  PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
-  PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
-  NAME=${PROGRAM_FILE%.swift}
-  PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
-  DELETE_PROGRAM_TCL=1
-fi
-
 message()
 {
   (( VERBOSE )) && print ${*}
@@ -153,10 +148,42 @@ verbose()
 
 message "Swift/T"
 
-# Run STC & Turbine
-message "Compiling: ${PROGRAM_SWIFT}"
-message "       to: ${PROGRAM_TCL}"
-verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+make_stc_output() 
+{
+  # Set up STC file arguments
+  if [[ ${PROGRAM_TCL} == "" ]]
+  then
+    PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
+    PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
+    NAME=${PROGRAM_FILE%.swift}
+    PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
+    DELETE_PROGRAM_TCL=1
+  fi
+}
+
+DELETE_PROGRAM_TCL=0
+SKIP_COMPILE=0
+
+if (( CHECK_DATES )) 
+then
+  if [[ -e ${PROGRAM_TCL} ]] && \
+     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]] 
+  then
+    SKIP_COMPILE=1
+    message "${PROGRAM_TCL} is up-to-date."
+  fi
+fi
+
+if (( ! SKIP_COMPILE )) 
+then
+  # Run STC 
+  make_stc_output
+  message "Compiling: ${PROGRAM_SWIFT}"
+  message "       to: ${PROGRAM_TCL}"
+  verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+fi
+
+# Run Turbine
 message "Running:   ${PROGRAM_TCL}"
 verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
 
