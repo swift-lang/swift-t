@@ -25,6 +25,9 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire);
 
 static adlb_code
+xlb_refc_cleanup(xlb_refc_changes *c, bool maintain_index);
+
+static adlb_code
 xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 
 static adlb_code
@@ -498,10 +501,13 @@ static adlb_code
 xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire)
 {
+  DEBUG("APPLYING LOCAL REFCOUNTS");
   adlb_data_code dc;
   xlb_refc_changes *c = &notifs->refcs;
+  bool any_applied = false;
   for (int i = 0; i < c->count; i++)
   {
+    DEBUG("APPLYING LOCAL REFCOUNT %i", i);
     bool applied = false;
     xlb_refc_change *change = &c->arr[i];
     if (ADLB_REFC_IS_NULL(change->rc))
@@ -537,8 +543,47 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 
     if (applied)
     {
+      any_applied = true;
+
       // Array may have been realloced, old pointer maybe invalid
       change = &c->arr[i];
+
+      // Set to zero and remove remove later
+      change->rc.read_refcount = change->rc.write_refcount = 0;
+    }
+  }
+
+  if (any_applied && !apply_all)
+  {
+    // Cleanup any empty entries, unless we applied all, in which case
+    // we can throw everything away
+    adlb_code ac = xlb_refc_cleanup(c, true);
+    ADLB_CHECK(ac);
+  }
+
+  // Free memory if none present
+  if (c->count == 0)
+  {
+    // Remove all from list
+    xlb_refc_changes_free(c);
+  }
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Remove any refcount entries with 0 read/0 write
+ */
+static adlb_code
+xlb_refc_cleanup(xlb_refc_changes *c, bool maintain_index)
+{
+  int insert_ix = 0;
+  for (int i = 0; i < c->count; i++)
+  {
+    xlb_refc_change *change = &c->arr[i];
+    if (change->rc.read_refcount == 0 &&
+        change->rc.write_refcount == 0)
+    {
 #if XLB_INDEX_REFC_CHANGES
       // Will need to update or invalidate index if not processing all
       bool maintain_index = !apply_all;
@@ -552,36 +597,30 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         assert(((unsigned long)tmp) == i);
       }
 #endif
-
-      // Remove processed entries
-      c->count--;
-      if (i != c->count)
+    }
+    else
+    {
+      if (i != insert_ix)
       {
-        // Swap last to here
-        *change = c->arr[c->count];
-        i--; // Process new entry next
+        c->arr[insert_ix] = c->arr[i];
 #if XLB_INDEX_REFC_CHANGES
         if (maintain_index)
         {
           void *ptr;
           bool found = table_lp_set(&c->index, change->id,
-                      (void*)(unsigned long)(i + 1), &ptr);
+                      (void*)(unsigned long)(insert_ix), &ptr);
           assert(found);
-          assert(((unsigned long)ptr) == c->count);
+          assert(((unsigned long)ptr) == i);
           TRACE("Reindex change for id <%"PRId64">: %lu => %d",
                 change->id, (unsigned long)ptr, i);
         }
 #endif
       }
+      insert_ix++;
     }
   }
 
-  // Free memory if none present
-  if (c->count == 0)
-  {
-    // Remove all from list
-    xlb_refc_changes_free(c);
-  }
+  c->count = insert_ix;
 
   return ADLB_SUCCESS;
 }
