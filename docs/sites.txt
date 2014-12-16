@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.7.0, November 2014
+Swift/T v0.7.0, December 2014
 
 ////
 
@@ -140,7 +140,7 @@ stc program.swift
 turbine-pbs-run.zsh -n 96 -s settings.sh program.tic
 ----
 
-which are equivalent. 
+which are equivalent.
 
 +program.tic+ is the output of STC and +settings.sh+ contains:
 ----
@@ -156,7 +156,7 @@ processes per node), submitted by PBS to queue +bigqueue+.
 
 For scheduled systems, Turbine accepts a common set of environment
 variables.  These may be placed in +settings.sh+ or set by the user in
-any other way.  
+any other way.
 
 +PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
@@ -378,8 +378,9 @@ cluster at ANL.  It uses PBS.
 
 To run:
 ----
-export QUEUE=batch
-~wozniak/Public/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
+$ export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+$ ~wozniak/Public/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tcl
 ----
 
 See the <<variables,Turbine scheduler variables>> and
@@ -388,6 +389,33 @@ See the <<variables,Turbine scheduler variables>> and
 ==== Build procedure
 
 Apparently need to append to use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
+----
+$ which gcc
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+----
+
+=== Fusion
+
+http://www.lcrc.anl.gov/about/fusion[Fusion] is a 320-node x86
+cluster at ANL.  It uses PBS.
+
+==== Public installation
+
+* STC: +~wozniak/Public/compute/stc/bin/stc+
+
+To run:
+----
+export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
+$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
+----
+
+See the <<variables,Turbine scheduler variables>> and
+<<options,Turbine run script options>> for additional settings.
+
+==== Build procedure
+
+Use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
 ----
 $ which gcc
 /software/gcc-4.7.2/bin/gcc
@@ -486,46 +514,48 @@ See the script header for usage.
 
 === Blue Gene/Q
 
-==== Mira/Cetus
+==== ALCF
 
-*As of:* 0.7.0 - 11/20/2014
-
-Add to +PATH+:
-
-* STC: +~wozniak/Public/ppc64/stc/bin+
-* Turbine (optional): +~wozniak/Public/ppc64/turbine/scripts/submit/cobalt+
-
-* Run as:
+* Run with:
 +
 ----
 export MODE=BGQ
-export QUEUE=...
-export PROJECT=...
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
 swift-t -m cobalt -n 3 program.tic
 ----
-
-==== Vesta
-
-*As of:* 0.7.0 - 11/20/2014
-
-* STC: +~wozniak/Public/sfw/stc/bin+ 
-* Turbine (optional): +~wozniak/Public/sfw/turbine/scripts/submit/turbine-cobalt-run.zsh+ 
-* Run as:
++
+or:
 +
 ----
 export MODE=BGQ
-export QUEUE=default
-swift-t -m cobalt -n 2 program.tic
+export QUEUE=<queue_name>
+turbine-cobalt-run.zsh -n 2 program.tic
 ----
 
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
+===== Public installation: Vesta
+
+*As of:* 0.7.0 - 12/16/2014
+
+* STC: +~wozniak/Public/sfw/stc/bin/stc+
+* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+===== Public installation: Mira/Cetus
+
+*As of:* 0.5.0 - 4/4/2014
+
+* STC: +~wozniak/Public/ppc64/stc/bin/stc+
+* Turbine:
++~wozniak/Public/ppc64/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
 ==== Build procedure
 
 *As of:* 0.7.0 - 11/20/2014
 
-*Tcl:*
+*Building Tcl:*
 
 The GCC installation does not support shared libraries.  Thus, you
 must compile Tcl with +bgxlc+.  You must modify the Makefile to use
@@ -536,14 +566,16 @@ You may get errors that say +wrong digit+.  This is apparently a bgxlc
 bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
+*Building Swift/T:*
+
 * Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
 * Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
 * Configure Turbine with:
 +
 ----
 CC=mpixlc
---disable-static 
---with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12 
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
 --with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
 --with-mpi-lib-name=mpich-xl
 --without-zlib
