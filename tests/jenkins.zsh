@@ -59,11 +59,10 @@ print "Using TURBINE:     ${TURBINE_INSTALL}"
 print "Using MPI install: ${MPICH_INSTALL}"
 ${TURBINE_HOME}/bin/turbine -v
 
-
 cd tests
 
 export ADLB_PERF_COUNTERS=0
-./run-tests.zsh -O0 -O1 -O2 -O3 \
+nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
       -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
