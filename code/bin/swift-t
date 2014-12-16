@@ -33,7 +33,8 @@ help()
   # These options are only available in the swift-t interface:
   cat ${STC_HOME}/etc/help-options-3.txt   
   # These are details about Turbine features accessible from swift-t
-  print 
+  cat ${STC_HOME}/etc/help-turbine.txt
+  print
   printf "TURBINE OPTIONS\n\n"
   cat ${TURBINE_HOME}/etc/help-options-1.txt
   print
@@ -41,6 +42,8 @@ help()
   print
   # These are details about compiler flag terms
   cat ${STC_HOME}/etc/help-option-terms.txt
+  print
+  print "TOOL USAGE"
   print
   print "You may want to run STC and Turbine individually."
   print "Use 'stc -h' to see STC help and optimization list" 
