@@ -9,11 +9,13 @@ Edit downloads.txt or sites.txt
 
 Run ./build.sh to make HTML
 
+(HTML is copied to turbine-*.html)
+
 Preview in local browser
 
 Commit txt files (to ExM repo)
 
-Copy HTML to https://svn.ci.uchicago.edu/svn/vdl2/www/Swift-T
+Copy turbine-*.html to https://svn.ci.uchicago.edu/svn/vdl2/www/Swift-T
 
 Commit HTML (to VDL2 repo)
 
