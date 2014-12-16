@@ -6,6 +6,10 @@
 
 set -eu
 
+echo
+echo "maint/jenkins.zsh ..."
+echo
+
 if [[ ! -d /tmp/mpich-install ]]
 then
   print "MPICH disappeared!"
@@ -33,4 +37,5 @@ make V=1 install
 # ldd lib/libadlb.so
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
+
 exit 0
