@@ -1,4 +1,6 @@
 
+// SKIP-THIS-TEST : issue 758
+
 import assert;
 import sys;
 
