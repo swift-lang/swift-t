@@ -2,7 +2,7 @@
 ////
 
 Swift/T leaf function guide, asciidoc format
-http://www.mcs.anl.gov/exm/local/guides/leaf.html
+http://swift-lang.org/Swift-T/leaf.html
 
 ////
 
