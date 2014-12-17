@@ -1,5 +1,5 @@
 
-// SKIP-THIS-TEST: Only works at -O0
+// Test exists(A,i)
 
 import io;
 
