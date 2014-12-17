@@ -92,7 +92,7 @@ type external void;
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
 @pure @implements=contains
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains";
-@pure
+
 <K, V> (boolean o) exists(V A[K], K key) "turbine" "0.7.0" "exists";
 
 @pure @implements=size
