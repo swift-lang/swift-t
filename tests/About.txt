@@ -73,6 +73,7 @@ The tests are numbered for lexical sorting by shell glob.
 *        400: foreach
 *        410: if
 *        420: for
+*        450: Associative arrays
 *        480: Key functions on arrays
 500::       Types 
 *        560: files
