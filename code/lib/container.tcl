@@ -640,6 +640,22 @@ namespace eval turbine {
       return [ adlb::container_size $container $read_decr ]
     }
 
+    # When integer i is closed,
+    #        return whether exists c[i]
+    # Does not wait for container c to be closed.
+    # result: a turbine integer, 0 if not present, 1 if true
+    proc exists { result inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        rule "$i" "exists_body $result $c $i" \
+            name "exists-$result-$c-$i"
+    }
+
+    proc exists_body { result c i } {
+        set i_val [ turbine::retrieve_decr $i ]
+        store_integer $result [ adlb::exists_sub $c $i_val 1 ]
+    }
+
     # When container c and integer i are closed,
     #        return whether exists c[i]
     # result: a turbine integer, 0 if not present, 1 if true
