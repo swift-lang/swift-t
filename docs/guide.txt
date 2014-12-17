@@ -1119,11 +1119,6 @@ automatic operations and optimizations are disabled
 +read(file) -> string+::   Read file as a string
 +write(string) -> file+::  Write string to file
 
-+file_lines(file) -> string[]+::
-Reads the whole file, returning each line as a separate entry in the
-output array.  Comments with +#+ are excised, leading and trailing
-whitespace is trimmed, and blank lines are omitted.
-
 +glob(string) -> file[]+:: Perform glob operation, returning files
 that match.  Available glob symbols include:
 +
@@ -1132,6 +1127,28 @@ that match.  Available glob symbols include:
 * +[chars]+: any of the given characters
 * +\x+: character +x+
 * +{a,b,c,...}+ any of +a+, +b+, +c+, etc.
+
++file_exists(string) -> boolean+::
+
+Attempt to find a file with the given name in the filesystem: return
++true+ if found, else +false+.
+
++file_lines(file) -> string[]+::
+
+Reads the whole file, returning each line as a separate entry in the
+output array.  Comments with +#+ are excised, leading and trailing
+whitespace is trimmed, and blank lines are omitted.
+
++file_mtime(string) -> int+::
+
+Attempt to find a file with the given name in the filesystem: return
+its POSIX modification time in seconds since the Unix epoch. 
+
++file_type(file) -> string+:: 
+
+Returns a string giving the type of file, which will be one of
++"file"+, +"directory"+, +"characterSpecial"+, +"blockSpecial"+,
++"fifo"+, +"link"+, or +"socket"+.
 
 === Blobs
 
