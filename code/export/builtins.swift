@@ -158,4 +158,9 @@ type external void;
   "set <<O>> <<I>>" // Use Tcl string conversion
 ];
 
+// Implement % operator
+@builtin_op=SPRINTF
+(string o) __sprintf_op__(string fmt, int|float|string|boolean... args)
+"turbine" "0.0.2" "sprintf";
+
 #endif
