@@ -121,6 +121,9 @@ public class TypeChecker {
       throws UserException {
     int token = tree.getType();
     switch (token) {
+    case ExMParser.TUPLE: {
+      return tuple(context, tree);
+    }
     case ExMParser.CALL_FUNCTION: {
       return callFunction(context, tree);
     }
@@ -481,6 +484,20 @@ public class TypeChecker {
     assert(res.val1.isConcrete()) : "Non-concrete arg type: " + res.val1;
     assert(res.val2.isConcrete()) : "Non-concrete arg type: " + res.val2;
     return res;
+  }
+
+  private static ExprType tuple(Context context, SwiftAST tree) throws UserException {
+    assert(tree.getType() == ExMParser.TUPLE);
+
+    int n = tree.childCount();
+    List<Type> types = new ArrayList<Type>(n);
+
+    for (int i = 0; i < n; i++) {
+      // Single type - can't have nested multiple types
+      Type type = findSingleExprType(context, tree.child(i));
+      types.add(type);
+    }
+    return new ExprType(types);
   }
 
   private static ExprType callFunction(Context context, SwiftAST tree)

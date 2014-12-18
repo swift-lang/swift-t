@@ -72,6 +72,7 @@ tokens {
     COMMAND;
     EXPR;
     EXPR_STMT;
+    TUPLE;
     UPDATE;
     IF_STATEMENT;
     SWITCH_STATEMENT;
@@ -611,8 +612,7 @@ base_expr:
             literal
         |   function_call
         |   variable
-        |    LPAREN e=expr RPAREN
-            -> $e
+        |   paren_expr
         |   array_constructor
         |   array_kv_constructor
     ;
@@ -710,6 +710,13 @@ assign_op:
 more_expr:
         COMMA expr -> expr
     ;
+    
+// Parenthesized expression or tuple
+paren_expr:
+    LPAREN e=expr (
+        -> $e
+      | more_expr* -> ^( TUPLE $e more_expr* )
+    ) RPAREN;
 
 assignment_list:
         LPAREN a=assignment_list_arguments RPAREN ->
