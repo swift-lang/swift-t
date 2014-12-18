@@ -26,6 +26,7 @@ tokens {
     DIV     = '/' ;
     INTDIV  = '%/' ;
     MOD     = '%%' ;
+    PERCENT = '%' ;
     POW     = '**' ;
     ASSIGN  = '=';
     MUTATE  = ':=';
@@ -567,7 +568,7 @@ mexpr:
         )*
     ;
 
-mexpr_op: MULT | DIV | INTDIV | MOD
+mexpr_op: MULT | DIV | INTDIV | MOD | PERCENT
     ;
 
 

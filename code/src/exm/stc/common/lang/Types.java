@@ -1607,6 +1607,10 @@ public class Types {
       throw new STCRuntimeError("typeVarName() not supported for type "
                               + toString());
     }
+
+    public List<Type> asList() {
+      return Collections.singletonList(this);
+    }
   }
 
   /**
@@ -1855,6 +1859,25 @@ public class Types {
     @Override
     public String toString() {
       return types.toString();
+    }
+
+    public String typeName() {
+      if (types.size() == 1) {
+        return types.get(0).typeName();
+      }
+      StringBuilder sb = new StringBuilder();
+      sb.append("(");
+      boolean first = true;
+      for (Type type: types) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append(", ");
+        }
+        sb.append(type.typeName());
+      }
+      sb.append(")");
+      return sb.toString();
     }
   }
 
