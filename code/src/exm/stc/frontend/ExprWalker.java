@@ -43,13 +43,14 @@ import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
+import exm.stc.common.lang.Operators.OpInputType;
 import exm.stc.common.lang.TaskProp;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
-import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -62,6 +63,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
+import exm.stc.frontend.TypeChecker.MatchedOp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
@@ -198,7 +200,6 @@ public class  ExprWalker {
    * @return return the name of a newly created tmp variable
    * @throws UserException
    */
-
   public Var eval(Context context, SwiftAST tree, Type type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
     assert(type != null);
@@ -228,6 +229,38 @@ public class  ExprWalker {
       evalToVars(context, tree, tmp.asList(), renames);
       return tmp;
     }
+  }
+
+  /**
+   * Evaluate 1..n expressions to temporary variables.
+   * In 1 cases, expression directly evaluated.
+   * In 2+ cases, assumed to be tuple.
+   * @param context
+   * @param tree
+   * @param type
+   * @param storeInStack
+   * @param renames
+   * @return
+   * @throws UserException
+   */
+  public List<Var> evalMulti(Context context, SwiftAST tree, ExprType type,
+      boolean storeInStack, Map<String, String> renames) throws UserException {
+    List<Type> types = type.getTypes();
+    int n = types.size();
+    assert(n >= 1);
+
+    if (n == 1) {
+      return eval(context, tree, types.get(0), storeInStack, renames).asList();
+    }
+
+    List<Var> results = new ArrayList<Var>(n);
+    assert(tree.getType() == ExMParser.TUPLE);
+    assert(n == tree.childCount());
+    for (int i = 0; i < n; i++) {
+      results.add(eval(context, tree.child(i), types.get(i), storeInStack, renames));
+    }
+
+    return results;
   }
 
   /**
@@ -502,9 +535,12 @@ public class  ExprWalker {
     int op_argcount = tree.getChildCount() - 1;
 
     // Use the AST token label to find the actual operator
-    Op op = TypeChecker.getOpFromTree(context, tree, out.type());
+    MatchedOp opMatch = TypeChecker.getOpFromTree(context, tree, out.type());
+    Op op = opMatch.op;
+    List<ExprType> exprTypes = opMatch.exprTypes;
 
-    int argcount = op.type.in.size();
+    List<OpInputType> inArgs = op.type.in();
+    int argcount = inArgs.size();
 
     if (op_argcount != argcount) {
       throw new STCRuntimeError("Operator " + opName + " has " + op_argcount
@@ -513,11 +549,23 @@ public class  ExprWalker {
 
     ArrayList<Arg> iList = new ArrayList<Arg>(argcount);
     for (int i = 0; i < op_argcount; i++) {
-      Type type = new ScalarFutureType(op.type.in.get(i));
+      OpInputType inArg = inArgs.get(i);
+      ExprType exprType = exprTypes.get(i);
+      if (inArg.variadic) {
+        // Flatten out variadic args list
+        List<Var> args =  evalMulti(context, tree.child(i + 1), exprType,
+                                    false, renames);
+        for (Var arg: args) {
+          iList.add(Arg.createVar(arg));
+        }
+      } else {
+        assert(exprType.elems() == 1);
+        Type type = exprType.get(0);
 
-      // Store into temporary variables
-      Var arg = eval(context, tree.child(i + 1), type, false, renames);
-      iList.add(Arg.createVar(arg));
+        // Store into temporary variables
+        Var arg = eval(context, tree.child(i + 1), type, false, renames);
+        iList.add(Arg.createVar(arg));
+      }
     }
     asyncOp(op.code, out, iList);
   }

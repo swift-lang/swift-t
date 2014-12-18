@@ -15,6 +15,7 @@
  */
 package exm.stc.common.lang;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +28,9 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.ScalarFutureType;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context;
 
@@ -82,11 +86,11 @@ public class Operators {
       String opTypeName = getOpTypeName(primT);
 
       // Type for relational operations, e.g. a < b
-      OpType relOp = new OpType(PrimType.BOOL, primT, primT);
+      OpType relOp = OpType.build(PrimType.BOOL, primT, primT);
 
       // Types for closed operations - output type is input type
-      OpType closedUnaryOp = new OpType(primT, primT);
-      OpType closedOp = new OpType(primT, primT, primT);
+      OpType closedUnaryOp = OpType.build(primT, primT);
+      OpType closedOp = OpType.build(primT, primT, primT);
 
       // Want equality tests for all primitives
       BuiltinOpcode eq = BuiltinOpcode.valueOf("EQ_" + opTypeName);
@@ -133,15 +137,15 @@ public class Operators {
 
         BuiltinOpcode pow = BuiltinOpcode.valueOf("POW_" + opTypeName);
         registerOperator(ExMParser.POW, pow,
-                          new OpType(PrimType.FLOAT, primT, primT));
+                          OpType.build(PrimType.FLOAT, primT, primT));
 
         /*
          * Allow + to take integer/string pair and do string concatenation.
          */
         registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT,
-                          new OpType(PrimType.STRING, primT, PrimType.STRING));
+                          OpType.build(PrimType.STRING, primT, PrimType.STRING));
         registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT,
-                          new OpType(PrimType.STRING, PrimType.STRING, primT));
+                          OpType.build(PrimType.STRING, PrimType.STRING, primT));
       }
 
       if (primT == PrimType.BOOL) {
@@ -152,6 +156,12 @@ public class Operators {
         registerOperator(ExMParser.OR, BuiltinOpcode.OR, closedOp);
       }
     }
+
+    Type sprintfArg = UnionType.createUnionType(Types.F_STRING, Types.F_INT, Types.F_FLOAT, Types.F_BOOL);
+    List<OpInputType> sprintfArgs = Arrays.asList(new OpInputType(Types.F_STRING, false),
+                                                  new OpInputType(sprintfArg, true));
+    OpType sprintfOp = new OpType(Types.F_STRING, sprintfArgs);
+    registerOperator(ExMParser.PERCENT, BuiltinOpcode.SPRINTF, sprintfOp);
   }
 
   private static boolean isNumeric(PrimType primT) {
@@ -291,25 +301,77 @@ public class Operators {
     }
   }
 
-  /**
-   * Represent type of builtin operators
-   */
-  public static class OpType {
-    public final PrimType out;
-    public final List<PrimType> in;
 
-    private OpType(PrimType out, PrimType ...in) {
-      this(out, Arrays.asList(in));
-    }
+  public static class OpInputType {
+    public final Type type;
+    public final boolean variadic;
 
-    private OpType(PrimType out, List<PrimType> in) {
-      this.out = out;
-      this.in = Collections.unmodifiableList(in);
+    public OpInputType(Type type, boolean variadic) {
+      super();
+      this.type = type;
+      this.variadic = variadic;
     }
 
     @Override
     public String toString() {
-      return this.in.toString() + " => " + this.out.toString();
+      if (variadic) {
+        return "..." + type.typeName();
+      } else  {
+        return type.typeName();
+      }
+    }
+  }
+
+  /**
+   * Represent type of builtin operators
+   */
+  public static class OpType {
+    private final Type out;
+    private final List<OpInputType> in;
+
+    private OpType(Type out, List<OpInputType> in) {
+      this.out = out;
+      this.in = in;
+    }
+
+    private static OpType build(PrimType out, PrimType ...in) {
+      return build(out, Arrays.asList(in));
+    }
+
+    private static OpType build(PrimType out, List<PrimType> in) {
+      return build(new ScalarFutureType(out), scalarFutureList(in));
+    }
+
+    private static OpType build(Type out, List<Type> in) {
+      return new OpType(out, convertToOpInputs(in));
+    }
+
+
+    private static List<Type> scalarFutureList(List<PrimType> pts) {
+      List<Type> result = new ArrayList<Type>(pts.size());
+      for (PrimType pt: pts) {
+        result.add(new ScalarFutureType(pt));
+      }
+      return result;
+    }
+
+    private static List<OpInputType> convertToOpInputs(List<Type> in) {
+      List<OpInputType> result = new ArrayList<OpInputType>(in.size());
+      for (Type t: in) {
+        result.add(new OpInputType(t, false));
+      }
+      return result;
+    }
+
+    /**
+     * @return output type, or null if no output
+     */
+    public Type out() {
+      return out;
+    }
+
+    public List<OpInputType> in() {
+      return Collections.unmodifiableList(in);
     }
   }
 

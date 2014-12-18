@@ -34,13 +34,13 @@ import exm.stc.common.exceptions.UndefinedOperatorException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.Op;
+import exm.stc.common.lang.Operators.OpInputType;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
-import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
@@ -237,18 +237,27 @@ public class TypeChecker {
 
   private static ExprType findOperatorResultType(Context context, SwiftAST tree)
       throws TypeMismatchException, UserException {
-    ArrayList<Type> argTypes = new ArrayList<Type>();
-
-    List<Op> ops = getOpsFromTree(context, tree, argTypes);
+    List<MatchedOp> ops = getOpsFromTree(context, tree, null);
     assert(ops != null);
     assert(ops.size() > 0);
 
     // Handle possibility of multiple return types
     List<Type> alternatives = new ArrayList<Type>(ops.size());
-    for (Op op: ops) {
-      alternatives.add(new ScalarFutureType(op.type.out));
+    for (MatchedOp op: ops) {
+      alternatives.add(op.op.type.out());
     }
     return new ExprType(UnionType.makeUnion(alternatives));
+  }
+
+  public static class MatchedOp {
+    public final Op op;
+    public final List<ExprType> exprTypes;
+
+    public MatchedOp(Op op, List<ExprType> exprTypes) {
+      this.op = op;
+      this.exprTypes = Collections.unmodifiableList(
+                      new ArrayList<ExprType>(exprTypes));
+    }
   }
 
   /**
@@ -259,8 +268,8 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public static List<Op> getOpsFromTree(Context context,
-      SwiftAST tree, List<Type> argTypes) throws UserException {
+  public static List<MatchedOp> getOpsFromTree(Context context,
+      SwiftAST tree, List<ExprType> argTypes) throws UserException {
     return getOpsFromTree(context, tree, null, argTypes, false);
   }
 
@@ -272,10 +281,10 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public static Op getOpFromTree(Context context,
+  public static MatchedOp getOpFromTree(Context context,
       SwiftAST tree, Type outType) throws UserException {
-    List<Op> matches = getOpsFromTree(context, tree, outType,
-                                            null, true);
+    List<MatchedOp> matches = getOpsFromTree(context, tree, outType, null,
+                                             true);
     assert(matches.size() > 0);
     return matches.get(0);
   }
@@ -292,8 +301,8 @@ public class TypeChecker {
    * @return at least one builtin operator
    * @throws TypeMismatchException if no matches possible
    */
-  private static List<Op> getOpsFromTree(Context context,
-          SwiftAST tree, Type outType, List<Type> outArgTypes,
+  private static List<MatchedOp> getOpsFromTree(Context context,
+          SwiftAST tree, Type outType, List<ExprType> outArgTypes,
           boolean expectUnambig)
           throws UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
@@ -301,7 +310,7 @@ public class TypeChecker {
     int opTok = tree.child(0).getType();
     String opName = extractOpName(tree);
 
-    List<Type> argTypes = findOperatorArgTypes(context, tree, opName);
+    List<ExprType> argTypes = findOperatorArgTypes(context, tree, opName);
 
     if (outArgTypes != null) {
       // Store for caller
@@ -310,22 +319,19 @@ public class TypeChecker {
     }
 
     // Track operators that matched
-    List<Op> matched = new ArrayList<Op>();
+    List<MatchedOp> matched = new ArrayList<MatchedOp>();
 
     for (Op candidate: Operators.getOps(opTok)) {
-      OpType opType = candidate.type;
-
-      if (opOutputMatches(outType, opType) &&
-          opInputsMatch(argTypes, opType)) {
-        matched.add(candidate);
+      MatchedOp match = opTypesMatch(outType, argTypes, candidate);
+      if (match != null) {
+        matched.add(match);
       }
     }
-
 
     if (matched.size() != 1) {
       // Hope to match exactly one operator
       List<String> typeNames = new ArrayList<String>();
-      for (Type argType: argTypes) {
+      for (ExprType argType: argTypes) {
         typeNames.add(argType.typeName());
       }
       if (matched.size() == 0) {
@@ -348,24 +354,60 @@ public class TypeChecker {
     return matched;
   }
 
-  private static boolean opInputsMatch(List<Type> argTypes, OpType opType) {
-    if (argTypes.size() != opType.in.size()) {
-      return false;
+  private static MatchedOp opTypesMatch(Type outType, List<ExprType> argTypes,
+      Op candidate) {
+    OpType opType = candidate.type;
+
+    if (!opOutputMatches(outType, opType)) {
+      return null;
     }
 
-    for (int i = 0; i < argTypes.size(); i++) {
-      ScalarFutureType inFT = new ScalarFutureType(opType.in.get(i));
-      if (!argTypes.get(i).assignableTo(inFT)) {
-        return false;
-      }
+    List<ExprType> exprTypes = opInputsMatch(argTypes, opType);
+    if (exprTypes == null) {
+      return null;
     }
-    return true;
+
+    return new MatchedOp(candidate, exprTypes);
+  }
+
+  /**
+   * @param argTypes
+   * @param opType
+   * @return list of types that expressions should be evaluated to
+   */
+  private static List<ExprType> opInputsMatch(List<ExprType> argTypes, OpType opType) {
+    if (argTypes.size() != opType.in().size()) {
+      return null;
+    }
+
+    List<ExprType> result = new ArrayList<ExprType>(argTypes.size());
+
+    for (int i = 0; i < argTypes.size(); i++) {
+      OpInputType in = opType.in().get(i);
+      ExprType argType = argTypes.get(i);
+      if (!in.variadic && argType.elems() != 1) {
+        // Mismatch in arity
+        return null;
+      }
+
+      List<Type> argResultTypes = new ArrayList<Type>(argType.elems());
+
+      for (int j = 0; j < argType.elems(); j++) {
+        Pair<Type, Type> altType = whichAlternativeType(in.type, argType.get(j), true);
+        if (altType == null) {
+          return null;
+        }
+        argResultTypes.add(altType.val2);
+      }
+      result.add(new ExprType(argResultTypes));
+    }
+    return result;
   }
 
   private static boolean opOutputMatches(Type outType, OpType opType) {
     return outType == null ||
-        (opType.out != null &&
-        new ScalarFutureType(opType.out).assignableTo(outType));
+        (opType.out() != null &&
+         opType.out().assignableTo(outType));
   }
 
 
@@ -382,9 +424,10 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private static List<Type> findOperatorArgTypes(Context context, SwiftAST tree,
-                                                String opName)
+  private static List<ExprType> findOperatorArgTypes(Context context, SwiftAST tree,
+                                                     String opName)
           throws TypeMismatchException, UserException {
+    assert(tree.getType() == ExMParser.OPERATOR);
 
     int argcount = tree.getChildCount() - 1;
     if (argcount == 0) {
@@ -393,9 +436,9 @@ public class TypeChecker {
           opName);
     }
 
-    List<Type> argTypes = new ArrayList<Type>(argcount);
+    List<ExprType> argTypes = new ArrayList<ExprType>(argcount);
     for (SwiftAST argTree: tree.children(1)) {
-      argTypes.add(findSingleExprType(context, argTree));
+      argTypes.add(findExprType(context, argTree));
     }
 
     return argTypes;
