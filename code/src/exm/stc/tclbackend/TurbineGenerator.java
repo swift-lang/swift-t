@@ -1396,7 +1396,7 @@ public class TurbineGenerator implements CompilerBackend {
       assert(impls.size() > 0) : op;
 
       if (impls.size() > 1) {
-        Logging.getSTCLogger().warn("Multiple implementations for operation " +
+        Logging.getSTCLogger().debug("Multiple implementations for operation " +
             op + ": " + impls.toString());
       }
       fn = tclFuncSymbols.get(impls.get(0)).val2;
