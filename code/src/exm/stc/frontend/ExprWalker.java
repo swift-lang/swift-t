@@ -107,11 +107,13 @@ public class  ExprWalker {
     if (token == ExMParser.CALL_FUNCTION) {
       callFunctionExpression(context, tree, oList, renames);
       return;
+    } else if (token == ExMParser.TUPLE) {
+      tupleExpression(context, tree, oList, renames);
+      return;
     }
 
-    if (oList.size() != 1)
-      throw new UserException
-      (context, "Cannot assign expression to multiple variables");
+    assert(oList.size() == 1): "Cannot assign expression type " +
+            LogHelper.tokName(token) + " to multiple variables";
 
     Var oVar = oList.get(0);
     assert(oVar.type().isConcrete()) : oVar.type();
@@ -629,6 +631,25 @@ public class  ExprWalker {
         throw new UserException(context, "Tried to call non-targetable"
             + " function " + f.function() + " with target");
       }
+    }
+  }
+
+  /**
+   * Evaluate a tuple expression.
+   * @param context
+   * @param tree
+   * @param oList
+   * @param renames
+   * @throws UserException
+   */
+  private void tupleExpression(Context context, SwiftAST tree,
+      List<Var> oList, Map<String, String> renames) throws UserException {
+    assert(tree.getType() == ExMParser.TUPLE);
+    int n = tree.childCount();
+    assert(n == oList.size()) : "Assignment count mismatch not caught in type checking";
+
+    for (int i = 0; i < n; i++) {
+      evalToVars(context, tree.child(i), oList.get(i).asList(), renames);
     }
   }
 

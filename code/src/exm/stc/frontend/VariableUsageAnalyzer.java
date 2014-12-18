@@ -588,6 +588,11 @@ class VariableUsageAnalyzer {
               ExMParser.tokenNames[token] + " at " + context.getInputFile()
               + ":" + line);*/
       switch (token) {
+        case ExMParser.TUPLE:
+          for (SwiftAST tupleElem: node.children()) {
+            exprNodes.push(tupleElem);
+          }
+          break;
         case ExMParser.CALL_FUNCTION:
           assert(node.getChildCount() >= 2);
           // Walk all the arguments
