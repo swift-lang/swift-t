@@ -48,13 +48,13 @@ public class If {
   }
 
   private final SwiftAST elseBlock;
-  
+
   public boolean hasElse() {
     return elseBlock != null;
   }
-  
+
   public Type getCondType(Context context) throws UserException {
-    Type condType = TypeChecker.findSingleExprType(context, condition);
+    Type condType = TypeChecker.findExprType(context, condition);
     if (condType.assignableTo(Types.F_BOOL)) {
       return Types.F_BOOL;
     } else if (condType.assignableTo(Types.F_INT)) {
@@ -64,7 +64,7 @@ public class If {
               + "be of type boolean or int, but was " + condType);
     }
   }
-  
+
   public static If fromAST(Context context, SwiftAST tree) {
     int count = tree.getChildCount();
     if (count < 2 || count > 3)

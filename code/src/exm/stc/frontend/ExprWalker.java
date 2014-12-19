@@ -220,7 +220,7 @@ public class  ExprWalker {
     }
 
     if (tree.getType() == ExMParser.STRUCT_LOAD && Types.isStruct(
-                TypeChecker.findSingleExprType(context, tree.child(0)))) {
+                TypeChecker.findExprType(context, tree.child(0)))) {
       return structLoad(context, tree, type, storeInStack, null, renames);
     } else {
       Var tmp = varCreator.createTmp(context, type, storeInStack, false);
@@ -237,15 +237,14 @@ public class  ExprWalker {
    * In 2+ cases, assumed to be tuple.
    * @param context
    * @param tree
-   * @param type
+   * @param type expression type, may be tuple type
    * @param storeInStack
    * @param renames
    * @return
    * @throws UserException
    */
-  public List<Var> evalMulti(Context context, SwiftAST tree, TupleType type,
+  public List<Var> evalMulti(Context context, SwiftAST tree, List<Type> types,
       boolean storeInStack, Map<String, String> renames) throws UserException {
-    List<Type> types = type.getFields();
     int n = types.size();
     assert(n >= 1);
 
@@ -537,7 +536,7 @@ public class  ExprWalker {
     // Use the AST token label to find the actual operator
     MatchedOp opMatch = TypeChecker.getOpFromTree(context, tree, out.type());
     Op op = opMatch.op;
-    List<TupleType> exprTypes = opMatch.exprTypes;
+    List<Type> exprTypes = opMatch.exprTypes;
 
     List<OpInputType> inArgs = op.type.in();
     int argcount = inArgs.size();
@@ -550,20 +549,17 @@ public class  ExprWalker {
     ArrayList<Arg> iList = new ArrayList<Arg>(argcount);
     for (int i = 0; i < op_argcount; i++) {
       OpInputType inArg = inArgs.get(i);
-      TupleType exprType = exprTypes.get(i);
+      Type exprType = exprTypes.get(i);
       if (inArg.variadic) {
         // Flatten out variadic args list
-        List<Var> args =  evalMulti(context, tree.child(i + 1), exprType,
-                                    false, renames);
+        List<Var> args =  evalMulti(context, tree.child(i + 1),
+                 TupleType.getFields(exprType), false, renames);
         for (Var arg: args) {
           iList.add(Arg.createVar(arg));
         }
       } else {
-        assert(exprType.numFields() == 1);
-        Type type = exprType.getField(0);
-
         // Store into temporary variables
-        Var arg = eval(context, tree.child(i + 1), type, false, renames);
+        Var arg = eval(context, tree.child(i + 1), exprType, false, renames);
         iList.add(Arg.createVar(arg));
       }
     }
@@ -609,7 +605,7 @@ public class  ExprWalker {
       SwiftAST argtree = f.args().get(i);
       Type expType = concrete.getInputs().get(i);
 
-      Type exprType = TypeChecker.findSingleExprType(context, argtree);
+      Type exprType = TypeChecker.findExprType(context, argtree);
       Type argType = TypeChecker.concretiseFnArg(context, f.function(), i,
                                       expType, exprType).val2;
       argVars.add(eval(context, argtree, argType, false, renames));
@@ -628,7 +624,7 @@ public class  ExprWalker {
         checkCallAnnotation(context, f, ann);
 
         SwiftAST expr = f.annotations().get(ann);
-        Type exprType = TypeChecker.findSingleExprType(callContext, expr);
+        Type exprType = TypeChecker.findExprType(callContext, expr);
         Type concreteType = TaskProp.checkFrontendType(callContext, ann, exprType);
         Var future = eval(context, expr, concreteType, false, renames);
         waitVars.add(future);
@@ -722,7 +718,7 @@ public class  ExprWalker {
 
     // Work out the type of the array so we know the type of the temp var
     SwiftAST arrayTree = tree.child(0);
-    Type arrExprType = TypeChecker.findSingleExprType(context, arrayTree);
+    Type arrExprType = TypeChecker.findExprType(context, arrayTree);
     Type arrType = chooseArrayTypeForLookup(oVar, arrExprType);
 
     // Evaluate the array
@@ -730,7 +726,7 @@ public class  ExprWalker {
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
-    Type indexType = TypeChecker.findSingleExprType(context, arrayIndexTree);
+    Type indexType = TypeChecker.findExprType(context, arrayIndexTree);
     if (!Types.isArrayKeyFuture(arrayVar, indexType)) {
       throw new TypeMismatchException(context,
             "array index expression does not have appropriate key type "
@@ -856,7 +852,7 @@ public class  ExprWalker {
       String structVarName = structTree.child(0).getText();
       rootStruct = context.lookupVarUser(structVarName);
     } else {
-      Type parentType = TypeChecker.findSingleExprType(context, structTree);
+      Type parentType = TypeChecker.findExprType(context, structTree);
       // Type error should have been caught earlier
       assert(Types.isStruct(parentType) || Types.isStructRef(parentType));
       rootStruct = eval(context, structTree, parentType, false, renames);
@@ -938,7 +934,7 @@ public class  ExprWalker {
     Map<String, String> renames) throws UserException {
     assert(Types.isArray(oVar.type()));
     ArrayElems ae = ArrayElems.fromAST(context, tree);
-    Type arrType = TypeChecker.findSingleExprType(context, tree);
+    Type arrType = TypeChecker.findExprType(context, tree);
     assert(Types.isArray(arrType) || Types.isUnion(arrType));
     assert(arrType.assignableTo(oVar.type()));
 

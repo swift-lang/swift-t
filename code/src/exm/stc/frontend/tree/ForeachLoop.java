@@ -49,8 +49,8 @@ public class ForeachLoop {
   private LocalContext loopBodyContext = null;
   private Var loopCountVal = null;
   private Type keyType = null;
-  
-  /** Array member var as future */ 
+
+  /** Array member var as future */
   private Var memberVar = null;
   /** Array member value */
   private Var memberVal = null;
@@ -66,11 +66,11 @@ public class ForeachLoop {
   public int getSplitDegree() {
     return splitDegree;
   }
-  
+
   public int getLeafDegree() {
     return leafDegree;
   }
-  
+
   public List<String> getAnnotations() {
     return Collections.unmodifiableList(annotations);
   }
@@ -82,7 +82,7 @@ public class ForeachLoop {
   public Var getMemberVar() {
     return memberVar;
   }
-  
+
   public Var getMemberVal() {
     return memberVal;
   }
@@ -129,7 +129,7 @@ public class ForeachLoop {
     this.annotations = annotations;
   }
 
-  public static ForeachLoop fromAST(Context context, SwiftAST tree) 
+  public static ForeachLoop fromAST(Context context, SwiftAST tree)
       throws UserException {
     assert (tree.getType() == ExMParser.FOREACH_LOOP);
 
@@ -140,7 +140,7 @@ public class ForeachLoop {
     int splitDegree = DEFAULT_SPLIT_DEGREE;
     int leafDegree = DEFAULT_LEAF_DEGREE;
 
-    
+
     int annotationCount = 0;
     for (int i = tree.getChildCount() - 1; i >= 0; i--) {
       SwiftAST subtree = tree.child(i);
@@ -183,7 +183,7 @@ public class ForeachLoop {
         break;
       }
     }
-    
+
     if (annotations.contains(Annotations.LOOP_NOSPLIT)) {
       // Disable splitting
       splitDegree = -1;
@@ -191,13 +191,13 @@ public class ForeachLoop {
 
     int childCount = tree.getChildCount() - annotationCount;
     assert(childCount == 3 || childCount == 4);
-    
+
     SwiftAST arrayVarTree = tree.child(0);
     SwiftAST loopBodyTree = tree.child(1);
     SwiftAST memberVarTree = tree.child(2);
     assert (memberVarTree.getType() == ExMParser.ID);
     String memberVarName = memberVarTree.getText();
-    
+
     context.checkNotDefined(memberVarName);
 
     String loopCountVarName;
@@ -240,7 +240,7 @@ public class ForeachLoop {
    * returns true for the special case of foreach where we're iterating over a
    * range bounded by integer values e.g. foreach x in [1:10] { ... } or foreach
    * x, i in [f():g():h()] { ... }
-   * 
+   *
    * @return true if it is a range foreach loop
    */
   public boolean iteratesOverRange() {
@@ -249,7 +249,7 @@ public class ForeachLoop {
 
   public Type findArrayType(Context context)
       throws UserException {
-    Type arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
+    Type arrayType = TypeChecker.findExprType(context, arrayVarTree);
     for (Type alt: UnionType.getAlternatives(arrayType)) {
       if (Types.isContainer(alt) || Types.isContainerRef(alt)) {
         return alt;
@@ -273,7 +273,7 @@ public class ForeachLoop {
   /**
    * Initialize the context and define the two variables: for array member and
    * (optionally) for the loop count
-   * 
+   *
    * @param context
    * @param rangeLoop where a range loop or container
    * @param includeIndexFuture if true, initialize the count var
@@ -284,7 +284,7 @@ public class ForeachLoop {
   public Context setupLoopBodyContext(Context context, boolean rangeLoop,
       boolean includeIndexFuture) throws UserException {
     // Set up the context for the loop body with loop variables
-    Type arrayType = findArrayType(context); 
+    Type arrayType = findArrayType(context);
     loopBodyContext = new LocalContext(context);
     if (countVarName != null) {
       if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {

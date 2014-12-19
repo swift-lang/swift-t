@@ -1300,19 +1300,6 @@ public class Types {
     }
 
     /**
-     * Make a tuple that can include 1 field
-     * @param fields
-     * @return
-     */
-    public static TupleType makeDenormalizedTuple(List<Type> fields) {
-      return new TupleType(new ArrayList<Type>(fields));
-    }
-
-    public static TupleType makeDenormalizedTuple(Type ...fields) {
-      return makeDenormalizedTuple(Arrays.asList(fields));
-    }
-
-    /**
      * @return TupleType if multiple fields, or plain type if singular
      */
     public static Type makeTuple(List<Type> fields) {

@@ -20,8 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
@@ -35,7 +35,7 @@ public class Switch {
   private final List<Integer> caseLabels;
   private final boolean hasDefault;
   private final List<SwiftAST> caseBodies;
-  
+
   public int getCaseCount() {
     return caseCount;
   }
@@ -66,14 +66,14 @@ public class Switch {
   }
 
   public void typeCheck(Context context) throws UserException {
-    if (!TypeChecker.findSingleExprType(context, switchExpr).assignableTo(
+    if (!TypeChecker.findExprType(context, switchExpr).assignableTo(
         Types.F_INT)) {
       throw new TypeMismatchException(context, "switch variable must "
            + "be of type int");
     }
 
   }
-  
+
   public static Switch fromAST(Context context, SwiftAST tree) throws UserException {
     assert(tree.getType() == ExMParser.SWITCH_STATEMENT);
 
@@ -84,16 +84,16 @@ public class Switch {
     SwiftAST switchExpr = tree.child(0);
 
     int caseCount = count - 1;
-    
+
     List<SwiftAST> caseBodies = new ArrayList<SwiftAST>(caseCount);
     // All of the integer labels: will be one shorter than casecount if there is
     // a default
     // case
     List<Integer> caseLabels = new ArrayList<Integer>(caseCount);
     Set<Integer> caseLabelSet = new HashSet<Integer>(caseCount);
-    
+
     boolean hasDefault = false;
-    
+
     for (int i = 1; i <= caseCount; i++) {
       SwiftAST thisCase = tree.child(i);
       if (thisCase.getType() == ExMParser.DEFAULT) {
@@ -120,7 +120,7 @@ public class Switch {
         try {
           Integer caseNum = Integer.valueOf(caseStr);
           if (caseLabelSet.contains(caseNum)) {
-            throw new UserException(context, "Duplicate case label " 
+            throw new UserException(context, "Duplicate case label "
                                                   + caseNum);
           }
           caseLabels.add(caseNum);
@@ -132,12 +132,12 @@ public class Switch {
         }
       }
     }
-    
+
     assert((hasDefault && caseLabels.size() + 1 == caseBodies.size())
         || (!hasDefault && caseLabels.size() == caseBodies.size()));
 
-    
-    return new Switch(switchExpr, caseCount, caseLabels, hasDefault, 
+
+    return new Switch(switchExpr, caseCount, caseLabels, hasDefault,
                           caseBodies);
   }
 }

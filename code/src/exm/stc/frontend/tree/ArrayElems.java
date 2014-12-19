@@ -25,7 +25,6 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.WildcardType;
@@ -97,7 +96,7 @@ public class ArrayElems {
    * @return the type of the result
    * @throws UserException
    */
-  public TupleType getType(Context context) throws UserException {
+  public Type getType(Context context) throws UserException {
     // Check to see all arguments have compatible types
     List<SwiftAST> vals = getVals();
 
@@ -118,8 +117,7 @@ public class ArrayElems {
         }
       }
     }
-    return TupleType.makeDenormalizedTuple(
-          UnionType.makeUnion(possibleArrayTypes));
+    return UnionType.makeUnion(possibleArrayTypes);
   }
 
   /**
@@ -150,7 +148,7 @@ public class ArrayElems {
     } else {
       List<Type> valTypes = new ArrayList<Type>(exprs.size());
       for (SwiftAST elem: exprs) {
-        valTypes.add(TypeChecker.findSingleExprType(context, elem));
+        valTypes.add(TypeChecker.findExprType(context, elem));
       }
 
       List<Type> possibleTypes = Types.typeIntersection(valTypes);
