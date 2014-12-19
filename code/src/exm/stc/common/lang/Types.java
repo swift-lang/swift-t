@@ -1278,6 +1278,14 @@ public class Types {
       return fields;
     }
 
+    public int numFields() {
+      return fields.size();
+    }
+
+    public Type getField(int i) {
+      return fields.get(i);
+    }
+
     /**
      * Return the list of fields in tuple, or original type if not a tuple
      * @param type
@@ -1292,13 +1300,26 @@ public class Types {
     }
 
     /**
+     * Make a tuple that can include 1 field
+     * @param fields
+     * @return
+     */
+    public static TupleType makeDenormalizedTuple(List<Type> fields) {
+      return new TupleType(new ArrayList<Type>(fields));
+    }
+
+    public static TupleType makeDenormalizedTuple(Type ...fields) {
+      return makeDenormalizedTuple(Arrays.asList(fields));
+    }
+
+    /**
      * @return TupleType if multiple fields, or plain type if singular
      */
     public static Type makeTuple(List<Type> fields) {
       if (fields.size() == 1) {
         return fields.get(0);
       } else {
-        return new UnionType(new ArrayList<Type>(fields));
+        return new TupleType(new ArrayList<Type>(fields));
       }
     }
 
@@ -2068,60 +2089,6 @@ public class Types {
     public boolean isConcrete() {
       // Should be able to instantiate function in principle
       return true;
-    }
-  }
-
-  /**
-   * Represents expression type.
-   *
-   * Can have multiple elements because of multiple return valued functions
-   */
-  public static class ExprType {
-    private final ArrayList<Type> types;
-
-    public ExprType(List<Type> types) {
-      this.types = new ArrayList<Type>(types);
-    }
-
-    public ExprType(Type exprType) {
-      this.types = new ArrayList<Type>(1);
-      this.types.add(exprType);
-    }
-
-    public List<Type> getTypes() {
-      return Collections.unmodifiableList(types);
-    }
-
-    public Type get(int index) {
-      return types.get(index);
-    }
-
-    public int elems() {
-      return types.size();
-    }
-
-    @Override
-    public String toString() {
-      return types.toString();
-    }
-
-    public String typeName() {
-      if (types.size() == 1) {
-        return types.get(0).typeName();
-      }
-      StringBuilder sb = new StringBuilder();
-      sb.append("(");
-      boolean first = true;
-      for (Type type: types) {
-        if (first) {
-          first = false;
-        } else {
-          sb.append(", ");
-        }
-        sb.append(type.typeName());
-      }
-      sb.append(")");
-      return sb.toString();
     }
   }
 

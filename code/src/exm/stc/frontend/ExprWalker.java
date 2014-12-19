@@ -48,12 +48,12 @@ import exm.stc.common.lang.TaskProp;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
@@ -243,9 +243,9 @@ public class  ExprWalker {
    * @return
    * @throws UserException
    */
-  public List<Var> evalMulti(Context context, SwiftAST tree, ExprType type,
+  public List<Var> evalMulti(Context context, SwiftAST tree, TupleType type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
-    List<Type> types = type.getTypes();
+    List<Type> types = type.getFields();
     int n = types.size();
     assert(n >= 1);
 
@@ -537,7 +537,7 @@ public class  ExprWalker {
     // Use the AST token label to find the actual operator
     MatchedOp opMatch = TypeChecker.getOpFromTree(context, tree, out.type());
     Op op = opMatch.op;
-    List<ExprType> exprTypes = opMatch.exprTypes;
+    List<TupleType> exprTypes = opMatch.exprTypes;
 
     List<OpInputType> inArgs = op.type.in();
     int argcount = inArgs.size();
@@ -550,7 +550,7 @@ public class  ExprWalker {
     ArrayList<Arg> iList = new ArrayList<Arg>(argcount);
     for (int i = 0; i < op_argcount; i++) {
       OpInputType inArg = inArgs.get(i);
-      ExprType exprType = exprTypes.get(i);
+      TupleType exprType = exprTypes.get(i);
       if (inArg.variadic) {
         // Flatten out variadic args list
         List<Var> args =  evalMulti(context, tree.child(i + 1), exprType,
@@ -559,8 +559,8 @@ public class  ExprWalker {
           iList.add(Arg.createVar(arg));
         }
       } else {
-        assert(exprType.elems() == 1);
-        Type type = exprType.get(0);
+        assert(exprType.numFields() == 1);
+        Type type = exprType.getField(0);
 
         // Store into temporary variables
         Var arg = eval(context, tree.child(i + 1), type, false, renames);
