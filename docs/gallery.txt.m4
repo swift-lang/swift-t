@@ -58,6 +58,19 @@ example(mtc/mtc3.swift)
 Note that leading whitespace is trimmed by +file_lines()+, and +cat()+
 is part of the Swift/T standard library in module +unix+.
 
+== Recursion
+
+This script computes the given Fibonacci number:
+
+example(fib/fib.swift)
+
+Run it as:
+
+example(fib/run.sh)
+
+The +sys+ module provides the +argv()+ function, which provides a
+handy key/value interface for input values.
+
 == Python and Numpy
 
 See this section for information about calling Python or Numpy:
