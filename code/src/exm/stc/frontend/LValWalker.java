@@ -16,8 +16,8 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.RefType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitMode;
@@ -61,7 +61,7 @@ public class LValWalker {
   public LRVals prepareLVals(Context context, AssignOp op, List<LValue> lVals,
       SwiftAST rValExpr, WalkMode walkMode)
       throws UserException {
-    ExprType rValTs = TypeChecker.findExprType(context, lVals, rValExpr);
+    TupleType rValTs = TypeChecker.findExprType(context, lVals, rValExpr);
 
     List<LValue> reducedLVals = new ArrayList<LValue>(lVals.size());
 
@@ -75,7 +75,7 @@ public class LValWalker {
 
     for (int i = 0; i < lVals.size(); i++) {
       LValue lVal = lVals.get(i);
-      Type rValType = rValTs.get(i);
+      Type rValType = rValTs.getField(i);
 
       lVal = declareLValueIfNeeded(context, walkMode, lVal, rValType);
 

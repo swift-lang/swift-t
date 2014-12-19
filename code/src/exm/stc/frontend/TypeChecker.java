@@ -38,11 +38,11 @@ import exm.stc.common.lang.Operators.OpInputType;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Types.UnionType;
@@ -75,19 +75,19 @@ public class TypeChecker {
    *                           type variables, and union types.
    * @throws UserException
    */
-  public static ExprType findExprType(Context context, SwiftAST tree)
+  public static TupleType findExprType(Context context, SwiftAST tree)
       throws UserException {
     // Memoize this function to avoid recalculating type
-    ExprType cached = tree.getExprType();
+    TupleType cached = tree.getExprType();
     if (cached != null) {
       LogHelper.trace(context, "Expr has cached type " + cached.toString());
       return cached;
     } else {
-      ExprType calcedType = uncachedFindExprType(context, tree);
+      TupleType calcedType = uncachedFindExprType(context, tree);
       tree.setType(calcedType);
       LogHelper.trace(context, "Expr found type " + calcedType.toString());
 
-      for (Type t: calcedType.getTypes()) {
+      for (Type t: TupleType.getFields(calcedType)) {
         // Log information about non-concrete types
         if (!t.isConcrete()) {
           LogHelper.trace(context, "Non-concrete type to resolve later: " + t);
@@ -106,18 +106,18 @@ public class TypeChecker {
    * @return
    * @throws UserException
    */
-  public static ExprType findExprType(Context context,
+  public static TupleType findExprType(Context context,
                  List<LValue> lVals, SwiftAST rValExpr) throws UserException {
-    ExprType rValTs = TypeChecker.findExprType(context, rValExpr);
-    if (rValTs.elems() != lVals.size()) {
-      throw new TypeMismatchException(context, "Needed " + rValTs.elems()
+    TupleType rValTs = TypeChecker.findExprType(context, rValExpr);
+    if (rValTs.numFields() != lVals.size()) {
+      throw new TypeMismatchException(context, "Needed " + rValTs.numFields()
               + " " + "assignment targets on LHS of assignment, but "
               + lVals.size() + " were present");
     }
     return rValTs;
   }
 
-  private static ExprType uncachedFindExprType(Context context, SwiftAST tree)
+  private static TupleType uncachedFindExprType(Context context, SwiftAST tree)
       throws UserException {
     int token = tree.getType();
     switch (token) {
@@ -133,21 +133,21 @@ public class TypeChecker {
       Type exprType = var.type();
       if (Types.isScalarUpdateable(exprType)) {
         // Can coerce to future
-        return new ExprType(UnionType.createUnionType(exprType,
+        return TupleType.makeDenormalizedTuple(UnionType.createUnionType(exprType,
                             ScalarUpdateableType.asScalarFuture(exprType)));
       }
-      return new ExprType(exprType);
+      return TupleType.makeDenormalizedTuple(exprType);
     }
     case ExMParser.INT_LITERAL:
         // interpret as float
-      return new ExprType(UnionType.createUnionType(Types.F_INT,
+      return TupleType.makeDenormalizedTuple(UnionType.createUnionType(Types.F_INT,
                                                     Types.F_FLOAT));
     case ExMParser.FLOAT_LITERAL:
-      return new ExprType(Types.F_FLOAT);
+      return TupleType.makeDenormalizedTuple(Types.F_FLOAT);
     case ExMParser.STRING_LITERAL:
-      return new ExprType(Types.F_STRING);
+      return TupleType.makeDenormalizedTuple(Types.F_STRING);
     case ExMParser.BOOL_LITERAL:
-      return new ExprType(Types.F_BOOL);
+      return TupleType.makeDenormalizedTuple(Types.F_BOOL);
     case ExMParser.OPERATOR:
       return findOperatorResultType(context, tree);
     case ExMParser.STRUCT_LOAD:
@@ -159,7 +159,7 @@ public class TypeChecker {
       ArrayRange ar = ArrayRange.fromAST(context, tree);
       Type rangeType = ar.rangeType(context);
       // Type is always the same: an array of integers
-      return new ExprType(ArrayType.sharedArray(Types.F_INT, rangeType));
+      return TupleType.makeDenormalizedTuple(ArrayType.sharedArray(Types.F_INT, rangeType));
     }
     case ExMParser.ARRAY_ELEMS:
     case ExMParser.ARRAY_KV_ELEMS: {
@@ -217,12 +217,12 @@ public class TypeChecker {
    */
   public static Type findSingleExprType(Context context, SwiftAST tree)
         throws UserException {
-    ExprType typeL = findExprType(context, tree);
-    if (typeL.elems() != 1) {
+    TupleType typeL = findExprType(context, tree);
+    if (typeL.numFields() != 1) {
       throw new TypeMismatchException(context, "Expected expression to have "
-          + "a single value, instead had " + typeL.elems() + " values");
+          + "a single value, instead had " + typeL.numFields() + " values");
     }
-    return typeL.get(0);
+    return typeL.getField(0);
   }
 
   private static String extractOpName(SwiftAST opTree) {
@@ -235,7 +235,7 @@ public class TypeChecker {
     }
   }
 
-  private static ExprType findOperatorResultType(Context context, SwiftAST tree)
+  private static TupleType findOperatorResultType(Context context, SwiftAST tree)
       throws TypeMismatchException, UserException {
     List<MatchedOp> ops = getOpsFromTree(context, tree, null);
     assert(ops != null);
@@ -246,17 +246,17 @@ public class TypeChecker {
     for (MatchedOp op: ops) {
       alternatives.add(op.op.type.out());
     }
-    return new ExprType(UnionType.makeUnion(alternatives));
+    return TupleType.makeDenormalizedTuple(UnionType.makeUnion(alternatives));
   }
 
   public static class MatchedOp {
     public final Op op;
-    public final List<ExprType> exprTypes;
+    public final List<TupleType> exprTypes;
 
-    public MatchedOp(Op op, List<ExprType> exprTypes) {
+    public MatchedOp(Op op, List<TupleType> exprTypes) {
       this.op = op;
       this.exprTypes = Collections.unmodifiableList(
-                      new ArrayList<ExprType>(exprTypes));
+                      new ArrayList<TupleType>(exprTypes));
     }
   }
 
@@ -269,7 +269,7 @@ public class TypeChecker {
    * @throws UserException
    */
   public static List<MatchedOp> getOpsFromTree(Context context,
-      SwiftAST tree, List<ExprType> argTypes) throws UserException {
+      SwiftAST tree, List<TupleType> argTypes) throws UserException {
     return getOpsFromTree(context, tree, null, argTypes, false);
   }
 
@@ -302,7 +302,7 @@ public class TypeChecker {
    * @throws TypeMismatchException if no matches possible
    */
   private static List<MatchedOp> getOpsFromTree(Context context,
-          SwiftAST tree, Type outType, List<ExprType> outArgTypes,
+          SwiftAST tree, Type outType, List<TupleType> outArgTypes,
           boolean expectUnambig)
           throws UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
@@ -310,7 +310,7 @@ public class TypeChecker {
     int opTok = tree.child(0).getType();
     String opName = extractOpName(tree);
 
-    List<ExprType> argTypes = findOperatorArgTypes(context, tree, opName);
+    List<TupleType> argTypes = findOperatorArgTypes(context, tree, opName);
 
     if (outArgTypes != null) {
       // Store for caller
@@ -331,7 +331,7 @@ public class TypeChecker {
     if (matched.size() != 1) {
       // Hope to match exactly one operator
       List<String> typeNames = new ArrayList<String>();
-      for (ExprType argType: argTypes) {
+      for (TupleType argType: argTypes) {
         typeNames.add(argType.typeName());
       }
       if (matched.size() == 0) {
@@ -354,7 +354,7 @@ public class TypeChecker {
     return matched;
   }
 
-  private static MatchedOp opTypesMatch(Type outType, List<ExprType> argTypes,
+  private static MatchedOp opTypesMatch(Type outType, List<TupleType> argTypes,
       Op candidate) {
     OpType opType = candidate.type;
 
@@ -362,7 +362,7 @@ public class TypeChecker {
       return null;
     }
 
-    List<ExprType> exprTypes = opInputsMatch(argTypes, opType);
+    List<TupleType> exprTypes = opInputsMatch(argTypes, opType);
     if (exprTypes == null) {
       return null;
     }
@@ -375,31 +375,33 @@ public class TypeChecker {
    * @param opType
    * @return list of types that expressions should be evaluated to
    */
-  private static List<ExprType> opInputsMatch(List<ExprType> argTypes, OpType opType) {
+  private static List<TupleType> opInputsMatch(List<TupleType> argTypes,
+                                              OpType opType) {
     if (argTypes.size() != opType.in().size()) {
       return null;
     }
 
-    List<ExprType> result = new ArrayList<ExprType>(argTypes.size());
+    List<TupleType> result = new ArrayList<TupleType>(argTypes.size());
 
     for (int i = 0; i < argTypes.size(); i++) {
       OpInputType in = opType.in().get(i);
-      ExprType argType = argTypes.get(i);
-      if (!in.variadic && argType.elems() != 1) {
+      TupleType argType = argTypes.get(i);
+      if (!in.variadic && argType.numFields() != 1) {
         // Mismatch in arity
         return null;
       }
 
-      List<Type> argResultTypes = new ArrayList<Type>(argType.elems());
+      List<Type> argResultTypes = new ArrayList<Type>(argType.numFields());
 
-      for (int j = 0; j < argType.elems(); j++) {
-        Pair<Type, Type> altType = whichAlternativeType(in.type, argType.get(j), true);
+      for (int j = 0; j < argType.numFields(); j++) {
+        Pair<Type, Type> altType = whichAlternativeType(in.type,
+                                       argType.getField(j), true);
         if (altType == null) {
           return null;
         }
         argResultTypes.add(altType.val2);
       }
-      result.add(new ExprType(argResultTypes));
+      result.add(TupleType.makeDenormalizedTuple(argResultTypes));
     }
     return result;
   }
@@ -424,7 +426,7 @@ public class TypeChecker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private static List<ExprType> findOperatorArgTypes(Context context, SwiftAST tree,
+  private static List<TupleType> findOperatorArgTypes(Context context, SwiftAST tree,
                                                      String opName)
           throws TypeMismatchException, UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
@@ -436,7 +438,7 @@ public class TypeChecker {
           opName);
     }
 
-    List<ExprType> argTypes = new ArrayList<ExprType>(argcount);
+    List<TupleType> argTypes = new ArrayList<TupleType>(argcount);
     for (SwiftAST argTree: tree.children(1)) {
       argTypes.add(findExprType(context, argTree));
     }
@@ -529,7 +531,7 @@ public class TypeChecker {
     return res;
   }
 
-  private static ExprType tuple(Context context, SwiftAST tree) throws UserException {
+  private static TupleType tuple(Context context, SwiftAST tree) throws UserException {
     assert(tree.getType() == ExMParser.TUPLE);
 
     int n = tree.childCount();
@@ -540,23 +542,23 @@ public class TypeChecker {
       Type type = findSingleExprType(context, tree.child(i));
       types.add(type);
     }
-    return new ExprType(types);
+    return TupleType.makeDenormalizedTuple(types);
   }
 
-  private static ExprType callFunction(Context context, SwiftAST tree)
+  private static TupleType callFunction(Context context, SwiftAST tree)
       throws UndefinedFunctionException, UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree, false);
     List<FunctionType> alts = concretiseFunctionCall(context,
               f.function(), f.type(), f.args());
     if (alts.size() == 1) {
       // Function type determined entirely by input type
-      return new ExprType(alts.get(0).getOutputs());
+      return TupleType.makeDenormalizedTuple(alts.get(0).getOutputs());
     } else {
       // Ambiguous type variable binding (based on inputs)
       assert(alts.size() >= 2);
       int numOutputs = f.type().getOutputs().size();
       if (numOutputs == 0) {
-        return new ExprType(Collections.<Type>emptyList());
+        return TupleType.makeDenormalizedTuple();
       } else {
         // Turn into a list of UnionTypes
         List<Type> altOutputs = new ArrayList<Type>();
@@ -567,7 +569,7 @@ public class TypeChecker {
           }
           altOutputs.add(UnionType.makeUnion(altOutput));
         }
-        return new ExprType(altOutputs);
+        return TupleType.makeDenormalizedTuple(altOutputs);
       }
     }
   }
@@ -958,7 +960,7 @@ public class TypeChecker {
     return res;
   }
 
-  private static ExprType arrayLoad(Context context, SwiftAST tree)
+  private static TupleType arrayLoad(Context context, SwiftAST tree)
           throws UserException, TypeMismatchException {
     Type arrType = findSingleExprType(context, tree.child(0));
 
@@ -977,19 +979,19 @@ public class TypeChecker {
                 + arrType.toString());
       }
     }
-    return new ExprType(UnionType.makeUnion(resultAlts));
+    return TupleType.makeDenormalizedTuple(UnionType.makeUnion(resultAlts));
   }
 
-  private static ExprType structLoad(Context context, SwiftAST tree)
+  private static TupleType structLoad(Context context, SwiftAST tree)
           throws UserException, TypeMismatchException {
-    ExprType structTypeL = findExprType(context, tree.child(0));
+    TupleType structTypeL = findExprType(context, tree.child(0));
     String fieldName = tree.child(1).getText();
-    if (structTypeL.elems() != 1) {
+    if (structTypeL.numFields() != 1) {
       throw new TypeMismatchException(context,
           "Trying to lookup field on return value of function with"
               + " zero or multiple return values");
     }
-    Type structType = structTypeL.get(0);
+    Type structType = structTypeL.getField(0);
     Type fieldType;
     fieldType = findStructFieldType(context, fieldName, structType);
 
@@ -1000,10 +1002,10 @@ public class TypeChecker {
     }
     if (Types.isStruct(structType)) {
       // Look up immediately
-      return new ExprType(fieldType);
+      return TupleType.makeDenormalizedTuple(fieldType);
     } else { assert(Types.isStructRef(structType));
       // Will get copy
-      return new ExprType(VarRepr.containerElemRepr(fieldType, false));
+      return TupleType.makeDenormalizedTuple(VarRepr.containerElemRepr(fieldType, false));
     }
   }
 

@@ -25,23 +25,23 @@ import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Types.ExprType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.frontend.VariableUsageInfo;
 
 /**
- * A custom tree class for the Swift AST with slots to store semantic info 
+ * A custom tree class for the Swift AST with slots to store semantic info
  * about Swift script
  *
  */
 public class SwiftAST extends CommonTree {
-  
-  private ExprType exprType = null;
+
+  private TupleType exprType = null;
   private VariableUsageInfo variableUsage = null;
-  
+
   public VariableUsageInfo getVariableUsage() {
     return variableUsage;
   }
-  
+
   public VariableUsageInfo checkedGetVariableUsage() {
     if (variableUsage == null) {
       throw new STCRuntimeError("Lookup of saved variable usage info"
@@ -55,23 +55,23 @@ public class SwiftAST extends CommonTree {
     this.variableUsage = variableUsage;
   }
 
-  public ExprType getExprType() {
+  public TupleType getExprType() {
     return exprType;
   }
 
-  public void setType(ExprType exprType) {
+  public void setType(TupleType exprType) {
     this.exprType = exprType;
   }
-  
+
   /**
    * Shorter alternative to getChildCount()
    */
   public int childCount() {
     return getChildCount();
   }
-  
+
   /**
-   * alternative to getChild so we can avoid having the cast to 
+   * alternative to getChild so we can avoid having the cast to
    * SwiftAST everywhere
    */
   public SwiftAST child(int i) {
@@ -83,9 +83,9 @@ public class SwiftAST extends CommonTree {
     if (children == null) {
       return Collections.emptyList();
     }
-    return (List<SwiftAST>)(List)(this.children);
+    return (List)(this.children);
   }
-  
+
   public List<SwiftAST> children(int start) {
     // Return empty list if nothing in range
     if (childCount() <= start) {
@@ -93,7 +93,7 @@ public class SwiftAST extends CommonTree {
     }
     return children().subList(start, children.size());
   }
-  
+
   public List<SwiftAST> children(int start, int end) {
     return children().subList(start, end);
   }
@@ -101,7 +101,7 @@ public class SwiftAST extends CommonTree {
   public SwiftAST(Token t) {
     super(t);
   }
-  
+
   public String printTree() {
     StringWriter sw = new StringWriter();
     PrintWriter writer = new PrintWriter(sw);
@@ -126,7 +126,7 @@ public class SwiftAST extends CommonTree {
   public void resetAnnotations() {
     ArrayList<SwiftAST> stack = new ArrayList<SwiftAST>();
     stack.add(this);
-    
+
     while (!stack.isEmpty()) {
       SwiftAST tree = stack.remove(stack.size() - 1);
       tree.exprType = null;
@@ -134,5 +134,5 @@ public class SwiftAST extends CommonTree {
       stack.addAll(tree.children());
     }
   }
-  
+
 }

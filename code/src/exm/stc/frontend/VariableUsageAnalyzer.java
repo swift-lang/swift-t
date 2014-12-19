@@ -32,7 +32,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.ExprType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -356,7 +356,7 @@ class VariableUsageAnalyzer {
                     assignments.getMatchedAssignments(context)) {
       List<LValue> lVals = assign.val1;
       SwiftAST rVal = assign.val2;
-      ExprType rValTs = TypeChecker.findExprType(context, lVals, rVal);
+      TupleType rValTs = TypeChecker.findExprType(context, lVals, rVal);
 
       // Walk the rval expression to add in reads
       walkExpr(context, vu, rVal);
@@ -366,7 +366,7 @@ class VariableUsageAnalyzer {
         syncFilePos(context, lVal.tree);
         if (lVal.var == null) {
           // Auto-declare variable
-          lVal = lVal.varDeclarationNeeded(context, rValTs.get(i));
+          lVal = lVal.varDeclarationNeeded(context, rValTs.getField(i));
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(),

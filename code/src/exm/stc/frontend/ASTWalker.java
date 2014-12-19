@@ -59,13 +59,13 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
@@ -1409,11 +1409,11 @@ public class ASTWalker {
     assert (tree.getChildCount() == 1);
     SwiftAST expr = tree.child(0);
 
-    ExprType exprType = TypeChecker.findExprType(context, expr);
+    TupleType exprType = TypeChecker.findExprType(context, expr);
 
     // Need to create throwaway temporaries for return values
     List<Var> oList = new ArrayList<Var>();
-    for (Type t : exprType.getTypes()) {
+    for (Type t: TupleType.getFields(exprType)) {
       t = Types.concretiseArbitrarily(t);
       oList.add(varCreator.createTmp(context, t));
     }

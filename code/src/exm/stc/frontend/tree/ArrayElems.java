@@ -25,7 +25,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.Types.ExprType;
+import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.WildcardType;
@@ -33,11 +33,11 @@ import exm.stc.frontend.Context;
 import exm.stc.frontend.TypeChecker;
 
 public class ArrayElems {
-  
+
   // Keys. null if keys not specified
   private final ArrayList<SwiftAST> keys;
   private final ArrayList<SwiftAST> values;
-  
+
   public boolean hasKeys() {
     return keys != null;
   }
@@ -50,7 +50,7 @@ public class ArrayElems {
   public List<SwiftAST> getVals() {
     return Collections.unmodifiableList(values);
   }
-  
+
   public int getElemCount() {
     return values.size();
   }
@@ -58,20 +58,20 @@ public class ArrayElems {
   public SwiftAST getVal(int i) {
     return values.get(i);
   }
-  
+
   /**
-   * Constructor when keys not specified. 
+   * Constructor when keys not specified.
    * @param values
    */
   public ArrayElems(ArrayList<SwiftAST> values) {
     this (null, values);
   }
-  
+
   public ArrayElems(ArrayList<SwiftAST> keys, ArrayList<SwiftAST> values) {
     this.keys = keys;
     this.values = values;
   }
-  
+
   public static ArrayElems fromAST(Context context, SwiftAST tree) {
     if (tree.getType() == ExMParser.ARRAY_ELEMS) {
       ArrayList<SwiftAST> vals = new ArrayList<SwiftAST>(tree.getChildCount());
@@ -95,9 +95,9 @@ public class ArrayElems {
 
   /**
    * @return the type of the result
-   * @throws UserException 
+   * @throws UserException
    */
-  public ExprType getType(Context context) throws UserException {
+  public TupleType getType(Context context) throws UserException {
     // Check to see all arguments have compatible types
     List<SwiftAST> vals = getVals();
 
@@ -118,7 +118,8 @@ public class ArrayElems {
         }
       }
     }
-    return new ExprType(UnionType.makeUnion(possibleArrayTypes));
+    return TupleType.makeDenormalizedTuple(
+          UnionType.makeUnion(possibleArrayTypes));
   }
 
   /**
@@ -143,7 +144,7 @@ public class ArrayElems {
 
   private List<Type> findCompatibleTypes(Context context, List<SwiftAST> exprs)
       throws UserException, TypeMismatchException {
-    
+
     if (exprs.size() == 0) {
       return Collections.<Type>singletonList(new WildcardType());
     } else {
@@ -151,7 +152,7 @@ public class ArrayElems {
       for (SwiftAST elem: exprs) {
         valTypes.add(TypeChecker.findSingleExprType(context, elem));
       }
-      
+
       List<Type> possibleTypes = Types.typeIntersection(valTypes);
       if (possibleTypes.size() == 0) {
         throw new TypeMismatchException(context, "Elements in array" +
