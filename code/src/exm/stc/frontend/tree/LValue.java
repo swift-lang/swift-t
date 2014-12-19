@@ -294,7 +294,7 @@ public class LValue {
 
     for (int i = 0; i < arrayDepth; i++) {
       SwiftAST keyExpr = indices.get(i).child(0);
-      Type keyType = TypeChecker.findSingleExprType(context, keyExpr);
+      Type keyType = TypeChecker.findExprType(context, keyExpr);
       keyType = Types.concretiseArbitrarily(keyType);
       declType = ArrayType.sharedArray(keyType, declType);
     }

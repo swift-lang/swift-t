@@ -38,8 +38,8 @@ public class Update {
   private final Var target;
   private final SwiftAST expr;
   private final Operators.UpdateMode mode;
-  
-  
+
+
   public Var getTarget() {
     return target;
   }
@@ -60,42 +60,42 @@ public class Update {
   public Type typecheck(Context context) throws UserException {
     Type expected = ScalarUpdateableType.asScalarFuture(
                             this.target.type());
-    
-    Type exprType = TypeChecker.findSingleExprType(context, expr);
+
+    Type exprType = TypeChecker.findExprType(context, expr);
     if (exprType.assignableTo(expected)) {
       return expected;
     } else {
       throw new TypeMismatchException(context, "in update of variable "
           + target.name() + " with type " + target.type().typeName()
-          + " expected expression of type " + expected.typeName() 
+          + " expected expression of type " + expected.typeName()
           + " but got expression of type " + exprType);
     }
   }
-  
-  public static Update fromAST(Context context, SwiftAST tree) 
+
+  public static Update fromAST(Context context, SwiftAST tree)
           throws UserException {
     assert(tree.getType() == ExMParser.UPDATE);
     assert(tree.getChildCount() == 3);
     SwiftAST cmd = tree.child(0);
     SwiftAST var = tree.child(1);
     SwiftAST expr = tree.child(2);
-    
+
     assert(cmd.getType() == ExMParser.ID);
     assert(var.getType() == ExMParser.ID);
-    
-    
+
+
     Operators.UpdateMode mode = Operators.UpdateMode.fromString(context, cmd.getText());
     assert(mode != null);
-    
+
     Var v = context.lookupVarUser(var.getText());
-    
+
     if (!Types.isPrimUpdateable(v.type())) {
       throw new TypeMismatchException(context, "can only update" +
           " updateable variables: variable " + v.name() + " had " +
           " type " + v.type().typeName());
     }
-    
+
     return new Update(v, expr, mode);
   }
-                                
+
 }

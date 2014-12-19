@@ -25,7 +25,7 @@ import org.antlr.runtime.Token;
 import org.antlr.runtime.tree.CommonTree;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.Types.TupleType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.VariableUsageInfo;
 
 /**
@@ -35,7 +35,7 @@ import exm.stc.frontend.VariableUsageInfo;
  */
 public class SwiftAST extends CommonTree {
 
-  private TupleType exprType = null;
+  private Type exprType = null;
   private VariableUsageInfo variableUsage = null;
 
   public VariableUsageInfo getVariableUsage() {
@@ -55,11 +55,11 @@ public class SwiftAST extends CommonTree {
     this.variableUsage = variableUsage;
   }
 
-  public TupleType getExprType() {
+  public Type getExprType() {
     return exprType;
   }
 
-  public void setType(TupleType exprType) {
+  public void setType(Type exprType) {
     this.exprType = exprType;
   }
 

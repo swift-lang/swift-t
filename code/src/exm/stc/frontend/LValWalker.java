@@ -61,7 +61,8 @@ public class LValWalker {
   public LRVals prepareLVals(Context context, AssignOp op, List<LValue> lVals,
       SwiftAST rValExpr, WalkMode walkMode)
       throws UserException {
-    TupleType rValTs = TypeChecker.findExprType(context, lVals, rValExpr);
+    Type rValT = TypeChecker.findExprType(context, lVals, rValExpr);
+    List<Type> rValFields = TupleType.getFields(rValT);
 
     List<LValue> reducedLVals = new ArrayList<LValue>(lVals.size());
 
@@ -75,7 +76,7 @@ public class LValWalker {
 
     for (int i = 0; i < lVals.size(); i++) {
       LValue lVal = lVals.get(i);
-      Type rValType = rValTs.getField(i);
+      Type rValType = rValFields.get(i);
 
       lVal = declareLValueIfNeeded(context, walkMode, lVal, rValType);
 
@@ -550,8 +551,7 @@ public class LValWalker {
     assert (indexExpr.getType() == ExMParser.ARRAY_PATH);
     assert (indexExpr.getChildCount() == 1);
     // Typecheck index expression
-    Type indexType = TypeChecker.findSingleExprType(context,
-                                             indexExpr.child(0));
+    Type indexType = TypeChecker.findExprType(context, indexExpr.child(0));
     if (!Types.isArrayKeyFuture(array, indexType)) {
       throw new TypeMismatchException(context,
           "Array key type mismatch in LVal.  " +

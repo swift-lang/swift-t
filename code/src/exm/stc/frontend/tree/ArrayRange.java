@@ -71,14 +71,14 @@ public class ArrayRange {
   public Type rangeType(Context context) throws UserException {
     List<Pair<String, Type>> types = new ArrayList<Pair<String, Type>>();
 
-    Type startT = TypeChecker.findSingleExprType(context, start);
+    Type startT = TypeChecker.findExprType(context, start);
     types.add(Pair.create("start", startT));
 
-    Type endT = TypeChecker.findSingleExprType(context, end);
+    Type endT = TypeChecker.findExprType(context, end);
     types.add(Pair.create("end", endT));
 
     if (step != null) {
-      Type stepT = TypeChecker.findSingleExprType(context, step);
+      Type stepT = TypeChecker.findExprType(context, step);
       types.add(Pair.create("step", stepT));
     }
 

@@ -193,7 +193,7 @@ public class ForLoopDescriptor {
         throw new UserException(context, "loop variable " + v.name()
             + " does not have an initial value");
       }
-      Type initExprType = TypeChecker.findSingleExprType(context, initExpr);
+      Type initExprType = TypeChecker.findExprType(context, initExpr);
       TypeChecker.checkSingleAssignment(context, initExprType, v.type(),
                                         v.name());
     }
@@ -201,7 +201,7 @@ public class ForLoopDescriptor {
 
   public void validateCond(Context afterInitContext) throws UserException {
     //check condition type
-    Type condType = TypeChecker.findSingleExprType(afterInitContext,
+    Type condType = TypeChecker.findExprType(afterInitContext,
                                                                   condition);
     if ((!Types.isBool(condType)) && (!Types.isInt(condType))) {
       throw new TypeMismatchException(afterInitContext, "for loop condition "
@@ -223,7 +223,7 @@ public class ForLoopDescriptor {
         throw new UserException(loopBodyContext, "loop variable " + v.name()
             + " must be updated between iterations");
       }
-      Type upExprType = TypeChecker.findSingleExprType(loopBodyContext,
+      Type upExprType = TypeChecker.findExprType(loopBodyContext,
                                                             upExpr);
       TypeChecker.checkSingleAssignment(loopBodyContext, upExprType, v.type(),
                                         v.name());

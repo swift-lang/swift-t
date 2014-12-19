@@ -623,7 +623,7 @@ public class ASTWalker {
     Wait wait = Wait.fromAST(context, tree);
     ArrayList<Var> waitEvaled = new ArrayList<Var>();
     for (SwiftAST expr: wait.getWaitExprs()) {
-      Type waitExprType = TypeChecker.findSingleExprType(context, expr);
+      Type waitExprType = TypeChecker.findExprType(context, expr);
       if (Types.isUnion(waitExprType)) {
         // Choose first alternative type
         for (Type alt: UnionType.getAlternatives(waitExprType)) {
@@ -1091,7 +1091,7 @@ public class ASTWalker {
     // Create context with loop variables
     Context loopIterContext = forLoop.createIterationContext(context);
     forLoop.validateCond(loopIterContext);
-    Type condType = TypeChecker.findSingleExprType(loopIterContext,
+    Type condType = TypeChecker.findExprType(loopIterContext,
                                               forLoop.getCondition());
 
     // Evaluate the conditional expression for the first iteration outside the
@@ -1211,7 +1211,7 @@ public class ASTWalker {
     block(bodyContext, loop.getBody());
 
     // Check the condition type now that all loop body vars have been declared
-    Type condType = TypeChecker.findSingleExprType(iterContext,
+    Type condType = TypeChecker.findExprType(iterContext,
         loop.getCond());
     if (!condType.assignableTo(Types.F_BOOL)) {
       throw new TypeMismatchException(bodyContext,
@@ -1245,7 +1245,7 @@ public class ASTWalker {
       Var v = forLoop.getLoopVars().get(i).var;
       Type argType = v.type();
       SwiftAST expr = loopVarExprs.get(v.name());
-      Type exprType = TypeChecker.findSingleExprType(context, expr);
+      Type exprType = TypeChecker.findExprType(context, expr);
       exprType = TypeChecker.checkSingleAssignment(context, exprType,
                                              argType,v.name());
       results.add(exprWalker.eval(context, expr, exprType, false, null));
@@ -1332,7 +1332,7 @@ public class ASTWalker {
     // First evaluate the mapping expr
     if (vDesc.getMappingExpr() != null) {
       if (Types.isMappable(vDesc.getType())) {
-        Type mapType = TypeChecker.findSingleExprType(context,
+        Type mapType = TypeChecker.findExprType(context,
                                           vDesc.getMappingExpr());
         if (!Types.isString(mapType)) {
           throw new TypeMismatchException(context, "Tried to map using " +
@@ -1409,7 +1409,7 @@ public class ASTWalker {
     assert (tree.getChildCount() == 1);
     SwiftAST expr = tree.child(0);
 
-    TupleType exprType = TypeChecker.findExprType(context, expr);
+    Type exprType = TypeChecker.findExprType(context, expr);
 
     // Need to create throwaway temporaries for return values
     List<Var> oList = new ArrayList<Var>();
@@ -2064,7 +2064,7 @@ public class ASTWalker {
       String redirTypeName = LogHelper.tokName(redirType.getType());
 
       // Now typecheck
-      Type type = TypeChecker.findSingleExprType(context, redirExpr);
+      Type type = TypeChecker.findExprType(context, redirExpr);
       // TODO: maybe could have plain string for filename, e.g. /dev/null?
       if (!Types.isFile(type)) {
         throw new TypeMismatchException(context, "Invalid type for" +
@@ -2249,7 +2249,7 @@ public class ASTWalker {
         }
         args.add(file);
       } else {
-        Type exprType = TypeChecker.findSingleExprType(context, cmdArg);
+        Type exprType = TypeChecker.findExprType(context, cmdArg);
         Type baseType = exprType; // Type after expanding arrays
         while (true) {
           // Iteratively reduce until we get base type
@@ -2477,7 +2477,7 @@ public class ASTWalker {
     SwiftAST val = vd.getVarExpr(0);
     assert(val != null);
 
-    Type valType = TypeChecker.findSingleExprType(context, val);
+    Type valType = TypeChecker.findExprType(context, val);
     if (!valType.assignableTo(v.type())) {
       throw new TypeMismatchException(context, "trying to assign expression "
           + " of type " + valType.typeName() + " to global constant "
