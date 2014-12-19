@@ -1263,6 +1263,249 @@ public class Types {
   }
 
   /**
+   * A type with multiple fields.
+   */
+  public static class TupleType extends Type {
+    private final List<Type> fields;
+
+    private TupleType(ArrayList<Type> alts) {
+      // Shouldn't have single-element union type
+      assert(alts.size() != 1);
+      this.fields = Collections.unmodifiableList(alts);
+    }
+
+    public List<Type> getFields() {
+      return fields;
+    }
+
+    /**
+     * Return the list of fields in tuple, or original type if not a tuple
+     * @param type
+     * @return
+     */
+    public static List<Type> getFields(Type type) {
+      if (isTuple(type)) {
+        return ((TupleType)type).getFields();
+      } else {
+        return Collections.singletonList(type);
+      }
+    }
+
+    /**
+     * @return TupleType if multiple fields, or plain type if singular
+     */
+    public static Type makeTuple(List<Type> fields) {
+      if (fields.size() == 1) {
+        return fields.get(0);
+      } else {
+        return new UnionType(new ArrayList<Type>(fields));
+      }
+    }
+
+    public static Type makeTuple(Type ...fields) {
+      return makeTuple(Arrays.asList(fields));
+    }
+
+    @Override
+    public StructureType structureType() {
+      return StructureType.TUPLE;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      sb.append("(");
+      for (Type field: fields) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append(",");
+        }
+        sb.append(field.toString());
+      }
+      sb.append(")");
+      return sb.toString();
+    }
+
+    @Override
+    public String typeName() {
+      StringBuilder sb = new StringBuilder();
+      boolean first = true;
+      sb.append("(");
+      for (Type field: fields) {
+        if (first) {
+          first = false;
+        } else {
+          sb.append(",");
+        }
+        sb.append(field.typeName());
+      }
+      sb.append(")");
+      return sb.toString();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof Type)) {
+        throw new STCRuntimeError("Comparing TupleType " +
+            "with non-type object");
+      }
+      Type otherT = (Type) other;
+      if (otherT.structureType() != StructureType.TUPLE) {
+        return false;
+      } else {
+        TupleType otherTT = (TupleType)otherT;
+        // Sets must be same size
+        if (this.fields.size() != otherTT.fields.size()) {
+          return false;
+        }
+
+        // Check members are the same
+        for (int i = 0; i < this.fields.size(); i++) {
+          Type field1 = this.fields.get(i);
+          Type field2 = otherTT.fields.get(i);
+          if (!field1.equals(field2)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+
+    @Override
+    public boolean assignableTo(Type other) {
+      if (isTuple(other)) {
+        TupleType otherTT = (TupleType)other;
+        // Check fields
+        if (this.fields.size() != otherTT.fields.size()) {
+          return false;
+        }
+        for (int i = 0; i < fields.size(); i++) {
+          if (!this.fields.get(i).assignableTo(otherTT.fields.get(i))) {
+            return false;
+          }
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      int hash = TupleType.class.hashCode();
+      for (Type field: fields) {
+        hash = hash * 13 + field.hashCode();
+      }
+      return hash;
+    }
+
+    @Override
+    public Type bindTypeVars(Map<String, Type> vals) {
+      ArrayList<Type> boundFields = new ArrayList<Type>(fields.size());
+      for (Type field: fields) {
+        boundFields.add(field.bindTypeVars(vals));
+      }
+      return new TupleType(boundFields);
+    }
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      ArrayList<Type> boundFields = new ArrayList<Type>(fields.size());
+      for (Type field: fields) {
+        boundFields.add(field.bindAllTypeVars(type));
+      }
+      return new TupleType(boundFields);
+    }
+
+    @Override
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      if (!Types.isTuple(concrete)) {
+        return null;
+      }
+      TupleType concreteTT = (TupleType)concrete;
+      if (this.fields.size() != concreteTT.fields.size()) {
+        return null;
+      }
+
+      Map<String, Type> tvs = new HashMap<String, Type>();
+
+      for (int i = 0; i < this.fields.size(); i++) {
+        Type field = this.fields.get(i);
+        Type concreteField = concreteTT.fields.get(i);
+
+        Map<String, Type> fieldTVs = field.matchTypeVars(concreteField);
+        if (fieldTVs == null) {
+          return null;
+        }
+        tvs.putAll(fieldTVs);
+      }
+
+      return tvs;
+    }
+
+    @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      assert(Types.isTuple(concrete));
+      TupleType concreteTT = (TupleType)concrete;
+      assert(concreteTT.fields.size() == this.fields.size());
+      boolean differences = false;
+
+      // Assume could be alt types etc in fields
+      List<Type> concreteFields = new ArrayList<Type>(this.fields.size());
+      for (int i = 0; i < fields.size(); i++) {
+        Type field = this.fields.get(i);
+        Type concreteField = field.concretize(concreteTT.fields.get(i));
+        if (concreteField != field) {
+          differences = true;
+        }
+        concreteFields.add(concreteField);
+      }
+
+      // Don't create new type unless needed
+      return differences ? TupleType.makeTuple(concreteFields) : this;
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      for (Type field: fields) {
+        if (field.hasTypeVar()) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public Type getImplType() {
+      boolean differences = false;
+      ArrayList<Type> implFields = new ArrayList<Type>(this.fields.size());
+      for (Type field: fields) {
+        Type fieldImpl = field.getImplType();
+        implFields.add(fieldImpl);
+        if (fieldImpl != field) {
+          differences = true;
+        }
+      }
+
+      // Avoid creating identical type objects
+      return differences ? new TupleType(implFields) : this;
+    }
+
+    @Override
+    public boolean isConcrete() {
+      for (Type field: fields) {
+        if (!field.isConcrete()) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
+  /**
    * A type variable that represents a wildcard type
    */
   public static class TypeVariable extends Type {
@@ -1474,6 +1717,7 @@ public class Types {
     TYPE_VARIABLE,
     WILDCARD,
     TYPE_UNION,
+    TUPLE,
     FUNCTION,
   }
 
@@ -2577,6 +2821,10 @@ public class Types {
 
   public static boolean isUnion(Typed type) {
     return type.type().structureType() == StructureType.TYPE_UNION;
+  }
+
+  public static boolean isTuple(Typed type) {
+    return type.type().structureType() == StructureType.TUPLE;
   }
 
   public static boolean isTypeVar(Typed type) {
