@@ -52,6 +52,8 @@ import exm.stc.common.lang.Var.VarProvenance;
  */
 public abstract class Context {
 
+  public static final int ROOT_LEVEL = 0;
+
   /**
    * How many levels from root: 0 if this is the root
    */
@@ -131,12 +133,27 @@ public abstract class Context {
    * @param type
    */
   protected void addDef(String name, DefKind kind) {
-    allDefs.put(name, new DefInfo(kind, inputFile, line, col));
+    allDefs.put(name, new DefInfo(kind, level, inputFile, line, col));
   }
 
-  public void checkNotDefined(String name) throws DoubleDefineException {
+  /**
+   * Check if there are any conflicting definitions for a new def
+   * @param name
+   * @throws DoubleDefineException
+   */
+  public void checkDefConflict(DefKind newDefKind, String name) throws DoubleDefineException {
     DefInfo def = lookupDef(name);
     if (def != null) {
+      /* Conflicts (e.g. shadowing, two declarations in same context) are not
+       * allowed, with exceptions:
+       */
+      if (newDefKind == DefKind.VARIABLE && this.level > ROOT_LEVEL &&
+          def.kind == DefKind.FUNCTION && def.level == ROOT_LEVEL) {
+        /* A global function def and a local variable def */
+        return;
+      }
+
+      // Not allowed
       String loc = buildLocationString(def.file, def.line, def.col, false);
       throw new DoubleDefineException(this, def.kind.humanReadable() +
           " called " + name + " already defined at " + loc);
@@ -171,7 +188,7 @@ public abstract class Context {
   public Var declareVariable(Var variable)
           throws DoubleDefineException {
     String name = variable.name();
-    checkNotDefined(name);
+    checkDefConflict(DefKind.VARIABLE, name);
 
     variables.put(name, variable);
     DefKind kind;
@@ -403,7 +420,7 @@ public abstract class Context {
 
   public void defineType(String typeName, Type newType)
       throws DoubleDefineException {
-    checkNotDefined(typeName);
+    checkDefConflict(DefKind.TYPE, typeName);
     types.put(typeName, newType);
     addDef(typeName, DefKind.TYPE);
   }
@@ -495,14 +512,15 @@ public abstract class Context {
    * Information about a definition
    */
   public static class DefInfo {
-    public DefInfo(DefKind kind, String file, int line, int col) {
-      super();
+    public DefInfo(DefKind kind, int level, String file, int line, int col) {
       this.kind = kind;
+      this.level = level;
       this.file = file;
       this.line = line;
       this.col = col;
     }
     public final DefKind kind;
+    public final int level; /* Context level */
     public final String file;
     public final int line;
     public final int col;

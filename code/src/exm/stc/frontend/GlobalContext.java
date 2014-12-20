@@ -97,7 +97,7 @@ public class GlobalContext extends Context {
   @Override
   public void defineFunction(String name, FunctionType type)
       throws UserException {
-    checkNotDefined(name);
+    checkDefConflict(DefKind.FUNCTION, name);
     declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
                     VarProvenance.userVar(getSourceLoc()), false);
   }

@@ -184,8 +184,6 @@ public class ForLoopDescriptor {
               "Variable wasn't declared in for loop initializer, and wasn't" +
               "declared outside of loop");
         }
-      } else {
-        context.checkNotDefined(v.name());
       }
 
       SwiftAST initExpr = initExprs.get(v.name());

@@ -196,14 +196,11 @@ public class ForeachLoop {
     assert (memberVarTree.getType() == ExMParser.ID);
     String memberVarName = memberVarTree.getText();
 
-    context.checkNotDefined(memberVarName);
-
     String loopCountVarName;
     if (childCount == 4 && tree.child(3).getType() != ExMParser.ANNOTATION) {
       SwiftAST loopCountTree = tree.child(3);
       assert (loopCountTree.getType() == ExMParser.ID);
       loopCountVarName = loopCountTree.getText();
-      context.checkNotDefined(loopCountVarName);
     } else {
       loopCountVarName = null;
     }
