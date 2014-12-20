@@ -40,7 +40,8 @@ public class Literals {
     } else if (tree.getType() == ExMParser.OPERATOR
         && tree.getChildCount() == 2
         && tree.child(1).getType() == ExMParser.INT_LITERAL) {
-      return parseIntToken(context, tree.child(1).child(0));
+      long posValue = parseIntToken(context, tree.child(1).child(0));
+      return -posValue;
     } else {
       return null;
     }
