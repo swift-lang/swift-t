@@ -28,18 +28,19 @@ public class Literals {
    *
    * @param context
    * @param tree
-   * @return null if tree isn't a literal, the value otherwise
+   * @return value of int literal , null if it's some other kind of AST node
+   * @throws InvalidSyntaxException if its an invalid int literal
    */
-  public static Long extractIntLit(Context context, SwiftAST tree) {
+  public static Long extractIntLit(Context context, SwiftAST tree)
+      throws InvalidSyntaxException {
     // Literals are either represented as a plain non-negative literal,
     // or the unary negation operator applied to a literal
     if (tree.getType() == ExMParser.INT_LITERAL) {
-      return parseIntToken(tree.child(0));
+      return parseIntToken(context, tree.child(0));
     } else if (tree.getType() == ExMParser.OPERATOR
         && tree.getChildCount() == 2
         && tree.child(1).getType() == ExMParser.INT_LITERAL) {
-      long posValue = parseIntToken(tree.child(1).child(0));
-      return -posValue;
+      return parseIntToken(context, tree.child(1).child(0));
     } else {
       return null;
     }
@@ -48,14 +49,32 @@ public class Literals {
   /**
    * Parse token with correct radix, etc
    * @param tree
-   * @return
+   * @return null if parse unsuccessful
+   * @throws InvalidSyntaxException
    */
-  public static long parseIntToken(SwiftAST tree) {
+  public static Long parseIntToken(Context context, SwiftAST tree)
+      throws InvalidSyntaxException {
     switch(tree.getType()) {
       case ExMParser.DECIMAL_INT:
-        return Long.parseLong(tree.getText(), 10);
+        return parseIntLiteral(context, tree.getText(), 10, "decimal");
+      case ExMParser.HEX_INT:
+        // Strip 0x
+        return parseIntLiteral(context, tree.getText().substring(2), 16, "hexadecimal");
+      case ExMParser.OCTAL_INT:
+        // Strip 0o
+        return parseIntLiteral(context, tree.getText().substring(2), 8, "octal");
       default:
-        throw new STCRuntimeError("Bad Token:" + LogHelper.tokName(tree.getType()));
+        throw new STCRuntimeError("Bad token: " + LogHelper.tokName(tree.getType()));
+    }
+  }
+
+  private static Long parseIntLiteral(Context context, String number, int base,
+              String literalType) throws InvalidSyntaxException {
+    try {
+      return Long.parseLong(number, base);
+    } catch (NumberFormatException e) {
+      throw new InvalidSyntaxException(context, "Invalid " + literalType +
+                                       " literal: " + number);
     }
   }
 

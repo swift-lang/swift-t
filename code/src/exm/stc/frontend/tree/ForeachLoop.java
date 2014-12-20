@@ -151,7 +151,7 @@ public class ForeachLoop {
               || key.equals(Annotations.LOOP_SPLIT_DEGREE)
               || key.equals(Annotations.LOOP_LEAF_DEGREE)) {
             boolean posint = false;
-            long val = Literals.parseIntToken(subtree.child(1));
+            long val = Literals.parseIntToken(context, subtree.child(1));
             if (val > 0) {
               posint = true;
               if (key.equals(Annotations.LOOP_UNROLL)) {
