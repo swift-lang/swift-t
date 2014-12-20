@@ -33,6 +33,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidConstructException;
+import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -1296,7 +1297,7 @@ public class ASTWalker {
 
 
   private void initUpdateableVar(Context context, Var var,
-                                                SwiftAST initExpr) {
+           SwiftAST initExpr) throws InvalidSyntaxException {
     if (initExpr != null) {
       // Handle as special case because currently we need an initial
       // value for the updateable variable right away
