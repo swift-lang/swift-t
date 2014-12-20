@@ -4,8 +4,9 @@
   x = y;
 }
 
+
+// Check can't define conflicting variable
+global const int trace2 = 3;
 main {
-  // Check can't define conflicting variable
-  int trace2 = 3;
   trace(trace2);
 }
