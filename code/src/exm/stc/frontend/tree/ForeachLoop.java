@@ -151,20 +151,18 @@ public class ForeachLoop {
               || key.equals(Annotations.LOOP_SPLIT_DEGREE)
               || key.equals(Annotations.LOOP_LEAF_DEGREE)) {
             boolean posint = false;
-            if (subtree.child(1).getType() == ExMParser.INTEGER) {
-              int val = Integer.parseInt(subtree.child(1).getText());
-              if (val > 0) {
-                posint = true;
-                if (key.equals(Annotations.LOOP_UNROLL)) {
-                  unrollFactor = val;
-                } else if (key.equals(Annotations.LOOP_SPLIT_DEGREE)) {
-                  splitDegree = val;
-                } else {
-                  assert(key.equals(Annotations.LOOP_LEAF_DEGREE));
-                  leafDegree = val;
-                }
-                annotationCount++;
+            long val = Literals.parseIntToken(subtree.child(1));
+            if (val > 0) {
+              posint = true;
+              if (key.equals(Annotations.LOOP_UNROLL)) {
+                unrollFactor = (int)Math.min(Integer.MAX_VALUE, val);
+              } else if (key.equals(Annotations.LOOP_SPLIT_DEGREE)) {
+                splitDegree = (int)Math.min(Integer.MAX_VALUE, val);;
+              } else {
+                assert(key.equals(Annotations.LOOP_LEAF_DEGREE));
+                leafDegree = (int)Math.min(Integer.MAX_VALUE, val);;
               }
+              annotationCount++;
             }
             if (!posint) {
               throw new InvalidAnnotationException(context, "Expected value "

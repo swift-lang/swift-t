@@ -413,8 +413,8 @@ switch_stmt:
     ;
 
 switch_case:
-        CASE INTEGER COLON stmt*
-        -> ^( CASE INTEGER ^( BLOCK stmt* ) )
+        CASE integer COLON stmt*
+        -> ^( CASE integer ^( BLOCK stmt* ) )
     |   DEFAULT COLON stmt*
         -> ^( DEFAULT ^( BLOCK stmt* ) )
     ;
@@ -619,7 +619,7 @@ base_expr:
     ;
 
 literal:
-        n=INTEGER -> ^( INT_LITERAL $n )
+        n=integer -> ^( INT_LITERAL $n )
             |   d=(DECIMAL | SCI_DECIMAL | INFINITY | NOTANUMBER)
                  -> ^( FLOAT_LITERAL $d)
             |   s=STRING -> ^( STRING_LITERAL $s)
@@ -628,6 +628,7 @@ literal:
             |   b=bool_lit -> ^( BOOL_LITERAL $b)
     ;
 
+integer: DECIMAL_INT | OCTAL_INT | HEX_INT;
 
 variable:
         var_name -> ^( VARIABLE var_name )
@@ -761,7 +762,7 @@ annotation:
             -> ^( ANNOTATION $a annotation_val )
     ;
 
-annotation_val: ID | INTEGER
+annotation_val: ID | integer
     ;
 
 // Handle C preprocessor lines in lexer as they can be inserted
@@ -823,7 +824,9 @@ fragment
 DEC_FRAG: NUM_FRAG '.' NUM_FRAG;
 
 // Number tokens
-INTEGER: NUM_FRAG;
+DECIMAL_INT: NUM_FRAG;
+OCTAL_INT: '0o' NUM_FRAG;
+HEX_INT: '0x' (DIGIT | ALPHA)+;
 DECIMAL: DEC_FRAG;
 SCI_DECIMAL: NUM_FRAG ('.' NUM_FRAG)? ('e'|'E') '-'? NUM_FRAG;
 NOTANUMBER: 'NaN';

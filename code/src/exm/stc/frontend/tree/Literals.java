@@ -44,16 +44,19 @@ public class Literals {
       return null;
     }
   }
-  
+
   /**
    * Parse token with correct radix, etc
    * @param tree
    * @return
    */
   public static long parseIntToken(SwiftAST tree) {
-    assert(tree.getType() == ExMParser.INTEGER) :
-        "Bad Token:" + LogHelper.tokName(tree.getType());
-    return Long.parseLong(tree.getText(), 10);
+    switch(tree.getType()) {
+      case ExMParser.DECIMAL_INT:
+        return Long.parseLong(tree.getText(), 10);
+      default:
+        throw new STCRuntimeError("Bad Token:" + LogHelper.tokName(tree.getType()));
+    }
   }
 
   public static String extractBoolLit(Context context, SwiftAST tree) {
@@ -99,13 +102,13 @@ public class Literals {
     assert(tree.getType() == ExMParser.STRING_LITERAL);
     assert(tree.getChildCount() == 1);
     // E.g. "hello world\n" with plain escape codes and quotes
-   
+
     String result = extractLiteralString(context, tree.child(0));
-    LogHelper.trace(context, "Unescaped string '" + tree.child(0).getText() + 
+    LogHelper.trace(context, "Unescaped string '" + tree.child(0).getText() +
               "', resulting in '" + result + "'");
     return result;
   }
-  
+
 
 
   /**
@@ -115,25 +118,25 @@ public class Literals {
    */
   public static double interpretIntAsFloat(Context context, long longval) {
      // Casts from long to double can lost precision
-     double floatval = (double)longval;
+     double floatval = longval;
      if (longval !=  (long)(floatval)) {
-       LogHelper.warn(context, 
+       LogHelper.warn(context,
              "Conversion of 64-bit integer constant " + longval
            + " to double precision floating point resulted in a loss of"
            + "  precision with result: " + (long)(floatval));
      }
     return floatval;
   }
-  
-  public static String extractLiteralString(Context context, 
-                                              SwiftAST stringLiteral) 
+
+  public static String extractLiteralString(Context context,
+                                              SwiftAST stringLiteral)
                                           throws InvalidSyntaxException {
     int type = stringLiteral.getType();
-    assert(type == ExMParser.STRING || 
-           type == ExMParser.STRING_MULTI_LINE_1 || 
+    assert(type == ExMParser.STRING ||
+           type == ExMParser.STRING_MULTI_LINE_1 ||
            type == ExMParser.STRING_MULTI_LINE_2);
-    
-    return unescapeString(context, 
+
+    return unescapeString(context,
                           unquote(stringLiteral.getText(), type));
   }
 
@@ -155,8 +158,8 @@ public class Literals {
     }
     throw new STCRuntimeError("String not quoted: " + s);
   }
-  
-  /** 
+
+  /**
    * Take a string with c-style escape sequences and unescape it
    * @param context
    * @param escapedString
@@ -173,7 +176,7 @@ public class Literals {
       if (c == '\\') {
         // Escape code!
         // We use the same escape codes as C
-        i++; 
+        i++;
 
         if (i >= escapedString.length()) {
           throw new InvalidSyntaxException(context, "'\\' cannot appear "
@@ -195,7 +198,7 @@ public class Literals {
         } else if (c == 'x') {
           // Hex escape code e.g. \x7 \xf \xf2
           String hex = "";
-          
+
           int next = i + 1; // Move past x
           int digits = 0;
           if (next >= escapedString.length()) {
@@ -204,7 +207,7 @@ public class Literals {
           }
           c = escapedString.charAt(next);
           // Check that next char is hex digit before advancing
-          while (digits < 2 && 
+          while (digits < 2 &&
               (Character.isDigit(c) ||
                 (Character.toUpperCase(c) >= 'A' &&
                 Character.toUpperCase(c) <= 'F'))) {
@@ -222,7 +225,7 @@ public class Literals {
                     + "followed by hex digit, instead '" + c + "'");
           }
           realString.append((char)Integer.parseInt(hex,16));
-          
+
           i = next - 1; // Set i to last index consumed
         } else {
           switch (c) {
