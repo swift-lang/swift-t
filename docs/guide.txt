@@ -277,6 +277,67 @@ C preprocessor on any included modules.  +import+ is recommended over
 #include <mypackage/mymodule.swift>
 ----
 
+== Variable declarations
+
+Swift is a statically and strongly typed language.  Thus, every variable
+in the program must have a fixed type at compile time and types are,
+with limited exceptions, not automatically converted.
+
+
+To declare a variable in Swift code, you must declare it with
+one of following variations of the variable declaration syntax:
+--------------------------------------
+<type> <variable name>;
+<type> <variable name> = <expression>;
+<variable name> = <expression>;
+--------------------------------------
+
+For example:
+--------------------------------------
+int x;
+int x = 1;
+x = 1;
+--------------------------------------
+
+In the last two cases, the variable is declared and assigned in the
+same statement.
+In the first two cases, the type of the variable is explicitly specified
+by the programmer.  In the last case, where the type of the variable is
+omitted and there was no prior declaration of the variable, then the
+type of the variable is automatically inferred based on the type of the
+expression on the right hand side of the assignment.
+
+The scope of a variable is limited to the code block in which the declaration
+appears.  Two variables with the same name cannot be declared in the same
+block.  *Shadowing* of variables, where a variable has the same name as
+a variable in an outer scope, is also not allowed in Swift.  This language
+design decision is intended to eliminate some common programming errors.
+
+This is shadowing and will result in a compile error:
+-------------------------------------------
+int x;
+{
+  int x;
+}
+-------------------------------------------
+
+This is not shadowing, because the scopes of the two declarations of x do not
+overlap, and is allowed:
+-------------------------------------------
+{
+  int x;
+}
+{
+  int x;
+}
+-------------------------------------------
+
+Variables, functions, and types share the same namespace so it is possible
+for a variable's name to shadow a function's name.  This is allowed in
+the specific case when a local variable has the same name as a global function
+(although it will not be possible to use the function within the scope
+where it has been shadowed).
+
 == Dataflow evaluation
 
 Swift expressions are evaluated in _dataflow_ order:
