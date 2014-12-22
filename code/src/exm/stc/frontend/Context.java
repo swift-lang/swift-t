@@ -131,9 +131,15 @@ public abstract class Context {
    * Add definition for current location in file
    * @param name
    * @param type
+   * @throws DoubleDefineException
    */
-  protected void addDef(String name, DefKind kind) {
-    allDefs.put(name, new DefInfo(kind, level, inputFile, line, col));
+  protected void addDef(String name, DefKind kind)
+                                    throws DoubleDefineException {
+    DefInfo def = new DefInfo(kind, level, inputFile, line, col);
+
+    checkDefConflict(name, def);
+
+    allDefs.put(name, def);
   }
 
   /**
@@ -141,23 +147,26 @@ public abstract class Context {
    * @param name
    * @throws DoubleDefineException
    */
-  public void checkDefConflict(DefKind newDefKind, String name) throws DoubleDefineException {
-    DefInfo def = lookupDef(name);
-    if (def != null) {
-      /* Conflicts (e.g. shadowing, two declarations in same context) are not
-       * allowed, with exceptions:
-       */
-      if (newDefKind == DefKind.VARIABLE && this.level > ROOT_LEVEL &&
-          def.kind == DefKind.FUNCTION && def.level == ROOT_LEVEL) {
-        /* A global function def and a local variable def */
-        return;
-      }
-
+  public void checkDefConflict(String name, DefInfo newDef) throws DoubleDefineException {
+    DefInfo oldDef = lookupDef(name);
+    /* Conflicts (e.g. shadowing, two declarations in same context) are not
+     * allowed, with exceptions:
+     */
+    if (oldDef != null && !shadowingAllowed(oldDef, newDef)) {
       // Not allowed
-      String loc = buildLocationString(def.file, def.line, def.col, false);
-      throw new DoubleDefineException(this, def.kind.humanReadable() +
+      String loc = buildLocationString(oldDef.file, oldDef.line, oldDef.col, false);
+      throw new DoubleDefineException(this, oldDef.kind.humanReadable() +
           " called " + name + " already defined at " + loc);
     }
+  }
+
+  private static boolean shadowingAllowed(DefInfo oldDef, DefInfo newDef) {
+    /*
+     * Local variables can shadow global function and type definitions
+     */
+    return newDef.level > ROOT_LEVEL && oldDef.level == ROOT_LEVEL &&
+        newDef.kind == DefKind.VARIABLE &&
+        (oldDef.kind == DefKind.FUNCTION || oldDef.kind == DefKind.TYPE);
   }
 
   /**
@@ -188,19 +197,18 @@ public abstract class Context {
   public Var declareVariable(Var variable)
           throws DoubleDefineException {
     String name = variable.name();
-    checkDefConflict(DefKind.VARIABLE, name);
-
-    variables.put(name, variable);
     DefKind kind;
     if (Types.isFunction(variable.type())) {
       kind = DefKind.FUNCTION;
     } else {
       kind = DefKind.VARIABLE;
     }
+
     addDef(name, kind);
+    variables.put(name, variable);
+
     return variable;
   }
-
 
   /**
    * Define a temporary variable with a unique name in the
@@ -420,9 +428,8 @@ public abstract class Context {
 
   public void defineType(String typeName, Type newType)
       throws DoubleDefineException {
-    checkDefConflict(DefKind.TYPE, typeName);
-    types.put(typeName, newType);
     addDef(typeName, DefKind.TYPE);
+    types.put(typeName, newType);
   }
 
   /**
