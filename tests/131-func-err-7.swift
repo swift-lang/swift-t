@@ -1,3 +1,5 @@
+// THIS-TEST-SHOULD-NOT-COMPILE
+
 import io;
 
 // Check that can't define conflicting global variable
