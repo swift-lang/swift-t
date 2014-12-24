@@ -17,7 +17,7 @@ for dir in $autotools_dirs; do
   fi
   git checkout -q -b __autotools_update github/master
   if git diff-index --exit-code HEAD ; then
-    ./setup.sh
+    ./bootstrap
     if git diff --exit-code --name-status ; then
       echo "No changes in generated scripts"
     else
