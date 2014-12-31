@@ -51,6 +51,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.componentaliases.Component;
@@ -1013,15 +1014,19 @@ public class ICInstructions {
       if (isImpl(SpecialFunction.INPUT_FILE) ||
           isImpl(SpecialFunction.UNCACHED_INPUT_FILE) ||
           isImpl(SpecialFunction.INPUT_URL)) {
-        // Track that the output variable has the filename of the input
+        // Track that the output variable has the filename of the input, if
+        // the output was unmapped (otherwise it has the mapped name!)
         // This is compatible with UNCACHED_INPUT_FILE preventing caching,
         // as we still assume that the input_file function is impure
-        if (op == Opcode.CALL_FOREIGN) {
-          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0), IsAssign.TO_VALUE));
-        } else if (op == Opcode.CALL_FOREIGN_LOCAL){
-          // Don't mark as IsAssign since standard cv catches this
-          cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0),
-                                           IsAssign.TO_VALUE));
+        Var file = getOutput(0);
+        if (file.isMapped() == Ternary.FALSE) {
+          if (op == Opcode.CALL_FOREIGN) {
+            cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0), IsAssign.TO_VALUE));
+          } else if (op == Opcode.CALL_FOREIGN_LOCAL){
+            // Don't mark as IsAssign since standard cv catches this
+            cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0),
+                                             IsAssign.TO_VALUE));
+          }
         }
       } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
