@@ -44,8 +44,9 @@ public class ForeignFunctions {
     INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL,
     SIZE, CONTAINS, RANGE, RANGE_STEP, RANGE_FLOAT, RANGE_FLOAT_STEP, ARGV;
 
-    /** List of functions that will initialize output mapping */
-    public static final SpecialFunction INITS_OUTPUT_MAPPING[] = new
+    /** List of functions that do not need initialized output mapping for
+     * unmapped files (but will accept one if the file is mapped)*/
+    public static final SpecialFunction CAN_INIT_OUTPUT_MAPPING[] = new
         SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL};
   }
 
@@ -159,8 +160,15 @@ public class ForeignFunctions {
     return false;
   }
 
-  public boolean initsOutputMapping(String function) {
-    return isSpecialImpl(function, SpecialFunction.INITS_OUTPUT_MAPPING);
+  public boolean canInitOutputMapping(String function) {
+    return isSpecialImpl(function, SpecialFunction.CAN_INIT_OUTPUT_MAPPING);
+  }
+  /**
+   * True if it is a funciton that never will initialize an output file's mapping,
+   * so generated code must do it for it
+   */
+  public boolean neverInitsOutputMapping(String function) {
+    return !canInitOutputMapping(function);
   }
 
   /**

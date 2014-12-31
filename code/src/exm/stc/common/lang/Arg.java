@@ -26,16 +26,17 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
 public class Arg implements Comparable<Arg>, Typed {
+  public static final Arg VOID = Arg.createVoidLit();
   public static final Arg ZERO = Arg.createIntLit(0);
   public static final Arg ONE = Arg.createIntLit(1);
   public static final Arg TRUE = Arg.createBoolLit(true);
   public static final Arg FALSE = Arg.createBoolLit(false);
-  
+
   public static final List<Arg> NONE = Collections.emptyList();
-  
-  
+
+
   public static enum ArgKind {
-    INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
+    VOIDVAL, INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
   }
 
   public final ArgKind kind;
@@ -46,13 +47,13 @@ public class Arg implements Comparable<Arg>, Typed {
   private final double floatlit;
   private final boolean boollit;
   private final Var var;
-  
+
   private final int hashCode;
 
   /**
    * Private constructors so that it can only be build using static builder
    * methods (below)
-   * 
+   *
    * @param type
    * @param stringval
    */
@@ -75,8 +76,13 @@ public class Arg implements Comparable<Arg>, Typed {
     return new ArrayList<Arg>(inputs);
   }
 
+  @Override
   public Arg clone() {
     return new Arg(kind, stringlit, var, intlit, floatlit, boollit);
+  }
+
+  public static Arg createVoidLit() {
+    return new Arg(ArgKind.VOIDVAL, null, null, -1, -1, false);
   }
 
   public static Arg createIntLit(long v) {
@@ -137,7 +143,7 @@ public class Arg implements Comparable<Arg>, Typed {
       return boollit;
     } else {
       throw new STCRuntimeError("getBoolLit for non-bool type " + kind
-                                 + " " + this);  
+                                 + " " + this);
     }
   }
 
@@ -150,7 +156,7 @@ public class Arg implements Comparable<Arg>, Typed {
     }
   }
 
-  
+
   /**
    * Return the type if used as a future
    * @return
@@ -158,11 +164,12 @@ public class Arg implements Comparable<Arg>, Typed {
   public Type futureType() {
     return typeInternal(true);
   }
-  
+
   /**
    * Return the type if used as a value;
    * @return
    */
+  @Override
   public Type type() {
     return typeInternal(false);
   }
@@ -175,6 +182,12 @@ public class Arg implements Comparable<Arg>, Typed {
    */
   public Type typeInternal(boolean futureContext) {
   switch (kind) {
+    case VOIDVAL:
+      if (futureContext) {
+        return Types.F_VOID;
+      } else {
+        return Types.V_VOID;
+      }
     case INTVAL:
       if (futureContext) {
         return Types.F_INT;
@@ -206,31 +219,40 @@ public class Arg implements Comparable<Arg>, Typed {
       throw new STCRuntimeError("Unknown oparg type " + this.kind.toString());
     }
   }
-  
+
   public boolean isVar() {
     return kind == ArgKind.VAR;
   }
-  
+
+  public boolean isVoidVal() {
+    return kind == ArgKind.VOIDVAL;
+  }
+
   public boolean isIntVal() {
     return kind == ArgKind.INTVAL;
   }
-  
+
   public boolean isBoolVal() {
     return kind == ArgKind.BOOLVAL;
   }
-  
+
   public boolean isFloatVal() {
     return kind == ArgKind.FLOATVAL;
   }
-  
+
   public boolean isStringVal() {
     return kind == ArgKind.STRINGVAL;
+  }
+
+  public boolean isImmediateVoid() {
+    return kind == ArgKind.VOIDVAL
+        || (kind == ArgKind.VAR && Types.isVoidVal(var));
   }
 
   /**
    * Is the oparg an int that can be immediately read (i.e. either a value or a
    * literal.
-   * 
+   *
    * @return
    */
   public boolean isImmediateInt() {
@@ -252,7 +274,7 @@ public class Arg implements Comparable<Arg>, Typed {
     return kind == ArgKind.BOOLVAL
         || (kind == ArgKind.VAR && Types.isBoolVal(var));
   }
-  
+
   public boolean isImmediateBlob() {
     return kind == ArgKind.VAR && Types.isBlobVal(var);
   }
@@ -260,6 +282,8 @@ public class Arg implements Comparable<Arg>, Typed {
   @Override
   public String toString() {
     switch (kind) {
+    case VOIDVAL:
+      return "void";
     case INTVAL:
       return Long.toString(this.intlit);
     case STRINGVAL:
@@ -291,10 +315,13 @@ public class Arg implements Comparable<Arg>, Typed {
   public int hashCode() {
     return hashCode;
   }
-  
+
   private int calcHashCode() {
     int hash1;
     switch (kind) {
+    case VOIDVAL:
+      hash1 = 5543643;
+      break;
     case INTVAL:
       hash1 = ((Long) this.intlit).hashCode();
       break;
@@ -327,6 +354,8 @@ public class Arg implements Comparable<Arg>, Typed {
       return false;
     }
     switch (this.kind) {
+    case VOIDVAL:
+      return true;
     case INTVAL:
       return this.intlit == other.intlit;
     case STRINGVAL:
@@ -348,6 +377,8 @@ public class Arg implements Comparable<Arg>, Typed {
     int typeComp = kind.compareTo(o.kind);
     if (typeComp == 0) {
       switch (kind) {
+      case VOIDVAL:
+        return 0;
       case BOOLVAL:
         return ((Boolean) boollit).compareTo(o.boollit);
       case INTVAL:
@@ -383,6 +414,7 @@ public class Arg implements Comparable<Arg>, Typed {
     switch (kind) {
       case VAR:
         return var.isMapped();
+      case VOIDVAL:
       case INTVAL:
       case FLOATVAL:
       case STRINGVAL:

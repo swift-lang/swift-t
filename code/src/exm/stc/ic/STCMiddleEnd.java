@@ -114,6 +114,13 @@ public class STCMiddleEnd {
     this.logger = logger;
     this.program = new Program(foreignFuncs);
     this.icOutput = icOutput;
+
+    initDefaults();
+  }
+
+  private void initDefaults() {
+    this.program.constants().add(Var.NO_WAIT_STRING_VAR,
+                         Arg.createStringLit("nowait"));
   }
 
   public void optimize() throws UserException {
@@ -976,7 +983,8 @@ public class STCMiddleEnd {
     assert(Types.isFile(file.type()));
     if (initUnmapped) {
       WrapUtil.initOrGetFileName(currBlock(),
-              currBlock().statementEndIterator(), filename, file);
+              currBlock().statementEndIterator(), filename, file,
+              initUnmapped);
     } else {
       // Don't allow initialization of filename
       currBlock().addInstruction(TurbineOp.getFileNameAlias(filename, file));
@@ -1051,11 +1059,12 @@ public class STCMiddleEnd {
     Block mainBlock = fn.mainBlock();
 
     // Check if we need to initialize mappings of output files
-    boolean mapOutFiles = !program.getForeignFunctions().initsOutputMapping(builtinName);
+    boolean mustMapOutFiles =
+        !program.getForeignFunctions().canInitOutputMapping(builtinName);
 
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
-                               userInArgs, Var.NONE, outArgs, mapOutFiles);
+                         userInArgs, Var.NONE, outArgs, mustMapOutFiles);
 
     // Variables we must wait for
     List<WaitVar> waitVars = p.val1;
@@ -1078,13 +1087,13 @@ public class STCMiddleEnd {
                                                   instBuffer, false);
 
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
-                            filenameVars, instBuffer, false, mapOutFiles,
+                            filenameVars, instBuffer, false, mustMapOutFiles,
                             true);
     instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals,
                                          program.getForeignFunctions()));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
-                               !mapOutFiles, true);
+                               !mustMapOutFiles, true);
 
     waitBlock.addStatements(instBuffer);
   }

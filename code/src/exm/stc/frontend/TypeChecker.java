@@ -637,7 +637,7 @@ public class TypeChecker {
           String function, Var output) throws TypeMismatchException {
     if (Types.isFile(output) && output.isMapped() == Ternary.FALSE &&
         !output.type().fileKind().supportsTmpImmediate() &&
-        !context.getForeignFunctions().initsOutputMapping(function)) {
+        !context.getForeignFunctions().canInitOutputMapping(function)) {
       /*
        * We can't create temporary files for this type.  If we detect any
        * where a definitely unmapped var is an output to a function, then

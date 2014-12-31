@@ -43,10 +43,11 @@ public class TclNamer {
   private static final String TCL_COMPILER_ARG_PREFIX = "ca:";
   public static final String TCL_TMP_LOOP_COND = "t:loopcond";
   public static final String TCL_NEXTITER_PREFIX = "nextiter:";
-  
+  public static final String TCL_COMPILER_NO_WAIT_VAR_PREFIX = "nowait:";
+
   /**
    * Replace internal names of variables with readable ones that
-   * are also valid in Tcl 
+   * are also valid in Tcl
    * @param varname
    * @return
    */
@@ -94,14 +95,17 @@ public class TclNamer {
       return TCL_OUTER_VAR_PREFIX +
           varname.substring(Var.OUTER_VAR_PREFIX.length());
     } else if (varname.startsWith(Var.FILENAME_OF_PREFIX)) {
-      return TCL_FILENAME_OF_PREFIX + 
+      return TCL_FILENAME_OF_PREFIX +
           varname.substring(Var.FILENAME_OF_PREFIX.length());
     } else if (varname.startsWith(Var.WRAP_FILENAME_PREFIX)) {
-      return TCL_WRAP_FILENAME_OF_PREFIX + 
+      return TCL_WRAP_FILENAME_OF_PREFIX +
           varname.substring(Var.WRAP_FILENAME_PREFIX.length());
     } else if (varname.startsWith(Var.COMPILER_ARG_PREFIX)){
-      return TCL_COMPILER_ARG_PREFIX + 
+      return TCL_COMPILER_ARG_PREFIX +
           varname.substring(Var.COMPILER_ARG_PREFIX.length());
+    } else if (varname.startsWith(Var.NO_WAIT_VAR_PREFIX)){
+      return TCL_COMPILER_NO_WAIT_VAR_PREFIX +
+          varname.substring(Var.NO_WAIT_VAR_PREFIX.length());
     } else {
       return TCL_USER_VAR_PREFIX + varname;
     }

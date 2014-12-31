@@ -57,24 +57,24 @@ public class WrapUtil {
    * @param block
    * @param instBuffer append fetch instruction to this list
    * @param var the variable to fetch the value of
-   * @param acquireWrite if the var is a reference, do we acquire 
+   * @param acquireWrite if the var is a reference, do we acquire
    *                      write refcounts?
    * @return variable holding value
    */
   public static Var fetchValueOf(Block block,
           List<? super Instruction> instBuffer,
           Var var, String valName, boolean recursive, boolean acquireWrite) {
-    
+
     Type valueT;
     if (recursive && Types.isContainer(var)) {
       valueT = Types.unpackedContainerType(var);
     } else {
       valueT = Types.retrievedType(var);
     }
-    
+
     if (Types.isPrimUpdateable(var)) {
       Var value_v = createValueVar(valName, valueT, var);
-      
+
       block.addVariable(value_v);
       instBuffer.add(TurbineOp.latestValue(value_v, var));
       return value_v;
@@ -85,7 +85,7 @@ public class WrapUtil {
       Var value_v = createValueVar(valName, valueT, var);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrievePrim(value_v, var));
-      
+
       // Add cleanup action if needed
       if (Types.isBlobVal(valueT)) {
         block.addCleanup(value_v, TurbineOp.freeBlob(value_v));
@@ -121,13 +121,13 @@ public class WrapUtil {
       instBuffer.add(TurbineOp.retrieveStruct(deref, var));
       return deref;
     } else if ((Types.isContainer(var) || Types.isStruct(var))
-                && !recursive) { 
+                && !recursive) {
       Var deref = new Var(valueT, valName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
       if (Types.isArray(var)) {
-        instBuffer.add(TurbineOp.retrieveArray(deref, var)); 
+        instBuffer.add(TurbineOp.retrieveArray(deref, var));
       } else if (Types.isBag(var)) {
         instBuffer.add(TurbineOp.retrieveBag(deref, var));
       } else {
@@ -145,7 +145,7 @@ public class WrapUtil {
                           VarProvenance.valueOf(orig));
     return value_v;
   }
-  
+
   /**
    * Work out which inputs/outputs need to be waited for before
    * executing a statement depending on them
@@ -153,15 +153,15 @@ public class WrapUtil {
    * @param instInsertIt position to insert instructions
    * @param inArgs
    * @param outArgs
-   * @param initOutputMapping 
+   * @param mustMapOutFiles
    * @return (a list of variables to wait for,
    *          the mapping from file output vars to filenames)
    */
   public static Pair<List<WaitVar>, Map<Var, Var>> buildWaitVars(
       Block block, ListIterator<Statement> instInsertIt,
       List<Var> inArgs, List<Var> otherWaitArgs, List<Var> outArgs,
-      boolean initOutputMapping) {
-    
+      boolean mustMapOutFiles) {
+
     List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
     Map<Var, Var> filenameVars = new HashMap<Var, Var>();
 
@@ -172,10 +172,10 @@ public class WrapUtil {
         }
       }
     }
-    
+
     for (Var out: outArgs) {
-      Var waitMapping = getWaitOutputMapping(block, instInsertIt, 
-                          initOutputMapping, filenameVars, out);
+      Var waitMapping = getWaitOutputMapping(block, instInsertIt,
+                          mustMapOutFiles, filenameVars, out);
       if (waitMapping != null) {
         waitVars.add(new WaitVar(waitMapping, false));
       }
@@ -184,28 +184,31 @@ public class WrapUtil {
   }
 
   /**
-   * 
+   *
    * @param block
    * @param instInsertIt
-   * @param initOutputMapping
+   * @param mustMapOutFiles
    * @param waitVars
    * @param filenameVars updated with any filenames
    * @param out
    * @return wait var if must wait, null otherwise
    */
   public static Var getWaitOutputMapping(Block block,
-      ListIterator<Statement> instInsertIt, boolean initOutputMapping,
+      ListIterator<Statement> instInsertIt, boolean mustMapOutFiles,
       Map<Var, Var> filenameVars, Var out) {
-    if (Types.isFile(out) && initOutputMapping) {
+    if (Types.isFile(out)) {
       // Must wait on filename of output var
       String name = block.uniqueVarName(Var.WRAP_FILENAME_PREFIX +
                                         out.name());
       Var filenameTmp = block.declareUnmapped(Types.F_STRING,
           name, Alloc.ALIAS, DefType.LOCAL_COMPILER,
           VarProvenance.filenameOf(out));
-      initOrGetFileName(block, instInsertIt, filenameTmp, out);
+      boolean initIfUnmapped = mustMapOutFiles;
+      Var filenameWaitVar =
+           initOrGetFileName(block, instInsertIt, filenameTmp, out, initIfUnmapped);
       filenameVars.put(out, filenameTmp);
-      return filenameTmp;
+
+      return filenameWaitVar;
     }
     return null;
   }
@@ -221,40 +224,69 @@ public class WrapUtil {
    * @param block
    * @param filename alias to be initialized
    * @param file
+   * @param initIfUnmapped
+   * @return variable to wait on for filename
    */
-  public static void initOrGetFileName(Block block,
-            ListIterator<Statement> insertPos, Var filename, Var file) {
+  public static Var initOrGetFileName(Block block,
+            ListIterator<Statement> insertPos, Var filename, Var file,
+            boolean initIfUnmapped) {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
     Instruction getFileName = TurbineOp.getFileNameAlias(filename, file);
-    
+
+    insertPos.add(getFileName);
+
     if (file.isMapped() == Ternary.TRUE ||
         !file.type().fileKind().supportsTmpImmediate()) {
       // Just get the mapping in these cases:
       // - File is definitely mapped
       // - The file type doesn't support temporary creation
-      insertPos.add(getFileName);
+      return filename;
     } else {
+      Var waitVar = null;
+      if (!initIfUnmapped) {
+        waitVar = block.declareUnmapped(Types.F_STRING,
+            OptUtil.optVPrefix(block, file.name() + "filename-wait"),
+            Alloc.ALIAS, DefType.LOCAL_COMPILER,
+            VarProvenance.filenameOf(file));
+      }
+
       // Use optimizer var prefixes to avoid clash with any frontend vars
       Var isMapped = getIsMapped(block, insertPos, file);
-      
+
       IfStatement ifMapped = new IfStatement(isMapped.asArg());
       ifMapped.setParent(block);
-      
-      // Case when mapped: just return var
-      ifMapped.thenBlock().addStatement(getFileName);
-      
+
+      if (!initIfUnmapped) {
+        // Wait on filename
+        ifMapped.thenBlock().addStatement(
+            TurbineOp.copyRef(waitVar, filename));
+      }
+
       // Case when not mapped: init with tmp
       Block elseB = ifMapped.elseBlock();
-      Var filenameVal = elseB.declareUnmapped(Types.V_STRING,
-          OptUtil.optFilenamePrefix(elseB, file), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, VarProvenance.filenameOf(file));
-      initTemporaryFileName(elseB.statementEndIterator(), file, filenameVal);
-      // Get the filename again but can assume mapping initialized
-      elseB.addStatement(getFileName);
-      
+
+      if (initIfUnmapped) {
+        Var filenameVal = elseB.declareUnmapped(Types.V_STRING,
+            OptUtil.optFilenamePrefix(elseB, file), Alloc.LOCAL,
+            DefType.LOCAL_COMPILER, VarProvenance.filenameOf(file));
+        initTemporaryFileName(elseB.statementEndIterator(), file, filenameVal);
+        // Get the filename again but can assume mapping initialized
+        elseB.addStatement(getFileName);
+      } else {
+        // Dummy wait variable
+        elseB.addStatement(TurbineOp.copyRef(waitVar,
+                              Var.NO_WAIT_STRING_VAR));
+      }
+
       insertPos.add(ifMapped);
+
+      if (initIfUnmapped) {
+        return filename;
+      } else {
+        return waitVar;
+      }
     }
   }
 
@@ -263,7 +295,7 @@ public class WrapUtil {
     Var isMapped = block.declareUnmapped(Types.V_BOOL,
           OptUtil.optVPrefix(block, "mapped_" + file.name()), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, VarProvenance.optimizerTmp());
-    
+
     insertPos.add(TurbineOp.isMapped(isMapped, file));
     return isMapped;
   }
@@ -319,14 +351,14 @@ public class WrapUtil {
    * @param instBuffer
    * @param uniquifyNames if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param initOutputMapping 
+   * @param mustInitOutputMapping
    * @param store recursively
    * @return
    */
   public static List<Var> createLocalOpOutputs(Block block,
       List<Var> outputFutures, Map<Var, Var> filenameVars,
       List<Statement> instBuffer, boolean uniquifyNames,
-      boolean initOutputMapping, boolean recursive) {
+      boolean mustInitOutputMapping, boolean recursive) {
     if (outputFutures == null) {
       // Gracefully handle null as empty list
       outputFutures = Var.NONE;
@@ -334,12 +366,12 @@ public class WrapUtil {
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outputFutures) {
       outVals.add(WrapUtil.createLocalOutputVar(outArg, filenameVars,
-                   block, instBuffer, uniquifyNames, initOutputMapping,
+                   block, instBuffer, uniquifyNames, mustInitOutputMapping,
                    recursive));
     }
     return outVals;
   }
-  
+
   /**
    * Declare a local output variable for an operation
    * @param block
@@ -353,7 +385,7 @@ public class WrapUtil {
         valName, Alloc.LOCAL, DefType.LOCAL_COMPILER,
         VarProvenance.valueOf(var));
   }
-  
+
 
   /**
    * Create an output variable for an operation, and
@@ -365,14 +397,14 @@ public class WrapUtil {
    * @param instBuffer buffer for initialization actions
    * @param uniquifyName if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param initOutputMapping whether to initialize mappings for output files
-   * @param recursive if the fetch will be recursive 
+   * @param mustInitOutputMapping whether to initialize mappings for output files
+   * @param recursive if the fetch will be recursive
    * @return
    */
   public static Var createLocalOutputVar(Var outFut,
       Map<Var, Var> filenameVars,
       Block block, List<Statement> instBuffer, boolean uniquifyName,
-      boolean initOutputMapping, boolean recursive) {
+      boolean mustInitOutputMapping, boolean recursive) {
     if (Types.isPrimUpdateable(outFut)) {
       // Use standard representation
       return outFut;
@@ -381,7 +413,7 @@ public class WrapUtil {
       Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName,
                   recursive);
       WrapUtil.initLocalOutputVar(block, filenameVars, instBuffer,
-                                  outFut, outVal, initOutputMapping);
+                                  outFut, outVal, mustInitOutputMapping);
       WrapUtil.cleanupLocalOutputVar(block, outFut, outVal);
       return outVal;
     }
@@ -404,33 +436,53 @@ public class WrapUtil {
    * @param instBuffer append initialize instructions to this buffer
    * @param outFut
    * @param outVal
-   * @param mapOutFile 
+   * @param mapOutFile
    */
   private static void initLocalOutputVar(Block block, Map<Var, Var> filenameVars,
-      List<Statement> instBuffer, Var outFut, Var outVal, boolean initOutputMapping) {
-    if (Types.isFile(outFut) && initOutputMapping) {
+      List<Statement> instBuffer, Var outFut, Var outVal, boolean mustInitOutputMapping) {
+    if (Types.isFile(outFut)) {
       // Initialize filename in local variable
+      Var isMapped = getIsMapped(block, instBuffer.listIterator(), outFut);
       Var outFilename = filenameVars.get(outFut);
+
+      IfStatement ifMapped = null;
+      List<Statement> fetchInstBuffer;
+
+      if (mustInitOutputMapping) {
+        fetchInstBuffer = instBuffer;
+      } else {
+        ifMapped = new IfStatement(isMapped.asArg());
+        instBuffer.add(ifMapped);
+        fetchInstBuffer = new ArrayList<Statement>();
+      }
+
       assert(outFilename != null) : "Expected filename in map for " + outFut;
       Var outFilenameVal;
       if (Types.isString(outFilename)) {
         String valName = block.uniqueVarName(Var.VALUEOF_VAR_PREFIX +
                                            outFilename.name());
-        outFilenameVal = WrapUtil.fetchValueOf(block, instBuffer,
+        outFilenameVal = WrapUtil.fetchValueOf(block, fetchInstBuffer,
                                      outFilename, valName, false, false);
+
+        if (!mustInitOutputMapping) {
+          // Read filename if mapped
+          ifMapped.thenBlock().addStatements(fetchInstBuffer);
+
+          // Set filename to something arbitrary if not mapped
+          ifMapped.elseBlock().addStatement(ICInstructions.valueSet(outFilenameVal,
+                                            Arg.createStringLit("")));
+        }
       } else {
         // Already a value
         assert(Types.isStringVal(outFilename));
         outFilenameVal = outFilename;
       }
-      
-      Var isMapped = getIsMapped(block, instBuffer.listIterator(), outFut);
-      
+
       instBuffer.add(TurbineOp.initLocalOutFile(outVal,
                             outFilenameVal.asArg(), isMapped.asArg()));
     }
   }
-  
+
   private static void cleanupLocalOutputVar(Block block, Var outFut, Var outVal) {
     if (Types.isBlobVal(outVal)) {
       block.addCleanup(outVal, TurbineOp.freeBlob(outVal));
@@ -442,7 +494,7 @@ public class WrapUtil {
       }
     }
   }
-  
+
 
   /**
    * Set futures from output values
@@ -471,7 +523,7 @@ public class WrapUtil {
       }
     }
   }
-  
+
   public static void assignOutput(Block block, List<Statement> instBuffer,
       boolean storeOutputMapping, Var outArg, Var outVal, boolean recursive) {
     if (Types.isFile(outArg)) {
@@ -480,7 +532,7 @@ public class WrapUtil {
       instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg(), recursive));
     }
   }
-  
+
   public static void assignOutputFile(Block block,
       List<Statement> instBuffer, boolean storeOutputMapping,
       Var file, Var fileVal) {
