@@ -142,7 +142,8 @@ namespace eval turbine {
             }
         }
         debug "retrieve: <$id>=$result"
-        return [ create_local_file_ref [ dict get $result path ] 2 ]
+        return [ create_local_file_ref [ dict get $result path ] 2 \
+                                   [ is_file_mapped $file_handle ] ]
     }
 
     proc retrieve_decr_file { file_handle {cachemode CACHED} } {
@@ -291,12 +292,13 @@ namespace eval turbine {
         error "input_file: file $fname does not exist"
       }
 
-      # TODO: more robust way?  Should empty string mapping correctly
       set outf_path [ local_file_path $outf ]
-      set is_mapped [ expr {$outf_path != ""} ]
+      set outf_mapped [ local_file_mapped $outf ]
 
-      if { $is_mapped } {
+      if { $outf_mapped } {
         physical_file_copy $outf_path $fname
+        # Increment file refcount to prevent deletion of file
+        incr_local_file_refcount outf 1
       } else {
         set outf [ create_local_file_ref $fname 100 ]
       }
@@ -468,13 +470,17 @@ namespace eval turbine {
     }
 
     # Create a reference to track local file
-    proc create_local_file_ref { filepath {refcount 1} } {
+    proc create_local_file_ref { filepath {refcount 1} {mapped 1} } {
         # puts "create_local_file_ref $filepath $refcount"
-        return [ list $filepath $refcount ]
+        return [ list $filepath $refcount $mapped ]
     }
 
     proc local_file_path { local_file } {
         return [ lindex $local_file 0 ]
+    }
+    
+    proc local_file_mapped { local_file } {
+        return [ lindex $local_file 2 ]
     }
 
     proc set_file { f local_f_varname } {
