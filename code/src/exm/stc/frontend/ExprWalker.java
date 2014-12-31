@@ -74,7 +74,7 @@ import exm.stc.ic.STCMiddleEnd;
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
  */
-public class  ExprWalker {
+public class ExprWalker {
 
   private final VarCreator varCreator;
   private final WrapperGen wrappers;
@@ -586,6 +586,19 @@ public class  ExprWalker {
     // This will check the type of the function call
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList);
+
+    // Check any special cases
+    if (context.getForeignFunctions().isSpecialImpl(f.function(),
+              SpecialFunction.INPUT_FILE, SpecialFunction.INPUT_URL)) {
+      assert(oList.size() == 1);
+      Var outFile = oList.get(0);
+      if (outFile.isMapped() == Ternary.TRUE) {
+        throw new UserException(context, "Cannot assign result of" +
+              " input file/url function " + f.function() +
+              " to mapped variable" + outFile.name());
+      }
+    }
+
     try {
       // If this is an assert statement, disable it
       if (context.getForeignFunctions().isAssertVariant(f.function()) &&

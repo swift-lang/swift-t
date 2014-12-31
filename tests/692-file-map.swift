@@ -1,8 +1,7 @@
 import string;
 
-// SKIP-THIS-TEST
 // See issue 
-// THIS-TEST-SHOULD-NOT-RUN
+// THIS-TEST-SHOULD-NOT-COMPILE
 
 main () {
     foreach i in [0:31]{
