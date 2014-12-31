@@ -285,11 +285,21 @@ namespace eval turbine {
 
     # fname: filename as tcl string
     # return: local file handle
-    proc input_file_local { fname } {
+    proc input_file_local { outf_varname fname } {
+      upvar 1 $outf_varname outf
       if { ! [ file exists $fname ] } {
         error "input_file: file $fname does not exist"
       }
-      return [ create_local_file_ref $fname 100 ]
+
+      # TODO: more robust way?  Should empty string mapping correctly
+      set outf_path [ local_file_path $outf ]
+      set is_mapped [ expr {$outf_path != ""} ]
+
+      if { $is_mapped } {
+        physical_file_copy $outf_path $fname
+      } else {
+        set outf [ create_local_file_ref $fname 100 ]
+      }
     }
 
     proc input_url { out filepath } {
@@ -316,6 +326,7 @@ namespace eval turbine {
     }
 
     proc input_url_local { url } {
+      # TODO: update
       # Create local file ref with extra refcount so that it is never deleted
       return [ create_local_file_ref $url 100 ]
     }

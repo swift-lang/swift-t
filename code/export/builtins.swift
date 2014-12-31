@@ -126,17 +126,17 @@ type external void;
 
 @pure @implements=input_file
 (file f) input(string filename) "turbine" "0.0.2" "input_file" [
-  "set <<f>> [ turbine::input_file_local <<filename>> ]"
+  "turbine::input_file_local <<f>> <<filename>>"
 ];
 
 @pure @implements=input_file
 (file f) input_file(string filename) "turbine" "0.0.2" "input_file" [
-  "set <<f>> [ turbine::input_file_local <<filename>> ]"
+  "turbine::input_file_local <<f>> <<filename>>"
 ];
 
 @pure @implements=input_url
 (url f) input_url(string url) "turbine" "0.0.2" "input_url" [
-  "set <<f>> [ turbine::input_url_local <<url>> ]"
+  "turbine::input_url_local <<f>> <<url>>"
 ];
 
 @pure @stc_intrinsic=FILENAME
