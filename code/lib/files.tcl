@@ -306,8 +306,17 @@ namespace eval turbine {
 
     proc input_url { out filepath } {
       set outfile [ lindex $out 0 ]
-      rule "$filepath" [ list input_url_body $outfile $filepath ] \
-        name "input_file-$outfile-$filepath"
+      
+      set mapped [ is_file_mapped $outfile ]
+      if { $mapped } {
+        set outfile_path [ get_file_path $outfile ]
+        rule "$outfile_path $filepath" \
+          [ list input_url_error_body $outfile_path $filepath ] \
+          name "input_url_error-$outfile-$filepath"
+      } else {
+        rule "$filepath" [ list input_url_body $outfile $filepath ] \
+          name "input_url-$outfile-$filepath"
+      }
     }
 
     proc input_url_body { outfile filepath } {
@@ -315,22 +324,39 @@ namespace eval turbine {
       input_url_impl $outfile $filepath_val
     }
 
+    proc input_url_error_body { out_url_path in_url_path } {
+      set in_url_path_val [ retrieve_decr_string $in_url_path ]
+      set out_url_path_val [ retrieve_string $out_url_path ]
+      input_url_mapped_error $out_url_path_val $in_url_path_val
+    }
+
     proc input_url_impl { outfile filepath_val } {
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
-          error "url \[ $outfile \] was already mapped to\
-              [ get_filename_val $outfile ], input_url cannot copy\
-              from input file $filepath_val"
+        error "Copying $filepath_val to mapped url"
       }
 
       # Set filename and close
       set_filename_val $outfile $filepath_val 1
     }
 
-    proc input_url_local { url } {
-      # TODO: update
+    proc input_url_mapped_error { out_url in_url } {
+        error "Cannot do url-to-url copy from $in_url to $out_url:\
+              url-to-url copies are not supported"
+    }
+
+    proc input_url_local { out_url_varname url } {
+      upvar 1 $out_url_varname out_url
+      
+      set out_url_mapped [ local_file_mapped $out_url ]
+      
+      if { $out_url_mapped } {
+        set out_url_path [ local_file_path $out_url ]
+        input_url_mapped_error $out_url_path $url
+      }
+
       # Create local file ref with extra refcount so that it is never deleted
-      return [ create_local_file_ref $url 100 ]
+      set out_url [ create_local_file_ref $url 100 ]
     }
 
     # initialise an unmapped file to a temporary location
