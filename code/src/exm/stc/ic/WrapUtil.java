@@ -236,13 +236,12 @@ public class WrapUtil {
     assert(Types.isFile(file.type()));
     Instruction getFileName = TurbineOp.getFileNameAlias(filename, file);
 
-    insertPos.add(getFileName);
-
     if (file.isMapped() == Ternary.TRUE ||
         !file.type().fileKind().supportsTmpImmediate()) {
       // Just get the mapping in these cases:
       // - File is definitely mapped
       // - The file type doesn't support temporary creation
+      insertPos.add(getFileName);
       return filename;
     } else {
       Var waitVar = null;
@@ -260,7 +259,9 @@ public class WrapUtil {
       ifMapped.setParent(block);
 
       if (!initIfUnmapped) {
+
         // Wait on filename
+        insertPos.add(getFileName);
         ifMapped.thenBlock().addStatement(
             TurbineOp.copyRef(waitVar, filename));
       }
@@ -274,7 +275,7 @@ public class WrapUtil {
             DefType.LOCAL_COMPILER, VarProvenance.filenameOf(file));
         initTemporaryFileName(elseB.statementEndIterator(), file, filenameVal);
         // Get the filename again but can assume mapping initialized
-        elseB.addStatement(getFileName);
+        insertPos.add(getFileName);
       } else {
         // Dummy wait variable
         elseB.addStatement(TurbineOp.copyRef(waitVar,
