@@ -251,10 +251,23 @@ namespace eval turbine {
       set outfile [ lindex $out 0 ]
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
-          error "file \[ $outfile \] was already mapped, cannot use input_file"
+        set outfile_path [ get_file_path $outfile ]
+
+        # Copy to mapped output
+        rule "$outfile_path $filepath" \
+          [ list input_file_copy_body $outfile $filepath ] \
+          name "input_file_copy-$outfile-$filepath"
+      } else {
+        rule "$filepath" [ list input_file_body $outfile $filepath ] \
+          name "input_file-$outfile-$filepath"
       }
-      rule "$filepath" [ list input_file_body $outfile $filepath ] \
-        name "input_file-$outfile-$filepath"
+    }
+
+    proc input_file_copy_body { outfile filepath } {
+      set outfile_path_val [ get_filename_val $outfile ]
+      set filepath_val [ retrieve_decr_string $filepath ]
+      physical_file_copy $outfile_path_val $filepath_val 
+      close_file $outfile
     }
 
     proc input_file_body { outfile filepath } {
@@ -281,10 +294,6 @@ namespace eval turbine {
 
     proc input_url { out filepath } {
       set outfile [ lindex $out 0 ]
-      set mapped [ is_file_mapped $outfile ]
-      if { $mapped } {
-          error "file \[ $outfile \] was already mapped, cannot use input_url"
-      }
       rule "$filepath" [ list input_url_body $outfile $filepath ] \
         name "input_file-$outfile-$filepath"
     }
@@ -295,6 +304,13 @@ namespace eval turbine {
     }
 
     proc input_url_impl { outfile filepath_val } {
+      set mapped [ is_file_mapped $outfile ]
+      if { $mapped } {
+          error "url \[ $outfile \] was already mapped to\
+              [ get_filename_val $outfile ], input_url cannot copy\
+              from input file $filepath_val"
+      }
+
       # Set filename and close
       set_filename_val $outfile $filepath_val 1
     }
@@ -350,12 +366,17 @@ namespace eval turbine {
       set dstpath_val [ get_filename_val $dst ]
       set src_val [ retrieve_decr_file $src ]
       set srcpath_val [ local_file_path $src_val ]
-      log "physical file copy \"$srcpath_val\" => \"$dstpath_val\""
       # do the copy: srcpath to dstpath
-      # TODO: is this the best way to do this?
-      file copy -force $srcpath_val $dstpath_val
+      physical_file_copy $dstpath_val $srcpath_val
       # signal that output is now available
       close_file $dst
+    }
+
+    # Implement physical file copy
+    proc physical_file_copy { dstpath srcpath } {
+      # TODO: is this the best way to do this?
+      log "physical file copy \"$srcpath\" => \"$dstpath\""
+      file copy -force $srcpath $dstpath
     }
 
     proc copy_local_file_contents { dst src } {
