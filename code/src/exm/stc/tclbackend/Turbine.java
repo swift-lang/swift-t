@@ -1677,9 +1677,9 @@ class Turbine {
   }
 
   public static SetVariable createLocalFile(String varName,
-          Expression fileName, Expression initRefcount) {
+          Expression fileName, Expression initRefcount, Expression mapped) {
     return new SetVariable(varName, new Square(CREATE_LOCAL_FILE_REF, fileName,
-            initRefcount));
+            initRefcount, mapped));
   }
 
   public static SetVariable mkTemp(String varName) {

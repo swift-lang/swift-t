@@ -1348,7 +1348,8 @@ public class TurbineGenerator implements CompilerBackend {
       pointAdd(new If(argToExpr(isMapped), ifMapped, ifUnmapped));
     }
     pointAdd(Turbine.createLocalFile(prefixVar(localFile),
-             argToExpr(filenameVal), new Value(TCLTMP_INIT_REFCOUNT)));
+             argToExpr(filenameVal), new Value(TCLTMP_INIT_REFCOUNT),
+             argToExpr(isMapped)));
   }
 
   @Override
