@@ -989,7 +989,7 @@ public class ValueNumber implements OptimizerPass {
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (MakeImmVar output: outputs) {
       Var outVar = output.var;
-      if (Types.isFile(outVar) && output.preinitOutputMapping) {
+      if (Types.isFile(outVar)) {
         Var filenameVal = insertContext.declareUnmapped(Types.V_STRING,
             OptUtil.optFilenamePrefix(insertContext, outVar),
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
