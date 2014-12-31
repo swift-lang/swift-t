@@ -206,6 +206,7 @@ public class WrapUtil {
       boolean initIfUnmapped = mustMapOutFiles;
       Var filenameWaitVar =
            initOrGetFileName(block, instInsertIt, filenameTmp, out, initIfUnmapped);
+
       filenameVars.put(out, filenameTmp);
 
       return filenameWaitVar;
