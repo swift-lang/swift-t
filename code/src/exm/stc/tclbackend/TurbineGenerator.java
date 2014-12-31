@@ -1328,15 +1328,27 @@ public class TurbineGenerator implements CompilerBackend {
     FileKind fileKind = localFile.type().fileKind();
     assert(filenameVal.isImmediateString());
     assert(isMapped.isImmediateBool());
+    /*
     assert(isMapped.isVar() || isMapped.getBoolLit() ||
         fileKind.supportsTmpImmediate()) : "Can't give unmapped file of kind "
-      + fileKind.typeName() + " a generated temporary file name";
+      + fileKind.typeName() + " a generated temporary file name";*/
+
 
     // Initialize refcount to 1 if unmapped, or 2 if mapped so that the file
     // isn't deleted upon the block finishing
     Sequence ifMapped = new Sequence(), ifUnmapped = new Sequence();
     ifMapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.TWO));
     ifUnmapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.ONE));
+
+/*
+    if (!fileKind.supportsTmpImmediate() &&
+        isMapped.isVar()) {
+       // Insert code to check that it's unmapped
+      ifUnmapped.add(new Command("error", "Cannot initialize unmapped "+
+          "file-like variable " + localFile.name() + " of type " +
+          localFile.type().typeName() + " with temporary location"));
+
+    } */
 
     if (isMapped.isBoolVal()) {
       if (isMapped.getBoolLit()) {
