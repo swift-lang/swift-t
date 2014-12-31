@@ -1354,7 +1354,9 @@ public class ICInstructions {
 
         // True unless the function alters mapping itself
         boolean preinitOutputMapping = true;
-        if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
+
+        // TODO: we're going to need to conditionally fetch this
+        if (foreignFuncs.canInitOutputMapping(this.functionName)) {
           preinitOutputMapping = false;
         }
 
@@ -1613,10 +1615,6 @@ public class ICInstructions {
     @SuppressWarnings("unchecked")
     @Override
     public List<Pair<Var, InitType>> getInitialized() {
-      if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
-        // The local version of input_file initializes the output for writing
-        return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
-      }
       return Collections.emptyList();
     }
 

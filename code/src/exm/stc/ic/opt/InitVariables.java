@@ -8,7 +8,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -18,7 +17,6 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
-import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
@@ -33,17 +31,17 @@ public class InitVariables {
   public static class InitState {
     public final HierarchicalSet<Var> initVars;
     public final HierarchicalSet<Var> assignedVals;
-    
+
     private InitState(HierarchicalSet<Var> initVars,
         HierarchicalSet<Var> assignedVals) {
       this.initVars = initVars;
       this.assignedVals = assignedVals;
     }
-    
+
     private InitState() {
       this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>());
     }
-    
+
     private InitState makeChild() {
       return new InitState(initVars.makeChild(), assignedVals.makeChild());
     }
@@ -70,7 +68,7 @@ public class InitVariables {
       }
       return state;
     }
-    
+
 
     /**
      * Create child initialized for continuation
@@ -90,15 +88,15 @@ public class InitVariables {
       }
       return contState;
     }
-    
+
     public InitState enterBlock(Block block) {
       return makeChild();
     }
-    
+
     public static boolean canUnifyBranches(Continuation cont) {
       return cont.isExhaustiveSyncConditional();
     }
-    
+
     /**
      * Unify any information from branches of continuation
      * @param cont
@@ -123,19 +121,19 @@ public class InitVariables {
      * @param validate
      */
     public void updateInitVars(Instruction inst, boolean validate) {
-      
+
       if (validate) {
         for (Arg in: inst.getInputs()) {
           if (in.isVar()) {
             assertInitialized(inst, in.getVar(), false);
-            
+
             assertAssigned(inst, in.getVar());
           }
         }
       }
       List<Var> regularOutputs = inst.getOutputs();
       List<Pair<Var, InitType>> initialized = inst.getInitialized();
-      
+
       if (initialized.size() > 0) {
         regularOutputs = new ArrayList<Var>(regularOutputs);
         for (Pair<Var, InitType> init: initialized) {
@@ -162,10 +160,10 @@ public class InitVariables {
         if (validate) {
           assertInitialized(inst, out, true);
         }
-        
+
         if (assignBeforeRead(out)) {
           boolean added = assignedVals.add(out);
-    
+
           if (validate && !added) {
             throw new STCRuntimeError("double assigned val " + out);
           }
@@ -190,7 +188,7 @@ public class InitVariables {
     public boolean isInitialized(Arg val, boolean output)
     {
       if (val.isVar()) {
-        return isInitialized(val.getVar(), output); 
+        return isInitialized(val.getVar(), output);
       } else {
         if (output) {
           throw new STCRuntimeError("Cannot use constant as output: " +
@@ -201,7 +199,7 @@ public class InitVariables {
         }
       }
     }
-    
+
     /**
      * Check that variable is correctly initialized
      * @param var
@@ -217,7 +215,7 @@ public class InitVariables {
       }
       return true;
     }
-    
+
     /**
      * Check that variable is initialized
      * @param context
@@ -231,7 +229,7 @@ public class InitVariables {
                       var + " in " + context.toString());
       }
     }
-    
+
     private void assertAssigned(Object context, Var inVar) {
       if (assignBeforeRead(inVar)
           && !assignedVals.contains(inVar)) {
@@ -239,24 +237,24 @@ public class InitVariables {
                        " read in " + context.toString());
       }
     }
-    
-    
+
+
   }
-  
-  
+
+
 
   /**
    * Analysis that performs validation of variable initialization
    * within a function. Throws a runtime error if a problem is
    * found.
-   * 
+   *
    * @param logger
    * @param fn
    */
   public static void checkVarInit(Logger logger, Function fn) {
     recurseOnBlock(logger, fn.mainBlock(), InitState.enterFunction(fn), true);
   }
-  
+
   /**
    * Perform analysis on a statement to determine what is initialized
    * by it. This doesn't perform any validation.
@@ -268,11 +266,11 @@ public class InitVariables {
     updateInitVars(logger, stmt, state, false);
     return state;
   }
-  
+
   /**
    * Check variable initialization recursively on continuation.
    * This is the workhorse of this module that traverses the intermediate
-   * representation and finds out which variables are initialized 
+   * representation and finds out which variables are initialized
    * @param logger
    * @param state Initialized vars.  Updated if we discover that more vars
    *      are initialized after continuation
@@ -284,7 +282,7 @@ public class InitVariables {
    */
   public static void checkInitCont(Logger logger, InitState state,
       Continuation c, boolean validate) {
-    
+
     if (validate) {
       for (Var v: c.requiredVars(false)) {
         state.assertInitialized(c.getType(), v, false);
@@ -293,18 +291,18 @@ public class InitVariables {
     }
     if (validate && c.isAsync()) {
       List<Var> init = c.constructDefinedVars(ContVarDefType.INIT);
-      
+
       // Vars passed to async continuation must generally be initialized
       for (PassedVar pv: c.getPassedVars()) {
         state.assertInitialized(c.getType(), pv.var, false);
-        
+
         // If not assigned by construct, must be assigned
         if (Types.assignBeforeRead(pv.var) && !init.contains(pv.var)) {
           state.assertAssigned(c.getType(), pv.var);
         }
       }
     }
-    
+
     if (validate || InitState.canUnifyBranches(c)) {
       recurseOnContinuation(logger, state, c, validate);
     }
@@ -318,7 +316,7 @@ public class InitVariables {
     if (unifyBranches) {
       branchStates = new ArrayList<InitState>();
     }
-    
+
     InitState contState = state.enterContinuation(cont);
     for (Block inner: cont.getBlocks()) {
       InitState blockState = contState.makeChild();
@@ -328,7 +326,7 @@ public class InitVariables {
         branchStates.add(blockState);
       }
     }
-    
+
     // Unify information from branches into parent
     if (unifyBranches) {
       state.unifyBranches(cont, branchStates);
@@ -337,11 +335,11 @@ public class InitVariables {
 
   private static void recurseOnBlock(Logger logger,
       Block block, InitState state, boolean validate) {
-    
+
     for (Statement stmt: block.getStatements()) {
       updateInitVars(logger, stmt, state, validate);
     }
-    
+
     for (Continuation c: block.getContinuations()) {
       if (validate || InitState.canUnifyBranches(c)) {
         // Only recurse if this might result in more initialized vars
@@ -358,7 +356,7 @@ public class InitVariables {
    * @param state
    * @param validate
    */
-  public static void updateInitVars(Logger logger, 
+  public static void updateInitVars(Logger logger,
             Statement stmt, InitState state, boolean validate) {
     switch (stmt.type()) {
       case INSTRUCTION:
@@ -373,7 +371,7 @@ public class InitVariables {
         throw new STCRuntimeError("Unknown statement type" + stmt.type());
     }
   }
-  
+
   public static boolean assignBeforeRead(Var v) {
     return Types.assignBeforeRead(v);
   }
@@ -383,14 +381,11 @@ public class InitVariables {
       return Types.outputRequiresInitialization(v);
     } else {
       return Types.inputRequiresInitialization(v);
-    } 
+    }
   }
 
   public static boolean initAndAssignLocalFile(Instruction inst) {
     if (inst.op == Opcode.LOAD_FILE) {
-      return true;
-    } else if (inst.op == Opcode.CALL_FOREIGN_LOCAL &&
-          ((CommonFunctionCall)inst).isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
       return true;
     } else {
       return false;

@@ -56,7 +56,7 @@ public class Var implements Comparable<Var>, Typed {
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
   public static final String FILENAME_OF_PREFIX = "__filename:";
   public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
-  /* Separate prefixes to avoid name clashes for optimizer 
+  /* Separate prefixes to avoid name clashes for optimizer
    *    inserted variables */
   public static final String OPT_VAR_PREFIX = "__o:";
   public static final String OPT_FILENAME_PREFIX = "__of:";
@@ -66,11 +66,19 @@ public class Var implements Comparable<Var>, Typed {
   public static final String COMPILER_ARG_PREFIX = "__ca:";
   public static final String LOOP_COND_PREFIX = "__xcond:";
   public static final String OUTER_VAR_PREFIX = "__outer:";
-  
+
+  public static final String NO_WAIT_VAR_PREFIX = "__no_wait_var";
+  public static final String NO_WAIT_STRING_NAME =
+                                  NO_WAIT_VAR_PREFIX + ":string";
+
   // Convenience constant
   public static final List<Var> NONE = Collections.emptyList();
 
-  
+  // Variable that signals no waiting
+  public static final Var NO_WAIT_STRING_VAR = new Var(Types.F_STRING,
+      Var.NO_WAIT_STRING_NAME, Alloc.GLOBAL_CONST,
+      DefType.GLOBAL_CONST, VarProvenance.optimizerTmp());
+
   /**
    * How the variable is allocated and stored.
    */
@@ -89,7 +97,7 @@ public class Var implements Comparable<Var>, Typed {
     /** Global constant store variable, allocated at program
      *  start. */
     GLOBAL_CONST;
-    
+
     public boolean allocUponBlockEntry() {
       return this == STACK || this == TEMP;
     }
@@ -121,7 +129,7 @@ public class Var implements Comparable<Var>, Typed {
   {
     this(type, name, storage, defType, provenance, false);
   }
-  
+
   public Var(Type type, String name, Alloc storage, DefType defType,
              VarProvenance provenance, boolean mappedDecl) {
     assert(provenance != null);
@@ -143,7 +151,7 @@ public class Var implements Comparable<Var>, Typed {
     if (newType.equals(this.type)) {
       return this;
     } else {
-      return new Var(newType, name, storage, defType, 
+      return new Var(newType, name, storage, defType,
                      provenance, mappedDecl);
     }
   }
@@ -157,12 +165,12 @@ public class Var implements Comparable<Var>, Typed {
   public int hashCode() {
     return hashCode;
   }
-  
+
   public int calcHashCode() {
     // Assume name unique
     return name.hashCode();
   }
-  
+
   /**
    * Compare variables by name (assume name unique)
    * @param o
@@ -178,7 +186,7 @@ public class Var implements Comparable<Var>, Typed {
     Var ov = (Var)o;
     return name.equals(ov.name);
   }
-  
+
   @Override
   public int compareTo(Var o) {
     return this.name.compareTo(o.name);
@@ -194,7 +202,7 @@ public class Var implements Comparable<Var>, Typed {
            storage == o.storage &&
            defType == o.defType;
   }
-  
+
   public String name() {
     return name;
   }
@@ -203,7 +211,7 @@ public class Var implements Comparable<Var>, Typed {
   public Type type() {
     return type;
   }
-  
+
   public Alloc storage() {
     return storage;
   }
@@ -215,7 +223,7 @@ public class Var implements Comparable<Var>, Typed {
   public VarProvenance provenance() {
     return provenance;
   }
-  
+
   public boolean mappedDecl() {
     return mappedDecl;
   }
@@ -234,13 +242,13 @@ public class Var implements Comparable<Var>, Typed {
     } else if (storage.allocUponBlockEntry() &&
                defType.isLocal()) {
       // If the variable is allocated in this scope and we didn't see a
-      // mapping, then we can assume it's unmapped 
+      // mapping, then we can assume it's unmapped
       return Ternary.FALSE;
     }
     // Can't be sure
     return Ternary.MAYBE;
   }
-  
+
   /**
    * Determine if the variable may be an alias at runtime
    * @return
@@ -283,14 +291,14 @@ public class Var implements Comparable<Var>, Typed {
     nameFill(result, variables);
     return result;
   }
-  
+
   public static Set<String> nameSet(Collection<Var> variables)
   {
     Set<String> result = new HashSet<String>(variables.size());
     nameFill(result, variables);
     return result;
   }
-  
+
   private static void nameFill(Collection<String> names,
                                   Collection<Var> variables)
   {
@@ -307,7 +315,7 @@ public class Var implements Comparable<Var>, Typed {
 
     return result;
   }
-  
+
   /**
    * Different by variable name
    * @param list
@@ -324,7 +332,7 @@ public class Var implements Comparable<Var>, Typed {
     }
     return diff;
   }
-  
+
 
   /**
    * Represent variable plus a count
@@ -332,28 +340,28 @@ public class Var implements Comparable<Var>, Typed {
   public static class VarCount {
     public final Var var;
     public final long count;
-    
+
     public VarCount(Var var, long count) {
       this.var = var;
       this.count = count;
     }
-    
+
     public static VarCount one(Var var) {
       return new VarCount(var, 1);
     }
-    
+
     public List<VarCount> asList() {
       return Collections.singletonList(this);
     }
-    
+
     @Override
     public String toString() {
       return var.name() + "=" + count;
     }
-    
+
     public static final List<VarCount> NONE = Collections.emptyList();
   }
-  
+
   public static List<VarCount> countVars(List<Var> list) {
     ArrayList<Var> sorted = new ArrayList<Var>(list);
     Collections.sort(sorted, new Comparator<Var>() {
@@ -364,7 +372,7 @@ public class Var implements Comparable<Var>, Typed {
     });
     ArrayList<VarCount> res = new ArrayList<VarCount>();
     Var curr = null;
-    long currCount = 0; 
+    long currCount = 0;
     for (Var v: sorted) {
       if (curr == null) {
         curr = v;
@@ -380,7 +388,7 @@ public class Var implements Comparable<Var>, Typed {
     if (curr != null && currCount != 0) {
       res.add(new VarCount(curr, currCount));
     }
-      
+
     return res;
   }
 
@@ -406,7 +414,7 @@ public class Var implements Comparable<Var>, Typed {
     }
     return res;
   }
-  
+
   /**
    * Do intersection by name
    * @param vs1
@@ -425,7 +433,7 @@ public class Var implements Comparable<Var>, Typed {
     }
     return res;
   }
-  
+
   public Arg asArg() {
     return Arg.createVar(this);
   }
@@ -436,18 +444,18 @@ public class Var implements Comparable<Var>, Typed {
       res.add(v.asArg());
     }
     return res;
-    
+
   }
 
   public List<Var> asList() {
     return Collections.singletonList(this);
   }
-  
+
   @Override
   public String toString() {
     return type.typeName() + ':' + name;
   }
-  
+
   public static Var findByName(List<Var> vars, String name) {
     for (Var v: vars) {
       if (v.name().equals(name)) {
@@ -456,7 +464,7 @@ public class Var implements Comparable<Var>, Typed {
     }
     return null;
   }
-  
+
   /**
    * Choose a name for a struct field var
    * @param struct
@@ -467,7 +475,7 @@ public class Var implements Comparable<Var>, Typed {
     return Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');
   }
-  
+
   /**
    * Create neated prefixed vars
    * @param prefix
@@ -480,7 +488,7 @@ public class Var implements Comparable<Var>, Typed {
     }
     return prefix + name;
   }
-  
+
   /**
    * Track where variable was derived from in source, or from other
    * variables
@@ -491,19 +499,19 @@ public class Var implements Comparable<Var>, Typed {
      * The type of provenance
      */
     public final VarProvType type;
-    
+
     /**
      * Source location it is associated with
      */
     public final SourceLoc sourceLoc;
-    
+
     /**
      * Any predecessor vars (interpretation depends on type)
      */
     public final List<Var> predecessors;
-    
+
     public final List<String> additional;
-    
+
     private VarProvenance(VarProvType type, SourceLoc sourceLoc,
                       List<Var> predecessors, List<String> additional) {
       this.type = type;
@@ -516,11 +524,11 @@ public class Var implements Comparable<Var>, Typed {
       }
       this.additional = additional;
     }
-    
+
     public static VarProvenance unknown() {
       return new VarProvenance(VarProvType.UNKNOWN, null, null, null);
     }
-    
+
     public static VarProvenance userVar(SourceLoc loc) {
       return new VarProvenance(VarProvType.USER_DECLARED, loc, null, null);
     }
@@ -532,27 +540,27 @@ public class Var implements Comparable<Var>, Typed {
     public static VarProvenance structField(Var struct, String field) {
       return structField(struct, Collections.singletonList(field), null);
     }
-    
+
     public static VarProvenance structField(Var struct, List<String> fieldPath,
                                             SourceLoc sourceLoc) {
       return new VarProvenance(VarProvType.STRUCT_MEMBER,  sourceLoc,
                    struct.asList(), new ArrayList<String>(fieldPath));
     }
 
-    
+
     public static VarProvenance valueOf(Var var) {
       return valueOf(var, null);
     }
-    
+
     public static VarProvenance valueOf(Var var, SourceLoc sourceLoc) {
       return new VarProvenance(VarProvType.VALUE_OF, sourceLoc,
                                var.asList(), null);
     }
-    
+
     public static VarProvenance filenameOf(Var var) {
       return filenameOf(var, null);
     }
-    
+
     public static VarProvenance filenameOf(Var var, SourceLoc sourceLoc) {
       return new VarProvenance(VarProvType.FILENAME_OF, sourceLoc,
                                var.asList(), null);
@@ -564,7 +572,7 @@ public class Var implements Comparable<Var>, Typed {
       while (original.provenance.type == VarProvType.RENAMED) {
         original = original.provenance.predecessors.get(0);
       }
-      
+
       return new VarProvenance(VarProvType.RENAMED,
               original.provenance.sourceLoc, original.asList(), null);
     }
@@ -596,10 +604,10 @@ public class Var implements Comparable<Var>, Typed {
           res += " " + additional;
         }
       }
-      
+
       if (sourceLoc != null) {
         if (!res.equals("")) {
-          res += " "; 
+          res += " ";
         }
         res += sourceLoc.toString();
       }
@@ -614,7 +622,7 @@ public class Var implements Comparable<Var>, Typed {
       }
     }
   }
-  
+
   public static enum VarProvType {
     UNKNOWN, // Don't know where it came from
     USER_DECLARED, // Explicitly declared
@@ -628,7 +636,7 @@ public class Var implements Comparable<Var>, Typed {
     STRUCT_MEMBER, // Member of struct
     ;
   }
-  
+
   /**
    * Location in a source file.
    */
@@ -641,13 +649,13 @@ public class Var implements Comparable<Var>, Typed {
       this.line = line;
       this.column = column;
     }
-    
+
     public final String file;
     public final String moduleName;
     public final String func;
     public final int line;
     public final int column;
-    
+
     @Override
     public String toString() {
       String res = "";
@@ -658,7 +666,7 @@ public class Var implements Comparable<Var>, Typed {
       res += this.line + ":" + this.column;
       return res;
     }
-    
+
 
     /**
      * @return concise human-readable string with logical location
