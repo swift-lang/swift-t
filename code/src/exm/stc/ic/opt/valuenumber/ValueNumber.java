@@ -60,6 +60,7 @@ import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.Congruences.OptUnsafeError;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
+import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -995,14 +996,22 @@ public class ValueNumber implements OptimizerPass {
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
             VarProvenance.filenameOf(outVar));
 
-        if (outVar.isMapped() == Ternary.FALSE) {
+        if (outVar.isMapped() == Ternary.FALSE && output.preinitOutputMapping) {
           // Initialize unmapped var
           assert (outVar.type().fileKind().supportsTmpImmediate());
           WrapUtil.initTemporaryFileName(insertPoint, outVar, filenameVal);
         } else {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
-          insertPoint.add(TurbineOp.getFilenameVal(filenameVal, outVar));
+          Var isMapped = WrapUtil.getIsMapped(insertContext, insertPoint, outVar);
+          IfStatement ifMapped = new IfStatement(isMapped.asArg());
+          ifMapped.setParent(insertContext);
+          insertPoint.add(ifMapped);
+
+          ifMapped.thenBlock().addInstruction(TurbineOp.getFilenameVal(filenameVal, outVar));
+          // Dummy value if no mapping
+          ifMapped.elseBlock().addInstruction(ICInstructions.valueSet(filenameVal,
+                                              Arg.createStringLit("")));
         }
         filenameVals.put(outVar, filenameVal);
       }
