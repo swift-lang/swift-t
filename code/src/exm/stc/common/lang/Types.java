@@ -519,11 +519,19 @@ public class Types {
     private final int hashCode;
 
     public static StructType localStruct(StructType structType) {
-      return new StructType(true, structType.typeName, structType.fields);
+      if (structType.local) {
+        return structType;
+      } else {
+        return new StructType(true, structType.typeName, structType.fields);
+      }
     }
 
     public static StructType sharedStruct(StructType structType) {
-      return new StructType(false, structType.typeName, structType.fields);
+      if (structType.local) {
+        return new StructType(false, structType.typeName, structType.fields);
+      } else {
+        return structType;
+      }
     }
 
     public static StructType localStruct(String typeName,
@@ -2689,14 +2697,10 @@ public class Types {
     } else if (isStruct(t)) {
       StructType st = (StructType)t.type().getImplType();
       if (recursive) {
-        for (StructField f: st.getFields()) {
-          if (Types.isRef(f.getType())) {
-            throw new STCRuntimeError("Recursive fetch of struct with ref field "
-                                     + "not supported yet " + st);
-          }
-        }
+        return unpackedType(st);
+      } else {
+        return StructType.localStruct(st);
       }
-      return StructType.localStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
@@ -2778,10 +2782,10 @@ public class Types {
     }
 
     if (differences) {
-      return new StructType(true, "local:" + type.typeName(),
+      return new StructType(true, "unpacked:" + type.typeName(),
                             unpackedFields);
     } else {
-      return structType;
+      return StructType.localStruct(structType);
     }
   }
 
