@@ -2538,10 +2538,10 @@ public class TurbineGenerator implements CompilerBackend {
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
-        TypeName baseTypes[] = new TypeName[waitVars.size()];
+        Expression baseTypes[] = new Expression[waitVars.size()];
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
-          Pair<Integer, TypeName> data = recursiveContainerType(waitVarType);
+          Pair<Integer, Expression> data = recursiveTypeDescriptor(waitVarType);
           depths[i] = data.val1;
           baseTypes[i] = data.val2;
         }
@@ -2596,8 +2596,6 @@ public class TurbineGenerator implements CompilerBackend {
         for (StructField f: ((StructType)baseType.getImplType()).getFields()) {
           if (checkRecursiveWait(f.getType())) {
             requiresRecursion = true;
-            throw new STCRuntimeError("Recursively waiting on structs with " +
-                         " references to other datums is not yet implemented");
           }
         }
       } else {
@@ -2613,27 +2611,99 @@ public class TurbineGenerator implements CompilerBackend {
      * @param type
      * @return (nesting depth, base type name)
      */
-    private Pair<Integer, TypeName> recursiveContainerType(Type type) {
+    private Pair<Integer, Expression> recursiveTypeDescriptor(Type type) {
       Type baseType;
       int depth;
       if (Types.isContainer(type)) {
         NestedContainerInfo ai = new NestedContainerInfo(type);
         depth = ai.nesting;
         baseType = ai.baseType;
-      } else if (Types.isFuture((type))) {
+      } else if (Types.isStruct(type)) {
+        depth = 0;
+        baseType = new RefType(type, false);
+      } else if (Types.isFuture((type)) || Types.isStruct(type)) {
         depth = 0;
         // Indicate that it's a future not a value
         // TODO: does mutability matter?
         baseType = new RefType(type, false);
-      } else if (Types.isPrimValue(type)) {
+      } else if (Types.isPrimValue(type) || Types.isStructLocal(type)) {
         depth = 0;
         baseType = type;
       } else {
         throw new STCRuntimeError("Not sure how to deep wait on type "
                                   + type);
       }
-      TypeName baseReprType = representationType(baseType);
-      return Pair.create(depth, baseReprType);
+
+      Expression baseTypeExpr;
+      if (Types.isStruct(baseType) || Types.isStructRef(baseType)) {
+        baseTypeExpr = structTypeDescriptorExpr(baseType);
+      } else {
+        baseTypeExpr = representationType(baseType);
+      }
+
+      return Pair.create(depth, baseTypeExpr);
+    }
+
+    /**
+     * Return descriptor describing struct fields that are references to
+     * other data.
+     * Descriptor is list with following elements:
+     *    ("struct"|"struct_ref"), fields, nest_levels, base_types
+     *    field_paths: list of field path lists with recursive references
+     *    nest_levels: list of nest levels for fields
+     *    base_types: list of base types for fields
+     *
+     * @param type - struct or ref to struct
+     * @return
+     */
+    private Expression structTypeDescriptorExpr(Type type) {
+      assert(Types.isStruct(type) || Types.isStructRef(type));
+
+      StructType structType;
+      boolean reference = Types.isRef(type);
+      if (reference) {
+        structType = (StructType)type.memberType();
+      } else {
+        structType = (StructType)type;
+      }
+
+      Token prefix = new Token(reference ? "struct_ref" : "struct");
+
+      List<Expression> fieldPaths = new ArrayList<Expression>();
+      List<LiteralInt> nestLevels = new ArrayList<LiteralInt>();
+      List<Expression> baseTypes = new ArrayList<Expression>();
+
+      StackLite<Expression> structPath = new StackLite<Expression>();
+      buildStructTypeDescriptor(structType, structPath, fieldPaths,
+                                nestLevels, baseTypes);
+
+      return new TclList(prefix, new TclList(fieldPaths),
+                         new TclList(nestLevels),
+                         new TclList(baseTypes));
+    }
+
+    private void buildStructTypeDescriptor(StructType structType,
+        StackLite<Expression> structPath, List<Expression> fieldPaths,
+        List<LiteralInt> nestLevels, List<Expression> baseTypes) {
+      for (StructField f: structType.getFields()) {
+        Type fieldType = f.getType();
+        structPath.push(new TclString(f.getName(), true));
+        if (Types.isRef(fieldType)) {
+          fieldPaths.add((Expression) new TclList(structPath));
+
+          Type derefed = fieldType.memberType();
+          Pair<Integer, Expression> fieldTypeDescriptor =
+              recursiveTypeDescriptor(derefed);
+          nestLevels.add(new LiteralInt(fieldTypeDescriptor.val1));
+          baseTypes.add(fieldTypeDescriptor.val2);
+        } else if (Types.isStruct(fieldType)) {
+          buildStructTypeDescriptor((StructType)fieldType, structPath,
+                                    fieldPaths, nestLevels, baseTypes);
+        } else {
+          // Value - don't need to follow
+        }
+        structPath.pop();
+      }
     }
 
     private void endAsync() {
@@ -3802,7 +3872,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private Expression unpackArrayInternal(Arg arg) {
-    Pair<Integer, TypeName> rct = recursiveContainerType(arg.type());
+    Pair<Integer, Expression> rct = recursiveTypeDescriptor(arg.type());
     Expression unpackArrayExpr = Turbine.unpackArray(
                             argToExpr(arg), rct.val1, rct.val2);
     return unpackArrayExpr;

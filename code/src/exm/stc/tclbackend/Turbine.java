@@ -1019,20 +1019,20 @@ class Turbine {
 
   public static Sequence deepRule(String symbol,
           List<? extends Expression> inputs, int[] depths,
-          TypeName[] baseTypes, List<Expression> action, ExecTarget mode,
+          Expression[] baseTypes, List<Expression> action, ExecTarget mode,
           ExecContext execCx, RuleProps props) {
     assert (inputs.size() == depths.length);
     assert (inputs.size() == baseTypes.length);
 
     List<Expression> depthExprs = new ArrayList<Expression>(depths.length);
-    List<Expression> isFileExprs = new ArrayList<Expression>(baseTypes.length);
+    List<Expression> baseTypeExprs = new ArrayList<Expression>(baseTypes.length);
 
     for (int depth : depths) {
       depthExprs.add(new LiteralInt(depth));
     }
 
-    for (TypeName t : baseTypes) {
-      isFileExprs.add(t);
+    for (Expression t : baseTypes) {
+      baseTypeExprs.add(t);
     }
 
     Sequence res = new Sequence();
@@ -1042,7 +1042,7 @@ class Turbine {
     List<Expression> args = new ArrayList<Expression>();
     args.add(new TclList(inputs));
     args.add(new TclList(depthExprs));
-    args.add(new TclList(isFileExprs));
+    args.add(new TclList(baseTypeExprs));
     args.add(TclUtil.tclStringAsList(action));
     ruleAddKeywordArgs(mode, props.target, props.softTarget,
                        props.parallelism, args);
@@ -1657,7 +1657,7 @@ class Turbine {
   }
 
   public static Expression unpackArray(Expression array, int nestLevel,
-          TypeName baseType) {
+                                       Expression baseType) {
     assert (nestLevel >= 0);
     return new Square(UNPACK_ARGS, array, new LiteralInt(nestLevel), baseType);
   }
