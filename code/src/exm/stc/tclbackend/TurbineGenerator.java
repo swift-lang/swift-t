@@ -1173,27 +1173,73 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignRecursive(Var target, Arg src) {
-    assert(Types.isContainer(target));
-    assert(Types.isContainerLocal(src.type()));
-    assert(src.type().assignableTo(
-              Types.unpackedContainerType(target)));
-
-    List<TypeName> typeList = recursiveTypeList(target.type(), false, true,
-                                                true, true, true);
-    pointAdd(Turbine.buildRec(typeList, varToExpr(target), argToExpr(src)));
+  public void assignArrayRecursive(Var dst, Arg src) {
+    assert(Types.isArray(dst));
+    assert(Types.isArrayLocal(src.type()));
+    assignRecursive(dst, src);
   }
 
   @Override
-  public void retrieveRecursive(Var target, Var src, Arg decr) {
-    assert(Types.isContainer(src));
-    assert(Types.isContainerLocal(target));
-    assert(Types.unpackedContainerType(src).assignableTo(target.type()));
+  public void assignStructRecursive(Var dst, Arg src) {
+    assert(Types.isStruct(dst));
+    assert(Types.isStructLocal(src.type()));
+    assignRecursive(dst, src);
+  }
+
+  @Override
+  public void assignBagRecursive(Var dst, Arg src) {
+    assert(Types.isBag(dst));
+    assert(Types.isBagLocal(src.type()));
+    assignRecursive(dst, src);
+  }
+
+  private void assignRecursive(Var dst, Arg src) {
+    assert(src.type().assignableTo(
+              Types.unpackedType(dst)));
+
+    if (Types.isStruct(dst)) {
+      // TODO
+      throw new STCRuntimeError("Unimplemented");
+    }
+
+    List<TypeName> typeList = recursiveTypeList(dst.type(), false, true,
+                                                true, true, true);
+    pointAdd(Turbine.buildRec(typeList, varToExpr(dst), argToExpr(src)));
+  }
+
+  @Override
+  public void retrieveArrayRecursive(Var dst, Var src, Arg decr) {
+    assert(Types.isArray(src));
+    assert(Types.isArrayLocal(dst));
+    retrieveRecursive(dst, src, decr);
+  }
+
+  @Override
+  public void retrieveStructRecursive(Var dst, Var src, Arg decr) {
+    assert(Types.isStruct(src));
+    assert(Types.isStructLocal(dst));
+    retrieveRecursive(dst, src, decr);
+  }
+
+  @Override
+  public void retrieveBagRecursive(Var dst, Var src, Arg decr) {
+    assert(Types.isBag(src));
+    assert(Types.isBagLocal(dst));
+    retrieveRecursive(dst, src, decr);
+  }
+
+  private void retrieveRecursive(Var dst, Var src, Arg decr) {
+    assert(Types.unpackedType(src).assignableTo(dst.type()));
+
+    if (Types.isStruct(src)) {
+      // TODO
+      throw new STCRuntimeError("Unimplemented");
+    }
 
     List<TypeName> typeList =
         recursiveTypeList(src.type(), false, false, true, true, true);
 
-    pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
+    pointAdd(Turbine.enumerateRec(prefixVar(dst), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 

@@ -197,7 +197,7 @@ public class ComputedValue<T> {
   public static ArgCV assignCompVal(Typed dst, Arg src, boolean recursive) {
     if (recursive) {
       assert(src.type().assignableTo(
-             Types.unpackedContainerType(dst)));
+             Types.unpackedType(dst)));
 
     } else {
       assert(Types.storeResultType(src, false)

@@ -466,7 +466,7 @@ public class ExprWalker {
   public Var retrieveContainerValues(Context context, Var c)
           throws UserException {
     assert(Types.isContainer(c));
-    Type unpackedT = Types.unpackedContainerType(c.type());
+    Type unpackedT = Types.unpackedType(c.type());
     Var val = varCreator.createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
     // TODO: recursively free e.g. blobs in list
@@ -1246,7 +1246,7 @@ public class ExprWalker {
       if (functionOutput.storage() == Alloc.LOCAL) {
         values.add(functionOutput);
       } else if (Types.isContainer(functionOutput)) {
-        Type unpackedT = Types.unpackedContainerType(functionOutput);
+        Type unpackedT = Types.unpackedType(functionOutput);
         values.add(varCreator.createValueVar(context, unpackedT,
                                              functionOutput, true));
       } else {

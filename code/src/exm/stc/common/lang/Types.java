@@ -2670,7 +2670,7 @@ public class Types {
       return t.type().baseType().memberType();
     } else if (recursive &&
         (isContainer(t) || isContainerLocal(t))) {
-      return unpackedContainerType(t);
+      return unpackedType(t);
     } else if (isArray(t)) {
       assert(!recursive);
       ArrayType at = (ArrayType)t.type().getImplType();
@@ -2728,34 +2728,38 @@ public class Types {
     }
   }
 
-
   /**
-   * Work out type of container variable if we extract all
-   * values into local variables
+   * Work out type of variable if we recursively extract all values into
+   * local variables
    * @param t
    * @return
    */
-  public static Type unpackedContainerType(Typed t) {
-    assert(Types.isContainer(t) || Types.isContainerRef(t) ||
-           Types.isContainerLocal(t));
+  public static Type unpackedType(Typed t) {
+    Type type = stripRefs(t.type());
+
+    if (Types.isContainer(type) ||
+        Types.isContainerLocal(type)) {
+      // Recursively unpack
+      return unpackedContainerType(type);
+    } else if (Types.isStruct(type) || Types.isStructLocal(type)) {
+      // TODO
+      throw new STCRuntimeError("Unimplemented");
+    } else {
+      while (Types.canRetrieve(type)) {
+        type = retrievedType(type);
+      }
+      return type;
+    }
+  }
+
+  private static Type unpackedContainerType(Typed t) {
+    assert(Types.isContainer(t) || Types.isContainerLocal(t));
+
     Type elemType = Types.containerElemType(t);
 
-    // Strip off references
-    while (Types.isRef(elemType)) {
-      elemType = Types.retrievedType(elemType);
-    }
+    // Recursively unpack
+    Type elemValType = unpackedType(elemType);
 
-    Type elemValType;
-    if (Types.isContainer(elemType) ||
-        Types.isContainerLocal(elemType)) {
-      // Recursively unpack
-      elemValType = unpackedContainerType(elemType);
-    } else {
-      elemValType = elemType;
-      while (Types.canRetrieve(elemValType)) {
-        elemValType = retrievedType(elemValType );
-      }
-    }
     if (Types.isArray(t) || Types.isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
       return ArrayType.localArray(at.keyType(), elemValType);
@@ -2763,6 +2767,15 @@ public class Types {
       assert(Types.isBag(t) || Types.isBagLocal(t));
       return BagType.localBag(elemValType);
     }
+  }
+
+  private static Type stripRefs(Type t) {
+    // Strip off references
+    while (Types.isRef(t)) {
+      t = Types.retrievedType(t);
+    }
+
+    return t;
   }
 
   /**

@@ -594,7 +594,25 @@ public interface CompilerBackend {
    * @param dst
    * @param src
    */
-  public void assignRecursive(Var dst, Arg src);
+  public void assignArrayRecursive(Var dst, Arg src);
+
+  /**
+   * Store a local data value to a compound data type.
+   * The exact behaviour should depend on the type of dst, which
+   * may or may not have {@link RefType} indirection in it.
+   * @param dst
+   * @param src
+   */
+  public void assignStructRecursive(Var dst, Arg src);
+
+  /**
+   * Store a local data value to a compound data type.
+   * The exact behaviour should depend on the type of dst, which
+   * may or may not have {@link RefType} indirection in it.
+   * @param dst
+   * @param src
+   */
+  public void assignBagRecursive(Var dst, Arg src);
 
   /**
    * Retrieve from a compound data type to a local value
@@ -604,7 +622,27 @@ public interface CompilerBackend {
    * @param src
    * @param decr
    */
-  public void retrieveRecursive(Var dst, Var src, Arg decr);
+  public void retrieveArrayRecursive(Var dst, Var src, Arg decr);
+
+  /**
+   * Retrieve from a compound data type to a local value
+   * The exact behaviour should depend on the type of src, which
+   * may or may not have {@link RefType} indirection in it.
+   * @param dst
+   * @param src
+   * @param decr
+   */
+  public void retrieveStructRecursive(Var dst, Var src, Arg decr);
+
+  /**
+   * Retrieve from a compound data type to a local value
+   * The exact behaviour should depend on the type of src, which
+   * may or may not have {@link RefType} indirection in it.
+   * @param dst
+   * @param src
+   * @param decr
+   */
+  public void retrieveBagRecursive(Var dst, Var src, Arg decr);
 
   /**
    * Unpack a nested array into a local flat array
