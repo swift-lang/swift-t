@@ -26,6 +26,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -65,7 +67,7 @@ public class WrapUtil {
 
     Type valueT;
     if (recursive && Types.isContainer(var)) {
-      valueT = Types.unpackedContainerType(var);
+      valueT = Types.unpackedType(var);
     } else {
       valueT = Types.retrievedType(var);
     }
@@ -109,7 +111,15 @@ public class WrapUtil {
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
-      instBuffer.add(TurbineOp.retrieveStruct(deref, var));
+      Instruction structRetrieve = TurbineOp.retrieveStruct(deref, var);
+
+      for (StructField f: ((StructType)var.type().getImplType()).getFields()) {
+        if (Types.isRef(f.getType())) {
+          structRetrieve = TurbineOp.retrieveRecursive(deref, var);
+        }
+      }
+
+      instBuffer.add(structRetrieve);
       return deref;
     } else if ((Types.isContainer(var) || Types.isStruct(var))
                 && !recursive) {

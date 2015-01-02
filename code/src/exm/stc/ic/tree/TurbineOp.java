@@ -128,8 +128,14 @@ public class TurbineOp extends Instruction {
     case STORE_STRUCT:
       gen.assignStruct(getOutput(0), getInput(0));
       break;
-    case STORE_RECURSIVE:
-      gen.assignRecursive(getOutput(0), getInput(0));
+    case STORE_ARRAY_RECURSIVE:
+      gen.assignArrayRecursive(getOutput(0), getInput(0));
+      break;
+    case STORE_STRUCT_RECURSIVE:
+      gen.assignStructRecursive(getOutput(0), getInput(0));
+      break;
+    case STORE_BAG_RECURSIVE:
+      gen.assignBagRecursive(getOutput(0), getInput(0));
       break;
     case ARR_RETRIEVE:
       gen.arrayRetrieve(getOutput(0), getInput(0).getVar(),
@@ -320,8 +326,16 @@ public class TurbineOp extends Instruction {
       gen.retrieveBag(getOutput(0), getInput(0).getVar(),
               getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
-    case LOAD_RECURSIVE:
-      gen.retrieveRecursive(getOutput(0), getInput(0).getVar(),
+    case LOAD_ARRAY_RECURSIVE:
+      gen.retrieveArrayRecursive(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
+    case LOAD_STRUCT_RECURSIVE:
+      gen.retrieveStructRecursive(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
+    case LOAD_BAG_RECURSIVE:
+      gen.retrieveBagRecursive(getOutput(0), getInput(0).getVar(),
               getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
     case FREE_BLOB:
@@ -1163,34 +1177,51 @@ public class TurbineOp extends Instruction {
   /**
    * Store a completely unpacked array/bag/etc to the standard shared
    * representation
-   * @param target
+   * @param dst
    * @param src
    * @return
    */
-  public static Instruction storeRecursive(Var target, Arg src) {
-    assert(Types.isContainer(target));
+  public static Instruction storeRecursive(Var dst, Arg src) {
+    assert(Types.isContainer(dst));
     assert(Types.isContainerLocal(src.type()));
     assert(src.type().assignableTo(
-            Types.unpackedContainerType(target))) : src + ":" + src.type()
-                                                          + " " + target;
-    return new TurbineOp(Opcode.STORE_RECURSIVE, target, src);
+            Types.unpackedType(dst))) : src + ":" + src.type()
+                                                          + " " + dst;
+    Opcode op;
+    if (Types.isArray(dst)) {
+      op = Opcode.STORE_ARRAY_RECURSIVE;
+    } else if (Types.isStruct(dst)) {
+      op = Opcode.STORE_STRUCT_RECURSIVE;
+    } else {
+      assert(Types.isBag(dst)) : src.type();
+      op = Opcode.STORE_BAG_RECURSIVE;
+    }
+    return new TurbineOp(op, dst, src);
   }
 
   /**
    * Retrieve an array/bag/etc, following all references to included.
    * src must be recursively closed
-   * @param target
+   * @param dst
    * @param src
    * @return
    */
-  public static Instruction retrieveRecursive(Var target, Var src) {
-    assert(Types.isContainer(src));
-    assert(Types.isContainerLocal(target));
-    Type unpackedSrcType = Types.unpackedContainerType(src);
-    assert(unpackedSrcType.assignableTo(target.type())) :
-            unpackedSrcType + " => " + target;
+  public static Instruction retrieveRecursive(Var dst, Var src) {
+    Type unpackedSrcType = Types.unpackedType(src);
+    assert(unpackedSrcType.assignableTo(dst.type())) :
+            unpackedSrcType + " => " + dst;
 
-    return new TurbineOp(Opcode.LOAD_RECURSIVE, target, src.asArg());
+    Opcode op;
+    if (Types.isArray(src)) {
+      op = Opcode.LOAD_ARRAY_RECURSIVE;
+    } else if (Types.isStruct(src)) {
+      op = Opcode.LOAD_STRUCT_RECURSIVE;
+    } else {
+      assert(Types.isBag(src)) : src.type();
+      op = Opcode.LOAD_BAG_RECURSIVE;
+    }
+
+    return new TurbineOp(op, dst, src.asArg());
   }
 
   public static Instruction freeBlob(Var blobVal) {
@@ -1702,7 +1733,9 @@ public class TurbineOp extends Instruction {
     case STORE_ARRAY:
     case STORE_BAG:
     case STORE_STRUCT:
-    case STORE_RECURSIVE:
+    case STORE_ARRAY_RECURSIVE:
+    case STORE_BAG_RECURSIVE:
+    case STORE_STRUCT_RECURSIVE:
     case DEREF_SCALAR:
     case DEREF_FILE:
     case LOAD_SCALAR:
@@ -1710,7 +1743,9 @@ public class TurbineOp extends Instruction {
     case LOAD_ARRAY:
     case LOAD_BAG:
     case LOAD_STRUCT:
-    case LOAD_RECURSIVE:
+    case LOAD_ARRAY_RECURSIVE:
+    case LOAD_STRUCT_RECURSIVE:
+    case LOAD_BAG_RECURSIVE:
     case STRUCT_LOCAL_BUILD:
       return false;
 
@@ -2650,13 +2685,17 @@ public class TurbineOp extends Instruction {
     case STORE_ARRAY:
     case STORE_BAG:
     case STORE_STRUCT:
-    case STORE_RECURSIVE:
+    case STORE_ARRAY_RECURSIVE:
+    case STORE_STRUCT_RECURSIVE:
+    case STORE_BAG_RECURSIVE:
     case LOAD_SCALAR:
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
     case LOAD_STRUCT:
-    case LOAD_RECURSIVE:
+    case LOAD_ARRAY_RECURSIVE:
+    case LOAD_STRUCT_RECURSIVE:
+    case LOAD_BAG_RECURSIVE:
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
@@ -2743,7 +2782,9 @@ public class TurbineOp extends Instruction {
       case LOAD_ARRAY:
       case LOAD_BAG:
       case LOAD_FILE:
-      case LOAD_RECURSIVE:
+      case LOAD_ARRAY_RECURSIVE:
+      case LOAD_STRUCT_RECURSIVE:
+      case LOAD_BAG_RECURSIVE:
       case LOAD_REF:
       case LOAD_SCALAR:
       case LOAD_STRUCT:
@@ -2751,7 +2792,9 @@ public class TurbineOp extends Instruction {
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_FILE:
-      case STORE_RECURSIVE:
+      case STORE_ARRAY_RECURSIVE:
+      case STORE_STRUCT_RECURSIVE:
+      case STORE_BAG_RECURSIVE:
       case STORE_REF:
       case STORE_SCALAR:
       case STORE_STRUCT:
@@ -2877,7 +2920,9 @@ public class TurbineOp extends Instruction {
       case LOAD_ARRAY:
       case LOAD_BAG:
       case LOAD_FILE:
-      case LOAD_RECURSIVE:
+      case LOAD_ARRAY_RECURSIVE:
+      case LOAD_STRUCT_RECURSIVE:
+      case LOAD_BAG_RECURSIVE:
       case LOAD_REF:
       case LOAD_SCALAR:
       case LOAD_STRUCT:
@@ -2889,7 +2934,9 @@ public class TurbineOp extends Instruction {
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_FILE:
-      case STORE_RECURSIVE:
+      case STORE_ARRAY_RECURSIVE:
+      case STORE_STRUCT_RECURSIVE:
+      case STORE_BAG_RECURSIVE:
       case STORE_REF:
       case STORE_SCALAR:
       case STORE_STRUCT:
@@ -3030,7 +3077,9 @@ public class TurbineOp extends Instruction {
       case LOAD_ARRAY:
       case LOAD_BAG:
       case LOAD_STRUCT:
-      case LOAD_RECURSIVE: {
+      case LOAD_ARRAY_RECURSIVE:
+      case LOAD_STRUCT_RECURSIVE:
+      case LOAD_BAG_RECURSIVE: {
         Arg src = getInput(0);
         Var dst = getOutput(0);
 
@@ -3039,8 +3088,7 @@ public class TurbineOp extends Instruction {
           return ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO,
                                      IsAssign.NO).asList();
         } else {
-          boolean recursive = op == Opcode.LOAD_RECURSIVE;
-          return ValLoc.retrieve(dst, src.getVar(), recursive,
+          return ValLoc.retrieve(dst, src.getVar(), op.isRecursiveRetrieve(),
                       Closed.MAYBE_NOT, IsValCopy.NO, IsAssign.TO_LOCATION).asList();
         }
       }
@@ -3050,7 +3098,9 @@ public class TurbineOp extends Instruction {
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_STRUCT:
-      case STORE_RECURSIVE: {
+      case STORE_ARRAY_RECURSIVE:
+      case STORE_STRUCT_RECURSIVE:
+      case STORE_BAG_RECURSIVE: {
         // add retrieve so we can avoid retrieving later
         Var dst = getOutput(0);
         Arg src = getInput(0);
@@ -3058,14 +3108,13 @@ public class TurbineOp extends Instruction {
 
         // add assign so we can avoid recreating future
         // (closed b/c this instruction closes val immediately)
-        boolean recursive = (op == Opcode.STORE_RECURSIVE);
         ValLoc assign;
         if (op == Opcode.STORE_FILE) {
           assign = ValLoc.assignFile(dst, src, getInput(1),
                                      IsAssign.TO_LOCATION);
         } else {
-          assign = ValLoc.assign(dst, src, recursive,
-            recursive ? Closed.YES_RECURSIVE : Closed.YES_NOT_RECURSIVE,
+          assign = ValLoc.assign(dst, src, (op.isRecursiveAssign()),
+            (op.isRecursiveAssign()) ? Closed.YES_RECURSIVE : Closed.YES_NOT_RECURSIVE,
             IsValCopy.NO, IsAssign.TO_LOCATION);
         }
 
@@ -3402,7 +3451,9 @@ public class TurbineOp extends Instruction {
       case STORE_BAG:
       case STORE_ARRAY:
       case STORE_STRUCT:
-      case STORE_RECURSIVE: {
+      case STORE_ARRAY_RECURSIVE:
+      case STORE_STRUCT_RECURSIVE:
+      case STORE_BAG_RECURSIVE: {
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
@@ -3642,7 +3693,9 @@ public class TurbineOp extends Instruction {
       case LOAD_ARRAY:
       case LOAD_BAG:
       case LOAD_STRUCT:
-      case LOAD_RECURSIVE: {
+      case LOAD_ARRAY_RECURSIVE:
+      case LOAD_STRUCT_RECURSIVE:
+      case LOAD_BAG_RECURSIVE: {
         Var inVar = getInput(0).getVar();
         if (type == RefCountType.READERS) {
           long amt = increments.getCount(inVar);
