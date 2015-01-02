@@ -1560,28 +1560,41 @@ public class ExprWalker {
   void findArraysInStruct(Context context,
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
           throws UndefinedTypeException, UserException {
-    findArraysInStructToClose(context, root, structVInfo,
-                              new StackLite<String>(), arrays);
+    assert(Types.isStruct(root));
+    findArraysInStructToClose(context, root, (StructType)root.type(),
+                    structVInfo, new StackLite<String>(), arrays);
   }
 
+  /**
+   *
+   * @param context
+   * @param rootStruct root struct
+   * @param currStructType current structure type (of root of sub-structure)
+   * @param currStructVInfo
+   * @param fieldPath
+   * @param arrays
+   * @throws UndefinedTypeException
+   * @throws UserException
+   */
   private void findArraysInStructToClose(Context context,
-      Var struct, VInfo structVInfo,
+      Var rootStruct, StructType currStructType, VInfo currStructVInfo,
       StackLite<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
-    assert(structVInfo != null);
-    StructType vtype = (StructType)struct.type();
-    for (StructField f: vtype.getFields()) {
+    assert(currStructVInfo != null);
+
+    for (StructField f: currStructType.getFields()) {
       fieldPath.push(f.getName());
       if (Types.isArray(f.getType())) {
-        Var fieldVar = structLookup(context, struct, fieldPath, false);
-        VInfo fieldInfo = structVInfo != null ?
-            structVInfo.getFieldVInfo(f.getName()) : null;
+        Var fieldVar = structLookup(context, rootStruct, fieldPath, false);
+        VInfo fieldInfo = currStructVInfo != null ?
+            currStructVInfo.getFieldVInfo(f.getName()) : null;
         arrays.add(Pair.create(fieldVar, fieldInfo));
       } else if (Types.isStruct(f.getType())) {
-        VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
-        findArraysInStructToClose(context, struct, nestedVInfo, fieldPath,
-                                  arrays);
+        VInfo nestedVInfo = currStructVInfo.getFieldVInfo(f.getName());
+        findArraysInStructToClose(context, rootStruct, (StructType)f.getType(),
+                                  nestedVInfo, fieldPath, arrays);
       }
+
       fieldPath.pop();
     }
   }

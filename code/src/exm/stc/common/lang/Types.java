@@ -497,6 +497,11 @@ public class Types {
       public String getName() {
         return name;
       }
+
+      @Override
+      public String toString() {
+        return name + ": " + type.typeName();
+      }
     }
 
     public StructType(boolean local, String typeName,
