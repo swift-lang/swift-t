@@ -656,6 +656,7 @@ public class Congruences implements AliasFinder {
       assert(vl.isAssign() == IsAssign.TO_VALUE);
       assigned = canonicalizeAssignValue(consts, vl.value());
     }
+
     if (maybeAssigned.contains(assigned)) {
       // Potential double assignment: avoid doing any optimizations on
       // the contents of this location.
@@ -705,9 +706,19 @@ public class Congruences implements AliasFinder {
       return Arrays.asList(arr, ix);
     } else if (val.isStructFieldVal() || val.isStructFieldAlias() ||
         val.isStructFieldCopy() || val.isStructFieldValRef()) {
-      Arg struct = byAlias.findCanonical(val.getInput(0));
-      Arg fieldName = byValue.findCanonical(val.getInput(1));
-      return Arrays.asList(struct, fieldName);
+      List<Arg> inputs = val.getInputs();
+      List<Arg> result = new ArrayList<Arg>(inputs.size());
+      assert(inputs.size() >= 2);
+
+      Arg struct = inputs.get(0);
+      result.add(byAlias.findCanonical(struct));
+
+      for (int i = 1; i < inputs.size(); i++) {
+        Arg field = inputs.get(i);
+
+        result.add(byValue.findCanonical(field));
+      }
+      return result;
     } else if (val.isFilenameValCV() ||
                val.isFilenameAliasCV() ||
                val.isLocalFilenameCV()) {
