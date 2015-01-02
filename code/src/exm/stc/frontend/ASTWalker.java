@@ -794,11 +794,14 @@ public class ASTWalker {
         HashSet<Var> alreadyFound = new HashSet<Var>();
         for (VariableUsageInfo bvu : branchVUs) {
           arrs.clear();
-          exprWalker.findArraysInStruct(context, v,
-              bvu.lookupVariableInfo(v.name()), arrs);
-          for (Pair<Var, VInfo> p: arrs) {
-            if (p.val2.isAssigned() != Ternary.FALSE) {
-              alreadyFound.add(p.val1);
+          VInfo vi = bvu.lookupVariableInfo(v.name());
+          if (vi != null) {
+            exprWalker.findArraysInStruct(context, v,
+                vi, arrs);
+            for (Pair<Var, VInfo> p: arrs) {
+              if (p.val2.isAssigned() != Ternary.FALSE) {
+                alreadyFound.add(p.val1);
+              }
             }
           }
         }
