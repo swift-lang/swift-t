@@ -1205,14 +1205,16 @@ class Turbine {
    * @return
    */
   public static Command copyStructSubscript(Value out, Value var,
-          Expression subscript, TypeName fieldType) {
-    return new Command(STRUCT_REFERENCE, var, subscript, out, fieldType);
+          Expression subscript, TypeName fieldType, long outWriteDecr) {
+    return new Command(STRUCT_REFERENCE, var, subscript, out, fieldType,
+                        new LiteralInt(outWriteDecr));
   }
 
   public static Command copyStructRefSubscript(Value out, Value var,
-          Expression subscript, TypeName fieldType) {
+          Expression subscript, TypeName fieldType, long outWriteDecr) {
 
-    return new Command(STRUCTREF_REFERENCE, var, subscript, out, fieldType);
+    return new Command(STRUCTREF_REFERENCE, var, subscript, out, fieldType,
+                       new LiteralInt(outWriteDecr));
   }
 
   /**
