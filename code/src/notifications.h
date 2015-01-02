@@ -47,6 +47,7 @@ typedef struct {
   adlb_subscript subscript; // Subscript of ID to set
   adlb_refc refcounts; // Refcounts to transfer
   adlb_data_type type;
+  int write_decr; // Amount to decrement ID write refcount by
   // Data to set it to:
   const void *value;
   int value_len;
@@ -280,7 +281,8 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
  */
 static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
       adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
-      const void *value, int value_len, adlb_refc refcounts)
+      const void *value, int value_len, adlb_refc refcounts,
+      int write_decr)
 {
   // Mark that caller should free
   if (refs->count == refs->size)
@@ -296,6 +298,7 @@ static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
   d->value = value;
   d->value_len = value_len;
   d->refcounts = refcounts;
+  d->write_decr = write_decr;
 
   return ADLB_SUCCESS;
 }

@@ -1969,7 +1969,8 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
 adlb_code
 ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
             adlb_datum_id ref_id, adlb_subscript ref_subscript,
-            adlb_data_type ref_type, adlb_refc transfer_refs)
+            adlb_data_type ref_type, adlb_refc transfer_refs,
+            int ref_write_decr)
 {
   MPI_Status status;
   MPI_Request request;
@@ -1980,6 +1981,7 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
   xfer_pos += xlb_pack_id_sub(xfer_pos, ref_id, ref_subscript);
   MSG_PACK_BIN(xfer_pos, transfer_refs);
+  MSG_PACK_BIN(xfer_pos, ref_write_decr);
 
   int to_server_rank = ADLB_Locate(id);
 

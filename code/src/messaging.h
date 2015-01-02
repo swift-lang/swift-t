@@ -330,6 +330,7 @@ struct packed_reference
 {
   adlb_refc refcounts; // Refcounts transferred
   adlb_datum_id id; // ID to set
+  int write_decr; // Write refcount decr for ID
   int subscript_data; // index of extra data subscript
   adlb_data_type type;
   int val_data; // index of extra data item

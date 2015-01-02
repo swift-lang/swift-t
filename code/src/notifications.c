@@ -33,7 +33,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
           const void *value, int length, adlb_data_type type,
-          adlb_refc transferred_refs, adlb_notif_t *notifs);
+          adlb_refc transferred_refs, int write_decr,
+          adlb_notif_t *notifs);
 
 static adlb_code
 xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript);
@@ -152,7 +153,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
       TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
             ADLB_Data_type_tostring(ref->type));
       rc = xlb_set_ref(ref->id, ref->subscript, ref->value,
-                ref->value_len, ref->type, ref->refcounts, notifs);
+                ref->value_len, ref->type, ref->refcounts, 
+                ref->write_decr, notifs);
       ADLB_CHECK(rc);
       
       ref = NULL; // Pointer may be invalid due to realloc
@@ -183,19 +185,23 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
             const void *value, int length, adlb_data_type type,
-            adlb_refc transferred_refs, adlb_notif_t *notifs)
+            adlb_refc transferred_refs, int write_decr,
+            adlb_notif_t *notifs)
 {
-  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i] r: %i w: %i", id,
-      (int)subscript.length, (const char*)subscript.key, value, length,
-      transferred_refs.read_refcount, transferred_refs.write_refcount);
+  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i] r: %i w: %i "
+      "write_decr: %i", id, (int)subscript.length,
+      (const char*)subscript.key, value, length,
+      transferred_refs.read_refcount, transferred_refs.write_refcount,
+      write_decr);
 
   adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
   if (server == xlb_comm_rank)
   {
+    adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
     adlb_data_code dc = xlb_data_store(id, subscript, value, length,
-                     type, ADLB_WRITE_REFC, transferred_refs, notifs);
+                     type, decr, transferred_refs, notifs);
     ADLB_DATA_CHECK(dc);
 
     return ADLB_SUCCESS;
@@ -915,6 +921,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     packed_refs[i].id = ref->id;
     packed_refs[i].type = ref->type;
     packed_refs[i].refcounts = ref->refcounts;
+    packed_refs[i].write_decr = ref->write_decr;
 
     if (adlb_has_sub(ref->subscript))
     {
@@ -1152,6 +1159,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       d->id = tmp[i].id;
       d->type = tmp[i].type;
       d->refcounts = tmp[i].refcounts;
+      d->write_decr = tmp[i].write_decr;
 
       int sub_data_ix = tmp[i].subscript_data;
       if (sub_data_ix >= 0)

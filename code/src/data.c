@@ -50,6 +50,7 @@ static struct table_lp tds;
 typedef struct {
   adlb_datum_id id;
   adlb_refc acquire;
+  int write_decr;
   size_t subscript_len;
   char subscript_data[];
 } container_reference;
@@ -699,6 +700,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         bool copy_subscript,
                                         adlb_data_type ref_type,
                                         adlb_refc to_acquire,
+                                        int ref_write_decr,
                                         const adlb_buffer *caller_buffer,
                                         adlb_binary_data *result,
                                         adlb_notif_t *notifs)
@@ -758,7 +760,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     // add reference setting work to notifications
     xlb_refs_add(&notifs->references, ref_id, ref_sub,
                  ref_type, result->data, result->length,
-                 to_acquire);
+                 to_acquire, ref_write_decr);
 
     // Need to acquire references 
     adlb_refc decr = { .read_refcount = -1,
@@ -829,6 +831,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                 "Could not allocate memory");
   entry->id = ref_id;
   entry->acquire = to_acquire;
+  entry->write_decr = ref_write_decr;
   entry->subscript_len = ref_sub.length;
   memcpy(entry->subscript_data, ref_sub.key, ref_sub.length);
 
@@ -2031,6 +2034,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
     ref->id = entry->id;
     ref->type = type;
     ref->refcounts = entry->acquire;
+    ref->write_decr = entry->write_decr;
     ref->value = value;
     ref->value_len = value_len;
 
