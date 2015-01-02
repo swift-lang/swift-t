@@ -65,12 +65,7 @@ public class WrapUtil {
           List<? super Instruction> instBuffer,
           Var var, String valName, boolean recursive, boolean acquireWrite) {
 
-    Type valueT;
-    if (recursive && Types.isContainer(var)) {
-      valueT = Types.unpackedType(var);
-    } else {
-      valueT = Types.retrievedType(var);
-    }
+    Type valueT = Types.retrievedType(var, recursive);
 
     if (Types.isPrimUpdateable(var)) {
       Var value_v = createValueVar(valName, valueT, var);
@@ -111,13 +106,18 @@ public class WrapUtil {
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
-      Instruction structRetrieve = TurbineOp.retrieveStruct(deref, var);
+
+      boolean mustUseRecursive = false;
 
       for (StructField f: ((StructType)var.type().getImplType()).getFields()) {
         if (Types.isRef(f.getType())) {
-          structRetrieve = TurbineOp.retrieveRecursive(deref, var);
+          mustUseRecursive = true;
         }
       }
+
+      Instruction structRetrieve = mustUseRecursive ?
+            TurbineOp.retrieveRecursive(deref, var) :
+            TurbineOp.retrieveStruct(deref, var);
 
       instBuffer.add(structRetrieve);
       return deref;
