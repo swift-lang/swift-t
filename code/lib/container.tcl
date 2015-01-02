@@ -712,7 +712,8 @@ namespace eval turbine {
             "deeprule: negative nest_level: $nest_level"
         if { $nest_level == 0 } {
           # Just need to wait on right thing
-          set signal [ deeprule_basetype_signal $base_type $input ]
+          set signal [ deeprule_basetype_signal $base_type $input \
+                                                allocated_signals ]
           if { $signal != "" } {
             lappend signals $signal
           }
@@ -737,7 +738,8 @@ namespace eval turbine {
     # Return thing that can be waited on to signal that base type is
     # recursively closed.  May require creating additional rules and
     # signal variables.  Returns empty string if no signal
-    proc deeprule_basetype_signal { base_type input } {
+    # allocated_signals: name of list tracking newly allocated signals
+    proc deeprule_basetype_signal { base_type input allocated_signals_name } {
       switch -glob $base_type {
         file_ref {
           return [ get_file_status $input ]
@@ -746,10 +748,14 @@ namespace eval turbine {
           return $input
         }
         "struct *" {
-          return [ deeprule_struct_signal $base_type $input ]
+          set signal [ deeprule_struct_signal $base_type $input ]
+          upvar 1 $allocated_signals_name allocated_signals
+          lappend allocated_signals $signal
+          return $signal
         }
         "struct_ref *" {
-          return [ struct_ref_rec_deep_wait $input $base_type ]
+          upvar 1 $allocated_signals_name allocated_signals
+          return [ struct_ref_rec_deep_wait $input $base_type allocated_signals ]
         }
         default {
           # Assume basic scalar value - don't need to wait
@@ -804,25 +810,33 @@ namespace eval turbine {
     }
 
     proc container_deep_wait_iterate { container progress n
-                                        nest_level base_type signal } {
+                                        nest_level base_type signal
+                                        {allocated_signals {}} } {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
       if { $n == -1 } {
         set n [ adlb::container_size $container ]
       }
+
+      free_allocated_signals $allocated_signals
+
       while { $progress < $n } {
         set chunk_size [ expr {min($MAX_CHUNK_SIZE, $n - $progress)} ]
         set members [ adlb::enumerate $container members \
                                       $chunk_size $progress ]
         foreach member $members {
-          set member_signal [ deeprule_basetype_signal $base_type $member ]
+          set allocated_signals [ list ]
+          set member_signal [ deeprule_basetype_signal $base_type $member allocated_signals ]
 
           if { $member_signal == "" || [ adlb::closed $member_signal ] } {
             incr progress
+
+            free_allocated_signals $allocated_signals
           } else {
             # Suspend execution until next item closed
             rule $member_signal [ list container_deep_wait_iterate $container \
-                          $progress $n $nest_level $base_type $signal ]
+                          $progress $n $nest_level $base_type $signal \
+                          $allocated_signals ]
             return
           }
         }
@@ -830,6 +844,12 @@ namespace eval turbine {
       # Finished
       log "Container <$container> deep closed"
       store_void $signal
+    }
+
+    proc free_allocated_signals { signals } {
+      foreach signal $signals {
+        read_refcount_decr $signal
+      }
     }
 
     proc container_rec_deep_wait { container nest_level base_type signal } {
@@ -881,7 +901,7 @@ namespace eval turbine {
     #     nest_levels: list of nest levels for fields
     #     base_types: list of base types for fields
     # returns signal to wait for completion
-    proc struct_ref_rec_deep_wait { input type } {
+    proc struct_ref_rec_deep_wait { input type allocated_signals_name } {
       set field_paths [ lindex $type 1 ]
       if { [ llength $field_paths ] == 0 } {
         # No need to recurse
@@ -889,6 +909,10 @@ namespace eval turbine {
       }
       
       set signal [ allocate void ]
+
+      upvar 1 $allocated_signals_name allocated_signals
+      lappend allocated_signals $signal
+
       rule $input \
         [ list struct_ref_rec_deep_wait_ready $input $type $signal ]
     }
