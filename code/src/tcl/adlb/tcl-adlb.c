@@ -4042,6 +4042,8 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: adlb::container_reference
       <container_id> <subscript> <reference> <reference_type>
+      [<reference write decr> [<read refcount transfer>
+      [<write refcount transfer>]]]
 
       reference_type is type of container field
       e.g. ref for plain turbine IDs
@@ -4057,6 +4059,9 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: adlb::struct_reference
       <struct_id> <subscript> <reference> <reference_type>
+      [<reference write decr> [<read refcount transfer>
+      [<write refcount transfer>]]]
+
       subscript is a list of indices into struct
       reference_type is type of container field
       e.g. ref for plain turbine IDs
@@ -4075,7 +4080,7 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
                              int objc, Tcl_Obj *const objv[],
                              adlb_subscript_kind sub_kind)
 {
-  TCL_ARGS(5);
+  TCL_CONDITION(objc >= 5 && objc <= 8, "requires 4-7 arguments!");
 
   int rc;
   tcl_adlb_handle handle;
@@ -4099,11 +4104,33 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
                            &extra);
   TCL_CHECK(rc);
 
-  // TODO: optionally take num of read/write references to transfer
+  // optionally write decrement
+  int ref_write_decr = 1;
+
+  if (objc >= 6)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[5], &ref_write_decr);
+    TCL_CHECK(rc);
+  }
+
+  // optionally take num of read/write references to transfer
   adlb_refc transfer_rc = ADLB_READ_REFC;
+  
+  if (objc >= 7)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[6], &transfer_rc.read_refcount);
+    TCL_CHECK(rc);
+  }
+  
+  if (objc >= 8)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[7], &transfer_rc.write_refcount);
+    TCL_CHECK(rc);
+  }
 
   rc = ADLB_Container_reference(handle.id, handle.sub.val,
-              ref_handle.id, ref_handle.sub.val, ref_type, transfer_rc);
+              ref_handle.id, ref_handle.sub.val, ref_type,
+              transfer_rc, ref_write_decr);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
   ADLB_PARSE_HANDLE_CLEANUP(&ref_handle);

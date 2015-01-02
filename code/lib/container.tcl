@@ -672,15 +672,19 @@ namespace eval turbine {
     }
 
     # Dereference a struct reference, then copy out a struct member
-    proc structref_reference { structr subscript result type } {
+    proc structref_reference { structr subscript result type \
+      {write_decr 1} {read_transfer 1} {write_transfer 0}} {
         rule  "$structr" \
-            "structref_reference_body $structr $subscript $result $type" \
+            "structref_reference_body $structr $subscript $result $type\
+             $write_decr $read_transfer $write_transfer" \
             name "structref_reference-$structr-$subscript"
     }
 
-    proc structref_reference_body { structr subscript result type } {
+    proc structref_reference_body { structr subscript result type
+            write_decr read_transfer write_transfer } {
         set struct [ adlb::acquire_ref $structr ref 1 1 ]
-        adlb::struct_reference $struct $subscript $result $type
+        adlb::struct_reference $struct $subscript $result $type \
+                    $write_decr $read_transfer $write_transfer
     }
 
     # Wait, recursively for container contents
