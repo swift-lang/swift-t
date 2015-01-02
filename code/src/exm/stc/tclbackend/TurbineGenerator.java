@@ -1856,8 +1856,12 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStruct(struct)) : struct;
     assert(Types.isStructField(struct, fields, output));
     Expression subscript = structSubscript(struct, fields);
+
+    long writeDecr = RefCounting.baseRefCount(output.type(), DefType.LOCAL_COMPILER,
+                                          RefCountType.WRITERS, false, true);
+
     pointAdd(Turbine.copyStructSubscript(varToExpr(output), varToExpr(struct),
-              subscript, representationType(output.type())));
+              subscript, representationType(output.type()), writeDecr));
   }
 
   @Override
@@ -1870,8 +1874,12 @@ public class TurbineGenerator implements CompilerBackend {
 
     Expression subscript = structSubscript(structRef, fields);
 
+    long writeDecr = RefCounting.baseRefCount(output.type(), DefType.LOCAL_COMPILER,
+                                          RefCountType.WRITERS, false, true);
+
     pointAdd(Turbine.copyStructRefSubscript(varToExpr(output),
-        varToExpr(structRef), subscript, representationType(output.type())));
+        varToExpr(structRef), subscript, representationType(output.type()),
+        writeDecr));
   }
 
   @Override
@@ -2689,7 +2697,7 @@ public class TurbineGenerator implements CompilerBackend {
         Type fieldType = f.getType();
         structPath.push(new TclString(f.getName(), true));
         if (Types.isRef(fieldType)) {
-          fieldPaths.add((Expression) new TclList(structPath));
+          fieldPaths.add(new TclList(structPath));
 
           Type derefed = fieldType.memberType();
           Pair<Integer, Expression> fieldTypeDescriptor =
