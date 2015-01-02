@@ -36,7 +36,7 @@ public class TclList extends Square
     this();
     addAll(listItems);
   }
-  
+
   public TclList(List<? extends Expression> listItems)
   {
     this();

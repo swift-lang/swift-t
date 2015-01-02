@@ -2747,13 +2747,41 @@ public class Types {
       // Recursively unpack
       return unpackedContainerType(type);
     } else if (Types.isStruct(type) || Types.isStructLocal(type)) {
-      // TODO
-      throw new STCRuntimeError("Unimplemented");
+      return unpackedStructType(type, (StructType)type);
     } else {
       while (Types.canRetrieve(type)) {
         type = retrievedType(type);
       }
       return type;
+    }
+  }
+
+  private static Type unpackedStructType(Type type, StructType structType) {
+    List<StructField> packedFields = structType.getFields();
+    List<StructField> unpackedFields = new ArrayList<StructField>(packedFields.size());
+
+    // Track whether the fields differ at all
+    boolean differences = false;
+
+    for (StructField packedField: packedFields) {
+      Type packedFieldType = packedField.getType();
+      Type unpackedFieldType = unpackedType(packedFieldType);
+
+      if (unpackedFieldType.equals(packedFieldType)) {
+        unpackedFields.add(packedField);
+      } else {
+        StructField unpackedField = new StructField(unpackedFieldType,
+                                                    packedField.getName());
+        unpackedFields.add(unpackedField);
+        differences = true;
+      }
+    }
+
+    if (differences) {
+      return new StructType(true, "local:" + type.typeName(),
+                            unpackedFields);
+    } else {
+      return structType;
     }
   }
 
