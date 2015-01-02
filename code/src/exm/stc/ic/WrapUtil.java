@@ -26,8 +26,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -107,13 +105,6 @@ public class WrapUtil {
       instBuffer.add(TurbineOp.retrieveRecursive(deref, var));
       return deref;
     } else if (Types.isStruct(var) && recursive) {
-      for (StructField f: ((StructType)var.type().getImplType()).getFields()) {
-        if (Types.isRef(f.getType())) {
-          throw new STCRuntimeError("Recursive fetch of struct with ref field "
-                                   + "not supported yet " + var.type());
-        }
-      }
-
       Var deref = new Var(valueT, valName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
