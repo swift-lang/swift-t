@@ -1,3 +1,7 @@
+// SKIP-O2-TEST
+// SKIP-O3-TEST
+// Issue #635
+
 type person {
   string name;
   int age;
