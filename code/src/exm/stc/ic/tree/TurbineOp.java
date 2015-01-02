@@ -1170,7 +1170,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isStruct(src.type()));
     assert(Types.isStructLocal(dst));
     assert(StructType.localStruct((StructType)src.type().getImplType())
-                                            .assignableTo(dst.type()));
+                                            .assignableTo(dst.type())):
+                src.type() + " => " + dst.type();
     return new TurbineOp(Opcode.LOAD_STRUCT, dst, src.asArg());
   }
 

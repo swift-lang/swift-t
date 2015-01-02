@@ -2751,7 +2751,7 @@ public class Types {
       // Recursively unpack
       return unpackedContainerType(type);
     } else if (Types.isStruct(type) || Types.isStructLocal(type)) {
-      return unpackedStructType(type, (StructType)type);
+      return unpackedStructType((StructType)type);
     } else {
       while (Types.canRetrieve(type)) {
         type = retrievedType(type);
@@ -2760,7 +2760,7 @@ public class Types {
     }
   }
 
-  private static Type unpackedStructType(Type type, StructType structType) {
+  private static Type unpackedStructType(StructType structType) {
     List<StructField> packedFields = structType.getFields();
     List<StructField> unpackedFields = new ArrayList<StructField>(packedFields.size());
 
@@ -2769,7 +2769,17 @@ public class Types {
 
     for (StructField packedField: packedFields) {
       Type packedFieldType = packedField.getType();
-      Type unpackedFieldType = unpackedType(packedFieldType);
+      Type unpackedFieldType;
+
+      if (Types.isRef(packedFieldType)) {
+        // Follow references to unpack
+        unpackedFieldType = unpackedType(packedFieldType);
+      } else if (Types.isStruct(packedFieldType)) {
+        // Nested struct
+        unpackedFieldType = unpackedStructType((StructType)packedFieldType);
+      } else {
+        unpackedFieldType = packedFieldType;
+      }
 
       if (unpackedFieldType.equals(packedFieldType)) {
         unpackedFields.add(packedField);
@@ -2777,12 +2787,13 @@ public class Types {
         StructField unpackedField = new StructField(unpackedFieldType,
                                                     packedField.getName());
         unpackedFields.add(unpackedField);
+        System.err.println(unpackedField + " " + packedField);
         differences = true;
       }
     }
 
     if (differences) {
-      return new StructType(true, "unpacked:" + type.typeName(),
+      return new StructType(true, "unpacked:" + structType.typeName(),
                             unpackedFields);
     } else {
       return StructType.localStruct(structType);
