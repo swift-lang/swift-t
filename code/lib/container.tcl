@@ -708,16 +708,9 @@ namespace eval turbine {
             "deeprule: negative nest_level: $nest_level"
         if { $nest_level == 0 } {
           # Just need to wait on right thing
-          switch $base_type {
-            case file_ref {
-              lappend signals [ get_file_status $input ]
-            }
-            case ref {
-              lappend signals $input
-            }
-            default {
-              # Assume don't need to wait
-            }
+          set signal [ deeprule_basetype_signal $base_type $input ]
+          if { $signal != "" } {
+            lappend signals $signal
           }
         } else {
           # Wait for deep close of container
@@ -737,6 +730,42 @@ namespace eval turbine {
           {*}$args
     }
 
+    # Return thing that can be waited on to signal that base type is
+    # recursively closed.  May require creating additional rules and
+    # signal variables.  Returns empty string if no signal
+    proc deeprule_basetype_signal { base_type input } {
+      switch -glob $base_type {
+        file_ref {
+          return [ get_file_status $input ]
+        }
+        ref {
+          return $input
+        }
+        "struct *" {
+          return [ deeprule_struct_signal $base_type $input ]
+        }
+        "struct_ref *" {
+          return [ struct_ref_rec_deep_wait $input $base_type ]
+        }
+        default {
+          # Assume basic scalar value - don't need to wait
+          return ""
+        }
+      }
+    }
+
+    proc deeprule_struct_signal { base_type input } {
+      set field_paths [ lindex $type 1 ]
+      
+      if { [ llength $field_paths ] == 0 } {
+        return ""
+      }
+
+      set signal [ allocate void ]
+      struct_rec_deep_wait $input $base_type $signal
+      return $signal
+    }
+
     proc deeprule_action { allocated_signals action } {
         deeprule_finish {*}$allocated_signals
         eval $action
@@ -746,14 +775,15 @@ namespace eval turbine {
     # set signal
     # Called after container itself is closed
     proc container_deep_wait { container nest_level base_type signal } {
-
         debug "container_deep_wait: $container $nest_level"
         if { $nest_level == 1 } {
-            switch $base_type {
+            switch -glob $base_type {
               ref -
-              file_ref {
-                # Need to 
-                set action [ list container_deep_wait_continue $container \
+              file_ref -
+              "struct *" -
+              "struct_ref *" {
+                # Need to enumerate container elements
+                set action [ list container_deep_wait_iterate $container \
                                       0 -1 $nest_level $base_type $signal ]
               }
               default {
@@ -769,7 +799,7 @@ namespace eval turbine {
         rule $container $action
     }
 
-    proc container_deep_wait_continue { container progress n
+    proc container_deep_wait_iterate { container progress n
                                         nest_level base_type signal } {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
@@ -781,22 +811,13 @@ namespace eval turbine {
         set members [ adlb::enumerate $container members \
                                       $chunk_size $progress ]
         foreach member $members {
-          switch $base_type {
-            file_ref {
-              set td [ get_file_status $member ]
-            }
-            ref {
-              set td $member
-            }
-            default {
-              error "Don't know how to wait on type: $base_type"
-            }
-          }
-          if { [ adlb::closed $td ] } {
+          set member_signal [ deeprule_basetype_signal $base_type $member ]
+
+          if { $member_signal == "" || [ adlb::closed $member_signal ] } {
             incr progress
           } else {
             # Suspend execution until next item closed
-            rule $td [ list container_deep_wait_continue $container \
+            rule $member_signal [ list container_deep_wait_iterate $container \
                           $progress $n $nest_level $base_type $signal ]
             return
           }
@@ -847,6 +868,46 @@ namespace eval turbine {
         }
     }
 
+    # Wait recursively on (not necessarily closed) struct with potentially
+    # nested references inside it.
+    # input: td or td/subscript of struct
+    # type: list with struct type info -
+    #      "struct_ref", fields, nest_levels, base_types
+    #     field_paths: list of field path lists with recursive references
+    #     nest_levels: list of nest levels for fields
+    #     base_types: list of base types for fields
+    # returns signal to wait for completion
+    proc struct_ref_rec_deep_wait { input type } {
+      set field_paths [ lindex $type 1 ]
+      if { [ llength $field_paths ] == 0 } {
+        # No need to recurse
+        return $input
+      }
+      
+      set signal [ allocate void ]
+      rule $input \
+        [ list struct_ref_rec_deep_wait_ready $input $type $signal ]
+    }
+
+    proc struct_ref_rec_deep_wait_ready { input type signal } {
+      struct_rec_deep_wait [ retrieve_struct $input ] $type $signal
+    }
+    
+    # Recursively follow any references in struct and set signal
+    proc struct_rec_deep_wait { value type signal } {
+      set field_paths [ lindex $type 1 ]
+      set field_nest_levels [ lindex $type 2 ]
+      set field_base_types [ lindex $type 3 ]
+      
+      set field_values [ list ]
+      foreach field_path $field_paths { 
+        lappend field_values [ dict get $value {*}$field_path ]
+      }
+      
+      deeprule $field_values $field_nest_levels $field_base_types \
+              "deeprule_fire_signal {} $signal"
+    }
+
     # Given an ADLB container/bag/etc, retrieve values of everything
     # inside container.  Unpack into a dict or list as appropriate
     # types: list of nested types, from outer container to inner value
@@ -857,9 +918,6 @@ namespace eval turbine {
     # multiset container int
     #
     # Consumes read refcounts from outer container
-
-
-
     proc enumerate_rec { container types {depth 0} {read_decr 0}} {
       set container_type [ lindex $types $depth ]
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
