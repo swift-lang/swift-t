@@ -2787,7 +2787,6 @@ public class Types {
         StructField unpackedField = new StructField(unpackedFieldType,
                                                     packedField.getName());
         unpackedFields.add(unpackedField);
-        System.err.println(unpackedField + " " + packedField);
         differences = true;
       }
     }
