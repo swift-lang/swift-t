@@ -26,7 +26,7 @@ import exm.stc.common.lang.Var.DefType;
 
 /**
  * Define how types should be refcounting
- * 
+ *
  * There are two dimensions in which we define reference counts:
  * - READ/WRITE - whether the reference is only read through or if it can be
  *                read or written through
@@ -35,7 +35,7 @@ import exm.stc.common.lang.Var.DefType;
  *           that can be written a non-fixed number of times.  An untracked
  *           reference count is automatically decremented for each assign, so
  *           is suited for structures that receive a fixed number of writes,
- *           e.g. a single-assignment variable  
+ *           e.g. a single-assignment variable
  */
 public class RefCounting {
   public static enum RefCountType {
@@ -99,7 +99,7 @@ public class RefCounting {
   public static boolean trackReadRefCount(Var v) {
     return trackReadRefCount(v.type(), v.defType());
   }
-  
+
   public static boolean trackReadRefCount(Type type, DefType defType) {
     if (!mayHaveTrackedReadRefcount(type)) {
       return false;
@@ -108,7 +108,7 @@ public class RefCounting {
     }
     return true;
   }
-  
+
   /**
    * @param v
    * @return true if var has write refcount to be tracked/managed by
@@ -117,7 +117,7 @@ public class RefCounting {
   public static boolean trackWriteRefCount(Var v) {
     return trackWriteRefCount(v.type(), v.defType());
   }
-  
+
   public static boolean trackWriteRefCount(Type type, DefType defType) {
     if (!mayHaveTrackedWriteRefcount(type)) {
       return false;
@@ -126,7 +126,7 @@ public class RefCounting {
     }
     return true;
   }
-  
+
   /**
    * @param v
    * @return true if var has refcount to be tracked/managed by
@@ -135,7 +135,7 @@ public class RefCounting {
   public static boolean trackRefCount(Var var, RefCountType rcType) {
     return trackRefCount(var.type(), var.defType(), rcType);
   }
-  
+
   public static boolean trackRefCount(Type type, DefType defType,
                                       RefCountType rcType) {
     if (rcType == RefCountType.READERS) {
@@ -161,8 +161,8 @@ public class RefCounting {
     }
     return res;
   }
-  
-  
+
+
   /**
    * @param wv
    * @return true if there is a distinction between closing and recursive
@@ -187,11 +187,11 @@ public class RefCounting {
     return baseRefCount(v.type(), v.defType(), rcType, includeTracked,
                        includeUntracked);
   }
-  
+
   /**
    * Return base reference count for type, i.e. what it's initialized to
-   * by default 
-   * @param rcType 
+   * by default
+   * @param rcType
    * @param blockVar
    * @param includeTracked
    * @param includeUntracked
@@ -200,39 +200,8 @@ public class RefCounting {
   public static long baseRefCount(Type type, DefType defType,
        RefCountType rcType, boolean includeTracked, boolean includeUntracked) {
     if (Types.isStruct(type) && rcType == RefCountType.WRITERS) {
-      // Sum of field refcounts
-      StructType structT = (StructType)type.type().getImplType();
-      long trackedSum = 0;
-      long untrackedSum = 0;
-      for (StructField field: structT.getFields()) {
-        untrackedSum += baseRefCount(field.getType(), defType, rcType,
-                                 false, true);
-        if (Types.isMutableRef(field.getType())) {
-          // Need to have tracked refcount as proxy
-          Type referencedType = field.getType().getImplType().memberType();
-          trackedSum += baseRefCount(referencedType, defType, rcType,
-                                      true, false);
-        } else {
-          trackedSum += baseRefCount(field.getType(), defType, rcType,
-                                     true, false);
-        }
-      }
-      
-      long structCount = 0;
-      if (includeTracked && trackedSum > 0) {
-        // At least one tracked field
-        // Only start off with one tracked count for all fields, can
-        // increment if more needed
-        structCount += 1;
-      }
-      
-      if (includeUntracked) {
-        // Each field is managed seperately in this case, since
-        // each assign will decrement the count
-        structCount += untrackedSum;
-      }
-      
-      return structCount;
+      return baseStructWriteRefCount(type, defType, includeTracked,
+                                     includeUntracked, true);
     } else if (Types.isPrimValue(type) || Types.isContainerLocal(type) ||
                Types.isStructLocal(type)) {
       // No refcount
@@ -247,17 +216,63 @@ public class RefCounting {
       }
     }
   }
-  
+
   public static long baseReadRefCount(Var var, boolean includeTracked,
                                       boolean includeUntracked) {
     return baseRefCount(var.type(), var.defType(), RefCountType.READERS,
                         includeTracked, includeUntracked);
   }
-  
+
   public static long baseWriteRefCount(Var var, boolean includeTracked,
                                        boolean includeUntracked) {
     return baseRefCount(var.type(), var.defType(), RefCountType.WRITERS,
         includeTracked, includeUntracked);
+  }
+
+  public static long baseStructWriteRefCount(Type type, DefType defType,
+      boolean includeTracked, boolean includeUntracked,
+      boolean includeInitializedRefs) {
+    assert(Types.isStruct(type));
+
+    // Sum of field refcounts
+    StructType structT = (StructType)type.type().getImplType();
+    long trackedSum = 0;
+    long untrackedSum = 0;
+    for (StructField field: structT.getFields()) {
+
+      long fieldUntracked = baseRefCount(field.getType(), defType,
+                              RefCountType.WRITERS, false, true);
+      if (Types.isMutableRef(field.getType())) {
+        // Need to have tracked refcount as proxy
+
+        if (includeInitializedRefs) {
+          untrackedSum += fieldUntracked;
+        }
+
+        Type referencedType = field.getType().getImplType().memberType();
+        trackedSum += baseRefCount(referencedType, defType,
+                              RefCountType.WRITERS, true, false);
+      } else {
+        untrackedSum += fieldUntracked;
+        trackedSum += baseRefCount(field.getType(), defType,
+                              RefCountType.WRITERS, true, false);
+      }
+    }
+
+    long structCount = 0;
+    if (includeTracked && trackedSum > 0) {
+      // At least one tracked field
+      // Only start off with one tracked count for all fields, can
+      // increment if more needed
+      structCount += 1;
+    }
+
+    if (includeUntracked) {
+      // Each field is managed seperately in this case, since
+      // each assign will decrement the count
+      structCount += untrackedSum;
+    }
+    return structCount;
   }
 
 }
