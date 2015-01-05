@@ -288,19 +288,33 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
 
-#define CHECK_ADLB_STORE(rc, id) {                                      \
-  TCL_CONDITION(rc != ADLB_REJECTED,                                    \
-                "adlb::store <%"PRId64"> failed: double assign!", id);  \
-  TCL_CONDITION(rc == ADLB_SUCCESS,                                     \
-                "adlb::store <%"PRId64"> failed!", id);                 \
+#define CHECK_ADLB_STORE(rc, id, sub) {                                      \
+  if (adlb_has_sub((sub))) {                                                 \
+    TCL_CONDITION(rc != ADLB_REJECTED,                                       \
+                  "<%"PRId64"> failed: double assign!", (id));               \
+    TCL_CONDITION(rc == ADLB_SUCCESS,                                        \
+                  "<%"PRId64"> failed!", (id));                              \
+  } else {                                                                   \
+  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
+                  (id), (int)(sub).length, (const char*)(sub).key);          \
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"] failed",          \
+                  (id), (int)(sub).length, (const char*)(sub).key);          \
+  }                                                                          \
 }
 
-#define CHECK_ADLB_STORE_SUB(rc, id, sub) {                                  \
-  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
-                  id, (int)sub.length, (const char*)sub.key);                \
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"], double assign!",\
-                  id, (int)sub.length, (const char*)sub.key);                \
+#define CHECK_ADLB_RETRIEVE(rc, handle, result_len) { \
+  if (adlb_has_sub((handle).sub.val)) { \
+    TCL_CONDITION((rc) == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!", \
+        (handle).id, (int)(handle).sub.val.length, \
+        (const char*)(handle).sub.val.key); \
+    TCL_CONDITION((result_len) >= 0, "<%"PRId64">[%.*s] not found!", (handle).id, \
+            (int)(handle).sub.val.length, (const char*)(handle).sub.val.key); \
+  } else { \
+    TCL_CONDITION((rc) == ADLB_SUCCESS, "<%"PRId64"> failed!", (handle).id); \
+    TCL_CONDITION((result_len) >= 0, "<%"PRId64"> not found!", (handle).id); \
+  } \
 }
+
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
@@ -2446,7 +2460,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
 
-  CHECK_ADLB_STORE(store_rc, handle.id);
+  CHECK_ADLB_STORE(store_rc, handle.id, handle.sub.val);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
@@ -2495,10 +2509,10 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int rc;
   int argpos = 1;
 
+  Tcl_Obj *handle_obj = objv[argpos++];
   tcl_adlb_handle handle;
-  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle, true);
-  TCL_CHECK_MSG(rc, "Invalid handle %s",
-                Tcl_GetString(objv[argpos-1]));
+  rc = ADLB_PARSE_HANDLE(handle_obj, &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(handle_obj));
 
   int decr_amount = 0;
   if (decr) {
@@ -2522,10 +2536,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   refcounts.decr_self.read_refcount = decr_amount;
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                      &type, xfer, &length);
-
-  TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
-  TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
-                            handle.id);
+  CHECK_ADLB_RETRIEVE(ret_rc, handle, length);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
@@ -2739,21 +2750,9 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
+  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
                      &length);
-  if (adlb_has_sub(handle.sub.val))
-  {
-    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!",
-        handle.id, (int)handle.sub.val.length,
-        (const char*)handle.sub.val.key);
-    TCL_CONDITION(length >= 0, "<%"PRId64">[%.*s] not found!", handle.id,
-            (int)handle.sub.val.length, (const char*)handle.sub.val.key);
-  }
-  else
-  {
-    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
-    TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", handle.id);
-  }
+  CHECK_ADLB_RETRIEVE(ac, handle, length);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
@@ -2773,8 +2772,6 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
-
-
 static inline int
 set_enumerate_params(Tcl_Interp *interp, Tcl_Obj *const objv[],
                      const char* token, bool *include_keys,
@@ -3096,9 +3093,8 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   int length;
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                              &type, xfer, &length);
+  CHECK_ADLB_RETRIEVE(ret_rc, handle, length);
 
-  TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!",
-                handle.id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
                 ADLB_DATA_TYPE_BLOB, type);
@@ -3359,7 +3355,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length,
                   decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id);
+  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3402,7 +3398,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
         xfer, length*(int)sizeof(double), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id);
+  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3445,7 +3441,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
         xfer, length*(int)sizeof(int), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id);
+  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3624,7 +3620,7 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
                   member.data, member.length, decr, store_rc);
 
   // TODO: support binary subscript
-  CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);
+  CHECK_ADLB_STORE(rc, handle.id, handle.sub.val);
 
   // Free if needed
   if (member.data != xfer_buf.data)
@@ -3800,9 +3796,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
       break;
   } while (spin && rc == ADLB_SUCCESS && len < 0);
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: "
-          "<%"PRId64">[%.*s]", handle.id, (int)handle.sub.val.length,
-          (const char*)handle.sub.val.key);
+  CHECK_ADLB_RETRIEVE(rc, handle, len);
 
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
