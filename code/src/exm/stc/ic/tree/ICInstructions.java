@@ -2045,9 +2045,6 @@ public class ICInstructions {
     }
 
     public void setLoopUsedVars(Collection<Var> variables) {
-      //System.err.println(this + " USED VARS CHANGE: " + loopUsedVars + " => " + variables);
-      //new Exception().printStackTrace();
-
       loopUsedVars.clear();
       loopUsedVars.addAll(variables);
     }
