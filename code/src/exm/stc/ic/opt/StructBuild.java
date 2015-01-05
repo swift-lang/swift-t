@@ -55,7 +55,7 @@ public class StructBuild extends FunctionOptimizerPass {
   private void structBuildRec(Logger logger, Block block) {
     // Track all assigned struct paths
     MultiMap<Var, List<String>> assignedPaths = new MultiMap<Var, List<String>>();
-    
+
     // Find all struct assign statements in block
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() == StatementType.INSTRUCTION) {
@@ -68,16 +68,16 @@ public class StructBuild extends FunctionOptimizerPass {
         }
       }
     }
-    
+
     // Check if all fields were assigned
     for (Var candidate: assignedPaths.keySet()) {
       StructType candidateType = (StructType)candidate.type().getImplType();
       Set<List<String>> expectedPaths = allAssignablePaths(candidateType);
       List<List<String>> assigned = assignedPaths.get(candidate);
-      
+
       logger.trace("Check candidate " + candidate.name() + "\n" +
                    "expected: " + expectedPaths);
-      
+
       for (List<String> path: assigned) {
         Type fieldType;
         try {
@@ -85,7 +85,7 @@ public class StructBuild extends FunctionOptimizerPass {
         } catch (TypeMismatchException e) {
           throw new STCRuntimeError(e.getMessage());
         }
-        
+
         Set<List<String>> assignedSubPaths;
         if (Types.isStruct(fieldType)) {
           // Handle case where we assign a substruct
@@ -94,7 +94,7 @@ public class StructBuild extends FunctionOptimizerPass {
         } else {
           assignedSubPaths = Collections.singleton(path);
         }
-        
+
         for (List<String> assignedPath: assignedSubPaths) {
           boolean found = expectedPaths.remove(assignedPath);
           if (!found) {
@@ -109,7 +109,7 @@ public class StructBuild extends FunctionOptimizerPass {
         logger.trace("Fields not assigned: " + expectedPaths);
       }
     }
-    
+
     for (Continuation cont: block.allComplexStatements()) {
       for (Block cb: cont.getBlocks()) {
         structBuildRec(logger, cb);
@@ -125,7 +125,7 @@ public class StructBuild extends FunctionOptimizerPass {
   private Set<List<String>> allAssignablePaths(StructType type) {
     return allAssignablePaths(type, Collections.<String>emptyList());
   }
-  
+
   private Set<List<String>> allAssignablePaths(StructType type,
                                                List<String> prefix) {
     Set<List<String>> paths = new HashSet<List<String>>();
@@ -166,7 +166,7 @@ public class StructBuild extends FunctionOptimizerPass {
     int fieldsAssigned = 0;
     List<List<String>> fieldPaths = new ArrayList<List<String>>();
     List<Arg> fieldVals = new ArrayList<Arg>();
-    
+
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
@@ -177,7 +177,7 @@ public class StructBuild extends FunctionOptimizerPass {
           if (struct.equals(candidate)) {
             stmtIt.remove();
             fieldsAssigned++;
-            
+
             List<Arg> inputs = inst.getInputs();
             fieldPaths.add(
                 Arg.extractStrings(inputs.subList(1, inputs.size())));
@@ -193,7 +193,7 @@ public class StructBuild extends FunctionOptimizerPass {
         return;
       }
     }
-    
+
     // Should not fall out of loop
     assert(false);
   }

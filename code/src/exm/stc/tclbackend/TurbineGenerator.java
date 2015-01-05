@@ -1150,9 +1150,13 @@ public class TurbineGenerator implements CompilerBackend {
     assert(StructType.sharedStruct((StructType)src.type().getImplType())
             .assignableTo(target.type()));
 
-    // Must decrement any refcounts not explicitly tracked since
-    // we're assigning the struct in whole
-    long writeDecr = RefCounting.baseWriteRefCount(target, true, true);
+    /*
+     * Must decrement any refcounts not explicitly tracked since we're
+     * assigning the struct in whole.
+     * Don't include refcounts for initialized struct fields, e.g. array ones
+     */
+    long writeDecr = RefCounting.baseStructWriteRefCount(target.type(),
+                          target.defType(), false, true, false);
 
     TypeName structType = representationType(target.type());
     pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
@@ -1199,6 +1203,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (Types.isStruct(dst)) {
       // TODO
+      // TODO: will need to include tracked & untraced refcounts
       throw new STCRuntimeError("Unimplemented");
     }
 
