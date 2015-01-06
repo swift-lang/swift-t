@@ -122,12 +122,12 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
     t->field_names[i] = strdup(field_names[i]);
     t->field_types[i] = field_types[i];
   }
-  
+
   // Add struct type name to index
   adlb_type_extra extra;
   extra.valid = true;
   extra.STRUCT.struct_type = type;
-  
+
   dc = xlb_data_type_add(type_name, ADLB_DATA_TYPE_STRUCT, extra);
   DATA_CHECK(dc);
 
@@ -201,7 +201,7 @@ struct_subscript_pop(adlb_subscript *sub, int *field_ix,
     {
       component_len--;
     }
-    
+
     *consumed = sub->length;
 
     // Finished with subscript
@@ -215,7 +215,7 @@ struct_subscript_pop(adlb_subscript *sub, int *field_ix,
     assert(*consumed <= sub->length);
     sub->length = sub->length - *consumed;
   }
-  
+
   int64_t field_ix64;
   dc = ADLB_Int64_parse(sub_str, component_len, &field_ix64);
   check_verbose(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
@@ -302,12 +302,18 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
                 sizeof(*(hdr->field_offsets)) * (size_t)t->field_count,
                 ADLB_DATA_ERROR_INVALID,
                 "buffer too small for header of struct type %s", t->type_name);
-  
+
   if (init_struct)
   {
     *s = alloc_struct(t);
     check_verbose(*s != NULL, ADLB_DATA_ERROR_OOM, "Couldn't allocate struct");
     (*s)->type = hdr->type;
+
+    for (int i = 0; i < t->field_count; i++)
+    {
+      // Need to mark fields as uninitialized
+      (*s)->fields[i].initialized = false;
+    }
   }
   else
   {
@@ -322,7 +328,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
   {
     int init_offset = hdr->field_offsets[i];
     int data_offset = init_offset + 1;
-    
+
     bool field_init = (((char*)data)[init_offset] != 0);
 
     if (field_init)
@@ -338,7 +344,8 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
       {
         field_len = hdr->field_offsets[i + 1] - data_offset;
       }
-      if (!init_struct && (*s)->fields[i].initialized)
+
+      if ((*s)->fields[i].initialized)
       {
         // Free any existing data
         dc = ADLB_Free_storage(&(*s)->fields[i].data,
@@ -348,9 +355,10 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
 
       ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
                   field_start, field_len, refcounts);
+      (*s)->fields[i].initialized = true;
     }
-    (*s)->fields[i].initialized = field_init;
   }
+
   return ADLB_DATA_SUCCESS;
 }
 
@@ -387,7 +395,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   {
     adlb_data_type field_t = t->field_types[i].type;
     adlb_binary_data field_data;
-      
+
     bool init = s->fields[i].initialized;
     if (init)
     {
@@ -404,7 +412,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
     dc = ADLB_Resize_buf(&result_buf, &using_caller_buf,
                          buf_pos + field_data.length + 1);
     DATA_CHECK(dc);
-    
+
     // Mark start of data
     (*hdr)->field_offsets[i] = buf_pos;
 
@@ -417,7 +425,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
       memcpy((result_buf.data) + buf_pos, field_data.data,
              (size_t)field_data.length);
       buf_pos += field_data.length;
-    
+
       ADLB_Free_binary_data(&field_data);
     }
   }
@@ -546,7 +554,7 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
 
   *val = &field->data;
   *type = field_type.type;
-  
+
   return ADLB_DATA_SUCCESS;
 }
 
@@ -693,7 +701,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   adlb_data_code dc;
   xlb_struct_type_info *t = &struct_types[s->type];
   bool acquiring = !ADLB_REFC_IS_NULL(to_acquire.refcounts);
-  
+
   int acquire_ix = -1; // negative means acquire all subscripts
   if (adlb_has_sub(to_acquire.subscript)) 
   {
