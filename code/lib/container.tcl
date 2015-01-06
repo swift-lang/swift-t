@@ -231,6 +231,10 @@ namespace eval turbine {
         file {
           store_file $id cval
         }
+        struct {
+          set struct_type [ lindex $types [ expr {$types_pos + 1} ] ]
+          build_struct_rec $id $cval $struct_type $write_decr
+        }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {
             # Don't need to recurse: just store
@@ -240,6 +244,52 @@ namespace eval turbine {
           }
         }
       }
+    }
+
+    proc build_struct_rec { id val field_types {write_decr 1} } {
+      set store_val [ build_struct_val_rec $val $field_types ]
+
+      puts "store_val $store_val"
+      # TODO: need specific struct type name
+      adlb::store $id struct $store_val $write_decr
+    }
+
+    proc build_struct_val_rec { val field_types } {
+      set store_val [ dict create ]
+
+      dict for { key field_type } $field_types {
+        set field_val [ dict get $val $key ]
+        set field_outer_type [ lindex $field_type 0 ]
+
+        switch $field_outer_type {
+          ref -
+          file_ref {
+            set create_type [ type_create_slice $field_type 1 ]
+            set val_id [ adlb::create $adlb::NULL_ID {*}$create_type ]
+            if { $field_type == "file_ref" } {
+              set val_id [ file_handle_from_td $val_id 0 ]
+            }
+
+            # build inner data structure
+            # TODO: is num of write refcounts to decr variable?
+            build_rec $val_id $val $field_type 1 1
+            set store_field_val $val_id
+          }
+          struct {
+            set field_struct_fields [ lindex $field_type 1 ]
+            set store_field_val [ build_struct_val_rec $field_val \
+                                              $field_struct_fields ]
+          }
+          default {
+            # Store unmodified
+            set store_field_val $field_val
+          }
+        }
+
+        dict append store_val $key $store_field_val
+      }
+
+      return $store_val
     }
 
     # Just like adlb::container_reference but add logging
@@ -978,10 +1028,10 @@ namespace eval turbine {
     }
 
     proc enumerate_rec_struct_val { struct_val types depth } {
-        set struct_desc [ lindex $types [ expr {$depth + 1} ] ]
+        set field_types [ lindex $types [ expr {$depth + 1} ] ]
         set result_dict [ dict create ]
 
-        dict for { key key_type } $struct_desc {
+        dict for { key key_type } $field_types {
           set val [ dict get $struct_val $key ]
           set key_type_prefix [ lindex $key_type 0 ]
           switch $key_type_prefix {
