@@ -41,20 +41,20 @@ namespace eval turbine {
       array_kv_build $c $kv_dict $write_decr integer {*}$args
     }
 
-    proc swift_array_build { elems var_type } { 
+    proc swift_array_build { elems var_type } {
         set n [ llength $elems ]
         log "swift_array_build: elems: $n var_type: $var_type"
 
         set result [ dict create ]
         if { $var_type == "file" } {
             # set type "file_ref"
-            for { set i 0 } { $i < $n } { incr i } { 
-                set elem [ lindex $elems $i ] 
+            for { set i 0 } { $i < $n } { incr i } {
+                set elem [ lindex $elems $i ]
                 dict append result $i [ create_local_file_ref $elem 1 ]
             }
-        } else { 
-            for { set i 0 } { $i < $n } { incr i } { 
-                set elem [ lindex $elems $i ] 
+        } else {
+            for { set i 0 } { $i < $n } { incr i } {
+                set elem [ lindex $elems $i ]
                 dict append result $i $elem
             }
         }
@@ -79,7 +79,7 @@ namespace eval turbine {
       set typel $args
       # Add decr to list
       lappend typel 1 1
-      
+
       if { $n > 0 } {
         set elems [ adlb::multicreate {*}[ lrepeat $n $typel ] ]
       } else {
@@ -97,8 +97,8 @@ namespace eval turbine {
       }
       array_kv_build $c $kv_dict2 $write_decr $key_type {*}$args
     }
-    
-    
+
+
     # build multiset by inserting items into a container starting at 0
     # write_decr: decrement writers count
     # args: type of multiset elems, passed to adlb::store
@@ -107,7 +107,7 @@ namespace eval turbine {
       log "multiset_build: <$ms> $n elems, write_decr $write_decr"
       adlb::store $ms multiset {*}$args $elems $write_decr
     }
-    
+
     proc type_create_slice { type_list pos } {
       set outer_type [ lindex $type_list $pos ]
       switch $outer_type {
@@ -126,17 +126,17 @@ namespace eval turbine {
     }
 
     # Recursively build a nested ADLB structure with containers/multisets/etc
-    # types: list of types from outer to inner. 
+    # types: list of types from outer to inner.
     #        key/value types are both included in list
     # types_pos: current position in types list
     proc build_rec { id cval types {types_pos 0} {write_decr 1}} {
       log "build_rec: <$id>"
       set outer_type [ lindex $types $types_pos ]
-      
+
       # If there are more than two entries left in the type list
       # (the leaf type, and another container type), we will
       # recurse to handle that.
-      
+
       switch $outer_type {
         container {
           set n [ dict size $cval ]
@@ -145,7 +145,7 @@ namespace eval turbine {
           set val_type_pos [ expr {$types_pos + 2} ]
           set val_type [ lindex $types $val_type_pos ]
           # TODO: check if val_type is ref
-         
+
           switch $val_type {
             ref -
             file_ref {
@@ -174,7 +174,7 @@ namespace eval turbine {
 
                 # build inner data structure
                 build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
-                
+
                 dict append val_dict $key $val_id
                 incr i
               }
@@ -766,7 +766,7 @@ namespace eval turbine {
 
     proc deeprule_struct_signal { base_type input } {
       set field_paths [ lindex $type 1 ]
-      
+
       if { [ llength $field_paths ] == 0 } {
         return ""
       }
@@ -800,7 +800,7 @@ namespace eval turbine {
                 set action "store_void $signal"
               }
             }
-            
+
         } else {
             set action [ list container_rec_deep_wait $container \
                                   $nest_level $base_type $signal ]
@@ -907,7 +907,7 @@ namespace eval turbine {
         # No need to recurse
         return $input
       }
-      
+
       set signal [ allocate void ]
 
       upvar 1 $allocated_signals_name allocated_signals
@@ -922,18 +922,18 @@ namespace eval turbine {
     proc struct_ref_rec_deep_wait_ready { input type signal } {
       struct_rec_deep_wait [ retrieve_struct $input ] $type $signal
     }
-    
+
     # Recursively follow any references in struct and set signal
     proc struct_rec_deep_wait { value type signal } {
       set field_paths [ lindex $type 1 ]
       set field_nest_levels [ lindex $type 2 ]
       set field_base_types [ lindex $type 3 ]
-      
+
       set field_values [ list ]
-      foreach field_path $field_paths { 
+      foreach field_path $field_paths {
         lappend field_values [ dict get $value {*}$field_path ]
       }
-      
+
       deeprule $field_values $field_nest_levels $field_base_types \
               "deeprule_fire_signal {} $signal"
     }
@@ -966,10 +966,19 @@ namespace eval turbine {
         }
       }
     }
-    
+
     proc enumerate_rec_struct { struct types depth read_decr } {
-        set struct_desc [ lindex $types [ expr {$depth + 1} ] ]
         set struct_val [ retrieve_struct $struct ]
+
+        set result [ enumerate_rec_struct_val $struct_val $types $depth ]
+        # Decrement here to avoid freeing contents earlier
+        read_refcount_decr $struct $read_decr
+
+        return $result
+    }
+
+    proc enumerate_rec_struct_val { struct_val types depth } {
+        set struct_desc [ lindex $types [ expr {$depth + 1} ] ]
         set result_dict [ dict create ]
 
         dict for { key key_type } $struct_desc {
@@ -981,7 +990,7 @@ namespace eval turbine {
               set result_val [ enumerate_rec $val $key_type 1 0 ]
             }
             struct {
-              error "unimplemented for $key_type_prefix"
+              set result_val [ enumerate_rec_struct_val $val $key_type 0 ]
             }
             default {
               set result_val $val
@@ -991,8 +1000,6 @@ namespace eval turbine {
           dict append result_dict $key $result_val
         }
 
-        # Decrement here to avoid freeing contents earlier
-        read_refcount_decr $struct $read_decr
         return $result_dict
     }
 
@@ -1008,15 +1015,13 @@ namespace eval turbine {
         if { $ref_root_type == "container" || \
              $ref_root_type == "multiset" ||
              $ref_root_type == "struct" } {
-          # TODO: would need to recurse on inline structs, which are
-          # currently unused in practice
           set recurse 1
         } else {
           set recurse 0
           set member_ref_type [ lindex $types [ expr {$depth + 2} ] ]
         }
       }
-      
+
       if { $include_keys } {
         if { $ref_value } {
           set vals [ adlb::enumerate $container dict all 0 0 ]
@@ -1036,6 +1041,8 @@ namespace eval turbine {
           read_refcount_decr $container $read_decr
           return $result_dict
         } else {
+          # TODO: would need to recurse on inline structs, which are
+          # currently unused in practice
           return [ adlb::enumerate $container dict all 0 $read_decr ]
         }
       } else {
@@ -1056,6 +1063,8 @@ namespace eval turbine {
           read_refcount_decr $container $read_decr
           return $result_dict
         } else {
+          # TODO: would need to recurse on inline structs, which are
+          # currently unused in practice
           return [ adlb::enumerate $container members all 0 $read_decr ]
         }
       }
