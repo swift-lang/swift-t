@@ -42,7 +42,6 @@ main {
   assertEqual(fmt2(p1, ppl).person.name, "Bob", "e");
   assertEqual(fmt2(p1, ppl).person.age, 100, "f");
   
-  assertEqual(fmt2(p1, ppl).mega.people[0], "Bob", "g");
-  assertEqual(fmt2(p1, ppl).mega.people[1], "Jane", "h");
-
+  assertEqual(fmt2(p1, ppl).mega.people[0].name, "Bob", "g");
+  assertEqual(fmt2(p1, ppl).mega.people[1].name, "Jane", "h");
 }
