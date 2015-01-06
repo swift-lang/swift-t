@@ -1,5 +1,5 @@
 // SKIP-THIS-TEST
-// Check wrapping and recursive wait for struct with nested arrays and structs
+// Check returning structs with nested arrays
 type person {
   string name;
   int age;
@@ -15,35 +15,34 @@ type uberstruct {
   megastruct mega;
 }
 
-(string o) fmt(megastruct s) "turbine" "0" [
-  "set <<o>> <<s>>"
+(megastruct o) fmt(person person, person ppl[]) "turbine" "0" [
+  "set <<o>> [ dict create person <<person>> people <<ppl>>]"
 ];
 
-(string o) fmt2(uberstruct s) "turbine" "0" [
-  "set <<o>> <<s>>"
+(uberstruct o) fmt2(person person, person ppl[]) "turbine" "0" [
+  "set <<o>> [ dict create mega [ dict create person <<person>> people <<ppl>> ] person <<person>> ]"
 ];
 
 import assert;
 
 main {
-  megastruct s;
-  s.person.name = "Bob";
-  s.person.age = 100;
- 
-  person t;
-  t.name = "X";
-  t.age = 1;
-  s.people[0] = t;
-  s.people[1] = s.person;
-  s.people[2] = t;
+  person p1, p2;
+  p1.name = "Bob";
+  p1.age = 100;
+  p2.name = "Jane";
+  p2.age = 101;
 
-  trace("test1",fmt(s));
+  person ppl[] = [p1, p2, p1];
 
-  uberstruct s2;
-  s2.mega.person = s.person;
-  s2.mega.people = s.people;
-  s2.person.name = "Jane";
-  s2.person.age = 101;
+  assertEqual(fmt(p1, ppl).person.name, "Bob", "a");
+  assertEqual(fmt(p1, ppl).person.age, 100, "b");
+  assertEqual(fmt(p1, ppl).people[0].name, "Bob", "c");
+  assertEqual(fmt(p1, ppl).people[1].name, "Jane", "d");
 
-  trace("test2",fmt2(s2));
+  assertEqual(fmt2(p1, ppl).person.name, "Bob", "e");
+  assertEqual(fmt2(p1, ppl).person.age, 100, "f");
+  
+  assertEqual(fmt2(p1, ppl).mega.people[0], "Bob", "g");
+  assertEqual(fmt2(p1, ppl).mega.people[1], "Jane", "h");
+
 }
