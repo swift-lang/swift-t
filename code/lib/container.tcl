@@ -915,6 +915,8 @@ namespace eval turbine {
 
       rule $input \
         [ list struct_ref_rec_deep_wait_ready $input $type $signal ]
+
+      return $signal
     }
 
     proc struct_ref_rec_deep_wait_ready { input type signal } {
