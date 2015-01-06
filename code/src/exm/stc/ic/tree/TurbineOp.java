@@ -3451,14 +3451,26 @@ public class TurbineOp extends Instruction {
       }
       case STORE_BAG:
       case STORE_ARRAY:
-      case STORE_STRUCT:
       case STORE_ARRAY_RECURSIVE:
-      case STORE_STRUCT_RECURSIVE:
       case STORE_BAG_RECURSIVE: {
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
                            VarCount.one(getOutput(0)).asList());
+      }
+      case STORE_STRUCT: {
+        // Inputs stored into array need to have refcount incremented
+        // Does not write any tracked elements of struct, so do not need to
+        // manage write refcount.
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.NONE);
+      }
+      case STORE_STRUCT_RECURSIVE: {
+        // Inputs stored into array need to have refcount incremented
+        // Does write any tracked elements of struct, so do need to
+        // manage write refcount.
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+            VarCount.one(getOutput(0)).asList());
       }
       case DEREF_SCALAR:
       case DEREF_FILE: {

@@ -47,7 +47,7 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 /**
  * Eliminate, merge and otherwise reduce read/write reference counting
  * operations. Run as a post-processing step.
- * 
+ *
  * Additional unimplemented ideas:
  * - Pushing down reference decrements to blocks where they can be merged
  */
@@ -130,7 +130,7 @@ public class RefcountPass implements OptimizerPass {
 
   private void recurseOnCont(Logger logger, Function f, Continuation cont,
       TopDownInfo info) {
-    
+
     for (Block block: cont.getBlocks()) {
       // Build separate copy for each block
       TopDownInfo contInfo = info.makeChild(cont);
@@ -140,7 +140,7 @@ public class RefcountPass implements OptimizerPass {
 
       recurseOnBlock(logger, f, block, increments, contInfo);
     }
-    
+
 
     // Try to batch increments for foreach loop
     if (RCUtil.isForeachLoop(cont)) {
@@ -149,7 +149,7 @@ public class RefcountPass implements OptimizerPass {
   }
 
   /**
-   * 
+   *
    * @param logger
    * @param fn
    * @param block
@@ -173,12 +173,12 @@ public class RefcountPass implements OptimizerPass {
     }
 
   }
-  
+
 
   /**
    * Handle foreach loop as special case where we want to increment <# of
    * iterations> * <needed increments inside loop> before loop.
-   * 
+   *
    * If the batching optimization is enabled, this function will work out
    * if it can pull out increments from foreach loop body
    */
@@ -200,7 +200,7 @@ public class RefcountPass implements OptimizerPass {
         }
       }
     }
-    
+
     if (RCUtil.batchEnabled()) {
       // Optionally try to batch increments from body
       removeIncrementsForeachBody(loop, readIncrs, writeIncrs);
@@ -262,7 +262,7 @@ public class RefcountPass implements OptimizerPass {
       logger.trace("==============================");
       logger.trace(increments);
     }
-    
+
     reorderContinuations(logger, block);
 
     // Move any increment instructions up to this block
@@ -274,9 +274,9 @@ public class RefcountPass implements OptimizerPass {
 
   /**
    * Work out how much each variable needs to be incremented.
-   * 
+   *
    * In some cases this will place the increment instructions right away
-   * 
+   *
    * @param block
    * @param increments
    */
@@ -312,9 +312,9 @@ public class RefcountPass implements OptimizerPass {
 
   /**
    * Work out how much each variable needs to be decrementent.
-   * 
+   *
    * In some cases this will place the decrement instructions right away
-   * 
+   *
    * @param block
    * @param increments
    */
@@ -393,7 +393,7 @@ public class RefcountPass implements OptimizerPass {
   private void updateCountsInst(Instruction inst, RCTracker increments) {
     Pair<List<VarCount>, List<VarCount>> inRefs;
     inRefs = inst.inRefCounts(functionMap);
-    
+
     List<VarCount> inReadRefs = inRefs.val1;
     List<VarCount> inWriteRefs = inRefs.val2;
 
@@ -404,31 +404,31 @@ public class RefcountPass implements OptimizerPass {
       increments.writeIncr(vc.var, vc.count);
     }
 
-    
+
     Pair<List<VarCount>, List<VarCount>> outRefs;
     outRefs = inst.outRefCounts(functionMap);
-    
+
     List<VarCount> outReadRefs = outRefs.val1;
     List<VarCount> outWriteRefs = outRefs.val2;
-    
+
     for (VarCount vc: outReadRefs) {
       increments.readDecr(vc.var, vc.count);
     }
-    
+
     for (VarCount vc: outWriteRefs) {
       increments.writeDecr(vc.var, vc.count);
     }
 
     if (logger.isTraceEnabled()) {
-      logger.trace("At " + inst + 
-          " inReadRefs: " + inReadRefs + " inWriteRefs: " + inWriteRefs + 
+      logger.trace("At " + inst +
+          " inReadRefs: " + inReadRefs + " inWriteRefs: " + inWriteRefs +
           " outReadRefs: " + outReadRefs + " outWriteRefs: " + outWriteRefs);
     }
   }
 
   /**
    * Update increments for variables passed into continuation
-   * 
+   *
    * @param cont
    * @param increments
    */
@@ -439,7 +439,7 @@ public class RefcountPass implements OptimizerPass {
 
       // Track those already added
       Set<Var> alreadyAdded = new HashSet<Var>();
-      
+
       for (Var keepOpen: cont.getKeepOpenVars()) {
         assert (RefCounting.trackWriteRefCount(keepOpen));
         alreadyAdded.add(keepOpen);
@@ -479,10 +479,10 @@ public class RefcountPass implements OptimizerPass {
         }
       }
     }
-    
+
     if (foreach.isAsync()) {
       /*
-       * Hold a refcount until we get to this loop: do a switcheroo where 
+       * Hold a refcount until we get to this loop: do a switcheroo where
        * we pull an increment into the outer block, and balance by adding
        * a decrement to loop.
        */
@@ -497,12 +497,12 @@ public class RefcountPass implements OptimizerPass {
    * Try to bring reference increments out from inner blocks. The observation is
    * that increments can safely be done earlier, so if a child wait increments
    * something, then we can just do it here.
-   * 
+   *
    * We always pull up reference increments if possible in the hope we can
    * cancel them or find a better place put them.  This means that increments
    * will "float" up to the topmost block if possible. We can't really
    * do worse than the explicit increment.
-   * 
+   *
    * @param block
    * @param increments
    * @param rootBlock if this is the root block we're pulling increments into
@@ -511,7 +511,7 @@ public class RefcountPass implements OptimizerPass {
     if (!RCUtil.hoistEnabled()) {
       return;
     }
-    
+
     for (Statement stmt: rootBlock.getStatements()) {
       if (stmt.type() == StatementType.CONDITIONAL) {
         pullUpRefIncrements(stmt.conditional(), increment);
@@ -520,7 +520,7 @@ public class RefcountPass implements OptimizerPass {
         // Do nothing
       }
     }
-    
+
     for (Continuation cont: rootBlock.getContinuations()) {
       pullUpRefIncrements(cont, increment);
     }
@@ -538,13 +538,13 @@ public class RefcountPass implements OptimizerPass {
       // Find increments that occur on every branch
       pullUpBranches(cont.getBlocks(), !cont.runLast(), increment);
     }
-    
+
   }
 
   /**
    * Remove positive constant increment instructions from block and update
    * counters.
-   * 
+   *
    * @param branches blocks that cover execution paths mutually exclusively and
    *                 exhaustively
    * @param runsBeforeCleanups if the continuation executes synchronously before
@@ -555,13 +555,13 @@ public class RefcountPass implements OptimizerPass {
   private void pullUpBranches(List<Block> branches, boolean runsBeforeCleanups,
                                     RCTracker increments) {
     RCTracker allBranchIncrements = new RCTracker(increments.getAliases());
-    
+
     // Find intersection of increments before removing anything
     findPullupIncrements(branches.get(0), allBranchIncrements, false);
     if (runsBeforeCleanups) {
       findPullupDecrements(branches.get(0), allBranchIncrements, false);
     }
-    
+
     for (int i = 1; i < branches.size(); i++) {
       Block branch = branches.get(i);
       RCTracker tmpBranchIncrements = new RCTracker(increments.getAliases());
@@ -569,7 +569,7 @@ public class RefcountPass implements OptimizerPass {
       if (runsBeforeCleanups) {
         findPullupDecrements(branch, tmpBranchIncrements, false);
       }
-      
+
       // Check for intersection
       for (RefCountType rcType: RefcountPass.RC_TYPES) {
         for (RCDir dir: RCDir.values()) {
@@ -605,7 +605,7 @@ public class RefcountPass implements OptimizerPass {
         removePullupDecrements(branch, allBranchIncrements);
       }
     }
-    
+
     // Apply changes to parent increments
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (RCDir dir: RCDir.values()) {
@@ -650,7 +650,7 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
-  
+
   private void removePullupIncrements(Block block, RCTracker toRemove) {
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
@@ -688,8 +688,8 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
-  
-  
+
+
   private void findPullupDecrements(Block block, RCTracker increments,
       boolean removeInstructions) {
     ListIterator<CleanupAction> it = block.cleanupIterator();
@@ -715,7 +715,7 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
-  
+
   private void removePullupDecrements(Block block, RCTracker toRemove) {
     ListIterator<CleanupAction> it = block.cleanupIterator();
     while (it.hasNext()) {
@@ -745,10 +745,10 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
-  
+
   /**
    * Add decrements that have to happen for continuation inside block
-   * 
+   *
    * @param cont
    * @param increments
    */
@@ -811,7 +811,7 @@ public class RefcountPass implements OptimizerPass {
 
   /**
    * Add decrements for loop
-   * 
+   *
    * @param loop
    * @param increments
    */
@@ -826,7 +826,7 @@ public class RefcountPass implements OptimizerPass {
   /**
    * Very specific utility function: returns a conditional statement if last
    * thing executed in loop body
-   * 
+   *
    * @param loop
    * @return
    */
@@ -855,7 +855,7 @@ public class RefcountPass implements OptimizerPass {
         syncContinuations.add(cont);
       }
     }
-    
+
     cIt = block.continuationIterator();
     for (Continuation sync: syncContinuations) {
       cIt.add(sync);

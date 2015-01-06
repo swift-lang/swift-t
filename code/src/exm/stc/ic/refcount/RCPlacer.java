@@ -50,8 +50,8 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
  * are all implemented in this module.  For example, we can insert explicit
  * reference count instructions, or we can do tricky things like piggybacking
  * them on other operations, or canceling them out.
- * 
- * 
+ *
+ *
  * TODO: Merge together refcounts to place - e.g. read/write same var,
  *       or two vars if they happen to alias same refcounted var
  */
@@ -73,10 +73,10 @@ public class RCPlacer {
       if (logger.isTraceEnabled()) {
         logger.trace("After preprocessing: \n" + increments);
       }
-      
+
       // Cancel out increments and decrements
       cancelIncrements(logger, fn, block, increments, rcType);
-      
+
       // Add decrements to block
       placeDecrements(logger, fn, block, increments, rcType);
 
@@ -98,12 +98,12 @@ public class RCPlacer {
    */
   private void preprocessIncrements(RCTracker increments, RefCountType rcType) {
     for (RCDir dir: RCDir.values()) {
-      Iterator<Entry<AliasKey, Long>> it = 
+      Iterator<Entry<AliasKey, Long>> it =
                           increments.rcIter(rcType, dir).iterator();
       List<Pair<Var, Long>> newRCs = new ArrayList<Pair<Var, Long>>();
       // Remove all refcounts
       while (it.hasNext()) {
-        Entry<AliasKey, Long> e = it.next();  
+        Entry<AliasKey, Long> e = it.next();
         Var rcVar = increments.getRefCountVar(e.getKey());
         if (logger.isTraceEnabled()) {
           logger.trace(rcVar + " is refcount var for key " + e.getKey());
@@ -130,25 +130,27 @@ public class RCPlacer {
    */
   private void placeDecrements(Logger logger, Function fn, Block block,
       RCTracker increments, RefCountType type) {
+
     // First try to piggyback on variable declarations
     piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
 
     // Then see if we can do the decrement on top of another operation
     piggybackOnStatements(logger, fn, block, increments, RCDir.DECR, type);
-  
+
     if (block.getType() != BlockType.MAIN_BLOCK
         && RCUtil.isForeachLoop(block.getParentCont())) {
       // Add remaining decrements to foreach loop where they can be batched
       batchDecrementsForeach(block, increments, type);
     }
-  
+
     // Add remaining decrements as cleanups at end of block
     addDecrementsAsCleanups(block, increments, type);
+
   }
 
   /**
    * Add reference increments at head of block
-   * 
+   *
    * @param fn
    * @param block
    * @param increments
@@ -161,7 +163,7 @@ public class RCPlacer {
       RefCountType rcType, Set<Var> parentAssignedAliasVars) {
     // First try to piggy-back onto var declarations
     piggybackIncrementsOnDeclarations(block, increments, rcType);
-    
+
     // Then see if we can do the increment on top of another operation
     piggybackOnStatements(logger, fn, block, increments, RCDir.INCR, rcType);
 
@@ -181,14 +183,14 @@ public class RCPlacer {
         block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
       }
     }
-    
+
     // Clear out all decrements
     increments.resetAll(RCDir.DECR);
   }
 
   /**
    * Insert all reference increments and decrements in place
-   * 
+   *
    * @param stmt the statement to insert before or after
    *              null indicates end of the block
    * @param stmtIt
@@ -206,7 +208,7 @@ public class RCPlacer {
         assert(incr >= 0);
         if (incr > 0) {
           boolean varInit = stmt != null &&
-                   stmt.type() == StatementType.INSTRUCTION && 
+                   stmt.type() == StatementType.INSTRUCTION &&
                    stmt.instruction().isInitialized(var);
           // TODO: what if not initialized in a conditional? Should insert before
           if (stmt != null &&
@@ -221,7 +223,7 @@ public class RCPlacer {
         }
       }
     }
-  
+
     // Clear out all increments
     increments.resetAll(RCDir.INCR);
   }
@@ -230,7 +232,7 @@ public class RCPlacer {
    * Cancel out increments and decrements.  We need to validate some
    * conditions to be sure that it's valid.  In particular, we need
    * to make sure that there isn't a "trailing" read/write of a variable
-   * that occurs after a reference count has been consumed by an instruction. 
+   * that occurs after a reference count has been consumed by an instruction.
    * @param logger
    * @param fn
    * @param block
@@ -246,11 +248,11 @@ public class RCPlacer {
     // Set of keys that we might be able to cancel
     // Use var instead of key since we can now deal with concrete vars
     Set<Var> cancelCandidates = new HashSet<Var>();
-    
+
     // TODO: inelegant
     // Need to track which vars are associated with each refcount var
     MultiMap<Var, AliasKey> rcVarToKey = new MultiMap<Var, AliasKey>();
-    
+
     for (Entry<AliasKey, Long> e: tracker.rcIter(rcType, RCDir.DECR)) {
       long decr = e.getValue();
       AliasKey key = e.getKey();
@@ -263,33 +265,33 @@ public class RCPlacer {
         rcVarToKey.put(rcVar, key);
       }
     }
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("Cancel candidates " + rcType + ": " + cancelCandidates);
     }
-    
+
     /*
      * Scan backwards up block to find out if we need to hold onto refcount
      * past point where it is consumed.
      */
-    
+
     // Set of variables where refcount was consumed by statement/continuation
     // after current position
     Set<Var> consumedAfter = new HashSet<Var>();
-    
+
     // Check that the data isn't actually used in block or sync continuations
     UseFinder useFinder = new UseFinder(tracker, rcType, cancelCandidates);
-    
+
     ListIterator<Continuation> cit = block.continuationEndIterator();
     while (cit.hasPrevious()) {
       Continuation cont = cit.previous();
-  
+
       useFinder.reset();
       TreeWalk.walkSyncChildren(logger, fn, cont, useFinder);
       updateCancelCont(tracker, cont, useFinder.getUsedVars(), rcType,
                        cancelCandidates, consumedAfter);
     }
-    
+
     ListIterator<Statement> it = block.statementEndIterator();
     while (it.hasPrevious()) {
       Statement stmt = it.previous();
@@ -305,13 +307,13 @@ public class RCPlacer {
                      cancelCandidates, consumedAfter);
       }
     }
-    
+
     for (Var toCancel: cancelCandidates) {
       // Simple approach to cancelling: if we are totally free to
       // cancel, cancel as much as possible
       long incr = 0;
       long decr = 0;
-      
+
       // Account for fact we may have multiple vars for key
       List<AliasKey> matchingKeys = rcVarToKey.get(toCancel);
       assert(!matchingKeys.isEmpty());
@@ -323,7 +325,7 @@ public class RCPlacer {
       if (logger.isTraceEnabled()) {
         logger.trace("Cancel " + toCancel.toString() + " " + cancelAmount);
       }
-  
+
       // cancel out increment and decrement
       tracker.cancel(toCancel, rcType, cancelAmount);
       tracker.cancel(toCancel, rcType, -cancelAmount);
@@ -355,11 +357,11 @@ public class RCPlacer {
         consumed.add(tracker.getRefCountVar(v.var));
       }
     }
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace(inst + " | " + rcType + " consumed " + consumed);
     }
-    
+
     if (rcType == RefCountType.READERS) {
       for (Arg in: inst.getInputs()) {
         if (in.isVar()) {
@@ -381,7 +383,7 @@ public class RCPlacer {
                      true, consumed.contains(modifiedRCVar));
       }
     }
-    
+
     // Update with any remaining consumptions.  Note that it doesn't
     // matter if we update consumption after use, but the other way
     // doesn't work
@@ -425,17 +427,17 @@ public class RCPlacer {
         }
       }
     }
-    
+
     for (Var usedRCVar: usedRCVars) {
       updateCancel(usedRCVar, cancelCandidates, consumedAfter, true,
                    consumedRCVars.contains(usedRCVar));
     }
-    
+
     for (Var consumedRCVar: consumedRCVars) {
       updateCancel(consumedRCVar, cancelCandidates, consumedAfter,
                    false, true);
     }
-    
+
   }
 
 
@@ -443,10 +445,10 @@ public class RCPlacer {
       Set<Var> cancelCandidates, Set<Var> consumedAfter,
       boolean usedHere, boolean consumedHere) {
     if (logger.isTraceEnabled()) {
-      logger.trace("updateCancel " + var + " usedHere: " + usedHere 
+      logger.trace("updateCancel " + var + " usedHere: " + usedHere
           + " consumedHere: " + consumedHere);
     }
-    
+
     if (consumedHere) {
       // For instructions that just consume a refcount, don't need to do
       // anything, just mark that it was consumed
@@ -469,7 +471,7 @@ public class RCPlacer {
   /**
    * Try to piggyback reference decrements onto var declarations, for example if
    * a var is never read or written
-   * 
+   *
    * @param block
    * @param tracker
    *          updated to reflect changes
@@ -480,7 +482,7 @@ public class RCPlacer {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
-    
+
     final Set<Var> immDecrCandidates = Sets.createSet(
                         block.getVariables().size());
     for (Var blockVar : block.getVariables()) {
@@ -514,7 +516,7 @@ public class RCPlacer {
     useFinder.reset();
     TreeWalk.walkSyncChildren(logger, fn, block, true, useFinder);
     immDecrCandidates.removeAll(useFinder.getUsedVars());
-   
+
     for (Var immDecrVar: immDecrCandidates) {
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
       long incr = tracker.getCount(rcType, immDecrVar, RCDir.DECR);
@@ -526,7 +528,7 @@ public class RCPlacer {
   /**
    * Try to piggyback decrement operations on instructions or continuations
    * in block
-   * 
+   *
    * @param logger
    * @param fn
    * @param block
@@ -538,7 +540,7 @@ public class RCPlacer {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
-    
+
     // Initially all decrements are candidates for piggybacking
     RefCountCandidates candidates =
         tracker.getVarCandidates(block, rcType, dir);
@@ -548,7 +550,7 @@ public class RCPlacer {
 
     UseFinder subblockWalker = new UseFinder(tracker, rcType,
                                              candidates.varKeySet());
-    
+
     // Depending on whether it's a decrement or an increment, we need
     // to traverse statements in a different direciton so that refcounts
     // can be disqualified in the right order
@@ -561,7 +563,7 @@ public class RCPlacer {
 
     piggybackOnStatements(logger, fn, block, tracker, dir, rcType, candidates,
                           subblockWalker, reverse);
-    
+
     if (!reverse) {
       piggybackOnContinuations(logger, fn, block, tracker, dir, rcType,
                                candidates, subblockWalker, reverse);
@@ -585,7 +587,7 @@ public class RCPlacer {
       } else {
         stmt = it.next();
       }
-      
+
       switch (stmt.type()) {
         case INSTRUCTION: {
           Instruction inst = stmt.instruction();
@@ -593,13 +595,13 @@ public class RCPlacer {
           if (logger.isTraceEnabled()) {
             logger.trace("Try piggyback " + dir + " on " + inst);
           }
-          
+
           VarCount piggybacked;
           do {
             /* Process one at a time so that candidates is correctly updated
              * for each call based on previous changes */
             piggybacked = inst.tryPiggyback(candidates, rcType);
-          
+
             if (piggybacked != null && piggybacked.count != 0) {
               if (logger.isTraceEnabled()) {
                 logger.trace("Piggybacked decr " + piggybacked + " on " + inst);
@@ -609,7 +611,7 @@ public class RCPlacer {
               successful.add(piggybacked);
             }
           } while (piggybacked != null && piggybacked.count != 0);
-            
+
           // Make sure we don't modify before a use of the var by removing
           // from candidate set
           List<Var> used = findUses(inst, tracker, rcType,
@@ -643,7 +645,7 @@ public class RCPlacer {
       Block block, RCTracker tracker, RCDir dir, RefCountType rcType,
       RefCountCandidates candidates, UseFinder subblockWalker, boolean reverse) {
     // Try to piggyback on continuations, starting at bottom up
-    ListIterator<Continuation> cit = reverse ? block.continuationEndIterator() 
+    ListIterator<Continuation> cit = reverse ? block.continuationEndIterator()
                                               : block.continuationIterator();
     while ((reverse && cit.hasPrevious()) || (!reverse && cit.hasNext())) {
       Continuation cont;
@@ -655,7 +657,7 @@ public class RCPlacer {
 
       if (RCUtil.isAsyncForeachLoop(cont)) {
         AbstractForeachLoop loop = (AbstractForeachLoop) cont;
-        
+
         VarCount piggybacked;
         do {
           /* Process one at a time so that candidates is correctly updated
@@ -689,14 +691,14 @@ public class RCPlacer {
   private final class UseFinder extends TreeWalker {
     private final RCTracker tracker;
     private final RefCountType rcType;
-    private final Set<Var> varCandidates; 
-    
+    private final Set<Var> varCandidates;
+
     /**
      * List into which usages are accumulated.  Must
      * be reset by caller
      */
     private final ArrayList<Var> varAccum;
-    
+
     private UseFinder(RCTracker tracker, RefCountType rcType,
             Set<Var> varCandidates) {
       this.tracker = tracker;
@@ -704,19 +706,21 @@ public class RCPlacer {
       this.varCandidates = varCandidates;
       this.varAccum = new ArrayList<Var>();
     }
-  
+
     public void reset() {
       this.varAccum.clear();
     }
-    
+
+    @Override
     public void visit(Continuation cont) {
       findUsesNonRec(cont, tracker, rcType, varCandidates, varAccum);
     }
-  
+
+    @Override
     public void visit(Instruction inst) {
       findUses(inst, tracker, rcType, varCandidates, varAccum);
     }
-    
+
     public List<Var> getUsedVars() {
       return varAccum;
     }
@@ -729,9 +733,9 @@ public class RCPlacer {
     findUses(inst, tracker, rcType, candidates, res);
     return res;
   }
-  
+
   /**
-   * 
+   *
    * @param inst
    * @param tracker required if keyCandidates != null
    * @param rcType
@@ -756,9 +760,9 @@ public class RCPlacer {
       for (Var modified : inst.getOutputs()) {
         updateUses(modified, tracker, varCandidates, varAccum);
       }
-    }    
+    }
   }
-  
+
   private void findUsesNonRec(Continuation cont, RCTracker tracker,
       RefCountType rcType, Set<Var> varCandidates, ArrayList<Var> varAccum) {
     if (rcType == RefCountType.READERS) {
@@ -796,7 +800,7 @@ public class RCPlacer {
       varAccum.add(tracker.getRefCountVar(v));
     }
   }
-  
+
   private void removeCandidates(Collection<Var> vars, RCTracker tracker,
                                 RefCountCandidates candidates) {
     for (Var key: vars) {
@@ -806,11 +810,11 @@ public class RCPlacer {
       candidates.reset(key);
     }
   }
-    
+
   /**
    * Foreach loops have different method for handling decrements: we add them to
    * the parent continuation
-   * 
+   *
    * @param block
    * @param increments
    * @param type
@@ -820,7 +824,7 @@ public class RCPlacer {
     if (!RCUtil.batchEnabled()) {
       return;
     }
-    
+
     assert (block.getType() != BlockType.MAIN_BLOCK);
     Continuation parent = block.getParentCont();
     AbstractForeachLoop loop = (AbstractForeachLoop) parent;
@@ -836,7 +840,7 @@ public class RCPlacer {
         loop.addEndDecrement(new RefCount(var, type, amountArg));
         changes.add(var, amount);
         Logging.getSTCLogger().trace("Piggyback " + var + " " + type + " " +
-                                     amount + " on foreach"); 
+                                     amount + " on foreach");
       }
     }
     // Build and merge to avoid concurrent modification problems
@@ -865,8 +869,8 @@ public class RCPlacer {
       block.addCleanup(var, RefCountOp.decrRef(type, var, amount));
 
       increments.add(var, amount.getIntLit());
-      
-      
+
+
       if (logger.isTraceEnabled()) {
         logger.trace("Add " + var.name() + " " + type + " " + count +
                      " as cleanup");
@@ -886,7 +890,7 @@ public class RCPlacer {
     assert(val >= 0);
     if (val == 0)
       return;
-    
+
     if (before)
       stmtIt.previous();
     Instruction inst;
@@ -915,7 +919,7 @@ public class RCPlacer {
       logger.trace("==============================");
       logger.trace(increments);
     }
-    
+
     // Next try to just put at top of block
     Iterator<Entry<AliasKey, Long>> it =
         increments.rcIter(rcType, RCDir.INCR).iterator();
@@ -955,7 +959,7 @@ public class RCPlacer {
           }
           break;
         }
-        default: 
+        default:
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
     }
@@ -968,7 +972,7 @@ public class RCPlacer {
    * @return
    */
   private Set<Var> findConditionalInitAliases(Conditional cond) {
-    Set<Var> initAllBranches; 
+    Set<Var> initAllBranches;
     if (cond.isExhaustiveSyncConditional()) {
       List<Set<Var>> branchesInit = new ArrayList<Set<Var>>();
       for (Block b: cond.getBlocks()) {
@@ -1024,7 +1028,7 @@ public class RCPlacer {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
-    
+
     for (Var blockVar : block.getVariables()) {
       if (blockVar.storage() != Alloc.ALIAS) {
         long incr = increments.getCount(rcType, blockVar, RCDir.INCR);
@@ -1040,7 +1044,7 @@ public class RCPlacer {
 
   /**
    * Add an increment instruction at top of block
-   * 
+   *
    * @param block
    * @param type
    * @param var
