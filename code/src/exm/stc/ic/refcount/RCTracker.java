@@ -27,33 +27,33 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
  * Class to keep track of information relevant to refcount pass
  */
 public class RCTracker {
-  
+
   /**
    * Current read increments per var
    */
   private final Counters<AliasKey> readIncrements;
-  
+
   /**
    * Current read decrements per var (negative numbers)
    */
   private final Counters<AliasKey> readDecrements;
-  
+
   /**
    * Current write increments per var
    */
   private final Counters<AliasKey> writeIncrements;
-  
+
   /**
    * Current write decrements per var (negative numbers)
    */
   private final Counters<AliasKey> writeDecrements;
-  
+
   private final AliasTracker aliases;
-  
+
   public RCTracker() {
     this(null);
   }
-  
+
   public RCTracker(AliasTracker parentAliases) {
     this.readIncrements =  new Counters<AliasKey>();
     this.readDecrements =  new Counters<AliasKey>();
@@ -69,7 +69,7 @@ public class RCTracker {
   public AliasTracker getAliases() {
     return aliases;
   }
-  
+
   public void updateForInstruction(Instruction inst) {
     for (Alias alias: aliases.update(inst)) {
       updateForAlias(alias);
@@ -78,7 +78,7 @@ public class RCTracker {
 
   /**
    * Perform any updates required for alias info
-   * 
+   *
    * @param parent
    * @param field
    * @param child
@@ -104,7 +104,7 @@ public class RCTracker {
     Counters<AliasKey> changes2 = new Counters<AliasKey>();
     for (Entry<Var, Long> e: changes.entries()) {
       changes2.add(getCountKey(e.getKey()), e.getValue());
-    } 
+    }
     getCounters(rcType, dir).merge(changes2);
   }
 
@@ -118,11 +118,11 @@ public class RCTracker {
         Iterator<Entry<AliasKey, Long>> it =
                           rcIter(rcType, dir).iterator();
         // Add these back in at end
-        List<Pair<AliasKey, Long>> toAdd = 
+        List<Pair<AliasKey, Long>> toAdd =
                                   new ArrayList<Pair<AliasKey,Long>>();
         while (it.hasNext()) {
           Entry<AliasKey, Long> e = it.next();
-          
+
           // Canonicalize key by finding var, and then finding first path
           // that a var is a part of
           AliasKey currKey = e.getKey();
@@ -136,15 +136,15 @@ public class RCTracker {
             }
           }
         }
-        
-        
+
+
         for (Pair<AliasKey, Long> e: toAdd) {
           incrKey(e.val1, rcType, e.val2, e.val1.type());
         }
       }
     }
   }
-  
+
   private Counters<AliasKey> getCounters(RefCountType rcType, RCDir dir) {
     if (rcType == RefCountType.READERS) {
       if (dir == RCDir.INCR) {
@@ -161,7 +161,7 @@ public class RCTracker {
       }
     }
   }
-  
+
   /**
    * Track refcounts requiring placement for a block
    */
@@ -206,13 +206,13 @@ public class RCTracker {
     public Set<Var> varKeySet() {
       return this.counts.keySet();
     }
-    
+
     @Override
     public String toString() {
       return counts.toString();
     }
   }
-  
+
   /**
    * Return list of variables that need to be incremented/decremented.
    * Modifying this doesn't affect underlying map
@@ -235,7 +235,7 @@ public class RCTracker {
                                                 RCDir dir) {
     return getCounters(rcType, dir).entries();
   }
-  
+
   /**
    * Get the variable that we need to increment/decrement refcount of
    * @param block
@@ -246,7 +246,7 @@ public class RCTracker {
     // Use getRefCountVar to find all keys for this
     return getRefCountVar(aliases.findVar(key));
   }
-  
+
   public Var getRefCountVar(Var var) {
     return aliases.getDatumRoot(var);
   }
@@ -254,7 +254,7 @@ public class RCTracker {
   public void reset(RefCountType rcType, Var v, RCDir dir) {
     getCounters(rcType, dir).reset(getCountKey(v));
   }
-  
+
   private void reset(RefCountType rcType, Var v) {
     for (RCDir dir: RCDir.values()) {
       getCounters(rcType, dir).reset(getCountKey(v));
@@ -267,13 +267,13 @@ public class RCTracker {
       reset(rcType, var, dir);
     }
   }
-  
+
   public void resetAll() {
     for (RCDir dir: RCDir.values()) {
       resetAll(dir);
     }
   }
-  
+
   public void resetAll(RCDir dir) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       getCounters(rcType, dir).resetAll();
@@ -283,7 +283,7 @@ public class RCTracker {
   public long getCount(RefCountType rcType, AliasKey k, RCDir dir) {
     return getCounters(rcType, dir).getCount(k);
   }
-  
+
   public long getCount(RefCountType rcType, Var v, RCDir dir) {
     return getCount(rcType, getCountKey(v), dir);
   }
@@ -291,31 +291,31 @@ public class RCTracker {
   void readIncr(Var var) {
     readIncr(var, 1);
   }
-  
+
   void readDecr(Var var) {
     readIncr(var, -1);
   }
-  
+
   void readIncr(Var var, long amount) {
     incr(var, RefCountType.READERS, amount);
   }
-  
+
   void readDecr(Var var, long amount) {
     readIncr(var, -1 * amount);
   }
-  
+
   void writeIncr(Var var) {
     writeIncr(var, 1);
   }
-  
+
   void writeDecr(Var var) {
     writeIncr(var, -1);
   }
-  
+
   void writeDecr(Var var, long amount) {
     writeIncr(var, -1 * amount);
   }
-  
+
   void writeIncr(Var var, long amount) {
     incr(var, RefCountType.WRITERS, amount);
   }
@@ -323,12 +323,12 @@ public class RCTracker {
   public void cancel(Var var, RefCountType rcType, long amount) {
     cancel(getCountKey(var), rcType, amount);
   }
-  
+
   public void cancel(AliasKey key, RefCountType rcType,
                     long amount) {
     RCDir dir = RCDir.fromAmount(-amount);
     Counters<AliasKey> counters = getCounters(rcType, dir);
-    
+
     long newCount = counters.add(key, amount);
     long oldCount = newCount - amount;
     Logger logger = Logging.getSTCLogger();
@@ -365,7 +365,7 @@ public class RCTracker {
   void decr(Var var, RefCountType type, long amount) {
     incr(var, type, -1 * amount);
   }
-  
+
   /**
    * Increment key by given amount
    * @param key
@@ -394,7 +394,7 @@ public class RCTracker {
     // topmost struct
     return aliases.getCanonical(var);
   }
-  
+
   @Override
   public String toString() {
     return "ReadIncr: " + readIncrements +
