@@ -21,7 +21,6 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Unimplemented;
@@ -1183,8 +1182,8 @@ public class TurbineOp extends Instruction {
    * @return
    */
   public static Instruction storeRecursive(Var dst, Arg src) {
-    assert(Types.isContainer(dst));
-    assert(Types.isContainerLocal(src.type()));
+    assert(Types.isContainer(dst) || Types.isStruct(dst));
+    assert(Types.isContainerLocal(src) || Types.isStructLocal(src));
     assert(src.type().assignableTo(
             Types.unpackedType(dst))) : src + ":" + src.type()
                                                           + " " + dst;
@@ -1300,14 +1299,11 @@ public class TurbineOp extends Instruction {
       }
     } else if (Types.isStruct(dst)) {
       assert(src.isVar());
-      // TODO: recursive
-      for (StructField f: ((StructType)dst.type().getImplType()).getFields()) {
-        if (Types.isRef(f.getType())) {
-          throw new STCRuntimeError("Recursive fetch of struct with ref field "
-                                   + "not supported yet " + dst.type());
-        }
+      if (recursive) {
+        return storeRecursive(dst, src);
+      } else {
+        return assignStruct(dst, src);
       }
-      return assignStruct(dst, src);
     } else {
       throw new STCRuntimeError("Don't know how to store to " + dst);
     }
