@@ -748,6 +748,25 @@ public class Types {
       }
       return true;
     }
+
+    /**
+     * @return true if this or a nested struct has a ref field
+     */
+    public boolean hasRefField() {
+      for (StructField f: this.fields) {
+        Type fType = f.getType();
+        if (Types.isRef(fType)) {
+          return true;
+        } else if (Types.isStruct(fType) ||
+                   Types.isStructLocal(fType)) {
+          if (((StructType)fType.getImplType()).hasRefField()) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
   }
 
 
