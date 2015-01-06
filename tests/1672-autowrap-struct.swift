@@ -1,3 +1,4 @@
+// SKIP-THIS-TEST
 // Check wrapping and recursive wait for struct with nested arrays and structs
 type person {
   string name;
