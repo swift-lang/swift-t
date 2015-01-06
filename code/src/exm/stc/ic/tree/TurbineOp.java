@@ -3119,6 +3119,18 @@ public class TurbineOp extends Instruction {
             IsValCopy.NO, IsAssign.TO_LOCATION);
         }
 
+        if (op == Opcode.STORE_STRUCT) {
+          /*
+           * Avoid invalid optimization in situations where we're only storing
+           * a subset of fields.
+           */
+          assert(Types.isStruct(dst));
+          StructType st = (StructType)dst.type().getImplType();
+          if (st.hasRefField()) {
+            return Collections.emptyList();
+          }
+        }
+
         if (op == Opcode.STORE_REF) {
           // TODO: incorporate mutability here?
           // Use standard dereference computed value

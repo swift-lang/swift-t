@@ -1089,7 +1089,7 @@ public class TurbineGenerator implements CompilerBackend {
       // TODO: will need to include tracked & untraced refcounts
     }
 
-    List<TypeName> typeList = TurbineTypes.recursiveTypeList(dst.type(),
+    List<Expression> typeList = TurbineTypes.recursiveTypeList(dst.type(),
                                       false, true, true, true, true);
     pointAdd(Turbine.buildRec(typeList, varToExpr(dst), argToExpr(src)));
   }
@@ -1118,7 +1118,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void retrieveRecursive(Var dst, Var src, Arg decr) {
     assert(Types.unpackedType(src).assignableTo(dst.type()));
 
-    List<TypeName> typeList = TurbineTypes.recursiveTypeList(src.type(),
+    List<Expression> typeList = TurbineTypes.recursiveTypeList(src.type(),
                                         false, false, true, true, true);
 
     pointAdd(Turbine.enumerateRec(prefixVar(dst), typeList,
@@ -2020,13 +2020,13 @@ public class TurbineGenerator implements CompilerBackend {
     // we're assigning the struct in whole
     long writeDecr = RefCounting.baseWriteRefCount(dst, true, true);
 
-    List<TypeName> fullReprType;
+    List<Expression> fullReprType;
 
     if (Types.isContainer(src)) {
       fullReprType = TurbineTypes.recursiveTypeList(dst.type(), false, true,
                                           true, false, false);
     } else {
-      fullReprType = Collections.singletonList(
+      fullReprType = Collections.<Expression>singletonList(
                         TurbineTypes.reprType(src.type()));
     }
     pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType,
@@ -2375,7 +2375,7 @@ public class TurbineGenerator implements CompilerBackend {
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
           Pair<Integer, Expression> data =
-              TurbineTypes.recursiveTypeDescriptor(waitVarType);
+              TurbineTypes.depthBaseDescriptor(waitVarType);
           depths[i] = data.val1;
           baseTypes[i] = data.val2;
         }
@@ -3561,7 +3561,8 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        List<TypeName> typeList = TurbineTypes.recursiveTypeList(val.type(), true, true, true, true, false);
+        List<Expression> typeList = TurbineTypes.recursiveTypeList(val.type(),
+                                                true, true, true, true, false);
         result.addAll(typeList);
       } else {
         result.add(TurbineTypes.valReprType(val.type()));
@@ -3606,7 +3607,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private Expression unpackArrayInternal(Arg arg) {
-    Pair<Integer, Expression> rct = TurbineTypes.recursiveTypeDescriptor(arg.type());
+    Pair<Integer, Expression> rct = TurbineTypes.depthBaseDescriptor(arg.type());
     Expression unpackArrayExpr = Turbine.unpackArray(
                             argToExpr(arg), rct.val1, rct.val2);
     return unpackArrayExpr;
