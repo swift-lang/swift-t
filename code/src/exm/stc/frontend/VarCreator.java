@@ -75,14 +75,14 @@ public class VarCreator {
     initialiseVariable(context, var);
     return var;
   }
-  
-  
+
+
   public Var createMappedVariable(Context context, Type type, String name,
       Alloc storage, DefType defType, VarProvenance prov, Var mapping)
                                                 throws UserException {
     Var v = createVariable(context,
         new Var(type, name, storage, defType, prov, mapping != null));
-    
+
     if (mapping != null) {
       if (Types.isFile(v)) {
         backend.copyInFilename(VarRepr.backendVar(v),
@@ -92,10 +92,10 @@ public class VarCreator {
                                   " not implemented");
       }
     }
-    
+
     return v;
   }
-  
+
   public Var createVariable(Context context, Type type, String name,
       Alloc storage, DefType defType, VarProvenance prov, boolean mapped)
                                                 throws UserException {
@@ -106,7 +106,7 @@ public class VarCreator {
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
     backendInit(v);
-    if (Types.isStruct(v)) {
+    if (Types.isStruct(v) && v.storage() != Alloc.ALIAS) {
       initialiseStruct(context, v);
     }
   }
@@ -123,8 +123,9 @@ public class VarCreator {
 
   private void initialiseStruct(Context context, Var struct)
       throws UndefinedTypeException, DoubleDefineException {
+    assert(struct.storage() != Alloc.ALIAS);
     StructType structType = (StructType)struct.type().getImplType();
-    
+
     List<List<String>> fieldPaths = new ArrayList<List<String>>();
     List<Arg> fieldVals = new ArrayList<Arg>();
 
@@ -141,42 +142,42 @@ public class VarCreator {
   }
 
   /**
-   * 
+   *
    * @param rootStruct
    * @param currFieldPath path from root to here
    * @param structType type of current path
    * @param fieldPaths Field paths - added to
    * @param fieldVals Field values - added to
    * @return number of fields initialised
-   * @throws DoubleDefineException 
-   * @throws UndefinedTypeException 
+   * @throws DoubleDefineException
+   * @throws UndefinedTypeException
    */
   private int initialiseStructRec(Context context,
       Var rootStruct, StackLite<String> currFieldPath, StructType structType,
       List<List<String>> fieldPaths, List<Arg> fieldVals)
           throws UndefinedTypeException, DoubleDefineException {
     int initFieldCount = 0;
-    
+
     for (StructField field: structType.getFields()) {
       currFieldPath.push(field.getName());
-      
+
       Type fieldT = field.getType();
       if (VarRepr.storeRefInStruct(fieldT)) {
         ArrayList<String> fieldPath = new ArrayList<String>(currFieldPath);
         // initialize data being referenced and put into struct
         Var fieldVar = createStructFieldTmp(context, rootStruct, fieldT,
                                               fieldPath, Alloc.TEMP);
-        
+
         fieldPaths.add(fieldPath);
         fieldVals.add(VarRepr.backendVar(fieldVar).asArg());
-        
+
         initFieldCount++;
       } else if (Types.isStruct(fieldT)) {
         initFieldCount += initialiseStructRec(context, rootStruct,
             currFieldPath, (StructType)fieldT.getImplType(),
             fieldPaths, fieldVals);
       }
-      
+
       currFieldPath.pop();
     }
     return initFieldCount;
@@ -191,12 +192,12 @@ public class VarCreator {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Var createTmp(Context context, Type type) 
+  public Var createTmp(Context context, Type type)
       throws UserException, UndefinedTypeException {
     assert(context != null);
     return createTmp(context, type, false, false);
   }
-  
+
   /**
    * Shortcut to create tmp alias vars
    * @param context
@@ -205,14 +206,14 @@ public class VarCreator {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Var createTmpAlias(Context context, Type type) 
+  public Var createTmpAlias(Context context, Type type)
       throws UserException, UndefinedTypeException {
     return createTmp(context, type, false, true);
   }
-  
+
   /**
    * Creates a new tmp value, entering it in the provided context
-   * and calling the backend to initialise it 
+   * and calling the backend to initialise it
    * @param context
    * @param type
    * @param storeInStack if the variable should be stored in the stack
@@ -240,24 +241,24 @@ public class VarCreator {
     initialiseVariable(context, tmp);
     return tmp;
   }
-  
-  public Var createTmpLocalVal(Context context, Type type) 
+
+  public Var createTmpLocalVal(Context context, Type type)
         throws UserException {
     assert(Types.isPrimValue(type));
     Var val = context.createLocalValueVariable(type);
     backendInit(val);
     return val;
   }
-  
-  
-  public Var createStructFieldAlias(Context context, Var rootStruct, 
+
+
+  public Var createStructFieldAlias(Context context, Var rootStruct,
       Type memType, List<String> fieldPath)
           throws UndefinedTypeException, DoubleDefineException {
     return createStructFieldTmp(context, rootStruct, memType, fieldPath,
             Alloc.ALIAS);
   }
-  
-  public Var createStructFieldTmp(Context context, Var rootStruct, 
+
+  public Var createStructFieldTmp(Context context, Var rootStruct,
                   Type memType, List<String> fieldPath,
                   Alloc storage) throws UndefinedTypeException, DoubleDefineException {
     Var tmp = context.createStructFieldTmp(rootStruct, memType,
@@ -266,7 +267,7 @@ public class VarCreator {
     return tmp;
   }
 
-  public Var createValueOfVar(Context context, Var future) 
+  public Var createValueOfVar(Context context, Var future)
       throws UserException {
     return createValueOfVar(context, future, true);
   }
@@ -297,7 +298,7 @@ public class VarCreator {
     }
     return val;
   }
-  
+
   /**
    * Shortcut to create filename of
    * @param context
@@ -310,5 +311,5 @@ public class VarCreator {
     initialiseVariable(context, filename);
     return filename;
   }
-  
+
 }
