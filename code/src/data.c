@@ -843,7 +843,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 static container_reference *
 alloc_container_reference(size_t subscript_len)
 {
-  return malloc(sizeof(container_references) + subscript_len);
+  return malloc(sizeof(container_reference) + subscript_len);
 }
 
 
