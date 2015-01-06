@@ -27,7 +27,6 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -107,13 +106,7 @@ public class WrapUtil {
           VarProvenance.valueOf(var));
       block.addVariable(deref);
 
-      boolean mustUseRecursive = false;
-
-      for (StructField f: ((StructType)var.type().getImplType()).getFields()) {
-        if (Types.isRef(f.getType())) {
-          mustUseRecursive = true;
-        }
-      }
+      boolean mustUseRecursive = ((StructType)var.type().getImplType()).hasRefField();
 
       Instruction structRetrieve = mustUseRecursive ?
             TurbineOp.retrieveRecursive(deref, var) :
