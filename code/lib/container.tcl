@@ -946,19 +946,70 @@ namespace eval turbine {
     # container int
     # container ref int
     # multiset container int
+    # struct [ x integer y [ ref container int ] ]
     #
-    # Consumes read refcounts from outer container
-    proc enumerate_rec { container types {depth 0} {read_decr 0}} {
-      set container_type [ lindex $types $depth ]
+    # Consumes read refcounts from outer datum
+    proc enumerate_rec { datum types {depth 0} {read_decr 0}} {
+      set outer_type [ lindex $types $depth ]
+      switch $outer_type {
+        container {
+          return [ enumerate_rec_container $datum $types $depth $read_decr 1 ]
+        }
+        multiset {
+          return [ enumerate_rec_container $datum $types $depth $read_decr 0 ]
+        }
+        struct {
+          return [ enumerate_rec_struct $datum $types $depth $read_decr ]
+        }
+        default {
+          error "Expected compound type to enumerate: $outer_type"
+        }
+      }
+    }
+    
+    proc enumerate_rec_struct { struct types depth read_decr } {
+        set struct_desc [ lindex $types [ expr {$depth + 1} ] ]
+        set struct_val [ retrieve_struct $struct ]
+        set result_dict [ dict create ]
+
+        dict for { key key_type } $struct_desc {
+          set val [ dict get $struct_val $key ]
+          set key_type_prefix [ lindex $key_type 0 ]
+          switch $key_type_prefix {
+            ref {
+              # Recurse (skip ref prefix)
+              set result_val [ enumerate_rec $val $key_type 1 0 ]
+            }
+            struct {
+              error "unimplemented for $key_type_prefix"
+            }
+            default {
+              set result_val $val
+            }
+          }
+
+          dict append result_dict $key $result_val
+        }
+
+        # Decrement here to avoid freeing contents earlier
+        read_refcount_decr $struct $read_decr
+        return $result_dict
+    }
+
+    proc enumerate_rec_container { container types depth read_decr \
+                                   include_keys } {
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
 
       # If there is a ref type, followed by another type, we will
       # recurse to handle that.
       set ref_value [ string equal $member_type ref ]
       if { $ref_value } {
-        set ref_root_type [ lindex $types [ expr {$depth + 1} ] ]
+        set ref_root_type [ lindex $types [ expr {$depth + 2} ] ]
         if { $ref_root_type == "container" || \
-             $ref_root_type == "multiset" } {
+             $ref_root_type == "multiset" ||
+             $ref_root_type == "struct" } {
+          # TODO: would need to recurse on inline structs, which are
+          # currently unused in practice
           set recurse 1
         } else {
           set recurse 0
@@ -966,52 +1017,46 @@ namespace eval turbine {
         }
       }
       
-      switch $container_type {
-        container {
-          if { $ref_value } {
-            set vals [ adlb::enumerate $container dict all 0 0 ]
-            set result_dict [ dict create ]
+      if { $include_keys } {
+        if { $ref_value } {
+          set vals [ adlb::enumerate $container dict all 0 0 ]
+          set result_dict [ dict create ]
 
-            if { $recurse } {
-              dict for { key subcontainer } $vals {
-                dict append result_dict $key [ enumerate_rec $subcontainer \
-                      $types [ expr {$depth + 2} ] 0 ]
-              }
-            } else {
-              # Optimization: do multiget on references
-              set result_dict [ multi_retrieve_kv $vals CACHED 0 \
-                                $member_ref_type ]
+          if { $recurse } {
+            dict for { key subcontainer } $vals {
+              dict append result_dict $key [ enumerate_rec $subcontainer \
+                    $types [ expr {$depth + 2} ] 0 ]
             }
-            # Decrement here to avoid freeing contents
-            read_refcount_decr $container $read_decr
-            return $result_dict
           } else {
-            return [ adlb::enumerate $container dict all 0 $read_decr ]
+            # Optimization: do multiget on references
+            set result_dict [ multi_retrieve_kv $vals CACHED 0 \
+                              $member_ref_type ]
           }
+          # Decrement here to avoid freeing contents
+          read_refcount_decr $container $read_decr
+          return $result_dict
+        } else {
+          return [ adlb::enumerate $container dict all 0 $read_decr ]
         }
-        multiset {
-          if { $ref_value } {
-            set vals [ adlb::enumerate $container members all 0 0 ]
-            set result_list [ list ]
-            if { $recurse } {
-              foreach subcontainer $vals {
-                lappend result_dict [ enumerate_rec $subcontainer \
-                                      $types [ expr {$depth + 2} ] 0 ]
-              }
-            } else {
-              # Optimization: do multiget on references
-              set result_dict [ multi_retrieve $vals CACHED 0 \
-                                $member_ref_type ]
+      } else {
+        if { $ref_value } {
+          set vals [ adlb::enumerate $container members all 0 0 ]
+          set result_list [ list ]
+          if { $recurse } {
+            foreach subcontainer $vals {
+              lappend result_dict [ enumerate_rec $subcontainer \
+                                    $types [ expr {$depth + 2} ] 0 ]
             }
-            # Decrement here to avoid freeing contents
-            read_refcount_decr $container $read_decr
-            return $result_dict
           } else {
-            return [ adlb::enumerate $container members all 0 $read_decr ]
+            # Optimization: do multiget on references
+            set result_dict [ multi_retrieve $vals CACHED 0 \
+                              $member_ref_type ]
           }
-        }
-        default {
-          error "Expected container type to enumerate: $container_type"
+          # Decrement here to avoid freeing contents
+          read_refcount_decr $container $read_decr
+          return $result_dict
+        } else {
+          return [ adlb::enumerate $container members all 0 $read_decr ]
         }
       }
     }
