@@ -256,8 +256,8 @@ namespace eval turbine {
     proc store_struct { id value typename {write_decr 1}} {
         log "store: <$id>=$value"
         adlb::store $id $typename $value $write_decr
-        # TODO: only store if have all fields present?
-        c::cache_store $id $typename $value
+        # TODO: only store if have all fields present
+        # c::cache_store $id $typename $value
     }
 
     proc retrieve_struct { id {cachemode CACHED} {decrref 0} } {
