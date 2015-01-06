@@ -564,19 +564,19 @@ class Turbine {
   }
 
   public static Command adlbStore(Value dst, Expression src,
-          List<TypeName> dstTypeInfo) {
+          List<? extends Expression> dstTypeInfo) {
     return adlbStore(dst, src, dstTypeInfo, null, null);
   }
 
   public static Command adlbStore(Value dst, Expression src,
-      List<TypeName> dstTypeInfo, Expression decrWriters,
+      List<? extends Expression> dstTypeInfo, Expression decrWriters,
       Expression decrReaders) {
     return adlbStore(dst, src, dstTypeInfo, decrWriters, decrReaders,
                      null, null);
   }
 
   public static Command adlbStore(Value dst, Expression src,
-          List<TypeName> dstTypeInfo, Expression decrWriters,
+          List<? extends Expression> dstTypeInfo, Expression decrWriters,
           Expression decrReaders, Expression storeReaders,
           Expression storeWriters) {
     List<Expression> args = new ArrayList<Expression>();
@@ -634,7 +634,7 @@ class Turbine {
    * outer container to inner vale
    */
   public static SetVariable enumerateRec(String target,
-          List<TypeName> typeList, Value src, Expression decr) {
+          List<Expression> typeList, Value src, Expression decr) {
     Square fnCall =
             Square.fnCall(ENUMERATE_REC, src, new TclList(typeList),
                     LiteralInt.ZERO, decr);
@@ -1731,7 +1731,7 @@ class Turbine {
     return new Command(MULTISET_BUILD, argList);
   }
 
-  public static Command buildRec(List<TypeName> typeList, Value target,
+  public static Command buildRec(List<Expression> typeList, Value target,
           Expression src) {
     return new Command(BUILD_REC, Arrays.asList(target, src, new TclList(
             typeList)));

@@ -1,0 +1,4 @@
+trace: .*person {name Bob age 100}
+trace: people {.*0 {name X age 1}.*}
+trace: people {.*1 {name Bob age 100}.*}
+trace: people {.*2 {name X age 1}.*}
