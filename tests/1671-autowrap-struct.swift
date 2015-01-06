@@ -40,7 +40,8 @@ main {
   trace("test1",fmt(s));
 
   uberstruct s2;
-  s2.mega = s;
+  s2.mega.person = s.person;
+  s2.mega.people = s.people;
   s2.person.name = "Jane";
   s2.person.age = 101;
 
