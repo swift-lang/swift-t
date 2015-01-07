@@ -290,15 +290,15 @@ static bool must_comm_free = false;
 
 #define CHECK_ADLB_STORE(rc, id, sub) {                                      \
   if (adlb_has_sub((sub))) {                                                 \
+    TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
+                    (id), (int)(sub).length, (const char*)(sub).key);          \
+    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"] failed",          \
+                    (id), (int)(sub).length, (const char*)(sub).key);          \
+  } else {                                                                   \
     TCL_CONDITION(rc != ADLB_REJECTED,                                       \
                   "<%"PRId64"> failed: double assign!", (id));               \
     TCL_CONDITION(rc == ADLB_SUCCESS,                                        \
                   "<%"PRId64"> failed!", (id));                              \
-  } else {                                                                   \
-  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"] failed",          \
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
   }                                                                          \
 }
 
