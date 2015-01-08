@@ -56,18 +56,19 @@ static inline struct list2_b_item* list2_b_item_alloc(size_t data_len);
 struct list2_b_item* list2_b_add(struct list2_b* target, const void *data,
                                  size_t data_len);
 
-static inline 
-void list2_b_add_item(struct list2_b* target, struct list2_b_item* new_item);
-
-static inline 
-struct list2_b_item* list2_b_pop_item(struct list2_b* target);
+static inline struct list2_b_item* list2_b_pop_item(struct list2_b* target);
 
 void list2_b_remove_item(struct list2_b* target, struct list2_b_item* item);
 
 /**
+  Alternative interface allowing caller to provide list node
+ */
+void list2_b_add_item(struct list2_b* target, struct list2_b_item* new_item);
+
+/*
   Functions for inlining follow.  These are fairly simple functions that
   are often called frequently, so inlining is often useful.
- */
+*/
 
 static inline int list2_b_size(struct list2_b *L)
 {
@@ -77,32 +78,6 @@ static inline int list2_b_size(struct list2_b *L)
 static inline struct list2_b_item* list2_b_item_alloc(size_t data_len)
 {
   return malloc(sizeof(struct list2_b_item) + data_len);
-}
-
-/**
-  Alternative interface allowing caller to provide list node
- */
-static inline void
-list2_b_add_item(struct list2_b* target, struct list2_b_item* new_item)
-{
-  assert(target != NULL);
-  new_item->next = NULL;
-  new_item->prev = target->tail;
-
-  // Already loaded target->tail, so check that for emptiness
-  if (target->tail == NULL)
-  {
-    // Empty list case
-    target->head = new_item;
-  }
-  else
-  {
-    // Non-empty list case
-    target->tail->next = new_item;
-  }
-
-  target->tail = new_item;
-  target->size++;
 }
 
 static inline struct list2_b_item*

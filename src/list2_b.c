@@ -106,3 +106,28 @@ list2_b_remove_item(struct list2_b* target, struct list2_b_item* item)
   target->size--;
 }
 
+/*
+   GCC says not to inline this. -Justin 2015/01/06
+ */
+void
+list2_b_add_item(struct list2_b* target, struct list2_b_item* new_item)
+{
+  assert(target != NULL);
+  new_item->next = NULL;
+  new_item->prev = target->tail;
+
+  // Already loaded target->tail, so check that for emptiness
+  if (target->tail == NULL)
+  {
+    // Empty list case
+    target->head = new_item;
+  }
+  else
+  {
+    // Non-empty list case
+    target->tail->next = new_item;
+  }
+
+  target->tail = new_item;
+  target->size++;
+}
