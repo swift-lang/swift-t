@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <libgen.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,15 +33,21 @@ turbine_io_bcast(MPI_Comm comm, char** s, int* length)
   int rc;
   int mpi_rank;
   MPI_Comm_rank(comm, &mpi_rank);
+  size_t size;
   int bytes;
 
   if (mpi_rank == 0)
-    bytes = strlen(*s)+1;
+  {
+    size = strlen(*s)+1;
+    if (size > INT_MAX)
+      return false;
+    bytes = (int) size;
+  }
 
   rc = MPI_Bcast(&bytes, 1, MPI_INT, 0, comm);
   MPI_ASSERT(rc);
   if (mpi_rank != 0)
-    *s = malloc(bytes);
+    *s = malloc((size_t) bytes);
 
   rc = MPI_Bcast(*s, bytes, MPI_CHAR, 0, comm);
   MPI_ASSERT(rc);
@@ -135,7 +142,7 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
   if (!result) return result;
 
   // Allocate buffer
-  static int chunk_max = TURBINE_IO_FILE_CHUNK_SIZE;
+  size_t chunk_max = TURBINE_IO_FILE_CHUNK_SIZE;
   void* buffer = malloc(chunk_max);
 
   // Open files
@@ -157,14 +164,15 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
   int64_t total = 0;
   while (total < file_size)
   {
-    int chunk = min_integer(chunk_max, file_size-total);
+    uint64_t remainder = (uint64_t) (file_size-total);
+    int chunk = (int) min_uint64(chunk_max, remainder);
     rc = MPI_File_read_all(fd_in, buffer, chunk, MPI_BYTE, &status);
     assert(rc == MPI_SUCCESS);
     int r;
     MPI_Get_count(&status, MPI_BYTE, &r);
     assert(r == chunk);
-    rc = fwrite(buffer, chunk, 1, fd_out);
-    assert(rc == 1);
+    size_t count = fwrite(buffer, (size_t) chunk, 1, fd_out);
+    assert(count == 1);
     total += r;
   }
 

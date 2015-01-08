@@ -42,6 +42,7 @@
 #include <tcl.h>
 
 #include <adlb.h>
+#include <adlb-defs.h>
 #include <adlb_types.h>
 
 #include <log.h>
@@ -571,7 +572,7 @@ Turbine_Cache_Check_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
   turbine_datum_id td;
   const char *subscript;
-  int subscript_len;
+  size_t subscript_len;
   int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
                                   &subscript_len);
   TCL_CHECK(error);
@@ -599,7 +600,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
   turbine_datum_id td;
   const char *subscript;
-  int subscript_len;
+  size_t subscript_len;
   int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
                                   &subscript_len);
   TCL_CHECK(error);
@@ -609,7 +610,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   turbine_type type;
   void* data;
-  int length;
+  size_t length;
   turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
@@ -625,7 +626,7 @@ static int
 turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
                adlb_type_extra extra, Tcl_Obj* obj,
-               bool canonicalize, void** result, int* length);
+               bool canonicalize, void** result, size_t* length);
 
 /**
    usage turbine::cache_store $td $type [ extra type info ] $value
@@ -638,13 +639,13 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   turbine_datum_id td;
   void* data = NULL;
-  int length = 0;
+  size_t length = 0;
 
   int argpos = 1;
   int error;
 
   const char *subscript;
-  int subscript_len;
+  size_t subscript_len;
   error = ADLB_EXTRACT_HANDLE(objv[argpos++], &td, &subscript,
                                   &subscript_len);
   TCL_CHECK(error);
@@ -681,7 +682,7 @@ static int
 turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
                adlb_type_extra extra, Tcl_Obj* obj,
-               bool canonicalize, void** result, int* length)
+               bool canonicalize, void** result, size_t* length)
 {
   adlb_binary_data data;
 

@@ -74,7 +74,7 @@ ptasks_1(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[2], &id);
   assert(rc == TCL_OK);
   adlb_data_type type;
-  int length;
+  size_t length;
   adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   adlb_code code = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, buffer, &length);
   assert(code == ADLB_SUCCESS);

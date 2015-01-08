@@ -36,7 +36,7 @@
 #define TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT 16
 
 // Default size of buffers to allocate
-#define TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE ADLB_DATA_MAX
+#define TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE ADLB_XFER_SIZE
 
 // Forward declare turbine executor
 typedef struct turbine_executor turbine_executor;

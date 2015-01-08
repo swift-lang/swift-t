@@ -62,6 +62,7 @@ ifeq ($(USE_MAC),no)
 	USE_XLC = @USE_XLC@
 	ifeq ($(USE_XLC),0)
 #       	Not XLC: GCC/Linux
+# CFLAGS += -mcmodel=medium # Now apparently required. 
 		PIC = -fPIC
 		STD = -std=gnu99
 		SHARED = -shared

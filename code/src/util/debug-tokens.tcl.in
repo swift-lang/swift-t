@@ -19,7 +19,7 @@
 # If you edit this file, you must re-run ./configure or ./config.status
 
 set INPUT {
-    TURBINE OFF
+    TURBINE ON
     TCL_TURBINE OFF
     ADLB OFF
     CACHE OFF

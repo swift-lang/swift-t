@@ -38,11 +38,11 @@ bool turbine_cache_check(turbine_datum_id td);
 
 turbine_code turbine_cache_retrieve(turbine_datum_id td,
                                     turbine_type* type,
-                                    void** result, int* length);
+                                    void** result, size_t* length);
 
 turbine_code turbine_cache_store(turbine_datum_id td,
                                  turbine_type type,
-                                 void* data, int length);
+                                 void* data, size_t length);
 
 void turbine_cache_finalize(void);
 

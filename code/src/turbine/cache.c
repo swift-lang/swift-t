@@ -65,7 +65,7 @@ struct entry
   turbine_datum_id td;
   turbine_type type;
   void* data;
-  int length;
+  size_t length;
   /** Counter as of last access */
   long stamp;
 };
@@ -99,7 +99,8 @@ turbine_cache_check(turbine_datum_id td)
 
 turbine_code
 turbine_cache_retrieve(turbine_datum_id td,
-                       turbine_type* type, void** result, int* length)
+                       turbine_type* type,
+                       void** result, size_t* length)
 {
   // We do not need to check max_entries here: if max_entries==0,
   // then turbine_cache_check() will miss
@@ -125,15 +126,15 @@ turbine_cache_retrieve(turbine_datum_id td,
 }
 
 static inline void cache_add(turbine_datum_id td, turbine_type type,
-                             void* data, int length);
+                             void* data, size_t length);
 
 static inline void cache_replace(turbine_datum_id td,
                                  turbine_type type,
-                                 void* data, int length);
+                                 void* data, size_t length);
 
 turbine_code
 turbine_cache_store(turbine_datum_id td, turbine_type type,
-                    void* data, int size)
+                    void* data, size_t size)
 {
   if (max_entries == 0)
     return TURBINE_SUCCESS;
@@ -156,7 +157,7 @@ turbine_cache_store(turbine_datum_id td, turbine_type type,
 static inline void
 entry_init(struct entry* result,
            turbine_datum_id td, turbine_type type,
-           void* data, int length, long counter)
+           void* data, size_t length, long counter)
 {
   result->td = td;
   result->type = type;
@@ -170,7 +171,7 @@ entry_init(struct entry* result,
  */
 static inline struct entry*
 entry_create(turbine_datum_id td, turbine_type type,
-             void* data, int length, long counter)
+             void* data, size_t length, long counter)
 {
   struct entry* result = malloc(sizeof(struct entry));
   entry_init(result, td, type, data, length, counter);
@@ -184,7 +185,7 @@ static inline void cache_shrink(void);
 */
 static inline void
 cache_add(turbine_datum_id td, turbine_type type,
-          void* data, int length)
+          void* data, size_t length)
 {
   assert(length >= 0);
   struct entry* e = entry_create(td, type, data, length, counter);
@@ -201,7 +202,7 @@ cache_add(turbine_datum_id td, turbine_type type,
  */
 static inline void
 cache_replace(turbine_datum_id td, turbine_type type,
-              void* data, int length)
+              void* data, size_t length)
 {
   // Lookup the least-recently-used entry
   struct rbtree_node* node = rbtree_leftmost(&lru);

@@ -62,7 +62,7 @@ adlb_tclobj2bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
 int
 adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_datum_id id, adlb_data_type type, adlb_type_extra extra,
-            const void *data, int length, Tcl_Obj** result);
+            const void *data, size_t length, Tcl_Obj** result);
 
 /**
   Different ways of interpreting subscripts
@@ -90,7 +90,7 @@ typedef struct {
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *obj, adlb_datum_id *id, const char **subscript,
-        int *subscript_len);
+        size_t *subscript_len);
 
 // Extract only ID from handle, ignore rest
 int

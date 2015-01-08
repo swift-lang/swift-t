@@ -60,7 +60,7 @@ turbine_tcl_string_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
 #define TCL_CONDITION_MSG_MAX 1024
 
 void turbine_tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
-                          const char* format, ...)
+                                  const char* format, ...)
 {
   va_list va;
   va_start(va,format);
