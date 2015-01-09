@@ -144,7 +144,6 @@ namespace eval turbine {
           set key_type [ lindex $types $key_type_pos ]
           set val_type_pos [ expr {$types_pos + 2} ]
           set val_type [ lindex $types $val_type_pos ]
-          # TODO: check if val_type is ref
 
           switch $val_type {
             ref -
@@ -173,7 +172,7 @@ namespace eval turbine {
                 }
 
                 # build inner data structure
-                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ]
 
                 dict append val_dict $key $val_id
                 incr i
@@ -216,7 +215,7 @@ namespace eval turbine {
                 }
 
                 # build inner data structure
-                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ]
 
                 incr i
               }
@@ -273,8 +272,7 @@ namespace eval turbine {
             }
 
             # build inner data structure
-            # TODO: is num of write refcounts to decr variable?
-            build_rec $val_id $field_val $field_type 1 1
+            build_rec $val_id $field_val $field_type 1
             set store_field_val $val_id
           }
           default {
