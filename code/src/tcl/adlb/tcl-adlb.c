@@ -338,8 +338,7 @@ static int
 ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc == 1 || objc == 2,
-                "adlb::init requires 0 or 1 arguments!");
+  TCL_CONDITION(objc == 1 || objc == 2, "requires 0 or 1 arguments!");
   int rc;
 
   MPI_Comm *adlb_comm_ptr = NULL;
@@ -404,8 +403,7 @@ static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc == 3 || objc == 4,
-                "adlb::init requires 2 or 3 arguments!");
+  TCL_CONDITION(objc == 3 || objc == 4, "requires 2 or 3 arguments!");
   TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
@@ -549,7 +547,7 @@ ADLB_Is_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   int rc;
-  
+
   adlb_data_type type;
   adlb_type_extra extra;
   rc = adlb_type_from_obj_extra(interp, objv, objv[1], &type, &extra);
@@ -1175,6 +1173,7 @@ int adlb_type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+
 /**
   Extra type info from argument list, advancing index.
   First consume type name as first arg, then if there is additional info
@@ -1197,35 +1196,46 @@ int adlb_type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
   // Process type-specific params if not already in type extra
   if (!extra->valid)
   {
-    switch (*type)
-    {
-      case ADLB_DATA_TYPE_CONTAINER: {
-        TCL_CONDITION(len > *ix + 1,
-                      "adlb::create type=container requires "
-                      "key and value types!");
-        adlb_data_type key_type, val_type;
-        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &key_type);
-        TCL_CHECK(rc);
-        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
-        TCL_CHECK(rc);
-        extra->CONTAINER.key_type = key_type;
-        extra->CONTAINER.val_type = val_type;
-        extra->valid = true;
-        break;
-      }
-      case ADLB_DATA_TYPE_MULTISET: {
-        TCL_CONDITION(len > *ix, "adlb::create type=multiset requires "
-                      "member type!");
-        adlb_data_type val_type;
-        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
-        TCL_CHECK(rc);
-        extra->MULTISET.val_type = val_type;
-        extra->valid = true;
-        break;
-      }
-      default:
-        break;
+    rc = adlb_type_extra_from_array(interp, objv, array, len, ix,
+                                   *type, extra);
+    TCL_CHECK(rc);
+  }
+  return TCL_OK;
+}
+
+int adlb_type_extra_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *const array[], int len, int *ix,
+        adlb_data_type type, adlb_type_extra *extra) {
+  int rc;
+
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER: {
+      TCL_CONDITION(len > *ix + 1, "type=container requires "
+                    "key and value types!");
+      adlb_data_type key_type, val_type;
+      rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &key_type);
+      TCL_CHECK(rc);
+      rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
+      TCL_CHECK(rc);
+      extra->CONTAINER.key_type = key_type;
+      extra->CONTAINER.val_type = val_type;
+      extra->valid = true;
+      break;
     }
+    case ADLB_DATA_TYPE_MULTISET: {
+      TCL_CONDITION(len > *ix, "type=multiset requires "
+                    "member type!");
+      adlb_data_type val_type;
+      rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
+      TCL_CHECK(rc);
+      extra->MULTISET.val_type = val_type;
+      extra->valid = true;
+      break;
+    }
+    default:
+      // No extra info expected
+      break;
   }
   return TCL_OK;
 }
@@ -1351,8 +1361,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
     case ADLB_DATA_TYPE_NULL:
     default:
-      Tcl_AddErrorInfo(interp,
-                       "adlb::create: unknown type!");
+      Tcl_AddErrorInfo(interp, "unknown type!");
       return TCL_ERROR;
       break;
 
@@ -1364,8 +1373,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, result);
   }
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%"PRId64"> failed!",
-                id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   return TCL_OK;
 }
 
@@ -1390,8 +1398,7 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
     int n;
     Tcl_Obj **elems;
     rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
-    TCL_CONDITION(rc == TCL_OK, "adlb::multicreate arg %i must be list",
-                  i);
+    TCL_CONDITION(rc == TCL_OK, "arg %i must be list", i);
     ADLB_create_spec *spec = &(specs[i]);
     rc = extract_create_props(interp, false, 0, n, elems, &(spec->id),
               &(spec->type), &(spec->type_extra), &(spec->props));
@@ -1399,7 +1406,7 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   rc = ADLB_Multicreate(specs, count);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::multicreate failed!");
+  TCL_CONDITION(rc == ADLB_SUCCESS, "failed!");
 
   // Build list to return
   Tcl_Obj *tcl_ids[count];
@@ -2018,6 +2025,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
 
   return TCL_OK;
+
 exit_err:
   return TCL_ERROR;
 }
@@ -2300,6 +2308,7 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
       "container data: %i bytes packed, consumed %i bytes", length, pos);
 
   rc = TCL_OK;
+
 exit_err:
   if (rc == TCL_OK)
   {
@@ -2368,6 +2377,7 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
   TCL_CONDITION_GOTO(pos == length, exit_err, "Didn't consume all "
       "container data: %i bytes packed, consumed %i bytes", length, pos);
   rc = TCL_OK;
+
 exit_err:
   if (rc == TCL_OK)
   {
@@ -3358,7 +3368,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
 {
   TCL_CONDITION(objc == 4 || objc == 5,
-                "adlb::store_blob requires 4 or 5 args!");
+                "requires 4 or 5 args!");
 
   int rc;
   adlb_datum_id id;
@@ -3543,8 +3553,7 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
   char *data = Tcl_GetStringFromObj(objv[1], &length);
   assert(length >= 0);
 
-  TCL_CONDITION(data != NULL,
-                "adlb::blob_from_string failed!");
+  TCL_CONDITION(data != NULL, "failed!");
   int length2 = length+1;
 
   void *blob = malloc((size_t)length2 * sizeof(char));
@@ -3573,7 +3582,7 @@ ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   TCL_CONDITION(((char*)blob.value)[blob.length-1] == '\0',
-        "adlb::blob_to_string blob must be null terminated");
+        "blob must be null terminated");
   Tcl_SetObjResult(interp, Tcl_NewStringObj(blob.value, blob.length-1));
   return TCL_OK;
 }
@@ -3612,7 +3621,7 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
                       member_obj, false, &xfer_buf, &member);
 
   // TODO: support binary subscript
-  TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%.*s] failed, could not "
+  TCL_CHECK_MSG(rc, "<%"PRId64">[%.*s] failed, could not "
         "extract data!", handle.id, (int)handle.sub.val.length,
         (const char*)handle.sub.val.key);
 
@@ -3742,7 +3751,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
                           NULL, NULL, NULL);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-        "adlb::insert_atomic: failed: <%"PRId64">[%.*s]", handle.id,
+        "failed: <%"PRId64">[%.*s]", handle.id,
         (int)handle.sub.val.length, (const char*)handle.sub.val.key);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
@@ -3757,7 +3766,7 @@ static int
 ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                  adlb_subscript_kind sub_kind, bool spin)
 {
-  TCL_CONDITION(objc >= 3, "adlb::lookup at least 2 arguments!");
+  TCL_CONDITION(objc >= 3, "at least 2 arguments!");
 
   int rc;
 
@@ -3823,7 +3832,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   CHECK_ADLB_RETRIEVE(rc, handle, len);
 
   // TODO: support binary subscript
-  TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
+  TCL_CONDITION(len >= 0, "<%"PRId64">[\"%.*s\"] not found",
                 handle.id, (int)handle.sub.val.length,
                 (const char*)handle.sub.val.key);
   assert(type != ADLB_DATA_TYPE_NULL);
@@ -4004,8 +4013,7 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_type type;
   rc = ADLB_Typeof(id, &type);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_typeof <%"PRId64"> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
   // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %i\n", id, type);
 
@@ -4037,8 +4045,7 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_type key_type, val_type;
   rc = ADLB_Container_typeof(id, &key_type, &val_type);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_typeof <%"PRId64"> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
   const char *key_type_string = ADLB_Data_type_tostring(val_type);
   const char *val_type_string = ADLB_Data_type_tostring(key_type);
@@ -4094,50 +4101,36 @@ ADLB_Struct_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[], adlb_data_type type)
+    int objc, Tcl_Obj *const objv[], adlb_data_type type,
+    adlb_subscript_kind sub_kind)
 {
-  TCL_CONDITION(type == ADLB_DATA_TYPE_CONTAINER ||
-                type == ADLB_DATA_TYPE_MULTISET,
-                "Must create nested container or multiset, not %s",
-                ADLB_Data_type_tostring(type));
-
-  int min_args;
-  if (type == ADLB_DATA_TYPE_CONTAINER) {
-    min_args = 4;
-  } else {
-    // Multiset
-    min_args = 3;
-  }
-  TCL_CONDITION(objc >= min_args, "Requires at least %d args", min_args);
-  adlb_datum_id id;
-  adlb_subscript subscript;
+  TCL_CONDITION(objc >= 4, "Requires at least 3 args");
 
   int rc;
   int argpos = 1;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK(rc);
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
 
-  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
-  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  rc = ADLB_PARSE_SUB(objv[argpos++], sub_kind, &handle.sub, true, true);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                    Tcl_GetString(objv[2]));
+
+  // Check for no subscript
+  TCL_CONDITION_GOTO(adlb_has_sub(handle.sub.val), exit_err,
+                    "No subscript");
 
   adlb_type_extra type_extra;
-  adlb_data_type tmp;
-  if (type == ADLB_DATA_TYPE_CONTAINER) {
-    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
+  if (type == ADLB_DATA_TYPE_NULL) {
+    // Get full type info from arg list
+    rc = adlb_type_from_array(interp, objv, objv, objc, &argpos, &type,
+                              &type_extra);
     TCL_CHECK(rc);
-    type_extra.CONTAINER.key_type = tmp;
-
-    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
-    TCL_CHECK(rc);
-    type_extra.CONTAINER.val_type = tmp;
   } else {
-    assert(type == ADLB_DATA_TYPE_MULTISET);
-    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
+    rc = adlb_type_extra_from_array(interp, objv, objv, objc, &argpos,
+                              type, &type_extra);
     TCL_CHECK(rc);
-    type_extra.MULTISET.val_type = tmp;
   }
-  type_extra.valid = true;
-
 
   // Increments/decrements for outer and inner containers
   // (default no extras)
@@ -4171,16 +4164,9 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
-  if (type == ADLB_DATA_TYPE_CONTAINER) {
-    log_printf("creating nested container <%"PRId64">[%.*s] (%s->%s)",
-      id, (int)subscript.length, subscript.key,
-      ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
-      ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
-  } else {
-    log_printf("creating nested multiset <%"PRId64">[%.*s] (%s)", id,
-      (int)subscript.length, subscript.key,
-      ADLB_Data_type_tostring(type_extra.MULTISET.val_type));
-  }
+  log_printf("creating nested %s <%"PRId64">[%.*s] (%s->%s)",
+    ADLB_Data_type_tostring(type),
+    handle.id, (int)handle.sub.val.length, handle.sub.val.key);
 
   uint64_t xfer_size;
   char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
@@ -4191,10 +4177,10 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Initial trial at inserting.
   // Refcounts are only applied here if we got back the data
-  adlb_code code = ADLB_Insert_atomic(id, subscript, refcounts,
-                        &created, xfer, &value_len, &outer_value_type);
-  
-  if (code != ADLB_SUCCESS)
+  adlb_code ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
+            refcounts, &created, xfer, &value_len, &outer_value_type);
+
+  if (ac != ADLB_SUCCESS)
   {
     /*
      * Attempt to provide more informative message about cause of
@@ -4203,30 +4189,31 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
      * inserted manually.
      * Retry without refcount acquisition.
      */
-    code = ADLB_Retrieve(id, subscript, ADLB_RETRIEVE_NO_REFC,
+    ac = ADLB_Retrieve(handle.id, handle.sub.val, ADLB_RETRIEVE_NO_REFC,
               &outer_value_type, xfer, &value_len);
-    TCL_CONDITION(code == ADLB_SUCCESS && value_len >= 0,
+    TCL_CONDITION(ac == ADLB_SUCCESS && value_len >= 0,
         "unexpected error while retrieving container value");
 
     adlb_ref retrieved;
     adlb_data_code dc = ADLB_Unpack_ref(&retrieved, xfer, value_len,
                               ADLB_NO_REFC, false);
-    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "malformed reference buffer "
+    TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
+        "malformed reference buffer "
         "of length %i received from ADLB server", value_len);
 
     if (retrieved.write_refs <= 0)
     {
-      TCL_RETURN_ERROR("Attempted to automatically create datum at "
-            "<%"PRId64">[\"%.*s\"], which was already set to "
-            "a read-only reference to <%"PRId64">", id,
-            (int)subscript.length, (const char*)subscript.key, 
+      TCL_ERROR_GOTO(exit_err, "Attempted to automatically create datum "
+            "at <%"PRId64">[\"%.*s\"], which was already set to "
+            "a read-only reference to <%"PRId64">", handle.id,
+            (int)handle.sub.val.length, (const char*)handle.sub.val.key,
             retrieved.id);
     }
-    
+
     TCL_RETURN_ERROR("Unexpected error in "
       "Insert_atomic when attempting to automatically create datum at"
-      "<%"PRId64">[\"%.*s\"]", id, (int)subscript.length,
-      (const char*)subscript.key);
+      "<%"PRId64">[\"%.*s\"]", handle.id, (int)handle.sub.val.length,
+      (const char*)handle.sub.val.key);
   }
 
   if (created)
@@ -4253,9 +4240,10 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                            refcounts.incr_referand.write_refcount;
 
     adlb_datum_id new_id;
-    code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props,
+    ac = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props,
                        &new_id);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
+    TCL_CONDITION_GOTO(ac == ADLB_SUCCESS, exit_err,
+                       "Error while creating nested");
 
     // ID is only relevant data, so init refcounts to any value
     adlb_ref new_ref = { .id = new_id, .read_refs = 0,
@@ -4264,19 +4252,21 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     // Pack using standard api.  Checks should be mostly optimized out
     adlb_binary_data packed;
     adlb_data_code dc = ADLB_Pack_ref(&new_ref, &packed);
-    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing ref");
+    TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
+                       "Error packing ref");
 
 
     // Store and apply remaining refcounts
-    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, packed.data,
+    ac = ADLB_Store(handle.id, handle.sub.val, ADLB_DATA_TYPE_REF,
+                      packed.data,
                       packed.length, refcounts.decr_self, init_refs);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
+    TCL_CONDITION_GOTO(ac == ADLB_SUCCESS, exit_err,
+                      "Error while inserting nested");
 
     ADLB_Free_binary_data(&packed);
 
     // Return the ID of the new container
     Tcl_SetObjResult(interp, Tcl_NewADLB_ID(new_id));
-    return TCL_OK;
   }
   else
   {
@@ -4285,22 +4275,31 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     {
       // Need to poll until value exists
       // This will decrement reference counts if it succeeds
-      code = ADLB_Retrieve(id, subscript, refcounts, &outer_value_type,
-                         xfer, &value_len);
+      ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
+                           &outer_value_type, xfer, &value_len);
 
       // Unknown cause
-      TCL_CONDITION(code == ADLB_SUCCESS,
+      TCL_CONDITION_GOTO(ac == ADLB_SUCCESS, exit_err,
               "unexpected error while retrieving container value");
     }
-    TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
+    TCL_CONDITION_GOTO(outer_value_type == ADLB_DATA_TYPE_REF, exit_err,
             "only works on containers with values of type ref");
 
     Tcl_Obj* result = NULL;
-    adlb_datum2tclobj(interp, objv, id, ADLB_DATA_TYPE_REF,
+    adlb_datum2tclobj(interp, objv, handle.id, ADLB_DATA_TYPE_REF,
             ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
     Tcl_SetObjResult(interp, result);
-    return TCL_OK;
   }
+
+  rc = TCL_OK;
+  goto cleanup;
+
+exit_err:
+  rc = TCL_ERROR;
+
+cleanup:
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  return rc;
 }
 
 /*
@@ -4316,7 +4315,7 @@ ADLB_Create_Nested_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
   return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
-                                  ADLB_DATA_TYPE_CONTAINER);
+                      ADLB_DATA_TYPE_CONTAINER, ADLB_SUB_CONTAINER);
 }
 
 /*
@@ -4332,7 +4331,7 @@ ADLB_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
   return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
-                                  ADLB_DATA_TYPE_MULTISET);
+                      ADLB_DATA_TYPE_MULTISET, ADLB_SUB_CONTAINER);
 }
 
 // container_reference, supporting different subscript formats
@@ -4376,13 +4375,13 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // optionally take num of read/write references to transfer
   adlb_refc transfer_rc = ADLB_READ_REFC;
-  
+
   if (objc >= 7)
   {
     rc = Tcl_GetIntFromObj(interp, objv[6], &transfer_rc.read_refcount);
     TCL_CHECK(rc);
   }
-  
+
   if (objc >= 8)
   {
     rc = Tcl_GetIntFromObj(interp, objv[7], &transfer_rc.write_refcount);
@@ -4435,8 +4434,7 @@ ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
   // DEBUG_ADLB("adlb::container_size: <%"PRId64">",
   //            container_id, size);
   rc = ADLB_Container_size(container_id, &size, decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_size: <%"PRId64"> failed!",
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!",
                 container_id);
   Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
@@ -4897,6 +4895,7 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   types->extras = extras;
   types->len = len;
   return TCL_OK;
+
 exit_err:
   if (type_arr != NULL)
   {

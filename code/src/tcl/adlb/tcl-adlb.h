@@ -43,6 +43,10 @@ int adlb_type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *const array[], int len, int *ix,
         adlb_data_type *type, adlb_type_extra *extra);
 
+int adlb_type_extra_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *const array[], int len, int *ix,
+        adlb_data_type type, adlb_type_extra *extra);
+
 int
 adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
       adlb_data_type type, adlb_type_extra extra,
