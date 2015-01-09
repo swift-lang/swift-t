@@ -910,7 +910,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
      */
     code = ADLB_Retrieve(id, subscript, ADLB_RETRIEVE_NO_REFC,
               &outer_value_type, xfer, &value_len);
-    TCL_CONDITION(code == ADLB_SUCCESS && value_len > 0,
+    TCL_CONDITION(code == ADLB_SUCCESS && value_len >= 0,
         "unexpected error while retrieving container value");
 
     adlb_ref retrieved;
@@ -994,7 +994,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                          xfer, &value_len);
 
       // Unknown cause
-      TCL_CONDITION(code != ADLB_SUCCESS,
+      TCL_CONDITION(code == ADLB_SUCCESS,
               "unexpected error while retrieving container value");
     }
     TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
