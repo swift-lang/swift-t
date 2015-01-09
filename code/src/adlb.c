@@ -1661,9 +1661,9 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
 
 adlb_code
 ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
-                        adlb_retrieve_refc refcounts,
-                        bool* result, void *data, size_t *length,
-                        adlb_data_type *type)
+                       adlb_retrieve_refc refcounts,
+                       bool *result, bool *value_present,
+                       void *data, size_t *length, adlb_data_type *type)
 {
   int ac;
   MPI_Status status;
@@ -1693,13 +1693,6 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   rc = MPI_Wait(&request, &status);
   MPI_CHECK(rc);
 
-  /*
-  IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank,
-                ADLB_TAG_RESPONSE);
-  SEND(xlb_xfer, (int)(xfer_pos - xlb_xfer), MPI_BYTE,
-            to_server_rank, ADLB_TAG_INSERT_ATOMIC);
-  WAIT(&request, &status); */
-
   if (resp.dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
 
@@ -1707,7 +1700,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   if (return_value)
   {
     *length = resp.value_len;
-    if (resp.value_len > 0)
+    if (resp.value_present)
     {
       printf("RECV BIG: %zu\n", resp.value_len);
       ac = mpi_recv_big(data, resp.value_len,
@@ -1723,6 +1716,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(ac);
 
   *result = resp.created;
+  *value_present = resp.value_present;
   return ADLB_SUCCESS;
 }
 
@@ -1763,7 +1757,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   if (resp_hdr.code == ADLB_DATA_ERROR_NOT_FOUND ||
       resp_hdr.code == ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND)
   {
-    return ADLB_NOT_FOUND;
+    return ADLB_NOTHING;
   }
   else if (resp_hdr.code != ADLB_DATA_SUCCESS)
   {

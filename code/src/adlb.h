@@ -340,10 +340,11 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change);
 
 /*
   Try to reserve an insert position in container
-  result: true if could be created, false if already present
+  result: true if could be created, false if already present/reserved
+  value_present: true if value was present (not just reserved)
   data: optionally, if this is not NULL, return the existing value in
         this buffer of at least size ADLB_DATA_MAX
-  length: length of existing value, -1 if value not yet present
+  length: length of existing value if found
   type: type of existing value
   refcounts: refcounts to apply.
         if data exists, apply all refcounts
@@ -352,12 +353,12 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change);
  */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         adlb_retrieve_refc refcounts,
-                        bool* result, void *data, size_t *length,
-                        adlb_data_type *type);
+                        bool *result, bool *value_present,
+                        void *data, size_t *length, adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         adlb_retrieve_refc refcounts,
-                       bool* result, void *data, size_t *length,
-                       adlb_data_type *type);
+                        bool *result, bool *value_present,
+                        void *data, size_t *length, adlb_data_type *type);
 
 /*
   returns: ADLB_SUCCESS if datum found

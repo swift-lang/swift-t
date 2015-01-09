@@ -1513,9 +1513,8 @@ handle_insert_atomic(int caller)
   struct packed_insert_atomic_resp resp;
   resp.value_len = 0; // Default: no data returned
 
-  bool value_present;
   resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
-                                   &value_present);
+                                   &resp.value_present);
 
   // TODO: support binary subscript
   DEBUG("Insert_atomic: "ADLB_PRIDSUB" => %i",
@@ -1531,9 +1530,9 @@ handle_insert_atomic(int caller)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data value;
-  bool send_data = return_value && value_present;
+  bool send_data = return_value && resp.value_present;
 
-  if (value_present)
+  if (resp.value_present)
   {
     // In these cases, need to apply refcount operation
     if (return_value)

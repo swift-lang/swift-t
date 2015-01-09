@@ -50,15 +50,12 @@ typedef enum
  ADLB_REJECTED = -2,
  /** Normal shutdown */
  ADLB_SHUTDOWN = -3,
- /** No error but indicate nothing happened */
+ /** No error but indicate nothing happened or was found */
  ADLB_NOTHING = -4,
  /** Indicate that caller should retry */
  ADLB_RETRY = -5,
  /** Indicate something is finished and shouldn't call again */
  ADLB_DONE = -6,
- /** Something was not found.
-     (Used as adlb_code version of adlb_data_code NOT_FOUND errors.) */
- ADLB_NOT_FOUND = -7
 } adlb_code;
 
 /**

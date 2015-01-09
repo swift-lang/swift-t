@@ -337,11 +337,11 @@ ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change)
 
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        adlb_retrieve_refc refcounts,
-                       bool* result, void *data, size_t *length,
-                       adlb_data_type *type)
+                       bool *result, bool *value_present,
+                       void *data, size_t *length, adlb_data_type *type)
 {
   adlb_code rc = ADLBP_Insert_atomic(id, subscript, refcounts, result,
-                                     data, length, type);
+                                     value_present, data, length, type);
   return rc;
 }
 

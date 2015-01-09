@@ -302,7 +302,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
   size_t min_length = sizeof(adlb_packed_struct_hdr) +
                 sizeof(hdr->field_offsets[0]) * (size_t)t->field_count;
   check_verbose((size_t)length >= min_length, ADLB_DATA_ERROR_INVALID,
-                "buffer too small for header of struct type %s: is %ib, "
+                "buffer too small for header of struct type %s: is %zub, "
                 "but expected >= %zub", t->type_name, length, min_length);
 
   if (init_struct)
