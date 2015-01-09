@@ -898,7 +898,41 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   // Refcounts are only applied here if we got back the data
   adlb_code code = ADLB_Insert_atomic(id, subscript, refcounts,
                         &created, xfer, &value_len, &outer_value_type);
-  TCL_CONDITION(code == ADLB_SUCCESS, "error in Insert_atomic!");
+  
+  if (code != ADLB_SUCCESS)
+  {
+    /*
+     * Attempt to provide more informative message about cause of
+     * failure.  A specific error can be that we tried to autocreate
+     * when there was a (read-only) reference to another array
+     * inserted manually.
+     * Retry without refcount acquisition.
+     */
+    code = ADLB_Retrieve(id, subscript, ADLB_RETRIEVE_NO_REFC,
+              &outer_value_type, xfer, &value_len);
+    TCL_CONDITION(code == ADLB_SUCCESS && value_len > 0,
+        "unexpected error while retrieving container value");
+
+    adlb_ref retrieved;
+    adlb_data_code dc = ADLB_Unpack_ref(&retrieved, xfer, value_len,
+                              ADLB_NO_REFC, false);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "malformed reference buffer "
+        "of length %i received from ADLB server", value_len);
+
+    if (retrieved.write_refs <= 0)
+    {
+      TCL_RETURN_ERROR("Attempted to automatically create datum at "
+            "<%"PRId64">[\"%.*s\"], which was already set to "
+            "a read-only reference to <%"PRId64">", id,
+            (int)subscript.length, (const char*)subscript.key, 
+            retrieved.id);
+    }
+    
+    TCL_RETURN_ERROR("Unexpected error in "
+      "Insert_atomic when attempting to automatically create datum at"
+      "<%"PRId64">[\"%.*s\"]", id, (int)subscript.length,
+      (const char*)subscript.key);
+  }
 
   if (created)
   {
@@ -958,9 +992,10 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
       // This will decrement reference counts if it succeeds
       code = ADLB_Retrieve(id, subscript, refcounts, &outer_value_type,
                          xfer, &value_len);
-      TCL_CONDITION(code == ADLB_SUCCESS,
-          "unexpected error while polling for container value");
 
+      // Unknown cause
+      TCL_CONDITION(code != ADLB_SUCCESS,
+              "unexpected error while retrieving container value");
     }
     TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
             "only works on containers with values of type ref");

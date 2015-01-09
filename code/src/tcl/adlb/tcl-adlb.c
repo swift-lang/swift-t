@@ -2606,7 +2606,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
       *result = Tcl_NewADLBInt(tmp.INTEGER);
       break;
     case ADLB_DATA_TYPE_REF:
-      dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_REFC);
+      dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_REFC, true);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "Retrieve failed due to error unpacking data %i", dc);
       *result = Tcl_NewADLB_ID(tmp.REF.id);
