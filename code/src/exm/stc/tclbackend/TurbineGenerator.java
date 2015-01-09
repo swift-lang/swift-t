@@ -512,7 +512,7 @@ public class TurbineGenerator implements CompilerBackend {
       for (StructField field: st.getFields()) {
         // Field name and type
         fieldInfo.add(new TclString(field.getName(), true));
-        fieldInfo.addAll(TurbineTypes.dataDeclarationFullType(field.getType()));
+        fieldInfo.addAll(TurbineTypes.dataDeclFullType(field.getType()));
         if (Types.isStruct(field.getType())) {
           assert(declared.contains(field.getType())) :
             field.getType() + " struct type was not initialized";
@@ -607,7 +607,7 @@ public class TurbineGenerator implements CompilerBackend {
           Types.isArray(t) || Types.isRef(t) || Types.isBag(t) ||
           Types.isStruct(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
-        createArgs.addAll(TurbineTypes.dataDeclarationFullType(t));
+        createArgs.addAll(TurbineTypes.dataDeclFullType(t));
         createArgs.add(argToExpr(initReaders));
         createArgs.add(argToExpr(initWriters));
         createArgs.add(new LiteralInt(nextDebugSymbol(var)));
@@ -1250,10 +1250,13 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isNonLocalRef(result, true));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(result.storage() != Alloc.ALIAS);
-    TclTree t = Turbine.containerCreateNested(
+
+    List<TypeName> fullType =
+        TurbineTypes.dataDeclFullType(Types.retrievedType(result.type()));
+
+    pointAdd(Turbine.arrayCreateNested(
         varToExpr(result), varToExpr(array),
-        varToExpr(ix), TurbineTypes.dataDeclarationFullType(result.type()));
-    pointAdd(t);
+        varToExpr(ix), fullType));
   }
 
   @Override
@@ -1264,10 +1267,12 @@ public class TurbineGenerator implements CompilerBackend {
     assert(result.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
-    TclTree t = Turbine.containerRefCreateNested(
+    List<TypeName> fullType =
+        TurbineTypes.dataDeclFullType(Types.retrievedType(result.type()));
+
+    pointAdd(Turbine.arrayRefCreateNested(
         varToExpr(result), varToExpr(arrayRefVar), varToExpr(ix),
-        TurbineTypes.dataDeclarationFullType(result.type()));
-    pointAdd(t);
+        fullType));
   }
 
 
@@ -1284,12 +1289,11 @@ public class TurbineGenerator implements CompilerBackend {
     assert(readDecr.isImmediateInt());
     assert(writeDecr.isImmediateInt());
 
-    TclTree t = Turbine.containerCreateNestedImmIx(
+    pointAdd(Turbine.arrayCreateNested(
         prefixVar(result), varToExpr(array), argToExpr(ix),
-        TurbineTypes.dataDeclarationFullType(result.type()),
+        TurbineTypes.dataDeclFullType(result.type()),
         argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
-        argToExpr(readDecr), argToExpr(writeDecr));
-    pointAdd(t);
+        argToExpr(readDecr), argToExpr(writeDecr)));
   }
 
   @Override
@@ -1299,10 +1303,13 @@ public class TurbineGenerator implements CompilerBackend {
     assert(result.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
 
-    TclTree t = Turbine.containerRefCreateNestedImmIx(
+
+    List<TypeName> fullType =
+        TurbineTypes.dataDeclFullType(Types.retrievedType(result.type()));
+
+    pointAdd(Turbine.arrayRefCreateNestedImmIx(
         varToExpr(result), varToExpr(array), argToExpr(ix),
-        TurbineTypes.dataDeclarationFullType(result.type()));
-    pointAdd(t);
+        fullType));
   }
 
   @Override
@@ -1669,7 +1676,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     TclTree t = Turbine.structCreateNested(
             prefixVar(result), varToExpr(struct), subscript,
-            TurbineTypes.dataDeclarationFullType(result.type()),
+            TurbineTypes.dataDeclFullType(result.type()),
             argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
             argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
