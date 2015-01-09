@@ -352,12 +352,11 @@ public class VariableUsageInfo {
     /**
      * The depth of indexing at which array assignment occurred
      */
-    private int arrayAssignDepth;
     private int maxReadDepth;
 
     public VInfo(Type type, boolean mapped, String name, boolean locallyDeclared) {
       this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-           Ternary.FALSE, 0, -1);
+           Ternary.FALSE, -1);
     }
 
     public boolean hasMapping() {
@@ -366,7 +365,7 @@ public class VariableUsageInfo {
 
     private VInfo(Type type, boolean hasMapping, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
-        Ternary assigned, Ternary appended, Ternary read, int arrayAssignDepth,
+        Ternary assigned, Ternary appended, Ternary read,
         int maxReadDepth) {
       this.type = type;
       this.hasMapping = hasMapping;
@@ -376,14 +375,13 @@ public class VariableUsageInfo {
       this.assigned = assigned;
       this.appended = appended;
       this.read = read;
-      this.arrayAssignDepth = arrayAssignDepth;
       this.maxReadDepth = maxReadDepth;
 
     }
 
     private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
         Ternary assigned, Ternary read, Ternary appended,
-         int arrayAssignDepth, int maxReadDepth) {
+         int maxReadDepth) {
       this.type = type;
       this.hasMapping = mapped;
       if (Types.isStruct(type)) {
@@ -400,7 +398,6 @@ public class VariableUsageInfo {
       this.assigned = assigned;
       this.appended = appended;
       this.read = read;
-      this.arrayAssignDepth = arrayAssignDepth;
       this.maxReadDepth = maxReadDepth;
     }
 
@@ -459,10 +456,6 @@ public class VariableUsageInfo {
       return declaredInCurrentScope;
     }
 
-    public int getArrayAssignDepth() {
-      return arrayAssignDepth;
-    }
-
     /**
      * make a copy, except it might be in a different scope
      * All of the usage tracking is reset
@@ -478,7 +471,7 @@ public class VariableUsageInfo {
 
       return new VInfo(type, hasMapping, structFieldsNew,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-          Ternary.FALSE, 0, -1);
+          Ternary.FALSE, -1);
     }
 
 
@@ -560,26 +553,9 @@ public class VariableUsageInfo {
 
     private List<Violation> arrayAssign(Context context, int arrayDepth, AssignOp op) {
       // Assigning to an index of the array
-      if (assigned != Ternary.FALSE) {
-        if (arrayAssignDepth != arrayDepth) {
-          return Arrays.asList(makeArrDepthViolation(context, arrayDepth));
-        }
-        this.assigned = Ternary.TRUE;
-      } else {
-        this.assigned = Ternary.TRUE;
-        arrayAssignDepth = arrayDepth;
-      }
+      this.assigned = Ternary.TRUE;
       return Collections.emptyList();
     }
-
-    private Violation makeArrDepthViolation(Context context,
-        int arrayDepth) {
-      return new Violation(ViolationType.ERROR,
-          "Array assignment, indexing at depth" + arrayDepth
-          + " when previous assignment was at index depth " +
-              arrayAssignDepth, context);
-    }
-
 
     private List<Violation> structAssign(Context context,
         List<String> fieldPath, int arrayDepth, AssignOp op) {
@@ -765,40 +741,19 @@ public class VariableUsageInfo {
       Ternary assignedInBranch;
       Ternary appendedInBranch;
 
-      /* we keep track of the depth of indexing used for array assignment:
-       * currently we assume that it is the same across branches (TODO) */
-      int expectAssignedDepth;
       if (exhaustive) {
         VInfo firstBranch = branches.get(0);
         assignedInBranch = firstBranch.assigned;
         appendedInBranch = firstBranch.appended;
-        expectAssignedDepth = firstBranch.arrayAssignDepth;
       } else {
         /* Shouldn't be assigned on any branch, because if we don't enter any branch,
          * no assignment occurs*/
         assignedInBranch = Ternary.FALSE;
         appendedInBranch = Ternary.FALSE;
-        expectAssignedDepth = 0;
       }
 
       for (int i = 0; i < branches.size(); i++) {
         VInfo currBr = branches.get(i);
-
-        if (assignedInBranch == Ternary.FALSE) {
-          // Assume this branch's assignment index depth should be used in
-          // all branches
-          expectAssignedDepth = currBr.arrayAssignDepth;
-        }
-
-        // Check to make sure assignment depth is the same across branches
-        if (assignedInBranch != Ternary.FALSE &&
-                  currBr.assigned != Ternary.FALSE) {
-          if (currBr.arrayAssignDepth != expectAssignedDepth) {
-              result.add(new Violation(ViolationType.ERROR, "Variable " + name
-                  + " is assigned at different subscript levels on different "
-                  + " branches", context));
-          }
-        }
 
         // Update the assignment state of variable
         assignedInBranch = Ternary.consensus(assignedInBranch,
@@ -817,14 +772,10 @@ public class VariableUsageInfo {
       } else if (this.assigned == Ternary.FALSE) {
         // was only touched in branches
         this.assigned = assignedInBranch;
-        this.arrayAssignDepth =  expectAssignedDepth;
         return result;
       } else if (Types.isArray(this.type)) {
         // Arrays can be assigned multiple times, the depth just has to match
         this.assigned = Ternary.or(assigned, assignedInBranch);
-        if (this.arrayAssignDepth != expectAssignedDepth) {
-          result.add(makeArrDepthViolation(context, expectAssignedDepth));
-        }
         return result;
       } else {
         // Non-array type

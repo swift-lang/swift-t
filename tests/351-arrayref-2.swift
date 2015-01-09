@@ -1,6 +1,3 @@
-// this doesn't work yet
-// SKIP-THIS-TEST
-
 (int res[][]) g () {
     int a[];
     int b[];
