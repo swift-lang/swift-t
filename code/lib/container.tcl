@@ -1045,7 +1045,12 @@ namespace eval turbine {
               set result_val [ enumerate_rec $val $key_type 1 0 ]
             }
             struct {
-              set result_val [ enumerate_rec_struct_val $val $key_type 0 ]
+              # Check if we need to recurse
+              if { [ llength $key_type ] > 1 } {
+                set result_val [ enumerate_rec_struct_val $val $key_type 0 ]
+              } else {
+                set result_val $val
+              }
             }
             default {
               set result_val $val
@@ -1067,11 +1072,11 @@ namespace eval turbine {
       set ref_value [ string equal $member_type ref ]
       if { $ref_value } {
         set ref_root_type [ lindex $types [ expr {$depth + 2} ] ]
-        if { $ref_root_type == "container" || \
-             $ref_root_type == "multiset" ||
-             $ref_root_type == "struct" } {
+        if { [ llength $types ] > [ expr {$depth + 3} ] } {
+          # Need to recurse further after retrieving member refs
           set recurse 1
         } else {
+          # Just need to fetch members
           set recurse 0
           set member_ref_type [ lindex $types [ expr {$depth + 2} ] ]
         }
