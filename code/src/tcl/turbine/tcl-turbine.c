@@ -798,7 +798,7 @@ worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
-static int
+int
 Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {

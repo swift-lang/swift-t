@@ -306,17 +306,25 @@ static bool must_comm_free = false;
   }                                                                          \
 }
 
-#define CHECK_ADLB_RETRIEVE(rc, handle, result_len) { \
-  if (adlb_has_sub((handle).sub.val)) { \
-    TCL_CONDITION((rc) == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!", \
-        (handle).id, (int)(handle).sub.val.length, \
-        (const char*)(handle).sub.val.key); \
-    TCL_CONDITION((result_len) >= 0, "<%"PRId64">[%.*s] not found!", (handle).id, \
-            (int)(handle).sub.val.length, (const char*)(handle).sub.val.key); \
-  } else { \
-    TCL_CONDITION((rc) == ADLB_SUCCESS, "<%"PRId64"> failed!", (handle).id); \
-    TCL_CONDITION((result_len) >= 0, "<%"PRId64"> not found!", (handle).id); \
-  } \
+#define CHECK_ADLB_RETRIEVE(rc, handle) {                  \
+  if (adlb_has_sub((handle).sub.val)) {                    \
+    if ((rc) == ADLB_NOTHING)                              \
+      TCL_RETURN_ERROR("<%"PRId64">[%.*s] not found!",     \
+                       (handle).id,                        \
+                       (int)(handle).sub.val.length,       \
+                       (const char*)(handle).sub.val.key); \
+    TCL_CONDITION((rc) == ADLB_SUCCESS,                    \
+                  "<%"PRId64">[%.*s] failed!",             \
+                  (handle).id,                             \
+                  (int)(handle).sub.val.length,            \
+                  (const char*)(handle).sub.val.key);      \
+  } else {                                                 \
+    if ((rc) == ADLB_NOTHING)                              \
+      TCL_RETURN_ERROR("<%"PRId64"> not found!",           \
+                       (handle).id);                       \
+    TCL_CONDITION((rc) == ADLB_SUCCESS,                    \
+                  "<%"PRId64"> failed!", (handle).id);     \
+  }                                                        \
 }
 
 static int
@@ -2572,7 +2580,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   refcounts.decr_self.read_refcount = decr_amount;
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                              &type, xfer, &length);
-  CHECK_ADLB_RETRIEVE(ret_rc, handle, length);
+  CHECK_ADLB_RETRIEVE(ret_rc, handle);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
@@ -2790,7 +2798,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   size_t length;
   adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
                      &length);
-  CHECK_ADLB_RETRIEVE(ac, handle, length);
+  CHECK_ADLB_RETRIEVE(ac, handle);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
@@ -3130,7 +3138,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   size_t length;
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                              &type, xfer, &length);
-  CHECK_ADLB_RETRIEVE(ret_rc, handle, length);
+  CHECK_ADLB_RETRIEVE(ret_rc, handle);
 
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
@@ -3705,7 +3713,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION(objc >= 3, "Requires at least 3 args");
   int rc;
-  bool b;
+  bool b, value_present;
 
   tcl_adlb_handle handle;
   rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
@@ -3755,7 +3763,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
              handle.id, (int)handle.sub.val.length,
              (const char*)handle.sub.val.key);
   rc = ADLB_Insert_atomic(handle.id, handle.sub.val, refcounts, &b,
-                          NULL, NULL, NULL);
+                          &value_present, NULL, NULL, NULL);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
         "failed: <%"PRId64">[%.*s]", handle.id,
@@ -3832,11 +3840,11 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
     // TODO: support binary subscript
     rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type,
                       xfer, &len);
-    if (rc != ADLB_SUCCESS) // Check outside loop
+    if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING) // Check outside loop
       break;
-  } while (spin && rc == ADLB_SUCCESS && len < 0);
+  } while (spin && rc == ADLB_NOTHING);
 
-  CHECK_ADLB_RETRIEVE(rc, handle, len);
+  CHECK_ADLB_RETRIEVE(rc, handle);
 
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "<%"PRId64">[\"%.*s\"] not found",
@@ -4178,14 +4186,15 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   uint64_t xfer_size;
   char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
 
-  bool created;
-  int value_len;
+  bool created, value_present;
+  size_t value_len;
   adlb_data_type outer_value_type;
 
   // Initial trial at inserting.
   // Refcounts are only applied here if we got back the data
   adlb_code ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
-            refcounts, &created, xfer, &value_len, &outer_value_type);
+            refcounts, &created, &value_present, xfer,
+            &value_len, &outer_value_type);
 
   if (ac != ADLB_SUCCESS)
   {
@@ -4206,7 +4215,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                               ADLB_NO_REFC, false);
     TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
         "malformed reference buffer "
-        "of length %i received from ADLB server", value_len);
+        "of length %zu received from ADLB server", value_len);
 
     if (retrieved.write_refs <= 0)
     {
@@ -4278,7 +4287,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   else
   {
     // Wasn't able to create.  Entry may or may not already have value.
-    while (value_len < 0)
+    while (!value_present)
     {
       // Need to poll until value exists
       // This will decrement reference counts if it succeeds
@@ -4286,8 +4295,9 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                            &outer_value_type, xfer, &value_len);
 
       // Unknown cause
-      TCL_CONDITION_GOTO(ac == ADLB_SUCCESS, exit_err,
-              "unexpected error while retrieving container value");
+      TCL_CONDITION_GOTO(ac == ADLB_SUCCESS || ac == ADLB_NOTHING,
+            exit_err, "unexpected error while retrieving container value");
+      value_present = (ac == ADLB_SUCCESS);
     }
     TCL_CONDITION_GOTO(outer_value_type == ADLB_DATA_TYPE_REF, exit_err,
             "only works on containers with values of type ref");
