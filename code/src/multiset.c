@@ -73,7 +73,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length, true,
+  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length, 
                      refcounts);
 }
 

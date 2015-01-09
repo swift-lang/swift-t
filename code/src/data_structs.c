@@ -287,7 +287,7 @@ static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
-                   adlb_refc refcounts, bool init_struct)
+                   bool copy, adlb_refc refcounts, bool init_struct)
 {
   adlb_data_code dc;
 
@@ -353,8 +353,8 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
         DATA_CHECK(dc);
       }
 
-      ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
-                  field_start, field_len, true, refcounts);
+      ADLB_Unpack2(&(*s)->fields[i].data, t->field_types[i].type,
+                  field_start, field_len, copy, refcounts, true);
       (*s)->fields[i].initialized = true;
     }
   }

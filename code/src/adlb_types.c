@@ -566,9 +566,9 @@ ADLB_Unpack_buffer(adlb_data_type type,
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, size_t length, bool copy, adlb_refc refcounts)
+            const void *buffer, size_t length, adlb_refc refcounts)
 {
-  return ADLB_Unpack2(d, type, buffer, length, copy, refcounts, true);
+  return ADLB_Unpack2(d, type, buffer, length, true, refcounts, true);
 }
 
 adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
@@ -590,7 +590,7 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
       // Ok to cast from const buffer since we force it to copy
       return ADLB_Unpack_blob(&d->BLOB, (void*)buffer, length, copy);
     case ADLB_DATA_TYPE_STRUCT:
-      return ADLB_Unpack_struct(&d->STRUCT, buffer, length, refcounts,
+      return ADLB_Unpack_struct(&d->STRUCT, buffer, length, copy, refcounts,
                                 init_compound);
     case ADLB_DATA_TYPE_CONTAINER:
       return ADLB_Unpack_container(&d->CONTAINER, buffer, length,
@@ -652,7 +652,7 @@ ADLB_Unpack_container(adlb_container *container,
     adlb_datum_storage *d = malloc(sizeof(adlb_datum_storage));
     check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                   "error allocating memory");
-    dc = ADLB_Unpack(d, val_type, val, val_len, true, refcounts);
+    dc = ADLB_Unpack(d, val_type, val, val_len, refcounts);
     DATA_CHECK(dc);
 
     // TODO: handle case where key already exists

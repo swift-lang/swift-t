@@ -279,8 +279,7 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
  */
 adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, size_t length, bool copy,
-            adlb_refc refcounts);
+            const void *buffer, size_t length, adlb_refc refcounts);
 
 /*
   Same as ADLB_Unpack, except optionally we can specify that
@@ -561,7 +560,7 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
-                   adlb_refc refcounts, bool init_struct);
+                   bool copy, adlb_refc refcounts, bool init_struct);
 
 // Free any memory used
 adlb_data_code

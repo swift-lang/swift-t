@@ -1036,9 +1036,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       
       // Now we are guaranteed to succeed
       adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-      dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type,
-                       value, length, copy,
-                       store_refcounts);
+      dc = ADLB_Unpack2(entry, (adlb_data_type)c->val_type,
+                       value, length, copy, store_refcounts, true);
       DATA_CHECK(dc);
 
       if (found)
