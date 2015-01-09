@@ -772,7 +772,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   DEBUG("Record length %"PRId64, rec_len64);
 
   // sanity check for record length
-  if(rec_len64 < 0 || rec_len64 > INT_MAX)
+  if(rec_len64 < 0 || rec_len64 > SIZE_MAX)
   {
     ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
 
@@ -850,7 +850,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   }
 
   // CRC check passed: checkpoint record is probably intact
-  int key_len_encb = vint_decode(buffer->data, (int)rec_len64,
+  int key_len_encb = vint_decode(buffer->data, (size_t)rec_len64,
                                  &key_len64);
   if (key_len_encb < 0)
   {
