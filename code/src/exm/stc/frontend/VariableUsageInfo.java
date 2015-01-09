@@ -222,11 +222,7 @@ public class VariableUsageInfo {
        */
       if (v.isRead() != Ternary.FALSE) {
         // v might be read
-        if (Types.isArray(v.type)) {
-          // ok to refer to entire array if not written
-          // Could do more sophisticated analysis of indices, but best to avoid
-          // emitting too much warning spam
-        } else if (Types.isBag(v.type)) {
+        if (!requiresAssignment(v)) {
           // ok not to add anything
         } else if (Types.isStruct(v.type)) {
           // check this elsewhere in the incompletely defined
@@ -263,6 +259,13 @@ public class VariableUsageInfo {
     }
   }
 
+  /**
+   * @param fvi
+   * @return whether the type needs at least one assignment before being read
+   */
+  private static boolean requiresAssignment(VInfo fvi) {
+    return !Types.isContainer(fvi.type);
+  }
 
   public enum ViolationType {
     ERROR,
@@ -423,7 +426,11 @@ public class VariableUsageInfo {
         int assignedCount = 0;
         int maybeAssignedCount = 0;
         for (VInfo fvi: structFields.values()) {
-          if (fvi.isAssigned() == Ternary.TRUE) {
+          if (!requiresAssignment(fvi)) {
+            // Empty ones can be counted as assigned
+            assignedCount++;
+            maybeAssignedCount++;
+          } else if (fvi.isAssigned() == Ternary.TRUE) {
             assignedCount++;
             maybeAssignedCount++;
           } else if (fvi.isAssigned() == Ternary.MAYBE) {
@@ -850,7 +857,7 @@ public class VariableUsageInfo {
                   "Deadlock detected: " + vi.getName() + " is "
                  + "never assigned but is read", context));
             } else if (somehowAssigned != Ternary.FALSE ) {
-              // If we might write somebut not all
+              // If we might write some but not all
               result.add(new Violation(ViolationType.WARNING,
                   vi.getName() + " is not guaranteed to be written to"
                   + ", this may result in an incomplete struct value",
