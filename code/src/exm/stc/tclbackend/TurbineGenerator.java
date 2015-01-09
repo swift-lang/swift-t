@@ -1089,8 +1089,7 @@ public class TurbineGenerator implements CompilerBackend {
       // TODO: will need to include tracked & untraced refcounts
     }
 
-    List<Expression> typeList = TurbineTypes.recursiveTypeList(dst.type(),
-                                      false, true, true, true, true);
+    List<Expression> typeList = TurbineTypes.buildRecTypeInfo(dst.type());
     pointAdd(Turbine.buildRec(typeList, varToExpr(dst), argToExpr(src)));
   }
 
@@ -1118,8 +1117,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void retrieveRecursive(Var dst, Var src, Arg decr) {
     assert(Types.unpackedType(src).assignableTo(dst.type()));
 
-    List<Expression> typeList = TurbineTypes.recursiveTypeList(src.type(),
-                                        false, false, true, true, true);
+    List<Expression> typeList = TurbineTypes.enumRecTypeInfo(src.type());
 
     pointAdd(Turbine.enumerateRec(prefixVar(dst), typeList,
               varToExpr(src), argToExpr(decr)));
@@ -2023,8 +2021,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> fullReprType;
 
     if (Types.isContainer(src)) {
-      fullReprType = TurbineTypes.recursiveTypeList(dst.type(), false, true,
-                                          true, false, false);
+      fullReprType = TurbineTypes.adlbStoreTypeInfo(dst.type());
     } else {
       fullReprType = Collections.<Expression>singletonList(
                         TurbineTypes.reprType(src.type()));
@@ -3545,7 +3542,7 @@ public class TurbineGenerator implements CompilerBackend {
     }
 
     // Need to pass type names to packing routine
-    List<Expression> exprs = makeTypeValList(unpacked);
+    List<Expression> exprs = xptPackArgs(unpacked);
     pointAdd(new SetVariable(prefixVar(packed), Turbine.xptPack(exprs)));
   }
 
@@ -3557,16 +3554,11 @@ public class TurbineGenerator implements CompilerBackend {
    * @param vals
    * @return
    */
-  private List<Expression> makeTypeValList(List<Arg> vals) {
+  private List<Expression> xptPackArgs(List<Arg> vals) {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
-      if (Types.isContainerLocal(val.type())) {
-        List<Expression> typeList = TurbineTypes.recursiveTypeList(val.type(),
-                                                true, true, true, true, false);
-        result.addAll(typeList);
-      } else {
-        result.add(TurbineTypes.valReprType(val.type()));
-      }
+      List<Expression> typeList = TurbineTypes.xptPackType(val);
+      result.addAll(typeList);
       result.add(argToExpr(val));
     }
     return result;
