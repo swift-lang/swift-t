@@ -160,9 +160,9 @@ adlb_data_code xlb_data_reference_count(adlb_datum_id id,
 const char*
 xlb_data_refc_type_tostring(adlb_refcount_type refc_type);
 
-adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
+adlb_data_code xlb_data_insert_atomic(adlb_datum_id id,
                                   adlb_subscript subscript,
-                                  bool* created, bool *value_present);
+                                  bool *created, bool *value_present);
 
 adlb_data_code xlb_data_unique(adlb_datum_id* result);
 

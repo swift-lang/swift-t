@@ -98,7 +98,8 @@ static adlb_data_code
 lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
     const adlb_datum_storage *d,
     adlb_subscript subscript, adlb_data_type type,
-    const adlb_datum_storage **result, adlb_data_type *result_type);
+    bool *sub_exists, const adlb_datum_storage **result,
+    adlb_data_type *result_type);
 
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            xlb_refc_acquire acquire, xlb_refc_changes *refcs);
@@ -164,13 +165,13 @@ insert_notifications2(adlb_datum *d,
       struct list *ref_list, struct list_b *listener_list,
       adlb_notif_t *notifs, bool *garbage_collected);
 
-static 
+static
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
           const void *value, size_t value_len,
           adlb_refc *to_acquire); 
 
-static 
+static
 adlb_data_code append_notifs(struct list_b *listeners, bool free_list_root,
   adlb_datum_id id, adlb_dsym dsym, adlb_subscript sub, adlb_notif_ranks *notify);
 
@@ -182,7 +183,7 @@ static bool container_lookup(const adlb_container *c, adlb_subscript sub,
 static bool container_set(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val,
                               adlb_container_val *prev);
-static void container_add(adlb_container *c, adlb_subscript sub,
+static adlb_data_code container_add(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val);
 
 static void report_leaks(void);
@@ -229,7 +230,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%"PRId64"\n", id);
 
-  DEBUG("Create "ADLB_PRID" t:%s r:%i w:%i", 
+  DEBUG("Create "ADLB_PRID" t:%s r:%i w:%i",
         ADLB_PRID_ARGS(id, props->symbol),
         ADLB_Data_type_tostring(type),
         props->read_refcount, props->write_refcount);
@@ -241,7 +242,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
 
 #ifndef NDEBUG
   check_verbose(!table_lp_contains(&tds, id), ADLB_DATA_ERROR_DOUBLE_DECLARE,
-                ADLB_PRID" already exists", 
+                ADLB_PRID" already exists",
                 ADLB_PRID_ARGS(id, props->symbol));
 #endif
 
@@ -319,14 +320,14 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
     check_verbose(d != NULL, ADLB_DATA_ERROR_INVALID,
         ADLB_PRID" does not exist, can't check existence of subscript",
         ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
+    bool sub_exists;
     const adlb_datum_storage *lookup_result;
     adlb_data_type result_type;
     dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
-                          &lookup_result, &result_type);
+                     &sub_exists, &lookup_result, &result_type);
     DATA_CHECK(dc);
-                          
+
     *result = (lookup_result != NULL);
-    // TODO: support binary keys
     DEBUG("Exists: "ADLB_PRIDSUB" => %s", ADLB_PRIDSUB_ARGS(
             id, d->symbol, subscript), bool2string(*result));
   }
@@ -399,7 +400,7 @@ adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
   adlb_datum *d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
-  
+
   result->read_refcount = d->read_refcount;
   result->write_refcount = d->write_refcount;
   return ADLB_DATA_SUCCESS;
@@ -496,11 +497,11 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
     {
       DEBUG("Updating referand refcounts. release write refs: %i, "
             "Acquire sub: [%.*s] r: %i w: %i ", (int)release_write_refs,
-            (int)acquire.subscript.length, (const char*)acquire.subscript.key, 
+            (int)acquire.subscript.length, (const char*)acquire.subscript.key,
             acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
       // Have to release or acquire references
       dc = xlb_incr_referand(&d->data, d->type, false, release_write_refs,
-                   acquire, &notifs->refcs); 
+                   acquire, &notifs->refcs);
       DATA_CHECK(dc);
     }
   }
@@ -601,7 +602,6 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   }
   else
   {
-    // TODO: support binary keys
     DEBUG("data_subscribe(): "ADLB_PRIDSUB,
           ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
   }
@@ -609,16 +609,15 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
 
   if (adlb_has_sub(subscript))
   {
-    // TODO: support binary keys
     bool is_container = d->type == ADLB_DATA_TYPE_CONTAINER;
-    bool is_struct = d->type == ADLB_DATA_TYPE_STRUCT; 
+    bool is_struct = d->type == ADLB_DATA_TYPE_STRUCT;
     check_verbose(is_container || is_struct,
             ADLB_DATA_ERROR_INVALID, "subscribing to subscript on "
             "invalid type: %s for "ADLB_PRIDSUB,
             ADLB_Data_type_tostring(d->type), ADLB_PRIDSUB_ARGS(
             id, d->symbol, subscript));
-    
-    bool found = false; 
+
+    bool found = false;
     if (is_container &&
         container_value_exists(&d->data.CONTAINER, subscript))
     {
@@ -635,13 +634,13 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       DATA_CHECK(dc);
       TRACE("Struct subscript initialized: %i", (int)found);
     }
-    
+
     if (!found)
     {
       // encode container, index and ref type into string
       char key[xlb_id_sub_buflen(subscript)];
       size_t key_len = xlb_write_id_sub(key, id, subscript);
-      
+
       DEBUG("Subscribe to "ADLB_PRIDSUB,
         ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
 
@@ -656,7 +655,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       }
       TRACE("Added %i to listeners for "ADLB_PRIDSUB, rank,
           ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
-     
+
       xlb_listener listener = { .rank = rank, .work_type = work_type };
       list_b_add(listeners, &listener, sizeof(listener));
       *subscribed = true;
@@ -713,12 +712,13 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
 
+  bool sub_exists;
   // Is the subscript already pointing to a data identifier?
   const adlb_datum_storage *val_data;
   adlb_data_type val_type;
 
   dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
-                        &val_data, &val_type);
+                        &sub_exists, &val_data, &val_type);
   DATA_CHECK(dc);
 
   TRACE("lookup datum for ref: "ADLB_PRIDSUB": %p",
@@ -733,7 +733,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   {
     dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
     DATA_CHECK(dc);
-    
+
     // Get ownership in case internal pointer freed later
     dc = ADLB_Own_data(caller_buffer, result);
     DATA_CHECK(dc);
@@ -745,7 +745,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
       ac = xlb_to_free_add(notifs, result->caller_data);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
-    
+
     if (adlb_has_sub(ref_sub) && copy_subscript)
     {
       // Need to make a copy of the subscript data
@@ -764,7 +764,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                  ref_type, result->data, result->length,
                  to_acquire, ref_write_decr);
 
-    // Need to acquire references 
+    // Need to acquire references
     adlb_refc decr = { .read_refcount = -1,
                             .write_refcount = 0 };
     xlb_refc_acquire to_acquire2 = { .subscript = subscript,
@@ -778,7 +778,6 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   result->data = result->caller_data = NULL; // Signal data not found
 
   // Is the container closed?
-  // TODO: support binary keys
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
         "Attempting to subscribe to non-existent subscript\n"
         "on a closed container:  "ADLB_PRIDSUB,
@@ -816,13 +815,12 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     if (xlb_read_refcount_enabled) {
       assert(d->read_refcount >= 2);
       d->read_refcount--;
-      
+
       DEBUG("read_refcount in container_reference: "ADLB_PRID
             " => %i", ADLB_PRID_ARGS(id, d->symbol), d->read_refcount);
     }
   }
 
-  // TODO: support binary keys
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
                 "for:  "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(id,
@@ -939,7 +937,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
   {
     char *val_s = ADLB_Data_repr(&d->data, d->type);
-    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i\n", 
+    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i\n",
           ADLB_PRID_ARGS(id, d->symbol), val_s,
           store_refcounts.read_refcount, store_refcounts.write_refcount);
     free(val_s);
@@ -957,7 +955,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 }
 
 /**
- * Internal function to store data in a subscript of a datum
+ * Internal function to store data in a subscript of a datum.
+ * If value is set to NULL, reserve the subscript intead of assigning
  */
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
@@ -986,6 +985,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       assert(adlb_has_sub(curr_sub));
       adlb_data_type elem_type;
       elem_type = (adlb_data_type)data->MULTISET->elem_type;
+      check_verbose(value != NULL, ADLB_DATA_ERROR_INVALID,
+              "Don't support reserving subscripts for multiset type");
       check_verbose(value_type == elem_type, ADLB_DATA_ERROR_TYPE,
               "Type mismatch for multiset val: expected %s actual %s\n",
               ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(value_type));
@@ -1012,65 +1013,74 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       adlb_container *c = &data->CONTAINER;
 
-      check_verbose(value_type == (adlb_data_type)c->val_type,
+      // Does the link already exist?
+      adlb_container_val t = NULL;
+      bool found = container_lookup(c, curr_sub, &t);
+
+      if (found && (value == NULL || t != NULL))
+      {
+        // Can overwrite reserved (unlinked) entries with actual data, but
+        // cannot double reserve entries.
+
+        // Don't print error by default: caller may want to handle
+        DEBUG("already exists: "ADLB_PRIDSUB,
+              ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
+        return ADLB_DATA_ERROR_DOUBLE_WRITE;
+      }
+
+      if (value != NULL)
+      {
+        check_verbose(value_type == (adlb_data_type)c->val_type,
                     ADLB_DATA_ERROR_TYPE,
                     "Type mismatch for container value: "
                     "given: %s required: %s\n",
                     ADLB_Data_type_tostring(value_type),
                     ADLB_Data_type_tostring(c->val_type));
 
-      // Does the link already exist?
-      adlb_container_val t = NULL;
-      bool found = container_lookup(c, curr_sub, &t);
+        // Now we are guaranteed to succeed
+        adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
+        dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type, value, length,
+                        store_refcounts);
+        DATA_CHECK(dc);
 
-      if (found && t != NULL)
-      {
-        // If present, must be an UNLINKED entry:
-        // TODO: support binary keys
-        // Don't print error by default: caller may want to handle
-        DEBUG("already exists: "ADLB_PRIDSUB,
-              ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
-        return ADLB_DATA_ERROR_DOUBLE_WRITE;
-     } 
+        if (found)
+        {
+          DEBUG("Assigning unlinked precreated entry");
+          // Ok- somebody did an Insert_atomic
+          adlb_container_val v;
+          // Reset entry
+          bool b = container_set(c, curr_sub, entry, &v);
+          ASSERT(b);
+          ASSERT(v == NULL); // Should have been NULL for unlinked
+        }
+        else
+        {
+          DEBUG("Creating new container entry");
+          dc = container_add(c, curr_sub, entry);
+          DATA_CHECK(dc);
+        }
 
-      
-      // Now we are guaranteed to succeed
-      adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-      dc = ADLB_Unpack2(entry, (adlb_data_type)c->val_type,
-                       value, length, copy, store_refcounts, true);
-      DATA_CHECK(dc);
+        if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+        {
+          char *val_s = ADLB_Data_repr(entry, value_type);
+          DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
+             ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
+             store_refcounts.read_refcount, store_refcounts.write_refcount);
+          free(val_s);
+        }
 
-      if (found)
-      {
-        DEBUG("Assigning unlinked precreated entry");
-        // Ok- somebody did an Insert_atomic
-        adlb_container_val v;
-        // Reset entry
-        bool b = container_set(c, curr_sub, entry, &v);
-        ASSERT(b);
-        ASSERT(v == NULL); // Should have been NULL for unlinked
+        if (d->status.subscript_notifs)
+        {
+          dc = insert_notifications(d, id, subscript,
+                    entry, value, length, value_type,
+                    notifs, freed_datum);
+          DATA_CHECK(dc);
+        }
       }
       else
       {
-        DEBUG("Creating new container entry");
-        container_add(c, curr_sub, entry);
-      }
-
-      if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
-      {
-        char *val_s = ADLB_Data_repr(entry, value_type);
-        // TODO: support binary keys
-        DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
-           ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
-           store_refcounts.read_refcount, store_refcounts.write_refcount);
-        free(val_s);
-      }
-
-      if (d->status.subscript_notifs)
-      {
-        dc = insert_notifications(d, id, subscript,
-                                  entry, value, length, value_type,
-                                  notifs, freed_datum);
+        // Use NULL pointer value to represent reserved but not set
+        dc = container_add(c, curr_sub, NULL);
         DATA_CHECK(dc);
       }
       return ADLB_DATA_SUCCESS;
@@ -1084,31 +1094,47 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       dc = xlb_struct_lookup(data->STRUCT, curr_sub, true, &field,
                              &field_type, &curr_sub_pos);
       DATA_CHECK(dc);
-      
+
       assert(curr_sub_pos <= curr_sub.length);
+
+      // TODO: use this recursive logic to set ->reserved flag
 
       if (curr_sub_pos == curr_sub.length) {
         // Located field to assign.  This function will check
         // that it hasn't already been assigned
-        dc = xlb_struct_assign_field(field, field_type, value, length,
-                                     value_type, store_refcounts);
-        DATA_CHECK(dc);
 
-        if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+        if (value != NULL)
         {
-          char *val_s = ADLB_Data_repr(&field->data, value_type);
-          // TODO: support binary keys
-          DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
-            ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
-            store_refcounts.read_refcount, store_refcounts.write_refcount);
-          free(val_s);
+          dc = xlb_struct_assign_field(field, field_type, value, length,
+                                       value_type, store_refcounts);
+          DATA_CHECK(dc);
+
+          if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+          {
+            char *val_s = ADLB_Data_repr(&field->data, value_type);
+            DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
+              ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
+              store_refcounts.read_refcount, store_refcounts.write_refcount);
+            free(val_s);
+          }
+
+          dc = insert_notifications(d, id, subscript,
+                    &field->data, value, length, value_type,
+                    notifs, freed_datum);
+          DATA_CHECK(dc);
         }
-
-        dc = insert_notifications(d, id, subscript,
-                  &field->data, value, length, value_type,
-                  notifs, freed_datum);
-        DATA_CHECK(dc);
-
+        else
+        {
+          // Need to reserve
+          if (field->reserved || field->initialized) {
+            // Don't print error by default: caller may want to handle
+            DEBUG("already exists: "ADLB_PRIDSUB,
+                  ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
+            return ADLB_DATA_ERROR_DOUBLE_WRITE;
+          } else {
+            field->reserved = true;
+          }
+        }
         return ADLB_DATA_SUCCESS;
       }
       else
@@ -1122,7 +1148,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
             "Uninitialized subscript:  "ADLB_PRIDSUB " "
             "Remaining bytes %zu", ADLB_PRIDSUB_ARGS(id, d->symbol,
               subscript), curr_sub.length - curr_sub_pos);
-          
+
           dc = ADLB_Init_compound(&d->data, field_type.type,
                                   field_type.extra, true);
           DATA_CHECK(dc);
@@ -1210,8 +1236,9 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   }
   else
   {
+    bool sub_exists;
     dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
-                          &val_data, &val_type);
+                          &sub_exists, &val_data, &val_type);
     DATA_CHECK(dc);
 
     if (val_data == NULL)
@@ -1224,7 +1251,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   DATA_CHECK(dc);
 
   *type = val_type;
-  
+
   if (ADLB_REFC_NOT_NULL(decr) || ADLB_REFC_NOT_NULL(to_acquire)) {
     // own data in case we free it
     if (ADLB_REFC_NOT_NULL(decr))
@@ -1246,13 +1273,15 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 /**
   Lookup subscript in any datum that supports it.
   result is NULL if not present.
+  sub_exists is set to true if subscript reserved or value present
   result_type is always set
  */
 static adlb_data_code
 lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
     const adlb_datum_storage *d,
     adlb_subscript subscript, adlb_data_type type,
-    const adlb_datum_storage **result, adlb_data_type *result_type)
+    bool *sub_exists, const adlb_datum_storage **result,
+    adlb_data_type *result_type)
 {
   adlb_data_code dc;
   while (true)
@@ -1263,9 +1292,10 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
         // Assume remainder of subscript is container key
         *result_type = (adlb_data_type)d->CONTAINER.val_type;
         adlb_container_val tmp_val;
-        
+
         // We don't distinguish unlinked and non-existent subscript here
-        if (container_lookup(&d->CONTAINER, subscript, &tmp_val))
+        *sub_exists = container_lookup(&d->CONTAINER, subscript, &tmp_val);
+        if (*sub_exists)
         {
           *result = tmp_val;
         }
@@ -1279,24 +1309,26 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
         check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
             "subscript of struct initialized without type "ADLB_PRID,
             ADLB_PRID_ARGS(id, dsym));
-        
+
         adlb_struct_field *field;
         adlb_struct_field_type field_type;
         size_t sub_pos;
         dc = xlb_struct_lookup(d->STRUCT, subscript, true, &field,
                                &field_type, &sub_pos);
         DATA_CHECK(dc);
-        
+
         assert(sub_pos <= subscript.length);
 
         if (!field->initialized)
         {
+          *sub_exists = field->reserved;
           *result = NULL;
           *result_type = field_type.type;
           return ADLB_DATA_SUCCESS;
         }
         else if (sub_pos == subscript.length)
         {
+          *sub_exists = true;
           *result = &field->data;
           *result_type = field_type.type;
           return ADLB_DATA_SUCCESS;
@@ -1324,11 +1356,13 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
 /**
    Helper function to add to container
  */
-static void container_add(adlb_container *c, adlb_subscript sub,
+static adlb_data_code container_add(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val)
 {
   TRACE("Adding %p to %p", val, c);
-  table_bp_add(c->members, sub.key, sub.length, val);
+  bool ok = table_bp_add(c->members, sub.key, sub.length, val);
+
+  return ok ? ADLB_DATA_SUCCESS : ADLB_DATA_ERROR_OOM;
 }
 
 /**
@@ -1585,7 +1619,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
  * subscript: we assume that a point to the subscript can be added to
  *          notifications, i.e. that lifetime of subscript is longer than
  *          notifications structure
- * 
+ *
  * TODO: we don't handle subscription to nodes that are neither the root
  * nor the leaf here.  In principle a subtree could be fully assigned
  * before the full datum is assigned, but we don't detect that.
@@ -1605,7 +1639,7 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
   dc = check_subscript_notifications(id, subscript, &ref_list,
                                      &listener_list);
   DATA_CHECK(dc);
-  
+
   DEBUG("Notifications for "ADLB_PRIDSUB" refs %i subscribers %i",
     ADLB_PRIDSUB_ARGS(id, d->symbol, subscript),
     ref_list != NULL ? ref_list->size : 0,
@@ -1614,7 +1648,7 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
   // Track whether we garbage collected the data
   assert(garbage_collected != NULL);
   *garbage_collected = false;
-  
+
   dc = insert_notifications2(d, id, subscript, false,
       value_type, value_buffer, value_len,
       ref_list, listener_list, notifs, garbage_collected);
@@ -1622,7 +1656,7 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
 
   TRACE("remove container_ref "ADLB_PRIDSUB,
       ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
-  
+
   dc = add_recursive_notifs(d, id, subscript, value,
               value_type, notifs, garbage_collected);
   DATA_CHECK(dc);
@@ -1647,7 +1681,7 @@ check_subscript_notifications(adlb_datum_id id,
   {
     *ref_list = (struct list*) data;
   }
-  
+
   result = table_bp_remove(&container_ix_listeners, s, s_len, &data);
 
   if (result)
@@ -1695,14 +1729,14 @@ insert_notifications2(adlb_datum *d,
       read_decr.read_refcount = 0;
       referand_acquire.refcounts.read_refcount = 0;
     }
-    
+
     // Update refcounts if necessary
     dc = xlb_refc_incr(d, id, read_decr, referand_acquire,
                      garbage_collected, notifs);
     DATA_CHECK(dc);
   }
 
-  
+
   if (listener_list != NULL && listener_list->size > 0)
   {
     if (copy_sub && adlb_has_sub(subscript))
@@ -1875,12 +1909,12 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
    * It's possible that sub_buf is reallocated, in which case
    * we need to keep the subscript pointer pointed to it
    */
-  bool subscript_uses_buf = (subscript.key == sub_buf->data); 
+  bool subscript_uses_buf = (subscript.key == sub_buf->data);
   TABLE_BP_FOREACH(c->members, item)
   {
     adlb_subscript component = { .key = table_bp_get_key(item),
                                  .length = item->key_len };
-         
+
     // Ensure subscript valid in event of reallocation
     if (subscript_uses_buf)
     {
@@ -1948,8 +1982,8 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       // key from field index
       size_t max_key_len = 21;
       char key[max_key_len];
-      adlb_subscript child_sub; 
-     
+      adlb_subscript child_sub;
+
       if (adlb_has_sub(subscript))
       {
         // Append child subscript to buffer
@@ -1979,7 +2013,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
         child_sub.key = key;
         child_sub.length = 1 + (size_t)sprintf(key, "%i", i);
       }
-      
+
       adlb_data_type field_type = st->field_types[i].type;
       // Check for subscriptions on this subscript
       dc = all_notifs_step(d, id, child_sub, true, &field->data,
@@ -1991,7 +2025,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
         // We just processed the last pending notification: we're done!
         return ADLB_DATA_SUCCESS;
       }
-    
+
       dc = subscript_notifs_rec(d, id, &field->data, field_type,
                      sub_buf, sub_caller_buf, child_sub, notifs,
                      garbage_collected);
@@ -2011,7 +2045,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
  * Process reference list:
  * subscribers: list memory is freed
  */
-static 
+static
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
           const void *value, size_t value_len,
@@ -2056,7 +2090,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
     node = next;
   }
   references->count += nsubs;
-  
+
   // We freed list nodes, now free head
   free(subscribers);
 
@@ -2067,7 +2101,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
  * listeners: list items are freed, list root is freed
               if free_list_root is true
  */
-static 
+static
 adlb_data_code append_notifs(struct list_b *listeners,
   bool free_list_root, adlb_datum_id id, adlb_dsym dsym,
   adlb_subscript sub, adlb_notif_ranks *notify)
@@ -2086,7 +2120,7 @@ adlb_data_code append_notifs(struct list_b *listeners,
   for (int i = 0; i < nlisteners; i++)
   {
     assert(node != NULL); // If null, list size was wrong
-    
+
     xlb_listener *listener = (xlb_listener*)node->data;
     assert(node->data_len == sizeof(*listener));
 
@@ -2118,31 +2152,38 @@ adlb_data_code append_notifs(struct list_b *listeners,
 }
 
 adlb_data_code
-xlb_data_insert_atomic(adlb_datum_id container_id, adlb_subscript subscript,
-                   bool* created, bool *value_present)
+xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                   bool *created, bool *value_present)
 {
-  adlb_datum* d;
-  adlb_data_code dc = xlb_datum_lookup(container_id, &d);
+  adlb_datum *d;
+  adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
 
-  check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
-                ADLB_DATA_ERROR_TYPE, "not a container: "ADLB_PRID,
-                ADLB_PRID_ARGS(container_id, d->symbol));
-
-  // Does the link already exist?
-  adlb_container_val val;
-  bool key_exists = container_lookup(&d->data.CONTAINER, subscript, &val);
-  if (key_exists)
+  // Attempt to reserve
+  dc = data_store_subscript(id, d, subscript,
+          NULL, -1, ADLB_DATA_TYPE_NULL, ADLB_NO_REFC, NULL, NULL);
+  if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
   {
+    // Return data if present
+    bool sub_exists;
+    const adlb_datum_storage *val;
+    adlb_data_type type;
+    dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
+                    &sub_exists, &val, &type);
+    DATA_CHECK(dc);
+
+    assert(sub_exists);
+
     *created = false;
     *value_present = (val != NULL);
-    return ADLB_DATA_SUCCESS;
   }
+  else
+  {
+    DATA_CHECK(dc); // Check for other errors
 
-  // Use NULL pointer value to represent unlinked
-  container_add(&d->data.CONTAINER, subscript, NULL);
-  *created = true;
-  *value_present = false;
+    *created = true;
+    *value_present = false;
+  }
   return ADLB_DATA_SUCCESS;
 }
 
@@ -2236,7 +2277,7 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     adlb_dsym src_symbol, dst_symbol;
     xlb_read_id_sub(key, key_len, &src_id, &src_sub);
     src_symbol = xlb_get_dsym(src_id);
-    
+
     container_reference *dst = curr->data;
     dst_sub.length = dst->subscript_len;
     dst_sub.key = dst->subscript_data;
@@ -2265,7 +2306,7 @@ static void free_ix_l_entry(const void *key, size_t key_len, void *val)
     adlb_dsym src_symbol;
     xlb_read_id_sub(key, key_len, &src_id, &src_sub);
     src_symbol = xlb_get_dsym(src_id);
-    
+
     xlb_listener *listener = (xlb_listener*)curr->data;
 
     // TODO: pass waiting tasks to higher-level handling code
@@ -2297,7 +2338,7 @@ xlb_data_finalize()
   table_bp_free_callback(&container_ix_listeners, false, free_ix_l_entry);
 
   table_lp_free_callback(&locked, false, free_locked_entry);
-  
+
   // Finally free up memory allocated in this module
   table_lp_free_callback(&tds, false, free_td_entry);
 

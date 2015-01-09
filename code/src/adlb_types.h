@@ -117,7 +117,11 @@ typedef struct {
 
 typedef struct {
   adlb_datum_storage data;
-  bool initialized;
+  /* If initialized, valid data is stored in field */
+  bool initialized : 1;
+  /* Flag that indicates something has reserved this field.
+     Typically remains false but used for special purposes. */
+  bool reserved : 1;
 } adlb_struct_field;
 
 typedef struct adlb_struct_s {

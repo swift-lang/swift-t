@@ -271,6 +271,7 @@ adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s)
   for (int i = 0; i < t->field_count; i++)
   {
     tmp->fields[i].initialized = false;
+    tmp->fields[i].reserved = false;
   }
   *s = tmp;
 
