@@ -38,7 +38,7 @@ public class TurbineTypes {
    * @param createArgs
    * @return
    */
-  public static List<TypeName> dataDeclarationFullType(Type type) {
+  public static List<TypeName> dataDeclFullType(Type type) {
     List<TypeName> typeExprList = new ArrayList<TypeName>();
     // Basic data type
     typeExprList.add(reprType(type));
