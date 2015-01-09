@@ -233,7 +233,8 @@ namespace eval turbine {
         }
         struct {
           set struct_type [ lindex $types [ expr {$types_pos + 1} ] ]
-          build_struct_rec $id $cval $struct_type $write_decr
+          set field_types [ lindex $types [ expr {$types_pos + 2} ] ]
+          build_struct_rec $id $cval $struct_type $field_types $write_decr
         }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {
@@ -246,12 +247,14 @@ namespace eval turbine {
       }
     }
 
-    proc build_struct_rec { id val field_types {write_decr 1} } {
+    # Build a struct recursively with inner references
+    # val: Tcl data structure with data
+    # struct_type: specific struct type
+    # field_types: dict mapping field name to field type info
+    proc build_struct_rec { id val struct_type field_types {write_decr 1} } {
       set store_val [ build_struct_val_rec $val $field_types ]
 
-      puts "store_val $store_val"
-      # TODO: need specific struct type name
-      adlb::store $id struct $store_val $write_decr
+      adlb::store $id $struct_type $store_val $write_decr
     }
 
     proc build_struct_val_rec { val field_types } {
