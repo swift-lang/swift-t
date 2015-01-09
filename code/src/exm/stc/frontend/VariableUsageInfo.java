@@ -443,7 +443,7 @@ public class VariableUsageInfo {
       }
     }
 
-    public Ternary ispartAssigned() {
+    public Ternary isPartAssigned() {
       return partAssigned;
     }
 
@@ -608,7 +608,6 @@ public class VariableUsageInfo {
       fieldPath.remove(0);
 
       errs.addAll(fieldVInfo.assign(context, fieldPath, arrayDepth, op));
-      mergeStructFieldWriteInfo(context);
 
       return errs;
     }
@@ -841,14 +840,16 @@ public class VariableUsageInfo {
         }
 
         for (VInfo vi: structFields.values()) {
-          if (vi.isAssigned() != Ternary.TRUE) {
-            if (vi.isAssigned() == Ternary.FALSE &&
+          Ternary somehowAssigned = Ternary.or(vi.isAssigned(),
+                                            vi.isPartAssigned());
+          if (somehowAssigned != Ternary.TRUE) {
+            if (somehowAssigned == Ternary.FALSE &&
                   vi.isRead() == Ternary.TRUE) {
               // certain deadlock
               result.add(new Violation(ViolationType.ERROR,
                   "Deadlock detected: " + vi.getName() + " is "
                  + "never assigned but is read", context));
-            } else if (assigned != Ternary.FALSE) {
+            } else if (somehowAssigned != Ternary.FALSE ) {
               // If we might write somebut not all
               result.add(new Violation(ViolationType.WARNING,
                   vi.getName() + " is not guaranteed to be written to"
@@ -864,23 +865,6 @@ public class VariableUsageInfo {
       } else {
         return null;
       }
-    }
-
-    private void mergeStructFieldWriteInfo(Context context) {
-      assert(structFields != null);
-      // TODO: maybe useful for some cases. Currently doesn't work for array fields
-      /*
-      Ternary allFieldsAssigned = Ternary.TRUE;
-      for (VInfo vi: structFields.values()) {
-        allFieldsAssigned = Ternary.and(allFieldsAssigned, vi.assigned);
-      }
-      if (allFieldsAssigned == Ternary.TRUE) {
-        this.assigned = Ternary.TRUE;
-      } else if (allFieldsAssigned == Ternary.MAYBE &&
-          this.assigned == Ternary.FALSE) {
-        this.assigned = Ternary.MAYBE;
-      }
-      */
     }
 
     public Type getType() {
