@@ -41,7 +41,7 @@ proc rules { } {
     # Setup r1 and r2
     turbine::allocate r1 ref
     turbine::allocate r3 ref
-    turbine::c_f_create $r1 $A $i integer ref
+    turbine::c_f_create $r1 $A $i { container integer ref }
     turbine::cr_f_insert $r1 $j $t1 ref
     turbine::cr_f_lookup $r1 $j $r3 ref
 

@@ -609,15 +609,23 @@ and a proposed shorthand notation *(PSN)*.
 
 *c_v_create (CVC)*
 +
-Creates subcontainer when index is a value.
+Creates subdatum when index is a value.
 +
 Swift/T example: +(A[i])[j] = f();+
+
++struct_create_nested struct subscript type+::
+
+*struct_create (SC)*
++
+Creates subdatum in struct.
++
+Swift/T example: +s.f[i] = f();+
 
 +f_container_create_nested container subscript type+::
 
 *c_f_create (CFC)*
 +
-Creates subcontainer when index is a future.
+Creates subdatum when index is a future.
 +
 Swift/T example: +(A[i])[j] = f();+
 

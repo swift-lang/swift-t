@@ -595,74 +595,73 @@ namespace eval turbine {
     }
 
     # CVC
-    # Create container c[i] inside of container c
+    # Create datum c[i] inside of container c
     # c[i] may already exist, if so, that's fine
-    proc c_v_create { c i key_type val_type {caller_read_ref 0} \
+    proc c_v_create { c i full_type {caller_read_ref 0} \
                 {caller_write_ref 0} {decr_write 0} {decr_read 0}} {
-      return [ create_nested_container $c $i $key_type $val_type \
+      return [ create_nested $c $i {*}$full_type \
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
-
-    # CVCB
-    # Create bag c[i] inside of container c
-    # c[i] may already exist, if so, that's fine
-    proc c_v_create_bag { c i val_type {caller_read_ref 0} \
+    
+    # SC
+    # Create datum s.f inside of struct s
+    # s.f may already exist, if so, that's fine
+    proc struct_create { s f full_type {caller_read_ref 0} \
                 {caller_write_ref 0} {decr_write 0} {decr_read 0}} {
-      return [ create_nested_bag $c $i $val_type \
+      return [ struct_create_nested $s $f {*}$full_type \
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
-
 
     # CFC
-    # puts a reference to a nested container at c[i]
+    # puts a reference to a nested datum at c[i]
     # into reference variable r.
     # i: an integer future
-    proc c_f_create { r c i key_type val_type {decr_write 1} {decr_read 0}} {
-        rule $i "c_f_create_body $r $c $i $key_type $val_type $decr_write $decr_read" \
+    proc c_f_create { r c i full_type {decr_write 1} {decr_read 0}} {
+        rule $i "c_f_create_body $r $c $i {$full_type} $decr_write $decr_read" \
             name "CFC-$r"
     }
 
     # Create container at c[i]
     # Set r, a reference TD on c[i]
-    proc c_f_create_body { r c i key_type val_type decr_write decr_read } {
+    proc c_f_create_body { r c i full_type decr_write decr_read } {
 
-        debug "c_f_create: $r $c\[$i\] $key_type $val_type"
+        debug "c_f_create: $r $c\[$i\] $full_type"
 
         set s [ retrieve_decr $i ]
         # Acquire 1 read & 1 write refcount for container
-        set res [ create_nested_container $c $s $key_type $val_type 1 1 $decr_write $decr_read ]
+        set res [ create_nested $c $s {*}$full_type 1 1 $decr_write $decr_read ]
         store_rw_ref $r $res
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    proc cr_v_create { r cr i key_type val_type } {
+    proc cr_v_create { r cr i full_type } {
         rule "$cr" \
-          "cr_v_create_body $r $cr $i $key_type $val_type" \
+          "cr_v_create_body $r $cr $i {$full_type}" \
            name crvc
     }
 
-    proc cr_v_create_body { r cr i key_type val_type } {
+    proc cr_v_create_body { r cr i full_type } {
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # Transfer 1 read & write refcount to ref
-        set res [ create_nested_container $c $i $key_type $val_type 1 1 1 1 ]
+        set res [ create_nested $c $i {*}$full_type 1 1 1 1 ]
         store_rw_ref $r $res
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    proc cr_f_create { r cr i key_type val_type} {
-        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type" \
+    proc cr_f_create { r cr i full_type } {
+        rule "$cr $i" "cr_f_create_body $r $cr $i {$full_type}" \
            name crfc
     }
 
-    proc cr_f_create_body { r cr i key_type val_type } {
+    proc cr_f_create_body { r cr i full_type } {
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $i ]
         # Transfer 1 read & write refcount to ref
-        set res [ create_nested_container $c $s $key_type $val_type 1 1 1 1 ]
+        set res [ create_nested $c $s {*}$full_type 1 1 1 1 ]
         store_rw_ref $r $res
     }
 
