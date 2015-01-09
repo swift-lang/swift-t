@@ -335,7 +335,7 @@ xlb_xpt_write(const void *key, size_t key_len,
   size_t key_len_encb;
 
   // encode key_len using variable-length int format
-  key_len_encb = vint_encode_size_t(key_len, key_len_enc);
+  key_len_encb = (size_t) vint_encode((int64_t) key_len, key_len_enc);
 
   // Record length w/o CRC or record length
   size_t rec_len = key_len_encb + key_len + val_len;
@@ -362,7 +362,7 @@ write_entry(xlb_xpt_state *state, size_t rec_len,
   // Length in bytes of encoded vint
   uInt rec_len_encb;
 
-  rec_len_encb = (uInt) vint_encode_size_t(rec_len, rec_len_enc);
+  rec_len_encb = (uInt) vint_encode((int64_t) rec_len, rec_len_enc);
 
   bool empty_record = (rec_len == 0);
 
