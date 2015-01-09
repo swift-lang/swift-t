@@ -347,6 +347,7 @@ public class VariableUsageInfo {
     private final boolean declaredInCurrentScope;
     private final String name;
     private Ternary assigned;
+    private Ternary partAssigned; /** If array is only partially assigned */
     private Ternary appended;
     private Ternary read;
     /**
@@ -356,7 +357,7 @@ public class VariableUsageInfo {
 
     public VInfo(Type type, boolean mapped, String name, boolean locallyDeclared) {
       this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-           Ternary.FALSE, -1);
+          Ternary.FALSE, Ternary.FALSE, -1);
     }
 
     public boolean hasMapping() {
@@ -365,7 +366,8 @@ public class VariableUsageInfo {
 
     private VInfo(Type type, boolean hasMapping, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
-        Ternary assigned, Ternary appended, Ternary read,
+        Ternary assigned, Ternary partAssigned,
+        Ternary appended, Ternary read,
         int maxReadDepth) {
       this.type = type;
       this.hasMapping = hasMapping;
@@ -373,6 +375,7 @@ public class VariableUsageInfo {
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
       this.assigned = assigned;
+      this.partAssigned = partAssigned;
       this.appended = appended;
       this.read = read;
       this.maxReadDepth = maxReadDepth;
@@ -380,7 +383,7 @@ public class VariableUsageInfo {
     }
 
     private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
-        Ternary assigned, Ternary read, Ternary appended,
+        Ternary assigned, Ternary partAssigned, Ternary read, Ternary appended,
          int maxReadDepth) {
       this.type = type;
       this.hasMapping = mapped;
@@ -396,6 +399,7 @@ public class VariableUsageInfo {
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
       this.assigned = assigned;
+      this.partAssigned = partAssigned;
       this.appended = appended;
       this.read = read;
       this.maxReadDepth = maxReadDepth;
@@ -439,6 +443,10 @@ public class VariableUsageInfo {
       }
     }
 
+    public Ternary ispartAssigned() {
+      return partAssigned;
+    }
+
     public Ternary isAppended() {
       return appended;
     }
@@ -471,7 +479,7 @@ public class VariableUsageInfo {
 
       return new VInfo(type, hasMapping, structFieldsNew,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-          Ternary.FALSE, -1);
+          Ternary.FALSE, Ternary.FALSE, -1);
     }
 
 
@@ -518,7 +526,7 @@ public class VariableUsageInfo {
 
     private List<Violation> plainAssign(Context context, AssignOp op) {
 
-      if (assigned == Ternary.TRUE ||
+      if (assigned == Ternary.TRUE || partAssigned == Ternary.TRUE ||
           (op == AssignOp.ASSIGN && appended == Ternary.TRUE)) {
         // There will definitely be a double assignment
         return Arrays.asList(new Violation(
@@ -529,7 +537,7 @@ public class VariableUsageInfo {
 
       // Let assignment proceed
       ArrayList<Violation> res = new ArrayList<Violation>();
-      if (assigned == Ternary.MAYBE ||
+      if (assigned == Ternary.MAYBE || partAssigned == Ternary.MAYBE ||
           (op == AssignOp.ASSIGN && appended == Ternary.MAYBE)) {
         res.add(new Violation(ViolationType.WARNING,
             "Possible double write of " + "variable " + name, context));
@@ -552,8 +560,18 @@ public class VariableUsageInfo {
 
 
     private List<Violation> arrayAssign(Context context, int arrayDepth, AssignOp op) {
-      // Assigning to an index of the array
-      this.assigned = Ternary.TRUE;
+      assert(arrayDepth > 0);
+      partAssigned = Ternary.TRUE;
+
+      if (assigned == Ternary.TRUE) {
+        return Arrays.asList(new Violation(ViolationType.ERROR,
+            "Assigning to variable " + this.name +
+            " which was already assigned in full", context));
+      } else if (assigned == Ternary.MAYBE) {
+        return Arrays.asList(new Violation(ViolationType.WARNING,
+            "Maybe assigning to variable " + this.name +
+            " which was already assigned in full", context));
+      }
       return Collections.emptyList();
     }
 
@@ -739,17 +757,20 @@ public class VariableUsageInfo {
        * path
        */
       Ternary assignedInBranch;
+      Ternary partAssignedInBranch;
       Ternary appendedInBranch;
 
       if (exhaustive) {
         VInfo firstBranch = branches.get(0);
         assignedInBranch = firstBranch.assigned;
         appendedInBranch = firstBranch.appended;
+        partAssignedInBranch = firstBranch.partAssigned;
       } else {
         /* Shouldn't be assigned on any branch, because if we don't enter any branch,
          * no assignment occurs*/
         assignedInBranch = Ternary.FALSE;
         appendedInBranch = Ternary.FALSE;
+        partAssignedInBranch = Ternary.FALSE;
       }
 
       for (int i = 0; i < branches.size(); i++) {
@@ -760,10 +781,13 @@ public class VariableUsageInfo {
                                               currBr.assigned);
         appendedInBranch = Ternary.consensus(appendedInBranch,
                                               currBr.appended);
+        partAssignedInBranch = Ternary.consensus(partAssignedInBranch,
+                                              currBr.partAssigned);
       }
 
 
       this.appended = Ternary.or(appended, appendedInBranch);
+      this.partAssigned = Ternary.or(appended, partAssigned);
 
       // First handle the clear situations
       if (assignedInBranch == Ternary.FALSE) {
@@ -773,12 +797,7 @@ public class VariableUsageInfo {
         // was only touched in branches
         this.assigned = assignedInBranch;
         return result;
-      } else if (Types.isArray(this.type)) {
-        // Arrays can be assigned multiple times, the depth just has to match
-        this.assigned = Ternary.or(assigned, assignedInBranch);
-        return result;
       } else {
-        // Non-array type
         if (Ternary.and(assignedInBranch, this.assigned) ==
                                                           Ternary.TRUE) {
           result.add(new Violation(ViolationType.ERROR, "Variable " + name
