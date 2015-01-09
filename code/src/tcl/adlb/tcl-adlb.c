@@ -537,6 +537,30 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/**
+   usage: adlb::is_struct_type <type name>
+    Returns 1 if type name is a valid ADLB struct type or
+           0 if another valid ADLB type
+    Raises error if type name is invalid.
+ */
+static int
+ADLB_Is_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
+              int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int rc;
+  
+  adlb_data_type type;
+  adlb_type_extra extra;
+  rc = adlb_type_from_obj_extra(interp, objv, objv[1], &type, &extra);
+  TCL_CHECK(rc);
+
+  int result = (type == ADLB_DATA_TYPE_STRUCT) ? 1 : 0;
+
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+  return TCL_OK;
+}
+
 static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[])
 {
   field_name_objs.size = 64;
@@ -5426,6 +5450,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("init_comm", ADLB_Init_Comm_Cmd);
   COMMAND("init",      ADLB_Init_Cmd);
   COMMAND("declare_struct_type", ADLB_Declare_Struct_Type_Cmd);
+  COMMAND("is_struct_type", ADLB_Is_Struct_Type_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_CommRank_Cmd);
   COMMAND("size",      ADLB_CommSize_Cmd);
