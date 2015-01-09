@@ -231,17 +231,16 @@ namespace eval turbine {
         file {
           store_file $id cval
         }
-        struct {
-          set struct_type [ lindex $types [ expr {$types_pos + 1} ] ]
-          set field_types [ lindex $types [ expr {$types_pos + 2} ] ]
-          build_struct_rec $id $cval $struct_type $field_types $write_decr
-        }
         default {
-          if [ expr {$types_pos + 1 == [ llength $types ]} ] {
+          if { [ adlb::is_struct_type $outer_type ] && \
+               [ llength $types ] > [ expr {$types_pos + 1} ] } {
+            set field_types [ lindex $types [ expr {$types_pos + 1} ] ]
+            build_struct_rec $id $cval $outer_type $field_types $write_decr
+          } elseif [ expr {$types_pos + 1 == [ llength $types ]} ] {
             # Don't need to recurse: just store
             adlb::store $id $outer_type $cval
           } else {
-            error "Expected container type to enumerate: $outer_type"
+            error "Expected type to recursively enumerate: $outer_type"
           }
         }
       }
@@ -278,14 +277,17 @@ namespace eval turbine {
             build_rec $val_id $val $field_type 1 1
             set store_field_val $val_id
           }
-          struct {
-            set field_struct_fields [ lindex $field_type 1 ]
-            set store_field_val [ build_struct_val_rec $field_val \
-                                              $field_struct_fields ]
-          }
           default {
-            # Store unmodified
-            set store_field_val $field_val
+            if { [ adlb::is_struct_type $field_outer_type ] && \
+                 [ llength $field_type ] > 1 } {
+              # Use additional type info to build struct recursively
+              set field_struct_fields [ lindex $field_type 1 ]
+              set store_field_val [ build_struct_val_rec $field_val \
+                                                $field_struct_fields ]
+            } else {
+              # Store unmodified
+              set store_field_val $field_val
+            }
           }
         }
 
