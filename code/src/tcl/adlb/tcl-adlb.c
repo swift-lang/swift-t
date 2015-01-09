@@ -1768,7 +1768,7 @@ adlb_tclobj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
     {
       size_t packed_len = *output_pos - start_pos - VINT_MAX_BYTES;
       // Add int to spot we reserved
-      vint_encode(packed_len, output->data + start_pos);
+      vint_encode_size_t(packed_len, output->data + start_pos);
     }
   }
   else
@@ -2994,11 +2994,10 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
     if (include_keys)
     {
       int64_t key_len = 0;
-      // Amount just consumed
       int consumed = vint_decode(data + pos, length - pos, &key_len);
       TCL_CONDITION(consumed >= 0, "Corrupted message received: bad key "
                     "length for record %i/%i", i+1, records);
-      pos += consumed;
+      pos += (size_t)consumed;
       TCL_CONDITION(key_len <= length - pos, "Truncated/corrupted "
             "message received, key for record %i/%i extends beyond end "
             "of data", i + 1, records);
@@ -3013,8 +3012,9 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
       int64_t val_len = 0;
       int consumed = vint_decode(data + pos, length - pos, &val_len);
       TCL_CONDITION(consumed >= 0, "Corrupted message received: bad "
-                    "value length for record %i/%i", i + 1, records);
-      pos += consumed;
+            "value length for record %i/%i", i + 1, records);
+
+      pos += (size_t)consumed;
       TCL_CONDITION(val_len <= length - pos, "Truncated/corrupted "
             "message received, key for record %i/%i extends beyond end "
             "of data", i + 1, records);
