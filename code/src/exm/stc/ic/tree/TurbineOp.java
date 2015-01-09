@@ -137,8 +137,8 @@ public class TurbineOp extends Instruction {
       gen.assignBagRecursive(getOutput(0), getInput(0));
       break;
     case ARR_RETRIEVE:
-      gen.arrayRetrieve(getOutput(0), getInput(0).getVar(),
-                         getInput(1), getInput(2));
+      gen.arrayRetrieve(getOutput(0), getInput(0).getVar(), getInput(1),
+                        getInput(2), getInput(3));
       break;
     case ARR_CREATE_ALIAS:
       gen.arrayCreateAlias(getOutput(0), getInput(0).getVar(),
@@ -413,24 +413,30 @@ public class TurbineOp extends Instruction {
     }
   }
 
+  public static Instruction arrayRetrieve(Var dst, Var arrayVar, Arg arrIx) {
+    long decrRead = 0;
+    long acquireRead = RefCounting.trackReadRefCount(dst) ? 1 : 0;
+    return arrayRetrieve(dst, arrayVar, arrIx, decrRead, acquireRead);
+  }
+
   /**
    * Look up value of array index immediately
    * @param dst
    * @param arrayVar
    * @param arrIx
    * @param decrRead
+   * @param acquireRead
    * @return
    */
   public static Instruction arrayRetrieve(Var dst, Var arrayVar,
-                                          Arg arrIx, Arg decrRead) {
+                                          Arg arrIx, long decrRead, long acquireRead) {
     assert(dst.storage() == Alloc.LOCAL || dst.storage() == Alloc.ALIAS);
     assert(Types.isArray(arrayVar));
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemValType(arrayVar, dst));
-    assert(decrRead.isImmediateInt());
 
-    return new TurbineOp(Opcode.ARR_RETRIEVE,
-        dst, arrayVar.asArg(), arrIx, decrRead);
+    return new TurbineOp(Opcode.ARR_RETRIEVE, dst, arrayVar.asArg(), arrIx,
+        Arg.createIntLit(decrRead), Arg.createIntLit(acquireRead));
   }
 
   /**
@@ -2160,7 +2166,7 @@ public class TurbineOp extends Instruction {
       // Output switched from ref to value
       Var origOut = getOutput(0);
       Var valOut = creator.createDerefTmp(origOut);
-      Instruction newI = arrayRetrieve(valOut, arr, getInput(1), Arg.ZERO);
+      Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
       return new MakeImmChange(valOut, origOut, newI);
     }
     case ARR_COPY_OUT_FUTURE: {
@@ -3613,13 +3619,14 @@ public class TurbineOp extends Instruction {
       }
       case STRUCT_RETRIEVE_SUB: {
         // Gives back a read refcount to the result if relevant
-        // TODO: change to optionally get back write increment?
         return Pair.create(VarCount.one(getOutput(0)).asList(),
                            VarCount.NONE);
       }
       case ARR_RETRIEVE: {
         // Gives back a refcount to the result if relevant
-        return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
+        long acquireRead = getInput(3).getIntLit();
+        return Pair.create(new VarCount(getOutput(0), acquireRead).asList(),
+                           VarCount.NONE);
       }
       case ARR_CREATE_NESTED_IMM: {
         long readIncr = getInput(1).getIntLit();
@@ -3700,8 +3707,18 @@ public class TurbineOp extends Instruction {
       }
       case ARR_RETRIEVE: {
         Var arr = getInput(0).getVar();
-        assert(getInputs().size() == 3);
-        return piggyBackDecrHelper(increments, type, arr, 2, -1);
+        assert(getInputs().size() == 4);
+        VarCount success = piggyBackDecrHelper(increments, type, arr, 2, -1);
+        if (success != null) {
+          return success;
+        }
+
+        success = piggybackCancelIncr(increments, getOutput(0), type,
+                                      3, -1);
+        if (success != null) {
+          return success;
+        }
+        break;
       }
       case ARR_CREATE_NESTED_IMM:
       case STRUCT_CREATE_NESTED: {

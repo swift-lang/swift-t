@@ -1091,9 +1091,9 @@ class Turbine {
    * Lookup arrayVar[arrayIndex] right away, regardless of whether it is closed
    */
   public static SetVariable arrayLookupImm(String dst, Value arrayVar,
-          Expression arrayIndex, Expression readDecr) {
+          Expression arrayIndex, Expression readDecr, Expression readAcquire) {
     return new SetVariable(dst,
-          new Square(C_LOOKUP, arrayVar, arrayIndex, readDecr));
+          new Square(C_LOOKUP, arrayVar, arrayIndex, readDecr, readAcquire));
   }
 
   /**
