@@ -107,7 +107,7 @@ class Turbine {
   private static final Token BUILD_REC = turbFn("build_rec");
 
   // Container nested creation
-  private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
+  private static final Token C_V_CREATE_NESTED = turbFn("create_nested_container");
   private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
   private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
