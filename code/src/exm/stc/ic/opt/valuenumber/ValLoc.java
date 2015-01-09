@@ -228,6 +228,20 @@ public class ValLoc {
                           val, Closed.MAYBE_NOT, assign);
   }
 
+  public static ValLoc makeStructCreateNestedResult(Var contents, Var struct,
+      List<Arg> fields) {
+    assert(Types.isStruct(struct));
+    Arg contentsArg = contents == null ? null : Arg.createVar(contents);
+    ArgCV val;
+    assert(contents == null ||
+           Types.isStructFieldVal(struct, Arg.extractStrings(fields), contents)) :
+           "not right type for field " + fields + " of " + struct.type() +
+           ": " + contents;
+    val = ComputedValue.structNestedCV(struct, fields);
+
+    return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
+  }
+
   public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean async,
                                 IsAssign isAssign) {
     ArgCV cv = ComputedValue.containerSizeCV(arr, async);

@@ -33,6 +33,7 @@ import exm.stc.ic.tree.TurbineOp;
 
 /**
  * TODO: combine with array build?
+ * TODO: store array references if assigned in whole?
  */
 public class StructBuild extends FunctionOptimizerPass {
 

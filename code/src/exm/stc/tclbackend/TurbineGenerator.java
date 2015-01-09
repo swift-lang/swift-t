@@ -973,34 +973,6 @@ public class TurbineGenerator implements CompilerBackend {
             argToExpr(decr)));
   }
 
-  @Override
-  public void structInitFields(Var struct, List<List<String>> fieldPaths,
-      List<Arg> fieldVals, Arg writeDecr) {
-    /*
-     * Implement by storing a local struct with missing fields.
-     * ADLB/Turbine semantics allow us to do this: only the required
-     * fields will be overwritten.
-     */
-    // TODO: assertions
-    assert(Types.isStruct(struct));
-    assert(fieldPaths.size() == fieldVals.size());
-    assert(writeDecr.isImmediateInt());
-
-
-    Dict dict = localStructDict(struct, fieldPaths, fieldVals);
-
-    List<TypeName> structTypeName = Collections.singletonList(
-                          TurbineTypes.reprType(struct.type()));
-
-    // Struct should own both refcount types
-    Expression storeReadRC = LiteralInt.ONE;
-    Expression storeWriteRC = LiteralInt.ONE;
-
-    pointAdd(Turbine.adlbStore(varToExpr(struct),
-            dict, structTypeName, argToExpr(writeDecr),
-            LiteralInt.ZERO, storeReadRC, storeWriteRC));
-  }
-
   private Dict localStructDict(Var struct, List<List<String>> fieldPaths,
       List<Arg> fieldVals) {
     // Restructure into pairs
@@ -1037,10 +1009,9 @@ public class TurbineGenerator implements CompilerBackend {
     /*
      * Must decrement any refcounts not explicitly tracked since we're
      * assigning the struct in whole.
-     * Don't include refcounts for initialized struct fields, e.g. array ones
      */
     long writeDecr = RefCounting.baseStructWriteRefCount(target.type(),
-                          target.defType(), false, true, false);
+                          target.defType(), false, true);
 
     TypeName structType = TurbineTypes.reprType(target.type());
     pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
@@ -1273,42 +1244,40 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayCreateNestedFuture(Var arrayResult,
+  public void arrayCreateNestedFuture(Var result,
       Var array, Var ix) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayRef(arrayResult.type()));
+    assert(Types.isArray(array));
+    assert(Types.isNonLocalRef(result, true));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(arrayResult.storage() != Alloc.ALIAS);
+    assert(result.storage() != Alloc.ALIAS);
     TclTree t = Turbine.containerCreateNested(
-        varToExpr(arrayResult), varToExpr(array),
-        varToExpr(ix), TurbineTypes.arrayKeyType(arrayResult, true),
-        TurbineTypes.arrayValueType(arrayResult, true));
+        varToExpr(result), varToExpr(array),
+        varToExpr(ix), TurbineTypes.dataDeclarationFullType(result.type()));
     pointAdd(t);
   }
 
   @Override
-  public void arrayRefCreateNestedFuture(Var arrayResult, Var arrayRefVar,
+  public void arrayRefCreateNestedFuture(Var result, Var arrayRefVar,
                                          Var ix) {
-    assert(Types.isArrayRef(arrayRefVar.type()));
-    assert(Types.isArrayRef(arrayResult.type()));
-    assert(arrayResult.storage() != Alloc.ALIAS);
+    assert(Types.isArrayRef(arrayRefVar));
+    assert(Types.isNonLocalRef(result, true));
+    assert(result.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
     TclTree t = Turbine.containerRefCreateNested(
-        varToExpr(arrayResult), varToExpr(arrayRefVar), varToExpr(ix),
-        TurbineTypes.arrayKeyType(arrayResult, true),
-        TurbineTypes.arrayValueType(arrayResult, true));
+        varToExpr(result), varToExpr(arrayRefVar), varToExpr(ix),
+        TurbineTypes.dataDeclarationFullType(result.type()));
     pointAdd(t);
   }
 
 
   @Override
-  public void arrayCreateNestedImm(Var arrayResult, Var array, Arg ix,
+  public void arrayCreateNestedImm(Var result, Var array, Arg ix,
         Arg callerReadRefs, Arg callerWriteRefs,
         Arg readDecr, Arg writeDecr) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArray(arrayResult.type()));
-    assert(arrayResult.storage() == Alloc.ALIAS);
+    assert(Types.isArray(array));
+    assert(Types.isNonLocal(result));
+    assert(result.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
@@ -1316,45 +1285,23 @@ public class TurbineGenerator implements CompilerBackend {
     assert(writeDecr.isImmediateInt());
 
     TclTree t = Turbine.containerCreateNestedImmIx(
-        prefixVar(arrayResult), varToExpr(array), argToExpr(ix),
-        TurbineTypes.arrayKeyType(arrayResult, true),
-        TurbineTypes.arrayValueType(arrayResult, true),
+        prefixVar(result), varToExpr(array), argToExpr(ix),
+        TurbineTypes.dataDeclarationFullType(result.type()),
         argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
         argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
   }
 
   @Override
-  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix) {
+  public void arrayRefCreateNestedImm(Var result, Var array, Arg ix) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArrayRef(arrayResult.type()));
-    assert(arrayResult.storage() != Alloc.ALIAS);
+    assert(Types.isNonLocalRef(result, true));
+    assert(result.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
-        varToExpr(arrayResult), varToExpr(array), argToExpr(ix),
-        TurbineTypes.arrayKeyType(arrayResult, true),
-        TurbineTypes.arrayValueType(arrayResult, true));
-    pointAdd(t);
-  }
-
-  @Override
-  public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-      Arg callerWriteRefs, Arg readDecr, Arg writeDecr) {
-    assert(Types.isBag(bag));
-    assert(bag.storage() == Alloc.ALIAS);
-    assert(Types.isArrayKeyVal(arr, ix));
-    assert(Types.isElemValType(arr, bag)) : arr + " " + bag;
-    assert(callerReadRefs.isImmediateInt());
-    assert(callerWriteRefs.isImmediateInt());
-    assert(readDecr.isImmediateInt());
-    assert(writeDecr.isImmediateInt());
-
-    TclTree t = Turbine.containerCreateNestedBag(
-            prefixVar(bag), varToExpr(arr), argToExpr(ix),
-            TurbineTypes.bagValueType(bag, true),
-            argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
-            argToExpr(readDecr), argToExpr(writeDecr));
+        varToExpr(result), varToExpr(array), argToExpr(ix),
+        TurbineTypes.dataDeclarationFullType(result.type()));
     pointAdd(t);
   }
 
@@ -1703,6 +1650,29 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(Turbine.copyStructRefSubscript(varToExpr(output),
         varToExpr(structRef), subscript, TurbineTypes.reprType(output.type()),
         writeDecr));
+  }
+
+  @Override
+  public void structCreateNested(Var result, Var struct,
+      List<String> fields, Arg callerReadRefs,
+      Arg callerWriteRefs, Arg readDecr, Arg writeDecr) {
+    assert(Types.isNonLocal(result));
+    assert(result.storage() == Alloc.ALIAS);
+
+    assert(Types.isStructFieldVal(struct, fields, result));
+    assert(callerReadRefs.isImmediateInt());
+    assert(callerWriteRefs.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
+
+    Expression subscript = structSubscript(struct, fields);
+
+    TclTree t = Turbine.structCreateNested(
+            prefixVar(result), varToExpr(struct), subscript,
+            TurbineTypes.dataDeclarationFullType(result.type()),
+            argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
+            argToExpr(readDecr), argToExpr(writeDecr));
+    pointAdd(t);
   }
 
   @Override

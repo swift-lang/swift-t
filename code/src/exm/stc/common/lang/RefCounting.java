@@ -201,7 +201,7 @@ public class RefCounting {
        RefCountType rcType, boolean includeTracked, boolean includeUntracked) {
     if (Types.isStruct(type) && rcType == RefCountType.WRITERS) {
       return baseStructWriteRefCount(type, defType, includeTracked,
-                                     includeUntracked, true);
+                                     includeUntracked);
     } else if (Types.isPrimValue(type) || Types.isContainerLocal(type) ||
                Types.isStructLocal(type)) {
       // No refcount
@@ -230,8 +230,7 @@ public class RefCounting {
   }
 
   public static long baseStructWriteRefCount(Type type, DefType defType,
-      boolean includeTracked, boolean includeUntracked,
-      boolean includeInitializedRefs) {
+      boolean includeTracked, boolean includeUntracked) {
     assert(Types.isStruct(type));
 
     // Sum of field refcounts
@@ -244,11 +243,6 @@ public class RefCounting {
                               RefCountType.WRITERS, false, true);
       if (Types.isMutableRef(field.getType())) {
         // Need to have tracked refcount as proxy
-
-        if (includeInitializedRefs) {
-          untrackedSum += fieldUntracked;
-        }
-
         Type referencedType = field.getType().getImplType().memberType();
         trackedSum += baseRefCount(referencedType, defType,
                               RefCountType.WRITERS, true, false);

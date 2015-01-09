@@ -542,28 +542,28 @@ public class STCMiddleEnd {
         TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));
   }
 
-  public void arrayCreateNestedFuture(Var arrayResult,
+  public void arrayCreateNestedFuture(Var result,
       Var array, Var ix) {
     currBlock().addInstruction(
-      TurbineOp.arrayCreateNestedFuture(arrayResult, array, ix));
+      TurbineOp.arrayCreateNestedFuture(result, array, ix));
   }
 
-  public void arrayCreateNestedImm(Var arrayResult,
+  public void arrayCreateNestedImm(Var result,
       Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
-      TurbineOp.arrayCreateNestedImm(arrayResult,
+      TurbineOp.arrayCreateNestedImm(result,
           arrayVar, arrIx));
   }
 
-  public void arrayRefCreateNestedImm(Var arrayResult,
+  public void arrayRefCreateNestedImm(Var result,
                                       Var array, Arg ix) {
     currBlock().addInstruction(
-      TurbineOp.arrayRefCreateNestedImmIx(arrayResult, array, ix));
+      TurbineOp.arrayRefCreateNestedImmIx(result, array, ix));
   }
 
-  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix) {
+  public void arrayRefCreateNestedFuture(Var result, Var array, Var ix) {
     currBlock().addInstruction(
-        TurbineOp.arrayRefCreateNestedComputed(arrayResult, array, ix));
+        TurbineOp.arrayRefCreateNestedComputed(result, array, ix));
   }
 
   public void asyncCopy(Var dst, Var src) {
@@ -576,10 +576,6 @@ public class STCMiddleEnd {
 
   public void bagInsert(Var bag, Arg elem) {
     currBlock().addInstruction(TurbineOp.bagInsert(bag, elem, Arg.ZERO));
-  }
-
-  public void arrayCreateBag(Var bag, Var arr, Arg key) {
-    currBlock().addInstruction(TurbineOp.arrayCreateBag(bag, arr, key));
   }
 
   public void assignRef(Var target, Var src, long readRefs, long writeRefs) {
@@ -776,12 +772,6 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
 
-  public void structInitFields(Var struct, List<List<String>> fieldNames,
-        List<Arg> fieldVals, Arg writeDecr) {
-    currBlock().addInstruction(
-        TurbineOp.structInitFields(struct, fieldNames, fieldVals, writeDecr));
-  }
-
   public void assignStruct(Var target, Arg src) {
     currBlock().addInstruction(TurbineOp.assignStruct(target, src));
   }
@@ -923,6 +913,11 @@ public class STCMiddleEnd {
                               Var fieldVar) {
     currBlock().addInstruction(TurbineOp.structRefCopyIn(struct,
                                           fieldPath, fieldVar));
+  }
+
+  public void structCreateNested(Var result, Var struct, List<String> fields) {
+    currBlock().addInstruction(
+      TurbineOp.structCreateNested(result, struct, fields));
   }
 
   public void addGlobal(Var var, Arg val) {

@@ -330,8 +330,8 @@ public class LValWalker {
 
     if (VarRepr.storeRefInStruct(fieldType)) {
       // Lookup ref stored in struct
-      backend.structRetrieveSub(VarRepr.backendVar(field),
-                  VarRepr.backendVar(rootVar), fieldPath);
+      backend.structCreateNested(VarRepr.backendVar(field),
+                   VarRepr.backendVar(rootVar), fieldPath);
     } else {
       // Create an alias to data stored in struct
       backend.structCreateAlias(VarRepr.backendVar(field),
@@ -458,7 +458,7 @@ public class LValWalker {
     assert (Types.isBag(bagType));
     Var bag = varCreator.createTmpAlias(context, bagType);
     // create or get nested bag instruction
-    backend.arrayCreateBag(VarRepr.backendVar(bag),
+    backend.arrayCreateNestedImm(VarRepr.backendVar(bag),
         VarRepr.backendVar(derefArr), VarRepr.backendArg(keyVal));
     backendBagAppend(context, bag, elem);
 

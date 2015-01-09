@@ -12,7 +12,7 @@ public enum Opcode {
   STORE_SCALAR, STORE_FILE, STORE_REF,
   LOAD_SCALAR, LOAD_FILE, LOAD_REF,
 
-  // Load and store container contents (TODO: recursively?)
+  // Load and store container contents
   STORE_ARRAY, STORE_BAG, STORE_STRUCT,
   LOAD_ARRAY, LOAD_BAG, LOAD_STRUCT,
   STORE_ARRAY_RECURSIVE, LOAD_ARRAY_RECURSIVE,
@@ -74,19 +74,15 @@ public enum Opcode {
   ARR_COPY_IN_IMM, ARR_COPY_IN_FUTURE,
   AREF_COPY_IN_IMM, AREF_COPY_IN_FUTURE,
 
-  // Create nested arrays
+  // Create nested datums in arrays
   ARR_CREATE_NESTED_FUTURE, AREF_CREATE_NESTED_FUTURE,
   ARR_CREATE_NESTED_IMM, AREF_CREATE_NESTED_IMM,
 
   // Insert into bag
   BAG_INSERT,
-  // Create new bag inside array
-  ARR_CREATE_BAG,
 
   // Create local struct
   STRUCT_LOCAL_BUILD,
-  // Initialize struct fields
-  STRUCT_INIT_FIELDS,
   // Create alias of struct field
   STRUCT_CREATE_ALIAS,
   // Retrieve field from struct
@@ -97,6 +93,8 @@ public enum Opcode {
   STRUCTREF_COPY_OUT,
   // Assign or copy to struct
   STRUCT_STORE_SUB, STRUCTREF_STORE_SUB, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
+  // Create nested datums in structs
+  STRUCT_CREATE_NESTED,
 
   // Manipulate filenames
   GET_FILENAME_ALIAS, // Create String alias to filename
