@@ -4164,7 +4164,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
-  log_printf("creating nested %s <%"PRId64">[%.*s] (%s->%s)",
+  log_printf("creating nested %s <%"PRId64">[%.*s]",
     ADLB_Data_type_tostring(type),
     handle.id, (int)handle.sub.val.length, handle.sub.val.key);
 
@@ -4303,11 +4303,27 @@ cleanup:
 }
 
 /*
+  adlb::create_nested <id> <subscript> <type> [<extra for type> ]
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested datum at subscript of id.
+   id: id of a container to create nested datum in
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                      ADLB_DATA_TYPE_NULL, ADLB_SUB_CONTAINER);
+}
+
+/*
   adlb::create_nested_container <id> <subscript> <key_type> <val_type>
               [<caller read refs>] [<caller write refs>]
               [<outer write decrements>] [<outer read decrements>]
    Create a nested container at subscript of id.
-   id: id of a subscriptable type that supports nested datum creation
+   id: id of a container to create nested datum in
    caller * refs: how many reference counts to give back to caller
  */
 static int
@@ -4323,7 +4339,7 @@ ADLB_Create_Nested_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
               [<caller read refs>] [<caller write refs>]
               [<outer write decrements>] [<outer read decrements>]
    Create a nested bag at subscript of id.
-   id: id of a subscriptable type that supports nested datum creation
+   id: id of a container to create nested datum in
    caller * refs: how many reference counts to give back to caller
  */
 static int
@@ -4332,6 +4348,54 @@ ADLB_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
                       ADLB_DATA_TYPE_MULTISET, ADLB_SUB_CONTAINER);
+}
+
+/*
+  adlb::struct_create_nested <id> <subscript> <type> [<extra for type> ]
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested datum at subscript of id.
+   id: id of a struct to create nested datum in
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Struct_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                      ADLB_DATA_TYPE_NULL, ADLB_SUB_STRUCT);
+}
+
+/*
+  adlb::struct_create_nested_container <id> <subscript> <key_type> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested container at subscript of id.
+   id: id of a struct to create nested datum in
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Struct_Create_Nested_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                      ADLB_DATA_TYPE_CONTAINER, ADLB_SUB_STRUCT);
+}
+
+/*
+  adlb::struct_create_nested_bag <id> <subscript> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested bag at subscript of id.
+   id: id of a struct to create nested datum in
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Struct_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                      ADLB_DATA_TYPE_MULTISET, ADLB_SUB_STRUCT);
 }
 
 // container_reference, supporting different subscript formats
@@ -5758,8 +5822,13 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
   COMMAND("struct_reference", ADLB_Struct_Reference_Cmd);
+  COMMAND("create_nested", ADLB_Create_Nested_Cmd);
   COMMAND("create_nested_container", ADLB_Create_Nested_Container_Cmd);
   COMMAND("create_nested_bag", ADLB_Create_Nested_Bag_Cmd);
+  COMMAND("struct_create_nested", ADLB_Struct_Create_Nested_Cmd);
+  COMMAND("struct_create_nested_container",
+                        ADLB_Struct_Create_Nested_Container_Cmd);
+  COMMAND("struct_create_nested_bag", ADLB_Struct_Create_Nested_Bag_Cmd);
   COMMAND("xpt_init", ADLB_Xpt_Init_Cmd);
   COMMAND("xpt_finalize", ADLB_Xpt_Finalize_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);

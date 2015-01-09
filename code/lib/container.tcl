@@ -24,8 +24,8 @@ namespace eval turbine {
     namespace export c_f_lookup deeprule
     namespace export swift_array_build
 
-    namespace import ::adlb::create_nested_container \
-                     ::adlb::create_nested_bag
+    namespace import ::adlb::create_nested* \
+                     ::adlb::struct_create_nested*
 
     # build integer keyed array by inserting items into a container
     # starting at 0
