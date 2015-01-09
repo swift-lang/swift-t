@@ -1,4 +1,3 @@
-// SKIP-THIS-TEST
 // Check returning structs with nested arrays
 type person {
   string name;

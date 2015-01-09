@@ -1,8 +1,6 @@
 
 import assert;
-// will need to support whole-array copying
-
-// SKIP-O0-TEST  Issue #644
+// Regression test - could not do copy of struct of arrays 
 
 (int r) id (int x) {
     r = x;
