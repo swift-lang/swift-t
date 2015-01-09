@@ -1759,9 +1759,10 @@ class Turbine {
   }
 
   public static Command buildRec(List<Expression> typeList, Value target,
-          Expression src) {
+          Expression src, long writeDecr) {
+    Expression typeListStartIx = LiteralInt.ZERO;
     return new Command(BUILD_REC, Arrays.asList(target, src, new TclList(
-            typeList)));
+                  typeList), typeListStartIx, new LiteralInt(writeDecr)));
   }
 
   public static Command batchDeclare(List<String> batchedVarNames,

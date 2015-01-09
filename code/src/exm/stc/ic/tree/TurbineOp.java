@@ -3421,8 +3421,9 @@ public class TurbineOp extends Instruction {
         // Inputs stored into array need to have refcount incremented
         // Does write any tracked elements of struct, so do need to
         // manage write refcount.
+        long writeCount = RefCounting.baseWriteRefCount(getOutput(0), true, false);
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
-            VarCount.one(getOutput(0)).asList());
+                      new VarCount(getOutput(0), writeCount).asList());
       }
       case DEREF_SCALAR:
       case DEREF_FILE: {
