@@ -872,8 +872,9 @@ public interface CompilerBackend {
    * @param array non-local {@link ArrayType}
    * @param key key into array
    * @param decr decrement read refcount of array
+   * @param acquire acquire read refcount of referand
    */
-  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr);
+  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr, Arg acquire);
 
   /**
    * Copy out array member once it is assigned.

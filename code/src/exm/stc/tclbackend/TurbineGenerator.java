@@ -1618,7 +1618,6 @@ public class TurbineGenerator implements CompilerBackend {
     Expression subscript = structSubscript(struct, fields);
     Expression readAcquire = LiteralInt.ONE;
 
-    // TODO: may want to support acquiring write in future
     Expression expr = Turbine.lookupStruct(varToExpr(struct),
                 subscript, argToExpr(readDecr), readAcquire,
                 null, null);
@@ -1681,11 +1680,12 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRetrieve(Var oVar, Var arrayVar, Arg arrIx, Arg readDecr) {
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isElemValType(arrayVar, oVar));
-    pointAdd(Turbine.arrayLookupImm(prefixVar(oVar), varToExpr(arrayVar),
-             argToExpr(arrIx), argToExpr(readDecr)));
+  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr,
+                            Arg acquire) {
+    assert(Types.isArrayKeyVal(array, key));
+    assert(Types.isElemValType(array, dst));
+    pointAdd(Turbine.arrayLookupImm(prefixVar(dst), varToExpr(array),
+             argToExpr(key), argToExpr(decr), argToExpr(acquire)));
   }
 
   @Override
