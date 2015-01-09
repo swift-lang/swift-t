@@ -580,7 +580,7 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_INTEGER:
       return ADLB_Unpack_integer(&d->INTEGER, buffer, length);
     case ADLB_DATA_TYPE_REF:
-      return ADLB_Unpack_ref(&d->REF, buffer, length, refcounts);
+      return ADLB_Unpack_ref(&d->REF, buffer, length, refcounts, true);
     case ADLB_DATA_TYPE_FLOAT:
       return ADLB_Unpack_float(&d->FLOAT, buffer, length);
     case ADLB_DATA_TYPE_STRING:

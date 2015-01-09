@@ -349,11 +349,11 @@ ADLB_Free_binary_data(adlb_binary_data *buffer);
 
 // Helper macro for packing and unpacking data types with no additional memory
 #define ADLB_PACK_SCALAR(d, result) {     \
-  assert(result != NULL);                 \
+  assert((result) != NULL);               \
   assert((d) != NULL);                    \
-  result->data = (d);                     \
-  result->caller_data = NULL;             \
-  result->length = (int)sizeof(*(d));     \
+  (result)->data = (d);                   \
+  (result)->caller_data = NULL;           \
+  (result)->length = (int)sizeof(*(d));   \
 }
 
 #define ADLB_UNPACK_SCALAR(d, data, length) {           \
@@ -392,18 +392,21 @@ ADLB_Unpack_integer(adlb_int_t *d, const void *data, size_t length)
 static inline adlb_data_code
 ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 {
-  // only pack ID
-  ADLB_PACK_SCALAR(&d->id, result);
+  ADLB_PACK_SCALAR(d, result);
   return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Unpack_ref(adlb_ref *d, const void *data, size_t length,
-                adlb_refc refcounts)
+                adlb_refc refcounts, bool overwrite_refcounts)
 {
-  ADLB_UNPACK_SCALAR(&d->id, data, length);
-  d->read_refs = refcounts.read_refcount;
-  d->write_refs = refcounts.write_refcount;
+  ADLB_UNPACK_SCALAR(d, data, length);
+
+  if (overwrite_refcounts) {
+    // Overwrite refcounts with provided refcounts
+    d->read_refs = refcounts.read_refcount;
+    d->write_refs = refcounts.write_refcount;
+  }
   return ADLB_DATA_SUCCESS;
 }
 
