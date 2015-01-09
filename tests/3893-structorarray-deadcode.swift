@@ -1,7 +1,6 @@
 /* Regression test for dead code elimination bug not understanding recursive
    stores to structs */
 
-// SKIP-THIS-TEST
 import assert;
 
 type st {
