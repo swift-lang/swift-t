@@ -1,6 +1,7 @@
 package exm.stc.tclbackend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -28,8 +29,6 @@ import exm.stc.tclbackend.tree.Token;
  * Helper methods that encode type information in ways that is usable by Turbine
  */
 public class TurbineTypes {
-
-  private static final Token STRUCT = new Token("struct");
 
   /**
    * Return the full type required to create data by ADLB.
@@ -262,12 +261,6 @@ public class TurbineTypes {
     }
   }
 
-  public static enum StructTypeFmt {
-    STRUCT_ONLY, /* Only struct token */
-    SUBTYPE_ONLY, /* Only struct subtype token */
-    STRUCT_SUBTYPE, /* Both tokens */
-  }
-
   /**
    * Encode full information about a data type as a list.
    *
@@ -284,15 +277,14 @@ public class TurbineTypes {
    *
    * @param type
    * @param valueType if the argument is a local value type
-   * @param includeStructTypes whether to include specific of struct as second token
-   *                          (needed to assign a struct)
+   * @param useStructSubtype if true, name specific struct type, if false, just "struct"
    * @param includeKeyTypes whether to include key types for containers
    *                          (needed to create subcontainers)
    * @param followRefs if false, don't include anything past first reference type
    * @return
    */
   public static List<Expression> recursiveTypeList(Type type,
-        boolean valueType, StructTypeFmt structFmt,
+        boolean valueType, boolean useStructSubtype,
         boolean includeKeyTypes, boolean followRefs) {
     List<Expression> typeList = new ArrayList<Expression>();
     Type curr = type;
@@ -317,12 +309,10 @@ public class TurbineTypes {
 
     curr = appendRefs(followRefs, typeList, curr);
 
-    if (followRefs &&
-        (Types.isStruct(curr) || Types.isStructLocal(curr)) &&
-        ((StructType)curr.getImplType()).hasRefField()) {
+    if (Types.isStruct(curr) || Types.isStructLocal(curr)) {
       StructType st = (StructType)curr.getImplType();
         // Need to follow refs
-      typeList.addAll(recursiveStructType(st, valueType, structFmt,
+      typeList.addAll(recursiveStructType(st, valueType, useStructSubtype,
                                 includeKeyTypes, followRefs));
     } else {
       typeList.add(reprTypeHelper(valueType, curr));
@@ -336,7 +326,7 @@ public class TurbineTypes {
    * @return type in format expected for turbine::enumerate_rec
    */
   public static List<Expression> enumRecTypeInfo(Type src) {
-    return recursiveTypeList(src, false, StructTypeFmt.STRUCT_ONLY, false, true);
+    return recursiveTypeList(src, false, false, false, true);
   }
 
   /**
@@ -344,7 +334,7 @@ public class TurbineTypes {
    * @return type in format expected for turbine::build_rec
    */
   public static List<Expression> buildRecTypeInfo(Type dst) {
-    return recursiveTypeList(dst, false, StructTypeFmt.STRUCT_SUBTYPE, true, true);
+    return recursiveTypeList(dst, false, true, true, true);
   }
 
   /**
@@ -352,14 +342,14 @@ public class TurbineTypes {
    * @return type in format expected for adlb::store
    */
   public static List<Expression> adlbStoreTypeInfo(Type dst) {
-    return recursiveTypeList(dst, false, StructTypeFmt.STRUCT_ONLY, true, false);
+    return recursiveTypeList(dst, false, true, true, false);
   }
 
   public static List<Expression> xptPackType(Arg val) {
     if (Types.isContainerLocal(val.type()) ||
         Types.isStructLocal(val.type())) {
       return TurbineTypes.recursiveTypeList(val.type(),
-                  true, StructTypeFmt.SUBTYPE_ONLY, true, false);
+                  true, true, true, false);
     } else {
       return Collections.<Expression>singletonList(TurbineTypes.valReprType(val.type()));
     }
@@ -375,39 +365,29 @@ public class TurbineTypes {
   }
 
   private static List<Expression> recursiveStructType(StructType st,
-      boolean valueType, StructTypeFmt structFmt, boolean includeKeyTypes,
+      boolean valueType, boolean useStructSubtype, boolean includeKeyTypes,
       boolean followRefs) {
-    List<Expression> typeList = new ArrayList<Expression>();
 
-    for (StructField f: st.getFields()) {
-      typeList.add(new TclString(f.getName(), true));
-      List<Expression> fieldTypeList = recursiveTypeList(f.getType(), valueType,
-                      structFmt, includeKeyTypes, followRefs);
-      typeList.add(new TclList(fieldTypeList));
+    TypeName structTypeName = useStructSubtype ? structTypeName(st)
+                                               : Turbine.ADLB_STRUCT_TYPE;
+
+    /*
+     * Need to include recursive field info in some circumstances to allow
+     * the structure to be rebuilt.  If it is a simple structure with only
+     * values, we can just treat it as a simple value
+     */
+    if (followRefs && st.hasRefField()) {
+      List<Expression> typeList = new ArrayList<Expression>();
+      for (StructField f: st.getFields()) {
+        typeList.add(new TclString(f.getName(), true));
+        List<Expression> fieldTypeList = recursiveTypeList(f.getType(), valueType,
+                           useStructSubtype, includeKeyTypes, followRefs);
+        typeList.add(new TclList(fieldTypeList));
+      }
+      return Arrays.asList(structTypeName, new TclList(typeList));
+    } else {
+      return Arrays.<Expression>asList(structTypeName);
     }
-
-    List<Expression> result = new ArrayList<Expression>();
-    switch (structFmt) {
-      case STRUCT_ONLY: {
-        result.add(STRUCT);
-        break;
-      }
-      case SUBTYPE_ONLY: {
-        result.add(structTypeName(st));
-        break;
-      }
-      case STRUCT_SUBTYPE: {
-        result.add(STRUCT);
-        result.add(structTypeName(st));
-        break;
-      }
-      default: {
-        throw new STCRuntimeError("Unexpected: " + structFmt);
-      }
-    }
-
-    result.add(new TclList(typeList));
-    return result;
   }
 
 }
