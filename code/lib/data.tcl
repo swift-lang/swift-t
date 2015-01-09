@@ -554,9 +554,9 @@ namespace eval turbine {
         adlb::insert $id $subscript $member $type $read_drops $write_drops
     }
 
-    # Returns 0 if subscript is not found
-    proc container_lookup { id subscript {read_decr 0} } {
-        set s [ adlb::lookup $id $subscript $read_decr ]
+    # Raises error if subscript is not found
+    proc container_lookup { id subscript {read_decr 0} {read_acquire 0}} {
+        set s [ adlb::lookup $id $subscript $read_decr $read_acquire ]
         return $s
     }
 
