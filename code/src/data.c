@@ -116,9 +116,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript,
-    const void* buffer, size_t length, bool copy,
-    adlb_data_type type, adlb_refc store_refcounts,
+    adlb_subscript subscript, const void *value, size_t length,
+    bool copy, adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
@@ -960,8 +959,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
  */
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript, const void* value, size_t length, bool copy,
-    adlb_data_type value_type, adlb_refc store_refcounts,
+    adlb_subscript subscript, const void *value, size_t length,
+    bool copy, adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -987,9 +986,10 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       elem_type = (adlb_data_type)data->MULTISET->elem_type;
       check_verbose(value != NULL, ADLB_DATA_ERROR_INVALID,
               "Don't support reserving subscripts for multiset type");
-      check_verbose(value_type == elem_type, ADLB_DATA_ERROR_TYPE,
+      check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
               "Type mismatch for multiset val: expected %s actual %s\n",
-              ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(value_type));
+              ADLB_Data_type_tostring(elem_type),
+              ADLB_Data_type_tostring(type));
       // Handle addition to multiset
       const adlb_datum_storage *elem;
       dc = xlb_multiset_add(data->MULTISET, value, length,
@@ -1030,17 +1030,17 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       if (value != NULL)
       {
-        check_verbose(value_type == (adlb_data_type)c->val_type,
+        check_verbose(type == (adlb_data_type)c->val_type,
                     ADLB_DATA_ERROR_TYPE,
                     "Type mismatch for container value: "
                     "given: %s required: %s\n",
-                    ADLB_Data_type_tostring(value_type),
+                    ADLB_Data_type_tostring(type),
                     ADLB_Data_type_tostring(c->val_type));
 
         // Now we are guaranteed to succeed
         adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
         dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type, value, length,
-                        store_refcounts);
+                        copy, store_refcounts);
         DATA_CHECK(dc);
 
         if (found)
@@ -1096,8 +1096,6 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       DATA_CHECK(dc);
 
       assert(curr_sub_pos <= curr_sub.length);
-
-      // TODO: use this recursive logic to set ->reserved flag
 
       if (curr_sub_pos == curr_sub.length) {
         // Located field to assign.  This function will check
@@ -2161,7 +2159,7 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
   // Attempt to reserve
   dc = data_store_subscript(id, d, subscript,
-          NULL, -1, ADLB_DATA_TYPE_NULL, ADLB_NO_REFC, NULL, NULL);
+          NULL, 0, ADLB_DATA_TYPE_NULL, ADLB_NO_REFC, NULL, NULL);
   if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
   {
     // Return data if present
