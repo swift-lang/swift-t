@@ -1062,7 +1062,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
         if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
         {
-          char *val_s = ADLB_Data_repr(entry, value_type);
+          char *val_s = ADLB_Data_repr(entry, type);
           DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
              ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
              store_refcounts.read_refcount, store_refcounts.write_refcount);
@@ -1072,7 +1072,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         if (d->status.subscript_notifs)
         {
           dc = insert_notifications(d, id, subscript,
-                    entry, value, length, value_type,
+                    entry, value, length, type,
                     notifs, freed_datum);
           DATA_CHECK(dc);
         }
@@ -1104,12 +1104,12 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         if (value != NULL)
         {
           dc = xlb_struct_assign_field(field, field_type, value, length,
-                                       value_type, store_refcounts);
+                                       type, store_refcounts);
           DATA_CHECK(dc);
 
           if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
           {
-            char *val_s = ADLB_Data_repr(&field->data, value_type);
+            char *val_s = ADLB_Data_repr(&field->data, type);
             DEBUG("data_store "ADLB_PRIDSUB"=%s | refs: r: %i w: %i\n",
               ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_s,
               store_refcounts.read_refcount, store_refcounts.write_refcount);
@@ -1117,7 +1117,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
           }
 
           dc = insert_notifications(d, id, subscript,
-                    &field->data, value, length, value_type,
+                    &field->data, value, length, type,
                     notifs, freed_datum);
           DATA_CHECK(dc);
         }
@@ -2159,7 +2159,8 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
   // Attempt to reserve
   dc = data_store_subscript(id, d, subscript,
-          NULL, 0, ADLB_DATA_TYPE_NULL, ADLB_NO_REFC, NULL, NULL);
+          NULL, 0, ADLB_DATA_TYPE_NULL, true,
+          ADLB_NO_REFC, NULL, NULL);
   if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
   {
     // Return data if present
