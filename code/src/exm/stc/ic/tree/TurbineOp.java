@@ -473,7 +473,7 @@ public class TurbineOp extends Instruction {
    */
   public static Instruction arrayCopyOutImm(Var dst, Var arrayVar,
       Arg arrIx) {
-    assert(Types.isArray(arrayVar));
+    assert(Types.isArray(arrayVar)) : arrayVar;
     assert(Types.isArrayKeyVal(arrayVar, arrIx)) :
                 arrayVar.type() + " " + arrIx.type();
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
