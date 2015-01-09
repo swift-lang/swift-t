@@ -12,7 +12,7 @@ public class Component {
   /**
    * Mark "value of reference"
    */
-  public static final Arg DEREF = Arg.createStringLit("*");
+  public static final Arg DEREF = Arg.newString("*");
   
   /**
    * Enclosing object

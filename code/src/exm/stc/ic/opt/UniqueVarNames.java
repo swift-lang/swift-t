@@ -157,7 +157,7 @@ public class UniqueVarNames implements OptimizerPass {
       Var newVar = var.makeRenamed(newName);
       fn.addUsedVarName(newVar);
       
-      Arg oldVal = renames.put(var, Arg.createVar(newVar));
+      Arg oldVal = renames.put(var, Arg.newVar(newVar));
       assert(oldVal == null) : "Shadowed variable: " + var.name();
       replaceCleanup(block, var, newVar);
       existing.addDeclaration(newVar);

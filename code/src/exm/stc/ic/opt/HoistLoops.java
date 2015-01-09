@@ -361,8 +361,8 @@ public class HoistLoops implements OptimizerPass {
 
   private static boolean trackDeclares(Var v) {
     // Track declares for variables that can be waited on
-    return (Types.isContainer(v.type()) || Types.isPrimFuture(v.type()) ||
-            Types.isRef(v.type()));
+    return (Types.isContainer(v) || Types.isPrimFuture(v) ||
+            Types.isRef(v));
   }
 
   private static boolean canHoistThrough(Continuation c) {
@@ -434,7 +434,7 @@ public class HoistLoops implements OptimizerPass {
       /* Check if we can pass vars between tasks, if not conservatively
        * don't hoist, because hoisting may put producer and consumer of data
       // in different tasks */
-      if (!Semantics.canPassToChildTask(out.type())) {
+      if (!Semantics.canPassToChildTask(out)) {
         return false;
       }
       if (trackDeclares(out)) {
@@ -531,7 +531,7 @@ public class HoistLoops implements OptimizerPass {
       logger.trace("Write depth of " + inVar.name() + ": " + depth);
     }
 
-    if (Types.isPiecewiseAssigned(inVar.type()) && !aggressive) {
+    if (Types.isPiecewiseAssigned(inVar) && !aggressive) {
       // We might want to avoid moving before a piecewise write since it could
       // hurt future optimization opportunities
       int pwDepth = state.piecewiseWriteMap.getDepth(inVar);

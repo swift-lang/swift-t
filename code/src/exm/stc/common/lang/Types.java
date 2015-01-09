@@ -482,7 +482,7 @@ public class Types {
   }
 
   public static class StructType extends Type {
-    public static class StructField {
+    public static class StructField implements Typed {
       private final Type type;
       private final String name;
       public StructField(Type type, String name) {
@@ -490,11 +490,12 @@ public class Types {
         this.name = name;
       }
 
-      public Type getType() {
+      @Override
+      public Type type() {
         return type;
       }
 
-      public String getName() {
+      public String name() {
         return name;
       }
 
@@ -560,19 +561,19 @@ public class Types {
       return local ? StructureType.STRUCT_LOCAL : StructureType.STRUCT;
     }
 
-    public List<StructField> getFields() {
+    public List<StructField> fields() {
       return Collections.unmodifiableList(fields);
     }
 
-    public int getFieldCount() {
+    public int fieldCount() {
       return fields.size();
     }
 
 
-    public Type getFieldTypeByName(String name) {
+    public Type fieldTypeByName(String name) {
       for (StructField field: fields) {
-        if (field.getName().equals(name)) {
-          return field.getType();
+        if (field.name().equals(name)) {
+          return field.type();
         }
       }
       return null;
@@ -585,7 +586,7 @@ public class Types {
      * @return
      * @throw {@link TypeMismatchException} if path invalid
      */
-    public Type getFieldTypeByPath(List<String> fields)
+    public Type fieldTypeByPath(List<String> fields)
         throws TypeMismatchException {
       Type curr = this;
       for (String field: fields) {
@@ -594,7 +595,7 @@ public class Types {
           throw new TypeMismatchException("Can't lookup field " + field +
                                           " in non-struct type: " + curr);
         }
-        Type fieldType = ((StructType)curr).getFieldTypeByName(field);
+        Type fieldType = ((StructType)curr).fieldTypeByName(field);
         if (fieldType == null) {
           throw new TypeMismatchException("Field " + field + " does not "
                                       + " exist in struct type " + curr);
@@ -604,10 +605,10 @@ public class Types {
       return curr;
     }
 
-    public int getFieldIndexByName(String name) {
+    public int fieldIndexByName(String name) {
       for (int i=0; i < fields.size(); i++) {
         StructField field = fields.get(i);
-        if (field.getName().equals(name)) {
+        if (field.name().equals(name)) {
           return i;
         }
       }
@@ -659,9 +660,9 @@ public class Types {
         } else {
           s.append("; ");
         }
-        s.append(f.getType().toString());
+        s.append(f.type().toString());
         s.append(' ');
-        s.append(f.getName());
+        s.append(f.name());
       }
       s.append("}");
       return s.toString();
@@ -742,7 +743,7 @@ public class Types {
     public boolean isConcrete() {
       // Concrete if all fields are concrete (they probably should be..)
       for (StructField f: fields) {
-        if (!f.getType().isConcrete()) {
+        if (!f.type().isConcrete()) {
           return false;
         }
       }
@@ -754,7 +755,7 @@ public class Types {
      */
     public boolean hasRefField() {
       for (StructField f: this.fields) {
-        Type fType = f.getType();
+        Type fType = f.type();
         if (Types.isRef(fType)) {
           return true;
         } else if (Types.isStruct(fType) ||
@@ -2440,7 +2441,7 @@ public class Types {
     } else {
       structType = (StructType)struct.type().getImplType().memberType();
     }
-    return structType.getFieldTypeByPath(fieldPath);
+    return structType.fieldTypeByPath(fieldPath);
   }
 
   public static boolean isStructFieldVal(Typed struct,
@@ -2784,14 +2785,14 @@ public class Types {
   }
 
   private static Type unpackedStructType(StructType structType) {
-    List<StructField> packedFields = structType.getFields();
+    List<StructField> packedFields = structType.fields();
     List<StructField> unpackedFields = new ArrayList<StructField>(packedFields.size());
 
     // Track whether the fields differ at all
     boolean differences = false;
 
     for (StructField packedField: packedFields) {
-      Type packedFieldType = packedField.getType();
+      Type packedFieldType = packedField.type();
       Type unpackedFieldType;
 
       if (Types.isRef(packedFieldType)) {
@@ -2808,7 +2809,7 @@ public class Types {
         unpackedFields.add(packedField);
       } else {
         StructField unpackedField = new StructField(unpackedFieldType,
-                                                    packedField.getName());
+                                                    packedField.name());
         unpackedFields.add(unpackedField);
         differences = true;
       }

@@ -21,28 +21,28 @@ import exm.stc.common.util.StackLite;
  */
 public class ClosedVarTracker {
   private final boolean useTransitiveDeps;
-  
+
   private final Logger logger;
-  
+
   private final ClosedVarTracker parent;
-  
+
   /**
    * Index of this within parent statements.
    */
   private final int parentStmtIndex;
 
-  /** 
-   * variables which are closed in this scope 
+  /**
+   * variables which are closed in this scope
    * */
   private final MultiMap<Var, ClosedEntry> closed;
 
 
   /**
    * Multimap of var1 -> [ var2, var3]
-   * 
+   *
    * There should only be an entry in here if var1 is not closed An entry here
    * means that var2 or var3 being closed implies that var1 is closed
-   * 
+   *
    * We maintain this data structure because it lets us infer which variables
    * will be closed if we block on a given variable
    * TODO: recursive dependencies?
@@ -63,11 +63,11 @@ public class ClosedVarTracker {
   public static ClosedVarTracker makeRoot(Logger logger, boolean reorderingAllowed) {
     return new ClosedVarTracker(logger, reorderingAllowed, null, 0);
   }
-  
+
   public ClosedVarTracker enterContinuation(int parentStmtIndex) {
     return makeChild(parentStmtIndex);
   }
-  
+
   public ClosedVarTracker enterBlock() {
     // Don't have concept of statement index
     return makeChild(0);
@@ -105,8 +105,8 @@ public class ClosedVarTracker {
       return Collections.unmodifiableSet(closed.keySet());
     }
   }
-    
-  
+
+
   /**
    * Check if variable was closed before a given statement index
    * Note that this is not inclusive: if the variable is closed by
@@ -121,9 +121,9 @@ public class ClosedVarTracker {
       AliasFinder aliases) {
     if (logger.isTraceEnabled()) {
       logger.trace("getClosedEntry(" + var.name() + ")@" + stmtIndex +
-                  " rec: " + recursive); 
+                  " rec: " + recursive);
     }
-    
+
     List<Var> varAliases = aliases.getAliasesOf(var);
     ClosedEntry ce = getDirectClosedEntry(varAliases, recursive, stmtIndex);
     if (ce != null) {
@@ -132,7 +132,7 @@ public class ClosedVarTracker {
         return ce;
       }
     }
-    
+
     // Didn't find anything about this variable directly
     // Check if closed via dependency.
     if (recursive || useTransitiveDeps) {
@@ -140,12 +140,12 @@ public class ClosedVarTracker {
       // inference if not allowed
       return null;
     }
-    
+
     StackLite<Var> depStack = new StackLite<Var>();
     for (Var varAlias: varAliases) {
       depStack.addAll(directDeps(varAlias));
     }
-    
+
     // Avoid visiting same variables multiple times
     Set<Var> visited = new HashSet<Var>();
     visited.add(var);
@@ -162,12 +162,12 @@ public class ClosedVarTracker {
           // Copy over entry to this variable
           if (logger.isTraceEnabled()) {
             logger.trace("Inferred: " + predecessor + " closed => "
-                         + var + " closed"); 
+                         + var + " closed");
           }
           closed.put(var, predCE);
           return predCE;
         }
-        for (Var predAlias: predAliases) { 
+        for (Var predAlias: predAliases) {
           depStack.addAll(directDeps(predAlias));
         }
       }
@@ -192,7 +192,7 @@ public class ClosedVarTracker {
 
   /**
    * Check if one of a set of variables is directly closed.
-   * Returns a matching entry 
+   * Returns a matching entry
    * @param vars
    * @param recursive
    * @param stmtIndex
@@ -221,7 +221,7 @@ public class ClosedVarTracker {
           }
         }
       }
-      
+
       currStmtIndex = curr.parentStmtIndex;
       curr = curr.parent;
     }
@@ -230,13 +230,13 @@ public class ClosedVarTracker {
 
   /**
    * Called to mark that var is closed
-   * 
+   *
    * @param var
    */
   public void close(Var var, int stmtIndex, boolean recursive) {
     close(var, new ClosedEntry(stmtIndex, recursive));
   }
-  
+
   /**
    * If closed from before the first statement of block executes
    * @param var
@@ -249,9 +249,9 @@ public class ClosedVarTracker {
   public void close(Var var, ClosedEntry ce) {
     if (logger.isTraceEnabled())
       logger.trace(var + " is closed: " + ce);
-    
+
     closed.put(var, ce);
-    
+
     // TODO: do this as a post-processing step?
     /*
     // Do DFS on the dependency graph to find all dependencies
@@ -279,13 +279,13 @@ public class ClosedVarTracker {
   /**
    * Register that variable future depends on another variable.
    * I.e. we can infer that if to is closed, then from is closed
-   * 
+   *
    * @param to a future
    * @param from another future.
    */
   public void setDependency(Var to, Var from) {
-    assert (!Types.isPrimValue(to.type()));
-    assert (!Types.isPrimValue(from.type()));
+    assert (!Types.isPrimValue(to));
+    assert (!Types.isPrimValue(from));
     assert (!useTransitiveDeps) : "Tracking transitive dependencies "
         + "unsafe until reordering disabled";
     if (logger.isTraceEnabled()) {
@@ -299,7 +299,7 @@ public class ClosedVarTracker {
     int parentIndex = -1;
     ClosedVarTracker curr = this;
     while (curr != null) {
-      logger.trace("Closed vars @ ancestor " + height + 
+      logger.trace("Closed vars @ ancestor " + height +
           (curr == this ? "" : " Index " + parentIndex));
       logger.trace("closed:" + curr.closed);
       logger.trace("dependsOn: " + dependsOn);
@@ -309,17 +309,17 @@ public class ClosedVarTracker {
       height++;
     }
   }
- 
+
   public static class ClosedEntry {
     private ClosedEntry(int stmtIndex, boolean recursive) {
       this.stmtIndex = stmtIndex;
       this.recursive = recursive;
     }
-    
+
     /** stmtIndex: the variable is closed atall statements after this index */
     final int stmtIndex;
     final boolean recursive;
-    
+
     /**
      * Create one showing that it is closed at the block start
      * @param recursive
@@ -336,13 +336,14 @@ public class ClosedVarTracker {
                   (!recursive || this.recursive);
     }
     /**
-     * For debug prints 
+     * For debug prints
      */
+    @Override
     public String toString() {
       return (recursive ? "REC_CLOSED" : "CLOSED") + "@" + stmtIndex;
     }
   }
-  
+
   public static interface AliasFinder {
     /**
      * Return list of aliases of var, including var itself

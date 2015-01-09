@@ -435,7 +435,7 @@ public class Var implements Comparable<Var>, Typed {
   }
 
   public Arg asArg() {
-    return Arg.createVar(this);
+    return Arg.newVar(this);
   }
 
   public static List<Arg> asArgList(List<Var> inputs) {

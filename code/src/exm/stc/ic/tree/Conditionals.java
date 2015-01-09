@@ -212,10 +212,10 @@ public class Conditionals {
         return null;
       }
 
-      assert(condVal.isIntVal() || condVal.isBoolVal());
-      if (condVal.isIntVal() && condVal.getIntLit() != 0) {
+      assert(condVal.isInt() || condVal.isBool());
+      if (condVal.isInt() && condVal.getInt() != 0) {
         return thenBlock;
-      } else if (condVal.isBoolVal() && condVal.getBoolLit()) {
+      } else if (condVal.isBool() && condVal.getBool()) {
         return thenBlock;
       } else {
         return elseBlock;
@@ -383,7 +383,7 @@ public class Conditionals {
         // Variable condition
         return null;
       }
-      long val = switchVal.getIntLit();
+      long val = switchVal.getInt();
       // Check cases
       for (int i = 0; i < caseLabels.size(); i++) {
         if (val == caseLabels.get(i)) {

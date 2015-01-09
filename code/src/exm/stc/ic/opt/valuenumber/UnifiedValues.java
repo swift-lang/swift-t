@@ -192,7 +192,7 @@ public class UnifiedValues {
           allSameLocation = false;
         }
 
-        if (!Types.isPrimValue(loc.type())) {
+        if (!Types.isPrimValue(loc)) {
           allVals = false;
         }
 

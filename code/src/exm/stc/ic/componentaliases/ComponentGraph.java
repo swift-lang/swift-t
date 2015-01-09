@@ -83,7 +83,7 @@ public class ComponentGraph {
   }
   
   private static Arg normaliseComponentKey(Arg key) {
-    if (key != null && !key.isConstant()) {
+    if (key != null && !key.isConst()) {
       // Treat all non-constant keys as wildcard
       return WILDCARD;
     } else {
@@ -98,7 +98,7 @@ public class ComponentGraph {
    * @return
    */
   private static boolean isValidComponentKey(Arg key) {
-    return key == WILDCARD || key.isConstant();
+    return key == WILDCARD || key.isConst();
   }
 
   /**

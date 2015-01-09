@@ -24,7 +24,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
@@ -186,8 +185,7 @@ public class ComputedValue<T> {
    * @return null if cannot be fetched
    */
   public static ArgCV retrieveCompVal(Var src, boolean recursive) {
-    Type srcType = src.type();
-    Opcode op = Opcode.retrieveOpcode(srcType, recursive);
+    Opcode op = Opcode.retrieveOpcode(src, recursive);
     if (op == null) {
       return null;
     }
@@ -445,7 +443,7 @@ public class ComputedValue<T> {
     List<Arg> inputs = new ArrayList<Arg>(fieldNames.size() + 1);
     inputs.add(struct.asArg());
     for (Arg fieldName: fieldNames) {
-      assert(fieldName.isStringVal()) : fieldName;
+      assert(fieldName.isString()) : fieldName;
       inputs.add(fieldName);
     }
     return inputs;

@@ -374,7 +374,7 @@ public class Congruences implements AliasFinder {
           Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
     Var localFile = cv.getInput(0).getVar();
     Arg setFilename = cv.getInput(1);
-    if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
+    if (setFilename.isBool() && setFilename.getBool()) {
       // Only if the filename was definitely set by store
       ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
       ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
@@ -514,7 +514,7 @@ public class Congruences implements AliasFinder {
     throws OptUnsafeError {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
-      if (val1.isConstant() && val2.isConstant() && !val1.equals(val2)) {
+      if (val1.isConst() && val2.isConst() && !val1.equals(val2)) {
         contradiction = true;
       }
     } else {
@@ -610,7 +610,7 @@ public class Congruences implements AliasFinder {
    * @return
    */
   static boolean isConst(Arg arg) {
-    return arg.isConstant() ||
+    return arg.isConst() ||
         (arg.isVar() && arg.getVar().storage() == Alloc.GLOBAL_CONST);
   }
 
@@ -722,7 +722,7 @@ public class Congruences implements AliasFinder {
     } else if (val.isFilenameValCV() ||
                val.isFilenameAliasCV() ||
                val.isLocalFilenameCV()) {
-      return Arrays.asList(Arg.createStringLit("filename"),
+      return Arrays.asList(Arg.newString("filename"),
                            byAlias.findCanonical(val.getInput(0)));
     } else {
       throw new STCRuntimeError("Don't know how to canonicalize " +
@@ -822,7 +822,7 @@ public class Congruences implements AliasFinder {
     }
 
     // Find canonical var for alias, and check if that is closed.
-    if (varArg.isConstant() || !trackClosed(varArg.getVar())) {
+    if (varArg.isConst() || !trackClosed(varArg.getVar())) {
       // No write refcount - always closed
       logger.trace(varArg + " has no refcount");
       return true;

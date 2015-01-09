@@ -55,10 +55,10 @@ public class TurbineStructs {
    * @return
    */
   public int getFieldID(StructType structType, String structField) {
-    List<StructField> fields = structType.getFields();
+    List<StructField> fields = structType.fields();
     for (int i = 0; i < fields.size(); i++) {
       StructField f = fields.get(i);
-      if (structField.equals(f.getName()))
+      if (structField.equals(f.name()))
         return i;
     }
     throw new STCRuntimeError("Field not found in type: " + structField +
