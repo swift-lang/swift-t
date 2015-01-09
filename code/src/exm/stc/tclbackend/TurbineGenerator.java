@@ -1053,15 +1053,13 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private void assignRecursive(Var dst, Arg src) {
-    assert(src.type().assignableTo(
-              Types.unpackedType(dst)));
-
-    if (Types.isStruct(dst)) {
-      // TODO: will need to include tracked & untraced refcounts
-    }
-
+    assert(src.type().assignableTo(Types.unpackedType(dst)));
     List<Expression> typeList = TurbineTypes.buildRecTypeInfo(dst.type());
-    pointAdd(Turbine.buildRec(typeList, varToExpr(dst), argToExpr(src)));
+
+    // Decrements all refcounts
+    long writeDecr = RefCounting.baseWriteRefCount(dst, true, true);
+    pointAdd(
+        Turbine.buildRec(typeList, varToExpr(dst), argToExpr(src), writeDecr));
   }
 
   @Override
