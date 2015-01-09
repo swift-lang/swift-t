@@ -41,40 +41,42 @@
 
 #include "c-utils-types.h"
 
+// Type to represent a valid vint length
+// 0 is out of range since vint must be at least one byte
+typedef uint8_t vint_len_t;
+
 // Maximum size of int64_t encoded in bytes
 // One bit overhead per byte
-#define VINT_MAX_BYTES (sizeof(int64_t) + (sizeof(int64_t) - 1) / 8 + 1)
+#define VINT_MAX_BYTES \
+  ((vint_len_t)(sizeof(int64_t) + (sizeof(int64_t) - 1) / 8 + 1))
 
 /*
   Return encoded length of a vint
  */
-static inline int vint_bytes(int64_t val);
+static inline vint_len_t vint_bytes(int64_t val);
 
 /*
   Encode a vint.  Must have at least VINT_MAX_BYTES or vint_bytes(val)
   space in buffer, whichever is less.
   Returns number of bytes written
  */
-static inline int vint_encode(int64_t val, void *buffer);
+static inline vint_len_t vint_encode(int64_t val, void *buffer);
 
 /*
   Decode a vint.  Returns number of bytes read, or negative on an error
  */
-static inline int vint_decode(const void *buffer, int len, int64_t *val);
-
-
-
-
+static inline int vint_decode(const void *buffer, size_t len,
+                                     int64_t *val);
 
 #define VINT_MORE_MASK (0x80)
 #define VINT_SIGN_MASK (0x40)
 #define VINT_6BIT_MASK (0x3f)
 #define VINT_7BIT_MASK (0x7f)
 
-static inline int
+static inline vint_len_t
 vint_bytes(int64_t val)
 {
-  int len = 1;
+  vint_len_t len = 1;
   if (val < 0)
     val = -val;
   val >>= 6; // Account for sign bit. 
@@ -85,7 +87,7 @@ vint_bytes(int64_t val)
   return len;
 }
 
-static inline int
+static inline vint_len_t
 vint_encode(int64_t val, void *buffer)
 {
   unsigned char *buffer2 = buffer;
@@ -107,7 +109,7 @@ vint_encode(int64_t val, void *buffer)
     b |= VINT_MORE_MASK;
 
   buffer2[0] = b;
-  int pos = 1;
+  vint_len_t pos = 1;
   while (more)
   {
     b = val & VINT_7BIT_MASK;
@@ -118,6 +120,22 @@ vint_encode(int64_t val, void *buffer)
     buffer2[pos++] = b;
   }
   return pos;
+}
+
+
+static inline vint_len_t
+vint_encode_unsigned(uint64_t val, void *buffer)
+{
+  // Reinterpret, relying on width being same
+  int64_t signed_val = *(int64_t*)&val;
+  return vint_encode(signed_val, buffer);
+}
+
+static inline vint_len_t
+vint_encode_size_t(size_t val, void *buffer)
+{
+  // Assume size_t at most 64 bits wide
+  return vint_encode_unsigned((uint64_t)val, buffer);
 }
 
 typedef struct
@@ -156,7 +174,7 @@ vint_decode_more(unsigned char b, vint_dec *dec)
 }
 
 static inline int
-vint_decode(const void *buffer, int len, int64_t *val)
+vint_decode(const void *buffer, size_t len, int64_t *val)
 {
   const unsigned char *buffer2 = buffer;
   if (len < 1)
@@ -183,6 +201,27 @@ vint_decode(const void *buffer, int len, int64_t *val)
 
   *val = dec.accum * dec.sign;
   return pos;
+}
+
+static inline int vint_decode_unsigned(const void *buffer, size_t len,
+                                       uint64_t *val)
+{
+  // Rely on uint64_t and int64_t being same width
+  return vint_decode(buffer, len, (int64_t*)&val);
+}
+
+static inline int vint_decode_size_t(const void *buffer, size_t len,  
+                                     size_t *val)
+{
+  uint64_t val64 = 0;
+  int consumed = vint_decode_unsigned(buffer, len, &val64);
+
+  // Additional error case: value doesn't fit in size_t
+  if (consumed >= 0 && val64 > SIZE_MAX) {
+    return -1;
+  }
+  *val = (size_t)val64;
+  return consumed;
 }
 
 /*
