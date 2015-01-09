@@ -100,9 +100,9 @@ static adlb_code xpt_header_read(xlb_xpt_read_state *state,
                                         const char *filename);
 static adlb_code xpt_header_write(xlb_xpt_state *state);
 static adlb_code write_entry(xlb_xpt_state *state,
-    int64_t rec_len, const void *key, int key_len,
-    const void *key_len_enc, int key_len_encb,
-    const void *val, int val_len, xpt_file_pos_t *val_offset);
+    size_t rec_len, const void *key, size_t key_len,
+    const void *key_len_enc, size_t key_len_encb,
+    const void *val, size_t val_len, xpt_file_pos_t *val_offset);
 static bool check_crc(xlb_xpt_read_state *state, int rec_len,
                              uint32_t crc, adlb_buffer *buffer);
 static void xpt_read_resync(xlb_xpt_read_state *state,
@@ -216,7 +216,7 @@ static adlb_code flush_buffers(xlb_xpt_state *state)
 
     if (write_size > 0)
     {
-      TRACE("pwrite %zu bytes @ %zi", write_size, curr_pos);
+      TRACE("pwrite %ui bytes @ %zi", write_size, curr_pos);
       ssize_t pwc = pwrite(state->fd, buf_pos, write_size, curr_pos);
       CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
               "offset %zi", curr_pos);
@@ -319,11 +319,11 @@ static adlb_code xpt_header_write(xlb_xpt_state *state)
   Checkpoint entries can be split across blocks.
  */
 adlb_code
-xlb_xpt_write(const void *key, int key_len,
-              const void *val, int val_len,
+xlb_xpt_write(const void *key, size_t key_len,
+              const void *val, size_t val_len,
               xlb_xpt_state *state, xpt_file_pos_t *val_offset)
 {
-  DEBUG("Writing entry to checkpoint file key_len: %i, val_len: %i, "
+  DEBUG("Writing entry to checkpoint file key_len: %zu, val_len: %zu, "
         "Block: %"PRIu32, key_len, val_len, state->curr_block);
   assert(is_init(state));
   assert(key_len >= 0);
@@ -332,13 +332,13 @@ xlb_xpt_write(const void *key, int key_len,
   // Buffer for encoded vint
   Byte key_len_enc[VINT_MAX_BYTES];
   // Length in bytes of encoded vint
-  int key_len_encb;
+  size_t key_len_encb;
 
   // encode key_len using variable-length int format
-  key_len_encb = vint_encode((int64_t)key_len, key_len_enc);
+  key_len_encb = vint_encode_size_t(key_len, key_len_enc);
 
   // Record length w/o CRC or record length
-  int64_t rec_len = (int64_t)key_len_encb + key_len + val_len;
+  size_t rec_len = key_len_encb + key_len + val_len;
   return write_entry(state, rec_len, key, key_len, key_len_enc,
       key_len_encb, val, val_len, val_offset);
 }
@@ -348,10 +348,10 @@ xlb_xpt_write(const void *key, int key_len,
   rec_len: if null, write "empty" entry as end of file marker
  */
 static adlb_code
-write_entry(xlb_xpt_state *state, int64_t rec_len,
-    const void *key, int key_len,
-    const void *key_len_enc, int key_len_encb,
-    const void *val, int val_len, xpt_file_pos_t *val_offset)
+write_entry(xlb_xpt_state *state, size_t rec_len,
+    const void *key, size_t key_len,
+    const void *key_len_enc, size_t key_len_encb,
+    const void *val, size_t val_len, xpt_file_pos_t *val_offset)
 {
   assert(rec_len >= 0);
   assert(key_len_encb >= 0);
@@ -362,7 +362,7 @@ write_entry(xlb_xpt_state *state, int64_t rec_len,
   // Length in bytes of encoded vint
   uInt rec_len_encb;
 
-  rec_len_encb = (uInt)vint_encode(rec_len, rec_len_enc);
+  rec_len_encb = (uInt) vint_encode_size_t(rec_len, rec_len_enc);
 
   bool empty_record = (rec_len == 0);
 
@@ -417,7 +417,7 @@ write_entry(xlb_xpt_state *state, int64_t rec_len,
 
 adlb_code
 xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
-                            int val_len, void *buffer)
+                            size_t val_len, void *buffer)
 {
   // TODO: it would be better to reread entire record to make sure
   //       we don't get a corrupted record.
@@ -475,14 +475,14 @@ xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
 
 adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state,
                             xpt_file_pos_t val_offset,
-                            int val_len, void *buffer)
+                            size_t val_len, void *buffer)
 {
   assert(state != NULL);
   assert(val_len >= 0);
   // TODO: it would be better to reread entire record to make sure
   //       we don't get a corrupted record.
   adlb_code ac;
-  DEBUG("Reading value: %i bytes at offset %zi in file %s", val_len,
+  DEBUG("Reading value: %zu bytes at offset %zi in file %s", val_len,
         val_offset, state->filename);
 
   ac = seek_read(state, val_offset);
@@ -490,9 +490,9 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state,
           val_offset, state->filename);
 
   ac = blkread(state, buffer, (xpt_block_pos_t)val_len);
-  CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %i bytes at offset "
-          "%zi in file %s (%i)", val_len,
-          val_offset, state->filename, (int)ac);
+  CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %zu bytes at offset "
+          "%zi in file %s", val_len,
+          val_offset, state->filename);
 
   return ADLB_SUCCESS;
 }
@@ -711,7 +711,7 @@ seek_read(xlb_xpt_read_state *state, xpt_file_pos_t offset)
 }
 
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-   int *key_len, void **key, int *val_len, void **val,
+   size_t *key_len, void **key, size_t *val_len, void **val,
    xpt_file_pos_t *val_offset)
 {
   adlb_code rc;
@@ -823,7 +823,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     // reset position to start of record for re-reading
     seek_file_pos(state, record_start);
 
-    *key_len = (int)rec_len64;
+    *key_len = (size_t) rec_len64;
     DEBUG("Buffer too small for record");
     return ADLB_RETRY;
   }
@@ -874,12 +874,12 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
   DEBUG("Key length is %"PRId64, key_len64);
 
-  *key_len = (int)key_len64;
-  *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);
+  *key_len = (size_t) key_len64;
+  *val_len = (size_t) (rec_len64 - (int64_t)key_len_encb - key_len64);
 
   // Work out relative offsets of key/value data from record start
-  int key_rel = key_len_encb;
-  int val_rel = key_rel + *key_len;
+  size_t key_rel = (size_t) key_len_encb;
+  size_t val_rel = key_rel + *key_len;
   *key = buffer->data + key_rel;
   *val = buffer->data + val_rel;
   *val_offset = data_offset + (xpt_file_pos_t)val_rel;
@@ -1035,7 +1035,7 @@ static adlb_code bufwrite(xlb_xpt_state *state,
   {
     xpt_block_pos_t buffer_left = XLB_XPT_BUFFER_SIZE -
                                   state->buffer_used;
-    TRACE("Buffer size: %i, buffer used: %zu buffer left: %zu",
+    TRACE("Buffer size: %i, buffer used: %ui buffer left: %ui",
           XLB_XPT_BUFFER_SIZE, state->buffer_used, buffer_left);
 
     if (buffer_left == 0)
@@ -1060,7 +1060,7 @@ static adlb_code bufwrite(xlb_xpt_state *state,
       write_size = XLB_XPT_BLOCK_SIZE - after_buf_pos.block_pos;
     }
 
-    TRACE("Append %zu bytes to write buffer (%zu already used)",
+    TRACE("Append %ui bytes to write buffer (%ui already used)",
           write_size, state->buffer_used);
     memcpy(state->buffer + state->buffer_used, data_ptr, write_size);
 

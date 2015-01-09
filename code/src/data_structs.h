@@ -87,11 +87,11 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
                                         bool validate_path, bool *b);
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
-        adlb_struct_field_type field_type, const void *data, int length,
+        adlb_struct_field_type field_type, const void *data, size_t length,
         adlb_data_type data_type, adlb_refc refcounts);
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
-                const void *data, int length, adlb_data_type type,
+                const void *data, size_t length, adlb_data_type type,
                 adlb_refc refcounts);
 
 /**
@@ -100,7 +100,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
  */
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
       adlb_subscript subscript, bool init_nested,
-      const void *data, int length, adlb_data_type type,
+      const void *data, size_t length, adlb_data_type type,
       adlb_refc refcounts);
 
 adlb_data_code

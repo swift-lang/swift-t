@@ -286,7 +286,7 @@ static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 }
 
 adlb_data_code
-ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
+ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
                    adlb_refc refcounts, bool init_struct)
 {
   adlb_data_code dc;
@@ -326,15 +326,15 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
   // Go through and assign all of the datums from the data in the buffer
   for (int i = 0; i < t->field_count; i++)
   {
-    int init_offset = hdr->field_offsets[i];
-    int data_offset = init_offset + 1;
+    size_t init_offset = hdr->field_offsets[i];
+    size_t data_offset = init_offset + 1;
 
     bool field_init = (((char*)data)[init_offset] != 0);
 
     if (field_init)
     {
       const void *field_start = ((const char*)data) + data_offset;
-      int field_len;
+      size_t field_len;
       if (i == t->field_count - 1)
       {
         // Remainder of buffer
@@ -354,7 +354,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
       }
 
       ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
-                  field_start, field_len, refcounts);
+                  field_start, field_len, true, refcounts);
       (*s)->fields[i].initialized = true;
     }
   }
@@ -380,8 +380,8 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   adlb_packed_struct_hdr **hdr = (adlb_packed_struct_hdr **) &result_buf.data;
 
   // Resize buf for header if needed
-  int hdr_size = (int)sizeof(**hdr) +
-              t->field_count * (int)sizeof((*hdr)->field_offsets[0]);
+  size_t hdr_size = sizeof(**hdr) +
+      ((size_t) t->field_count) * sizeof((*hdr)->field_offsets[0]);
 
   bool using_caller_buf;
   dc = ADLB_Init_buf(caller_buffer, &result_buf, &using_caller_buf, hdr_size);
@@ -389,7 +389,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 
   // Add header info
   (*hdr)->type = s->type;
-  int buf_pos = hdr_size; // Current amount of buffer used
+  size_t buf_pos = hdr_size; // Current amount of buffer used
 
   for (int i = 0; i < t->field_count; i++)
   {
@@ -507,6 +507,7 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
       return ADLB_DATA_SUCCESS;
     }
   }
+  return ADLB_DATA_SUCCESS;
 }
 
 // Get data for struct field
@@ -598,7 +599,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 }
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
-        adlb_struct_field_type field_type, const void *data, int length,
+        adlb_struct_field_type field_type, const void *data, size_t length,
         adlb_data_type data_type, adlb_refc refcounts)
 {
   adlb_data_code dc;
@@ -614,7 +615,7 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         ADLB_Data_type_tostring(data_type));
 
   // Assign, initializing compound type if needed
-  dc = ADLB_Unpack2(&field->data, data_type, data, length, refcounts,
+  dc = ADLB_Unpack2(&field->data, data_type, data, length, true, refcounts,
                     !field->initialized); 
   DATA_CHECK(dc);
   field->initialized = true;
@@ -623,7 +624,7 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
 }
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
-                const void *data, int length, adlb_data_type type,
+                const void *data, size_t length, adlb_data_type type,
                 adlb_refc refcounts)
 {
   adlb_struct_field *f;
@@ -637,7 +638,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
 
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
       adlb_subscript subscript, bool init_nested,
-      const void *data, int length, adlb_data_type type,
+      const void *data, size_t length, adlb_data_type type,
       adlb_refc refcounts)
 {
   adlb_data_code dc;

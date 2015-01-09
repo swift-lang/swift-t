@@ -32,7 +32,7 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
-          const void *value, int length, adlb_data_type type,
+          const void *value, size_t length, adlb_data_type type,
           adlb_refc transferred_refs, int write_decr,
           adlb_notif_t *notifs);
 
@@ -184,11 +184,11 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
-            const void *value, int length, adlb_data_type type,
+            const void *value, size_t length, adlb_data_type type,
             adlb_refc transferred_refs, int write_decr,
             adlb_notif_t *notifs)
 {
-  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i] r: %i w: %i "
+  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%zu] r: %i w: %i "
       "write_decr: %i", id, (int)subscript.length,
       (const char*)subscript.key, value, length,
       transferred_refs.read_refcount, transferred_refs.write_refcount,
@@ -200,7 +200,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   if (server == xlb_comm_rank)
   {
     adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
-    adlb_data_code dc = xlb_data_store(id, subscript, value, length,
+    adlb_data_code dc = xlb_data_store(id, subscript, value, length, false,
                      type, decr, transferred_refs, notifs);
     ADLB_DATA_CHECK(dc);
 
@@ -807,8 +807,8 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     we know the side we need in advance
    */
 
-  int caller_buf_size = (caller_buf == NULL) ?  0 : caller_buf->length;
-  int caller_buf_used = 0;
+  size_t caller_buf_size = (caller_buf == NULL) ?  0 : caller_buf->length;
+  size_t caller_buf_used = 0;
 
   struct packed_notif *packed_notifs = NULL;
   struct packed_reference *packed_refs = NULL;
@@ -818,7 +818,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
   if (notify_count > 0)
   {
     // Grab enough space for packed notifs in buffer or by mallocing
-    int notif_bytes = (int)sizeof(struct packed_notif) * notify_count;
+    size_t notif_bytes = sizeof(struct packed_notif) * (size_t) notify_count;
     if (caller_buf_used + notif_bytes <= caller_buf_size)
     {
       packed_notifs = (struct packed_notif *)
@@ -837,7 +837,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
   if (refs_count > 0)
   {
     // Grab enough space for packed refs in buffer or by mallocing
-    int refs_bytes = (int)sizeof(struct packed_reference) * refs_count;
+    size_t refs_bytes = sizeof(struct packed_reference) * (size_t) refs_count;
     if (caller_buf_used + refs_bytes <= caller_buf_size)
     {
       packed_refs = (struct packed_reference*)
@@ -869,7 +869,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
   dc = ADLB_Init_buf(&caller_buf2, &extra_data, &using_caller_buf2, 0);
   ADLB_DATA_CHECK(dc);
 
-  int extra_pos = 0;
+  size_t extra_pos = 0;
   int extra_data_count = 0;
 
   // Track last subscript so we don't send redundant subscripts
@@ -896,7 +896,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
 
         // pack into extra data
         dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,rank->subscript.key,
-            (int)rank->subscript.length, true, &extra_data,
+            rank->subscript.length, true, &extra_data,
             &using_caller_buf2, &extra_pos);
         ADLB_DATA_CHECK(dc);
        
@@ -913,7 +913,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
 
   // Track last value so we don't send redundant values
   const void *last_value = NULL;
-  int last_value_len;
+  size_t last_value_len;
   int last_value_ix;
   for (int i = 0; i < refs_count; i++)
   {
@@ -927,7 +927,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     {
       packed_refs[i].subscript_data = extra_data_count++;
       dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->subscript.key,
-          (int)ref->subscript.length, true, &extra_data,
+          ref->subscript.length, true, &extra_data,
           &using_caller_buf2, &extra_pos);
       ADLB_DATA_CHECK(dc);
     }
@@ -976,18 +976,18 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
        const struct packed_notif_counts *counts,
        const xlb_prepared_notifs *prepared)
 {
-  int extra_data_bytes = counts->extra_data_bytes;
+  size_t extra_data_bytes = counts->extra_data_bytes;
   int notify_count = counts->notify_count;
   int refs_count = counts->reference_count;
   int refcs_count = counts->refc_count;
 
   if (extra_data_bytes > 0)
   {
-    TRACE("Sending %i extra data count %i bytes",
+    TRACE("Sending %i extra data count %zu bytes",
            counts->extra_data_count, extra_data_bytes);
     assert(counts->extra_data_count > 0);
-    SEND(prepared->extra_data, extra_data_bytes, MPI_BYTE,
-         caller, ADLB_TAG_RESPONSE_NOTIF);
+    mpi_send_big(prepared->extra_data, extra_data_bytes,
+                 caller, ADLB_TAG_RESPONSE_NOTIF);
 
     if (prepared->free_extra_data)
     {
@@ -1066,7 +1066,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
   int extra_data_count = 0;
   if (counts->extra_data_bytes > 0)
   {
-    int bytes = counts->extra_data_bytes;
+    size_t bytes = counts->extra_data_bytes;
     extra_data_count = counts->extra_data_count;
     assert(extra_data_count >= 0);
 
@@ -1074,9 +1074,10 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     ADLB_MALLOC_CHECK(extra_data);
     
     ac = xlb_to_free_add(notifs, extra_data);
-    ADLB_CHECK(ac)
+    ADLB_CHECK(ac);
 
-    RECV(extra_data, bytes, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
+    ac = mpi_recv_big(extra_data, bytes, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
+    ADLB_CHECK(ac);
 
     // Locate the separate data entries in the buffer
     extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) *
@@ -1086,7 +1087,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     ac = xlb_to_free_add(notifs, extra_data_ptrs);
     ADLB_CHECK(ac)
 
-    int pos = 0;
+    size_t pos = 0;
     for (int i = 0; i < extra_data_count; i++)
     {
       dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, extra_data, bytes, &pos,

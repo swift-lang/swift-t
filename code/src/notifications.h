@@ -50,7 +50,7 @@ typedef struct {
   int write_decr; // Amount to decrement ID write refcount by
   // Data to set it to:
   const void *value;
-  int value_len;
+  size_t value_len;
 } adlb_ref_datum;
 
 typedef struct {
@@ -281,7 +281,7 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
  */
 static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
       adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
-      const void *value, int value_len, adlb_refc refcounts,
+      const void *value, size_t value_len, adlb_refc refcounts,
       int write_decr)
 {
   // Mark that caller should free

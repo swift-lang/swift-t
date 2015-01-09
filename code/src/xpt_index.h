@@ -28,7 +28,7 @@ typedef struct
 {
   char *file; // To handle if file location is in older checkpoint file
   off_t val_offset;
-  int val_len;
+  size_t val_len;
 } xpt_file_loc;
 
 typedef struct 
@@ -55,7 +55,7 @@ adlb_code xlb_xpt_index_init(void);
 
   Caller must free any allocated binary data returned in adlb_binary_data.
  */
-adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
+adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
                                xpt_index_entry *res);
 
 /*
@@ -64,7 +64,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
   entry: the entry to add.  This function doesn't modify or store any
          pointers from this entry.
  */
-adlb_code xlb_xpt_index_add(const void *key, int key_len,
+adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
                             const xpt_index_entry *entry);
 
 #endif // __XLB_XPT_INDEX_H

@@ -275,21 +275,22 @@ ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
 {
   MPE_LOG(xlb_mpe_wkr_exists_start);
   adlb_code rc = ADLBP_Exists(id, subscript, result, decr);
-  return rc;
   MPE_LOG(xlb_mpe_wkr_exists_end);
+  return rc;
 }
 
 adlb_code ADLB_Refcount_get(adlb_datum_id id, adlb_refc *result,
                               adlb_refc decr)
 {
   MPE_LOG(xlb_mpe_wkr_get_refcounts_start);
-  return ADLBP_Refcount_get(id, result, decr);
+  adlb_code rc = ADLBP_Refcount_get(id, result, decr);
   MPE_LOG(xlb_mpe_wkr_get_refcounts_end);
+  return rc;
 }
 
 adlb_code
 ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
-          adlb_data_type type, const void *data, int length,
+          adlb_data_type type, const void *data, size_t length,
           adlb_refc refcount_decr, adlb_refc store_refcounts)
 {
   MPE_LOG(xlb_mpe_wkr_store_start);
@@ -302,7 +303,7 @@ ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
 adlb_code
 ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
       adlb_retrieve_refc refcounts, adlb_data_type* type,
-      void *data, int *length)
+      void *data, size_t *length)
 {
   MPE_LOG(xlb_mpe_wkr_retrieve_start);
   adlb_code rc = ADLBP_Retrieve(id, subscript, refcounts, type, data, length);
@@ -314,7 +315,7 @@ adlb_code
 ADLB_Enumerate(adlb_datum_id container_id,
                int count, int offset, adlb_refc decr,
                bool include_keys, bool include_vals,
-               void** data, int* length, int* records,
+               void** data, size_t* length, int* records,
                adlb_type_extra *kv_type)
 {
   return ADLBP_Enumerate(container_id, count, offset, decr,
@@ -336,7 +337,7 @@ ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change)
 
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        adlb_retrieve_refc refcounts,
-                       bool* result, void *data, int *length,
+                       bool* result, void *data, size_t *length,
                        adlb_data_type *type)
 {
   adlb_code rc = ADLBP_Insert_atomic(id, subscript, refcounts, result,

@@ -56,7 +56,7 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
 static void free_open_read(const char *key, void *read_state);
 
 static adlb_code read_file_val(xpt_file_loc *file_loc,
-                                 void *buffer, int val_len);
+                               void *buffer, size_t val_len);
 
 adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
@@ -108,8 +108,8 @@ adlb_code ADLB_Xpt_finalize(void)
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
-                int val_len, adlb_xpt_persist persist, bool index_add)
+adlb_code ADLB_Xpt_write(const void *key, size_t key_len, const void *val,
+                size_t val_len, adlb_xpt_persist persist, bool index_add)
 {
   assert(xlb_xpt_initialized);
   assert(key_len >= 0);
@@ -130,7 +130,7 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
       do_persist = true;
       entry.in_file = true;
       // Fill in file location upon write
-      CHECK_MSG(xlb_xpt_write_enabled, "%i > %i Checkpoint value size exceeded "
+      CHECK_MSG(xlb_xpt_write_enabled, "%zu > %i Checkpoint value size exceeded "
                 "maximum size for checkpoint index, but writing to file "
                 "not enabled", val_len, max_index_val_bytes);
     }
@@ -184,7 +184,8 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
   return ADLB_SUCCESS;
 }
 
-adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result)
+adlb_code ADLB_Xpt_lookup(const void *key, size_t key_len,
+                          adlb_binary_data *result)
 {
   assert(xlb_xpt_initialized);
   assert(key != NULL);
@@ -210,8 +211,8 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   if (res.in_file)
   {
     // Allocate buffer that caller should free
-    int val_len = res.FILE_LOC.val_len;
-    result->data = result->caller_data = malloc((size_t)val_len);
+    size_t val_len = res.FILE_LOC.val_len;
+    result->data = result->caller_data = malloc(val_len);
     result->length = val_len;
     ADLB_MALLOC_CHECK(result->data);
     
@@ -234,7 +235,7 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   Read value from file at given location
  */
 static adlb_code read_file_val(xpt_file_loc *file_loc,
-                                 void *buffer, int val_len)
+                                 void *buffer, size_t val_len)
 {
   adlb_code rc; 
   if (file_loc->file == NULL)
@@ -375,7 +376,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
   while (true)
   {
     void *key_ptr, *val_ptr;
-    int key_len, val_len;
+    size_t key_len, val_len;
     off_t val_offset;
     rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
                       &val_len, &val_ptr, &val_offset);
@@ -411,7 +412,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     else if (val_len > ADLB_XPT_MAX)
     {
       ERR_PRINTF("Checkpoint entry loaded from file "
-          "bigger than ADLB_XPT_MAX: %i vs %i\n", val_len, ADLB_XPT_MAX);
+          "bigger than ADLB_XPT_MAX: %zu vs %llu\n", val_len, ADLB_XPT_MAX);
       stats->invalid++;
       return ADLB_ERROR;
     }

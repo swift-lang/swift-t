@@ -244,7 +244,7 @@ struct packed_notif_counts
   int reference_count;
   int refc_count;
   int extra_data_count;
-  int extra_data_bytes;
+  size_t extra_data_bytes;
 };
 
 struct packed_mget_request
@@ -294,7 +294,7 @@ struct retrieve_response_hdr
   struct packed_notif_counts notifs;
   adlb_data_code code;
   adlb_data_type type;
-  int length;
+  size_t length;
 };
 
 /**
@@ -314,7 +314,7 @@ struct packed_enumerate_result
 {
   adlb_data_code dc;
   int records; // Count of elements returned
-  int length; // length of data in bytes
+  size_t length; // length of data in bytes
   adlb_data_type key_type;
   adlb_data_type val_type;
 };
@@ -376,9 +376,9 @@ struct packed_store_hdr
   adlb_data_type type; // Type of data
   adlb_refc refcount_decr;
   adlb_refc store_refcounts; // Refcounts to store
+  uint64_t length; // Data length
   int subscript_len; // including null byte, 0 if no subscript
 };
-
 
 /**
  * Response for store
@@ -407,7 +407,7 @@ struct packed_insert_atomic_resp
   struct packed_notif_counts notifs;
   adlb_data_code dc;
   bool created;
-  int value_len; // Value length, negative if not present
+  size_t value_len; // Value length, negative if not present
   adlb_data_type value_type;
 };
 
@@ -699,4 +699,41 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
 
 // Revert to regular packing rules
 #pragma pack(pop)
+
+static inline adlb_code
+mpi_send_big(const void* data, size_t length, int target, int tag)
+{
+  size_t chunk     = 100*1024*1024;
+  int    chunk_int = (int) chunk;
+  size_t chunks_full = length / chunk;
+  size_t remainder   = length % chunk;
+  int    remainder_int = (int) remainder;
+  const void* p = data;
+  for (int i = 0; i < chunks_full; i++)
+  {
+    SEND(p, chunk_int, MPI_BYTE, target, tag);
+    p += chunk;
+  }
+  SEND(p, remainder_int, MPI_BYTE, target, tag);
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code
+mpi_recv_big(void* xfer, size_t length, int caller, int tag)
+{
+  size_t chunk     = 100*1024*1024;
+  int    chunk_int = (int) chunk;
+  size_t chunks_full = length / chunk;
+  size_t remainder   = length % chunk;
+  int    remainder_int = (int) remainder;
+  void* p = xfer;
+  MPI_Status status;
+  for (int i = 0; i < chunks_full; i++)
+  {
+    RECV(p, chunk_int, MPI_BYTE, caller, tag);
+  }
+  RECV(p, remainder_int, MPI_BYTE, caller, tag);
+  return ADLB_SUCCESS;
+}
+
 #endif

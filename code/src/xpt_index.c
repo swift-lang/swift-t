@@ -31,7 +31,7 @@ static bool xpt_index_init = false;
 static inline adlb_datum_id id_for_rank(int comm_rank);
 static inline adlb_datum_id id_for_server(int server_num);
 static inline adlb_datum_id id_for_hash(uint32_t key_hash);
-static inline uint32_t calc_hash(const void *data, int length);
+static inline uint32_t calc_hash(const void *data, size_t length);
 
 adlb_code xlb_xpt_index_init(void)
 {
@@ -55,7 +55,7 @@ adlb_code xlb_xpt_index_init(void)
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
+adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
                                xpt_index_entry *res)
 {
   assert(xpt_index_init);
@@ -68,7 +68,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
 
   void *buffer = xlb_xfer; 
   adlb_data_type type;
-  int length;
+  size_t length;
   adlb_code rc = ADLB_Retrieve(id, subscript, refcounts, &type,
                                buffer, &length);
   CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in "
@@ -78,7 +78,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
     // Not present
     return ADLB_NOTHING;
   }
-  CHECK_MSG(length >= 1, "Checkpoint index val too small: %i", length);
+  CHECK_MSG(length >= 1, "Checkpoint index val too small: %zu", length);
 
   // Type flag goes at end of buffer
   char in_file_flag = ((char*)buffer)[length - 1];
@@ -91,13 +91,13 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
     char *pos = (char*)buffer;
     size_t filename_len;
     CHECK_MSG(length >= sizeof(filename_len), "Buffer not large enough "
-            "for filename len: %d v %zu", length, sizeof(filename_len));
+            "for filename len: %zu v %zu", length, sizeof(filename_len));
     MSG_UNPACK_BIN(pos, &filename_len);
 
     // Check buffer was expected size (members plus in_file byte)
-    int exp_length = (int)(sizeof(filename_len) + filename_len + 
-          sizeof(res_file->val_offset) + sizeof(res_file->val_len) + 1);
-    CHECK_MSG(length == exp_length, "Buffer not expected size: %i vs %i",
+    size_t exp_length = sizeof(filename_len) + filename_len +
+        sizeof(res_file->val_offset) + sizeof(res_file->val_len) + 1;
+    CHECK_MSG(length == exp_length, "Buffer not expected size: %zu vs %zu",
               length, exp_length);
 
     // Extract filename if needed
@@ -131,7 +131,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_xpt_index_add(const void *key, int key_len,
+adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
                             const xpt_index_entry *entry)
 {
   assert(xpt_index_init);
@@ -144,7 +144,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
 
   const void *data; // Pointer to binary repr
-  long data_len; // Length of data minus flag
+  size_t data_len; // Length of data minus flag
   if (entry->in_file)
   {
     // Write info to binary buffer
@@ -164,13 +164,13 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     xfer_pos++;
 
     data = xlb_xfer;
-    data_len = xfer_pos - xlb_xfer;
+    data_len = (size_t) (xfer_pos - xlb_xfer);
     assert(data_len <= ADLB_XPT_MAX); // Should certainly be smaller
   }
   else
   {
     CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
-      "Checkpoint data too long: %i vs. %i", key_len, ADLB_XPT_MAX);
+      "Checkpoint data too long: %zu vs. %llu", key_len, ADLB_XPT_MAX);
     // Set file flag
     memcpy(xlb_xfer, entry->DATA.data, (size_t)entry->DATA.length);
     xlb_xfer[entry->DATA.length] = (char)0; // file flag
@@ -183,7 +183,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
   assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-                    data, (int)data_len, refcounts, ADLB_NO_REFC);
+                            data, data_len, refcounts, ADLB_NO_REFC);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!
@@ -223,10 +223,10 @@ static inline adlb_datum_id id_for_hash(uint32_t key_hash)
 }
 
 __attribute__((always_inline))
-static inline uint32_t calc_hash(const void *data, int length)
+static inline uint32_t calc_hash(const void *data, size_t length)
 {
   assert(length >= 0);
-  return bj_hashlittle(data, (size_t)length, 0u);
+  return bj_hashlittle(data, length, 0u);
 }
 
 #endif // XLB_ENABLE_XPT

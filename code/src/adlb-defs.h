@@ -56,6 +56,9 @@ typedef enum
  ADLB_RETRY = -5,
  /** Indicate something is finished and shouldn't call again */
  ADLB_DONE = -6,
+ /** Something was not found.
+     (Used as adlb_code version of adlb_data_code NOT_FOUND errors.) */
+ ADLB_NOT_FOUND = -7
 } adlb_code;
 
 /**
@@ -340,13 +343,18 @@ typedef enum
 #define ADLB_DATA_SUBSCRIPT_MAX 1024
 
 /** The maximal length of an ADLB datum (string, blob, etc.) */
-#define ADLB_DATA_MAX (20*1024*1024)
+#define ADLB_DATA_MAX (1ULL*1024*1024*1024)
+// (100ULL*1024*1024*1024)
+// const size_t ADLB_DATA_MAX = ADLB_DEFINED_DATA_MAX;
 
 /** Maximum size for a given ADLB transaction */
 #define ADLB_PAYLOAD_MAX ADLB_DATA_MAX
 
 /** Maximum size for ADLB checkpoint value */
 #define ADLB_XPT_MAX (ADLB_DATA_MAX - 1)
+
+/** Size of the pre-allocated XLB transfer buffer */
+#define ADLB_XFER_SIZE (10*1024)
 
 /**
   printf specifiers for printing data identifier with debug symbol.

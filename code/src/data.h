@@ -122,7 +122,8 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                adlb_data_type *key_type, adlb_data_type *val_type);
 
 adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
-          const void* buffer, int length, adlb_data_type type,
+          const void* buffer, size_t length, bool copy,
+          adlb_data_type type,
           adlb_refc refcount_decr, adlb_refc store_refcounts,
           adlb_notif_t *notifs);
 

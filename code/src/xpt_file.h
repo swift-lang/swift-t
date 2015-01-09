@@ -71,8 +71,8 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state);
 /* Write a checkpoint record.
   val_offset: offset of value record in file. */
 adlb_code
-xlb_xpt_write(const void *key, int key_len,
-              const void *val, int val_len,
+xlb_xpt_write(const void *key, size_t key_len,
+              const void *val, size_t val_len,
               xlb_xpt_state *state, xpt_file_pos_t *val_offset);
 
 /* Read a checkpoint value from the file being written, 
@@ -82,12 +82,12 @@ xlb_xpt_write(const void *key, int key_len,
       otherwise open previously written file. */
 adlb_code
 xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
-                int val_len, void *buffer);
+                   size_t val_len, void *buffer);
 
 /* Read a checkpoint value from a file open for reading */
 adlb_code
 xlb_xpt_read_val_r(xlb_xpt_read_state *state, xpt_file_pos_t val_offset,
-                int val_len, void *buffer);
+                   size_t val_len, void *buffer);
 
 /* Flush checkpoint writes */
 adlb_code xlb_xpt_flush(xlb_xpt_state *state);
@@ -120,7 +120,7 @@ xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank);
   val_offset: file offset for value entry
  */
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-       int *key_len, void **key, int *val_len, void **val,
+       size_t *key_len, void **key, size_t *val_len, void **val,
        xpt_file_pos_t *val_offset);
 
 #endif // __XLB_XPT_FILE_H

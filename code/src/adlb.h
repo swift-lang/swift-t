@@ -284,10 +284,10 @@ adlb_code ADLB_Refcount_get(adlb_datum_id id, adlb_refc *result,
            ADLB_ERROR for other errors
  */
 adlb_code ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
-          adlb_data_type type, const void *data, int length,
+          adlb_data_type type, const void *data, size_t length,
           adlb_refc refcount_decr, adlb_refc store_refcounts);
 adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
-          adlb_data_type type, const void *data, int length,
+          adlb_data_type type, const void *data, size_t length,
           adlb_refc refcount_decr, adlb_refc store_refcounts);
 
 /*
@@ -303,10 +303,10 @@ adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
  */
 adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
       adlb_retrieve_refc refcounts,
-      adlb_data_type *type, void *data, int *length);
+      adlb_data_type* type, void* data, size_t* length);
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
-      adlb_retrieve_refc refcounts, adlb_data_type *type, 
-      void *data, int *length);
+      adlb_retrieve_refc refcounts, adlb_data_type* type,
+      void* data, size_t* length);
 
 /*
    List contents of container
@@ -323,12 +323,12 @@ adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
 adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
                    int count, int offset, adlb_refc decr,
                    bool include_keys, bool include_vals,
-                   void** data, int* length, int* records,
+                   void** data, size_t* length, int* records,
                    adlb_type_extra *kv_type);
 adlb_code ADLB_Enumerate(adlb_datum_id container_id,
                    int count, int offset, adlb_refc decr,
                    bool include_keys, bool include_vals,
-                   void** data, int* length, int* records,
+                   void** data, size_t* length, int* records,
                    adlb_type_extra *kv_type);
 
 // Switch on read refcounting and memory management, which is off by default
@@ -352,11 +352,11 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change);
  */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         adlb_retrieve_refc refcounts,
-                        bool* result, void *data, int *length,
+                        bool* result, void *data, size_t *length,
                         adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         adlb_retrieve_refc refcounts,
-                       bool* result, void *data, int *length,
+                       bool* result, void *data, size_t *length,
                        adlb_data_type *type);
 
 /*
@@ -414,6 +414,9 @@ adlb_code ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
 adlb_code ADLBP_Finalize(void);
 adlb_code ADLB_Finalize(void);
 
+/**
+   Tell server to fail.
+ */
 adlb_code ADLB_Fail(int code);
 
 void ADLB_Abort(int code);

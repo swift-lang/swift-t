@@ -49,13 +49,13 @@ typedef unsigned int uint;
 typedef struct
 {
   char* value;
-  int length; // Length including null terminator
+  size_t length; // Length including null terminator
 } adlb_string_t;
 
 typedef struct
 {
   void* value;
-  int length;
+  size_t length;
 } adlb_blob_t;
 
 typedef struct {
@@ -163,13 +163,13 @@ typedef struct {
   const void *data; // Pointer to data, always filled in
   // Caller-owned pointer if we use caller's buffer or allocate memory
   void *caller_data;
-  int length; // Length of packed data
+  size_t length; // Length of packed data
 } adlb_binary_data;
 
 // Struct representing a buffer, such as one provided by caller of function
 typedef struct {
   char *data;
-  int length;
+  size_t length;
 } adlb_buffer;
 
 /**
@@ -231,9 +231,9 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
         ADLB data type upon decoding.
  */
 adlb_data_code
-ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
+ADLB_Append_buffer(adlb_data_type type, const void *data, size_t length,
         bool prefix_len, adlb_buffer *output, bool *output_caller_buffer,
-        int *output_pos);
+        size_t *output_pos);
 
 
 /*
@@ -254,7 +254,7 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
 adlb_data_code
 ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
         bool prefix_len, const adlb_buffer *tmp_buf, adlb_buffer *output,
-        bool *output_caller_buffer, int *output_pos);
+        bool *output_caller_buffer, size_t *output_pos);
 
 /*
   Whether we pad the vint size to VINT_MAX_BYTES when appending
@@ -279,7 +279,8 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
  */
 adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, adlb_refc refcounts);
+            const void *buffer, size_t length, bool copy,
+            adlb_refc refcounts);
 
 /*
   Same as ADLB_Unpack, except optionally we can specify that
@@ -288,8 +289,8 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
  */
 adlb_data_code
 ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, adlb_refc refcounts,
-            bool init_compound);
+            const void *buffer, size_t length, bool copy,
+            adlb_refc refcounts, bool init_compound);
 
 /*
   Helper to unpack data from buffer.  This will simply
@@ -306,8 +307,8 @@ ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
  */
 adlb_data_code
 ADLB_Unpack_buffer(adlb_data_type type,
-        const void *buffer, int length, int *pos,
-        const void **entry, int *entry_length);
+        const void *buffer, size_t length, size_t *pos,
+        const void **entry, size_t* entry_length);
 
 /**
    Functions to pack and unpack data from buffers.
@@ -330,7 +331,7 @@ ADLB_Unpack_buffer(adlb_data_type type,
 static inline adlb_data_code
 ADLB_Init_buf(const adlb_buffer *caller_buffer,
                              adlb_buffer *curr_buffer,
-                             bool *using_caller_buf, int init_length);
+                             bool *using_caller_buf, size_t init_length);
 
 /*
    Helper function to resize buffer, supporting caller-provided buffers
@@ -339,7 +340,7 @@ ADLB_Init_buf(const adlb_buffer *caller_buffer,
    int: minimum length required
  */
 static inline adlb_data_code
-ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length);
+ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, size_t min_length);
 
 static inline void
 ADLB_Free_buf(adlb_buffer *buf, bool using_caller_buf);
@@ -356,14 +357,14 @@ ADLB_Free_binary_data(adlb_binary_data *buffer);
   result->length = (int)sizeof(*(d));     \
 }
 
-#define ADLB_UNPACK_SCALAR(d, data, length) { \
-  if (length != (int)sizeof(*(d)))            \
-  {                                           \
-    printf("Could not unpack: expected length " \
-        "%zu actual length %i", sizeof(*(d)), length); \
-    return ADLB_DATA_ERROR_INVALID;           \
-  }                                           \
-  memcpy((d), data, sizeof(*(d)));            \
+#define ADLB_UNPACK_SCALAR(d, data, length) {           \
+  if (length != sizeof(*(d)))                           \
+  {                                                     \
+    printf("Could not unpack: expected length "         \
+        "%zu actual length %zu", sizeof(*(d)), length); \
+    return ADLB_DATA_ERROR_INVALID;                     \
+  }                                                     \
+  memcpy((d), data, sizeof(*(d)));                      \
 }
 
 /**
@@ -383,7 +384,7 @@ ADLB_Pack_integer(const adlb_int_t *d, adlb_binary_data *result)
 }
 
 static inline adlb_data_code
-ADLB_Unpack_integer(adlb_int_t *d, const void *data, int length)
+ADLB_Unpack_integer(adlb_int_t *d, const void *data, size_t length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
   return ADLB_DATA_SUCCESS;
@@ -398,7 +399,7 @@ ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 }
 
 static inline adlb_data_code
-ADLB_Unpack_ref(adlb_ref *d, const void *data, int length,
+ADLB_Unpack_ref(adlb_ref *d, const void *data, size_t length,
                 adlb_refc refcounts)
 {
   ADLB_UNPACK_SCALAR(&d->id, data, length);
@@ -415,7 +416,7 @@ ADLB_Pack_float(const adlb_float_t *d, adlb_binary_data *result)
 }
 
 static inline adlb_data_code
-ADLB_Unpack_float(adlb_float_t *d, const void *data, int length)
+ADLB_Unpack_float(adlb_float_t *d, const void *data, size_t length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
   return ADLB_DATA_SUCCESS;
@@ -437,7 +438,7 @@ ADLB_Pack_string(const adlb_string_t *s, adlb_binary_data *result)
 }
 
 static inline adlb_data_code
-ADLB_Unpack_string(adlb_string_t *s, void *data, int length, bool copy)
+ADLB_Unpack_string(adlb_string_t *s, void *data, size_t length, bool copy)
 {
   // Must be null-terminated
   if (length < 1 || ((char*)data)[length-1] != '\0')
@@ -471,7 +472,7 @@ ADLB_Pack_blob(const adlb_blob_t *b, adlb_binary_data *result)
 }
 
 static inline adlb_data_code
-ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
+ADLB_Unpack_blob(adlb_blob_t *b, void *data, size_t length, bool copy)
 {
   assert(length >= 0);
   if (copy)
@@ -494,12 +495,12 @@ ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
 adlb_data_code
 ADLB_Pack_container(const adlb_container *container,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
-          bool *output_caller_buffer, int *output_pos);
+          bool *output_caller_buffer, size_t *output_pos);
 
 adlb_data_code
 ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
         adlb_data_type val_type, adlb_buffer *output,
-        bool *output_caller_buffer, int *output_pos);
+        bool *output_caller_buffer, size_t *output_pos);
 
 /*
  init_cont: if true, initialize new container
@@ -507,18 +508,18 @@ ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
  */
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-    const void *data, int length, adlb_refc refcounts,
+    const void *data, size_t length, adlb_refc refcounts,
     bool init_cont);
 
 adlb_data_code
-ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
+ADLB_Unpack_container_hdr(const void *data, size_t length, size_t *pos,
         int *entries, adlb_data_type *key_type, adlb_data_type *val_type);
 
 adlb_data_code
 ADLB_Unpack_container_entry(adlb_data_type key_type,
-          adlb_data_type val_type, const void *data, int length,
-          int *pos, const void **key, int *key_len,
-          const void **val, int *val_len);
+          adlb_data_type val_type, const void *data, size_t length,
+          size_t *pos, const void **key, size_t *key_len,
+          const void **val, size_t *val_len);
 
 /*
   Multiset is packed with a header, then a series of
@@ -527,31 +528,31 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
 adlb_data_code
 ADLB_Pack_multiset(const adlb_multiset_ptr ms,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
-          bool *output_caller_buffer, int *output_pos);
+          bool *output_caller_buffer, size_t *output_pos);
 
 adlb_data_code
 ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
-    adlb_buffer *output, bool *output_caller_buffer, int *output_pos);
+    adlb_buffer *output, bool *output_caller_buffer, size_t *output_pos);
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
-        int length, adlb_refc refcounts, bool init_ms);
+        size_t length, adlb_refc refcounts, bool init_ms);
 
 adlb_data_code
-ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
+ADLB_Unpack_multiset_hdr(const void *data, size_t length, size_t *pos,
                 int *entries, adlb_data_type *elem_type);
 
 adlb_data_code
 ADLB_Unpack_multiset_entry(adlb_data_type elem_type,
-          const void *data, int length, int *pos,
-          const void **elem, int *elem_len);
+          const void *data, size_t length, size_t *pos,
+          const void **elem, size_t *elem_len);
 
 // Header used for metadata about serialization
 // The remainder of buffer has struct fields stored in order
 typedef struct {
   adlb_struct_type type;
   // Offsets of fields within buffer relative to start of buffer
-  int field_offsets[];
+  size_t field_offsets[];
 } adlb_packed_struct_hdr;
 
 adlb_data_code
@@ -559,7 +560,7 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result);
 
 adlb_data_code
-ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
+ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
                    adlb_refc refcounts, bool init_struct);
 
 // Free any memory used
@@ -585,7 +586,7 @@ ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type);
 static inline adlb_data_code
 ADLB_Init_buf(const adlb_buffer *caller_buffer,
                              adlb_buffer *curr_buffer,
-                             bool *using_caller_buf, int init_length)
+                             bool *using_caller_buf, size_t init_length)
 {
   assert(curr_buffer != NULL);
   bool buf_provided = caller_buffer != NULL;
@@ -609,9 +610,9 @@ ADLB_Init_buf(const adlb_buffer *caller_buffer,
 }
 
 static inline adlb_data_code
-ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
+ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, size_t min_length)
 {
-  int old_length = buf->length;
+  size_t old_length = buf->length;
   if (min_length >= buf->length)
   {
     buf->length *= 2;

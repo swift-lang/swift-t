@@ -262,7 +262,8 @@ static adlb_code handle_steal_response(int caller)
 /**
   Placeholder request: do nothing.
  */
-static adlb_code handle_do_nothing(int caller)
+static adlb_code
+handle_do_nothing(int caller)
 {
   MPI_Status status;
   RECV_TAG(caller, ADLB_TAG_DO_NOTHING);
@@ -309,7 +310,7 @@ handle_dput(int caller)
 
   MPE_LOG(xlb_mpe_svr_put_start);
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_DPUT);
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_DPUT);
   const struct packed_dput *p = (struct packed_dput*)xlb_xfer;
 
   // Put arrays first to avoid alignment issues
@@ -1102,7 +1103,7 @@ handle_exists(int caller)
   struct packed_bool_resp resp;
   MPI_Status status;
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_EXISTS);
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_EXISTS);
 
   adlb_datum_id id;
   adlb_subscript subscript;
@@ -1152,15 +1153,26 @@ handle_store(int caller)
         ADLB_PRID_ARGS(hdr.id, ADLB_DSYM_NULL));
   }
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller,
-       ADLB_TAG_STORE_PAYLOAD);
+  void* xfer;
+  // Normally, we copy out of the same recv buffer:
+  bool xfer_copy = true;
+  if (hdr.length > ADLB_XFER_SIZE)
+  {
+    xfer_copy = false;
+    xfer = malloc(hdr.length);
+    ADLB_MALLOC_CHECK(xfer);
+  }
+  else
+  {
+    xfer = xlb_xfer;
+  }
 
-  int length;
-  MPI_Get_count(&status, MPI_BYTE, &length);
+  mpi_recv_big(xfer, hdr.length, caller, ADLB_TAG_STORE_PAYLOAD);
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
-  adlb_data_code dc = xlb_data_store(hdr.id, subscript, xlb_xfer, length,
+  adlb_data_code dc =
+      xlb_data_store(hdr.id, subscript, xlb_xfer, hdr.length, xfer_copy,
           hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
   struct packed_store_resp resp = { .dc = dc };
@@ -1173,7 +1185,7 @@ handle_store(int caller)
   else
   {
     adlb_code rc;
-    int tmp_len = 8192;
+    size_t tmp_len = 8192;
     char tmp[tmp_len];
     adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
     xlb_prepared_notifs prep;
@@ -1208,7 +1220,7 @@ handle_retrieve(int caller)
 
   MPI_Status status;
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
 
   // Interpret xlb_xfer buffer as struct
   struct packed_retrieve_hdr *hdr =
@@ -1245,7 +1257,7 @@ handle_retrieve(int caller)
   if (dc == ADLB_DATA_SUCCESS)
   {
     adlb_code rc;
-    int tmp_len = 8192;
+    size_t tmp_len = 8192;
     char tmp[tmp_len];
     adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
     xlb_prepared_notifs prep;
@@ -1259,8 +1271,7 @@ handle_retrieve(int caller)
           ADLB_TAG_RESPONSE);
 
     // Send data then notifs
-    SEND(result.data, result.length, MPI_BYTE, caller,
-         ADLB_TAG_RESPONSE);
+    mpi_send_big(result.data, result.length, caller, ADLB_TAG_RESPONSE);
     DEBUG("Retrieve: "ADLB_PRID,
           ADLB_PRID_ARGS(hdr->id, ADLB_DSYM_NULL));
 
@@ -1319,7 +1330,9 @@ handle_enumerate(int caller)
   {
     if (opts.request_subscripts || opts.request_members)
     {
-      SEND(data.data, data.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+      rc = mpi_send_big(data.data, data.length,
+                        caller, ADLB_TAG_RESPONSE);
+      ADLB_CHECK(rc);
     }
   }
 
@@ -1335,7 +1348,7 @@ handle_subscribe(int caller)
   MPE_LOG(xlb_mpe_svr_subscribe_start);
 
   MPI_Status status;
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_SUBSCRIBE);
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_SUBSCRIBE);
 
   adlb_datum_id id;
   adlb_subscript subscript;
@@ -1373,7 +1386,7 @@ handle_notify(int caller)
   TRACE("ADLB_TAG_NOTIFY\n");
 
   MPI_Status status;
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_NOTIFY);
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_NOTIFY);
   struct packed_notify_hdr *hdr = (struct packed_notify_hdr *)xlb_xfer;
 
   xlb_engine_code tc;
@@ -1486,7 +1499,7 @@ handle_insert_atomic(int caller)
 {
   MPI_Status status;
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_CHAR, caller,
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_CHAR, caller,
        ADLB_TAG_INSERT_ATOMIC);
 
   adlb_subscript subscript;
@@ -1495,20 +1508,19 @@ handle_insert_atomic(int caller)
   xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript);
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
-
   adlb_retrieve_refc refcounts;
   MSG_UNPACK_BIN(xfer_pos, &refcounts);
-
   struct packed_insert_atomic_resp resp;
-  resp.value_len = -1; // Default: no data returned
+  resp.value_len = 0; // Default: no data returned
 
   bool value_present;
   resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
                                    &value_present);
 
   // TODO: support binary subscript
-  DEBUG("Insert_atomic: "ADLB_PRIDSUB" => %i", ADLB_PRIDSUB_ARGS(id,
-        ADLB_DSYM_NULL, subscript), resp.created);
+  DEBUG("Insert_atomic: "ADLB_PRIDSUB" => %i",
+        ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
+        resp.created);
 
   if (resp.dc != ADLB_DATA_SUCCESS)
   {
@@ -1520,6 +1532,7 @@ handle_insert_atomic(int caller)
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data value;
   bool send_data = return_value && value_present;
+
   if (value_present)
   {
     // In these cases, need to apply refcount operation
@@ -1535,7 +1548,7 @@ handle_insert_atomic(int caller)
     else
     {
       xlb_refc_acquire acq = { .refcounts = refcounts.incr_referand,
-                          .subscript = subscript };
+          .subscript = subscript };
       // Just update reference counts
       resp.dc = xlb_data_reference_count(id,
             adlb_refc_negate(refcounts.decr_self), acq , NULL, &notifs);
@@ -1550,7 +1563,7 @@ handle_insert_atomic(int caller)
   }
 
   adlb_code rc;
-  int tmp_len = 8192;
+  size_t tmp_len = 8192;
   char tmp[tmp_len];
   adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
   xlb_prepared_notifs prep;
@@ -1566,18 +1579,19 @@ handle_insert_atomic(int caller)
   if (send_data)
   {
     // Send response value
-    SEND(value.data, value.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    rc = mpi_send_big(value.data, value.length,
+                      caller, ADLB_TAG_RESPONSE);
+    ADLB_CHECK(rc);
     ADLB_Free_binary_data2(&value, xlb_scratch);
   }
 
   if (send_notifs)
   {
     rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
-    ADLB_CHECK(rc)
+    ADLB_CHECK(rc);
   }
 
   xlb_free_notif(&notifs);
-
   return ADLB_SUCCESS;
 }
 
@@ -1650,7 +1664,7 @@ static adlb_code
 handle_container_reference(int caller)
 {
   MPI_Status status;
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller,
+  RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller,
        ADLB_TAG_CONTAINER_REFERENCE);
 
   adlb_datum_id id, ref_id;
@@ -1694,9 +1708,9 @@ handle_container_reference(int caller)
   else
   {
     adlb_code rc;
-    int tmp_len = 8192;
+    size_t tmp_len = 8192;
     char tmp[tmp_len];
-    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    adlb_buffer tmp_buf = { .data=tmp, .length=tmp_len };
     xlb_prepared_notifs prep;
     bool send_notifs;
 

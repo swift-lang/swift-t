@@ -85,11 +85,10 @@ extern double xlb_start_time;
 
 #define  MAX_PUSH_ATTEMPTS                1000
 
-#define XLB_XFER_SIZE (ADLB_PAYLOAD_MAX)
 /** Reusable transfer buffer */
 extern char xlb_xfer[];
 static const adlb_buffer xlb_xfer_buf =
-            { .data = xlb_xfer, .length = XLB_XFER_SIZE };
+            { .data = xlb_xfer, .length = ADLB_XFER_SIZE };
 
 int xlb_random_server(void);
 

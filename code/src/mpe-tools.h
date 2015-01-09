@@ -52,6 +52,7 @@ extern_declare_pair(all, finalize);
 extern_declare_pair(svr, busy);
 // Task operations:
 extern_declare_pair(svr, put);
+extern_declare_pair(svr, dput);
 extern_declare_pair(svr, get);
 extern_declare_pair(svr, sync);
 extern_declare_pair(svr, steal);

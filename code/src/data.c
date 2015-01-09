@@ -108,20 +108,22 @@ alloc_container_reference(size_t subscript_len);
 
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
-    const void* buffer, int length, adlb_data_type type,
+    const void* buffer, size_t length, bool copy,
+    adlb_data_type type,
     adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript, const void* buffer, int length,
+    adlb_subscript subscript,
+    const void* buffer, size_t length, bool copy,
     adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d, adlb_datum_id id,
     adlb_subscript subscript, const adlb_datum_storage *value,
-    const void *value_buffer, int value_len, adlb_data_type value_type,
+    const void *value_buffer, size_t value_len, adlb_data_type value_type,
     adlb_notif_t *notifs, bool *garbage_collected);
 
 static adlb_data_code
@@ -158,14 +160,14 @@ static adlb_data_code
 insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
       bool copy_sub, adlb_data_type value_type,
-      const void *value_buffer, int value_len,
+      const void *value_buffer, size_t value_len,
       struct list *ref_list, struct list_b *listener_list,
       adlb_notif_t *notifs, bool *garbage_collected);
 
 static 
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
-          const void *value, int value_len,
+          const void *value, size_t value_len,
           adlb_refc *to_acquire); 
 
 static 
@@ -855,7 +857,8 @@ alloc_container_reference(size_t subscript_len)
  */
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
-          const void* buffer, int length, adlb_data_type type,
+          const void* buffer, size_t length, bool copy,
+          adlb_data_type type,
           adlb_refc refcount_decr, adlb_refc store_refcounts, 
           adlb_notif_t *notifs)
 {
@@ -879,14 +882,14 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 
   if (adlb_has_sub(subscript))
   {
-    dc = data_store_subscript(id, d, subscript, buffer, length, type,
+    dc = data_store_subscript(id, d, subscript, buffer, length, copy, type,
                              store_refcounts, notifs, &freed_datum);
     DATA_CHECK(dc);
   }
   else
   {
-    dc = data_store_root(id, d, buffer, length, type, store_refcounts,
-                         notifs, &freed_datum);
+    dc = data_store_root(id, d, buffer, length, copy, type,
+                         store_refcounts, notifs, &freed_datum);
     DATA_CHECK(dc);
   }
 
@@ -916,7 +919,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
  */
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
-    const void* buffer, int length, adlb_data_type type,
+    const void* buffer, size_t length, bool copy, adlb_data_type type,
     adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
@@ -928,8 +931,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 
   // Handle store to top-level datum
   bool initialize = !d->status.set;
-  dc = ADLB_Unpack2(&d->data, d->type, buffer, length, store_refcounts,
-                    initialize);
+  dc = ADLB_Unpack2(&d->data, d->type, buffer, length, copy,
+                    store_refcounts, initialize);
   DATA_CHECK(dc);
   d->status.set = true;
 
@@ -958,7 +961,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
  */
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript, const void* value, int length,
+    adlb_subscript subscript, const void* value, size_t length, bool copy,
     adlb_data_type value_type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
@@ -1033,8 +1036,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       
       // Now we are guaranteed to succeed
       adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-      dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type, value, length,
-                      store_refcounts);
+      dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type,
+                       value, length, copy,
+                       store_refcounts);
       DATA_CHECK(dc);
 
       if (found)
@@ -1066,8 +1070,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       if (d->status.subscript_notifs)
       {
         dc = insert_notifications(d, id, subscript,
-                  entry, value, length, value_type,
-                  notifs, freed_datum);
+                                  entry, value, length, value_type,
+                                  notifs, freed_datum);
         DATA_CHECK(dc);
       }
       return ADLB_DATA_SUCCESS;
@@ -1215,7 +1219,6 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
     {
       return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
     }
-    
   }
 
   dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
@@ -1368,7 +1371,7 @@ static adlb_data_code
 pack_member(adlb_container *cont, table_bp_entry *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
-            bool *result_caller_buffer, int *result_pos);
+            bool *result_caller_buffer, size_t* result_pos);
 
 /**
    Extract the table members into a buffer.
@@ -1395,7 +1398,7 @@ extract_members(adlb_container *cont, int count, int offset,
   char tmp_storage[XLB_STACK_BUFFER_LEN];
   tmp_buf.data = tmp_storage;
 
-  int output_pos = 0; // Amount of output used
+  size_t output_pos = 0; // Amount of output used
 
   TABLE_BP_FOREACH(members, item)
   {
@@ -1426,7 +1429,7 @@ extract_members(adlb_container *cont, int count, int offset,
 extract_members_done:
   // Mark actual length of output
   output->length = output_pos;
-  TRACE("extract_members: output_length: %i\n", output->length);
+  TRACE("extract_members: output_length: %zu\n", output->length);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1434,7 +1437,7 @@ static adlb_data_code
 pack_member(adlb_container *cont, table_bp_entry *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
-            bool *result_caller_buffer, int *result_pos)
+            bool *result_caller_buffer, size_t* result_pos)
 {
   assert(table_bp_entry_valid(item));
 
@@ -1443,7 +1446,7 @@ pack_member(adlb_container *cont, table_bp_entry *item,
   {
     assert(item->key_len <= INT_MAX);
     dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, 
-            table_bp_get_key(item), (int)item->key_len,
+            table_bp_get_key(item), item->key_len,
             true, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
@@ -1519,7 +1522,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     *actual = slice_size;
     *key_type = (adlb_data_type)d->data.CONTAINER.key_type;
     *val_type = (adlb_data_type)d->data.CONTAINER.val_type;
-    TRACE("Enumerate container: %i elems %i bytes\n", slice_size,
+    TRACE("Enumerate container: %i elems %zu bytes\n", slice_size,
                                                       data->length);
     return ADLB_DATA_SUCCESS;
   }
@@ -1541,7 +1544,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     *actual = slice_size;
     *key_type = ADLB_DATA_TYPE_NULL;
     *val_type = (adlb_data_type)d->data.MULTISET->elem_type;
-    TRACE("Enumerate multiset: %i elems %i bytes\n", slice_size,
+    TRACE("Enumerate multiset: %i elems %zu bytes\n", slice_size,
                                                      data->length);
     return ADLB_DATA_SUCCESS;
   }
@@ -1591,7 +1594,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
 static adlb_data_code
 insert_notifications(adlb_datum *d, adlb_datum_id id,
     adlb_subscript subscript, const adlb_datum_storage *value,
-    const void *value_buffer, int value_len, adlb_data_type value_type,
+    const void *value_buffer, size_t value_len, adlb_data_type value_type,
     adlb_notif_t *notifs, bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1669,7 +1672,7 @@ static adlb_data_code
 insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
       bool copy_sub, adlb_data_type value_type,
-      const void *value_buffer, int value_len,
+      const void *value_buffer, size_t value_len,
       struct list *ref_list, struct list_b *listener_list,
       adlb_notif_t *notifs, bool *garbage_collected)
 {
@@ -1844,7 +1847,7 @@ concat_subscripts(adlb_subscript sub1, adlb_subscript sub2,
   {
     // Combine subscripts
     result->length = sub1.length + sub2.length;
-    dc = ADLB_Resize_buf(sub_buf, sub_caller_buf, (int)result->length);
+    dc = ADLB_Resize_buf(sub_buf, sub_caller_buf, result->length);
     DATA_CHECK(dc);
 
     if (sub1.key != sub_buf->data)
@@ -1952,7 +1955,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       {
         // Append child subscript to buffer
         dc = ADLB_Resize_buf(sub_buf, sub_caller_buf,
-                             (int)(subscript.length + max_key_len));
+                             subscript.length + max_key_len);
         DATA_CHECK(dc);
 
         if (subscript_uses_buf)
@@ -2012,7 +2015,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
 static 
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
-          const void *value, int value_len,
+          const void *value, size_t value_len,
           adlb_refc *to_acquire)
 {
   assert(subscribers != NULL);
@@ -2143,7 +2146,6 @@ xlb_data_insert_atomic(adlb_datum_id container_id, adlb_subscript subscript,
   *value_present = false;
   return ADLB_DATA_SUCCESS;
 }
-
 
 /**
    Obtain an unused TD

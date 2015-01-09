@@ -74,8 +74,8 @@ adlb_code ADLB_Xpt_finalize(void);
   Result is flushed to disk if requested, or if value too large to fit
   in memory (since other nodes may need to lookup result).
  */
-adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
-                int val_len, adlb_xpt_persist persist, bool index_add);
+adlb_code ADLB_Xpt_write(const void *key, size_t key_len, const void *val,
+                size_t val_len, adlb_xpt_persist persist, bool index_add);
 
 /*
   Lookup checkpoint for key in in-memory index.
@@ -84,7 +84,8 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
   (e.g. into an internal buffer), it is only valid until the next ADLB call.
   Return ADLB_SUCCESS if found, ADLB_NOTHING if not present
  */
-adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result);
+adlb_code ADLB_Xpt_lookup(const void *key, size_t key_len,
+                          adlb_binary_data *result);
 
 typedef struct {
   // True if attempted to load (may have been loaded in other process)

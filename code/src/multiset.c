@@ -42,8 +42,8 @@ uint xlb_multiset_size(const xlb_multiset *set) {
 }
 
 adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
-                               int length, adlb_refc refcounts,
-                                  const adlb_datum_storage **stored) {
+                                size_t length, adlb_refc refcounts,
+                                const adlb_datum_storage **stored) {
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
   {
@@ -73,7 +73,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length,
+  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length, true,
                      refcounts);
 }
 
@@ -175,7 +175,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
   DATA_CHECK(dc);
   
-  int output_pos = 0; // Amount of output used
+  size_t output_pos = 0; // Amount of output used
   int c = 0; // Count of members added to result
 
   // Allocate some temporary storage on stack

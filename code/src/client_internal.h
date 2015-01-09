@@ -32,7 +32,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
 
 adlb_code
 xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
-            const void *data, int length, adlb_refc refcount_decr,
+            const void *data, size_t length, adlb_refc refcount_decr,
             adlb_refc store_refcounts, adlb_notif_t *notifs);
 
 #endif // __XLB_DATA_INTERNAL_H

@@ -84,7 +84,7 @@ merge_request(request *R, int rank, int type, int count, bool blocking);
 static int pop_rank_from_types(struct list2 *type_list);
 static void request_match_update(request *R, bool in_targets, int count);
 static inline void invalidate_request(request *R);
-static inline bool in_targets_array(request *R);
+static bool in_targets_array(request *R);
 
 /** Node pool functions */
 static inline adlb_code list2_node_pool_init(int size);
@@ -244,8 +244,9 @@ static inline void invalidate_request(request *R)
 
 /*
   Return true if request is stored directly in targets array
+  GCC says not to inline this. -Justin 2015/01/06
  */
-static inline bool in_targets_array(request *R)
+static bool in_targets_array(request *R)
 {
   if (xlb_map_to_server(R->rank) != xlb_comm_rank) {
     return false;
