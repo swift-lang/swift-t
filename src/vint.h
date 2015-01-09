@@ -120,35 +120,6 @@ vint_encode(int64_t val, void *buffer)
   return pos;
 }
 
-static inline size_t
-vint_encode_size_t(size_t val, void *buffer)
-{
-  unsigned char *buffer2 = buffer;
-  unsigned char b; // Current byte being encoded
-  bool more; // If more bytes are needed
-
-  // First byte has 6 bits of number owing to sign bit
-  b = val & VINT_6BIT_MASK;
-  val >>= 6;
-
-  more = val != 0;
-  if (more)
-    b |= VINT_MORE_MASK;
-
-  buffer2[0] = b;
-  size_t pos = 1;
-  while (more)
-  {
-    b = val & VINT_7BIT_MASK;
-    val >>= 7;
-    more = val != 0;
-    if (more)
-      b |= VINT_MORE_MASK;
-    buffer2[pos++] = b;
-  }
-  return pos;
-}
-
 typedef struct
 {
   signed char sign; // 1 for +ive, -1 for -ive
@@ -212,38 +183,6 @@ vint_decode(const void *buffer, int len, int64_t *val)
 
   *val = dec.accum * dec.sign;
   return pos;
-}
-
-static inline bool
-vint_decode_size_t(const void *buffer, size_t len, int64_t *val,
-                   size_t* consumed)
-{
-  const unsigned char *buffer2 = buffer;
-  if (len == 0)
-    return -1;
-
-  vint_dec dec;
-  int dec_rc = vint_decode_start(buffer2[0], &dec);
-  size_t pos = 1; // Byte position
-
-  while (dec_rc == 1)
-  {
-    if (len <= pos)
-    {
-      // Too long
-      return false;
-    }
-    dec_rc = vint_decode_more(buffer2[pos++], &dec);
-  }
-  if (dec_rc == -1)
-  {
-    // Error encountered
-    return false;
-  }
-
-  *val = dec.accum * dec.sign;
-  *consumed = pos;
-  return true;
 }
 
 /*
