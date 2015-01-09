@@ -316,18 +316,16 @@ public class ExprWalker {
     assert(struct != null);
     assert(fieldPath != null);
     assert(fieldPath.size() > 0);
-    Type memType = TypeChecker.findStructFieldType(context, fieldPath,
+    Type fieldType = TypeChecker.findStructFieldType(context, fieldPath,
                                                    struct.type());
-    boolean storedAsRef = VarRepr.storeRefInStruct(memType);
+    boolean storedAsRef = VarRepr.storeRefInStruct(fieldType);
 
     Var result;
     Var backendStruct = VarRepr.backendVar(struct);
-    if (Types.isStructRef(struct)) {
-      Type resultType = memType;
-      if (storedAsRef) {
-        resultType = new RefType(resultType, false);
-      }
 
+    Type resultType = TypeChecker.structLoadResultType(struct.type(), fieldType);
+
+    if (Types.isStructRef(struct)) {
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context,
             struct, resultType, fieldPath, Alloc.TEMP);
@@ -339,8 +337,6 @@ public class ExprWalker {
     } else {
       assert(Types.isStruct(struct));
       if (storedAsRef)  {
-        Type resultType = new RefType(memType, false);
-
         // Copy out reference once it's set (field maybe not initialized)
         result = varCreator.createStructFieldTmp(context, struct, resultType,
                                                  fieldPath, Alloc.TEMP);
@@ -350,7 +346,7 @@ public class ExprWalker {
       } else if (!storedAsRef && outVar == null) {
         // Just create alias to data in struct for later use
         result = varCreator.createStructFieldAlias(context,
-                            struct, memType, fieldPath);
+                            struct, fieldType, fieldPath);
         backend.structCreateAlias(VarRepr.backendVar(result),
                                   backendStruct, fieldPath);
       } else {
@@ -876,7 +872,7 @@ public class ExprWalker {
     try {
       if (outVar == null) {
         return lookupResult;
-      } else if (Types.isAssignableRefTo(lookupResult.type(), outVar.type())) {
+      } else if (Types.isRefTo(lookupResult.type(), outVar.type())) {
         dereference(context, outVar, lookupResult);
         return outVar;
       } else {
