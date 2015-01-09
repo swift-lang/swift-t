@@ -333,9 +333,7 @@ namespace eval turbine {
     
     proc string_join_impl { container separator } {
         set A [ list ]
-        puts "cont: $container"
         set sorted_keys [ lsort -integer [ dict keys $container ] ]
-        puts "Keys: $sorted_keys cont: $container"
         foreach i $sorted_keys {
             lappend A [ dict get $container $i ]
         }
