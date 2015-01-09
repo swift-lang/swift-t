@@ -2666,7 +2666,7 @@ public class Types {
    * @param t
    * @return
    */
-  public static boolean canRetrieve(Type t) {
+  public static boolean isNonLocal(Typed t) {
     if (isContainer(t) || isRef(t) || isPrimFuture(t)) {
       return true;
     } else if (isStruct(t)) {
@@ -2677,6 +2677,10 @@ public class Types {
     } else {
       throw new STCRuntimeError("Not sure if can deref " + t);
     }
+  }
+
+  public static boolean isNonLocalRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isNonLocal(t.type().memberType());
   }
 
   /**
@@ -2772,7 +2776,7 @@ public class Types {
     } else if (Types.isStruct(type) || Types.isStructLocal(type)) {
       return unpackedStructType((StructType)type);
     } else {
-      while (Types.canRetrieve(type)) {
+      while (Types.isNonLocal(type)) {
         type = retrievedType(type);
       }
       return type;
@@ -2898,39 +2902,8 @@ public class Types {
    * @return
    */
   public static boolean inputRequiresInitialization(Var input) {
-    if (Types.isStruct(input)) {
-      return structRequiresInputInit(input);
-    }
     return input.storage() == Alloc.ALIAS
         || isPrimUpdateable(input);
-  }
-
-  private static boolean structRequiresInputInit(Typed typed) {
-    StructType type = (StructType)typed.type().getImplType();
-    for (StructField f: type.getFields()) {
-      if (structFieldRequiresInit(f)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Check if a struct field needs to be initialised
-   * @param f
-   * @return
-   */
-  private static boolean structFieldRequiresInit(StructField f) {
-    if (Types.isStruct(f.getType()) &&
-        structRequiresInputInit(f.getType())) {
-      return true;
-    } else if (Types.isRef(f.getType())) {
-      // Refs need to be initialized since STC middle end assumes that
-      // refs in an initialized struct are set
-      return true;
-    } else {
-      return false;
-    }
   }
 
   /**

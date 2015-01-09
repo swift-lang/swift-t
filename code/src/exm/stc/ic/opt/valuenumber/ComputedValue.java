@@ -428,6 +428,13 @@ public class ComputedValue<T> {
     }
   }
 
+  public static ArgCV structNestedCV(Var struct, List<Arg> fields) {
+    List<Arg> args = new ArrayList<Arg>(fields.size() + 1);
+    args.add(struct.asArg());
+    args.addAll(fields);
+    return new ArgCV(Opcode.FAKE, ComputedValue.STRUCT_NESTED, args);
+  }
+
   /**
    * Helper to convert struct fields to input list
    * @param struct
@@ -585,7 +592,8 @@ public class ComputedValue<T> {
   public static final String STRUCT_FIELD_VALUE_REF = "struct_field_value_ref";
 
   public static final String ARRAY_NESTED = "autocreated_nested";
-  public static final String ARRAY_NESTED_REF = "autocreated_nested_ref";
+  public static final String ARRAY_NESTED_REF = "array_autocreated_nested_ref";
+  public static final String STRUCT_NESTED = "struct_autocreated_nested_ref";
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
 

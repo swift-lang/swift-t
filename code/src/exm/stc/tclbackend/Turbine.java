@@ -107,12 +107,10 @@ class Turbine {
   private static final Token BUILD_REC = turbFn("build_rec");
 
   // Container nested creation
-  private static final Token C_V_CREATE_NESTED = turbFn("create_nested_container");
+  private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
   private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
   private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
-  private static final Token C_V_CREATE_NESTED_BAG =
-                                            turbFn("create_nested_bag");
 
   // Container lookup
   private static final Token C_LOOKUP = turbFn("container_lookup");
@@ -123,6 +121,9 @@ class Turbine {
   private static final Token ENUMERATE = adlbFn("enumerate");
   private static final Token ENUMERATE_REC = turbFn("enumerate_rec");
   private static final Token EXISTS_SUB = adlbFn("exists_sub");
+
+  // Struct nested creation
+  private static final Token STRUCT_CREATE_NESTED = turbFn("struct_create_nested");
 
   // Retrieve functions
   private static final Token RETRIEVE_INTEGER = turbFn("retrieve_integer");
@@ -1312,42 +1313,52 @@ class Turbine {
 
   public static TclTree
           containerCreateNested(Value resultVar, Value containerVar,
-                  Value indexVar, TypeName keyType, TypeName valType) {
-    return new Command(C_F_CREATE_NESTED, resultVar, containerVar, indexVar,
-            keyType, valType);
+                  Value indexVar, List<TypeName> fullType) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(resultVar);
+    args.add(containerVar);
+    args.add(indexVar);
+    args.addAll(fullType);
+
+    return new Command(C_F_CREATE_NESTED, args);
   }
 
   public static TclTree containerRefCreateNested(Value resultVar,
-          Value containerVar, Value indexVar, TypeName keyType,
-          TypeName valType) {
-    return new Command(CR_F_CREATE_NESTED, resultVar, containerVar, indexVar,
-                       keyType, valType);
+          Value containerVar, Value indexVar, List<TypeName> fullType) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(resultVar);
+    args.add(containerVar);
+    args.add(indexVar);
+    args.addAll(fullType);
+
+    return new Command(CR_F_CREATE_NESTED, args);
   }
 
   public static TclTree containerRefCreateNestedImmIx(Value resultVar,
-          Value containerVar, Expression arrIx,
-          TypeName keyType, TypeName valType) {
-    return new Command(CR_V_CREATE_NESTED, resultVar, containerVar, arrIx,
-            keyType, valType);
+          Value containerVar, Expression arrIx, List<TypeName> fullType) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(resultVar);
+    args.add(containerVar);
+    args.add(arrIx);
+    args.addAll(fullType);
+
+    return new Command(CR_V_CREATE_NESTED, args);
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,
-          Value containerVar, Expression arrIx, TypeName keyType,
-          TypeName valType, Expression callerReadRefs,
-          Expression callerWriteRefs,
-          Expression decrRead, Expression decrWrite) {
-    return new SetVariable(resultVar, new Square(C_V_CREATE_NESTED,
-            containerVar, arrIx, keyType, valType, callerReadRefs,
-            callerWriteRefs, decrWrite, decrRead));
-  }
-
-  public static TclTree containerCreateNestedBag(String resultVar,
-          Value containerVar, Expression arrIx, TypeName valType,
+          Value containerVar, Expression arrIx, List<TypeName>  fullType,
           Expression callerReadRefs, Expression callerWriteRefs,
           Expression decrRead, Expression decrWrite) {
-    return new SetVariable(resultVar, new Square(C_V_CREATE_NESTED_BAG,
-            containerVar, arrIx, valType, callerReadRefs, callerWriteRefs,
-            decrWrite, decrRead));
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(containerVar);
+    args.add(arrIx);
+    args.addAll(fullType);
+    args.add(callerReadRefs);
+    args.add(callerWriteRefs);
+    args.add(decrWrite);
+    args.add(decrRead);
+
+    return new SetVariable(resultVar, Square.fnCall(C_V_CREATE_NESTED, args));
   }
 
   public static TclTree bagAppend(Value bag, TypeName elemType,
@@ -1355,6 +1366,22 @@ class Turbine {
     // Append to arbitrary subscript
     return new Command(adlbFn("insert"), bag, new TclString(""), elem,
             elemType, decr);
+  }
+
+  public static TclTree structCreateNested(String resultVar,
+          Value structVar, Expression subscript, List<TypeName> fullType,
+          Expression callerReadRefs, Expression callerWriteRefs,
+          Expression decrRead, Expression decrWrite) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(structVar);
+    args.add(subscript);
+    args.addAll(fullType);
+    args.add(callerReadRefs);
+    args.add(callerWriteRefs);
+    args.add(decrWrite);
+    args.add(decrRead);
+
+    return new SetVariable(resultVar, Square.fnCall(STRUCT_CREATE_NESTED, args));
   }
 
   public static TclTree incrWriters(Value arr, Expression incr) {

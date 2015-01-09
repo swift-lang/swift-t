@@ -15,7 +15,6 @@
  */
 package exm.stc.frontend;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -25,16 +24,12 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.StackLite;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -46,6 +41,7 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class VarCreator {
   private final STCMiddleEnd backend;
+  @SuppressWarnings("unused")
   private final Logger logger;
 
   public VarCreator(STCMiddleEnd backend) {
@@ -106,9 +102,6 @@ public class VarCreator {
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
     backendInit(v);
-    if (Types.isStruct(v) && v.storage() != Alloc.ALIAS) {
-      initialiseStruct(context, v);
-    }
   }
 
   /**
@@ -119,68 +112,6 @@ public class VarCreator {
    */
   public void backendInit(Var var) throws UndefinedTypeException {
     backend.declare(VarRepr.backendVar(var));
-  }
-
-  private void initialiseStruct(Context context, Var struct)
-      throws UndefinedTypeException, DoubleDefineException {
-    assert(struct.storage() != Alloc.ALIAS);
-    StructType structType = (StructType)struct.type().getImplType();
-
-    List<List<String>> fieldPaths = new ArrayList<List<String>>();
-    List<Arg> fieldVals = new ArrayList<Arg>();
-
-    StackLite<String> currFieldPath = new StackLite<String>();
-    int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
-        structType, fieldPaths, fieldVals);
-    if (initFieldCount > 0) {
-      logger.trace("Init struct: " + struct.name() +
-               " type: " + struct.type() + "\n" +
-               "Paths: " + fieldPaths + "\n" + "Vals: " + fieldVals);
-      backend.structInitFields(VarRepr.backendVar(struct), fieldPaths,
-          VarRepr.backendArgs(fieldVals), Arg.createIntLit(initFieldCount));
-    }
-  }
-
-  /**
-   *
-   * @param rootStruct
-   * @param currFieldPath path from root to here
-   * @param structType type of current path
-   * @param fieldPaths Field paths - added to
-   * @param fieldVals Field values - added to
-   * @return number of fields initialised
-   * @throws DoubleDefineException
-   * @throws UndefinedTypeException
-   */
-  private int initialiseStructRec(Context context,
-      Var rootStruct, StackLite<String> currFieldPath, StructType structType,
-      List<List<String>> fieldPaths, List<Arg> fieldVals)
-          throws UndefinedTypeException, DoubleDefineException {
-    int initFieldCount = 0;
-
-    for (StructField field: structType.getFields()) {
-      currFieldPath.push(field.getName());
-
-      Type fieldT = field.getType();
-      if (VarRepr.storeRefInStruct(fieldT)) {
-        ArrayList<String> fieldPath = new ArrayList<String>(currFieldPath);
-        // initialize data being referenced and put into struct
-        Var fieldVar = createStructFieldTmp(context, rootStruct, fieldT,
-                                              fieldPath, Alloc.TEMP);
-
-        fieldPaths.add(fieldPath);
-        fieldVals.add(VarRepr.backendVar(fieldVar).asArg());
-
-        initFieldCount++;
-      } else if (Types.isStruct(fieldT)) {
-        initFieldCount += initialiseStructRec(context, rootStruct,
-            currFieldPath, (StructType)fieldT.getImplType(),
-            fieldPaths, fieldVals);
-      }
-
-      currFieldPath.pop();
-    }
-    return initFieldCount;
   }
 
   /**

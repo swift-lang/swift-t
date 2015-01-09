@@ -324,6 +324,10 @@ public class ExprWalker {
     Var backendStruct = VarRepr.backendVar(struct);
     if (Types.isStructRef(struct)) {
       Type resultType = memType;
+      if (storedAsRef) {
+        resultType = new RefType(resultType, false);
+      }
+
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context,
             struct, resultType, fieldPath, Alloc.TEMP);
@@ -335,10 +339,14 @@ public class ExprWalker {
     } else {
       assert(Types.isStruct(struct));
       if (storedAsRef)  {
-        // Lookup ref data into tmp alias
-        result = varCreator.createTmpAlias(context, memType);
-        backend.structRetrieveSub(VarRepr.backendVar(result),
-                                  backendStruct, fieldPath);
+        Type resultType = new RefType(memType, false);
+
+        // Copy out reference once it's set (field maybe not initialized)
+        result = varCreator.createStructFieldTmp(context, struct, resultType,
+                                                 fieldPath, Alloc.TEMP);
+
+        backend.structCopyOut(VarRepr.backendVar(result), backendStruct,
+                              fieldPath);
       } else if (!storedAsRef && outVar == null) {
         // Just create alias to data in struct for later use
         result = varCreator.createStructFieldAlias(context,
@@ -1561,7 +1569,7 @@ public class ExprWalker {
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
           throws UndefinedTypeException, UserException {
     assert(Types.isStruct(root));
-    findArraysInStructToClose(context, root, (StructType)root.type(),
+    findArraysInStruct(context, root, (StructType)root.type(),
                     structVInfo, new StackLite<String>(), arrays);
   }
 
@@ -1576,7 +1584,7 @@ public class ExprWalker {
    * @throws UndefinedTypeException
    * @throws UserException
    */
-  private void findArraysInStructToClose(Context context,
+  private void findArraysInStruct(Context context,
       Var rootStruct, StructType currStructType, VInfo currStructVInfo,
       StackLite<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
@@ -1591,7 +1599,7 @@ public class ExprWalker {
         arrays.add(Pair.create(fieldVar, fieldInfo));
       } else if (Types.isStruct(f.getType())) {
         VInfo nestedVInfo = currStructVInfo.getFieldVInfo(f.getName());
-        findArraysInStructToClose(context, rootStruct, (StructType)f.getType(),
+        findArraysInStruct(context, rootStruct, (StructType)f.getType(),
                                   nestedVInfo, fieldPath, arrays);
       }
 
