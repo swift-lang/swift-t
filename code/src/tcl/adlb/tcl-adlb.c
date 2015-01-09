@@ -4092,6 +4092,249 @@ ADLB_Struct_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                              ADLB_SUB_STRUCT);
 }
 
+static int
+ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[], adlb_data_type type)
+{
+  TCL_CONDITION(type == ADLB_DATA_TYPE_CONTAINER ||
+                type == ADLB_DATA_TYPE_MULTISET,
+                "Must create nested container or multiset, not %s",
+                ADLB_Data_type_tostring(type));
+
+  int min_args;
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    min_args = 4;
+  } else {
+    // Multiset
+    min_args = 3;
+  }
+  TCL_CONDITION(objc >= min_args, "Requires at least %d args", min_args);
+  adlb_datum_id id;
+  adlb_subscript subscript;
+
+  int rc;
+  int argpos = 1;
+  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
+  TCL_CHECK(rc);
+
+  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+
+  adlb_type_extra type_extra;
+  adlb_data_type tmp;
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.CONTAINER.key_type = tmp;
+
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.CONTAINER.val_type = tmp;
+  } else {
+    assert(type == ADLB_DATA_TYPE_MULTISET);
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.MULTISET.val_type = tmp;
+  }
+  type_extra.valid = true;
+
+
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
+
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                    &refcounts.incr_referand.read_refcount);
+    TCL_CHECK(rc);
+  }
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                    &refcounts.incr_referand.write_refcount);
+    TCL_CHECK(rc);
+  }
+
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.write_refcount);
+    TCL_CHECK(rc);
+  }
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.read_refcount);
+    TCL_CHECK(rc);
+  }
+
+  TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
+
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    log_printf("creating nested container <%"PRId64">[%.*s] (%s->%s)",
+      id, (int)subscript.length, subscript.key,
+      ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
+      ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+  } else {
+    log_printf("creating nested multiset <%"PRId64">[%.*s] (%s)", id,
+      (int)subscript.length, subscript.key,
+      ADLB_Data_type_tostring(type_extra.MULTISET.val_type));
+  }
+
+  uint64_t xfer_size;
+  char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
+
+  bool created;
+  int value_len;
+  adlb_data_type outer_value_type;
+
+  // Initial trial at inserting.
+  // Refcounts are only applied here if we got back the data
+  adlb_code code = ADLB_Insert_atomic(id, subscript, refcounts,
+                        &created, xfer, &value_len, &outer_value_type);
+  
+  if (code != ADLB_SUCCESS)
+  {
+    /*
+     * Attempt to provide more informative message about cause of
+     * failure.  A specific error can be that we tried to autocreate
+     * when there was a (read-only) reference to another array
+     * inserted manually.
+     * Retry without refcount acquisition.
+     */
+    code = ADLB_Retrieve(id, subscript, ADLB_RETRIEVE_NO_REFC,
+              &outer_value_type, xfer, &value_len);
+    TCL_CONDITION(code == ADLB_SUCCESS && value_len >= 0,
+        "unexpected error while retrieving container value");
+
+    adlb_ref retrieved;
+    adlb_data_code dc = ADLB_Unpack_ref(&retrieved, xfer, value_len,
+                              ADLB_NO_REFC, false);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "malformed reference buffer "
+        "of length %i received from ADLB server", value_len);
+
+    if (retrieved.write_refs <= 0)
+    {
+      TCL_RETURN_ERROR("Attempted to automatically create datum at "
+            "<%"PRId64">[\"%.*s\"], which was already set to "
+            "a read-only reference to <%"PRId64">", id,
+            (int)subscript.length, (const char*)subscript.key, 
+            retrieved.id);
+    }
+    
+    TCL_RETURN_ERROR("Unexpected error in "
+      "Insert_atomic when attempting to automatically create datum at"
+      "<%"PRId64">[\"%.*s\"]", id, (int)subscript.length,
+      (const char*)subscript.key);
+  }
+
+  if (created)
+  {
+    // Need to create container and insert
+
+    /*
+     * Initial refcounts for container passed to caller
+     * We set to a fairly high number since this lets us give refcounts
+     * from outer container to callers without also touching inner
+     * datum.  Remainder will be freed all at once when outer container
+     * is closed/garbage collected.
+     */
+    int init_count = (2 << 24);
+    adlb_refc init_refs = { .read_refcount = init_count,
+                                 .write_refcount = init_count };
+    adlb_create_props props = DEFAULT_CREATE_PROPS;
+
+    props.release_write_refs = turbine_release_write_rc_policy(type);
+
+    props.read_refcount = init_refs.read_refcount +
+                          refcounts.incr_referand.read_refcount;
+    props.write_refcount = init_refs.write_refcount +
+                           refcounts.incr_referand.write_refcount;
+
+    adlb_datum_id new_id;
+    code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props,
+                       &new_id);
+    TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
+
+    // ID is only relevant data, so init refcounts to any value
+    adlb_ref new_ref = { .id = new_id, .read_refs = 0,
+                         .write_refs = 0 };
+
+    // Pack using standard api.  Checks should be mostly optimized out
+    adlb_binary_data packed;
+    adlb_data_code dc = ADLB_Pack_ref(&new_ref, &packed);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing ref");
+
+
+    // Store and apply remaining refcounts
+    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, packed.data,
+                      packed.length, refcounts.decr_self, init_refs);
+    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
+
+    ADLB_Free_binary_data(&packed);
+
+    // Return the ID of the new container
+    Tcl_SetObjResult(interp, Tcl_NewADLB_ID(new_id));
+    return TCL_OK;
+  }
+  else
+  {
+    // Wasn't able to create.  Entry may or may not already have value.
+    while (value_len < 0)
+    {
+      // Need to poll until value exists
+      // This will decrement reference counts if it succeeds
+      code = ADLB_Retrieve(id, subscript, refcounts, &outer_value_type,
+                         xfer, &value_len);
+
+      // Unknown cause
+      TCL_CONDITION(code == ADLB_SUCCESS,
+              "unexpected error while retrieving container value");
+    }
+    TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
+            "only works on containers with values of type ref");
+
+    Tcl_Obj* result = NULL;
+    adlb_datum2tclobj(interp, objv, id, ADLB_DATA_TYPE_REF,
+            ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
+    Tcl_SetObjResult(interp, result);
+    return TCL_OK;
+  }
+}
+
+/*
+  adlb::create_nested_container <id> <subscript> <key_type> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested container at subscript of id.
+   id: id of a subscriptable type that supports nested datum creation
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Create_Nested_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                                  ADLB_DATA_TYPE_CONTAINER);
+}
+
+/*
+  adlb::create_nested_bag <id> <subscript> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   Create a nested bag at subscript of id.
+   id: id of a subscriptable type that supports nested datum creation
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+ADLB_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Create_Nested_Impl(cdata, interp, objc, objv,
+                                  ADLB_DATA_TYPE_MULTISET);
+}
+
 // container_reference, supporting different subscript formats
 static int
 ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
@@ -5516,6 +5759,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
   COMMAND("struct_reference", ADLB_Struct_Reference_Cmd);
+  COMMAND("create_nested_container", ADLB_Create_Nested_Container_Cmd);
+  COMMAND("create_nested_bag", ADLB_Create_Nested_Bag_Cmd);
   COMMAND("xpt_init", ADLB_Xpt_Init_Cmd);
   COMMAND("xpt_finalize", ADLB_Xpt_Finalize_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);

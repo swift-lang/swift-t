@@ -24,8 +24,8 @@ namespace eval turbine {
     namespace export c_f_lookup deeprule
     namespace export swift_array_build
 
-    namespace import ::turbine::c::create_nested \
-                     ::turbine::c::create_nested_bag
+    namespace import ::adlb::create_nested_container \
+                     ::adlb::create_nested_bag
 
     # build integer keyed array by inserting items into a container
     # starting at 0
@@ -599,7 +599,7 @@ namespace eval turbine {
     # c[i] may already exist, if so, that's fine
     proc c_v_create { c i key_type val_type {caller_read_ref 0} \
                 {caller_write_ref 0} {decr_write 0} {decr_read 0}} {
-      return [ create_nested $c $i $key_type $val_type \
+      return [ create_nested_container $c $i $key_type $val_type \
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
@@ -632,7 +632,7 @@ namespace eval turbine {
 
         set s [ retrieve_decr $i ]
         # Acquire 1 read & 1 write refcount for container
-        set res [ create_nested $c $s $key_type $val_type 1 1 $decr_write $decr_read ]
+        set res [ create_nested_container $c $s $key_type $val_type 1 1 $decr_write $decr_read ]
         store_rw_ref $r $res
     }
 
@@ -647,7 +647,7 @@ namespace eval turbine {
     proc cr_v_create_body { r cr i key_type val_type } {
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # Transfer 1 read & write refcount to ref
-        set res [ create_nested $c $i $key_type $val_type 1 1 1 1 ]
+        set res [ create_nested_container $c $i $key_type $val_type 1 1 1 1 ]
         store_rw_ref $r $res
     }
 
@@ -662,7 +662,7 @@ namespace eval turbine {
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $i ]
         # Transfer 1 read & write refcount to ref
-        set res [ create_nested $c $s $key_type $val_type 1 1 1 1 ]
+        set res [ create_nested_container $c $s $key_type $val_type 1 1 1 1 ]
         store_rw_ref $r $res
     }
 
