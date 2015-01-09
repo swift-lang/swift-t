@@ -274,7 +274,7 @@ namespace eval turbine {
 
             # build inner data structure
             # TODO: is num of write refcounts to decr variable?
-            build_rec $val_id $val $field_type 1 1
+            build_rec $val_id $field_val $field_type 1 1
             set store_field_val $val_id
           }
           default {
