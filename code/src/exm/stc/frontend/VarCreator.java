@@ -214,7 +214,7 @@ public class VarCreator {
    */
   public Var createValueOfVar(Context context, Var future,
         boolean initialise) throws UserException {
-    Type valType = Types.retrievedType(future.type());
+    Type valType = Types.retrievedType(future);
     assert(valType != null) : future.type() + " could not be derefed";
     Var val = createValueVar(context, valType, future, initialise);
     return val;
@@ -237,7 +237,7 @@ public class VarCreator {
    */
   public Var createFilenameAlias(Context context, Var fileVar)
       throws UserException, UndefinedTypeException {
-    assert(Types.isFile(fileVar.type()));
+    assert(Types.isFile(fileVar));
     Var filename = context.createFilenameAliasVariable(fileVar);
     initialiseVariable(context, filename);
     return filename;

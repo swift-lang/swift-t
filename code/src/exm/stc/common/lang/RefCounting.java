@@ -234,21 +234,21 @@ public class RefCounting {
     assert(Types.isStruct(type));
 
     // Sum of field refcounts
-    StructType structT = (StructType)type.type().getImplType();
+    StructType structT = (StructType)type.getImplType();
     long trackedSum = 0;
     long untrackedSum = 0;
-    for (StructField field: structT.getFields()) {
+    for (StructField field: structT.fields()) {
 
-      long fieldUntracked = baseRefCount(field.getType(), defType,
+      long fieldUntracked = baseRefCount(field.type(), defType,
                               RefCountType.WRITERS, false, true);
-      if (Types.isMutableRef(field.getType())) {
+      if (Types.isMutableRef(field.type())) {
         // Need to have tracked refcount as proxy
-        Type referencedType = field.getType().getImplType().memberType();
+        Type referencedType = field.type().getImplType().memberType();
         trackedSum += baseRefCount(referencedType, defType,
                               RefCountType.WRITERS, true, false);
       } else {
         untrackedSum += fieldUntracked;
-        trackedSum += baseRefCount(field.getType(), defType,
+        trackedSum += baseRefCount(field.type(), defType,
                               RefCountType.WRITERS, true, false);
       }
     }

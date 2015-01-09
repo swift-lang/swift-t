@@ -769,7 +769,7 @@ public class WaitCoalescer implements OptimizerPass {
           Set<Var> writtenFutures = findConditionalAssignedFutures(logger, stmt.conditional());
 
           for (Var writtenFuture: writtenFutures) {
-            assert(Types.isFuture(writtenFuture.type()));
+            assert(Types.isFuture(writtenFuture));
             boolean success = tryPushdownClosedVar(logger, top, topContext, ancestors, curr,
                 currContext, waitMap, pushedDown, it, writtenFuture);
             changed = changed || success;
@@ -836,7 +836,7 @@ public class WaitCoalescer implements OptimizerPass {
     for (Statement stmt: b.getStatements()) {
       if (stmt.type() == StatementType.INSTRUCTION) {
         for (Var out: stmt.instruction().getOutputs()) {
-          if (Types.isFuture(out.type())) {
+          if (Types.isFuture(out)) {
             branchState.add(out);
           }
         }
@@ -1139,8 +1139,7 @@ public class WaitCoalescer implements OptimizerPass {
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;
       for (Var out: inst.getOutputs()) {
-        if (!Types.isFuture(out.type())
-            || out.storage() == Alloc.ALIAS) {
+        if (!Types.isFuture(out) || out.storage() == Alloc.ALIAS) {
           canMove = false;
           break;
         }

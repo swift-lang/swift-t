@@ -382,8 +382,8 @@ public class ExprWalker {
    */
   public void dereference(Context context, Var dst, Var src)
       throws UndefinedTypeException, UserException {
-    assert(Types.isRef(src.type()));
-    assert(Types.isAssignableRefTo(src.type(), dst.type()));
+    assert(Types.isRef(src));
+    assert(Types.isAssignableRefTo(src, dst));
 
     Var backendDst = VarRepr.backendVar(dst);
     Var backendSrc = VarRepr.backendVar(src);
@@ -403,7 +403,7 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(src.type().assignableTo(Types.retrievedType(dst.type()))) :
+    assert(src.type().assignableTo(Types.retrievedType(dst))) :
                       dst + " = " + src;
     Var backendDst = VarRepr.backendVar(dst);
     Arg backendSrc = VarRepr.backendArg(src);
@@ -470,7 +470,7 @@ public class ExprWalker {
   public Var retrieveContainerValues(Context context, Var c)
           throws UserException {
     assert(Types.isContainer(c));
-    Type unpackedT = Types.unpackedType(c.type());
+    Type unpackedT = Types.unpackedType(c);
     Var val = varCreator.createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
     // TODO: recursively free e.g. blobs in list
@@ -501,8 +501,8 @@ public class ExprWalker {
    */
   public Var assignToVar(Context bodyContext, Arg value, boolean mutableRef)
       throws UserException, UndefinedTypeException {
-    assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
-    Type resultType = Types.storeResultType(value.type(), mutableRef);
+    assert(value.isConst() || value.getVar().storage() == Alloc.LOCAL);
+    Type resultType = Types.storeResultType(value, mutableRef);
     Var result = varCreator.createTmp(bodyContext, resultType);
     assign(result, value);
     return result;
@@ -559,12 +559,12 @@ public class ExprWalker {
         List<Var> args =  evalMulti(context, tree.child(i + 1),
                  TupleType.getFields(exprType), false, renames);
         for (Var arg: args) {
-          iList.add(Arg.createVar(arg));
+          iList.add(Arg.newVar(arg));
         }
       } else {
         // Store into temporary variables
         Var arg = eval(context, tree.child(i + 1), exprType, false, renames);
-        iList.add(Arg.createVar(arg));
+        iList.add(Arg.newVar(arg));
       }
     }
     asyncOp(op.code, out, iList);
@@ -769,10 +769,10 @@ public class ExprWalker {
       // Handle the special case where the index is a constant.
       if (Types.isArrayRef(arrType)) {
         backend.arrayRefCopyOutImm(backendCopyDst,
-            backendArray, Arg.createIntLit(arrayIndex));
+            backendArray, Arg.newInt(arrayIndex));
       } else {
         backend.arrayCopyOutImm(backendCopyDst,
-                backendArray, Arg.createIntLit(arrayIndex));
+                backendArray, Arg.newInt(arrayIndex));
       }
     } else {
       // Handle the general case where the index must be computed
@@ -872,7 +872,7 @@ public class ExprWalker {
     try {
       if (outVar == null) {
         return lookupResult;
-      } else if (Types.isRefTo(lookupResult.type(), outVar.type())) {
+      } else if (Types.isRefTo(lookupResult, outVar)) {
         dereference(context, outVar, lookupResult);
         return outVar;
       } else {
@@ -889,7 +889,7 @@ public class ExprWalker {
 
   private void arrayRange(Context context, SwiftAST tree, Var oVar,
       Map<String, String> renames) throws UserException {
-    assert(Types.isArray(oVar.type()));
+    assert(Types.isArray(oVar));
     ArrayRange ar = ArrayRange.fromAST(context, tree);
     Type rangeType = ar.rangeType(context);
 
@@ -937,7 +937,7 @@ public class ExprWalker {
    */
   private void arrayElems(Context context, SwiftAST tree, Var oVar,
     Map<String, String> renames) throws UserException {
-    assert(Types.isArray(oVar.type()));
+    assert(Types.isArray(oVar));
     ArrayElems ae = ArrayElems.fromAST(context, tree);
     Type arrType = TypeChecker.findExprType(context, tree);
     assert(Types.isArray(arrType) || Types.isUnion(arrType));
@@ -1008,7 +1008,7 @@ public class ExprWalker {
   private List<Arg> arrayElemsDefaultKeys(ArrayElems ae) {
     List<Arg> backendKeys = new ArrayList<Arg>(ae.getElemCount());
     for (int i = 0; i < ae.getElemCount(); i++) {
-      backendKeys.add(Arg.createIntLit(i));
+      backendKeys.add(Arg.newInt(i));
     }
     return backendKeys;
   }
@@ -1214,7 +1214,7 @@ public class ExprWalker {
 
     if (functionName != null) {
       // Prefix with function name
-      elems.add(Arg.createStringLit(functionName));
+      elems.add(Arg.newString(functionName));
     }
 
     for (Var v: vars) {
@@ -1410,11 +1410,11 @@ public class ExprWalker {
                                   throws UserException {
    LogHelper.trace(context, dst.toString()+"="+val);
    if (Types.isInt(dst)) {
-     assign(dst, Arg.createIntLit(val));
+     assign(dst, Arg.newInt(val));
    } else {
      assert(Types.isFloat(dst)) : dst;
      double fVal = Literals.interpretIntAsFloat(context, val);
-     assign(dst, Arg.createFloatLit(fVal));
+     assign(dst, Arg.newFloat(fVal));
    }
   }
 
@@ -1429,7 +1429,7 @@ public class ExprWalker {
             throws UserException {
    assert(Types.isBool(dst));
    String val = Literals.extractBoolLit(context, tree);
-  assign(dst, Arg.createBoolLit(Boolean.parseBoolean(val)));
+  assign(dst, Arg.newBool(Boolean.parseBoolean(val)));
   }
 
   /**
@@ -1443,7 +1443,7 @@ public class ExprWalker {
   throws UserException {
    assert(Types.isFloat(dst));
    double val = Literals.extractFloatLit(context, tree);
-   assign(dst, Arg.createFloatLit(val));
+   assign(dst, Arg.newFloat(val));
   }
 
   /**
@@ -1457,7 +1457,7 @@ public class ExprWalker {
           throws UserException {
     assert(Types.isString(dst));
     String val = Literals.extractStringLit(context, tree);
-    assign(dst, Arg.createStringLit(val));
+    assign(dst, Arg.newString(val));
   }
 
   /**
@@ -1586,16 +1586,16 @@ public class ExprWalker {
                                                                       UserException {
     assert(currStructVInfo != null);
 
-    for (StructField f: currStructType.getFields()) {
-      fieldPath.push(f.getName());
-      if (Types.isArray(f.getType())) {
+    for (StructField f: currStructType.fields()) {
+      fieldPath.push(f.name());
+      if (Types.isArray(f.type())) {
         Var fieldVar = structLookup(context, rootStruct, fieldPath, false);
         VInfo fieldInfo = currStructVInfo != null ?
-            currStructVInfo.getFieldVInfo(f.getName()) : null;
+            currStructVInfo.getFieldVInfo(f.name()) : null;
         arrays.add(Pair.create(fieldVar, fieldInfo));
-      } else if (Types.isStruct(f.getType())) {
-        VInfo nestedVInfo = currStructVInfo.getFieldVInfo(f.getName());
-        findArraysInStruct(context, rootStruct, (StructType)f.getType(),
+      } else if (Types.isStruct(f.type())) {
+        VInfo nestedVInfo = currStructVInfo.getFieldVInfo(f.name());
+        findArraysInStruct(context, rootStruct, (StructType)f.type(),
                                   nestedVInfo, fieldPath, arrays);
       }
 

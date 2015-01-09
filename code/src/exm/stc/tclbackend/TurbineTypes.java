@@ -34,20 +34,20 @@ public class TurbineTypes {
    * Return the full type required to create data by ADLB.
    * In case of simple data, just the name - e.g. "int", or "mystruct"
    * For containers, may need to have key/value/etc as separate arguments
-   * @param type
+   * @param typed
    * @param createArgs
    * @return
    */
-  public static List<TypeName> dataDeclFullType(Type type) {
+  public static List<TypeName> dataDeclFullType(Typed typed) {
     List<TypeName> typeExprList = new ArrayList<TypeName>();
     // Basic data type
-    typeExprList.add(reprType(type));
+    typeExprList.add(reprType(typed));
     // Subscript and value type for containers only
-    if (Types.isArray(type)) {
-      typeExprList.add(arrayKeyType(type, true)); // key
-      typeExprList.add(arrayValueType(type, true)); // value
-    } else if (Types.isBag(type)) {
-      typeExprList.add(bagValueType(type, true));
+    if (Types.isArray(typed)) {
+      typeExprList.add(arrayKeyType(typed, true)); // key
+      typeExprList.add(arrayValueType(typed, true)); // value
+    } else if (Types.isBag(typed)) {
+      typeExprList.add(bagValueType(typed, true));
     }
     return typeExprList;
   }
@@ -69,11 +69,11 @@ public class TurbineTypes {
     }
   }
 
-  public static TypeName structTypeName(Type type) {
-    assert(Types.isStruct(type) || Types.isStructLocal(type));
+  public static TypeName structTypeName(Typed typed) {
+    assert(Types.isStruct(typed) || Types.isStructLocal(typed));
     // Prefix Swift name with prefix to indicate struct type
 
-    StructType st = (StructType)type.getImplType();
+    StructType st = (StructType)typed.type().getImplType();
     return new TypeName("s:" + st.getStructTypeName());
   }
 
@@ -81,11 +81,11 @@ public class TurbineTypes {
    * @param t
    * @return ADLB representation type
    */
-  public static TypeName reprType(Type t) {
+  public static TypeName reprType(Typed t) {
     if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
-      return adlbPrimType(t.primType());
+      return adlbPrimType(t.type().primType());
     } else if (Types.isRef(t)) {
-      return refReprType(t.memberType());
+      return refReprType(t.type().memberType());
     } else if (Types.isArray(t)) {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBag(t)) {
@@ -99,7 +99,7 @@ public class TurbineTypes {
     }
   }
 
-  public static TypeName refReprType(Type memberType) {
+  public static TypeName refReprType(Typed memberType) {
       if (Types.isFile(memberType)) {
         return Turbine.ADLB_FILE_REF_TYPE;
       } else {
@@ -113,9 +113,9 @@ public class TurbineTypes {
    * @param creation
    * @return
    */
-  public static TypeName valReprType(Type t) {
+  public static TypeName valReprType(Typed t) {
     if (Types.isScalarValue(t)) {
-      return adlbPrimType(t.primType());
+      return adlbPrimType(t.type().primType());
     } else if (Types.isArrayLocal(t)) {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBagLocal(t)) {
@@ -166,7 +166,8 @@ public class TurbineTypes {
    * @param type
    * @return (nesting depth, base type name)
    */
-  public static Pair<Integer, Expression> depthBaseDescriptor(Type type) {
+  public static Pair<Integer, Expression> depthBaseDescriptor(Typed typed) {
+    Type type = typed.type();
     Type baseType;
     int depth;
     if (Types.isContainer(type)) {
@@ -240,9 +241,9 @@ public class TurbineTypes {
   private static void buildStructTypeDescriptor(StructType structType,
       StackLite<Expression> structPath, List<Expression> fieldPaths,
       List<LiteralInt> nestLevels, List<Expression> baseTypes) {
-    for (StructField f: structType.getFields()) {
-      Type fieldType = f.getType();
-      structPath.push(new TclString(f.getName(), true));
+    for (StructField f: structType.fields()) {
+      Type fieldType = f.type();
+      structPath.push(new TclString(f.name(), true));
       if (Types.isRef(fieldType)) {
         fieldPaths.add(new TclList(structPath));
 
@@ -283,11 +284,11 @@ public class TurbineTypes {
    * @param followRefs if false, don't include anything past first reference type
    * @return
    */
-  public static List<Expression> recursiveTypeList(Type type,
+  public static List<Expression> recursiveTypeList(Typed typed,
         boolean valueType, boolean useStructSubtype,
         boolean includeKeyTypes, boolean followRefs) {
     List<Expression> typeList = new ArrayList<Expression>();
-    Type curr = type;
+    Type curr = typed.type();
 
     curr = appendRefs(followRefs, typeList, curr);
 
@@ -325,7 +326,7 @@ public class TurbineTypes {
    * @param src
    * @return type in format expected for turbine::enumerate_rec
    */
-  public static List<Expression> enumRecTypeInfo(Type src) {
+  public static List<Expression> enumRecTypeInfo(Typed src) {
     return recursiveTypeList(src, false, false, false, true);
   }
 
@@ -333,7 +334,7 @@ public class TurbineTypes {
    * @param dst
    * @return type in format expected for turbine::build_rec
    */
-  public static List<Expression> buildRecTypeInfo(Type dst) {
+  public static List<Expression> buildRecTypeInfo(Typed dst) {
     return recursiveTypeList(dst, false, true, true, true);
   }
 
@@ -341,17 +342,16 @@ public class TurbineTypes {
    * @param dst
    * @return type in format expected for adlb::store
    */
-  public static List<Expression> adlbStoreTypeInfo(Type dst) {
+  public static List<Expression> adlbStoreTypeInfo(Typed dst) {
     return recursiveTypeList(dst, false, true, true, false);
   }
 
   public static List<Expression> xptPackType(Arg val) {
-    if (Types.isContainerLocal(val.type()) ||
-        Types.isStructLocal(val.type())) {
-      return TurbineTypes.recursiveTypeList(val.type(),
-                  true, true, true, false);
+    if (Types.isContainerLocal(val) ||
+        Types.isStructLocal(val)) {
+      return TurbineTypes.recursiveTypeList(val, true, true, true, false);
     } else {
-      return Collections.<Expression>singletonList(TurbineTypes.valReprType(val.type()));
+      return Collections.<Expression>singletonList(TurbineTypes.valReprType(val));
     }
   }
 
@@ -378,9 +378,9 @@ public class TurbineTypes {
      */
     if (followRefs && st.hasRefField()) {
       List<Expression> typeList = new ArrayList<Expression>();
-      for (StructField f: st.getFields()) {
-        typeList.add(new TclString(f.getName(), true));
-        List<Expression> fieldTypeList = recursiveTypeList(f.getType(), valueType,
+      for (StructField f: st.fields()) {
+        typeList.add(new TclString(f.name(), true));
+        List<Expression> fieldTypeList = recursiveTypeList(f.type(), valueType,
                            useStructSubtype, includeKeyTypes, followRefs);
         typeList.add(new TclList(fieldTypeList));
       }

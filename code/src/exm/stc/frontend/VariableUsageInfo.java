@@ -392,9 +392,9 @@ public class VariableUsageInfo {
       this.hasMapping = mapped;
       if (Types.isStruct(type)) {
         structFields = new HashMap<String, VInfo>();
-        for (StructField f:  ((StructType)type.getImplType()).getFields()) {
-          VInfo fieldVInfo = new VInfo(f.getType(), mapped, name + "." + f.getName(), locallyDeclared);
-          structFields.put(f.getName(), fieldVInfo);
+        for (StructField f:  ((StructType)type.getImplType()).fields()) {
+          VInfo fieldVInfo = new VInfo(f.type(), mapped, name + "." + f.name(), locallyDeclared);
+          structFields.put(f.name(), fieldVInfo);
         }
       } else {
         structFields = null;

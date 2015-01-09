@@ -68,7 +68,7 @@ public class BuiltinOps {
         return new SetVariable(TclNamer.prefixVar(out.name()), fmt);
       } else {
         assert(out != null);
-        assert(Types.isPrimValue(out.type()));
+        assert(Types.isPrimValue(out));
         Expression rhs;
         // First handle special cases, then typical case
         if (op == BuiltinOpcode.STRCAT) {
@@ -101,7 +101,7 @@ public class BuiltinOps {
           rhs = Turbine.divideInteger(argExpr.get(0), argExpr.get(1));
         } else if (op == BuiltinOpcode.POW_INT) {
           assert(argExpr.size() == 2);
-          assert(in.get(0).isImmediateInt() && in.get(1).isImmediateInt());
+          assert(in.get(0).isImmInt() && in.get(1).isImmInt());
           rhs = new Square(new Token("turbine::pow_integer_impl"), argExpr.get(0),
                                                                   argExpr.get(1));
         } else if (op == BuiltinOpcode.SUBSTRING) {
@@ -126,12 +126,12 @@ public class BuiltinOps {
           Expression exp[] = arithOpExpr(op, argExpr);
           rhs = new TclExpr(exp);
         }
-        return new SetVariable(TclNamer.prefixVar(out.name()), rhs); 
+        return new SetVariable(TclNamer.prefixVar(out.name()), rhs);
       }
     }
   }
 
-  
+
   private static Expression[] arithOpExpr(BuiltinOpcode op,
       ArrayList<Expression> argExpr) {
     switch (op) {
@@ -185,7 +185,7 @@ public class BuiltinOps {
       assert (argExpr.size() == 1);
       // Need to explicitly convert to floating point number, other
       // TCL will do e.g. integer division
-      return new Expression[] { 
+      return new Expression[] {
           TclExpr.exprFn(TclExpr.DOUBLE_CONV, argExpr.get(0))};
     case CEIL:
     case FLOOR:
@@ -207,7 +207,7 @@ public class BuiltinOps {
       }
       // Need to apply int( conversion, as the rounding function still return
       // a floating point (albeit one with no fractional part)
-      return new Expression[] { 
+      return new Expression[] {
           TclExpr.exprFn(TclExpr.INT_CONV,
               TclExpr.exprFn(fname, argExpr.get(0)))};
     }
@@ -221,7 +221,7 @@ public class BuiltinOps {
       } else {
         fnName = TclExpr.MIN;
       }
-      return new Expression[] { 
+      return new Expression[] {
           TclExpr.exprFn(fnName, argExpr.get(0), argExpr.get(1))};
     default:
       throw new STCRuntimeError("Haven't implement code gen for "
@@ -276,7 +276,7 @@ public class BuiltinOps {
       throw new STCRuntimeError("need to add op " + op.toString());
     }
   }
-  
+
   private static String arithOpFn(BuiltinOpcode op) {
     switch (op) {
     case EXP:
@@ -318,26 +318,26 @@ public class BuiltinOps {
     default:
       throw new STCRuntimeError("Unexpected op: " + op);
     }
-    assert(Types.isVal(expType, inArg.type()));
+    assert(Types.isVal(expType, inArg));
     assert(Types.isVal(expType, out));
   }
 
   private static Expression localStrCat(List<Arg> in, ArrayList<Expression> argExpr) {
     return new TclString(argExpr, ExprContext.VALUE_STRING);
   }
-  
+
   private static Expression localDirCat(List<Arg> in, ArrayList<Expression> argExpr) {
     assert(argExpr.size() == 2);
     Expression e1 = argExpr.get(0);
     Expression e2 = argExpr.get(1);
     Expression op = new TclString("/");
     List<Expression> args = Arrays.asList(e1, op, e2);
-    return new TclString(args, ExprContext.VALUE_STRING); 
+    return new TclString(args, ExprContext.VALUE_STRING);
   }
 
   private static Map<BuiltinOpcode, TclFunRef> builtinOpImpls
     = new HashMap<BuiltinOpcode, TclFunRef>();
-  
+
   static {
     populateBuiltinOpImpls();
   }
@@ -345,13 +345,13 @@ public class BuiltinOps {
   /**
    * Get asynchronous implementation of builtin op
    * TODO: this is a temporary solution to get this working.
-   * Will be better later on to have arith ops, etc in 
-   * different namespace entirely 
+   * Will be better later on to have arith ops, etc in
+   * different namespace entirely
    */
   public static TclFunRef getBuiltinOpImpl(BuiltinOpcode op) {
     return builtinOpImpls.get(op);
   }
-  
+
   /** Package in which async implementations of TCL operators live */
   private static final String OP_TCL_PKG = "turbine";
   private static void populateBuiltinOpImpls() {
@@ -400,7 +400,7 @@ public class BuiltinOps {
     builtinOpImpls.put(BuiltinOpcode.GT_FLOAT, new TclFunRef(
         OP_TCL_PKG, "gt_float"));
     builtinOpImpls.put(BuiltinOpcode.GTE_FLOAT, new TclFunRef(
-        OP_TCL_PKG, "gte_float"));      
+        OP_TCL_PKG, "gte_float"));
     builtinOpImpls.put(BuiltinOpcode.EQ_STRING, new TclFunRef(
         OP_TCL_PKG, "eq_string"));
     builtinOpImpls.put(BuiltinOpcode.NEQ_STRING, new TclFunRef(
@@ -431,5 +431,5 @@ public class BuiltinOps {
         OP_TCL_PKG, "copy_blob"));
 
   }
-  
+
 }

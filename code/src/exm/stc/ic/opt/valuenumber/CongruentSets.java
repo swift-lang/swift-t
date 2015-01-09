@@ -916,7 +916,7 @@ class CongruentSets {
     ComputedValue<Arg> val = result.cv();
     if (val.op().isAssign()) {
       Arg assignedVal = val.getInput(0);
-      if (assignedVal.isConstant()) {
+      if (assignedVal.isConst()) {
         Var globalConst = consts.getOrCreateByVal(assignedVal);
         result = new ArgOrCV(globalConst.asArg());
       }
@@ -952,7 +952,7 @@ class CongruentSets {
    */
   private void checkForRecanonicalization(Arg canonicalVal,
       ComputedValue<Arg> val) {
-    if (val.op().isRetrieve() && canonicalVal.isConstant()) {
+    if (val.op().isRetrieve() && canonicalVal.isConst()) {
       // If we found out the value of a future, add to queue for
       // later processing
       Arg future = val.getInput(0);
@@ -1193,7 +1193,7 @@ class CongruentSets {
     }
 
     private boolean isInit(Arg replace) {
-      if (replace.isConstant()) {
+      if (replace.isConst()) {
         return true;
       }
       boolean output = (congType == CongruenceType.ALIAS);

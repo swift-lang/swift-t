@@ -225,8 +225,8 @@ public class Pipeline extends FunctionOptimizerPass {
     } else if (Types.isStruct(t)) {
       StructType st = (StructType)t.getImplType();
       int totalCost = 0;
-      for (StructField sf: st.getFields()) {
-        totalCost += costOfPassing(logger, sf.getType());
+      for (StructField sf: st.fields()) {
+        totalCost += costOfPassing(logger, sf.type());
       }
       return totalCost;
     } else {

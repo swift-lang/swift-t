@@ -853,7 +853,7 @@ public class ICInstructions {
       List<Var> varInputs = new ArrayList<Var>();
       for (Arg input: inputs) {
         if (input.isVar()) {
-          if (!noValues || !Types.isPrimValue(input.type())) {
+          if (!noValues || !Types.isPrimValue(input)) {
             varInputs.add(input.getVar());
           }
         }
@@ -889,7 +889,7 @@ public class ICInstructions {
           List<Var> res = new ArrayList<Var>();
           // Only some output types might be read
           for (Var o: outputs) {
-            if (Types.hasReadableSideChannel(o.type())) {
+            if (Types.hasReadableSideChannel(o)) {
               res.add(o);
             }
           }
@@ -993,7 +993,7 @@ public class ICInstructions {
               // put in canonical order
               Collections.sort(cvArgs);
             }
-            cvArgs.add(Arg.createIntLit(output)); // Disambiguate outputs
+            cvArgs.add(Arg.newInt(output)); // Disambiguate outputs
 
             res.add(ValLoc.buildResult(this.op,
                 canonicalFunctionName, cvArgs,
@@ -1062,19 +1062,19 @@ public class ICInstructions {
       boolean allValues = true;
       long start = 0, end = 0, step = 1;
 
-      if (getInput(0).isIntVal()) {
-        start = getInput(0).getIntLit();
+      if (getInput(0).isInt()) {
+        start = getInput(0).getInt();
       } else {
         allValues = false;
       }
-      if (getInput(1).isIntVal()) {
-        end = getInput(1).getIntLit();
+      if (getInput(1).isInt()) {
+        end = getInput(1).getInt();
       } else {
         allValues = false;
       }
       if (isImpl(SpecialFunction.RANGE_STEP)) {
-        if (getInput(2).isIntVal()) {
-          step = getInput(2).getIntLit();
+        if (getInput(2).isInt()) {
+          step = getInput(2).getInt();
         } else {
           allValues = false;
         }
@@ -1083,15 +1083,15 @@ public class ICInstructions {
         // We can work out array contents
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
-        cvs.add(ValLoc.makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
+        cvs.add(ValLoc.makeContainerSizeCV(arr, Arg.newInt(arrSize),
                                 false, IsAssign.NO));
         // add array elements up to some limit
         int max_elems = 64;
         for (long val = start, key = 0;
                   val <= end && key < max_elems;
                   val += step, key++) {
-          cvs.add(ValLoc.makeArrayResult(arr, Arg.createIntLit(key),
-                      Arg.createIntLit(val), true, IsAssign.TO_VALUE));
+          cvs.add(ValLoc.makeArrayResult(arr, Arg.newInt(key),
+                      Arg.newInt(val), true, IsAssign.TO_VALUE));
         }
       }
     }
@@ -1145,11 +1145,11 @@ public class ICInstructions {
       String functionName = (String)cv.subop();
       if (isImpl(foreignFuncs, functionName, SpecialFunction.ARGV)) {
         Arg argName = inputs.get(0);
-        if (argName.isStringVal()) {
-          String val = CompileTimeArgs.lookup(argName.getStringLit());
+        if (argName.isString()) {
+          String val = CompileTimeArgs.lookup(argName.getString());
           if (val != null) {
             // Success!
-            return Arg.createStringLit(val);
+            return Arg.newString(val);
           }
         }
       }
@@ -1478,7 +1478,7 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      Type exp = Types.retrievedType(oldOut.type(),
+      Type exp = Types.retrievedType(oldOut,
                   recursiveInOut(foreignFuncs, op, frontendName));
       assert(exp.equals(newOut.type()));
     }
@@ -1490,8 +1490,7 @@ public class ICInstructions {
         for (Arg in: inputs) {
           if (in.isVar()) {
             Var v = in.getVar();
-            if (Types.isPrimFuture(v.type())
-                || Types.isRef(v.type())) {
+            if (Types.isPrimFuture(v) || Types.isRef(v)) {
               // TODO: this is a conservative idea of which ones are set
               blocksOn.add(v);
             }
@@ -1807,7 +1806,7 @@ public class ICInstructions {
         for (int i = 0; i < outFiles.size(); i++) {
           List<Arg> cvArgs = new ArrayList<Arg>(args.size() + 1);
           cvArgs.addAll(args);
-          cvArgs.add(Arg.createIntLit(i)); // Disambiguate outputs
+          cvArgs.add(Arg.newInt(i)); // Disambiguate outputs
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ValLoc cv = ValLoc.buildResult(op, cmd,
@@ -1963,7 +1962,7 @@ public class ICInstructions {
 
       for (int i = 0; i < this.newLoopVars.size(); i++) {
         Arg v = this.newLoopVars.get(i);
-        if (v.isConstant() || closedVars.contains(v.getVar())) {
+        if (v.isConst() || closedVars.contains(v.getVar())) {
           // Mark as closed
           this.closedVars.set(i, true);
         }
@@ -2333,7 +2332,7 @@ public class ICInstructions {
       List<Arg> inputVals = new ArrayList<Arg>(inputs.size());
       // Check that all inputs are available
       for (Arg input: inputs) {
-        if (input.isConstant()) {
+        if (input.isConst()) {
           inputVals.add(input);
         } else {
           // Can't check
@@ -2345,8 +2344,8 @@ public class ICInstructions {
       if (subop2 == BuiltinOpcode.ASSERT) {
         Arg cond = inputVals.get(0);
 
-        assert(cond.isBoolVal());
-        if(!cond.getBoolLit()) {
+        assert(cond.isBool());
+        if(!cond.getBool()) {
           compileTimeAssertWarn(enclosingFnName,
               "constant condition evaluated to false", inputs.get(1));
         }
@@ -2355,8 +2354,8 @@ public class ICInstructions {
 
         Arg a1 = inputVals.get(0);
         Arg a2 = inputVals.get(1);
-        assert(a1.isConstant()) : a1 + " " + a1.getKind();
-        assert(a2.isConstant()) : a2 + " " + a2.getKind();
+        assert(a1.isConst()) : a1 + " " + a1.getKind();
+        assert(a2.isConst()) : a2 + " " + a2.getKind();
         if (a1 != null && a2 != null) {
           if(!a1.equals(a2)) {
             String reason = a1.toString() + " != " + a2.toString();
@@ -2370,8 +2369,8 @@ public class ICInstructions {
     private static void compileTimeAssertWarn(String enclosingFnName,
         String reason, Arg assertMsg) {
       String errMessage;
-      if (assertMsg.isConstant()) {
-        errMessage = assertMsg.getStringLit();
+      if (assertMsg.isConst()) {
+        errMessage = assertMsg.getString();
       } else {
         errMessage = "<RUNTIME ERROR MESSAGE>";
       }
@@ -2440,7 +2439,7 @@ public class ICInstructions {
         List<Arg> newInArgs = Fetched.getFetched(newIn);
         if (output != null) {
           assert(newOut.size() == 1);
-          assert(Types.retrievedType(output.type()).equals(
+          assert(Types.retrievedType(output).equals(
                  newOut.get(0).fetched.type()));
           return new MakeImmChange(
               Builtin.createLocal(subop, newOut.get(0).fetched, newInArgs));
@@ -2582,25 +2581,25 @@ public class ICInstructions {
   }
 
   public static Instruction valueSet(Var dst, Arg value) {
-    if (Types.isPrimValue(dst.type())) {
+    if (Types.isPrimValue(dst)) {
       switch (dst.type().primType()) {
       case BOOL:
-        assert(value.isImmediateBool());
+        assert(value.isImmBool());
         return Builtin.createLocal(BuiltinOpcode.COPY_BOOL, dst, value);
       case INT:
-        assert(value.isImmediateInt());
+        assert(value.isImmInt());
         return Builtin.createLocal(BuiltinOpcode.COPY_INT, dst, value);
       case FLOAT:
-        assert(value.isImmediateFloat());
+        assert(value.isImmFloat());
         return Builtin.createLocal(BuiltinOpcode.COPY_FLOAT, dst, value);
       case STRING:
-        assert(value.isImmediateString());
+        assert(value.isImmString());
         return Builtin.createLocal(BuiltinOpcode.COPY_STRING, dst, value);
       case BLOB:
-        assert(value.isImmediateBlob());
+        assert(value.isImmBlob());
         return Builtin.createLocal(BuiltinOpcode.COPY_BLOB, dst, value);
       case VOID:
-        assert(Types.isBoolVal(value.type()));
+        assert(Types.isBoolVal(value));
         return Builtin.createLocal(BuiltinOpcode.COPY_VOID, dst, value);
       default:
         // fall through

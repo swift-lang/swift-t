@@ -82,7 +82,7 @@ public class StructBuild extends FunctionOptimizerPass {
       for (List<String> path: assigned) {
         Type fieldType;
         try {
-          fieldType = candidateType.getFieldTypeByPath(path);
+          fieldType = candidateType.fieldTypeByPath(path);
         } catch (TypeMismatchException e) {
           throw new STCRuntimeError(e.getMessage());
         }
@@ -138,12 +138,12 @@ public class StructBuild extends FunctionOptimizerPass {
 
   private void addAssignablePaths(StructType type, StackLite<String> prefix,
       Set<List<String>> paths) {
-    for (StructField f: type.getFields()) {
-      prefix.push(f.getName());
-      if (Types.isRef(f.getType())) {
+    for (StructField f: type.fields()) {
+      prefix.push(f.name());
+      if (Types.isRef(f.type())) {
         // Don't assign
-      } else if (Types.isStruct(f.getType())) {
-        addAssignablePaths((StructType)f.getType().getImplType(), prefix,
+      } else if (Types.isStruct(f.type())) {
+        addAssignablePaths((StructType)f.type().getImplType(), prefix,
                            paths);
       } else {
         // Must be assigned

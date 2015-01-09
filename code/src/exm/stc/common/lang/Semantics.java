@@ -31,8 +31,8 @@ public class Semantics {
     } else if (Types.isStructLocal(t)) {
       // Check if can pass all fields
       StructType st = (StructType)t.type().getImplType();
-      for (StructField field: st.getFields()) {
-        Type fieldType = field.getType();
+      for (StructField field: st.fields()) {
+        Type fieldType = field.type();
         if (!canPassToChildTask(fieldType)) {
           return false;
         }

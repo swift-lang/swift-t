@@ -209,8 +209,7 @@ public class WrapUtil {
   }
 
   public static boolean inputMustWait(Var in) {
-    return !Types.isPrimUpdateable(in.type()) &&
-        in.storage() != Alloc.GLOBAL_CONST;
+    return !Types.isPrimUpdateable(in) && in.storage() != Alloc.GLOBAL_CONST;
   }
 
   /**
@@ -225,7 +224,7 @@ public class WrapUtil {
   public static Var initOrGetFileName(Block block,
             ListIterator<Statement> insertPos, Var filename, Var file,
             boolean initIfUnmapped) {
-    assert(Types.isString(filename.type()));
+    assert(Types.isString(filename));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
     Instruction getFileName = TurbineOp.getFileNameAlias(filename, file);
@@ -377,7 +376,7 @@ public class WrapUtil {
    */
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName, boolean recursive) {
-    return block.declareUnmapped(Types.retrievedType(var.type(), recursive),
+    return block.declareUnmapped(Types.retrievedType(var, recursive),
         valName, Alloc.LOCAL, DefType.LOCAL_COMPILER,
         VarProvenance.valueOf(var));
   }
@@ -466,7 +465,7 @@ public class WrapUtil {
 
           // Set filename to something arbitrary if not mapped
           ifMapped.elseBlock().addStatement(ICInstructions.valueSet(outFilenameVal,
-                                            Arg.createStringLit("")));
+                                            Arg.newString("")));
         }
       } else {
         // Already a value

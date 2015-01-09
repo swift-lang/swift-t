@@ -196,7 +196,7 @@ public class ValLoc {
       boolean nonRefResult) {
     assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
         Types.isArrayLocal(arr));
-    Arg contentsArg = contents == null ? null : Arg.createVar(contents);
+    Arg contentsArg = contents == null ? null : Arg.newVar(contents);
     ArgCV val;
     if (nonRefResult) {
       assert(contents == null || Types.isElemValType(arr, contents)) :
@@ -231,7 +231,7 @@ public class ValLoc {
   public static ValLoc makeStructCreateNestedResult(Var contents, Var struct,
       List<Arg> fields) {
     assert(Types.isStruct(struct));
-    Arg contentsArg = contents == null ? null : Arg.createVar(contents);
+    Arg contentsArg = contents == null ? null : Arg.newVar(contents);
     ArgCV val;
     assert(contents == null ||
            Types.isStructFieldVal(struct, Arg.extractStrings(fields), contents)) :
@@ -246,8 +246,8 @@ public class ValLoc {
                                 IsAssign isAssign) {
     ArgCV cv = ComputedValue.containerSizeCV(arr, async);
 
-    assert((!async && size.isImmediateInt()) ||
-           (async && Types.isInt(size.type())));
+    assert((!async && size.isImmInt()) ||
+           (async && Types.isInt(size)));
 
     return ValLoc.build(cv, size, Closed.MAYBE_NOT, isAssign);
   }
@@ -265,9 +265,9 @@ public class ValLoc {
 
   public static ValLoc makeFilename(Arg outFilename, Var inFile,
             IsAssign assign) {
-    assert(Types.isFile(inFile.type()));
+    assert(Types.isFile(inFile));
     assert(outFilename.isVar());
-    assert(Types.isString(outFilename.getVar().type()));
+    assert(Types.isString(outFilename.getVar()));
     return build(ComputedValue.filenameAliasCV(inFile),
                       outFilename, Closed.MAYBE_NOT, assign);
   }
@@ -275,7 +275,7 @@ public class ValLoc {
   public static ValLoc makeFilenameVal(Var file, Arg filenameVal,
                                        IsAssign isAssign) {
     assert(Types.isFile(file));
-    assert(filenameVal == null || filenameVal.isImmediateString());
+    assert(filenameVal == null || filenameVal.isImmString());
     return build(ComputedValue.filenameValCV(file),
                           filenameVal, Closed.YES_NOT_RECURSIVE, isAssign);
   }
@@ -283,7 +283,7 @@ public class ValLoc {
   public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile,
           IsAssign isAssign) {
     assert(Types.isFileVal(inFile));
-    assert(outFilename.isImmediateString());
+    assert(outFilename.isImmString());
     return build(ComputedValue.localFilenameCV(inFile),
                         outFilename, Closed.YES_NOT_RECURSIVE, isAssign);
   }

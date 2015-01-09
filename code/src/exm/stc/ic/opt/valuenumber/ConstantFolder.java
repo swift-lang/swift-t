@@ -88,7 +88,7 @@ public class ConstantFolder {
     assert(fileCV.isVar());
     Var file = fileCV.getVar();
     if (file.isMapped() != Ternary.MAYBE) {
-      Arg isMapped = Arg.createBoolLit(file.isMapped() == Ternary.TRUE);
+      Arg isMapped = Arg.newBool(file.isMapped() == Ternary.TRUE);
       return new ArgOrCV(isMapped);
     }
     return null;
@@ -129,7 +129,7 @@ public class ConstantFolder {
     if (!futureResult) {
       // Can use directly
       return new ArgOrCV(arg);
-    } else if (arg.isConstant()){
+    } else if (arg.isConst()){
       // Record stored future
       return new ArgOrCV(Opcode.assignOpcode(arg.futureType()),
                                              arg.asList());
@@ -151,12 +151,12 @@ public class ConstantFolder {
                                             ComputedValue<Arg> val) {
     List<Arg> inputs = new ArrayList<Arg>(val.inputs.size());
     for (Arg arg: val.inputs) {
-      if (arg.isConstant()) {
+      if (arg.isConst()) {
         // For some calling conventions, constants are used
         inputs.add(arg);
       } else {
         Arg storedConst = sets.findRetrieveResult(arg, false);
-        if (storedConst != null && storedConst.isConstant()) {
+        if (storedConst != null && storedConst.isConst()) {
           inputs.add(storedConst);
         } else {
           inputs.add(arg);

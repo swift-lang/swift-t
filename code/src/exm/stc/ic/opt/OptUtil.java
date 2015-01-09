@@ -59,19 +59,19 @@ public class OptUtil {
   public static String optVPrefix(Block b, Var v) {
      return optVPrefix(b, v.name());
   }
-  
+
   public static String optVPrefix(Block b, String name) {
     return b.uniqueVarName(Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, name));
   }
-  
+
   public static String optFilenamePrefix(Block b, Var v) {
     return optFilenamePrefix(b, v.name());
   }
-  
+
   public static String optFilenamePrefix(Block b, String name) {
     return b.uniqueVarName(Var.joinPrefix(Var.OPT_FILENAME_PREFIX, name));
   }
-  
+
   /**
    * Build wait var list
    * @param block
@@ -83,15 +83,15 @@ public class OptUtil {
    *                  for recursively
    */
   public static void buildWaitVars(Block block, ListIterator<Statement> it,
-            List<MakeImmVar> inputs, List<MakeImmVar> outputs, 
+            List<MakeImmVar> inputs, List<MakeImmVar> outputs,
             Map<Var, Var> filenameMap, List<Pair<Var, Ternary>> waitVars) {
-    
+
     for (MakeImmVar in: inputs) {
       if (WrapUtil.inputMustWait(in.var)) {
         waitVars.add(makeWaitVarTernary(in.var, in.recursive));
       }
     }
-    
+
     for (MakeImmVar out: outputs) {
       Var toWaitVar = WrapUtil.getWaitOutputMapping(block, it,
         out.preinitOutputMapping, filenameMap, out.var);
@@ -126,7 +126,7 @@ public class OptUtil {
       String name = optVPrefix(block, v);
       Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name,
                                          recursive, acquireWrite);
-      Arg value = Arg.createVar(valueV);
+      Arg value = Arg.newVar(valueV);
       inVals.add(value);
     }
     return inVals;
@@ -146,7 +146,7 @@ public class OptUtil {
    * output variable to be replaced with a new one. Assume that
    * newOut is a value type of oldOut
    * @param function
-   * @param srcBlock source block for instruction 
+   * @param srcBlock source block for instruction
    * @param targetBlock target block for instruction
    * @param instBuffer append any fixup instructions here
    * @param newOut
@@ -156,7 +156,7 @@ public class OptUtil {
   public static void replaceInstOutput(String function, Block srcBlock,
           Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
           boolean initialisesOutput) {
-    boolean isDerefResult = 
+    boolean isDerefResult =
         Types.retrievedType(oldOut).assignableTo(newOut.type());
     if (isDerefResult) {
       Var oldOutReplacement;
@@ -167,12 +167,12 @@ public class OptUtil {
         oldOutReplacement = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
             oldOut.defType(), oldOut.provenance(), oldOut.mappedDecl());
-        
+
         // Replace variable in block and in buffered instructions
         replaceVarDeclaration(srcBlock, oldOut, oldOutReplacement);
-        
+
         Map<Var, Arg> renames = Collections.singletonMap(
-                                oldOut, Arg.createVar(oldOutReplacement));
+                                oldOut, Arg.newVar(oldOutReplacement));
         for (Statement inst: instBuffer) {
           inst.renameVars(function, renames, RenameMode.REPLACE_VAR);
         }
@@ -189,7 +189,7 @@ public class OptUtil {
           + " to optimizer");
     }
   }
-  
+
   /**
    * Replace variable declaration in block or one of parents
    * @param block
@@ -202,7 +202,7 @@ public class OptUtil {
     assert(oldVar.name().equals(newVar.name()));
     Block curr = block;
     while (true) {
-      if (curr.replaceVarDeclaration(block.getFunction().getName(), 
+      if (curr.replaceVarDeclaration(block.getFunction().getName(),
                                      oldVar, newVar)) {
         // Success
         return;
@@ -217,7 +217,7 @@ public class OptUtil {
       }
     }
   }
-  
+
   /**
    * Declare and fetch inputs for conversion to local operation
    * @param block
@@ -242,7 +242,7 @@ public class OptUtil {
     }
     return inVals;
   }
-  
+
   /**
    * Build output variable list for conversion to local operation
    * @param block
@@ -251,7 +251,7 @@ public class OptUtil {
    * @param instBuffer
    * @param uniquifyNames if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param preinitOutputMapping 
+   * @param preinitOutputMapping
    * @param store recursively
    * @return
    */
@@ -264,7 +264,7 @@ public class OptUtil {
     }
     List<Var> outVals = new ArrayList<Var>();
     for (MakeImmVar outArg: outputFutures) {
-      if (Types.isPrimUpdateable(outArg.var.type())) {
+      if (Types.isPrimUpdateable(outArg.var)) {
         // Use standard representation
         outVals.add(outArg.var);
       } else {
@@ -283,27 +283,27 @@ public class OptUtil {
     if (outFutures == null) {
       return Collections.emptyList();
     }
-    
+
     List<Statement> instBuffer = new ArrayList<Statement>();
-    
+
     List<Var> outValVars = new ArrayList<Var>(outFutures.size());
     for (MakeImmVar outFut: outFutures) {
       outValVars.add(WrapUtil.createLocalOutputVar(outFut.var,
-           outputFilenames, block, instBuffer, true, 
+           outputFilenames, block, instBuffer, true,
            outFut.preinitOutputMapping, outFut.recursive));
     }
-    
+
     for (Statement stmt: instBuffer) {
       insertPos.add(stmt);
     }
 
     return outValVars;
-  }  
+  }
 
   public static void fixupImmChange(String function, Block srcBlock,
           Block targetBlock, Instruction oldInst,
           MakeImmChange change,
-          List<Statement> instBuffer, 
+          List<Statement> instBuffer,
           List<Var> newOutVars, List<MakeImmVar> oldOutVars) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
 
@@ -312,7 +312,7 @@ public class OptUtil {
       logger.trace("Swapped " + oldInst + " for " +
                    Arrays.asList(change.newInsts));
     }
-    
+
     if (!change.isOutVarSame()) {
       // Output variable of instruction changed, need to fix up
       Var newOut = change.newOut;
@@ -325,17 +325,17 @@ public class OptUtil {
           break;
         }
       }
-      
+
       replaceInstOutput(function, srcBlock, targetBlock, instBuffer,
                          newOut, oldOut, initOutput);
     }
-    
+
     // Now copy back values into future
     if (change.storeOutputVals) {
       setLocalOutputs(targetBlock, oldOutVars, newOutVars, instBuffer);
     }
   }
-  
+
   /**
    * Set futures from output values
    * @param outFuts
@@ -362,7 +362,7 @@ public class OptUtil {
       }
     }
   }
-  
+
   /**
    * Union of Instruction and Continuation, useful in some cases
    */
@@ -381,33 +381,34 @@ public class OptUtil {
       this.cont = c;
       this._type = InstOrContType.CONTINUATION;
     }
-    
+
     private final Instruction inst;
     private final Continuation cont;
     private final InstOrContType _type;
-    
+
     public InstOrContType type() {
       return _type;
     }
-    
+
     public Instruction instruction() {
       if (_type != InstOrContType.INSTRUCTION) {
         throw new STCRuntimeError("InstOrCont not an " +
-                "instruction, was: " + _type); 
-            
+                "instruction, was: " + _type);
+
       }
       return inst;
     }
-    
+
     public Continuation continuation() {
       if (_type != InstOrContType.CONTINUATION) {
         throw new STCRuntimeError("InstOrCont not an " +
-            "continuation, was: " + _type); 
-            
+            "continuation, was: " + _type);
+
       }
       return cont;
     }
-    
+
+    @Override
     public String toString() {
       switch (_type) {
         case CONTINUATION:
@@ -437,41 +438,41 @@ public class OptUtil {
     }
 
     private final Block block;
-    
+
     @Override
     public Var createDerefTmp(Var toDeref) {
       return OptUtil.createDerefTmp(block, toDeref);
     }
-    
+
   }
-  
+
   /**
    * Create dereferenced variable given a reference
    */
   public static Var createDerefTmp(Block block, Var toDeref) {
     Alloc storage;
-    if (Types.isRef(toDeref.type())) {
+    if (Types.isRef(toDeref)) {
       storage = Alloc.ALIAS;
     } else {
       storage = Alloc.LOCAL;
     }
-    
+
     Type resType = Types.retrievedType(toDeref);
     String name = block.uniqueVarName(
         Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, toDeref.name()));
     Var res = new Var(resType, name,
-        storage, DefType.LOCAL_COMPILER, 
+        storage, DefType.LOCAL_COMPILER,
         VarProvenance.valueOf(toDeref));
 
     block.addVariable(res);
     return res;
   }
-  
+
   public static Var createTmpAlias(Block block, Var orig) {
     String name = block.uniqueVarName(
         Var.joinPrefix(Var.ALIAS_VAR_PREFIX, orig.name()));
     Var res = new Var(orig.type(), name,
-        Alloc.ALIAS, DefType.LOCAL_COMPILER, 
+        Alloc.ALIAS, DefType.LOCAL_COMPILER,
         VarProvenance.renamed(orig));
 
     block.addVariable(res);

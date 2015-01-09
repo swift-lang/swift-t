@@ -178,13 +178,13 @@ public class VarRepr {
                                 boolean checkInstantiate) {
     List<StructField> backendFields = new ArrayList<StructField>();
 
-    for (StructField frontendF: frontend.getFields()) {
-      Type fieldT = backendTypeInternal(frontendF.getType(), checkInstantiate);
+    for (StructField frontendF: frontend.fields()) {
+      Type fieldT = backendTypeInternal(frontendF.type(), checkInstantiate);
       if (storeRefInStruct(fieldT)) {
         // Need to store as ref to separate data
         fieldT = new RefType(fieldT, true);
       }
-      backendFields.add(new StructField(fieldT, frontendF.getName()));
+      backendFields.add(new StructField(fieldT, frontendF.name()));
     }
 
     return new StructType(frontend.isLocal(), frontend.typeName(),

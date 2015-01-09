@@ -26,11 +26,11 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
 public class Arg implements Comparable<Arg>, Typed {
-  public static final Arg VOID = Arg.createVoidLit();
-  public static final Arg ZERO = Arg.createIntLit(0);
-  public static final Arg ONE = Arg.createIntLit(1);
-  public static final Arg TRUE = Arg.createBoolLit(true);
-  public static final Arg FALSE = Arg.createBoolLit(false);
+  public static final Arg VOID = Arg.newVoid();
+  public static final Arg ZERO = Arg.newInt(0);
+  public static final Arg ONE = Arg.newInt(1);
+  public static final Arg TRUE = Arg.newBool(true);
+  public static final Arg FALSE = Arg.newBool(false);
 
   public static final List<Arg> NONE = Collections.emptyList();
 
@@ -81,28 +81,28 @@ public class Arg implements Comparable<Arg>, Typed {
     return new Arg(kind, stringlit, var, intlit, floatlit, boollit);
   }
 
-  public static Arg createVoidLit() {
+  public static Arg newVoid() {
     return new Arg(ArgKind.VOIDVAL, null, null, -1, -1, false);
   }
 
-  public static Arg createIntLit(long v) {
+  public static Arg newInt(long v) {
     return new Arg(ArgKind.INTVAL, null, null, v, -1, false);
   }
 
-  public static Arg createFloatLit(double v) {
+  public static Arg newFloat(double v) {
     return new Arg(ArgKind.FLOATVAL, null, null, -1, v, false);
   }
 
-  public static Arg createStringLit(String v) {
+  public static Arg newString(String v) {
     assert (v != null);
     return new Arg(ArgKind.STRINGVAL, v, null, -1, -1, false);
   }
 
-  public static Arg createBoolLit(boolean v) {
+  public static Arg newBool(boolean v) {
     return new Arg(ArgKind.BOOLVAL, null, null, -1, -1, v);
   }
 
-  public static Arg createVar(Var var) {
+  public static Arg newVar(Var var) {
     assert (var != null);
     return new Arg(ArgKind.VAR, null, var, -1, -1, false);
   }
@@ -111,7 +111,7 @@ public class Arg implements Comparable<Arg>, Typed {
     return kind;
   }
 
-  public String getStringLit() {
+  public String getString() {
     if (kind == ArgKind.STRINGVAL) {
       return stringlit;
     } else {
@@ -120,7 +120,7 @@ public class Arg implements Comparable<Arg>, Typed {
     }
   }
 
-  public long getIntLit() {
+  public long getInt() {
     if (kind == ArgKind.INTVAL) {
       return intlit;
     } else {
@@ -129,7 +129,7 @@ public class Arg implements Comparable<Arg>, Typed {
     }
   }
 
-  public double getFloatLit() {
+  public double getFloat() {
     if (kind == ArgKind.FLOATVAL) {
       return floatlit;
     } else {
@@ -138,7 +138,7 @@ public class Arg implements Comparable<Arg>, Typed {
     }
   }
 
-  public boolean getBoolLit() {
+  public boolean getBool() {
     if (kind == ArgKind.BOOLVAL) {
       return boollit;
     } else {
@@ -155,7 +155,6 @@ public class Arg implements Comparable<Arg>, Typed {
                                 + " " + this);
     }
   }
-
 
   /**
    * Return the type if used as a future
@@ -224,27 +223,27 @@ public class Arg implements Comparable<Arg>, Typed {
     return kind == ArgKind.VAR;
   }
 
-  public boolean isVoidVal() {
+  public boolean isVoid() {
     return kind == ArgKind.VOIDVAL;
   }
 
-  public boolean isIntVal() {
+  public boolean isInt() {
     return kind == ArgKind.INTVAL;
   }
 
-  public boolean isBoolVal() {
+  public boolean isBool() {
     return kind == ArgKind.BOOLVAL;
   }
 
-  public boolean isFloatVal() {
+  public boolean isFloat() {
     return kind == ArgKind.FLOATVAL;
   }
 
-  public boolean isStringVal() {
+  public boolean isString() {
     return kind == ArgKind.STRINGVAL;
   }
 
-  public boolean isImmediateVoid() {
+  public boolean isImmVoid() {
     return kind == ArgKind.VOIDVAL
         || (kind == ArgKind.VAR && Types.isVoidVal(var));
   }
@@ -255,27 +254,27 @@ public class Arg implements Comparable<Arg>, Typed {
    *
    * @return
    */
-  public boolean isImmediateInt() {
+  public boolean isImmInt() {
     return kind == ArgKind.INTVAL
         || (kind == ArgKind.VAR && Types.isIntVal(var));
   }
 
-  public boolean isImmediateFloat() {
+  public boolean isImmFloat() {
     return kind == ArgKind.FLOATVAL
         || (kind == ArgKind.VAR && Types.isFloatVal(var));
   }
 
-  public boolean isImmediateString() {
+  public boolean isImmString() {
     return kind == ArgKind.STRINGVAL
         || (kind == ArgKind.VAR && Types.isStringVal(var));
   }
 
-  public boolean isImmediateBool() {
+  public boolean isImmBool() {
     return kind == ArgKind.BOOLVAL
         || (kind == ArgKind.VAR && Types.isBoolVal(var));
   }
 
-  public boolean isImmediateBlob() {
+  public boolean isImmBlob() {
     return kind == ArgKind.VAR && Types.isBlobVal(var);
   }
 
@@ -401,12 +400,12 @@ public class Arg implements Comparable<Arg>, Typed {
   public static List<Arg> fromVarList(List<Var> vars) {
     ArrayList<Arg> result = new ArrayList<Arg>(vars.size());
     for (Var v : vars) {
-      result.add(Arg.createVar(v));
+      result.add(Arg.newVar(v));
     }
     return result;
   }
 
-  public boolean isConstant() {
+  public boolean isConst() {
     return this.kind != ArgKind.VAR;
   }
 
@@ -438,7 +437,7 @@ public class Arg implements Comparable<Arg>, Typed {
   public static List<String> extractStrings(List<Arg> l) {
     ArrayList<String> result = new ArrayList<String>(l.size());
     for (Arg a: l) {
-      result.add(a.getStringLit());
+      result.add(a.getString());
     }
     return result;
   }

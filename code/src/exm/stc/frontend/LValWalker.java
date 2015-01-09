@@ -490,15 +490,15 @@ public class LValWalker {
       if (literal != null) {
         long arrIx = literal;
         // Add this variable to array
-        if (Types.isArray(lvalArr.type())) {
+        if (Types.isArray(lvalArr)) {
           mVar = varCreator.createTmpAlias(context, memberType);
           backend.arrayCreateNestedImm(VarRepr.backendVar(mVar),
-              backendLValArr, Arg.createIntLit(arrIx));
+              backendLValArr, Arg.newInt(arrIx));
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
           mVar = varCreator.createTmp(context, new RefType(memberType, true));
           backend.arrayRefCreateNestedImm(VarRepr.backendVar(mVar),
-                          backendLValArr, Arg.createIntLit(arrIx));
+                          backendLValArr, Arg.newInt(arrIx));
         }
 
       } else {
@@ -565,7 +565,7 @@ public class LValWalker {
               boolean isArrayRef, boolean rValIsVal) {
     Var backendArr = VarRepr.backendVar(arr);
     Var backendMember = VarRepr.backendVar(member);
-    Arg ixArg = Arg.createIntLit(ix);
+    Arg ixArg = Arg.newInt(ix);
     if (isArrayRef) {
       if (rValIsVal) {
         backend.arrayRefStoreImm(backendArr, ixArg,  backendMember.asArg());

@@ -109,7 +109,7 @@ public class AliasKey implements Typed {
           return false;
         } else {
           assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
-          t = ((StructType)t).getFieldTypeByName(field);
+          t = ((StructType)t).fieldTypeByName(field);
         }
       }
     }
@@ -140,7 +140,7 @@ public class AliasKey implements Typed {
           t = Types.F_STRING;
         } else {
           assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
-          t = ((StructType)t).getFieldTypeByName(field);
+          t = ((StructType)t).fieldTypeByName(field);
         }
       }
     }

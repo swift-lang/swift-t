@@ -129,7 +129,7 @@ public class LValue {
         StructType st = (StructType) t;
         assert (tree.getChildCount() == 1);
         String fieldName = tree.child(0).getText();
-        Type newType = st.getFieldTypeByName(fieldName);
+        Type newType = st.fieldTypeByName(fieldName);
         if (newType == null) {
           throw new TypeMismatchException(context, "Struct type "
               + st.getStructTypeName() + " does not have field called " + fieldName);

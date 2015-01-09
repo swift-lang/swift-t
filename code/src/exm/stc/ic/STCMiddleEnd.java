@@ -120,7 +120,7 @@ public class STCMiddleEnd {
 
   private void initDefaults() {
     this.program.constants().add(Var.NO_WAIT_STRING_VAR,
-                         Arg.createStringLit("nowait"));
+                         Arg.newString("nowait"));
   }
 
   public void optimize() throws UserException {
@@ -204,8 +204,7 @@ public class STCMiddleEnd {
 
   public void startIfStatement(Arg condition, boolean hasElse) {
     assert(currFunction != null);
-    assert(Types.isIntVal(condition.type()) ||
-           Types.isBoolVal(condition.type()));
+    assert(Types.isIntVal(condition) || Types.isBoolVal(condition));
 
     IfStatement stmt = new IfStatement(condition);
     currBlock().addStatement(stmt);
@@ -445,7 +444,7 @@ public class STCMiddleEnd {
     }
 
     for (Arg i: inFiles) {
-      assert(Types.isFileVal(i.type()));
+      assert(Types.isFileVal(i));
     }
 
 
@@ -592,7 +591,7 @@ public class STCMiddleEnd {
   }
 
   public void derefFile(Var target, Var src) {
-    assert(Types.isFile(target.type()));
+    assert(Types.isFile(target));
     assert(Types.isFileRef(src));
     currBlock().addInstruction(
         TurbineOp.derefFile(target, src));
@@ -847,14 +846,14 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
 
     if (out != null) {
-      assert(Types.isPrimFuture(out.type()));
+      assert(Types.isPrimFuture(out));
     }
     currBlock().addInstruction(Builtin.createAsync(op, out, in, props));
   }
 
   public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
     // TODO: other container types?
-    assert(Types.isArray(inputArray.type()));
+    assert(Types.isArray(inputArray));
     NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
     assert(Types.isArrayLocal(flatLocalArray));
     Type baseType = c.baseType;
@@ -921,32 +920,31 @@ public class STCMiddleEnd {
   }
 
   public void addGlobal(Var var, Arg val) {
-    assert(val.isConstant());
+    assert(val.isConst());
     program.constants().add(var, val);
   }
 
   public void initScalarUpdateable(Var updateable, Arg val) {
-    assert(Types.isPrimUpdateable(updateable.type()));
+    assert(Types.isPrimUpdateable(updateable));
     if (!updateable.type().equals(Types.UP_FLOAT)) {
-      throw new STCRuntimeError(updateable.type() +
-          " not yet supported");
+      throw new STCRuntimeError(updateable.type() + " not yet supported");
     }
-    assert(val.isImmediateFloat());
+    assert(val.isImmFloat());
 
     currBlock().addInstruction(TurbineOp.initUpdateableFloat(updateable, val));
   }
 
   public void latestValue(Var result, Var updateable) {
-    assert(Types.isPrimUpdateable(updateable.type()));
-    assert(Types.isPrimValue(result.type()));
+    assert(Types.isPrimUpdateable(updateable));
+    assert(Types.isPrimValue(result));
     assert(updateable.type().primType() == result.type().primType());
     currBlock().addInstruction(
           TurbineOp.latestValue(result, updateable));
   }
 
   public void updateScalarFuture(Var updateable, Operators.UpdateMode updateMode, Var val) {
-    assert(Types.isPrimUpdateable(updateable.type()));
-    assert(Types.isPrimFuture(val.type()));
+    assert(Types.isPrimUpdateable(updateable));
+    assert(Types.isPrimFuture(val));
     assert(updateable.type().primType() == val.type().primType());
     assert(updateMode != null);
 
@@ -956,9 +954,9 @@ public class STCMiddleEnd {
 
   public void updateScalarImm(Var updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
-    assert(Types.isPrimUpdateable(updateable.type()));
+    assert(Types.isPrimUpdateable(updateable));
     if (updateable.type().equals(Types.UP_FLOAT)) {
-      assert(val.isImmediateFloat());
+      assert(val.isImmFloat());
     } else {
       throw new STCRuntimeError("only updateable floats are"
           + " implemented so far");
@@ -971,9 +969,9 @@ public class STCMiddleEnd {
 
   public void getFileNameAlias(Var filename, Var file,
                           boolean initUnmapped) {
-    assert(Types.isString(filename.type()));
+    assert(Types.isString(filename));
     assert(filename.storage() == Alloc.ALIAS);
-    assert(Types.isFile(file.type()));
+    assert(Types.isFile(file));
     if (initUnmapped) {
       WrapUtil.initOrGetFileName(currBlock(),
               currBlock().statementEndIterator(), filename, file,
@@ -1113,14 +1111,14 @@ public class STCMiddleEnd {
 
 
   public void writeCheckpoint(Arg key, Arg val) {
-    assert(Types.isBlobVal(key.type()));
-    assert(Types.isBlobVal(val.type()));
+    assert(Types.isBlobVal(key));
+    assert(Types.isBlobVal(val));
     currBlock().addInstruction(TurbineOp.writeCheckpoint(key, val));
   }
 
   public void lookupCheckpoint(Var checkpointExists, Var value,
                                Arg key) {
-    assert(Types.isBlobVal(key.type()));
+    assert(Types.isBlobVal(key));
     currBlock().addInstruction(
         TurbineOp.lookupCheckpoint(checkpointExists, value, key));
   }

@@ -607,7 +607,7 @@ public class ValueNumber implements OptimizerPass {
               }
             } else if (Types.isScalarValue(output)) {
               Arg val = state.findValue(output);
-              if (val != null && val.isConstant()) {
+              if (val != null && val.isConst()) {
                 Instruction valueSet = ICInstructions.valueSet(output, val);
                 stmtIt.set(valueSet);
                 logger.trace("Replaced with " + valueSet);
@@ -786,7 +786,7 @@ public class ValueNumber implements OptimizerPass {
       List<Var> in = inst.getBlockingInputs(prog);
       if (in != null) {
         for (Var ov : inst.getOutputs()) {
-          if (!Types.isPrimValue(ov.type())) {
+          if (!Types.isPrimValue(ov)) {
             state.setDependencies(ov, in);
           }
         }
@@ -964,7 +964,7 @@ public class ValueNumber implements OptimizerPass {
       // be passed into new scope.
       if (maybeVal != null
           && (fetchedHere || noWaitRequired ||
-              Semantics.canPassToChildTask(maybeVal.type()))) {
+              Semantics.canPassToChildTask(maybeVal))) {
         /*
          * this variable might not actually be passed through continuations to
          * the current scope, so we might have temporarily made the IC invalid,
@@ -976,7 +976,7 @@ public class ValueNumber implements OptimizerPass {
         // Generate instruction to fetch val, append to alt
         Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch,
                                   input.recursive, input.acquireWriteRefs);
-        Arg fetched = Arg.createVar(fetchedV);
+        Arg fetched = Arg.newVar(fetchedV);
         inVals.add(new Fetched<Arg>(toFetch, fetched));
         alreadyFetched.put(toFetch, fetched);
       }
@@ -1011,7 +1011,7 @@ public class ValueNumber implements OptimizerPass {
           ifMapped.thenBlock().addInstruction(TurbineOp.getFilenameVal(filenameVal, outVar));
           // Dummy value if no mapping
           ifMapped.elseBlock().addInstruction(ICInstructions.valueSet(filenameVal,
-                                              Arg.createStringLit("")));
+                                              Arg.newString("")));
         }
         filenameVals.put(outVar, filenameVal);
       }

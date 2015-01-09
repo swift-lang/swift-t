@@ -177,7 +177,6 @@ public class InitVariables {
      * @param initVar
      */
     private void updatePartialInit(Instruction inst, Var initVar) {
-      // TODO: might need to bring back in logic for partially init structs
       throw new STCRuntimeError("Can't handle partial init for type " +
                                    initVar.type());
     }
