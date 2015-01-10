@@ -2607,6 +2607,9 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 /**
    interp, objv, id, and length: just for error checking and messages
    If object is a blob, this converts it to a string
+
+   TODO: this always copies input, will need to change to support
+         large blobs
  */
 int
 adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -3133,6 +3136,8 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
                           &refcounts.decr_self.read_refcount);
     TCL_CHECK_MSG(rc, "requires id!");
   }
+
+  // TODO: will need to avoid using xfer to support large blobs
 
   // Retrieve the blob data
   adlb_data_type type;
