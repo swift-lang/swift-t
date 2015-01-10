@@ -731,6 +731,7 @@ mpi_recv_big(void* xfer, size_t length, int caller, int tag)
   for (int i = 0; i < chunks_full; i++)
   {
     RECV(p, chunk_int, MPI_BYTE, caller, tag);
+    p += chunk;
   }
   RECV(p, remainder_int, MPI_BYTE, caller, tag);
   return ADLB_SUCCESS;
