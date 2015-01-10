@@ -1172,7 +1172,7 @@ handle_store(int caller)
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
   adlb_data_code dc =
-      xlb_data_store(hdr.id, subscript, xlb_xfer, hdr.length, xfer_copy,
+      xlb_data_store(hdr.id, subscript, xfer, hdr.length, xfer_copy,
           hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
   struct packed_store_resp resp = { .dc = dc };
