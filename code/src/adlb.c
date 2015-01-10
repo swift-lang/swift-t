@@ -1702,10 +1702,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
     *length = resp.value_len;
     if (resp.value_present)
     {
-      printf("RECV BIG: %zu\n", resp.value_len);
       ac = mpi_recv_big(data, resp.value_len,
                         to_server_rank, ADLB_TAG_RESPONSE);
-      printf("RECVD BIG\n");
       ADLB_CHECK(ac);
       *type = resp.value_type;
     }
