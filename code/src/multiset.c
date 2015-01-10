@@ -65,7 +65,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
     set->chunks[set->chunk_count++] = chunk;
     set->last_chunk_elems = 0;
   }
-  else 
+  else
   {
     chunk = set->chunks[set->chunk_count - 1];
   }
@@ -73,7 +73,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length, 
+  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length,
                      refcounts);
 }
 
@@ -128,7 +128,7 @@ adlb_data_code xlb_multiset_slice(xlb_multiset *set, uint start, uint count,
   size_t max_chunks = (size_t)(count / XLB_MULTISET_CHUNK_SIZE + 1);
   adlb_slice_t *slice = malloc(sizeof(adlb_slice_t) +
                                sizeof(slice_chunk_t) * max_chunks);
-  
+
 
   // First chunk
   uint chunk_ix = start / XLB_MULTISET_CHUNK_SIZE;
@@ -171,10 +171,10 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
   bool use_caller_buf;
 
   adlb_data_type elem_type = (adlb_data_type)set->elem_type;
-  
+
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
   DATA_CHECK(dc);
-  
+
   size_t output_pos = 0; // Amount of output used
   int c = 0; // Count of members added to result
 
@@ -192,7 +192,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
     xlb_multiset_chunk *chunk = set->chunks[chunk_ix];
     // Find size of current chunk.
     uint chunk_elems = chunk_len(set, chunk_ix);
-    
+
     while (c < count && pos_in_chunk < chunk_elems) {
       // Append element to buffer
       adlb_datum_storage *elem = &chunk->arr[pos_in_chunk];
@@ -236,11 +236,11 @@ xlb_multiset_repr(xlb_multiset *set, char **repr)
       size_t elem_strlen = strlen(elem_s);
       // String plus additional chars
       size_t elem_repr_len = elem_strlen + 4;
-      
+
 
       dc = xlb_resize_str(&res, &res_len, res_pos, elem_repr_len);
       DATA_CHECK(dc);
-      
+
       if (first)
       {
         first = false;
