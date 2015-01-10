@@ -351,6 +351,7 @@ typedef enum
 #define ADLB_XPT_MAX (ADLB_DATA_MAX - 1)
 
 /** Size of the pre-allocated XLB transfer buffer */
+// Tim Armstrong - 9 Jan 2015 - why so small?
 #define ADLB_XFER_SIZE (10*1024)
 
 /**
