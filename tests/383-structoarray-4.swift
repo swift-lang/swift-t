@@ -1,7 +1,4 @@
-
-// SKIP-O0-TEST
 // We fail to correctly refcount a.B and a.B
-// See issue #685
 
 type soa {
     int A[];

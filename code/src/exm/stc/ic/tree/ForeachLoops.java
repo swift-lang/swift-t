@@ -114,9 +114,9 @@ public class ForeachLoops {
       ListIterator<RefCount> it = prev.listIterator();
       while (it.hasNext()) {
         RefCount rc = it.next();
-        if (rc.var.equals(v) && rc.type == t && rc.amount.isIntVal()
-                                             && amount.isIntVal()) {
-          Arg newAmount = Arg.createIntLit(rc.amount.getIntLit() + amount.getIntLit());
+        if (rc.var.equals(v) && rc.type == t && rc.amount.isInt()
+                                             && amount.isInt()) {
+          Arg newAmount = Arg.newInt(rc.amount.getInt() + amount.getInt());
           it.set(new RefCount(v, t, newAmount));
           return;
         }
@@ -175,7 +175,7 @@ public class ForeachLoops {
           long incr = increments.getCount(startIncr.var);
           if ((dir == RCDir.DECR && incr < 0) ||
               (dir == RCDir.INCR && incr > 0)) {
-            addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
+            addConstantStartIncrement(startIncr.var, type, Arg.newInt(incr));
             return new VarCount(startIncr.var, incr);
           }
         }
@@ -412,11 +412,11 @@ public class ForeachLoops {
 
     public void fuseInto(String function, ForeachLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
-      renames.put(o.loopVar, Arg.createVar(this.loopVar));
+      renames.put(o.loopVar, Arg.newVar(this.loopVar));
       // Handle optional loop counter var
       if (o.loopCounterVar != null) {
         if (this.loopCounterVar != null) {
-          renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
+          renames.put(o.loopCounterVar, Arg.newVar(this.loopCounterVar));
         } else {
           this.loopCounterVar = o.loopCounterVar;
         }
@@ -482,14 +482,14 @@ public class ForeachLoops {
           constStartIncrements, endDecrements, emptyBody);
 
       if (Types.isIntVal(loopVar)) {
-        assert(start.isImmediateInt());
-        assert(end.isImmediateInt());
-        assert(increment.isImmediateInt());
+        assert(start.isImmInt());
+        assert(end.isImmInt());
+        assert(increment.isImmInt());
       } else {
         assert(Types.isFloatVal(loopVar));
-        assert(start.isImmediateFloat());
-        assert(end.isImmediateFloat());
-        assert(increment.isImmediateFloat());
+        assert(start.isImmFloat());
+        assert(end.isImmFloat());
+        assert(increment.isImmFloat());
       }
       this.start = start;
       this.end = end;
@@ -641,22 +641,22 @@ public class ForeachLoops {
       long iterCount = -1; // Negative if unknown
 
       // Need to know bounds at least
-      if (start.isIntVal() && end.isIntVal()) {
-        long startV = start.getIntLit();
-        long endV = end.getIntLit();
-        if (increment.isIntVal()) {
-          long incrV = increment.getIntLit();
+      if (start.isInt() && end.isInt()) {
+        long startV = start.getInt();
+        long endV = end.getInt();
+        if (increment.isInt()) {
+          long incrV = increment.getInt();
           iterCount = Math.max(0, (endV - startV + incrV) / incrV);
         } else {
           // Don't know increment, but might be able to bound
           iterCount = iterCountUnknownIncr(startV, endV);
         }
 
-      } else if (start.isFloatVal() && end.isFloatVal()) {
-        double startV = start.getFloatLit();
-        double endV = end.getFloatLit();
-        if (increment.isFloatVal()) {
-          double incrV = increment.getFloatLit();
+      } else if (start.isFloat() && end.isFloat()) {
+        double startV = start.getFloat();
+        double endV = end.getFloat();
+        if (increment.isFloat()) {
+          double incrV = increment.getFloat();
           iterCount = Math.max(0,
                               (long)Math.floor((endV - startV + incrV) / incrV));
         } else {
@@ -687,7 +687,7 @@ public class ForeachLoops {
       if (loopCounterVar != null) {
         this.loopBody.addVariable(loopCounterVar);
         this.loopBody.addInstructionFront(
-            ICInstructions.valueSet(loopCounterVar, Arg.createIntLit(0)));
+            ICInstructions.valueSet(loopCounterVar, Arg.newInt(0)));
       }
       block.insertInline(loopBody);
       block.removeContinuation(this);
@@ -908,7 +908,7 @@ public class ForeachLoops {
       // unroll_end = end - (end - start + 1 % big_step)
       // remainder_start = unroll_end + 1
       outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MULT_INT,
-          bigIncr, Arrays.asList(increment, Arg.createIntLit(unrollFactor))));
+          bigIncr, Arrays.asList(increment, Arg.newInt(unrollFactor))));
       outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.MINUS_INT,
           diff, Arrays.asList(end, start)));
       outerBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
@@ -955,10 +955,10 @@ public class ForeachLoops {
               VarProvenance.renamed(unrolled.loopVar));
           unrolledBody.addVariable(currIterLoopVar);
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
-              currIterLoopVar, Arrays.asList(Arg.createVar(lastIterLoopVar), oldIncr)));
+              currIterLoopVar, Arrays.asList(Arg.newVar(lastIterLoopVar), oldIncr)));
           // Replace references to the iteration counter in nested block
           nb.renameVars(function, Collections.singletonMap(unrolled.loopVar,
-                       Arg.createVar(currIterLoopVar)), RenameMode.REPLACE_VAR, true);
+                       Arg.newVar(currIterLoopVar)), RenameMode.REPLACE_VAR, true);
         }
         lastIterLoopVar = currIterLoopVar;
       }
@@ -982,9 +982,9 @@ public class ForeachLoops {
     public void fuseInto(String function, RangeLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       // Update loop var in other loop
-      renames.put(o.loopVar, Arg.createVar(this.loopVar));
+      renames.put(o.loopVar, Arg.newVar(this.loopVar));
       if (loopCounterVar != null)
-        renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
+        renames.put(o.loopCounterVar, Arg.newVar(this.loopCounterVar));
       o.renameVars(function, renames, RenameMode.REPLACE_VAR, true);
 
       this.fuseIntoAbstract(o, insertAtTop);

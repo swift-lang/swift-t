@@ -687,19 +687,6 @@ public interface CompilerBackend {
   public void syncCopy(Var dst, Var src);
 
   /**
-   * Initialize fields of a {@link StructType} variable.
-   * Do not have to initialize all fields, can assign some others later.
-   *
-   * @param struct a non-local {@link StructType} to initialize
-   * @param fieldPaths paths to assign, with multiple entries for
-   *                   nested structs
-   * @param fieldVals values to initialize paths to
-   * @param writeDecr write reference counts to decrement
-   */
-  public void structInitFields(Var struct, List<List<String>> fieldPaths,
-                               List<Arg> fieldVals, Arg writeDecr);
-
-  /**
    * Build a complete local struct value.
    * @param struct a local {@link StructType} to initialize.
    * @param fieldPaths paths to assign, with multiple entries for
@@ -855,6 +842,21 @@ public interface CompilerBackend {
   public void structRefCopyIn(Var structRef, List<String> fields, Var src);
 
   /**
+   * Create a nested datum in struct Array or return the existing
+   * datum if it currently exists.
+   * @param result alias for the created or retrieved inner datum
+   * @param struct outer struct, modified if new datum is created
+   * @param key key for outerArray
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
+   */
+  public void structCreateNested(Var result,
+      Var struct, List<String> fields, Arg callerReadRefs, Arg callerWriteRefs,
+      Arg readDecr, Arg writeDecr);
+
+  /**
    * Create an alias to an array member
    * @param dst a variable of time matching the member, of alias type
    * @param array a non-local {@link ArrayType}
@@ -870,8 +872,9 @@ public interface CompilerBackend {
    * @param array non-local {@link ArrayType}
    * @param key key into array
    * @param decr decrement read refcount of array
+   * @param acquire acquire read refcount of referand
    */
-  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr);
+  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr, Arg acquire);
 
   /**
    * Copy out array member once it is assigned.
@@ -1024,61 +1027,61 @@ public interface CompilerBackend {
   public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals);
 
   /**
-   * Create a nested array in outerArray or return the existing
-   * array if it currently exists.
-   * @param innerArray alias for the created or retrieved inner array
-   * @param outerArray outer array, modified if new array is created
+   * Create a nested datum in outerArray or return the existing
+   * datum if it currently exists.
+   * @param result alias for the created or retrieved inner array
+   * @param outerArray outer array, modified if new datum is created
    * @param key key for outerArray
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
    * @param readDecr decrement array
    * @param writeDecr decrement array
    */
-  public void arrayCreateNestedImm(Var innerArray,
+  public void arrayCreateNestedImm(Var result,
       Var outerArray, Arg key, Arg callerReadRefs, Arg callerWriteRefs,
       Arg readDecr, Arg writeDecr);
 
   /**
-   * Create a nested array in outerArray or return the existing
-   * array if it currently exists.  Executes asynchronously and
+   * Create a nested datum in outerArray or return the existing
+   * datum if it currently exists.  Executes asynchronously and
    * uses output reference.
-   * @param innerArray reference that is set to inner array
-   * @param outerArray outer array, modified if new array is created
+   * @param result reference that is set to inner datum
+   * @param outerArray outer array, modified if new datum is created
    * @param key key future for outerArray
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
    * @param readDecr decrement array
    * @param writeDecr decrement array
    */
-  public void arrayCreateNestedFuture(Var innerArray, Var outerArray, Var key);
+  public void arrayCreateNestedFuture(Var result, Var outerArray, Var key);
 
   /**
-   * Create a nested array in outerArray or return the existing
-   * array if it currently exists.  Executes asynchronously and
+   * Create a nested datum in outerArray or return the existing
+   * datum if it currently exists.  Executes asynchronously and
    * uses output reference.
-   * @param innerArray reference that is set to inner array
-   * @param outerArray writable reference to outer array, modified if new array is created
+   * @param result reference that is set to inner datum
+   * @param outerArray writable reference to outer array, modified if new datum is created
    * @param key key for outerArray
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
    * @param readDecr decrement array
    * @param writeDecr decrement array
    */
-  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix);
+  public void arrayRefCreateNestedImm(Var result, Var array, Arg ix);
 
   /**
-   * Create a nested array in outerArray or return the existing
-   * array if it currently exists.  Executes asynchronously and
+   * Create a nested datum in outerArray or return the existing
+   * datum if it currently exists.  Executes asynchronously and
    * uses output reference.
-   * @param innerArray reference that is set to inner array
-   * @param outerArray writable reference to outer array, modified if new array is created
+   * @param result reference that is set to inner datum
+   * @param outerArray writable reference to outer array, modified if new datum is created
    * @param key key future for outerArray
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
    * @param readDecr decrement array
    * @param writeDecr decrement array
    */
-  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
+  public void arrayRefCreateNestedFuture(Var result, Var array, Var ix);
 
   /**
    * Insert a value into a bag
@@ -1086,21 +1089,7 @@ public interface CompilerBackend {
    * @param value a value with the retrieved type of the bag member
    * @param writeDecr write reference counts to decrement from bag
    */
-  public void bagInsert(Var bag, Arg value, Arg writeDecr);
-
-  /**
-   * Create a nested bag in outerArray or return the existing
-   * bag if it currently exists.
-   * @param innerBag alias for the created or retrieved inner array
-   * @param outerArray outer array, modified if new array is created
-   * @param key key for outerArray
-   * @param callerReadRefs number of refcounts to give back to caller
-   * @param callerWriteRefs number of refcounts to give back to caller
-   * @param readDecr decrement array
-   * @param writeDecr decrement array
-   */
-  public void arrayCreateBag(Var innerBag, Var outerArray, Arg key, Arg callerReadRefs,
-                        Arg callerWriteRefs, Arg readDecr, Arg writeDecr);
+  public void bagInsert(Var bag, Arg value, Arg writeDecr);;
 
   /**
    * Initialize an updateable variable with an initial value

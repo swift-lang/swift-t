@@ -179,7 +179,7 @@ public class RCPlacer {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.DECR)) {
         assert (e.getValue() <= 0);
         Var var = increments.getRefCountVar(e.getKey());
-        Arg amount = Arg.createIntLit(e.getValue() * -1);
+        Arg amount = Arg.newInt(e.getValue() * -1);
         block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
       }
     }
@@ -836,7 +836,7 @@ public class RCPlacer {
       if (count < 0 && RCUtil.definedOutsideCont(loop, block, var)) {
         // Decrement vars defined outside block
         long amount = count * -1;
-        Arg amountArg = Arg.createIntLit(amount);
+        Arg amountArg = Arg.newInt(amount);
         loop.addEndDecrement(new RefCount(var, type, amountArg));
         changes.add(var, amount);
         Logging.getSTCLogger().trace("Piggyback " + var + " " + type + " " +
@@ -864,11 +864,11 @@ public class RCPlacer {
       RefCountType type, Var var, long count) {
     if (count < 0) {
       assert (RefCounting.trackRefCount(var, type));
-      Arg amount = Arg.createIntLit(count * -1);
+      Arg amount = Arg.newInt(count * -1);
 
       block.addCleanup(var, RefCountOp.decrRef(type, var, amount));
 
-      increments.add(var, amount.getIntLit());
+      increments.add(var, amount.getInt());
 
 
       if (logger.isTraceEnabled()) {
@@ -880,7 +880,7 @@ public class RCPlacer {
 
   private void insertDecrAfter(Block block, ListIterator<Statement> stmtIt,
       Var var, Long val, RefCountType type) {
-    Arg amount = Arg.createIntLit(val);
+    Arg amount = Arg.newInt(val);
     block.addCleanup(var, RefCountOp.decrRef(type, var, amount));
   }
 
@@ -894,7 +894,7 @@ public class RCPlacer {
     if (before)
       stmtIt.previous();
     Instruction inst;
-    Arg amount = Arg.createIntLit(val);
+    Arg amount = Arg.newInt(val);
     inst = RefCountOp.incrRef(type, var, amount);
     inst.setParent(block);
     stmtIt.add(inst);
@@ -1062,7 +1062,7 @@ public class RCPlacer {
 
   private static Instruction buildIncrInstruction(RefCountType type, Var var,
       long count) {
-    return RefCountOp.incrRef(type, var, Arg.createIntLit(count));
+    return RefCountOp.incrRef(type, var, Arg.newInt(count));
   }
 
 }

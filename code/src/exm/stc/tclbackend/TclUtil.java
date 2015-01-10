@@ -57,15 +57,15 @@ public class TclUtil {
     }
     switch (in.getKind()) {
     case INTVAL:
-      return new LiteralInt(in.getIntLit());
+      return new LiteralInt(in.getInt());
     case BOOLVAL:
-      return new LiteralInt(in.getBoolLit() ? 1 : 0);
+      return new LiteralInt(in.getBool() ? 1 : 0);
     case STRINGVAL:
-      return new TclString(in.getStringLit(), true);
+      return new TclString(in.getString(), true);
     case VAR:
       return varToExpr(in.getVar());
     case FLOATVAL:
-      return new LiteralFloat(in.getFloatLit());
+      return new LiteralFloat(in.getFloat());
     default:
       throw new STCRuntimeError("Unknown oparg type: "
           + in.getKind().toString());

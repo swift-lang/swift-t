@@ -124,7 +124,7 @@ public class Algebra {
         } else {
           // Otherwise add them together
           return new ArgCV(op, BuiltinOpcode.PLUS_INT, 
-                   Arrays.asList(add.val1.asArg(), Arg.createIntLit(c)));
+                   Arrays.asList(add.val1.asArg(), Arg.newInt(c)));
         }
       }
     }
@@ -142,7 +142,7 @@ public class Algebra {
     }
     if (in1.isVar()) {
       varArg = in1.getVar();
-      constArg = in2.getIntLit();
+      constArg = in2.getInt();
       if (subop == BuiltinOpcode.MINUS_INT) {
         // Convert to addition
         constArg *= -1;
@@ -152,7 +152,7 @@ public class Algebra {
         // Don't handle negated variable
         return null;
       }
-      constArg = in1.getIntLit();
+      constArg = in1.getInt();
       varArg = in2.getVar();
     }
     

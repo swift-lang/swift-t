@@ -778,7 +778,7 @@ public class ASTWalker {
           throws UndefinedTypeException, UserException {
     for (Var v : context.getVisibleVariables()) {
       // see if it is an array that might be modified
-      if (Types.isArray(v.type())) {
+      if (Types.isArray(v)) {
         for (VariableUsageInfo bvu : branchVUs) {
           VInfo vi = bvu.lookupVariableInfo(v.name());
           if (vi != null && vi.isAssigned() != Ternary.FALSE) {
@@ -786,7 +786,7 @@ public class ASTWalker {
             break;
           }
         }
-      } else if (Types.isStruct(v.type())) {
+      } else if (Types.isStruct(v)) {
         // Need to find arrays inside structs
         ArrayList<Pair<Var, VInfo>> arrs = new ArrayList<Pair<Var, VInfo>>();
         // This procedure might add the same array multiple times,
@@ -893,7 +893,7 @@ public class ASTWalker {
         defaultStep = Arg.ONE;
       } else{
         assert(Types.isFloat(rangeType));
-        defaultStep = Arg.createFloatLit(1.0);
+        defaultStep = Arg.newFloat(1.0);
       }
       step = exprWalker.assignToVar(context, defaultStep, false);
     }
@@ -1251,7 +1251,7 @@ public class ASTWalker {
       SwiftAST expr = loopVarExprs.get(v.name());
       Type exprType = TypeChecker.findExprType(context, expr);
       exprType = TypeChecker.checkSingleAssignment(context, exprType,
-                                             argType,v.name());
+                                             argType, v.name());
       results.add(exprWalker.eval(context, expr, exprType, false, null));
     }
     return results;
@@ -1279,7 +1279,7 @@ public class ASTWalker {
       } else {
         var = declareVariable(context, vDesc);
       }
-      if (Types.isPrimUpdateable(var.type())) {
+      if (Types.isPrimUpdateable(var)) {
         if (walkMode == WalkMode.ONLY_DECLARATIONS) {
           throw new TypeMismatchException(context, var.name() +
                   " is an updateable and its declaration cannot be chained");
@@ -1317,7 +1317,7 @@ public class ASTWalker {
                   " initialisers for updateable variables");
         }
         backend.initScalarUpdateable(VarRepr.backendVar(var),
-                               Arg.createFloatLit(initVal));
+                               Arg.newFloat(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
                 " implemented for type " + var.type());
@@ -1979,9 +1979,9 @@ public class ASTWalker {
     // being optimised out
     List<Arg> localInFiles = new ArrayList<Arg>();
     for (Var inArg: inArgs) {
-      if (Types.isFile(inArg.type())) {
+      if (Types.isFile(inArg)) {
         Var localInputFile = exprWalker.retrieveToVar(context, inArg);
-        localInFiles.add(Arg.createVar(localInputFile));
+        localInFiles.add(Arg.newVar(localInputFile));
       }
     }
 
@@ -1992,7 +1992,7 @@ public class ASTWalker {
       localOutputs.add(localOutput);
       Arg localOutputFileName = null;
       if (Types.isFile(output.type())) {
-        localOutputFileName = Arg.createVar(
+        localOutputFileName = Arg.newVar(
             exprWalker.retrieveToVar(context, fileNames.get(output.name())));
 
         // Initialize the output with a filename
@@ -2033,7 +2033,7 @@ public class ASTWalker {
                          VarRepr.backendVar(output));
         exprWalker.localOp(BuiltinOpcode.NOT, setOutFilename,
                            outIsMapped.asArg().asList());
-        exprWalker.assignFile(output, Arg.createVar(localOutput),
+        exprWalker.assignFile(output, Arg.newVar(localOutput),
                               setOutFilename.asArg());
         if (output.isMapped() != Ternary.TRUE &&
             output.type().fileKind().supportsTmpImmediate()) {
@@ -2130,7 +2130,7 @@ public class ASTWalker {
     HashMap<String, Var> outMap = new HashMap<String, Var>();
     for (Var output: outArgs) {
       // Check output types
-      if (!Types.isFile(output.type()) && !Types.isVoid(output.type())) {
+      if (!Types.isFile(output) && !Types.isVoid(output)) {
         LogHelper.error(context, "Output argument " + output.name() + " has "
             + " invalid type for app output: " + output.type().typeName());
         deferredError = true;
@@ -2186,19 +2186,19 @@ public class ASTWalker {
           throws UserException, UndefinedTypeException, DoubleDefineException {
     List<Arg> localInputs = new ArrayList<Arg>();
     for (Var in: args) {
-      localInputs.add(Arg.createVar(retrieveAppArg(context, fileNames, in)));
+      localInputs.add(Arg.newVar(retrieveAppArg(context, fileNames, in)));
     }
     Redirects<Arg> redirValues = new Redirects<Arg>();
     if (redirFutures.stdin != null) {
-      redirValues.stdin = Arg.createVar(retrieveAppArg(context, fileNames,
+      redirValues.stdin = Arg.newVar(retrieveAppArg(context, fileNames,
                                                  redirFutures.stdin));
     }
     if (redirFutures.stdout != null) {
-      redirValues.stdout = Arg.createVar(retrieveAppArg(context, fileNames,
+      redirValues.stdout = Arg.newVar(retrieveAppArg(context, fileNames,
                                                  redirFutures.stdout));
     }
     if (redirFutures.stderr != null) {
-      redirValues.stderr = Arg.createVar(retrieveAppArg(context, fileNames,
+      redirValues.stderr = Arg.newVar(retrieveAppArg(context, fileNames,
                                                  redirFutures.stderr));
     }
 
@@ -2210,7 +2210,7 @@ public class ASTWalker {
       retrieveAppArg(Context context, Map<String, Var> fileNames, Var in)
           throws UserException, UndefinedTypeException, DoubleDefineException {
     Var localInput;
-    if (Types.isFile(in.type())) {
+    if (Types.isFile(in)) {
       Var filenameFuture = fileNames.get(in.name());
       assert(filenameFuture != null);
       localInput = exprWalker.retrieveToVar(context, filenameFuture);
@@ -2247,7 +2247,7 @@ public class ASTWalker {
         assert(cmdArg.getChildCount() == 1);
         String fileVarName = cmdArg.child(0).getText();
         Var file = context.lookupVarUser(fileVarName);
-        if (!Types.isFile(file.type())) {
+        if (!Types.isFile(file)) {
           throw new TypeMismatchException(context, "Variable " + file.name()
                   + " is not a file, cannot use @ prefix for app");
         }
@@ -2357,7 +2357,7 @@ public class ASTWalker {
 
     // Fetch missing output arguments that weren't on command line
     for (Var outArg: outArgs) {
-      if (Types.isFile(outArg.type()) && !fileNames.containsKey(outArg.name())) {
+      if (Types.isFile(outArg) && !fileNames.containsKey(outArg.name())) {
         loadAppFilename(context, fileNames, waitVars, outArg);
       }
     }
@@ -2498,7 +2498,7 @@ public class ASTWalker {
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(backendVar, Arg.createBoolLit(
+      backend.addGlobal(backendVar, Arg.newBool(
                                         Boolean.parseBoolean(bval)));
       break;
     case INT:
@@ -2506,7 +2506,7 @@ public class ASTWalker {
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(backendVar, Arg.createIntLit(ival));
+      backend.addGlobal(backendVar, Arg.newInt(ival));
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
@@ -2519,14 +2519,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(backendVar, Arg.createFloatLit(fval));
+      backend.addGlobal(backendVar, Arg.newFloat(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(backendVar, Arg.createStringLit(sval));
+      backend.addGlobal(backendVar, Arg.newString(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

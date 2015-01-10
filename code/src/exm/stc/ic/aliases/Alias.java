@@ -126,7 +126,7 @@ public class Alias {
     StructType type = (StructType) struct.type().getImplType();
     Type fieldType;
     try {
-      fieldType = type.getFieldTypeByPath(fieldPath);
+      fieldType = type.fieldTypeByPath(fieldPath);
     } catch (TypeMismatchException e) {
       // Should only happen if we allowed bad IR to get generated
       throw new STCRuntimeError(e.getMessage());

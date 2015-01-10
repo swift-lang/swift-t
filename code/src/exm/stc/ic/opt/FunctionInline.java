@@ -437,7 +437,7 @@ public class FunctionInline implements OptimizerPass {
     for (int i = 0; i < fnCall.getFunctionOutputs().size(); i++) {
       Var outVar = fnCall.getFunctionOutput(i);
       Var outArg = toInline.getOutputList().get(i);
-      renames.put(outArg, Arg.createVar(outVar));
+      renames.put(outArg, Arg.newVar(outVar));
       passIn.add(outVar);
 
       // Remove cleanup actions
@@ -544,7 +544,7 @@ public class FunctionInline implements OptimizerPass {
                                         var.name(), excludedNames);
     Var newVar = var.makeRenamed(newName);
     assert(!replacements.containsKey(newName));
-    replacements.put(var, Arg.createVar(newVar));
+    replacements.put(var, Arg.newVar(newVar));
     excludedNames.add(newName);
     UniqueVarNames.replaceCleanup(block, var, newVar);
     logger.trace("Replace " + var + " with " + newVar

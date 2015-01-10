@@ -1,6 +1,4 @@
-// Regression test - copying struct with array inside does not work correctly
-// SKIP-THIS-TEST
-// Issue #760 
+// Regression test - copying struct with array inside did not work correctly
 import assert;
 
 type inner {

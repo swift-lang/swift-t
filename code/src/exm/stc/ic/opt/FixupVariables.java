@@ -130,7 +130,7 @@ public class FixupVariables implements OptimizerPass {
       // Mark write-only outputs
       for (int i = 0; i < fn.getOutputList().size(); i++) {
         Var output = fn.getOutput(i);
-        if (!res.read.contains(output) && !Types.hasReadableSideChannel(output.type())) {
+        if (!res.read.contains(output) && !Types.hasReadableSideChannel(output)) {
           fn.makeOutputWriteOnly(i);
         }
       }

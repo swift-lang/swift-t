@@ -211,7 +211,7 @@ public class PropagateAliases extends FunctionOptimizerPass {
         return TurbineOp.structRetrieveSub(inst.getOutput(0), srcKey.var,
                                 Arrays.asList(srcKey.path), decr);
       } else if (srcKey != null && srcKey.isFilenameAlias() && 
-                 decr.isIntVal() && decr.getIntLit() == 0) {
+                 decr.isInt() && decr.getInt() == 0) {
         return TurbineOp.getFilenameVal(inst.getOutput(0), srcKey.var);
       }
     } else if (inst.op.isAssign(false)) {

@@ -400,20 +400,20 @@ public class ICTree {
       String suffix;
       switch(val.kind) {
       case BOOLVAL:
-        suffix = "b_" + Boolean.toString(val.getBoolLit());
+        suffix = "b_" + Boolean.toString(val.getBool());
         break;
       case INTVAL:
-        suffix = "i_" + Long.toString(val.getIntLit());
+        suffix = "i_" + Long.toString(val.getInt());
         break;
       case FLOATVAL:
-        String stringRep = Double.toString(val.getFloatLit());
+        String stringRep = Double.toString(val.getFloat());
         // Truncate float val
         suffix = "f_" +
               stringRep.substring(0, Math.min(5, stringRep.length()));
         break;
       case STRINGVAL:
         // Try to have var name something to do with string contents
-        String onlyalphanum = val.getStringLit()
+        String onlyalphanum = val.getString()
               .replaceAll("[ \n\r\t.,]", "_")
               .replaceAll("[^a-zA-Z0-9_]", "");
 
@@ -636,7 +636,7 @@ public class ICTree {
     public void makeOutputWriteOnly(int i) {
       assert(i >= 0 && i < oList.size());
       // Files are complicated and can't be simply treated as write-only
-      assert(!Types.isFile(oList.get(i).type()));
+      assert(!Types.isFile(oList.get(i)));
       Var output = oList.get(i);
       if (!oListWriteOnly.contains(output)) {
         oListWriteOnly.add(output);
@@ -1150,13 +1150,13 @@ public class ICTree {
           if (initReaders == null) {
             // Init to default refcount
             long baseReaders = RefCounting.baseReadRefCount(v, true, true);
-            initReaders = Arg.createIntLit(baseReaders);
+            initReaders = Arg.newInt(baseReaders);
           }
 
           if (initWriters == null) {
             // Init to default refcount
             long baseWriters = RefCounting.baseWriteRefCount(v, true, true);
-            initWriters = Arg.createIntLit(baseWriters);
+            initWriters = Arg.newInt(baseWriters);
           }
         }
 
@@ -1643,7 +1643,7 @@ public class ICTree {
       }
 
       Map<Var, Arg> replacement =
-          Collections.singletonMap(oldV, Arg.createVar(newV));
+          Collections.singletonMap(oldV, Arg.newVar(newV));
       // Must replace everywhere
       this.renameVars(function, replacement, RenameMode.REPLACE_VAR, true);
       return true;
@@ -1775,7 +1775,7 @@ public class ICTree {
       assert(!refcountMap.containsKey(blockVar)) :
         "Tried to reassign refcount for block var " + blockVar;
 
-      refcountMap.put(blockVar, Arg.createIntLit(val));
+      refcountMap.put(blockVar, Arg.newInt(val));
     }
   }
 

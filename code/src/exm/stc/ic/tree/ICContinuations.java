@@ -1424,8 +1424,8 @@ public class ICContinuations {
 
     public boolean isParallel() {
       Arg parallelism = parallelism();
-      return parallelism != null && !(parallelism.isIntVal() &&
-                                      parallelism.getIntLit() > 1);
+      return parallelism != null && !(parallelism.isInt() &&
+                                      parallelism.getInt() > 1);
     }
 
     public Arg parallelism() {

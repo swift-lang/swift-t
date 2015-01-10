@@ -330,8 +330,8 @@ public class LValWalker {
 
     if (VarRepr.storeRefInStruct(fieldType)) {
       // Lookup ref stored in struct
-      backend.structRetrieveSub(VarRepr.backendVar(field),
-                  VarRepr.backendVar(rootVar), fieldPath);
+      backend.structCreateNested(VarRepr.backendVar(field),
+                   VarRepr.backendVar(rootVar), fieldPath);
     } else {
       // Create an alias to data stored in struct
       backend.structCreateAlias(VarRepr.backendVar(field),
@@ -458,7 +458,7 @@ public class LValWalker {
     assert (Types.isBag(bagType));
     Var bag = varCreator.createTmpAlias(context, bagType);
     // create or get nested bag instruction
-    backend.arrayCreateBag(VarRepr.backendVar(bag),
+    backend.arrayCreateNestedImm(VarRepr.backendVar(bag),
         VarRepr.backendVar(derefArr), VarRepr.backendArg(keyVal));
     backendBagAppend(context, bag, elem);
 
@@ -490,15 +490,15 @@ public class LValWalker {
       if (literal != null) {
         long arrIx = literal;
         // Add this variable to array
-        if (Types.isArray(lvalArr.type())) {
+        if (Types.isArray(lvalArr)) {
           mVar = varCreator.createTmpAlias(context, memberType);
           backend.arrayCreateNestedImm(VarRepr.backendVar(mVar),
-              backendLValArr, Arg.createIntLit(arrIx));
+              backendLValArr, Arg.newInt(arrIx));
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
           mVar = varCreator.createTmp(context, new RefType(memberType, true));
           backend.arrayRefCreateNestedImm(VarRepr.backendVar(mVar),
-                          backendLValArr, Arg.createIntLit(arrIx));
+                          backendLValArr, Arg.newInt(arrIx));
         }
 
       } else {
@@ -565,7 +565,7 @@ public class LValWalker {
               boolean isArrayRef, boolean rValIsVal) {
     Var backendArr = VarRepr.backendVar(arr);
     Var backendMember = VarRepr.backendVar(member);
-    Arg ixArg = Arg.createIntLit(ix);
+    Arg ixArg = Arg.newInt(ix);
     if (isArrayRef) {
       if (rValIsVal) {
         backend.arrayRefStoreImm(backendArr, ixArg,  backendMember.asArg());

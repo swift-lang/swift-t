@@ -208,12 +208,12 @@ public class RefcountPass implements OptimizerPass {
 
     for (Entry<Var, Long> read: readIncrs.entries()) {
       loop.addStartIncrement(new RefCount(read.getKey(), RefCountType.READERS,
-          Arg.createIntLit(read.getValue())));
+          Arg.newInt(read.getValue())));
     }
 
     for (Entry<Var, Long> write: writeIncrs.entries()) {
       loop.addStartIncrement(new RefCount(write.getKey(), RefCountType.WRITERS,
-          Arg.createIntLit(write.getValue())));
+          Arg.newInt(write.getValue())));
     }
   }
 
@@ -235,13 +235,13 @@ public class RefcountPass implements OptimizerPass {
       Arg amount = RefCountOp.getRCAmount(inst);
       Var var = RefCountOp.getRCTarget(inst);
       RefCountType rcType = RefCountOp.getRCType(inst.op);
-      if (amount.isIntVal() && RCUtil.definedOutsideCont(loop, loopBody, var)) {
+      if (amount.isInt() && RCUtil.definedOutsideCont(loop, loopBody, var)) {
         // Pull up constant increments
         if (rcType == RefCountType.READERS) {
-          readIncrs.add(var, amount.getIntLit());
+          readIncrs.add(var, amount.getInt());
         } else {
           assert (rcType == RefCountType.WRITERS);
-          writeIncrs.add(var, amount.getIntLit());
+          writeIncrs.add(var, amount.getInt());
         }
         it.remove();
       }
@@ -370,10 +370,10 @@ public class RefcountPass implements OptimizerPass {
           RefCountOp.isDecrement(action.op)) {
         Var decrVar = RefCountOp.getRCTarget(action);
         Arg amount = RefCountOp.getRCAmount(action);
-        if (amount.isIntVal()) {
+        if (amount.isInt()) {
           // Remove instructions where counts is integer value
           RefCountType rcType = RefCountOp.getRCType(action.op);
-          increments.decr(decrVar, rcType, amount.getIntLit());
+          increments.decr(decrVar, rcType, amount.getInt());
           caIt.remove();
         }
       }
@@ -473,8 +473,8 @@ public class RefcountPass implements OptimizerPass {
       ListIterator<RefCount> it = foreach.startIncrementIterator();
       while (it.hasNext()) {
         RefCount rc = it.next();
-        if (rc.amount.isIntVal()) {
-          increments.incr(rc.var, rc.type, iterCount * rc.amount.getIntLit());
+        if (rc.amount.isInt()) {
+          increments.incr(rc.var, rc.type, iterCount * rc.amount.getInt());
           it.remove();
         }
       }
@@ -488,7 +488,7 @@ public class RefcountPass implements OptimizerPass {
        */
       for (RefCount rc: foreach.getStartIncrements()) {
         increments.incr(rc.var, rc.type, 1);
-        foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));
+        foreach.addConstantStartIncrement(rc.var, rc.type, Arg.newInt(-1));
       }
     }
   }
@@ -628,8 +628,8 @@ public class RefcountPass implements OptimizerPass {
             Var v = RefCountOp.getRCTarget(inst);
             Arg amountArg = RefCountOp.getRCAmount(inst);
             RefCountType rcType = RefCountOp.getRCType(inst.op);
-            if (amountArg.isIntVal()) {
-              long amount = amountArg.getIntLit();
+            if (amountArg.isInt()) {
+              long amount = amountArg.getInt();
               if (!block.declaredHere(v)) {
                 // Check already being manipulated in this block
                 // Pull-up by default, if declared outside this block
@@ -662,8 +662,8 @@ public class RefcountPass implements OptimizerPass {
           Var v = RefCountOp.getRCTarget(inst);
           Arg amountArg = RefCountOp.getRCAmount(inst);
           RefCountType rcType = RefCountOp.getRCType(inst.op);
-          if (amountArg.isIntVal()) {
-            long amount = amountArg.getIntLit();
+          if (amountArg.isInt()) {
+            long amount = amountArg.getInt();
             long toRemoveAmount = toRemove.getCount(rcType, v, RCDir.INCR);
             assert (toRemoveAmount <= amount && toRemoveAmount >= 0);
             if (toRemoveAmount > 0) {
@@ -672,7 +672,7 @@ public class RefcountPass implements OptimizerPass {
               it.remove();
               if (toRemoveAmount < amount) {
                 // Need to replace with reduced refcount
-                Arg newAmount = Arg.createIntLit(amount - toRemoveAmount);
+                Arg newAmount = Arg.newInt(amount - toRemoveAmount);
                 it.add(RefCountOp.incrRef(rcType, v, newAmount));
               }
             }
@@ -700,8 +700,8 @@ public class RefcountPass implements OptimizerPass {
         Var v = RefCountOp.getRCTarget(inst);
         Arg amountArg = RefCountOp.getRCAmount(inst);
         RefCountType rcType = RefCountOp.getRCType(inst.op);
-        if (amountArg.isIntVal()) {
-          long amount = amountArg.getIntLit();
+        if (amountArg.isInt()) {
+          long amount = amountArg.getInt();
           assert(amount >= 0);
           if (!block.declaredHere(v)) {
             // Check already being manipulated in this block
@@ -725,8 +725,8 @@ public class RefcountPass implements OptimizerPass {
         Var v = RefCountOp.getRCTarget(inst);
         Arg amountArg = RefCountOp.getRCAmount(inst);
         RefCountType rcType = RefCountOp.getRCType(inst.op);
-        if (amountArg.isIntVal()) {
-          long amount = amountArg.getIntLit();
+        if (amountArg.isInt()) {
+          long amount = amountArg.getInt();
           // Ensure both positive
           long toRemoveAmount = -1 * toRemove.getCount(rcType, v, RCDir.DECR);
           logger.trace("hoisted " + v.name() + ":" + rcType + " -"
@@ -736,7 +736,7 @@ public class RefcountPass implements OptimizerPass {
             it.remove();
             if (toRemoveAmount < amount) {
               // Need to replace with reduced refcount
-              Arg newAmount = Arg.createIntLit(amount - toRemoveAmount);
+              Arg newAmount = Arg.newInt(amount - toRemoveAmount);
               Instruction newDecr = RefCountOp.decrRef(rcType, v, newAmount);
               it.add(new CleanupAction(ca.var(), newDecr));
             }

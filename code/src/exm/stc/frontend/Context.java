@@ -198,7 +198,7 @@ public abstract class Context {
           throws DoubleDefineException {
     String name = variable.name();
     DefKind kind;
-    if (Types.isFunction(variable.type())) {
+    if (Types.isFunction(variable)) {
       kind = DefKind.FUNCTION;
     } else {
       kind = DefKind.VARIABLE;
@@ -309,7 +309,7 @@ public abstract class Context {
    */
   public FunctionType lookupFunction(String name) {
     Var var = lookupVarUnsafe(name);
-    if (var == null || !Types.isFunction(var.type())) {
+    if (var == null || !Types.isFunction(var)) {
       return null;
     }
     return (FunctionType)var.type();

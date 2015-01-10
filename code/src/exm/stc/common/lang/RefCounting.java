@@ -201,7 +201,7 @@ public class RefCounting {
        RefCountType rcType, boolean includeTracked, boolean includeUntracked) {
     if (Types.isStruct(type) && rcType == RefCountType.WRITERS) {
       return baseStructWriteRefCount(type, defType, includeTracked,
-                                     includeUntracked, true);
+                                     includeUntracked);
     } else if (Types.isPrimValue(type) || Types.isContainerLocal(type) ||
                Types.isStructLocal(type)) {
       // No refcount
@@ -230,31 +230,25 @@ public class RefCounting {
   }
 
   public static long baseStructWriteRefCount(Type type, DefType defType,
-      boolean includeTracked, boolean includeUntracked,
-      boolean includeInitializedRefs) {
+      boolean includeTracked, boolean includeUntracked) {
     assert(Types.isStruct(type));
 
     // Sum of field refcounts
-    StructType structT = (StructType)type.type().getImplType();
+    StructType structT = (StructType)type.getImplType();
     long trackedSum = 0;
     long untrackedSum = 0;
-    for (StructField field: structT.getFields()) {
+    for (StructField field: structT.fields()) {
 
-      long fieldUntracked = baseRefCount(field.getType(), defType,
+      long fieldUntracked = baseRefCount(field.type(), defType,
                               RefCountType.WRITERS, false, true);
-      if (Types.isMutableRef(field.getType())) {
+      if (Types.isMutableRef(field.type())) {
         // Need to have tracked refcount as proxy
-
-        if (includeInitializedRefs) {
-          untrackedSum += fieldUntracked;
-        }
-
-        Type referencedType = field.getType().getImplType().memberType();
+        Type referencedType = field.type().getImplType().memberType();
         trackedSum += baseRefCount(referencedType, defType,
                               RefCountType.WRITERS, true, false);
       } else {
         untrackedSum += fieldUntracked;
-        trackedSum += baseRefCount(field.getType(), defType,
+        trackedSum += baseRefCount(field.type(), defType,
                               RefCountType.WRITERS, true, false);
       }
     }

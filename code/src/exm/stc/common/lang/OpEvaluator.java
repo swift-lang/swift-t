@@ -52,11 +52,11 @@ public class OpEvaluator {
         if (in == null) {
           return null;
         }
-        allInt = allInt && in.isImmediateInt();
-        allFloat = allFloat && in.isImmediateFloat();
-        allString = allString && in.isImmediateString();
-        allBool = allBool && in.isImmediateBool();
-        allConst = allConst && in.isConstant();
+        allInt = allInt && in.isImmInt();
+        allFloat = allFloat && in.isImmFloat();
+        allString = allString && in.isImmString();
+        allBool = allBool && in.isImmBool();
+        allConst = allConst && in.isConst();
       }
 
       if (allConst) {
@@ -92,7 +92,7 @@ public class OpEvaluator {
     Arg nonConstInput = null;
     for (Arg in : constArgs) {
       if (in != null) {
-        if (in.isBoolVal()) {
+        if (in.isBool()) {
           constInputs.add(in);
         } else {
           assert(in.isVar());
@@ -101,26 +101,26 @@ public class OpEvaluator {
       }
     }
     if (constInputs.size() >= 1) {
-      boolean arg1 = constInputs.get(0).getBoolLit();
+      boolean arg1 = constInputs.get(0).getBool();
       if (constInputs.size() == 2) {
         // Can directly evaluate
-        boolean arg2 = constInputs.get(1).getBoolLit();
+        boolean arg2 = constInputs.get(1).getBool();
         switch (op) { 
           case OR:
-            return Arg.createBoolLit(arg1 || arg2);
+            return Arg.newBool(arg1 || arg2);
           case AND:
-            return Arg.createBoolLit(arg1 && arg2);
+            return Arg.newBool(arg1 && arg2);
           default:
             // fall through
         }
       } else if (constInputs.size() == 1) {
         // see if we can short-circuit
         if (op == BuiltinOpcode.AND && !arg1) {
-          return Arg.createBoolLit(false);
+          return Arg.newBool(false);
         } else if (op == BuiltinOpcode.AND && arg1 && nonConstInput != null) {
           return nonConstInput;
         } else if (op == BuiltinOpcode.OR && arg1) {
-          return Arg.createBoolLit(true);
+          return Arg.newBool(true);
         } else if (op == BuiltinOpcode.OR && !arg1) {
           return nonConstInput;
         }
@@ -135,18 +135,18 @@ public class OpEvaluator {
         // Strcat can take multiple arguments
         StringBuilder sb = new StringBuilder();
         for (Arg oa : constInputs) {
-          sb.append(oa.getStringLit());
+          sb.append(oa.getString());
         }
-        return Arg.createStringLit(sb.toString());
+        return Arg.newString(sb.toString());
     } else if (constInputs.size() == 1) {
-      String arg1 = constInputs.get(0).getStringLit();
+      String arg1 = constInputs.get(0).getString();
       switch (op) {
         case COPY_STRING:
-          return Arg.createStringLit(arg1);
+          return Arg.newString(arg1);
         case STRTOINT:
           try {
             long val = Long.parseLong(arg1);
-            return Arg.createIntLit(val);
+            return Arg.newInt(val);
           } catch (NumberFormatException ex) {
             // Handle at runtime
           }
@@ -155,7 +155,7 @@ public class OpEvaluator {
           try {
             // TODO: does this match Tcl implementation?
             double val = Double.valueOf(arg1);
-            return Arg.createFloatLit(val);
+            return Arg.newFloat(val);
           } catch (NumberFormatException ex) {
             // Handle at runtime
           }
@@ -164,13 +164,13 @@ public class OpEvaluator {
           // Fall through
       }
     } else if (constInputs.size() == 2) {
-      String arg1 = constInputs.get(0).getStringLit();
-      String arg2 = constInputs.get(1).getStringLit();
+      String arg1 = constInputs.get(0).getString();
+      String arg2 = constInputs.get(1).getString();
       switch (op) { 
         case EQ_STRING:
-          return Arg.createBoolLit(arg1.equals(arg2));
+          return Arg.newBool(arg1.equals(arg2));
         case NEQ_STRING:
-          return Arg.createBoolLit(!arg1.equals(arg2));
+          return Arg.newBool(!arg1.equals(arg2));
         default:
           // fall through
           break;
@@ -182,60 +182,60 @@ public class OpEvaluator {
   private static Arg
       evalFloatOp(BuiltinOpcode op, List<Arg> constInputs) {
     if (constInputs.size() == 1) {
-      double arg1 = constInputs.get(0).getFloatLit();
+      double arg1 = constInputs.get(0).getFloat();
       switch(op) {
         case COPY_FLOAT:
-          return Arg.createFloatLit(arg1);
+          return Arg.newFloat(arg1);
         case ABS_FLOAT:
-          return Arg.createFloatLit(Math.abs(arg1));
+          return Arg.newFloat(Math.abs(arg1));
         case EXP:
-          return Arg.createFloatLit(Math.exp(arg1));
+          return Arg.newFloat(Math.exp(arg1));
         case LOG:
-          return Arg.createFloatLit(Math.log(arg1));
+          return Arg.newFloat(Math.log(arg1));
         case SQRT:
-          return Arg.createFloatLit(Math.sqrt(arg1));
+          return Arg.newFloat(Math.sqrt(arg1));
         case ROUND:
-          return Arg.createIntLit(Math.round(arg1));
+          return Arg.newInt(Math.round(arg1));
         case CEIL:
-          return Arg.createIntLit((long) Math.ceil(arg1));
+          return Arg.newInt((long) Math.ceil(arg1));
         case FLOOR:
-          return Arg.createIntLit((long) Math.floor(arg1));
+          return Arg.newInt((long) Math.floor(arg1));
         case FLOATTOSTR:
           // TODO: format might not be consistent with TCL
-          return Arg.createStringLit(Double.toString(arg1));
+          return Arg.newString(Double.toString(arg1));
         case IS_NAN:
-          return Arg.createBoolLit(Double.isNaN(arg1));
+          return Arg.newBool(Double.isNaN(arg1));
         default:
           return null;
       }
     } else if (constInputs.size() == 2) {
-      double arg1 = constInputs.get(0).getFloatLit();
-      double arg2 = constInputs.get(1).getFloatLit();
+      double arg1 = constInputs.get(0).getFloat();
+      double arg2 = constInputs.get(1).getFloat();
       switch(op) {
         case PLUS_FLOAT:
-          return Arg.createFloatLit(arg1 + arg2);
+          return Arg.newFloat(arg1 + arg2);
         case MINUS_FLOAT:
-          return Arg.createFloatLit(arg1 - arg2);
+          return Arg.newFloat(arg1 - arg2);
         case MULT_FLOAT:
-          return Arg.createFloatLit(arg1 * arg2);
+          return Arg.newFloat(arg1 * arg2);
         case EQ_FLOAT:
-          return Arg.createBoolLit(arg1 == arg2);
+          return Arg.newBool(arg1 == arg2);
         case NEQ_FLOAT:
-          return Arg.createBoolLit(arg1 != arg2);
+          return Arg.newBool(arg1 != arg2);
         case GT_FLOAT:
-          return Arg.createBoolLit(arg1 > arg2);
+          return Arg.newBool(arg1 > arg2);
         case GTE_FLOAT:
-          return Arg.createBoolLit(arg1 >= arg2);
+          return Arg.newBool(arg1 >= arg2);
         case LT_FLOAT:
-          return Arg.createBoolLit(arg1 < arg2);
+          return Arg.newBool(arg1 < arg2);
         case LTE_FLOAT:
-          return Arg.createBoolLit(arg1 <= arg2);
+          return Arg.newBool(arg1 <= arg2);
         case MAX_FLOAT:
-          return Arg.createFloatLit(Math.max(arg1, arg2));
+          return Arg.newFloat(Math.max(arg1, arg2));
         case MIN_FLOAT:
-          return Arg.createFloatLit(Math.min(arg1, arg2));
+          return Arg.newFloat(Math.min(arg1, arg2));
         case POW_FLOAT:
-          return Arg.createFloatLit(Math.pow(arg1, arg2));
+          return Arg.newFloat(Math.pow(arg1, arg2));
         default:
           return null;
       }
@@ -246,53 +246,53 @@ public class OpEvaluator {
 
   private static Arg evalIntOp(BuiltinOpcode op, List<Arg> constInputs) {
     if (constInputs.size() == 1) {
-      long arg1 = constInputs.get(0).getIntLit();
+      long arg1 = constInputs.get(0).getInt();
       switch(op) {
         case COPY_INT:
-          return Arg.createIntLit(arg1);
+          return Arg.newInt(arg1);
         case ABS_INT:
-          return Arg.createIntLit(Math.abs(arg1));
+          return Arg.newInt(Math.abs(arg1));
         case NEGATE_INT:
-          return Arg.createIntLit(0 - arg1);
+          return Arg.newInt(0 - arg1);
         case INTTOFLOAT:
-          return Arg.createFloatLit(arg1);
+          return Arg.newFloat(arg1);
         case INTTOSTR:
-          return Arg.createStringLit(Long.toString(arg1));
+          return Arg.newString(Long.toString(arg1));
         default:
           return null;
       }
     } else if (constInputs.size() == 2) {
-      long arg1 = constInputs.get(0).getIntLit();
-      long arg2 = constInputs.get(1).getIntLit();
+      long arg1 = constInputs.get(0).getInt();
+      long arg2 = constInputs.get(1).getInt();
       switch (op) { 
         case PLUS_INT:
-          return Arg.createIntLit(arg1 + arg2);
+          return Arg.newInt(arg1 + arg2);
         case MINUS_INT:
-          return Arg.createIntLit(arg1 - arg2);
+          return Arg.newInt(arg1 - arg2);
         case MULT_INT:
-          return Arg.createIntLit(arg1 * arg2);
+          return Arg.newInt(arg1 * arg2);
         case DIV_INT:
-          return Arg.createIntLit(arg1 / arg2);
+          return Arg.newInt(arg1 / arg2);
         case MOD_INT:
-          return Arg.createIntLit(arg1 % arg2);
+          return Arg.newInt(arg1 % arg2);
         case EQ_INT:
-          return Arg.createBoolLit(arg1 == arg2);
+          return Arg.newBool(arg1 == arg2);
         case NEQ_INT:
-          return Arg.createBoolLit(arg1 != arg2);
+          return Arg.newBool(arg1 != arg2);
         case GT_INT:
-          return Arg.createBoolLit(arg1 > arg2);
+          return Arg.newBool(arg1 > arg2);
         case GTE_INT:
-          return Arg.createBoolLit(arg1 >= arg2);
+          return Arg.newBool(arg1 >= arg2);
         case LT_INT:
-          return Arg.createBoolLit(arg1 < arg2);
+          return Arg.newBool(arg1 < arg2);
         case LTE_INT:
-          return Arg.createBoolLit(arg1 <= arg2);
+          return Arg.newBool(arg1 <= arg2);
         case MAX_INT:
-          return Arg.createIntLit(Math.max(arg1, arg2));
+          return Arg.newInt(Math.max(arg1, arg2));
         case MIN_INT:
-          return Arg.createIntLit(Math.min(arg1, arg2));
+          return Arg.newInt(Math.min(arg1, arg2));
         case POW_INT:
-          return Arg.createFloatLit(Math.pow((double) arg1, (double) arg2));
+          return Arg.newFloat(Math.pow((double) arg1, (double) arg2));
         default:
           return null;
       }
@@ -303,10 +303,10 @@ public class OpEvaluator {
   private static Arg
       evalBoolOp(BuiltinOpcode op, List<Arg> constInputs) {
     if (constInputs.size() == 1) {
-      boolean arg1 = constInputs.get(0).getBoolLit();
+      boolean arg1 = constInputs.get(0).getBool();
       switch (op) { 
         case NOT:
-          return Arg.createBoolLit(!arg1);
+          return Arg.newBool(!arg1);
         default:
           // fall through
           break;
@@ -327,11 +327,11 @@ public class OpEvaluator {
   private static Arg evalOtherOp(BuiltinOpcode op, List<Arg> inputs) {
     switch (op) { 
       case SUBSTRING:
-        String str = inputs.get(0).getStringLit();
-        long start = inputs.get(1).getIntLit();
-        long len = inputs.get(2).getIntLit();
+        String str = inputs.get(0).getString();
+        long start = inputs.get(1).getInt();
+        long len = inputs.get(2).getInt();
         long end = Math.min(start + len, str.length());
-        return Arg.createStringLit(str.substring((int) start, (int) (end)));
+        return Arg.newString(str.substring((int) start, (int) (end)));
       default:
         return null;
     }
