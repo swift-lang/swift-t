@@ -1817,7 +1817,9 @@ ADLBP_Enumerate(adlb_datum_id container_id,
     if (include_keys || include_vals)
     {
       assert(res.length >= 0);
-      *data = malloc((size_t)res.length);
+      *data = malloc(res.length);
+      ADLB_MALLOC_CHECK(*data);
+
       adlb_code ac = mpi_recv_big(*data, res.length,
                                   to_server_rank, ADLB_TAG_RESPONSE);
       ADLB_CHECK(ac);
