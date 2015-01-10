@@ -109,16 +109,20 @@ alloc_container_reference(size_t subscript_len);
 
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
-    const void* buffer, size_t length, bool copy,
+    void *buffer, size_t length, bool copy, bool *took_ownership,
     adlb_data_type type,
     adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript, const void *value, size_t length,
-    bool copy, adlb_data_type type, adlb_refc store_refcounts,
+    adlb_subscript subscript, void *value, size_t length, bool copy,
+    bool *took_ownership, adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
+
+static adlb_data_code
+data_reserve_subscript(adlb_datum_id id, adlb_datum *d,
+    adlb_subscript subscript);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d, adlb_datum_id id,
@@ -854,7 +858,7 @@ alloc_container_reference(size_t subscript_len)
  */
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
-          const void* buffer, size_t length, bool copy,
+          void *buffer, size_t length, bool copy, bool *took_ownership,
           adlb_data_type type,
           adlb_refc refcount_decr, adlb_refc store_refcounts, 
           adlb_notif_t *notifs)
@@ -879,14 +883,14 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 
   if (adlb_has_sub(subscript))
   {
-    dc = data_store_subscript(id, d, subscript, buffer, length, copy, type,
-                             store_refcounts, notifs, &freed_datum);
+    dc = data_store_subscript(id, d, subscript, buffer, length, copy,
+          took_ownership, type, store_refcounts, notifs, &freed_datum);
     DATA_CHECK(dc);
   }
   else
   {
-    dc = data_store_root(id, d, buffer, length, copy, type,
-                         store_refcounts, notifs, &freed_datum);
+    dc = data_store_root(id, d, buffer, length, copy, took_ownership,
+          type, store_refcounts, notifs, &freed_datum);
     DATA_CHECK(dc);
   }
 
@@ -916,8 +920,8 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
  */
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
-    const void* buffer, size_t length, bool copy, adlb_data_type type,
-    adlb_refc store_refcounts,
+    void *buffer, size_t length, bool copy, bool *took_ownership,
+    adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -929,7 +933,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   // Handle store to top-level datum
   bool initialize = !d->status.set;
   dc = ADLB_Unpack2(&d->data, d->type, buffer, length, copy,
-                    store_refcounts, initialize);
+                    store_refcounts, initialize, took_ownership);
   DATA_CHECK(dc);
   d->status.set = true;
 
@@ -959,8 +963,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
  */
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript, const void *value, size_t length,
-    bool copy, adlb_data_type type, adlb_refc store_refcounts,
+    adlb_subscript subscript, void *value, size_t length, bool copy,
+    bool *took_ownership, adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -1039,8 +1043,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
         // Now we are guaranteed to succeed
         adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-        dc = ADLB_Unpack2(entry, (adlb_data_type)c->val_type, value, length,
-                        copy, store_refcounts, true);
+        dc = ADLB_Unpack2(entry, (adlb_data_type)c->val_type, value,
+                  length, copy, store_refcounts, true, took_ownership);
         DATA_CHECK(dc);
 
         if (found)
@@ -1168,6 +1172,18 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
   }
 
   return ADLB_DATA_SUCCESS;
+}
+
+/*
+  Reserve a subscript of a datum
+ */
+static adlb_data_code
+data_reserve_subscript(adlb_datum_id id, adlb_datum *d,
+    adlb_subscript subscript)
+{
+  return data_store_subscript(id, d, subscript,
+          NULL, 0, true, NULL, ADLB_DATA_TYPE_NULL,
+          ADLB_NO_REFC, NULL, NULL);
 }
 
 
@@ -2158,9 +2174,7 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   DATA_CHECK(dc);
 
   // Attempt to reserve
-  dc = data_store_subscript(id, d, subscript,
-          NULL, 0, ADLB_DATA_TYPE_NULL, true,
-          ADLB_NO_REFC, NULL, NULL);
+  dc = data_reserve_subscript(id, d, subscript);
   if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
   {
     // Return data if present

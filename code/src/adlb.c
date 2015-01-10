@@ -1519,8 +1519,8 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript,
   if (to_server_rank == xlb_comm_rank)
   {
     // This is a server-to-server operation on myself
-    TRACE("Store SELF");
-    dc = xlb_data_store(id, subscript, data, length, true,
+    // Can cast away const since we're forcing it to copy
+    dc = xlb_data_store(id, subscript, (void*)data, length, true, NULL,
                     type, refcount_decr, store_refcounts, notifs);
     if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
       return ADLB_REJECTED;

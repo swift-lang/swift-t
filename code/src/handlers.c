@@ -1155,10 +1155,10 @@ handle_store(int caller)
 
   void* xfer;
   // Normally, we copy out of the same recv buffer:
-  bool xfer_copy = true;
+  bool xfer_alloced = false;
   if (hdr.length > ADLB_XFER_SIZE)
   {
-    xfer_copy = false;
+    xfer_alloced = true;
     xfer = malloc(hdr.length);
     ADLB_MALLOC_CHECK(xfer);
   }
@@ -1171,8 +1171,10 @@ handle_store(int caller)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
+  bool took_xfer_ownership;
   adlb_data_code dc =
-      xlb_data_store(hdr.id, subscript, xfer, hdr.length, xfer_copy,
+      xlb_data_store(hdr.id, subscript, xfer, hdr.length, !xfer_alloced,
+          &took_xfer_ownership,
           hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
   struct packed_store_resp resp = { .dc = dc };
@@ -1205,6 +1207,10 @@ handle_store(int caller)
   }
 
   xlb_free_notif(&notifs);
+
+  if (xfer_alloced && !took_xfer_ownership) {
+    free(xfer);
+  }
 
   TRACE("STORE DONE");
   MPE_LOG(xlb_mpe_svr_store_end);

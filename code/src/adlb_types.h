@@ -286,14 +286,24 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
             const void *buffer, size_t length, adlb_refc refcounts);
 
 /*
-  Same as ADLB_Unpack, except optionally we can specify that
-  compound data types (containers, etc) that support incremental
-  appends were pre-initialized and shouldn't be reinitialized
+  Same as ADLB_Unpack, with more options.
+  Buffer cannot be const since we may take ownership of buffer.
+
+  copy_buffer: If false, buffer must not be modified.  If true,
+      function can optionally take ownership of buffer.  If the
+      function takes ownership, the buffer will be freed when the
+      datum is freed.
+  init_compound: if true, compound data types (containers, structs, etc)
+  that support incremental stores are assumed to be initialized and
+  shouldn't be reinitialized.
+  took_ownership: Set to indicate whether the function took ownership
+        of the buffer.  Can be left as NULL.  Always false if
+        copy_buffer is true.
  */
 adlb_data_code
 ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, size_t length, bool copy,
-            adlb_refc refcounts, bool init_compound);
+          void *buffer, size_t length, bool copy_buffer,
+          adlb_refc refcounts, bool init_compound, bool *took_ownership);
 
 /*
   Helper to unpack data from buffer.  This will simply
@@ -567,7 +577,7 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
-                   bool copy, adlb_refc refcounts, bool init_struct);
+                   adlb_refc refcounts, bool init_struct);
 
 // Free any memory used
 adlb_data_code

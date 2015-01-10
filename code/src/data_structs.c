@@ -251,7 +251,7 @@ ADLB_Lookup_struct_type(adlb_struct_type type,
   if (field_names != NULL)
   {
     // Convert to non-modifiable pointer
-    char const* const* tmp_field_names = 
+    char const* const* tmp_field_names =
                     (char const* const*)t->field_names;
     *field_names = tmp_field_names;
   }
@@ -288,7 +288,7 @@ static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
-                   bool copy, adlb_refc refcounts, bool init_struct)
+                   adlb_refc refcounts, bool init_struct)
 {
   adlb_data_code dc;
 
@@ -322,7 +322,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
     assert(is_valid_type((*s)->type));
     check_verbose((*s)->type == hdr->type, ADLB_DATA_ERROR_TYPE,
              "Type of target struct doesn't match source data: %s vs. %s",
-              struct_types[(*s)->type].type_name, t->type_name); 
+              struct_types[(*s)->type].type_name, t->type_name);
   }
 
   // Go through and assign all of the datums from the data in the buffer
@@ -355,8 +355,8 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
         DATA_CHECK(dc);
       }
 
-      ADLB_Unpack2(&(*s)->fields[i].data, t->field_types[i].type,
-                  field_start, field_len, copy, refcounts, true);
+      ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
+                  field_start, field_len, refcounts);
       (*s)->fields[i].initialized = true;
     }
   }
@@ -617,8 +617,9 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         ADLB_Data_type_tostring(data_type));
 
   // Assign, initializing compound type if needed
-  dc = ADLB_Unpack2(&field->data, data_type, data, length, true, refcounts,
-                    !field->initialized); 
+  // Can safely cast data since we're forcing it to copy
+  dc = ADLB_Unpack2(&field->data, data_type, (void*)data, length, true,
+                    refcounts, !field->initialized, NULL);
   DATA_CHECK(dc);
   field->initialized = true;
 
@@ -696,7 +697,7 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
 
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
-                   bool release_write, 
+                   bool release_write,
                    xlb_refc_acquire to_acquire, xlb_refc_changes *refcs)
 {
   assert(s != NULL);
@@ -706,7 +707,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   bool acquiring = !ADLB_REFC_IS_NULL(to_acquire.refcounts);
 
   int acquire_ix = -1; // negative means acquire all subscripts
-  if (adlb_has_sub(to_acquire.subscript)) 
+  if (adlb_has_sub(to_acquire.subscript))
   {
     // separate initial component from rest
     // this leaves trailing subscript in to_acquire, allowing us

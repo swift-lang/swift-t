@@ -121,8 +121,14 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type);
 
+/*
+    copy: if true, this function will not modify or hold a reference to
+          buffer.  If false, xlb_data_store might take ownership of buffer
+    took_ownership: Set to indicate whether function took ownership (always
+          set to false if copy is true).  Can be left NULL.
+ */
 adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
-          const void* buffer, size_t length, bool copy,
+          void *buffer, size_t length, bool copy, bool *took_ownership,
           adlb_data_type type,
           adlb_refc refcount_decr, adlb_refc store_refcounts,
           adlb_notif_t *notifs);
