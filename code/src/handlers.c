@@ -1171,10 +1171,10 @@ handle_store(int caller)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
-  bool took_xfer_ownership;
+  bool lost_xfer_ownership;
   adlb_data_code dc =
       xlb_data_store(hdr.id, subscript, xfer, hdr.length, !xfer_alloced,
-          &took_xfer_ownership,
+          &lost_xfer_ownership,
           hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
   struct packed_store_resp resp = { .dc = dc };
@@ -1208,7 +1208,7 @@ handle_store(int caller)
 
   xlb_free_notif(&notifs);
 
-  if (xfer_alloced && !took_xfer_ownership) {
+  if (xfer_alloced && !lost_xfer_ownership) {
     free(xfer);
   }
 
