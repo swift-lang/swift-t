@@ -290,9 +290,7 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
   Buffer cannot be const since we may take ownership of buffer.
 
   copy_buffer: If false, buffer must not be modified.  If true,
-      function can optionally take ownership of buffer.  If the
-      function takes ownership, the buffer will be freed when the
-      datum is freed.
+      function can optionally take ownership of buffer.
   init_compound: if true, compound data types (containers, structs, etc)
   that support incremental stores are assumed to be initialized and
   shouldn't be reinitialized.
