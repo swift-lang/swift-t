@@ -207,7 +207,7 @@ static inline int vint_decode_unsigned(const void *buffer, size_t len,
                                        uint64_t *val)
 {
   // Rely on uint64_t and int64_t being same width
-  return vint_decode(buffer, len, (int64_t*)&val);
+  return vint_decode(buffer, len, (int64_t*)val);
 }
 
 static inline int vint_decode_size_t(const void *buffer, size_t len,  
