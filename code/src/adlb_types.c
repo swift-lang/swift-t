@@ -617,15 +617,12 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
       return ADLB_DATA_ERROR_INVALID;
   }
 
-  // Return without freeing in case of error
-  DATA_CHECK(dc);
-
   if (took_ownership != NULL) {
     // Need to tell caller what happened regarding ownership
     *took_ownership = !copy_buffer && can_take_ownership;
   }
 
-  return ADLB_DATA_SUCCESS;
+  return dc;
 }
 
 adlb_data_code
