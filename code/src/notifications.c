@@ -200,7 +200,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   if (server == xlb_comm_rank)
   {
     adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
-    adlb_data_code dc = xlb_data_store(id, subscript, value, length, false,
+    adlb_data_code dc = xlb_data_store(id, subscript, value, length, true,
                      type, decr, transferred_refs, notifs);
     ADLB_DATA_CHECK(dc);
 
