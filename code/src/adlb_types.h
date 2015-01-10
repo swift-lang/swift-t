@@ -451,6 +451,11 @@ ADLB_Pack_string(const adlb_string_t *s, adlb_binary_data *result)
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+  Unpack a packed string.
+  copy: if true, allocate new memory and copy, otherwise s takes ownership
+        of data pointer.
+ */
 static inline adlb_data_code
 ADLB_Unpack_string(adlb_string_t *s, void *data, size_t length, bool copy)
 {
@@ -485,6 +490,11 @@ ADLB_Pack_blob(const adlb_blob_t *b, adlb_binary_data *result)
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+  Unpack a packed blob.
+  copy: if true, allocate new memory and copy, otherwise s takes ownership
+        of data pointer.
+ */
 static inline adlb_data_code
 ADLB_Unpack_blob(adlb_blob_t *b, void *data, size_t length, bool copy)
 {
