@@ -190,7 +190,6 @@ namespace eval turbine {
 
           if { $v <= $end } {
             dict append kv_dict $k $v
-            puts "APPEND $k $v"
           } else {
             break
           }
