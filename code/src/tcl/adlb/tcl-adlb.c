@@ -1955,7 +1955,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
   dc = ADLB_Pack_container_hdr(entries, key_type, val_type, output,
                                 output_caller_buf, output_pos);
   TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
-        "Error constructing Tcl object for packed container val");
+        "Error packing container header");
 
   if (canonicalize)
   {
@@ -2296,8 +2296,9 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL, val_type,
             ADLB_TYPE_EXTRA_NULL, val, val_len, &val_obj);
-    TCL_CHECK_MSG_GOTO(rc, exit_err,
-            "Error constructing Tcl object for packed container val");
+    TCL_CHECK_MSG_GOTO(rc, exit_err, "Error constructing Tcl object "
+            "of type %s for packed container val",
+            ADLB_Data_type_tostring(val_type));
 
     int tmp_len = (int) (key_len - 1);
     key_obj = Tcl_NewStringObj(key, tmp_len);
