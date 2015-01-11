@@ -517,17 +517,6 @@ ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
   return ADLB_DATA_SUCCESS;
 }
 
-/* UNUSED? -Justin 2015/01/06
-static adlb_data_code
-ADLB_Pack_multiset_entry(const adlb_datum_storage *d, adlb_data_type type,
-        const adlb_buffer *tmp_buf, adlb_buffer *output,
-        bool *output_caller_buffer, size_t *output_pos)
-{
-  return ADLB_Pack_buffer(d, type, true, tmp_buf, output,
-                          output_caller_buffer, output_pos);
-}
-*/
-
 adlb_data_code
 ADLB_Unpack_buffer(adlb_data_type type,
         const void *buffer, size_t length, size_t *pos,

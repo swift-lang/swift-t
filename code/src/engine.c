@@ -81,9 +81,6 @@ typedef struct {
   size_t length;
 } engine_sub;
 
-// Unused? -Justin 2015/01/06
-// static const engine_sub XLB_ENGINE_NO_SUB = { .key = NULL, .length = 0 };
-
 typedef struct {
   adlb_datum_id td;
   engine_sub subscript;
