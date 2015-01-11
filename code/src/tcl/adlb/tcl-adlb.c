@@ -2997,13 +2997,16 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
   // Position in buffer
   size_t pos = 0;
 
+  // TODO: should switch to using ADLB_Unpack buffer instead of
+  // duplicating this logic
   for (int i = 0; i < records; i++)
   {
     Tcl_Obj *key = NULL, *val = NULL;
     if (include_keys)
     {
-      int64_t key_len = 0;
-      int consumed = vint_decode(data + pos, length - pos, &key_len);
+      size_t key_len = 0;
+      int consumed = vint_decode_size_t(data + pos, length - pos,
+                                        &key_len);
       TCL_CONDITION(consumed >= 0, "Corrupted message received: bad key "
                     "length for record %i/%i", i+1, records);
       pos += (size_t)consumed;
@@ -3013,13 +3016,15 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
       // Key currently must be string
       // TODO: support binary key
       key = Tcl_NewStringObj(data + pos, (int)key_len - 1);
-      pos += (size_t) key_len;
+      pos += key_len;
     }
 
     if (include_vals)
     {
-      int64_t val_len = 0;
-      int consumed = vint_decode(data + pos, length - pos, &val_len);
+
+      size_t val_len = 0;
+      int consumed = vint_decode_size_t(data + pos, length - pos,
+                                        &val_len);
       TCL_CONDITION(consumed >= 0, "Corrupted message received: bad "
             "value length for record %i/%i", i + 1, records);
 
@@ -3029,9 +3034,9 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
             "of data", i + 1, records);
       rc = adlb_datum2tclobj(interp, objv, id,
           kv_type.CONTAINER.val_type, ADLB_TYPE_EXTRA_NULL,
-          data + pos, (size_t) val_len, &val);
+          data + pos, val_len, &val);
 
-      pos += (size_t) val_len;
+      pos += val_len;
     }
 
     if (include_keys && include_vals)
