@@ -187,7 +187,6 @@ static inline void
 cache_add(turbine_datum_id td, turbine_type type,
           void* data, size_t length)
 {
-  assert(length >= 0);
   struct entry* e = entry_create(td, type, data, length, counter);
   table_lp_add(&entries, td, e);
   rbtree_add(&lru, counter, e);

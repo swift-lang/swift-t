@@ -1607,7 +1607,7 @@ adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CONDITION(result != NULL, "adlb extract string from %p failed!",
                       obj);
       result->STRING.length++; // Account for null byte
-      TCL_CONDITION(result->STRING.length < ADLB_DATA_MAX,
+      TCL_CONDITION(result->STRING.length <= ADLB_DATA_MAX,
           "adlb: string too long (%zu bytes)", result->STRING.length);
       if (own_pointers)
       {
@@ -1623,10 +1623,9 @@ adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CHECK(rc);
       if (own_pointers)
       {
-        assert(result->BLOB.length >= 0);
-        void *tmp = malloc((size_t)result->BLOB.length);
+        void *tmp = malloc(result->BLOB.length);
         TCL_CONDITION(tmp != NULL, "Error allocating memory");
-        memcpy(tmp, result->BLOB.value, (size_t)result->BLOB.length);
+        memcpy(tmp, result->BLOB.value, result->BLOB.length);
         result->BLOB.value = tmp;
       }
       return TCL_OK;
@@ -2120,7 +2119,6 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          adlb_type_extra extra, Tcl_Obj **result)
 {
   assert(data != NULL);
-  assert(length >= 0);
   assert(result != NULL);
   int rc;
 
@@ -2618,8 +2616,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   adlb_datum_storage tmp;
   adlb_data_code dc;
-  assert(length >= 0);
-  assert(length < ADLB_DATA_MAX);
+  assert(length <= ADLB_DATA_MAX);
 
   switch (type)
   {
@@ -3397,6 +3394,8 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "requires id!");
   rc = Tcl_GetPtr(interp, objv[2], &pointer);
   TCL_CHECK_MSG(rc, "requires pointer!");
+
+  // TODO: will need to change to wide int for big blobs
   rc = Tcl_GetIntFromObj(interp, objv[3], &length);
   TCL_CHECK_MSG(rc, "requires length!");
 
@@ -3852,10 +3851,6 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 
   CHECK_ADLB_RETRIEVE(rc, handle);
 
-  // TODO: support binary subscript
-  TCL_CONDITION(len >= 0, "<%"PRId64">[\"%.*s\"] not found",
-                handle.id, (int)handle.sub.val.length,
-                (const char*)handle.sub.val.key);
   assert(type != ADLB_DATA_TYPE_NULL);
 
   Tcl_Obj* result = NULL;
@@ -4213,7 +4208,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
      */
     ac = ADLB_Retrieve(handle.id, handle.sub.val, ADLB_RETRIEVE_NO_REFC,
               &outer_value_type, xfer, &value_len);
-    TCL_CONDITION(ac == ADLB_SUCCESS && value_len >= 0,
+    TCL_CONDITION(ac == ADLB_SUCCESS,
         "unexpected error while retrieving container value");
 
     adlb_ref retrieved;
@@ -5406,8 +5401,6 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
   const char *str, size_t length, adlb_buffer *buf, adlb_subscript *sub,
   bool *using_caller_buf, bool append)
 {
-  assert(length >= 0);
-
   adlb_data_code dc;
   /*
    * Let's assume struct subscript, which is a '.'-separated list of
@@ -5431,10 +5424,10 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
 
     buf->data[sub->length-1] = '.'; // Replace null terminator
 
-    memcpy(&buf->data[sub->length], str, (size_t)length);
+    memcpy(&buf->data[sub->length], str, length);
     buf->data[length] = '\0';
 
-    sub->length += (size_t)length + 1; // Length includes terminator;
+    sub->length += length + 1; // Length includes terminator;
     sub->key = buf->data;
   }
   else
@@ -5442,10 +5435,10 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
     dc = ADLB_Resize_buf(buf, using_caller_buf, length + 1);
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error expanding buf");
 
-    memcpy(buf->data, str, (size_t)length);
+    memcpy(buf->data, str, length);
     buf->data[length] = '\0';
 
-    sub->length = (size_t)length + 1; // Length includes terminator;
+    sub->length = length + 1; // Length includes terminator;
     sub->key = buf->data;
   }
 
