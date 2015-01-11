@@ -60,9 +60,8 @@ adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
 {
   assert(xpt_index_init);
   assert(key != NULL);
-  assert(key_len >= 0);
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
-  adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
+  adlb_subscript subscript = { .key = key, .length = key_len };
 
   adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
@@ -136,7 +135,6 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
 {
   assert(xpt_index_init);
   assert(key != NULL);
-  assert(key_len >= 0);
 
   // Using xlb_xfer limits the checkpoint size to ADLB_XPT_MAX ==
   // ADLB_DATA_MAX - 1
@@ -172,7 +170,7 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
     CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
       "Checkpoint data too long: %zu vs. %llu", key_len, ADLB_XPT_MAX);
     // Set file flag
-    memcpy(xlb_xfer, entry->DATA.data, (size_t)entry->DATA.length);
+    memcpy(xlb_xfer, entry->DATA.data, entry->DATA.length);
     xlb_xfer[entry->DATA.length] = (char)0; // file flag
 
     data = xlb_xfer;
@@ -180,7 +178,7 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
   }
   adlb_refc refcounts = ADLB_NO_REFC;
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
-  adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
+  adlb_subscript subscript = { .key = key, .length = key_len };
   assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
                             data, data_len, refcounts, ADLB_NO_REFC);
@@ -225,7 +223,6 @@ static inline adlb_datum_id id_for_hash(uint32_t key_hash)
 __attribute__((always_inline))
 static inline uint32_t calc_hash(const void *data, size_t length)
 {
-  assert(length >= 0);
   return bj_hashlittle(data, length, 0u);
 }
 

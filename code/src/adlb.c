@@ -1540,7 +1540,7 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript,
     .id = id,
     .type = type,
     .length = length,
-    .subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0,
+    .subscript_len = adlb_has_sub(subscript) ? subscript.length : 0,
     .refcount_decr = refcount_decr,
     .store_refcounts = store_refcounts
   };
@@ -1728,11 +1728,11 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
 
   int to_server_rank = ADLB_Locate(id);
 
-  int subscript_len = adlb_has_sub(subscript) ?
-                      (int)subscript.length : 0;
+  size_t subscript_len = adlb_has_sub(subscript) ?
+                          subscript.length : 0;
 
   // Stack allocate small buffer
-  int hdr_len = (int)sizeof(struct packed_retrieve_hdr) + subscript_len;
+  size_t hdr_len = sizeof(struct packed_retrieve_hdr) + subscript_len;
   char hdr_buffer[hdr_len];
   struct packed_retrieve_hdr *hdr;
   hdr = (struct packed_retrieve_hdr*)hdr_buffer;
@@ -1743,13 +1743,13 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   hdr->subscript_len = subscript_len;
   if (subscript_len > 0)
   {
-    memcpy(hdr->subscript, subscript.key, (size_t)subscript_len);
+    memcpy(hdr->subscript, subscript.key, subscript_len);
   }
 
   struct retrieve_response_hdr resp_hdr;
   IRECV(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, to_server_rank,
         ADLB_TAG_RESPONSE);
-  SEND(hdr, hdr_len, MPI_BYTE, to_server_rank, ADLB_TAG_RETRIEVE);
+  SEND(hdr, (int)hdr_len, MPI_BYTE, to_server_rank, ADLB_TAG_RETRIEVE);
   WAIT(&request,&status);
 
   if (resp_hdr.code == ADLB_DATA_ERROR_NOT_FOUND ||
@@ -1814,7 +1814,6 @@ ADLBP_Enumerate(adlb_datum_id container_id,
     *length = res.length;
     if (include_keys || include_vals)
     {
-      assert(res.length >= 0);
       *data = malloc(res.length);
       ADLB_MALLOC_CHECK(*data);
 

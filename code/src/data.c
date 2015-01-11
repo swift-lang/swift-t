@@ -863,8 +863,6 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           adlb_refc refcount_decr, adlb_refc store_refcounts,
           adlb_notif_t *notifs)
 {
-  assert(length >= 0);
-
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);

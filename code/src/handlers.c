@@ -1134,13 +1134,12 @@ handle_store(int caller)
   RECV(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE, caller,
        ADLB_TAG_STORE_HEADER);
 
-  assert(hdr.subscript_len >= 0);
   char subscript_buf[hdr.subscript_len];
   adlb_subscript subscript = { .key = NULL,
-        .length = (size_t)hdr.subscript_len };
+        .length = hdr.subscript_len };
   if (hdr.subscript_len > 0)
   {
-    RECV(subscript_buf, hdr.subscript_len, MPI_BYTE, caller,
+    RECV(subscript_buf, (int)hdr.subscript_len, MPI_BYTE, caller,
          ADLB_TAG_STORE_SUBSCRIPT);
     subscript.key = subscript_buf;
     // TODO: support binary subscript
@@ -1235,7 +1234,7 @@ handle_retrieve(int caller)
   if (hdr->subscript_len > 0)
   {
    subscript.key = hdr->subscript;
-   subscript.length = (size_t)hdr->subscript_len;
+   subscript.length = hdr->subscript_len;
   }
 
   adlb_refc decr_self = hdr->refcounts.decr_self;
@@ -1254,7 +1253,6 @@ handle_retrieve(int caller)
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   dc = xlb_data_retrieve(hdr->id, subscript, decr_self, incr_referand,
                           &type, &xlb_scratch_buf, &result, &notifs);
-  assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
   struct retrieve_response_hdr resp_hdr;
   resp_hdr.code = dc;
@@ -1401,7 +1399,7 @@ handle_notify(int caller)
   if (hdr->subscript_len > 0)
   {
     adlb_subscript sub = { .key = hdr->subscript,
-                           .length = (size_t)hdr->subscript_len };
+                           .length = hdr->subscript_len };
 
     DEBUG("notification received: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(
           hdr->id, ADLB_DSYM_NULL, sub));

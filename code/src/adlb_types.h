@@ -465,8 +465,8 @@ ADLB_Unpack_string(adlb_string_t *s, void *data, size_t length, bool copy)
 
   if (copy)
   {
-    s->value = malloc((size_t)length);
-    memcpy(s->value, data, (size_t)length);
+    s->value = malloc(length);
+    memcpy(s->value, data, length);
   }
   else
   {
@@ -480,7 +480,6 @@ static inline adlb_data_code
 ADLB_Pack_blob(const adlb_blob_t *b, adlb_binary_data *result)
 {
   // Check for malformed blob
-  assert(b->length >= 0);
   assert(b->value != NULL);
 
   result->caller_data = NULL;
@@ -498,11 +497,10 @@ ADLB_Pack_blob(const adlb_blob_t *b, adlb_binary_data *result)
 static inline adlb_data_code
 ADLB_Unpack_blob(adlb_blob_t *b, void *data, size_t length, bool copy)
 {
-  assert(length >= 0);
   if (copy)
   {
-    b->value = malloc((size_t)length);
-    memcpy(b->value, data, (size_t)length);
+    b->value = malloc(length);
+    memcpy(b->value, data, length);
   }
   else
   {
@@ -614,11 +612,10 @@ ADLB_Init_buf(const adlb_buffer *caller_buffer,
 {
   assert(curr_buffer != NULL);
   bool buf_provided = caller_buffer != NULL;
-  assert(!buf_provided || caller_buffer->length >= 0);
 
   if (!buf_provided || caller_buffer->length < init_length)
   {
-    curr_buffer->data = malloc((size_t)init_length);
+    curr_buffer->data = malloc(init_length);
     curr_buffer->length = init_length;
     if (using_caller_buf != NULL)
       *using_caller_buf = false;
@@ -650,13 +647,13 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, size_t min_length)
     if (buf->length == 0 || (using_caller_buf != NULL && *using_caller_buf))
     {
       void *old_data = buf->data;
-      buf->data = malloc((size_t)buf->length);
-      memcpy(buf->data, old_data, (size_t)old_length);
+      buf->data = malloc(buf->length);
+      memcpy(buf->data, old_data, old_length);
       *using_caller_buf = false;
     }
     else
     {
-      buf->data = realloc(buf->data, (size_t)buf->length);
+      buf->data = realloc(buf->data, buf->length);
     }
     if (buf->data == NULL)
       return ADLB_DATA_ERROR_OOM;
@@ -706,7 +703,6 @@ static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
 {
   assert(data->data != NULL);
-  assert(data->length >= 0);
 
   if (data->length > 0 && data->caller_data == NULL)
   {
@@ -718,9 +714,9 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
     }
     else
     {
-      data->caller_data = malloc((size_t)data->length);
+      data->caller_data = malloc(data->length);
     }
-    memcpy(data->caller_data, data->data, (size_t)data->length);
+    memcpy(data->caller_data, data->data, data->length);
     data->data = data->caller_data;
   }
   return ADLB_DATA_SUCCESS;

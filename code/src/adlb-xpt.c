@@ -112,8 +112,6 @@ adlb_code ADLB_Xpt_write(const void *key, size_t key_len, const void *val,
                 size_t val_len, adlb_xpt_persist persist, bool index_add)
 {
   assert(xlb_xpt_initialized);
-  assert(key_len >= 0);
-  assert(val_len >= 0);
 
   adlb_code rc;
   bool do_persist = persist != ADLB_NO_PERSIST;
@@ -189,7 +187,6 @@ adlb_code ADLB_Xpt_lookup(const void *key, size_t key_len,
 {
   assert(xlb_xpt_initialized);
   assert(key != NULL);
-  assert(key_len >= 0);
   assert(result != NULL);
   
   adlb_code rc;
@@ -314,7 +311,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
   //      we probably want min(<some sensible amount>,
   //                           max_index_val_bytes + key_size);
   buffer.length = 4 * 1024 * 1024;
-  buffer.data = malloc((size_t)buffer.length);
+  buffer.data = malloc(buffer.length);
   ADLB_MALLOC_CHECK(buffer.data);
 
   const xpt_rank_t ranks = read_state->ranks;
@@ -384,7 +381,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     {
       // Allocate larger buffer to fit
       buffer->length = key_len;
-      buffer->data = realloc(buffer->data, (size_t)buffer->length);
+      buffer->data = realloc(buffer->data, buffer->length);
       ADLB_MALLOC_CHECK(buffer->data);
       rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
                         &val_len, &val_ptr, &val_offset);

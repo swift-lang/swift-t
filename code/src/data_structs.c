@@ -293,7 +293,6 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
   adlb_data_code dc;
 
   assert(s != NULL);
-  assert(length >= 0);
   check_verbose(length >= sizeof(adlb_packed_struct_hdr), ADLB_DATA_ERROR_INVALID,
                 "buffer too small for serialized struct");
   const adlb_packed_struct_hdr *hdr = data;
@@ -404,7 +403,6 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
       dc = ADLB_Pack(&s->fields[i].data, field_t, NULL, &field_data);
       DATA_CHECK(dc);
       assert(field_data.data != NULL);
-      assert(field_data.length >= 0);
     }
     else
     {
@@ -425,7 +423,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
     {
       // Copy serialized data into buffer
       memcpy((result_buf.data) + buf_pos, field_data.data,
-             (size_t)field_data.length);
+             field_data.length);
       buf_pos += field_data.length;
 
       ADLB_Free_binary_data(&field_data);

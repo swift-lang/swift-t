@@ -310,15 +310,14 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, size_t length,
     if (ADLB_pack_pad_size(type) && vint_len < VINT_MAX_BYTES)
     {
       // We expect the size to be padded for these
-      size_t padding = VINT_MAX_BYTES - (size_t)vint_len;
-      memset(output->data + *output_pos, 0, (size_t)padding);
+      size_t padding = VINT_MAX_BYTES - vint_len;
+      memset(output->data + *output_pos, 0, padding);
       *output_pos += padding;
     }
   }
 
   // Copy in data
-  assert(length >= 0);
-  memcpy(output->data + *output_pos, data, (size_t)length);
+  memcpy(output->data + *output_pos, data, length);
   *output_pos += length;
   return ADLB_DATA_SUCCESS;
 }
@@ -535,7 +534,6 @@ ADLB_Unpack_buffer(adlb_data_type type,
         const void **entry, size_t* entry_length)
 {
   assert(buffer != NULL);
-  assert(length >= 0);
   assert(pos != NULL);
   assert(*pos >= 0);
   assert(entry != NULL);
@@ -675,7 +673,7 @@ ADLB_Unpack_container(adlb_container *container,
     DATA_CHECK(dc);
 
     // TODO: handle case where key already exists
-    bool ok = table_bp_add(container->members, key, (size_t)key_len, d);
+    bool ok = table_bp_add(container->members, key, key_len, d);
     check_verbose(ok, ADLB_DATA_ERROR_OOM, "Error adding to container");
   }
 
@@ -877,7 +875,7 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
     case ADLB_DATA_TYPE_STRING:
     {
       // Allocate with enough room for trailing ...
-      tmp = malloc((size_t)d->STRING.length + 5);
+      tmp = malloc(d->STRING.length + 5);
       strcpy(tmp, d->STRING.value);
       int pos = 0;
       // Don't return multiple lines of multi-line string

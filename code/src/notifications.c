@@ -287,14 +287,14 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
     return ADLB_SUCCESS;
   }
   
-  int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
+  size_t subscript_len = adlb_has_sub(subscript) ? subscript.length : 0;
   assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
 
   TRACE("notify_server(<%"PRId64">[%.*s]) => server %i",
          id, subscript_len, (char*)subscript.key, server);
 
   // Stack allocate small buffer
-  int hdr_len = (int)sizeof(struct packed_notify_hdr) + subscript_len;
+  size_t hdr_len = sizeof(struct packed_notify_hdr) + subscript_len;
   char hdr_buffer[hdr_len];
   struct packed_notify_hdr *hdr = (struct packed_notify_hdr*)hdr_buffer;
 
@@ -303,12 +303,12 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
   hdr->subscript_len = subscript_len;
   if (subscript_len > 0)
   {
-    memcpy(hdr->subscript, subscript.key, (size_t)subscript_len);
+    memcpy(hdr->subscript, subscript.key, subscript_len);
   }
 
   int response; 
   IRECV(&response, 1, MPI_INT, server, ADLB_TAG_RESPONSE);
-  SEND(hdr, hdr_len, MPI_BYTE, server, ADLB_TAG_NOTIFY);
+  SEND(hdr, (int)hdr_len, MPI_BYTE, server, ADLB_TAG_NOTIFY);
   WAIT(&request,&status);
 
   return (adlb_code)response;
@@ -828,7 +828,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     }
     else
     {
-      packed_notifs = malloc((size_t)notif_bytes);
+      packed_notifs = malloc(notif_bytes);
       ADLB_MALLOC_CHECK(packed_notifs);
       prepared->free_packed_notifs = true;
     }
@@ -847,7 +847,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     }
     else
     {
-      packed_refs = malloc((size_t)refs_bytes);
+      packed_refs = malloc(refs_bytes);
       ADLB_MALLOC_CHECK(packed_refs);
       prepared->free_packed_refs = true;
     }
@@ -1071,7 +1071,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     extra_data_count = counts->extra_data_count;
     assert(extra_data_count >= 0);
 
-    extra_data = malloc((size_t)bytes);
+    extra_data = malloc(bytes);
     ADLB_MALLOC_CHECK(extra_data);
     
     ac = xlb_to_free_add(notifs, extra_data);
@@ -1130,9 +1130,8 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
                tmp[i].subscript_data < extra_data_count);
         adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
         assert(data->data != NULL);
-        assert(data->length >= 0);
         r->subscript.key = data->data;
-        r->subscript.length = (size_t)data->length;
+        r->subscript.length = data->length;
       }
     }
     notifs->notify.count += added_count;

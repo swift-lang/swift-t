@@ -326,8 +326,6 @@ xlb_xpt_write(const void *key, size_t key_len,
   DEBUG("Writing entry to checkpoint file key_len: %zu, val_len: %zu, "
         "Block: %"PRIu32, key_len, val_len, state->curr_block);
   assert(is_init(state));
-  assert(key_len >= 0);
-  assert(val_len >= 0);
 
   // Buffer for encoded vint
   Byte key_len_enc[VINT_MAX_BYTES];
@@ -353,10 +351,6 @@ write_entry(xlb_xpt_state *state, size_t rec_len,
     const void *key_len_enc, size_t key_len_encb,
     const void *val, size_t val_len, xpt_file_pos_t *val_offset)
 {
-  assert(rec_len >= 0);
-  assert(key_len_encb >= 0);
-  assert(key_len >= 0);
-  assert(val_len >= 0);
   // Buffer for encoded vint
   Byte rec_len_enc[VINT_MAX_BYTES];
   // Length in bytes of encoded vint
@@ -423,7 +417,6 @@ xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
   //       we don't get a corrupted record.
   // checkpoint is in file currently being written.
   assert(is_init(state));
-  assert(val_len >= 0);
 
   xpt_block_num_t block = (xpt_block_num_t)
           (val_offset / XLB_XPT_BLOCK_SIZE);
@@ -478,7 +471,6 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state,
                             size_t val_len, void *buffer)
 {
   assert(state != NULL);
-  assert(val_len >= 0);
   // TODO: it would be better to reread entire record to make sure
   //       we don't get a corrupted record.
   adlb_code ac;

@@ -377,7 +377,7 @@ struct packed_store_hdr
   adlb_refc refcount_decr;
   adlb_refc store_refcounts; // Refcounts to store
   uint64_t length; // Data length
-  int subscript_len; // including null byte, 0 if no subscript
+  size_t subscript_len; // including null byte, 0 if no subscript
 };
 
 /**
@@ -396,7 +396,7 @@ struct packed_retrieve_hdr
 {
   adlb_datum_id id;
   adlb_retrieve_refc refcounts;
-  int subscript_len; // including null byte, 0 if no subscript
+  size_t subscript_len; // including null byte, 0 if no subscript
   char subscript[];
 };
 
@@ -475,7 +475,7 @@ struct packed_steal_resp
 struct packed_notify_hdr
 {
   adlb_datum_id id;
-  int subscript_len;
+  size_t subscript_len;
   char subscript[]; // Small subscripts inline
 };
 
@@ -505,7 +505,7 @@ struct packed_steal_work
 struct packed_subscribe_sync
 {
   adlb_datum_id id;
-  int subscript_len;
+  size_t subscript_len;
 };
 
 /**
@@ -647,13 +647,13 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id,
   MSG_PACK_BIN(pos, id);
 
   bool has_subscript = subscript.key != NULL;
-  int sub_packed_size = has_subscript ? (int)subscript.length : -1;
+  size_t sub_packed_size = has_subscript ? subscript.length : 0;
 
   MSG_PACK_BIN(pos, sub_packed_size);
 
   if (has_subscript)
   {
-    memcpy(pos, subscript.key, (size_t)sub_packed_size);
+    memcpy(pos, subscript.key, sub_packed_size);
     pos += sub_packed_size;
   }
 
@@ -677,14 +677,14 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
   const char *pos = (const char*)buffer;
   MSG_UNPACK_BIN(pos, id);
 
-  int subscript_packed_len;
+  size_t subscript_packed_len;
   MSG_UNPACK_BIN(pos, &subscript_packed_len);
 
   bool has_subscript = subscript_packed_len > 0;
   if (has_subscript)
   {
     subscript->key = pos;
-    subscript->length = (size_t)subscript_packed_len;
+    subscript->length = subscript_packed_len;
     pos += subscript_packed_len;
   }
   else

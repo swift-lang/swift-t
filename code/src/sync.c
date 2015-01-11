@@ -505,7 +505,7 @@ send_subscribe_sync(adlb_sync_mode mode,
   struct packed_sync *req = (struct packed_sync *)req_storage;
   req->mode = mode;
   req->subscribe.id = id;
-  req->subscribe.subscript_len = (int)sub.length;
+  req->subscribe.subscript_len = sub.length;
 
   bool inlined_subscript; 
   if (sub.length <= SYNC_DATA_SIZE)
@@ -930,7 +930,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
 
   void *malloced_subscript = NULL;
   adlb_subscript sub;
-  sub.length = (size_t)sub_hdr->subscript_len;
+  sub.length = sub_hdr->subscript_len;
 
   if (sub_hdr->subscript_len == 0)
   {
@@ -944,11 +944,11 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   else
   {
     assert(sub_hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
-    malloced_subscript = malloc((size_t)sub_hdr->subscript_len);
+    malloced_subscript = malloc(sub_hdr->subscript_len);
     ADLB_MALLOC_CHECK(malloced_subscript);
     
     // receive subscript as separate message with special tag
-    RECV(malloced_subscript, sub_hdr->subscript_len, MPI_BYTE,
+    RECV(malloced_subscript, (int)sub_hdr->subscript_len, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
     sub.key = malloced_subscript;
   }
@@ -991,7 +991,7 @@ adlb_code xlb_send_unsent_notify(int rank,
         const struct packed_sync *req_hdr, void *malloced_subscript)
 {
   adlb_subscript sub;
-  sub.length = (size_t)req_hdr->subscribe.subscript_len;
+  sub.length = req_hdr->subscribe.subscript_len;
 
   if (sub.length == 0)
   {
@@ -1030,17 +1030,17 @@ static adlb_code enqueue_deferred_notify(int rank,
   MPI_Status status;
 
   void *malloced_subscript = NULL;
-  int sub_length = hdr->subscribe.subscript_len;
+  size_t sub_length = hdr->subscribe.subscript_len;
 
   // Get subscript now to avoid having unreceived message sitting around
   if (sub_length > SYNC_DATA_SIZE)
   {
     assert(sub_length <= ADLB_DATA_SUBSCRIPT_MAX);
-    malloced_subscript = malloc((size_t)sub_length);
+    malloced_subscript = malloc(sub_length);
     ADLB_MALLOC_CHECK(malloced_subscript);
     
     // receive subscript as separate message with special tag
-    RECV(malloced_subscript, sub_length, MPI_BYTE,
+    RECV(malloced_subscript, (int)sub_length, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
   }
 
@@ -1065,7 +1065,7 @@ adlb_code xlb_handle_notify_sync(int rank,
 
   void *malloced_subscript = NULL;
   adlb_subscript sub;
-  sub.length = (size_t)hdr->subscript_len;
+  sub.length = hdr->subscript_len;
 
   if (hdr->subscript_len == 0)
   {
@@ -1083,11 +1083,11 @@ adlb_code xlb_handle_notify_sync(int rank,
   else
   {
     assert(hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
-    malloced_subscript = malloc((size_t)hdr->subscript_len);
+    malloced_subscript = malloc(hdr->subscript_len);
     ADLB_MALLOC_CHECK(malloced_subscript);
     
     // receive subscript as separate message with special tag
-    RECV(malloced_subscript, hdr->subscript_len, MPI_BYTE,
+    RECV(malloced_subscript, (int)hdr->subscript_len, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
     sub.key = malloced_subscript;
   }
