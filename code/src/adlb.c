@@ -1768,8 +1768,6 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   // Set length and type output parameters
   *length = resp_hdr.length;
   *type = resp_hdr.type;
-  DEBUG("RETRIEVE: "ADLB_PRID" (%zu bytes)\n",
-        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *length);
 
   adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
                                               to_server_rank);

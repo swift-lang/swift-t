@@ -370,14 +370,14 @@ ADLB_Free_binary_data(adlb_binary_data *buffer);
   (result)->length = (int)sizeof(*(d));   \
 }
 
-#define ADLB_UNPACK_SCALAR(d, data, length) {           \
-  if (length != sizeof(*(d)))                           \
-  {                                                     \
-    printf("Could not unpack: expected length "         \
-        "%zu actual length %zu", sizeof(*(d)), length); \
-    return ADLB_DATA_ERROR_INVALID;                     \
-  }                                                     \
-  memcpy((d), data, sizeof(*(d)));                      \
+#define ADLB_UNPACK_SCALAR(d, data, length) { \
+  if (length != (int)sizeof(*(d)))            \
+  {                                           \
+    printf("Could not unpack: expected length " \
+        "%zu actual length %zu\n", sizeof(*(d)), length); \
+    return ADLB_DATA_ERROR_INVALID;           \
+  }                                           \
+  memcpy((d), data, sizeof(*(d)));            \
 }
 
 /**

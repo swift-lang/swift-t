@@ -172,7 +172,7 @@ static
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
           const void *value, size_t value_len,
-          adlb_refc *to_acquire); 
+          adlb_refc *to_acquire);
 
 static
 adlb_data_code append_notifs(struct list_b *listeners, bool free_list_root,
@@ -860,7 +860,7 @@ adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           void *buffer, size_t length, bool copy, bool *took_ownership,
           adlb_data_type type,
-          adlb_refc refcount_decr, adlb_refc store_refcounts, 
+          adlb_refc refcount_decr, adlb_refc store_refcounts,
           adlb_notif_t *notifs)
 {
   assert(length >= 0);
@@ -1492,7 +1492,7 @@ pack_member(adlb_container *cont, table_bp_entry *item,
   if (include_keys)
   {
     assert(item->key_len <= INT_MAX);
-    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, 
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
             table_bp_get_key(item), item->key_len,
             true, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
