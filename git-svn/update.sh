@@ -24,6 +24,10 @@ do
       git tag -f -a $tag -m "SVN tag $tag" remotes/svn/tags/$tag
       echo
     elif [[ "$b" != trunk && !("$b" =~ .*@.*) ]]; then
+
+      # Need to remove untracked files and directories
+      git clean -f -d
+
       echo "Updating branch $b of $subrepo"
       # check if branch exists
       if git checkout $b &> /dev/null; then
