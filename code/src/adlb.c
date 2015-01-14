@@ -1504,7 +1504,6 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript,
 
   if (adlb_has_sub(subscript))
   {
-    // TODO: support binary subscript
     DEBUG("ADLB_Store: "ADLB_PRIDSUB"=%p[%zu]",
         ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
         data, length);
@@ -1670,7 +1669,6 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   MPI_Request request;
   struct packed_insert_atomic_resp resp;
 
-  // TODO: support binary subscript
   DEBUG("ADLB_Insert_atomic: "ADLB_PRIDSUB,
         ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript));
   char *xfer_pos = xlb_xfer;
@@ -1888,7 +1886,9 @@ adlb_code ADLBP_Alloc_global(int count, adlb_datum_id *start)
     }
   }
 
-  // TODO: collective operation to detect errors or inconsistent range?
+  // Collectively wait until all work has been finished
+  // Note: we don't validate that all ranks called with the same arguments
+  BARRIER();  
 
   if (error)
   {

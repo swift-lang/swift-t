@@ -391,7 +391,8 @@ adlb_code ADLB_Unique(adlb_datum_id *result);
  * is [start, start + count).
  *
  * Must be called collectively by all ranks of the ADLB communicator.
- * The same range will be returned on all ranks.
+ * The same range will be returned on all ranks.  This will return
+ * once all globals have been correctly set up.
  *
  * Start and end are arbitrarily selected by the function.
  * The allocated IDs will be negative, so will not conflict with any

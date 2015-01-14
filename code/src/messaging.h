@@ -162,6 +162,9 @@ const char* xlb_get_tag_name(int tag);
   int _rc = MPI_Cancel(r); \
   MPI_CHECK(_rc); }
 
+#define BARRIER() { \
+    int _rc = MPI_Barrier(adlb_comm); \
+    MPI_CHECK(_rc); }
 /** MPI data type tags */
 // 64-bit int
 #define MPI_ADLB_ID MPI_LONG_LONG
