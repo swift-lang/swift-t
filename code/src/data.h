@@ -173,6 +173,12 @@ adlb_data_code xlb_data_insert_atomic(adlb_datum_id id,
 adlb_data_code xlb_data_unique(adlb_datum_id* result);
 
 /*
+  Reserve a range of negative TDs for usage.
+ */
+adlb_data_code
+xlb_data_system_reserve(int count, adlb_datum_id *start);
+
+/*
   Get local debug symbol, return ADLB_DSYM_NULL if not local,
   non-existent, or freed
  */

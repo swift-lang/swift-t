@@ -378,8 +378,29 @@ adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                 adlb_data_type ref_type, adlb_refc transfer_refs,
                 int ref_write_decr);
 
+/*
+ * Allocate a unique data ID
+ */
 adlb_code ADLBP_Unique(adlb_datum_id *result);
 adlb_code ADLB_Unique(adlb_datum_id *result);
+
+/*
+ * Allocates a range of count data IDs ADLB ranks.  This is useful for
+ * implementing, for example, globally shared variables.  The allocated
+ * range is inclusive of start and end and will have count members, i.e.
+ * is [start, start + count).
+ *
+ * Must be called collectively by all ranks of the ADLB communicator.
+ * The same range will be returned on all ranks.
+ *
+ * Start and end are arbitrarily selected by the function.
+ * The allocated IDs will be negative, so will not conflict with any
+ * user-defined IDs in the positive range or IDs allocated by ADLB_Unique
+ * or a ADLB_Create or related call.  If the allocated range conflicts
+ * with any IDs already created, this will return an error.
+ */
+adlb_code ADLBP_Alloc_global(int count, adlb_datum_id *start);
+adlb_code ADLB_Alloc_global(int count, adlb_datum_id *start);
 
 adlb_code ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type);
 adlb_code ADLB_Typeof(adlb_datum_id id, adlb_data_type* type);

@@ -86,6 +86,11 @@ static adlb_datum_id unique = -1;
  */
 static adlb_datum_id last_id;
 
+/**
+   Lowest negative system data ID allocated so far.
+ */
+static adlb_datum_id xlb_min_alloced_system_id;
+
 static adlb_data_code
 datum_init_props(adlb_datum_id id, adlb_datum *d,
                  const adlb_create_props *props);
@@ -220,6 +225,8 @@ xlb_data_init(int s, int server_num)
     return ADLB_DATA_ERROR_OOM;
 
   last_id = LONG_MAX - servers - 1;
+
+  xlb_min_alloced_system_id = 0;
 
   return ADLB_DATA_SUCCESS;
 }
@@ -2195,6 +2202,16 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
     *created = true;
     *value_present = false;
   }
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+xlb_data_system_reserve(int count, adlb_datum_id *start)
+{
+  xlb_min_alloced_system_id = xlb_min_alloced_system_id - count;
+
+  *start = xlb_min_alloced_system_id;
+
   return ADLB_DATA_SUCCESS;
 }
 

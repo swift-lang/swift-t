@@ -1850,6 +1850,54 @@ ADLBP_Unique(adlb_datum_id* result)
   return ADLB_SUCCESS;
 }
 
+adlb_code ADLBP_Alloc_global(int count, adlb_datum_id *start)
+{
+  assert(start != NULL);
+
+  adlb_data_code dc;
+
+  dc = xlb_data_system_reserve(count, start);
+  ADLB_DATA_CHECK(dc);
+
+  adlb_datum_id end = *start + count - 1;
+
+  /*
+    Local check on servers to make sure not in use.
+    Note: checking all IDs is inefficient for large ranges since most
+          aren't on this server, but that is not a typical use-case for
+          this function.
+   */
+  bool error = false;
+  if (xlb_am_server)
+  {
+    for (adlb_datum_id id = *start; id <= end; id++)
+    {
+      if (ADLB_Locate(id) == xlb_comm_rank)
+      {
+        bool exists;
+        dc = xlb_data_exists(id, ADLB_NO_SUB, &exists);
+        ADLB_DATA_CHECK(dc);
+
+        if (exists)
+        {
+          ERR_PRINTF("ID " ADLB_PRID " was already allocated",
+                ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
+          error = true;
+        }
+      }
+    }
+  }
+
+  // TODO: collective operation to detect errors or inconsistent range?
+
+  if (error)
+  {
+    return ADLB_ERROR;
+  }
+
+  return ADLB_SUCCESS;
+}
+
 adlb_code
 ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
 {

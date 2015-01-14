@@ -350,6 +350,11 @@ adlb_code ADLB_Unique(adlb_datum_id *result)
   return ADLBP_Unique(result);
 }
 
+adlb_code ADLB_Alloc_global(int count, adlb_datum_id *start)
+{
+  return ADLBP_Alloc_global(count, start);
+}
+
 adlb_code ADLB_Typeof(adlb_datum_id id, adlb_data_type* type)
 {
   return ADLBP_Typeof(id, type);

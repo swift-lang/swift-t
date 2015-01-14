@@ -28,6 +28,8 @@
 
 static bool xpt_index_init = false;
 
+static adlb_datum_id xpt_index_start;
+
 static inline adlb_datum_id id_for_rank(int comm_rank);
 static inline adlb_datum_id id_for_server(int server_num);
 static inline adlb_datum_id id_for_hash(uint32_t key_hash);
@@ -36,10 +38,17 @@ static inline uint32_t calc_hash(const void *data, size_t length);
 adlb_code xlb_xpt_index_init(void)
 {
   adlb_data_code dc;
+
+  dc = xlb_data_system_reserve(xlb_servers, &xpt_index_start);
+  ADLB_DATA_CHECK(dc);
+
   if (xlb_am_server)
   {
     // setup checkpoint index using sharded container on servers
     adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
+
+    // Check that the calculation is valid
+    assert(ADLB_Locate(container_id) == xlb_comm_rank);
 
     adlb_type_extra extra;
     extra.CONTAINER.key_type = ADLB_DATA_TYPE_BLOB;
@@ -204,10 +213,9 @@ static inline adlb_datum_id id_for_rank(int comm_rank)
 static inline adlb_datum_id id_for_server(int server_num)
 {
   assert(server_num >= 0 && server_num < xlb_servers);
-  // Use negative numbers that aren't allocated by data_unique
-  // ADLB_Locate will map this id to the right server
-  // Must be negative number in [-xlb_servers, -1] inclusive
-  return -xlb_servers + server_num;
+  // Will be in range [xpt_index_start, xpt_index_start + xlb_servers)
+  // ADLB_Locate must map this id to the right server
+  return xpt_index_start + (server_num - (xpt_index_start % xlb_servers));
 }
 
 /*
