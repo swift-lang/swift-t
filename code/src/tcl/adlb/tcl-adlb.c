@@ -231,6 +231,10 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
         size_t *output_pos);
 
 static int
+parse_variable_spec_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         Tcl_Obj *list, ADLB_create_spec *spec);
+
+static int
 get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                 int *argpos, compound_type *types);
 
@@ -1389,7 +1393,6 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
 /**
    usage: adlb::multicreate [list of variable specs]*
    each list contains:
@@ -1407,13 +1410,7 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   for (int i = 0; i < count; i++)
   {
-    int n;
-    Tcl_Obj **elems;
-    rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
-    TCL_CONDITION(rc == TCL_OK, "arg %i must be list", i);
-    ADLB_create_spec *spec = &(specs[i]);
-    rc = extract_create_props(interp, false, 0, n, elems, &(spec->id),
-              &(spec->type), &(spec->type_extra), &(spec->props));
+    rc = parse_variable_spec_list(interp, objv, objv[i + 1], &specs[i]);
     TCL_CHECK(rc);
   }
 
@@ -1426,6 +1423,73 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
     tcl_ids[i] = Tcl_NewADLB_ID(specs[i].id);
   }
   Tcl_SetObjResult(interp, Tcl_NewListObj(count, tcl_ids));
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::create_globals [list of variable specs]*
+    Variable specs follow same format as adlb::multicreate.
+    All globals have the permanent flag set so are not garbage collected.
+    Must be called collectively by all ADLB ranks.
+*/
+static int
+ADLB_Create_Globals_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  int rc;
+  adlb_code ac;
+
+  int count = objc - 1;
+
+  // Allocate IDs for them (collective call)
+  adlb_datum_id start;
+  ac = ADLB_Alloc_global(count, &start);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "fail to reserve space for globals");
+
+  ADLB_create_spec specs[count];
+
+  for (int i = 0; i < count; i++)
+  {
+    rc = parse_variable_spec_list(interp, objv, objv[i + 1], &specs[i]);
+    TCL_CHECK(rc);
+    
+    specs[i].props.permanent = true;
+
+    specs[i].id = start + i;
+
+    // Split work among ranks
+    if (i % adlb_comm_size == adlb_comm_rank)
+    {
+      ac = ADLB_Create(specs[i].id, specs[i].type, specs[i].type_extra,
+                       specs[i].props, NULL);
+      TCL_CONDITION(ac == ADLB_SUCCESS, "error initializing global "
+                   "<%"PRId64">", specs[i].id);
+    }
+  }
+
+
+  // Build list to return
+  Tcl_Obj *tcl_ids[count];
+  for (int i = 0; i < count; i++) {
+    tcl_ids[i] = Tcl_NewADLB_ID(specs[i].id);
+  }
+  Tcl_SetObjResult(interp, Tcl_NewListObj(count, tcl_ids));
+  return TCL_OK;
+}
+
+static int
+parse_variable_spec_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         Tcl_Obj *list, ADLB_create_spec *spec)
+{
+  int rc;
+  int n;
+  Tcl_Obj **elems;
+  rc = Tcl_ListObjGetElements(interp, list, &n, &elems);
+  TCL_CONDITION(rc == TCL_OK, "arg must be list: %s", Tcl_GetString(list));
+  rc = extract_create_props(interp, false, 0, n, elems, &(spec->id),
+            &(spec->type), &(spec->type_extra), &(spec->props));
+  TCL_CHECK(rc);
+
   return TCL_OK;
 }
 
@@ -5803,6 +5867,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("iget",      ADLB_Iget_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("multicreate",ADLB_Multicreate_Cmd);
+  COMMAND("create_globals",ADLB_Create_Globals_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("exists_sub", ADLB_Exists_Sub_Cmd);
   COMMAND("closed", ADLB_Closed_Cmd);
