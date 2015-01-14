@@ -92,6 +92,7 @@ class Turbine {
   private static final Token ALLOCATE_FILE = turbFn("allocate_file");
   private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
   private static final Token MULTICREATE = adlbFn("multicreate");
+  private static final Token CREATE_GLOBALS = adlbFn("create_globals");
 
   // Container insert
   private static final Token C_V_INSERT = turbFn("container_insert");
@@ -329,6 +330,7 @@ class Turbine {
   private static final Token ADLB_WORK_TYPE = turbFn("adlb_work_type");
   private static final Token DECLARE_CUSTOM_WORK_TYPES =
                                   turbFn("declare_custom_work_types");
+  private static final Token LASSIGN = new Token("lassign");
 
   private static Token turbFn(String functionName) {
     return new Token("turbine::" + functionName);
@@ -1769,15 +1771,25 @@ class Turbine {
           List<TclList> batched) {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
 
-    List<Expression> multiCreateCall = new ArrayList<Expression>();
-    multiCreateCall.add(MULTICREATE);
-    multiCreateCall.addAll(batched);
-    exprs.add(new Square(multiCreateCall));
+
+    exprs.add(Square.fnCall(MULTICREATE, batched));
+
+    for (String varName: batchedVarNames) {
+      exprs.add(new Token(varName));
+    }
+    return new Command(LASSIGN, exprs);
+  }
+
+  public static Command batchDeclareGlobals(List<String> batchedVarNames,
+      List<TclList> batched) {
+    ArrayList<Expression> exprs = new ArrayList<Expression>();
+
+    exprs.add(Square.fnCall(CREATE_GLOBALS, batched));
 
     for (String varName : batchedVarNames) {
       exprs.add(new Token(varName));
     }
-    return new Command("lassign", exprs);
+    return new Command(LASSIGN, exprs);
   }
 
   public static Command log(TclString logMsg) {

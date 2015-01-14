@@ -574,14 +574,13 @@ public class TurbineGenerator implements CompilerBackend {
       Arg initReaders = decl.initReaders;
       Arg initWriters = decl.initWriters;
 
-      Type t = var.type();
-      assert(!var.mappedDecl() || Types.isMappable(t));
+      assert(!var.mappedDecl() || Types.isMappable(var.type()));
       if (var.storage() == Alloc.ALIAS) {
         assert(initReaders == null && initWriters == null);
         continue;
       }
       // For now, just add provenance info as a comment
-      pointAdd(new Comment("Var: " + t.typeName() + " " +
+      pointAdd(new Comment("Var: " + var.type().typeName() + " " +
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
 
       if (var.storage() == Alloc.GLOBAL_CONST) {
@@ -600,26 +599,20 @@ public class TurbineGenerator implements CompilerBackend {
         throw new STCRuntimeError(e.getMessage());
       }
 
-      String tclVarName = prefixVar(var);
-      if (Types.isFile(t)) {
+      if (Types.isFile(var)) {
         batchedFiles.add(decl);
-      } else if (Types.isPrimFuture(t) || Types.isPrimUpdateable(t) ||
-          Types.isArray(t) || Types.isRef(t) || Types.isBag(t) ||
-          Types.isStruct(t)) {
-        List<Expression> createArgs = new ArrayList<Expression>();
-        createArgs.addAll(TurbineTypes.dataDeclFullType(t));
-        createArgs.add(argToExpr(initReaders));
-        createArgs.add(argToExpr(initWriters));
-        createArgs.add(new LiteralInt(nextDebugSymbol(var)));
-        batched.add(new TclList(createArgs));
-        batchedVarNames.add(tclVarName);
-      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t) ||
-                  Types.isStructLocal(t)) {
+      } else if (Types.isPrimFuture(var) || Types.isPrimUpdateable(var) ||
+          Types.isArray(var) || Types.isRef(var) || Types.isBag(var) ||
+          Types.isStruct(var)) {
+        batched.add(createArgs(var, initReaders, initWriters));
+        batchedVarNames.add(prefixVar(var));
+      } else if (Types.isPrimValue(var) || Types.isContainerLocal(var) ||
+                  Types.isStructLocal(var)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
       } else {
         throw new STCRuntimeError("Code generation not supported for declaration " +
-        		"of type: " + t.typeName());
+        		"of type: " + var.type().typeName());
       }
     }
 
@@ -659,6 +652,16 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(s);
       }
     }
+  }
+
+  private TclList createArgs(Var var, Arg initReaders, Arg initWriters) {
+    List<Expression> createArgs = new ArrayList<Expression>();
+    createArgs.addAll(TurbineTypes.dataDeclFullType(var.type()));
+    createArgs.add(argToExpr(initReaders));
+    createArgs.add(argToExpr(initWriters));
+    createArgs.add(new LiteralInt(nextDebugSymbol(var)));
+    TclList createArgsL = new TclList(createArgs);
+    return createArgsL;
   }
 
   private void allocateFile(Var var, Arg initReaders, int debugSymbol) {

@@ -29,11 +29,11 @@ public class Square extends Expression
 {
 
   private final List<Expression> items;
-  
+
 
   /** if true, add braces as appropriate for context */
   private boolean treatAsList = false;
-  
+
   public Square()
   {
     super();
@@ -50,7 +50,7 @@ public class Square extends Expression
   {
     this.items = new ArrayList<Expression>(tokens);
   }
-  
+
   public Square(Expression... tokens)
   {
     this(Arrays.asList(tokens));
@@ -67,27 +67,27 @@ public class Square extends Expression
   {
     items.add(item);
   }
-  
+
   public void addAll(Expression... exprs)
   {
     for (Expression e: exprs) {
-      items.add(e); 
+      items.add(e);
     }
   }
-  
+
   public void addAll(Collection<? extends Expression> exprs)
   {
-    items.addAll(exprs); 
+    items.addAll(exprs);
   }
 
   @Override
   public void appendTo(StringBuilder sb, ExprContext mode)
   {
     boolean brace = treatAsList && mode == ExprContext.LIST_STRING;
-    
+
     if (brace)
         sb.append("{");
-    
+
     sb.append("[ ");
     Iterator<Expression> it = items.iterator();
     while (it.hasNext())
@@ -98,7 +98,7 @@ public class Square extends Expression
         sb.append(' ');
     }
     sb.append(" ]");
-    
+
     if (brace)
       sb.append("}");
   }
@@ -106,12 +106,12 @@ public class Square extends Expression
   public static Square fnCall(String fnName, Expression... args) {
     return fnCall(new Token(fnName), args);
   }
-  
+
   public static Square fnCall(Token fn, Expression... args) {
     return fnCall(fn, Arrays.asList(args));
   }
-  
-  public static Square fnCall(Token fn, List<Expression> args) {
+
+  public static Square fnCall(Token fn, List<? extends Expression> args) {
     Expression newE[] = new Expression[args.size() + 1];
 
     newE[0] = fn;
@@ -119,16 +119,16 @@ public class Square extends Expression
     for (Expression arg: args) {
       newE[i] = arg;
       i++;
-    } 
+    }
     return new Square(newE);
   }
-  
+
 
   @Override
   public boolean supportsStringList() {
     return true;
   }
-  
+
   public void setTreatAsList(boolean val) {
     this.treatAsList = val;
   }
