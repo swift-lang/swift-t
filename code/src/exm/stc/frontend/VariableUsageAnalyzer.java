@@ -17,6 +17,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -31,6 +32,7 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
@@ -53,6 +55,7 @@ import exm.stc.frontend.tree.If;
 import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Switch;
+import exm.stc.frontend.tree.TopLevel;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
@@ -80,7 +83,7 @@ class VariableUsageAnalyzer {
    * @param block
    * @throws UserException
    */
-  public void analyzeVariableUsage(Context context,
+  public void walkFunction(Context context,
           LineMapping lineMapping, String currModuleName,
           String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
@@ -88,13 +91,7 @@ class VariableUsageAnalyzer {
     this.lineMapping = lineMapping;
     this.currModuleName = currModuleName;
 
-    VariableUsageInfo globVui = new VariableUsageInfo();
-    // Add global constants
-    for (Var global: context.getScopeVariables()) {
-      globVui.declare(context,
-          global.name(), global.type(), false);
-      globVui.assign(context, global.name(), AssignOp.ASSIGN);
-    }
+    VariableUsageInfo globVui = setupGlobalUsage(context);
 
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
     Context fnContext = new LocalContext(context, function);
@@ -117,6 +114,66 @@ class VariableUsageAnalyzer {
     // obtain info about variable usage in function by walking tree
     walkBlock(fnContext, block, argVui);
 
+    reportErrors("in function " + function, argVui);
+    LogHelper.debug(context, "analyzer: done: " + function);
+  }
+
+
+  /**
+   * Analyse variable usage in program top level
+   * @param context
+   * @param lineMapping
+   * @param currModuleName
+   * @param syncPos position to report errors at
+   * @param stmts
+   * @throws UserException
+   */
+  public void walkTopLevel(Context context, SwiftAST program,
+                          Iterator<ParsedModule> moduleIt)
+        throws UserException {
+    LogHelper.debug(context, "analyzer: starting: top level");
+
+    VariableUsageInfo globVui = setupGlobalUsage(context);
+
+    Context fnContext = new LocalContext(context, Constants.ENTRY_FUNCTION);
+    VariableUsageInfo topLevelVui = globVui.createNested();
+
+    while (moduleIt.hasNext()) {
+      ParsedModule module = moduleIt.next();
+      this.lineMapping = module.lineMapping;
+      this.currModuleName = module.moduleName;
+
+      syncFilePos(fnContext, module.ast);
+
+      for (SwiftAST stmt: module.ast.children()) {
+        if (TopLevel.isStatement(stmt.getType())) {
+          syncFilePos(fnContext, stmt);
+          walk(fnContext, stmt, topLevelVui);
+        }
+      }
+    }
+
+    // After having collected data for block, check for unread/unwritten vars
+    syncFilePos(fnContext, program);
+    topLevelVui.detectVariableMisuse(fnContext);
+
+    reportErrors("at program top level", topLevelVui);
+    LogHelper.debug(context, "analyzer: done: top level");
+  }
+
+  private VariableUsageInfo setupGlobalUsage(Context context) {
+    VariableUsageInfo globVui = new VariableUsageInfo();
+    // Add global constants
+    for (Var global: context.getScopeVariables()) {
+      globVui.declare(context,
+          global.name(), global.type(), false);
+      globVui.assign(context, global.name(), AssignOp.ASSIGN);
+    }
+    return globVui;
+  }
+
+  private void reportErrors(String prepLocation, VariableUsageInfo argVui)
+      throws VariableUsageException {
     // Notify user of any warnings or errors, terminate compilation on errors
     boolean fatalError = false;
     for (Violation v: argVui.getViolations()) {
@@ -129,62 +186,13 @@ class VariableUsageAnalyzer {
       }
     }
     if (fatalError) {
-      throw new VariableUsageException("Previous variable usage error in function " +
-            function + " caused compilation termination");
+      throw new VariableUsageException("Previous variable usage error "
+                + prepLocation + " caused compilation termination");
     }
-    LogHelper.debug(context, "analyzer: done: " + function);
   }
 
   private void syncFilePos(Context context, SwiftAST tree) {
     context.syncFilePos(tree, currModuleName, lineMapping);
-  }
-
-  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
-      VariableUsageInfo initialVu) throws UserException {
-    return walkBlock(context, block, initialVu, true);
-  }
-  /**
-   *
-   * @param file
-   * @param block
-   * @param initialVu initial variable usage info for this block
-   * @param vuiMap map to insert info for this block and all children
-   * @param parent info about arguments, and about variables declared
-   *                outside this block but visible
-   * @return
-   * @throws UserException
-   */
-  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
-                 VariableUsageInfo initialVu, boolean checkMisuse)
-                                                   throws UserException {
-    assert(block.getType() == ExMParser.BLOCK);
-    syncFilePos(context, block);
-
-    VariableUsageInfo vu;
-    if (initialVu != null) {
-      vu = initialVu;
-    } else {
-      vu = new VariableUsageInfo();
-    }
-
-    for (SwiftAST t: block.children()) {
-      syncFilePos(context, t);
-      walk(context, t , vu);
-    }
-
-    // After having collected data for block, check for unread/unwritten vars
-    if (checkMisuse) {
-      syncFilePos(context, block);
-      vu.detectVariableMisuse(context);
-    }
-
-    if (block.getVariableUsage() != null) {
-      throw new STCRuntimeError("Error: overwriting variable usage "
-          + " info " + " for block " + block.hashCode() + " at line "
-          + context.getFileLine());
-    }
-    block.setVariableUsage(vu);
-    return vu;
   }
 
   private void walk(Context context, SwiftAST tree, VariableUsageInfo vu)
@@ -272,6 +280,56 @@ class VariableUsageAnalyzer {
         ("Unexpected token type inside procedure: " +
             LogHelper.tokName(token));
     }
+  }
+
+  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
+      VariableUsageInfo initialVu) throws UserException {
+    return walkBlock(context, block, initialVu, true);
+  }
+
+  /**
+   *
+   * @param file
+   * @param block
+   * @param initialVu initial variable usage info for this block
+   * @param vuiMap map to insert info for this block and all children
+   * @param parent info about arguments, and about variables declared
+   *                outside this block but visible
+   * @return
+   * @throws UserException
+   */
+  private VariableUsageInfo walkBlock(Context context, SwiftAST block,
+                 VariableUsageInfo initialVu, boolean checkMisuse)
+                                                   throws UserException {
+    assert(block.getType() == ExMParser.BLOCK);
+    syncFilePos(context, block);
+    VariableUsageInfo vu1;
+    if (initialVu != null) {
+      vu1 = initialVu;
+    } else {
+      vu1 = new VariableUsageInfo();
+    }
+
+    for (SwiftAST stmt: block.children()) {
+      syncFilePos(context, stmt);
+      walk(context, stmt, vu1);
+    }
+
+    // After having collected data for block, check for unread/unwritten vars
+    if (checkMisuse) {
+      syncFilePos(context, block);
+      vu1.detectVariableMisuse(context);
+    }
+    VariableUsageInfo vu = vu1;
+
+    if (block.getVariableUsage() != null) {
+      throw new STCRuntimeError("Error: overwriting variable usage "
+          + " info " + " for block " + block.hashCode() + " at line "
+          + context.getFileLine());
+    }
+    block.setVariableUsage(vu);
+
+    return vu;
   }
 
   private void walkStmtChain(Context context, SwiftAST tree,

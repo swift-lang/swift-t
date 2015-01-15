@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -95,6 +96,7 @@ import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
 import exm.stc.frontend.tree.Switch;
+import exm.stc.frontend.tree.TopLevel;
 import exm.stc.frontend.tree.TypeTree;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
@@ -169,7 +171,7 @@ public class ASTWalker {
      */
     loadDefinitions(context, mainModule, builtins);
 
-    compileTopLevel(context);
+    compileTopLevel(context, mainModule);
 
     compileFunctions(context);
   }
@@ -180,10 +182,18 @@ public class ASTWalker {
     loadModule(context, FrontendPass.DEFINITIONS, mainModule);
   }
 
-  private void compileTopLevel(GlobalContext context) throws UserException,
-      UndefinedFunctionException, ModuleLoadException {
+  private void compileTopLevel(GlobalContext context, LocatedModule mainModule)
+      throws UserException, UndefinedFunctionException, ModuleLoadException {
+
+    Pair<ParsedModule, Boolean> loadedMainModule = modules.loadIfNeeded(context, mainModule);
+    assert(!loadedMainModule.val2);
+
+    varAnalyzer.walkTopLevel(context, loadedMainModule.val1.ast,
+                            moduleIterator(context));
+
     backend.startFunction(Constants.ENTRY_FUNCTION, Var.NONE, Var.NONE,
                           ExecTarget.syncControl());
+
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE_TOPLEVEL, loadedModule);
     }
@@ -308,7 +318,7 @@ public class ASTWalker {
         break;
 
       default:
-        if (!isTopLevelStatement(type)) {
+        if (!TopLevel.isStatement(type)) {
           throw new STCRuntimeError("Unexpected token: " +
               LogHelper.tokName(type) + " at program top level");
         }
@@ -330,15 +340,21 @@ public class ASTWalker {
     Context context = globalContext.getTopLevelCodeContext();
     syncFilePos(context, fileTree);
 
+    List<SwiftAST> stmts = new ArrayList<SwiftAST>();
+
     for (SwiftAST stmt: fileTree.children()) {
       syncFilePos(context, stmt);
       int type = stmt.getType();
-      if (isTopLevelStatement(type)) {
-        walkStatement(context, stmt, WalkMode.NORMAL);
-      } else if (!isTopLevelDefinition(type)) {
+      if (TopLevel.isStatement(type)) {
+        stmts.add(stmt);
+      } else if (!TopLevel.isDefinition(type)) {
         throw new STCRuntimeError("Unexpected token: " +
               LogHelper.tokName(type) + " at program top level");
       }
+    }
+
+    for (SwiftAST stmt: stmts) {
+      walkStatement(context, stmt, WalkMode.NORMAL);
     }
   }
 
@@ -363,8 +379,8 @@ public class ASTWalker {
         compileFunction(context, stmt);
       } else if (type == ExMParser.DEFINE_APP_FUNCTION) {
         compileAppFunction(context, stmt);
-      } else if (isTopLevelDefinition(type) ||
-                 isTopLevelStatement(type)) {
+      } else if (TopLevel.isStatement(type) ||
+                 TopLevel.isDefinition(type)) {
         // Can ignore other definitions and statements
       } else {
         throw new STCRuntimeError("Unexpected token: " +
@@ -374,50 +390,53 @@ public class ASTWalker {
   }
 
   /**
-   * @param token
-   * @return true if the token is a valid top level definition
+   * Iterate over modules that were loaded during initial pass
+   * @param context
+   * @return
    */
-  private boolean isTopLevelDefinition(int token) {
-    switch (token) {
-      case ExMParser.IMPORT:
-      case ExMParser.DEFINE_BUILTIN_FUNCTION:
-      case ExMParser.DEFINE_FUNCTION:
-      case ExMParser.DEFINE_APP_FUNCTION:
-      case ExMParser.DEFINE_NEW_STRUCT_TYPE:
-      case ExMParser.DEFINE_NEW_TYPE:
-      case ExMParser.TYPEDEF:
-      case ExMParser.GLOBAL_CONST:
-      case ExMParser.PRAGMA:
-      case ExMParser.EOF:
-        return true;
-      default:
+  private Iterator<ParsedModule> moduleIterator(final Context context) {
+
+    return new Iterator<ParsedModule>() {
+      Iterator<LocatedModule> moduleIt = modules.loadedModules().iterator();
+      ParsedModule curr = null;
+
+      @Override
+      public void remove() {
+        throw new STCRuntimeError("Cannot remove");
+      }
+
+      @Override
+      public ParsedModule next() {
+        if (hasNext()) {
+          ParsedModule result = curr;
+          curr = null;
+          return result;
+        } else {
+          throw new STCRuntimeError("invalid iterator usage");
+        }
+      }
+
+      @Override
+      public boolean hasNext() {
+        if (curr != null) {
+          return true;
+        }
+        if (moduleIt.hasNext()) {
+          LocatedModule located = moduleIt.next();
+          Pair<ParsedModule, Boolean> loaded;
+          try {
+            loaded = modules.loadIfNeeded(context, located);
+          } catch (ModuleLoadException e) {
+            throw new STCRuntimeError("Unexpected: " + e.getMessage());
+          }
+          curr = loaded.val1;
+          boolean newlyLoaded = loaded.val2;
+          assert(!newlyLoaded);
+          return true;
+        }
         return false;
-    }
-  }
-  /**
-   * @param token a AST token type
-   * @return true if token is a statement token type that is syntactically
-   *        valid at top level of program but isn't yet supported
-   */
-  private boolean isTopLevelStatement(int token) {
-    switch (token) {
-      case ExMParser.BLOCK:
-      case ExMParser.IF_STATEMENT:
-      case ExMParser.SWITCH_STATEMENT:
-      case ExMParser.DECLARATION:
-      case ExMParser.ASSIGN_EXPRESSION:
-      case ExMParser.EXPR_STMT:
-      case ExMParser.FOREACH_LOOP:
-      case ExMParser.FOR_LOOP:
-      case ExMParser.ITERATE:
-      case ExMParser.WAIT_STATEMENT:
-      case ExMParser.WAIT_DEEP_STATEMENT:
-      case ExMParser.UPDATE:
-      case ExMParser.STATEMENT_CHAIN:
-        return true;
-      default:
-        return false;
-    }
+      }
+    };
   }
 
   /**
@@ -1871,7 +1890,7 @@ public class ASTWalker {
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
     String moduleName = modules.currentModule().moduleName;
-    varAnalyzer.analyzeVariableUsage(context, lineMap(), moduleName, function,
+    varAnalyzer.walkFunction(context, lineMap(), moduleName, function,
                                      iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
