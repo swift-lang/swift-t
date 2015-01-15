@@ -163,6 +163,7 @@ public class ASTWalker {
     // Two passes: first to find definitions, second to compile functions
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
     loadModule(context, FrontendPass.DEFINITIONS, mainModule);
+
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE, loadedModule);
     }
@@ -188,8 +189,8 @@ public class ASTWalker {
       ParsedModule parsed, FrontendPass pass) throws UserException {
     LogHelper.debug(context, "Entered module " + module.canonicalName
                + " on pass " + pass);
-    boolean compiling = (pass == FrontendPass.COMPILE);
-    modules.enterModule(module, parsed, compiling);
+
+    modules.enterModule(module, parsed);
     walkTopLevel(context, parsed.ast, pass);
     modules.exitModule();
     LogHelper.debug(context, "Finishing module" + module.canonicalName
@@ -371,9 +372,12 @@ public class ASTWalker {
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
 
-    LocatedModule module = LocatedModule.fromModuleNameAST(context,
-                                                  moduleID, false);
-    loadModule(context, pass, module);
+    // Only need to load on initial pass
+    if (pass == FrontendPass.DEFINITIONS) {
+      LocatedModule module = LocatedModule.fromModuleNameAST(context,
+                                                    moduleID, false);
+      loadModule(context, pass, module);
+    }
   }
 
   /**
@@ -409,10 +413,8 @@ public class ASTWalker {
       assert(pass == FrontendPass.COMPILE);
       // Should have been loaded at defs stage
       assert(!newlyLoaded);
-      // Check if already being compiled
-      if (!modules.wasCompiled(module)) {
-        walkFile(context, module, parsed, pass);
-      }
+
+      walkFile(context, module, parsed, pass);
     }
   }
 
