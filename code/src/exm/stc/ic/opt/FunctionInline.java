@@ -177,7 +177,7 @@ public class FunctionInline implements OptimizerPass {
     for (Function f: program.getFunctions()) {
       List<String> callLocs = finder.functionUsages.get(f.getName());
       int functionSize = finder.getFunctionSize(f);
-      if (f.getName().equals(Constants.MAIN_FUNCTION)) {
+      if (f.getName().equals(Constants.ENTRY_FUNCTION)) {
         // Do nothing
       } else if (callLocs == null || callLocs.size() == 0) {
         // Function not referenced - prune it!

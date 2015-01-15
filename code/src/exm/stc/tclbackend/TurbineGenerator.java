@@ -152,7 +152,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_SKIP = "tcltmp:skip";
   private static final String TCLTMP_IGNORE = "tcltmp:ignore";
 
-  private static final String MAIN_FUNCTION_NAME = "swift:main";
+  private static final String ENTRY_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
 
   private final String timestamp;
@@ -384,7 +384,7 @@ public class TurbineGenerator implements CompilerBackend {
 
       tree.append(compileTimeArgs());
 
-      tree.add(new Command("turbine::start " + MAIN_FUNCTION_NAME +
+      tree.add(new Command("turbine::start " + ENTRY_FUNCTION_NAME +
                                           " " + CONSTINIT_FUNCTION_NAME));
       tree.add(new Command("turbine::finalize"));
 
@@ -2156,16 +2156,16 @@ public class TurbineGenerator implements CompilerBackend {
     List<String> outputs = prefixVars(oList);
     List<String> inputs  = prefixVars(iList);
     // System.out.println("function" + functionName);
-    boolean isMain = functionName.equals(Constants.MAIN_FUNCTION);
+    boolean isEntryPoint = functionName.equals(Constants.ENTRY_FUNCTION);
     String prefixedFunctionName = null;
-    if (isMain)
-      prefixedFunctionName = MAIN_FUNCTION_NAME;
+    if (isEntryPoint)
+      prefixedFunctionName = ENTRY_FUNCTION_NAME;
     else
       prefixedFunctionName = TclNamer.swiftFuncName(functionName);
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
-    if (!isMain) {
+    if (!isEntryPoint) {
       args.add(Turbine.LOCAL_STACK_NAME);
     }
     args.addAll(outputs);
@@ -2182,13 +2182,13 @@ public class TurbineGenerator implements CompilerBackend {
     s.add(Turbine.turbineLog("enter function: " +
                              functionName));
 
-    if (noStack() && isMain) {
+    if (noStack() && isEntryPoint) {
       s.add(Turbine.createDummyStackFrame());
     }
 
     if (!noStack()) {
       TclTree[] setupStack;
-      if (isMain) {
+      if (isEntryPoint) {
         setupStack = Turbine.createStackFrame(StackFrameType.MAIN);
       } else {
         setupStack = Turbine.createStackFrame(StackFrameType.FUNCTION);

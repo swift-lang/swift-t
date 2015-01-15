@@ -161,26 +161,49 @@ public class ASTWalker {
     LocatedModule builtins = LocatedModule.fromPath(context,
                           Arrays.asList("builtins"), false);
 
-    // Two passes: first to find definitions, second to compile top-level code,
-    // third to compile functions
+    /*
+     * Three passes:
+     * 1. find definitions so they can be resolved during compilation
+     * 2. compile top-level code, so that any variables can be referenced in funcitons
+     * 3. compile functions
+     */
+    loadDefinitions(context, mainModule, builtins);
+
+    compileTopLevel(context);
+
+    compileFunctions(context);
+  }
+
+  private void loadDefinitions(GlobalContext context, LocatedModule mainModule,
+      LocatedModule builtins) throws ModuleLoadException, UserException {
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
     loadModule(context, FrontendPass.DEFINITIONS, mainModule);
+  }
 
+  private void compileTopLevel(GlobalContext context) throws UserException,
+      UndefinedFunctionException, ModuleLoadException {
+    backend.startFunction(Constants.ENTRY_FUNCTION, Var.NONE, Var.NONE,
+                          ExecTarget.syncControl());
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE_TOPLEVEL, loadedModule);
     }
+
+    // Main function runs after top-level code if present
+    FunctionType mainFn = context.lookupFunction(Constants.MAIN_FUNCTION);
+    if (mainFn != null) {
+      backend.functionCall(Constants.MAIN_FUNCTION, Constants.MAIN_FUNCTION,
+             Arg.NONE, Var.NONE, ExecTarget.syncControl(), new TaskProps());
+    }
+
+    backend.endFunction();
+  }
+
+  private void compileFunctions(GlobalContext context)
+      throws ModuleLoadException, UserException {
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE_FUNCTIONS, loadedModule);
     }
-
-    FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
-    if (fn == null ||
-        !context.hasFunctionProp(Constants.MAIN_FUNCTION, FnProp.COMPOSITE)) {
-      throw new UndefinedFunctionException(context,
-          "No composite main function was defined in the script");
-    }
   }
-
 
   /**
    * Walk the statements in a file.
@@ -243,41 +266,41 @@ public class ASTWalker {
     assert(fileTree.getType() == ExMParser.PROGRAM);
     syncFilePos(context, fileTree);
 
-    for (SwiftAST topLevelDefn: fileTree.children()) {
-      int type = topLevelDefn.getType();
-      syncFilePos(context, topLevelDefn);
+    for (SwiftAST stmt: fileTree.children()) {
+      int type = stmt.getType();
+      syncFilePos(context, stmt);
       switch (type) {
       case ExMParser.IMPORT:
-        importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
+        importModule(context, stmt, FrontendPass.DEFINITIONS);
         break;
 
       case ExMParser.DEFINE_BUILTIN_FUNCTION:
-        defineBuiltinFunction(context, topLevelDefn);
+        defineBuiltinFunction(context, stmt);
         break;
 
       case ExMParser.DEFINE_FUNCTION:
-        defineFunction(context, topLevelDefn);
+        defineFunction(context, stmt);
         break;
 
       case ExMParser.DEFINE_APP_FUNCTION:
-        defineAppFunction(context, topLevelDefn);
+        defineAppFunction(context, stmt);
         break;
 
       case ExMParser.DEFINE_NEW_STRUCT_TYPE:
-        defineNewStructType(context, topLevelDefn);
+        defineNewStructType(context, stmt);
         break;
 
       case ExMParser.DEFINE_NEW_TYPE:
       case ExMParser.TYPEDEF:
-        defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
+        defineNewType(context, stmt, type == ExMParser.TYPEDEF);
         break;
 
       case ExMParser.GLOBAL_CONST:
-        globalConst(context, topLevelDefn);
+        globalConst(context, stmt);
         break;
 
       case ExMParser.PRAGMA:
-        pragmaTopLevel(context, topLevelDefn);
+        pragmaTopLevel(context, stmt);
         break;
 
       case ExMParser.EOF:
@@ -285,14 +308,10 @@ public class ASTWalker {
         break;
 
       default:
-        String name = LogHelper.tokName(type);
-        if (isTopLevelStatement(type)) {
-          throw new InvalidConstructException(context,
-              "Statement type not yet supported at program top level: "
-                  + name.toLowerCase());
+        if (!isTopLevelStatement(type)) {
+          throw new STCRuntimeError("Unexpected token: " +
+              LogHelper.tokName(type) + " at program top level");
         }
-        throw new STCRuntimeError("Unexpected token: " + name
-            + " at program top level");
       }
     }
   }
@@ -300,37 +319,25 @@ public class ASTWalker {
   /**
    * Second pass:
    *  - Compile top-level statements
-   * @param context
+   * @param globalContext
    * @param fileTree
    * @throws UserException
    */
-  private void walkTopLevelCompileStatements(GlobalContext context, SwiftAST fileTree)
-      throws UserException {
+  private void walkTopLevelCompileStatements(GlobalContext globalContext,
+               SwiftAST fileTree) throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
+
+    Context context = globalContext.getTopLevelCodeContext();
     syncFilePos(context, fileTree);
-    // Second pass to compile functions
-    for (int i = 0; i < fileTree.getChildCount(); i++) {
-      SwiftAST topLevelDefn = fileTree.child(i);
-      syncFilePos(context, topLevelDefn);
-      int type = topLevelDefn.getType();
-      switch (type) {
-      case ExMParser.IMPORT:
-        // Don't recurse: we invoke compilation of modules elsewhere
-        break;
 
-      case ExMParser.DEFINE_FUNCTION:
-      case ExMParser.DEFINE_APP_FUNCTION:
-        // Don't compile functions yet
-        break;
-
-        // TODO: regular statements
-      default:
-        String name = LogHelper.tokName(type);
-        if (isTopLevelStatement(type)) {
-          throw new InvalidConstructException(context,
-              "Statement type not yet supported at program top level: "
-                  + name.toLowerCase());
-        }
+    for (SwiftAST stmt: fileTree.children()) {
+      syncFilePos(context, stmt);
+      int type = stmt.getType();
+      if (isTopLevelStatement(type)) {
+        walkStatement(context, stmt, WalkMode.NORMAL);
+      } else if (!isTopLevelDefinition(type)) {
+        throw new STCRuntimeError("Unexpected token: " +
+              LogHelper.tokName(type) + " at program top level");
       }
     }
   }
@@ -348,35 +355,45 @@ public class ASTWalker {
       throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
     syncFilePos(context, fileTree);
-    // Second pass to compile functions
-    for (int i = 0; i < fileTree.getChildCount(); i++) {
-      SwiftAST topLevelDefn = fileTree.child(i);
-      syncFilePos(context, topLevelDefn);
-      int type = topLevelDefn.getType();
-      switch (type) {
-      case ExMParser.IMPORT:
-        // Don't recurse: we invoke compilation of modules elsewhere
-        break;
 
-      case ExMParser.DEFINE_FUNCTION:
-        compileFunction(context, topLevelDefn);
-        break;
-
-      case ExMParser.DEFINE_APP_FUNCTION:
-        compileAppFunction(context, topLevelDefn);
-        break;
-
-      default:
-        String name = LogHelper.tokName(type);
-        if (isTopLevelStatement(type)) {
-          throw new InvalidConstructException(context,
-              "Statement type not yet supported at program top level: "
-                  + name.toLowerCase());
-        }
+    for (SwiftAST stmt: fileTree.children()) {
+      syncFilePos(context, stmt);
+      int type = stmt.getType();
+      if (type == ExMParser.DEFINE_FUNCTION) {
+        compileFunction(context, stmt);
+      } else if (type == ExMParser.DEFINE_APP_FUNCTION) {
+        compileAppFunction(context, stmt);
+      } else if (isTopLevelDefinition(type) ||
+                 isTopLevelStatement(type)) {
+        // Can ignore other definitions and statements
+      } else {
+        throw new STCRuntimeError("Unexpected token: " +
+              LogHelper.tokName(type) + " at program top level");
       }
     }
   }
 
+  /**
+   * @param token
+   * @return true if the token is a valid top level definition
+   */
+  private boolean isTopLevelDefinition(int token) {
+    switch (token) {
+      case ExMParser.IMPORT:
+      case ExMParser.DEFINE_BUILTIN_FUNCTION:
+      case ExMParser.DEFINE_FUNCTION:
+      case ExMParser.DEFINE_APP_FUNCTION:
+      case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+      case ExMParser.DEFINE_NEW_TYPE:
+      case ExMParser.TYPEDEF:
+      case ExMParser.GLOBAL_CONST:
+      case ExMParser.PRAGMA:
+      case ExMParser.EOF:
+        return true;
+      default:
+        return false;
+    }
+  }
   /**
    * @param token a AST token type
    * @return true if token is a statement token type that is syntactically
@@ -519,7 +536,6 @@ public class ASTWalker {
   throws UserException {
       int token = tree.getType();
       syncFilePos(context, tree);
-
 
       if (walkMode == WalkMode.ONLY_DECLARATIONS) {
         if (token == ExMParser.DECLARATION){
@@ -1732,14 +1748,17 @@ public class ASTWalker {
     }
 
     // Handle main as special case of regular function declaration
-    if (function.equals(Constants.MAIN_FUNCTION) &&
-        (ft.getInputs().size() > 0 || ft.getOutputs().size() > 0))
+    boolean isMain = function.equals(Constants.MAIN_FUNCTION);
+    if (isMain && (ft.getInputs().size() > 0 || ft.getOutputs().size() > 0))
       throw new TypeMismatchException(context,
           "main() is not allowed to have input or output arguments");
 
-    boolean async = true;
+    boolean async = isMain ? false : true;
     for (String annotation: annotations) {
-      if (annotation.equals(Annotations.FN_SYNC)) {
+      if (isMain) {
+        throw new InvalidAnnotationException(context,
+            "cannot annotate main function with " + annotation);
+      } else if (annotation.equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
         registerFunctionAnnotation(context, function, fdecl, annotation);
