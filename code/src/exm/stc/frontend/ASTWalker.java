@@ -124,7 +124,8 @@ public class ASTWalker {
 
   private static enum FrontendPass {
     DEFINITIONS, // Process top level defs
-    COMPILE,     // Compile functions
+    COMPILE_TOPLEVEL, // Compile top-levelcode
+    COMPILE_FUNCTIONS, // Compile functions
   }
 
   public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs) {
@@ -160,12 +161,16 @@ public class ASTWalker {
     LocatedModule builtins = LocatedModule.fromPath(context,
                           Arrays.asList("builtins"), false);
 
-    // Two passes: first to find definitions, second to compile functions
+    // Two passes: first to find definitions, second to compile top-level code,
+    // third to compile functions
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
     loadModule(context, FrontendPass.DEFINITIONS, mainModule);
 
     for (LocatedModule loadedModule: modules.loadedModules()) {
-      loadModule(context, FrontendPass.COMPILE, loadedModule);
+      loadModule(context, FrontendPass.COMPILE_TOPLEVEL, loadedModule);
+    }
+    for (LocatedModule loadedModule: modules.loadedModules()) {
+      loadModule(context, FrontendPass.COMPILE_FUNCTIONS, loadedModule);
     }
 
     FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
@@ -189,7 +194,6 @@ public class ASTWalker {
       ParsedModule parsed, FrontendPass pass) throws UserException {
     LogHelper.debug(context, "Entered module " + module.canonicalName
                + " on pass " + pass);
-
     modules.enterModule(module, parsed);
     walkTopLevel(context, parsed.ast, pass);
     modules.exitModule();
@@ -217,9 +221,11 @@ public class ASTWalker {
       FrontendPass pass) throws UserException {
     if (pass == FrontendPass.DEFINITIONS) {
       walkTopLevelDefs(context, fileTree);
+    } else if (pass == FrontendPass.COMPILE_TOPLEVEL){
+      walkTopLevelCompileStatements(context, fileTree);
     } else {
-      assert(pass == FrontendPass.COMPILE);
-      walkTopLevelCompile(context, fileTree);
+      assert(pass == FrontendPass.COMPILE_FUNCTIONS);
+      walkTopLevelCompileFunctions(context, fileTree);
     }
   }
 
@@ -291,15 +297,54 @@ public class ASTWalker {
     }
   }
 
-
   /**
    * Second pass:
-   *  - Compile composite and app functions, now that all function names are known
+   *  - Compile top-level statements
    * @param context
    * @param fileTree
    * @throws UserException
    */
-  private void walkTopLevelCompile(GlobalContext context, SwiftAST fileTree)
+  private void walkTopLevelCompileStatements(GlobalContext context, SwiftAST fileTree)
+      throws UserException {
+    assert(fileTree.getType() == ExMParser.PROGRAM);
+    syncFilePos(context, fileTree);
+    // Second pass to compile functions
+    for (int i = 0; i < fileTree.getChildCount(); i++) {
+      SwiftAST topLevelDefn = fileTree.child(i);
+      syncFilePos(context, topLevelDefn);
+      int type = topLevelDefn.getType();
+      switch (type) {
+      case ExMParser.IMPORT:
+        // Don't recurse: we invoke compilation of modules elsewhere
+        break;
+
+      case ExMParser.DEFINE_FUNCTION:
+      case ExMParser.DEFINE_APP_FUNCTION:
+        // Don't compile functions yet
+        break;
+
+        // TODO: regular statements
+      default:
+        String name = LogHelper.tokName(type);
+        if (isTopLevelStatement(type)) {
+          throw new InvalidConstructException(context,
+              "Statement type not yet supported at program top level: "
+                  + name.toLowerCase());
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Third pass:
+   *  - Compile composite and app functions, now that all function names and
+   *     globals are known
+   * @param context
+   * @param fileTree
+   * @throws UserException
+   */
+  private void walkTopLevelCompileFunctions(GlobalContext context, SwiftAST fileTree)
       throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
     syncFilePos(context, fileTree);
@@ -410,7 +455,8 @@ public class ASTWalker {
         walkFile(context, module, parsed, pass);
       }
     } else {
-      assert(pass == FrontendPass.COMPILE);
+      assert(pass == FrontendPass.COMPILE_FUNCTIONS ||
+             pass == FrontendPass.COMPILE_TOPLEVEL);
       // Should have been loaded at defs stage
       assert(!newlyLoaded);
 
