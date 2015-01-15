@@ -177,6 +177,9 @@ public class VariableUsageInfo {
    */
   public void mergeNestedScopes(Context context,
                   List<VariableUsageInfo> nested, boolean exhaustive) {
+    if (nested.size() == 0) {
+      return;
+    }
     // Add all violations in
     for (VariableUsageInfo vu: nested) {
       this.violations.addAll(vu.getViolations());
