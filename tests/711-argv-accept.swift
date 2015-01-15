@@ -4,6 +4,4 @@ import sys;
 
 // THIS-TEST-SHOULD-NOT-RUN
 
-main {
-  argv_accept("v");
-}
+argv_accept("v");

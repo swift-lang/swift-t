@@ -1,13 +1,10 @@
 
-main
-{
-  int a;
-  a = 1;
+int a;
+a = 1;
 
-  if (a)
-  {
-    int b;
-    b = 1;
-    trace(b);
-  }
+if (a)
+{
+  int b;
+  b = 1;
+  trace(b);
 }
