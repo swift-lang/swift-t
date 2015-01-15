@@ -2,8 +2,6 @@
 import assert;
 import sys;
 
-main {
-    argv_accept("compile_arg", "runtime-arg");
-    assertEqual("SUCCESS!", argv("compile_arg"), "Test compile time arg");
-    assertEqual("SUCCESS", argv("runtime-arg"), "Test runtime arg");
-}
+argv_accept("compile_arg", "runtime-arg");
+assertEqual("SUCCESS!", argv("compile_arg"), "Test compile time arg");
+assertEqual("SUCCESS", argv("runtime-arg"), "Test runtime arg");

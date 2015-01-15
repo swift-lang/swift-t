@@ -28,25 +28,23 @@ type tweedledum {
     trace(y.a, y.x.a, y.x.b);
 }
 
-main {
-    // Check they can be declared/allocated
-    tweedledee x;
-    tweedledee y;
-    tweedledum z;
-    
-    trace(x.a);
-    trace(x.b);
+// Check they can be declared/allocated
+tweedledee x;
+tweedledee y;
+tweedledum z;
 
-    trace(y.a);
-    trace(y.b);
+trace(x.a);
+trace(x.b);
 
-    x.a = 1234;
-    x.b = 11;
-    y.a = x.a + x.b;
-    y.b = y.a * x.a;
+trace(y.a);
+trace(y.b);
 
-    z = makeme();
-    traceme(z);
-    traceme2(z);
-    traceme3(z);
-}
+x.a = 1234;
+x.b = 11;
+y.a = x.a + x.b;
+y.b = y.a * x.a;
+
+z = makeme();
+traceme(z);
+traceme2(z);
+traceme3(z);

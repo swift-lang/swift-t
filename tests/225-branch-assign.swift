@@ -1,19 +1,15 @@
-
-
-main {
-  int a;
-  int branch = f(1);
-  if (branch == 1) {
-    a = 1;
+int a;
+int branch = f(1);
+if (branch == 1) {
+  a = 1;
+} else {
+  if (branch == 2) {
+    a = 2;
   } else {
-    if (branch == 2) {
-      a = 2;
-    } else {
-      a = 3;
-    }
+    a = 3;
   }
-  trace("RESULT: " + fromint(a));
 }
+trace("RESULT: " + fromint(a));
 
 
 // Opaque function that can't be inlined
