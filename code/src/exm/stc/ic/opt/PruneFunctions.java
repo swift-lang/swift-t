@@ -91,8 +91,8 @@ public class PruneFunctions implements OptimizerPass {
     Set<String> needed = new HashSet<String>();
     StackLite<String> workQueue = new StackLite<String>();
 
-    // Main is always needed
-    addFunction(needed, workQueue, Constants.MAIN_FUNCTION);
+    // Entry point is always needed
+    addFunction(needed, workQueue, Constants.ENTRY_FUNCTION);
 
     while (!workQueue.isEmpty()) {
       String curr = workQueue.pop();
