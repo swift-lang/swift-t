@@ -112,7 +112,7 @@ done
 shift $(( OPTIND - 1 ))
 
 # Handle temp file creation across platforms
-# Always has suffix *.tic
+# Always has .tic somewhere
 make_temp()
 {
   local PROGRAM_DIR=$1
