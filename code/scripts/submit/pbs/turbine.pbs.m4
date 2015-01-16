@@ -32,7 +32,11 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 #PBS -o getenv(OUTPUT_FILE)
 #PBS -V
 
-set -x
+VERBOSE=getenv(VERBOSE)
+if (( ${VERBOSE} )) 
+then
+ set -x
+fi
 
 echo "TURBINE-PBS"
 date
@@ -45,7 +49,7 @@ TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
 EXEC_SCRIPT=getenv(EXEC_SCRIPT)
 PROGRAM=getenv(PROGRAM)
 
+export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
-export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH)
 
 ${TURBINE_LAUNCHER} ${TCLSH} ${PROGRAM}
