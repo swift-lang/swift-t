@@ -115,11 +115,21 @@ shift $(( OPTIND - 1 ))
 # Always has suffix *.tic
 make_temp()
 {
-  PROGRAM_DIR=$1
-  NAME=$2
+  local PROGRAM_DIR=$1
+  local NAME=$2
   # Linux:
-  mktemp --suffix .tic ${PROGRAM_DIR}/swift-t-${NAME}.XXX
-  # Mac?
+  MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' ) 
+  if (( ${MKTEMP_VERSION} > 2 )) 
+  then
+    # Modern mktemp.  .tic at the end.
+    local SUFFIX=( --suffix .tic ) 
+  else
+    # Old (BSD?) mktemp.  .tic. will be in the middle of the name
+    local SUFFIX=""
+    NAME=${NAME}.tic
+  fi
+  mktemp ${SUFFIX} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
+  # TODO: Mac?
 }
 
 if [[ ${#*} == 0 ]]
