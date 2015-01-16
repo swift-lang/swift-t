@@ -122,7 +122,8 @@ make_temp()
   if (( ${MKTEMP_VERSION} > 2 )) 
   then
     # Modern mktemp.  .tic at the end.
-    local SUFFIX=( --suffix .tic ) 
+    local SUFFIX
+    SUFFIX=( --suffix .tic ) 
   else
     # Old (BSD?) mktemp.  .tic. will be in the middle of the name
     local SUFFIX=""
