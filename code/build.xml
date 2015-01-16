@@ -238,8 +238,8 @@
     <fail unless="dist.dir"
           message="Target install requires -Ddist.dir=..."/>
 
-    <echo message="INSTALL: dist.dir=${dist.dir} turbine.home=${turbine.home}"/>
-
+    <echo message="INSTALL: dist.dir=${dist.dir}"/>
+    <echo message="INSTALL: turbine.home=${turbine.home}"/>
 
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
