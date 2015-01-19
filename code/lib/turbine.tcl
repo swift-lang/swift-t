@@ -364,6 +364,8 @@ namespace eval turbine {
     }
 
     proc start { args } {
+        # Start checkpointing before servers go into loop
+        turbine::xpt_init2
 
         set rules [ lindex $args 0 ]
         if { [ llength $args ] > 1 } {
@@ -372,7 +374,14 @@ namespace eval turbine {
             set startup_cmd ""
         }
 
+        set failed 0
         if { [ catch { enter_mode $rules $startup_cmd } e d ] } {
+          set failed 1
+        }
+
+        turbine::xpt_finalize2
+
+        if { $failed } {
             fail $e $d
         }
     }

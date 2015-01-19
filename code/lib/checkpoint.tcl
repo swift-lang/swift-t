@@ -28,13 +28,24 @@ namespace eval turbine {
   namespace export xpt_init xpt_write_enabled xpt_write \
                xpt_lookup_enabled xpt_lookup xpt_finalize
 
-  # Initialize checkpointing, getting settings from environment
+  # Placeholder retained - old versions of STC generated it
+  proc xpt_init { } {
+
+  }
+
+  # Placeholder retained - old versions of STC generated it
+  proc xpt_finalize { } {
+  }
+
+  # Initialize checkpointing, getting settings from environment.
+  # Should be called immediately before turbine startup and before
+  # servers go into ADLB server loop
   # Environment variables are:
   # TURBINE_XPT_FILE: file to log to
   # TURBINE_XPT_RELOAD: colon-separated list of files to reload
   # TURBINE_XPT_FLUSH: flush mode
   # TURBINE_XPT_INDEX_MAX: max size in bytes
-  proc xpt_init { } {
+  proc xpt_init2 { } {
     variable xpt_mode
     # Defaults
     # Default to periodic_flush
@@ -56,7 +67,7 @@ namespace eval turbine {
       set flush_mode $::env(TURBINE_XPT_FLUSH)
     }
     if [ info exists ::env(TURBINE_XPT_INDEX_MAX) ] {
-      set xpt_index_max $::env(TURBINE_XPT_INDEX_MAX) 
+      set xpt_index_max $::env(TURBINE_XPT_INDEX_MAX)
       if { ! [ string is integer $xpt_index_max ] } {
         error "TURBINE_XPT_INDEX_MAX must be integer: \"${xpt_index_max}\""
       }
@@ -111,7 +122,7 @@ namespace eval turbine {
     }
   }
 
-  # Return true if we are logging data 
+  # Return true if we are logging data
   proc xpt_write_enabled { } {
     variable xpt_mode
     switch $xpt_mode {
@@ -129,7 +140,7 @@ namespace eval turbine {
     }
   }
 
-  proc xpt_finalize { } {
-    adlb::xpt_finalize 
+  proc xpt_finalize2 {} {
+    adlb::xpt_finalize
   }
 }
