@@ -38,7 +38,7 @@ public class PruneFunctions implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program program) throws UserException {
-    ForeignFunctions foreignFuncs = program.getForeignFunctions();
+    ForeignFunctions foreignFuncs = program.foreignFunctions();
 
     // Function a depends on function b
     DepFinder deps = new DepFinder(foreignFuncs);

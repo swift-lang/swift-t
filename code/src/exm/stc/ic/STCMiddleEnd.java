@@ -395,10 +395,10 @@ public class STCMiddleEnd {
   public void declare(Var var) throws UndefinedTypeException {
     assert(!var.mappedDecl()|| Types.isMappable(var));
     assert(var.type().isConcrete()) : var;
-    currBlock().addVariable(var);
     if (var.storage() == Alloc.GLOBAL_VAR) {
-      // TODO: track global variables
-      throw new STCRuntimeError("Global vars not implemented");
+      program.globalVars().addVariable(var);
+    } else {
+      currBlock().addVariable(var);
     }
   }
 
@@ -422,14 +422,14 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(functionName, frontendName,
             outputs, Var.asArgList(inputs), props,
-            program.getForeignFunctions()));
+            program.foreignFunctions()));
   }
 
   public void builtinLocalFunctionCall(String functionName, String frontendName,
           List<Arg> inputs, List<Var> outputs) {
     currBlock().addInstruction(new LocalFunctionCall(
         functionName, frontendName, inputs, outputs,
-        program.getForeignFunctions()));
+        program.foreignFunctions()));
   }
 
   public void functionCall(String functionName, String frontendName,
@@ -437,7 +437,7 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(functionName, frontendName,
-                outputs, inputs, mode, props, program.getForeignFunctions()));
+                outputs, inputs, mode, props, program.foreignFunctions()));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -1055,7 +1055,7 @@ public class STCMiddleEnd {
 
     // Check if we need to initialize mappings of output files
     boolean mustMapOutFiles =
-        !program.getForeignFunctions().canInitOutputMapping(builtinName);
+        !program.foreignFunctions().canInitOutputMapping(builtinName);
 
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
@@ -1085,7 +1085,7 @@ public class STCMiddleEnd {
                             filenameVars, instBuffer, false, mustMapOutFiles,
                             true);
     instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals,
-                                         program.getForeignFunctions()));
+                                         program.foreignFunctions()));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
                                !mustMapOutFiles, true);

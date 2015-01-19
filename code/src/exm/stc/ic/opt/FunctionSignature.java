@@ -62,7 +62,7 @@ public class FunctionSignature implements OptimizerPass {
     ListIterator<Function> fnIt = program.functionIterator();
     while (fnIt.hasNext()) {
       Function fn = fnIt.next();
-      Function newFn = switchToValuePassing(logger, program.getForeignFunctions(),
+      Function newFn = switchToValuePassing(logger, program.foreignFunctions(),
                                             fn, usedFunctionNames);
       if (newFn != null) {
         fnIt.remove(); // Remove old function

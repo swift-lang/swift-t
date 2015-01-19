@@ -379,7 +379,7 @@ public class ValueNumber implements OptimizerPass {
   private Map<Block, Congruences> findCongruences(Program program,
           Function f, ExecContext execCx) throws OptUnsafeError {
     Map<Block, Congruences> result = new HashMap<Block, Congruences>();
-    Congruences initState = initFuncState(logger, program.getForeignFunctions(),
+    Congruences initState = initFuncState(logger, program.foreignFunctions(),
                                           program.constants(), f);
     findCongruencesRec(program, f, f.mainBlock(), execCx, initState, result);
     return result;
