@@ -79,11 +79,6 @@ public class VariableUsageInfo {
 
   public Violation declare(Context context, String name,
                                 Type type, boolean mapped) {
-    if (vars.get(name) != null) {
-      return new Violation(ViolationType.ERROR, "Variable " + name +
-            " declared twice", context);
-    }
-
     vars.put(name, new VInfo(type, mapped, name, true));
 
     return null;
