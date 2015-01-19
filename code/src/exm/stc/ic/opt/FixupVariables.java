@@ -33,7 +33,6 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -47,6 +46,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
+import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.Opcode;
@@ -93,16 +93,16 @@ public class FixupVariables implements OptimizerPass {
     for (Function fn : prog.getFunctions()) {
 
       if (updateLists) {
-        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
-                      FixupVarMode.REBUILD);
+        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+                      referencedGlobals, FixupVarMode.REBUILD);
         // Need to do a second pass to resolve recursive dependencies,
         // e.g. loop_continue instructions that pass things back to
         // the top of the loop
-        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
-                      FixupVarMode.ADD);
+        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+                      referencedGlobals, FixupVarMode.ADD);
       } else {
-        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
-                     FixupVarMode.NO_UPDATE);
+        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+                      referencedGlobals, FixupVarMode.NO_UPDATE);
       }
     }
 
@@ -111,7 +111,8 @@ public class FixupVariables implements OptimizerPass {
   }
 
   public static void fixupFunction(Logger logger, GlobalConstants constants,
-          Function fn, Set<Var> referencedGlobals, FixupVarMode fixupMode) {
+      GlobalVars globalVars,  Function fn, Set<Var> referencedGlobals,
+      FixupVarMode fixupMode) {
     HierarchicalSet<Var> fnargs = new HierarchicalSet<Var>();
     for (Var v : fn.getInputList()) {
       fnargs.add(v);
@@ -120,6 +121,7 @@ public class FixupVariables implements OptimizerPass {
       fnargs.add(v);
     }
     fnargs.addAll(constants.vars());
+    fnargs.addAll(globalVars.vars());
 
     AliasTracker aliases = new AliasTracker();
 
@@ -345,18 +347,26 @@ public class FixupVariables implements OptimizerPass {
     // Outer scopes don't have anything to do with vars declared here
     result.removeReadWrite(blockVars);
 
-    if (canImportGlobals(execCx)) {
-      // Global constants can be imported in control blocks only
-      Set<Var> globals = addGlobalImports(block, visible, fixupMode,
-                                          result.allSets());
+    // Global constants can be imported in control blocks only
+    Set<Var> globals = addGlobalImports(block, execCx, visible, fixupMode,
+                                        result.allSets());
 
-      referencedGlobals.addAll(globals);
-      result.removeReadWrite(globals);
-    }
+    referencedGlobals.addAll(globals);
+    result.removeReadWrite(globals);
+
     return result;
   }
 
-  private static boolean canImportGlobals(ExecContext execCx) {
+  private static boolean canImportGlobal(ExecContext execCx, Alloc storage) {
+    if (storage == Alloc.GLOBAL_CONST) {
+      return canImportGlobalConsts(execCx);
+    } else {
+      assert(storage == Alloc.GLOBAL_VAR);
+      return true;
+    }
+  }
+
+  private static boolean canImportGlobalConsts(ExecContext execCx) {
     return execCx.isControlContext() ||
             !Settings.SEPARATE_TURBINE_ENGINE;
   }
@@ -513,10 +523,9 @@ public class FixupVariables implements OptimizerPass {
         }
       }
       if (mustAdd) {
-
-        if (addtl.var.storage() == Alloc.GLOBAL_CONST) {
+        if (addtl.var.storage().isGlobal()) {
           // Only pass global const if needed
-          if (canImportGlobals(contCx)) {
+          if (canImportGlobal(contCx, addtl.var.storage())) {
             for (Block b: continuation.getBlocks()) {
               if (!b.getVariables().contains(addtl.var)) {
                 b.addVariable(addtl.var);
@@ -576,7 +585,7 @@ public class FixupVariables implements OptimizerPass {
     ListIterator<Var> varIt = block.variableIterator();
     while (varIt.hasNext()) {
       Var v = varIt.next();
-      if (v.defType() == DefType.GLOBAL_CONST) {
+      if (v.defType().isGlobal()) {
         varIt.remove();
       }
     }
@@ -585,18 +594,19 @@ public class FixupVariables implements OptimizerPass {
   /**
    *
    * @param block
+   * @param execCx
    * @param visible
    * @param neededSets sets of vars needed from outside bock
    * @return set of global vars needed from outside
    */
   private static Set<Var> addGlobalImports(Block block,
-          HierarchicalSet<Var> visible,
+          ExecContext execCx, HierarchicalSet<Var> visible,
           FixupVarMode fixupMode, List<Set<Var>> neededSets) {
     // if global constant missing, just add it
     Set<Var> existingGlobals = new HashSet<Var>();
     if (fixupMode == FixupVarMode.ADD) {
       for (Var v: block.getVariables()) {
-        if (v.storage() == Alloc.GLOBAL_CONST) {
+        if (v.storage().isGlobal()) {
           existingGlobals.add(v);
         }
       }
@@ -605,7 +615,8 @@ public class FixupVariables implements OptimizerPass {
     for (Set<Var> neededSet: neededSets) {
       for (Var var: neededSet) {
         if (visible.contains(var)) {
-          if (var.storage() == Alloc.GLOBAL_CONST) {
+          if (var.storage().isGlobal() &&
+              canImportGlobal(execCx, var.storage())) {
             // Add at top in case used as mapping var
             if (fixupMode != FixupVarMode.NO_UPDATE
                 && !existingGlobals.contains(var))

@@ -15,6 +15,7 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,7 +29,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -39,17 +39,17 @@ import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class UniqueVarNames implements OptimizerPass {
-  
+
   @Override
   public String getPassName() {
     return "Uniquify variable names";
   }
-  
+
   @Override
   public String getConfigEnabledKey() {
     return null;
   }
-  
+
   /**
    * Make all of variable names in functions completely
    * unique within the function
@@ -58,7 +58,11 @@ public class UniqueVarNames implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program in) {
     for (Function f: in.getFunctions()) {
-      makeVarNamesUnique(f, in.constants().vars());
+      List<Var> allGlobals = new ArrayList<Var>();
+      allGlobals.addAll(in.constants().vars());
+      allGlobals.addAll(in.globalVars().vars());
+
+      makeVarNamesUnique(f, allGlobals);
     }
   }
 
@@ -71,16 +75,16 @@ public class UniqueVarNames implements OptimizerPass {
   private static void makeVarNamesUnique(Function fn,
       Block block, Vars existing, HierarchicalMap<Var, Arg> renames) {
     for (Var v: block.getVariables()) {
-      if (v.defType() != DefType.GLOBAL_CONST) {
+      if (!v.defType().isGlobal()) {
         updateName(fn, block, existing, renames, v);
       }
     }
-  
+
     if (!renames.isEmpty()) {
       // Rename variables in Block (and nested blocks) according to map
       block.renameVars(fn.getName(), renames, RenameMode.REPLACE_VAR, false);
     }
-  
+
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
     for (Continuation c: block.allComplexStatements()) {
@@ -109,7 +113,7 @@ public class UniqueVarNames implements OptimizerPass {
       		"construct defined vars has only one block";
       HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
       updateName(fn, cont.getBlocks().get(0), existing, contVarRenames, v);
-      
+
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
         cont.renameVars(fn.getName(), contVarRenames, RenameMode.REPLACE_VAR,
@@ -118,7 +122,7 @@ public class UniqueVarNames implements OptimizerPass {
       }
     }
     fixupVarRedefines(fn, existing, cont, renames);
-    
+
     for (Block b: cont.getBlocks()) {
       makeVarNamesUnique(fn, b, existing, renames.makeChildMap());
     }
@@ -127,7 +131,7 @@ public class UniqueVarNames implements OptimizerPass {
   /**
    * Handle the case where frontend generated intermediate representation
    * where a construct redefines the value of a variable present outside
-   * 
+   *
    * @param existing
    * @param cont
    * @param renames
@@ -156,7 +160,7 @@ public class UniqueVarNames implements OptimizerPass {
       String newName = chooseNewName(existing.usedNames, var);
       Var newVar = var.makeRenamed(newName);
       fn.addUsedVarName(newVar);
-      
+
       Arg oldVal = renames.put(var, Arg.newVar(newVar));
       assert(oldVal == null) : "Shadowed variable: " + var.name();
       replaceCleanup(block, var, newVar);
@@ -164,7 +168,7 @@ public class UniqueVarNames implements OptimizerPass {
     } else {
       existing.addDeclaration(var);
     }
-  } 
+  }
 
   static void replaceCleanup(Block block, Var var, Var newVar) {
     ListIterator<CleanupAction> it = block.cleanupIterator();
@@ -188,15 +192,15 @@ public class UniqueVarNames implements OptimizerPass {
     for (Var v: in.getOutputList()) {
       declarations.addDeclaration(v);
     }
-  
+
     makeVarNamesUnique(in, in.mainBlock(), declarations,
                        new HierarchicalMap<Var, Arg>());
   }
-  
+
   private static class Vars {
     public final Set<String> usedNames = new HashSet<String>();
     public final Map<String, Var> vars = new HashMap<String, Var>();
-    
+
     public void addDeclaration(Var var) {
       usedNames.add(var.name());
       vars.put(var.name(), var);

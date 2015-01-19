@@ -103,7 +103,8 @@ public class RefCounting {
   public static boolean trackReadRefCount(Type type, DefType defType) {
     if (!mayHaveTrackedReadRefcount(type)) {
       return false;
-    } else if (defType == DefType.GLOBAL_CONST) {
+    } else if (defType.isGlobal()) {
+      // Never removed
       return false;
     }
     return true;
@@ -121,7 +122,7 @@ public class RefCounting {
   public static boolean trackWriteRefCount(Type type, DefType defType) {
     if (!mayHaveTrackedWriteRefcount(type)) {
       return false;
-    } else if (defType == DefType.GLOBAL_CONST) {
+    } else if (defType.isConst()) {
       return false;
     }
     return true;

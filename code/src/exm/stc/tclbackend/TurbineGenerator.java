@@ -583,7 +583,7 @@ public class TurbineGenerator implements CompilerBackend {
       pointAdd(new Comment("Var: " + var.type().typeName() + " " +
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
 
-      if (var.storage() == Alloc.GLOBAL_CONST) {
+      if (var.storage().isGlobal()) {
         // If global, it should already be in TCL global scope, just need to
         // make sure that we've imported it
         pointAdd(Turbine.makeTCLGlobal(prefixVar(var)));

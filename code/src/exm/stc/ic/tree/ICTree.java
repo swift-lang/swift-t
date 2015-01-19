@@ -500,6 +500,10 @@ public class ICTree {
   public static class GlobalVars {
     private static final List<Var> vars = new ArrayList<Var>();
 
+    public List<Var> vars() {
+      return Collections.unmodifiableList(vars);
+    }
+
     public void addVariable(Var var) {
       assert(var.storage() == Alloc.GLOBAL_VAR);
       assert(var.defType() == DefType.GLOBAL_USER);

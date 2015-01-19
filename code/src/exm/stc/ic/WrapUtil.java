@@ -209,7 +209,7 @@ public class WrapUtil {
   }
 
   public static boolean inputMustWait(Var in) {
-    return !Types.isPrimUpdateable(in) && in.storage() != Alloc.GLOBAL_CONST;
+    return !Types.isPrimUpdateable(in) && !in.storage().isConst();
   }
 
   /**

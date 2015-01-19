@@ -30,7 +30,6 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -58,9 +57,9 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   public String getConfigEnabledKey() {
     return Settings.OPT_DEAD_CODE_ELIM;
   }
-  
-  
-  
+
+
+
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
     eliminate(logger, f);
@@ -71,12 +70,12 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    * data flow language, the easiest way to do this is to find variables which
    * aren't needed, eliminate those and the instructions which write to them,
    * and then do that repeatedly until we don't have anything more to eliminate.
-   * 
+   *
    * We avoid eliminating any instructions with side-effects, and anything that
    * contributes to the return value of a function. We currently assume that all
    * non-builtin functions have side effects, as well as any builtins operations
    * that are not specifically marked as side-effect free.
-   * 
+   *
    * @param logger
    * @param f
    */
@@ -91,14 +90,14 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       converged = !changeThisIter;
       changed = changed || changeThisIter;
     }
-    
+
     if (changed) {
       inlineContinuations(logger, f.mainBlock());
     }
   }
 
   /**
-   * 
+   *
    * @param logger
    * @param f
    * @return true if changes made
@@ -112,19 +111,19 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
-    List<Component> modifiedComponents = new ArrayList<Component>(); 
+    List<Component> modifiedComponents = new ArrayList<Component>();
     /*
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required
      */
     MultiMap<Var, Var> dependencyGraph = new MultiMap<Var, Var>();
-    
+
     /* Track components so that we know if a write from A may flow to B*/
     ComponentGraph components = new ComponentGraph();
 
     walkFunction(logger, f, removeCandidates, needed, dependencyGraph,
                  modifiedComponents, components);
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
@@ -133,7 +132,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
                    "modifiedComponents: " + modifiedComponents + "\n" +
                    "components: \n" + components);
     }
-    
+
     /*
      * Add in component info.
      * Take into account that we might modify value of containing
@@ -141,7 +140,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
      */
     for (Component written: modifiedComponents) {
       Set<Var> potentialAliases = components.findPotentialAliases(written);
-      
+
       if (logger.isTraceEnabled()) {
         logger.trace("Modified var " + written + " potential aliases: " +
                       potentialAliases);
@@ -155,16 +154,16 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         dependencyGraph.put(maybeAffected, written.var);
       }
     }
-    
+
     if (logger.isTraceEnabled())
       logger.trace("dependencies after component updates: \n" +
                    printDepGraph(dependencyGraph, 4));
     /*
-     * Expand set of needed based on dependency graph 
+     * Expand set of needed based on dependency graph
      */
     StackLite<Var> workStack = new StackLite<Var>();
     workStack.addAll(needed);
-    
+
     while (!workStack.isEmpty()) {
       Var neededVar = workStack.pop();
       // This loop converges as dependencyGraph is taken apart
@@ -174,9 +173,9 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         workStack.addAll(deps);
       }
     }
-    
+
     removeCandidates.removeAll(needed);
-    
+
     if (logger.isDebugEnabled()) {
       logger.debug("Final variables to be eliminated: " + removeCandidates);
     }
@@ -186,18 +185,18 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       f.mainBlock().removeVars(removeCandidates);
       return true;
     }
-  } 
+  }
 
   /**
    * Collect information for dead code elimination
-   * 
+   *
    * @param logger
    * @param f
    * @param removeCandidates list of vars declared in function that
    *                           could be removed
    * @param needed
    * @param dependencyGraph
-   * @param modifiedVars 
+   * @param modifiedVars
    * @param components
    */
   private static void walkFunction(Logger logger, Function f,
@@ -206,17 +205,17 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       ComponentGraph components) {
     StackLite<Block> workStack = new StackLite<Block>();
     workStack.push(f.mainBlock());
-    
+
     needed.addAll(f.getOutputList());
-    
+
     while (!workStack.isEmpty()) {
       Block block = workStack.pop();
 
       walkBlockVars(block, removeCandidates, dependencyGraph);
-      
+
       walkInstructions(logger, block, needed, dependencyGraph,
                        modifiedComponents, components);
-      
+
       Iterator<Continuation> it = block.allComplexStatements().iterator();
       while (it.hasNext()) {
         Continuation c = it.next();
@@ -225,7 +224,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         } else {
           // Add vars for continuation
           needed.addAll(c.requiredVars(true));
-          
+
           for (Block inner: c.getBlocks()) {
             workStack.push(inner);
           }
@@ -268,18 +267,18 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       List<Var> modOutputs = inst.getModifiedOutputs();
       List<Var> readOutputs = inst.getReadOutputs();
       List<Arg> inputs = inst.getInputs();
-      
+
       // First, if multiple modified outputs, need to remove all at once
       if (modOutputs.size() > 1) {
         // Connect mod outputs in ring so that they are
         // strongly connected component
-        for (int i = 0; i < modOutputs.size(); i++) { 
+        for (int i = 0; i < modOutputs.size(); i++) {
           int j = (i + 1) % modOutputs.size();
           dependencyGraph.put(modOutputs.get(i), modOutputs.get(j));
-        } 
+        }
       }
       if (modOutputs.size() > 0) {
-        // Second, modified output depends on all inputs and read outputs. 
+        // Second, modified output depends on all inputs and read outputs.
         // Just use one output if multiple
         Var out = modOutputs.get(0);
         for (Arg in: inputs) {
@@ -288,7 +287,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
                          in.getVar());
           }
         }
-        
+
         for (Var readOut: readOutputs) {
           addOutputDep(logger, inst, dependencyGraph, components, out,
                        readOut);
@@ -297,12 +296,12 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       // Writing mapped var can have side-effect, unless we're storing a
       // mapped value var that was written
       for (Var output: outputs) {
-        if (output.isMapped() != Ternary.FALSE && 
+        if (output.isMapped() != Ternary.FALSE &&
             inst.op != Opcode.STORE_FILE) {
           needed.add(output);
         }
       }
-      
+
       // Update any components that were modified
       List<Component> modComponents = inst.getModifiedComponents();
       if (modComponents != null)
@@ -318,7 +317,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
                         new Component(mod, Arg.NONE));
         }
       }
-      
+
       // Update structural information
       for (ComponentAlias componentAlias: inst.getComponentAliases()) {
         components.addPotentialComponent(componentAlias);
@@ -339,7 +338,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       modifiedComponents.add(component);
     }
   }
-  
+
   private static void addOutputDep(Logger logger,
       Instruction inst, MultiMap<Var, Var> dependencyGraph,
       ComponentGraph components, Var out, Var in) {
@@ -351,7 +350,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   private static void walkBlockVars(Block block,
       HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
     for (Var v: block.getVariables()) {
-      if (v.storage() != Alloc.GLOBAL_CONST) {
+      if (!v.storage().isGlobal()) {
         removeCandidates.add(v);
       }
     }
@@ -388,7 +387,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       ICUtil.prettyPrintVarList(sb, dependencyGraph.get(key));
       sb.append("]\n");
     }
-    
+
     return sb.toString();
   }
 
@@ -400,7 +399,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    */
   private static void inlineContinuations(Logger logger, Block block) {
     Set<Var> noClosedVars = Collections.emptySet();
-    
+
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() == StatementType.CONDITIONAL) {
         for (Block cb: stmt.conditional().getBlocks()) {
@@ -408,7 +407,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         }
       }
     }
-    
+
     ListIterator<Continuation> contIt = block.continuationIterator();
     while (contIt.hasNext()) {
       Continuation c = contIt.next();

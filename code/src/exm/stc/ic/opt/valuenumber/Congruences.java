@@ -611,7 +611,7 @@ public class Congruences implements AliasFinder {
    */
   static boolean isConst(Arg arg) {
     return arg.isConst() ||
-        (arg.isVar() && arg.getVar().storage() == Alloc.GLOBAL_CONST);
+        (arg.isVar() && arg.getVar().storage().isConst());
   }
 
   private Var getCanonicalAlias(Arg varArg) {
