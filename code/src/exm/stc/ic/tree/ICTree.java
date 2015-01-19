@@ -17,6 +17,7 @@ package exm.stc.ic.tree;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -832,6 +833,24 @@ public class ICTree {
 
     public Set<String> usedVarNames() {
       return Collections.unmodifiableSet(usedVarNames);
+    }
+
+
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode,
+                           boolean recursive) {
+
+      // Only rename if we're fully replacing
+      if (mode == RenameMode.REPLACE_VAR) {
+        for (List<Var> varList: Arrays.asList(iList, oList, oListWriteOnly)) {
+          ICUtil.replaceVarsInList(renames, varList, false);
+        }
+
+        WaitVar.replaceVars(blockingInputs, renames);
+      }
+
+      if (recursive) {
+        mainBlock.renameVars(name, renames, mode, recursive);
+      }
     }
   }
 

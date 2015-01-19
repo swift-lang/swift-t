@@ -74,6 +74,10 @@ public class LogHelper {
     log(context.getLevel(), Level.WARN, context.getLocation(), msg);
   }
 
+  public static void uniqueWarn(Context context, String message) {
+    Logging.uniqueWarn(logMsg(0, context.getLocation(), message));
+  }
+
   /**
     ERROR-level with indentation for nice output
    */
@@ -96,20 +100,29 @@ public class LogHelper {
   }
 
   public static void log(int indent, Level level, String location, String msg) {
+    logger.log(level, logMsg(indent, location, msg));
+  }
+
+  private static String logMsg(int indent, String location, String msg) {
     StringBuilder sb = new StringBuilder(256);
     sb.append(location);
     for (int i = 0; i < indent; i++)
       sb.append(' ');
     sb.append(msg);
-    logger.log(level, sb.toString());
+    String s = sb.toString();
+    return s;
   }
 
   public static void log(int indent, Level level, String msg) {
+    logger.log(level, logMsg(indent, msg));
+  }
+
+  private static String logMsg(int indent, String msg) {
     StringBuilder sb = new StringBuilder(256);
     for (int i = 0; i < indent; i++)
       sb.append(' ');
     sb.append(msg);
-    logger.log(level, sb);
+    return sb.toString();
   }
 
   public static boolean isDebugEnabled() {
