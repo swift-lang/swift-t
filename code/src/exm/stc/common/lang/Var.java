@@ -695,8 +695,10 @@ public class Var implements Comparable<Var>, Typed {
       StringBuilder sb = new StringBuilder();
       sb.append(moduleName);
       sb.append(':');
-      sb.append(func);
-      sb.append("():");
+      if (func != null) {
+        sb.append(func);
+        sb.append("():");
+      }
       sb.append(this.line);
       sb.append(":");
       sb.append(this.column);

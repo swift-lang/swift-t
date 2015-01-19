@@ -390,11 +390,12 @@ public abstract class Context {
   public SourceLoc getSourceLoc() {
     String function;
     FunctionContext fc = getFunctionContext();
-    if (fc == null) {
+    if (fc == null || isTopLevel()) {
       function = null;
     } else {
       function = fc.getFunctionName();
     }
+
     return new SourceLoc(getInputFile(), moduleName, function, getLine(), getColumn());
   }
 
