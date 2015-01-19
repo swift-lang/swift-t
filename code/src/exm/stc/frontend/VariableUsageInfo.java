@@ -213,7 +213,7 @@ public class VariableUsageInfo {
    * are not yet assigned or errors if they are assigned but not read.
    *
    */
-  public void detectVariableMisuse(Context context) {
+  public void detectVariableMisuse(Context context, boolean reportUnused) {
     for (VInfo v: this.vars.values()) {
       if (!v.wasDeclaredInCurrentScope()) {
         // variables from outer scopes might be read or written elsewhere
@@ -245,9 +245,11 @@ public class VariableUsageInfo {
       } else {
         // v isn't read, but still should issue warnings
         if (!v.hasMapping()) {
-          // If no mapping, variable just is useful
-          violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " is not used", context));
+          if (reportUnused) {
+            // If no mapping, variable just is useful
+            violations.add(new Violation(ViolationType.WARNING,
+                "Variable " + v.getName() + " is not used", context));
+          }
         } else if (v.isAssigned() == Ternary.FALSE) {
           violations.add(new Violation(ViolationType.WARNING,
               "Mapped variable " + v.getName() + " is not written",
