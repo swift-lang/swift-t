@@ -46,12 +46,25 @@ namespace eval turbine {
         # use void to signal file availability
         set file_td [ allocate_custom "$name" file \
                               $read_refcount $write_refcount {*}${args} ]
-
-        # Format matches file_ref struct type
-        set u [ dict create file $file_td is_mapped $is_mapped ]
+        set handle [ make_file_td $file_td $is_mapped ]
         upvar 1 $name v
-        set v $u
-        return $u
+        set v $handle
+        return $handle
+    }
+
+    # Initialize a file td and return a file handle
+    proc make_file_td { file_td is_mapped } {
+        # Format matches file_ref struct type
+        return [ dict create file $file_td is_mapped $is_mapped ]
+    }
+
+    # Initialize a list of file tds and return file handles
+    proc make_file_tds { file_tds is_mappeds } {
+      set handles [ list ]
+      foreach file_td $file_tds is_mapped $is_mappeds {
+        lappend handles [ make_file_td $file_td $is_mapped ]
+      }
+      return $handles
     }
 
     proc file_handle_from_td { td is_mapped } {
