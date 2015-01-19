@@ -157,7 +157,7 @@ class VariableUsageAnalyzer {
 
     // After having collected data for block, check for unread/unwritten vars
     syncFilePos(fnContext, program);
-    topLevelVui.detectVariableMisuse(fnContext);
+    topLevelVui.detectVariableMisuse(fnContext, false);
 
     reportErrors("at program top level", topLevelVui);
     LogHelper.debug(context, "analyzer: done: top level");
@@ -323,7 +323,7 @@ class VariableUsageAnalyzer {
     // After having collected data for block, check for unread/unwritten vars
     if (checkMisuse) {
       syncFilePos(context, block);
-      vu1.detectVariableMisuse(context);
+      vu1.detectVariableMisuse(context, true);
     }
     VariableUsageInfo vu = vu1;
 
@@ -578,7 +578,7 @@ class VariableUsageAnalyzer {
 
     syncFilePos(context, tree);
     // After walking the update expressions, check for warnings or errors
-    bodyInfo.detectVariableMisuse(context);
+    bodyInfo.detectVariableMisuse(context, true);
 
     outerLoopInfo.mergeNestedScopes(context,
                                     Arrays.asList(bodyInfo, bodyInfo), false);
