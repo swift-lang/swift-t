@@ -114,7 +114,7 @@ public class DeadCodeEliminator implements OptimizerPass {
 
     /* Set of vars that are definitely required */
     HashSet<Var> needed = new HashSet<Var>();
-    needed.addAll(globalVars.vars());
+    needed.addAll(globalVars.getVariables());
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
