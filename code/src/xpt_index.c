@@ -49,6 +49,11 @@ adlb_code xlb_xpt_index_init(void)
 
     // Check that the calculation is valid
     assert(ADLB_Locate(container_id) == xlb_comm_rank);
+    assert(container_id >= xpt_index_start);
+    assert(container_id < xpt_index_start + xlb_servers);
+
+    DEBUG("server %i xpt container "ADLB_PRID, xlb_comm_rank,
+          ADLB_PRID_ARGS(container_id, ADLB_DSYM_NULL));
 
     adlb_type_extra extra;
     extra.CONTAINER.key_type = ADLB_DATA_TYPE_BLOB;
@@ -213,9 +218,21 @@ static inline adlb_datum_id id_for_rank(int comm_rank)
 static inline adlb_datum_id id_for_server(int server_num)
 {
   assert(server_num >= 0 && server_num < xlb_servers);
+  assert(xpt_index_start <= -xlb_servers);
   // Will be in range [xpt_index_start, xpt_index_start + xlb_servers)
   // ADLB_Locate must map this id to the right server
-  return xpt_index_start + (server_num - (xpt_index_start % xlb_servers));
+
+  // Compensate for fact that xpt_index_start may not be multiple of
+  // xlb_servers
+  // 0 <= offset < xlb_servers
+  adlb_datum_id offset = (xpt_index_start % xlb_servers) + xlb_servers;
+
+  adlb_datum_id id = xpt_index_start +
+          (server_num + offset) % xlb_servers;
+
+  DEBUG("xpt_index_start %"PRId64" server_num %i xlb_servers %i => %"PRId64,
+        xpt_index_start, server_num, xlb_servers, id);
+  return id;
 }
 
 /*
@@ -224,8 +241,9 @@ static inline adlb_datum_id id_for_server(int server_num)
 __attribute__((always_inline))
 static inline adlb_datum_id id_for_hash(uint32_t key_hash)
 {
-  // Must be negative number in [-xlb_servers, -1] inclusive
-  return -(int32_t)(key_hash % (uint32_t)xlb_servers) - 1;
+  // Must be negative number in range
+  // [xpt_index_start, xpt_index_start + xlb_serversservers)
+  return (int32_t)(key_hash % (uint32_t)xlb_servers) + xpt_index_start;
 }
 
 __attribute__((always_inline))
