@@ -1242,13 +1242,7 @@ static adlb_code xlb_block_worker(bool blocking)
 int
 ADLB_Locate(adlb_datum_id id)
 {
-  int offset = (int) (id % xlb_servers);
-  if (offset < 0)
-  {
-    // Negative numbers continue pattern, e.g. -1 maps to last server
-    // and -xlb_servers maps to first server.
-    offset += xlb_servers;
-  }
+  int offset = abs((int) (id % xlb_servers));
   int rank = xlb_comm_size - xlb_servers + offset;
   // DEBUG("ADLB_Locate(%li) => %i\n", id, rank);
   return rank;

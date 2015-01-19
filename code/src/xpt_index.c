@@ -224,15 +224,12 @@ static inline adlb_datum_id id_for_server(int server_num)
 
   // Compensate for fact that xpt_index_start may not be multiple of
   // xlb_servers
-  // 0 <= offset < xlb_servers
-  adlb_datum_id offset = (xpt_index_start % xlb_servers) + xlb_servers;
+  // -xlb_servers < offset <= 0
+  adlb_datum_id offset = xpt_index_start % xlb_servers;
 
-  adlb_datum_id id = xpt_index_start +
-          (server_num + offset) % xlb_servers;
+  adlb_datum_id shift = (xlb_servers - (server_num + offset)) % xlb_servers;
 
-  DEBUG("xpt_index_start %"PRId64" server_num %i xlb_servers %i => %"PRId64,
-        xpt_index_start, server_num, xlb_servers, id);
-  return id;
+  return xpt_index_start + shift;
 }
 
 /*
