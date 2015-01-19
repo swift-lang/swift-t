@@ -88,6 +88,10 @@ public class HoistLoops implements OptimizerPass {
         global.declare(gv);
       }
 
+      for (Var gv: prog.globalVars().vars()) {
+        global.declare(gv);
+      }
+
       // Set up map for top block of function
       HoistTracking mainBlockState =
           global.makeChild(f.mainBlock(), true, ExecContext.control(), 0, 0);
