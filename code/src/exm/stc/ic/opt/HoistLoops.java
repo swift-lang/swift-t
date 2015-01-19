@@ -441,7 +441,7 @@ public class HoistLoops implements OptimizerPass {
         int declareDepth = state.declareMap.getDepth(out);
         if (logger.isTraceEnabled())
           logger.trace("DeclareDepth of " + out + " is " + declareDepth);
-        assert(declareDepth >= 0);
+        assert(declareDepth >= 0) : declareDepth + " " + out;
 
         // Can't hoist out of loop if variable declared outside loop
         if (declareDepth > state.maxLoopHoist && !inst.isIdempotent()) {

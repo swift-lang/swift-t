@@ -107,7 +107,7 @@ public class FixupVariables implements OptimizerPass {
     }
 
     if (updateLists)
-      removeUnusedGlobals(prog.constants(), referencedGlobals);
+      removeUnusedGlobals(prog.constants(), prog.globalVars(), referencedGlobals);
   }
 
   public static void fixupFunction(Logger logger, GlobalConstants constants,
@@ -630,12 +630,19 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static void removeUnusedGlobals(GlobalConstants constants,
-       Set<Var> referencedGlobals) {
-    Set<Var> globNames = new HashSet<Var>(
-                                constants.map().keySet());
-    globNames.removeAll(referencedGlobals);
-    for (Var unused: globNames) {
-      constants.remove(unused);
+       GlobalVars globalVars, Set<Var> referencedGlobals) {
+    Set<Var> globalsToRemove = new HashSet<Var>();
+    globalsToRemove.addAll(constants.map().keySet());
+    globalsToRemove.addAll(globalVars.vars());
+
+    globalsToRemove.removeAll(referencedGlobals);
+    for (Var unused: globalsToRemove) {
+      if (unused.storage() == Alloc.GLOBAL_CONST) {
+        constants.remove(unused);
+      } else {
+        assert(unused.storage() == Alloc.GLOBAL_VAR);
+        globalVars.removeVariable(unused);
+      }
     }
   }
 }
