@@ -37,16 +37,17 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.componentaliases.Component;
 import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.componentaliases.ComponentGraph;
-import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalVars;
+import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.Opcode;
 
-public class DeadCodeEliminator extends FunctionOptimizerPass {
+public class DeadCodeEliminator implements OptimizerPass {
 
   @Override
   public String getPassName() {
@@ -58,11 +59,11 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     return Settings.OPT_DEAD_CODE_ELIM;
   }
 
-
-
   @Override
-  public void optimize(Logger logger, Function f) throws UserException {
-    eliminate(logger, f);
+  public void optimize(Logger logger, Program program) throws UserException {
+    for (Function f: program.getFunctions()) {
+      eliminate(logger, f, program.globalVars());
+    }
   }
 
   /**
@@ -78,15 +79,18 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    *
    * @param logger
    * @param f
+   * @param globalVars
    */
-  public static void eliminate(Logger logger, Function f) {
+  public static void eliminate(Logger logger, Function f, GlobalVars globalVars) {
     boolean converged = false;
     boolean changed = false;
     while (!converged) {
-      // Dead variable elimination can allow dead code blocks to be removed,
-      // which can allow more variables to be removed.  So we should just
-      // iterate until no more changes were made
-      boolean changeThisIter = eliminateIter(logger, f);
+      /*
+       * Dead variable elimination can allow dead code blocks to be removed,
+       * which can allow more variables to be removed.  So we should just
+       * iterate until no more changes were made
+       */
+      boolean changeThisIter = eliminateIter(logger, f, globalVars);
       converged = !changeThisIter;
       changed = changed || changeThisIter;
     }
@@ -100,14 +104,17 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    *
    * @param logger
    * @param f
+   * @param globalVars
    * @return true if changes made
    */
-  private static boolean eliminateIter(Logger logger, Function f) {
+  private static boolean eliminateIter(Logger logger, Function f,
+                                        GlobalVars globalVars) {
     /* All vars defined in function blocks that could possibly be eliminated */
     HashSet<Var> removeCandidates = new HashSet<Var>();
 
     /* Set of vars that are definitely required */
     HashSet<Var> needed = new HashSet<Var>();
+    needed.addAll(globalVars.vars());
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
