@@ -116,6 +116,11 @@ public abstract class Context {
   public abstract GlobalContext getGlobals();
 
   /**
+   * @return whether this is logically a top-level context
+   */
+  public abstract boolean isTopLevel();
+  
+  /**
    * @return global info about foreign functions
    */
   public abstract ForeignFunctions getForeignFunctions();
@@ -196,6 +201,12 @@ public abstract class Context {
 
   public Var declareVariable(Var variable)
           throws DoubleDefineException {
+
+    if (variable.defType().isGlobal() && getGlobals() != this) {
+      // Ensure globals get declared in global context
+      return getGlobals().declareVariable(variable);
+    }
+
     String name = variable.name();
     DefKind kind;
     if (Types.isFunction(variable)) {

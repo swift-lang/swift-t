@@ -640,7 +640,7 @@ public class ExprWalker {
               VarRepr.backendVars(waitVars),
               WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
       openedWait = true;
-      callContext = new LocalContext(context);
+      callContext = LocalContext.fnSubcontext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
         Var value = retrieveToVar(callContext, x.val2);
         propVals.put(x.val1, value.asArg());
@@ -1034,7 +1034,7 @@ public class ExprWalker {
         realIList.add(input);
       } else if (Types.isAssignableRefTo(inputType, expType)) {
         if (waitContext == null) {
-          waitContext = new LocalContext(context);
+          waitContext = LocalContext.fnSubcontext(context);
         }
         Var derefed;
         derefed = waitContext.createTmpAliasVar(expType);

@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -44,20 +45,52 @@ public class LocalContext extends Context {
   private final Context parent;
   private final GlobalContext globals;
   private final FunctionContext functionContext;
+  private final boolean isTopLevel;
 
-  public LocalContext(Context parent) {
-    this(parent, null);
-  }
-
-  public LocalContext(Context parent, String functionName) {
+  public LocalContext(Context parent, String functionName, boolean isTopLevel) {
     super(parent.getLogger(), parent.getLevel() + 1);
     this.functionContext = functionName != null ?
           new FunctionContext(functionName) : null;
     this.parent = parent;
     this.globals = parent.getGlobals();
+    this.isTopLevel = isTopLevel;
     inputFile = parent.inputFile;
     line = parent.line;
     col = parent.col;
+  }
+
+  /**
+   * Subcontext of a function
+   * @param parent
+   * @return
+   */
+  public static LocalContext fnSubcontext(Context parent) {
+    return new LocalContext(parent, null, false);
+  }
+
+  /**
+   * Context for top level of function body
+   * @param global
+   * @param functionName
+   * @return
+   */
+  public static LocalContext fnContext(Context global,
+                                             String functionName) {
+    return new LocalContext(global, functionName, false);
+  }
+
+  /**
+   * Context for top-level code
+   * @param global
+   * @return
+   */
+  public static LocalContext topLevelContext(GlobalContext global) {
+    return new LocalContext(global, Constants.ENTRY_FUNCTION, true);
+  }
+
+  @Override
+  public boolean isTopLevel() {
+    return isTopLevel;
   }
 
   @Override
