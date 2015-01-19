@@ -92,6 +92,8 @@ public class ICTree {
 
     private final GlobalConstants constants = new GlobalConstants();
 
+    private final GlobalVars globalVars = new GlobalVars();
+
     private final ForeignFunctions foreignFunctions;
 
     private final ArrayList<Function> functions = new ArrayList<Function>();
@@ -149,6 +151,14 @@ public class ICTree {
       }
       logger.debug("Done generating work types");
 
+      logger.debug("Generating global constants");
+      constants.generate(logger, gen);
+      logger.debug("Done generating global constants");
+
+      logger.debug("Generating global variables");
+      globalVars.generate(logger, gen);
+      logger.debug("Done generating global variables");
+
       logger.debug("Generating builtins");
       for (BuiltinFunction f: builtinFuns) {
         f.generate(logger, gen, info);
@@ -161,8 +171,6 @@ public class ICTree {
         f.generate(logger, gen, info);
       }
       logger.debug("Done generating functions");
-
-      constants.generate(logger, gen);
 
       gen.finalize();
     }
@@ -285,7 +293,11 @@ public class ICTree {
       return constants;
     }
 
-    public ForeignFunctions getForeignFunctions() {
+    public GlobalVars globalVars() {
+      return globalVars;
+    }
+
+    public ForeignFunctions foreignFunctions() {
       return foreignFunctions;
     }
 
@@ -316,13 +328,16 @@ public class ICTree {
         out.append(wc.toString() + "\n");
       }
 
-      constants.prettyPrint(out);
-      out.append("\n");
-
       for (BuiltinFunction f: builtinFuns) {
         f.prettyPrint(out);
         out.append("\n");
       }
+
+      constants.prettyPrint(out);
+      out.append("\n");
+
+      globalVars.prettyPrint(out);
+      out.append("\n");
 
       for (Function f: functions) {
         f.prettyPrint(out);
@@ -464,14 +479,11 @@ public class ICTree {
     }
 
     public void generate(Logger logger, CompilerBackend gen) {
-      // Global Constants
-      logger.debug("Generating global constants");
       for (Entry<Var, Arg> c: globalConsts.entrySet()) {
         Var var = c.getKey();
         Arg val = c.getValue();
         gen.addGlobalConst(var, val);
       }
-      logger.debug("Done generating global constants");
     }
 
     public void prettyPrint(StringBuilder out) {
@@ -482,9 +494,31 @@ public class ICTree {
         out.append(" as " + val.futureType().typeName());
         out.append("\n");
       }
+    }
+  }
 
+  public static class GlobalVars {
+    private static final List<Var> vars = new ArrayList<Var>();
+
+    public void addVariable(Var var) {
+      assert(var.storage() == Alloc.GLOBAL_VAR);
+      assert(var.defType() == DefType.GLOBAL_USER);
+
+      vars.add(var);
     }
 
+    public void generate(Logger logger, CompilerBackend gen) {
+      for (Var var: vars) {
+        gen.addGlobalVar(var);
+      }
+    }
+
+    public void prettyPrint(StringBuilder out) {
+      for (Var var: vars) {
+        prettyPrintVarBasic(out, var);
+        out.append("\n");
+      }
+    }
   }
 
   public static class BuiltinFunction {
@@ -1168,12 +1202,9 @@ public class ICTree {
     public void prettyPrint(StringBuilder sb, String indent) {
       for (Var v: variables) {
         sb.append(indent);
-        sb.append("alloc " + v.type().typeName() + " " + v.name() +
-                " <" + v.storage().toString().toLowerCase() + ">");
 
-        if (v.mappedDecl()) {
-          sb.append(" @mapped");
-        }
+        prettyPrintVarBasic(sb, v);
+
         if (initReadRefcounts.containsKey(v)) {
           sb.append(" <readers=" + initReadRefcounts.get(v) + ">");
         }
@@ -1826,5 +1857,14 @@ public class ICTree {
     VALUE, // Replace where same value
     REFERENCE, // Replace where reference to same thing is appropriate
     REPLACE_VAR, // Replace var everywhere (e.g. if renaming)
+  }
+
+  private static void prettyPrintVarBasic(StringBuilder sb, Var v) {
+    sb.append("alloc " + v.type().typeName() + " " + v.name() +
+            " <" + v.storage().toString().toLowerCase() + ">");
+
+    if (v.mappedDecl()) {
+      sb.append(" @mapped");
+    }
   }
 }

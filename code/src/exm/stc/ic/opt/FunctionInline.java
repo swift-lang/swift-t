@@ -137,7 +137,7 @@ public class FunctionInline implements OptimizerPass {
 
   private void pruneBuiltins(Logger logger, Program program,
       FuncCallFinder finder) {
-    ForeignFunctions foreignFuncs = program.getForeignFunctions();
+    ForeignFunctions foreignFuncs = program.foreignFunctions();
     Iterator<BuiltinFunction> it = program.builtinIterator();
     while (it.hasNext()) {
       BuiltinFunction f = it.next();

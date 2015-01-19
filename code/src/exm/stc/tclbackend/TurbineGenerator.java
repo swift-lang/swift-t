@@ -3176,6 +3176,11 @@ public class TurbineGenerator implements CompilerBackend {
     globInit.add(setCmd);
   }
 
+  @Override
+  public void addGlobalVar(Var var) {
+    // TODO: unimplemented
+  }
+
   private static Value varToExpr(Var v) {
     return TclUtil.varToExpr(v);
   }
