@@ -38,6 +38,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
@@ -84,16 +85,16 @@ public class RefcountPass implements OptimizerPass {
 
     for (Function f: program.getFunctions()) {
       logger.trace("Entering function " + f.getName());
-      recurseOnBlock(logger, f, f.mainBlock(), new RCTracker(),
-                     new TopDownInfo());
+      recurseOnBlock(logger, program.globalVars(), f, f.mainBlock(),
+                     new RCTracker(), new TopDownInfo());
     }
 
     this.functionMap = null;
     this.placer = null;
   }
 
-  private void recurseOnBlock(Logger logger, Function f, Block block,
-      RCTracker increments, TopDownInfo parentInfo) {
+  private void recurseOnBlock(Logger logger, GlobalVars globals, Function f,
+      Block block, RCTracker increments, TopDownInfo parentInfo) {
 
     /*
      * Traverse in bottom-up order so that we can access refcount info in child
@@ -111,7 +112,7 @@ public class RefcountPass implements OptimizerPass {
         }
         case CONDITIONAL: {
           // Recurse on conditionals to add refcounts
-          recurseOnCont(logger, f, stmt.conditional(), info);
+          recurseOnCont(logger, globals, f, stmt.conditional(), info);
           break;
         }
         default:
@@ -121,15 +122,15 @@ public class RefcountPass implements OptimizerPass {
 
     // Recurse on remaining continuations to add refcounts
     for (Continuation cont: block.getContinuations()) {
-      recurseOnCont(logger, f, cont, info);
+      recurseOnCont(logger, globals, f, cont, info);
     }
 
     // Now add refcounts to this block
-    processBlock(logger, f, block, increments, parentInfo);
+    processBlock(logger, globals, f, block, increments, parentInfo);
   }
 
-  private void recurseOnCont(Logger logger, Function f, Continuation cont,
-      TopDownInfo info) {
+  private void recurseOnCont(Logger logger, GlobalVars globals, Function f,
+      Continuation cont, TopDownInfo info) {
 
     for (Block block: cont.getBlocks()) {
       // Build separate copy for each block
@@ -138,7 +139,7 @@ public class RefcountPass implements OptimizerPass {
       RCTracker increments = new RCTracker(contInfo.aliases);
       addDecrementsBlocksInsideCont(cont, increments);
 
-      recurseOnBlock(logger, f, block, increments, contInfo);
+      recurseOnBlock(logger, globals, f, block, increments, contInfo);
     }
 
 
@@ -159,8 +160,8 @@ public class RefcountPass implements OptimizerPass {
    *          assign alias vars from parent blocks that we can immediately
    *          manipulate refcount of
    */
-  private void processBlock(Logger logger, Function fn, Block block,
-      RCTracker increments, TopDownInfo parentInfo) {
+  private void processBlock(Logger logger, GlobalVars globals, Function fn,
+      Block block, RCTracker increments, TopDownInfo parentInfo) {
     // First collect up all required reference counting ops in block
     countBlockIncrements(block, increments);
 
@@ -168,8 +169,8 @@ public class RefcountPass implements OptimizerPass {
 
     if (RCUtil.mergeEnabled()) {
       // Second put saved refcounts back into IC
-      placeRefcounts(logger, fn, block, increments,
-          parentInfo.initAliasVars);
+      placeRefcounts(logger, globals, fn, block, increments,
+                      parentInfo.initAliasVars);
     }
 
   }
@@ -249,8 +250,8 @@ public class RefcountPass implements OptimizerPass {
   }
 
 
-  private void placeRefcounts(Logger logger, Function fn, Block block,
-      RCTracker increments, Set<Var> parentAssignedAliasVars) {
+  private void placeRefcounts(Logger logger, GlobalVars globals, Function fn,
+      Block block, RCTracker increments, Set<Var> parentAssignedAliasVars) {
 
     // First canonicalize so we can merge refcounts
     increments.canonicalize();
@@ -269,7 +270,8 @@ public class RefcountPass implements OptimizerPass {
     // if they can be combined with increments here
     pullUpRefIncrements(block, increments);
 
-    placer.placeAll(logger, fn, block, increments, parentAssignedAliasVars);
+    placer.placeAll(logger, globals, fn, block, increments,
+                    parentAssignedAliasVars);
   }
 
   /**

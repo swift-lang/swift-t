@@ -33,6 +33,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
@@ -778,6 +779,8 @@ public class ICInstructions {
         String frontendName, List<Var> outputs, List<Arg> inputs,
         TaskProps props, ForeignFunctions foreignFunctions) {
       super(op);
+      assert(!functionName.equals(Constants.ENTRY_FUNCTION)) :
+             "Can't call entry point";
       this.functionName = functionName;
       this.frontendName = frontendName;
       this.outputs = new ArrayList<Var>(outputs);

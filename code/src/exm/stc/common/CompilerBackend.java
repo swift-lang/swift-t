@@ -118,7 +118,7 @@ public interface CompilerBackend {
    *
    * @param name
    */
-  public void declareGlobalVars(List<Var> vars);
+  public void declareGlobalVars(List<VarDecl> vars);
 
   /**
    * Let backend know about struct type that will be used.

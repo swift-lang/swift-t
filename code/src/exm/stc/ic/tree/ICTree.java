@@ -607,6 +607,67 @@ public class ICTree {
       refcountMap.put(blockVar, Arg.newInt(val));
     }
 
+    /**
+     * Modify initial refcount from base
+     */
+    public void modifyInitRefcount(Var var, RefCountType rcType, long incr) {
+      long baseRC = RefCounting.baseRefCount(var, rcType, true, true);
+      setInitRefcount(var, rcType, baseRC + incr);
+    }
+
+    public List<VarDecl> getDeclarations() {
+      Logger logger = Logging.getSTCLogger();
+      List<VarDecl> declarations = new ArrayList<VarDecl>();
+      for (Var v: variables) {
+        logger.trace("generating variable decl for " + v.toString());
+        Arg initReaders = getInitReadRefcount(v);
+        Arg initWriters = getInitWriteRefcount(v);
+
+        if (initReaders == null) {
+          logger.trace("Init readers: " + v.name() + " null");
+        } else {
+          logger.trace("Init readers: " + v.name() + " " + initReaders);
+        }
+
+        if (initWriters == null) {
+          logger.trace("Init writers: " + v.name() + " null");
+        } else {
+          logger.trace("Init writers: " + v.name() + " " + initWriters);
+        }
+
+        // Initialize refcounts to default value if not
+        //  explicitly overridden and check for bad refcounts
+        if (v.storage() == Alloc.ALIAS ||
+            !RefCounting.trackReadRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initReaders == null) : v + " " +   initReaders;
+        }
+
+        if (v.storage() == Alloc.ALIAS ||
+            !RefCounting.trackWriteRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initWriters == null);
+        }
+
+        if (v.storage() != Alloc.ALIAS) {
+          // If not an alias, need to select refcount
+          if (initReaders == null) {
+            // Init to default refcount
+            long baseReaders = RefCounting.baseReadRefCount(v, true, true);
+            initReaders = Arg.newInt(baseReaders);
+          }
+
+          if (initWriters == null) {
+            // Init to default refcount
+            long baseWriters = RefCounting.baseWriteRefCount(v, true, true);
+            initWriters = Arg.newInt(baseWriters);
+          }
+        }
+
+        declarations.add(new VarDecl(v, initReaders, initWriters));
+      }
+      return declarations;
+    }
   }
 
   public static class GlobalVars extends Variables {
@@ -620,7 +681,7 @@ public class ICTree {
     }
 
     public void generate(Logger logger, CompilerBackend gen) {
-      gen.declareGlobalVars(getVariables());
+      gen.declareGlobalVars(getDeclarations());
     }
 
     public void prettyPrint(StringBuilder out) {
@@ -1239,8 +1300,8 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
 
       logger.trace("Generate code for block of type " + this.type.toString());
-      // Pass variable declarations as batch
-      generateBlockVariables(logger, gen);
+
+      generateBlockVariables(gen);
 
       for (Statement stmt: statements) {
         stmt.generate(logger, gen, info);
@@ -1264,57 +1325,9 @@ public class ICTree {
 
     }
 
-    private void generateBlockVariables(Logger logger, CompilerBackend gen) {
-      List<VarDecl> declarations = new ArrayList<VarDecl>();
-      for (Var v: variables.getVariables()) {
-        logger.trace("generating variable decl for " + v.toString());
-        Arg initReaders = variables.getInitReadRefcount(v);
-        Arg initWriters = variables.getInitWriteRefcount(v);
-
-        if (initReaders == null) {
-          logger.trace("Init readers: " + v.name() + " null");
-        } else {
-          logger.trace("Init readers: " + v.name() + " " + initReaders);
-        }
-
-        if (initWriters == null) {
-          logger.trace("Init writers: " + v.name() + " null");
-        } else {
-          logger.trace("Init writers: " + v.name() + " " + initWriters);
-        }
-
-        // Initialize refcounts to default value if not
-        //  explicitly overridden and check for bad refcounts
-        if (v.storage() == Alloc.ALIAS ||
-            !RefCounting.trackReadRefCount(v)) {
-          // Check we don't have refcount for untracked var
-          assert(initReaders == null) : v + " " +   initReaders;
-        }
-
-        if (v.storage() == Alloc.ALIAS ||
-            !RefCounting.trackWriteRefCount(v)) {
-          // Check we don't have refcount for untracked var
-          assert(initWriters == null);
-        }
-
-        if (v.storage() != Alloc.ALIAS) {
-          // If not an alias, need to select refcount
-          if (initReaders == null) {
-            // Init to default refcount
-            long baseReaders = RefCounting.baseReadRefCount(v, true, true);
-            initReaders = Arg.newInt(baseReaders);
-          }
-
-          if (initWriters == null) {
-            // Init to default refcount
-            long baseWriters = RefCounting.baseWriteRefCount(v, true, true);
-            initWriters = Arg.newInt(baseWriters);
-          }
-        }
-
-        declarations.add(new VarDecl(v, initReaders, initWriters));
-      }
-      gen.declare(declarations);
+    private void generateBlockVariables(CompilerBackend gen) {
+      // Pass variable declarations as batch
+      gen.declare(variables.getDeclarations());
     }
 
     public void prettyPrint(StringBuilder sb, String indent) {
@@ -1901,10 +1914,8 @@ public class ICTree {
      */
     public void modifyInitRefcount(Var blockVar, RefCountType rcType,
                                    long incr) {
-      long baseRC = RefCounting.baseRefCount(blockVar, rcType, true, true);
-      setInitRefcount(blockVar, rcType, baseRC + incr);
+      variables.modifyInitRefcount(blockVar, rcType, incr);
     }
-
 
     public void setInitRefcount(Var blockVar, RefCountType rcType,
                                    long val) {

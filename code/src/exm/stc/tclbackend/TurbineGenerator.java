@@ -287,7 +287,7 @@ public class TurbineGenerator implements CompilerBackend {
   private final List<Pair<Integer, DebugSymbolData>> debugSymbols
               = new ArrayList<Pair<Integer, DebugSymbolData>>();
 
-  private final List<Var> globalVars = new ArrayList<Var>();
+  private final List<VarDecl> globalVars = new ArrayList<VarDecl>();
 
   public TurbineGenerator(Logger logger, String timestamp)
   {
@@ -3174,7 +3174,9 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void declareGlobalVars(List<Var> vars) {
+  public void declareGlobalVars(List<VarDecl> vars) {
+
+    // TODO: support for global files
     this.globalVars.addAll(vars);
   }
 
@@ -3182,13 +3184,12 @@ public class TurbineGenerator implements CompilerBackend {
     List<String> varNames = new ArrayList<String>();
     List<TclList> createArgs = new ArrayList<TclList>();
 
-    for (Var var: globalVars) {
-      assert(var.storage() == Alloc.GLOBAL_VAR);
-      varNames.add(prefixVar(var));
+    for (VarDecl decl: globalVars) {
+      // TODO: don't handle allocating files properly
+      assert(decl.var.storage() == Alloc.GLOBAL_VAR);
+      varNames.add(prefixVar(decl.var));
 
-      // TODO: variable number of writers, skip readers
-      createArgs.add(createArgs(var, Arg.ONE, Arg.ONE));
-
+      createArgs.add(createArgs(decl.var, decl.initReaders, decl.initWriters));
     }
     return Turbine.batchDeclareGlobals(varNames, createArgs);
   }
