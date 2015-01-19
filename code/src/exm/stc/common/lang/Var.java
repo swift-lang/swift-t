@@ -96,10 +96,11 @@ public class Var implements Comparable<Var>, Typed {
     LOCAL,
     /** Global constant store variable, allocated at program
      *  start. */
-    GLOBAL_CONST;
-
+    GLOBAL_CONST,
+    /** Global variable, allocated at program start */
+    GLOBAL_VAR;
     public boolean allocUponBlockEntry() {
-      return this == STACK || this == TEMP;
+      return this == STACK || this == TEMP || this == GLOBAL_VAR;
     }
   }
 
@@ -110,6 +111,8 @@ public class Var implements Comparable<Var>, Typed {
   {
     /** Local variable */
     LOCAL_USER,
+    /** Global variable */
+    GLOBAL_USER,
     /** Compiler-generated local */
     LOCAL_COMPILER,
     /** Input argument */
@@ -121,6 +124,10 @@ public class Var implements Comparable<Var>, Typed {
 
     public boolean isLocal() {
       return this == LOCAL_COMPILER || this == LOCAL_USER;
+    }
+
+    public boolean isGlobal() {
+      return this == DefType.GLOBAL_CONST || this == DefType.GLOBAL_USER;
     }
   }
 

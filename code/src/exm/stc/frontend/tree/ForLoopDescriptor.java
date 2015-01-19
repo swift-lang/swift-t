@@ -336,7 +336,7 @@ public class ForLoopDescriptor {
 
 
   public Context createIterationContext(Context context) throws UserException {
-    Context bodyContext = new LocalContext(context);
+    Context bodyContext = LocalContext.fnSubcontext(context);
     for (LoopVar lv: this.getLoopVars()) {
       if (!lv.declaredOutsideLoop) {
         bodyContext.declareVariable(lv.var);

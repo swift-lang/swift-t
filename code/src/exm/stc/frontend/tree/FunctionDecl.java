@@ -84,7 +84,7 @@ public class FunctionDecl {
   public static FunctionDecl fromAST(Context context, String function,
                  SwiftAST inArgTree, SwiftAST outArgTree, Set<String> typeParams)
        throws UserException {
-    LocalContext typeVarContext = new LocalContext(context, function);
+    LocalContext typeVarContext = LocalContext.fnContext(context, function);
 
     for (String typeParam: typeParams) {
       typeVarContext.defineType(typeParam, new TypeVariable(typeParam));

@@ -280,7 +280,7 @@ public class ForeachLoop {
       boolean includeIndexFuture) throws UserException {
     // Set up the context for the loop body with loop variables
     Type arrayType = findArrayType(context);
-    loopBodyContext = new LocalContext(context);
+    loopBodyContext = LocalContext.fnSubcontext(context);
     if (countVarName != null) {
       if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {
         throw new UserException("Cannot have iteration counter with foreach "

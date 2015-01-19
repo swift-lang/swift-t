@@ -337,7 +337,7 @@ public class ASTWalker {
                SwiftAST fileTree) throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
 
-    Context context = globalContext.getTopLevelCodeContext();
+    Context context = LocalContext.topLevelContext(globalContext);
     syncFilePos(context, fileTree);
 
     List<SwiftAST> stmts = new ArrayList<SwiftAST>();
@@ -570,7 +570,7 @@ public class ASTWalker {
       switch (token) {
         case ExMParser.BLOCK:
           // Create a local context (stack frame) for this nested block
-          LocalContext nestedContext = new LocalContext(context);
+          LocalContext nestedContext = LocalContext.fnSubcontext(context);
           // Set up nested stack frame
 
           backend.startNestedBlock();
@@ -745,7 +745,7 @@ public class ASTWalker {
           context.getFunctionContext().constructName("explicit-wait"),
           VarRepr.backendVars(waitEvaled),
           WaitMode.WAIT_ONLY, true, wait.isDeepWait(), ExecTarget.nonDispatchedControl());
-    block(new LocalContext(context), wait.getBlock());
+    block(LocalContext.fnSubcontext(context), wait.getBlock());
     backend.endWaitStatement();
   }
 
@@ -801,15 +801,15 @@ public class ASTWalker {
                 VarRepr.backendVar(conditionVar).asList(),
                 WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
-    Context waitContext = new LocalContext(context);
+    Context waitContext = LocalContext.fnSubcontext(context);
     Var condVal = exprWalker.retrieveToVar(waitContext, conditionVar);
     backend.startIfStatement(VarRepr.backendArg(condVal),
                              ifStmt.hasElse());
-    block(new LocalContext(waitContext), ifStmt.getThenBlock());
+    block(LocalContext.fnSubcontext(waitContext), ifStmt.getThenBlock());
 
     if (ifStmt.hasElse()) {
       backend.startElseBlock();
-      block(new LocalContext(waitContext), ifStmt.getElseBlock());
+      block(LocalContext.fnSubcontext(waitContext), ifStmt.getElseBlock());
     }
     backend.endIfStatement();
     backend.endWaitStatement();
@@ -919,7 +919,7 @@ public class ASTWalker {
                 VarRepr.backendVar(switchVar).asList(),
                 WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
-    Context waitContext = new LocalContext(context);
+    Context waitContext = LocalContext.fnSubcontext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
                                                      switchVar);
 
@@ -930,7 +930,7 @@ public class ASTWalker {
     backend.startSwitch(VarRepr.backendArg(switchVal), sw.getCaseLabels(),
                                                          sw.hasDefault());
     for (SwiftAST caseBody : sw.getCaseBodies()) {
-      block(new LocalContext(waitContext), caseBody);
+      block(LocalContext.fnSubcontext(waitContext), caseBody);
       backend.endCase();
     }
     backend.endSwitch();
@@ -989,7 +989,7 @@ public class ASTWalker {
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
              VarRepr.backendVars(rangeBounds), WaitMode.WAIT_ONLY, false,
              false, ExecTarget.nonDispatchedControl());
-    Context waitContext = new LocalContext(context);
+    Context waitContext = LocalContext.fnSubcontext(context);
     Var startVal = exprWalker.retrieveToVar(waitContext, start);
     Var endVal = exprWalker.retrieveToVar(waitContext, end);
     Var stepVal = exprWalker.retrieveToVar(waitContext, step);
@@ -1071,7 +1071,7 @@ public class ASTWalker {
           VarRepr.backendVar(arrayVar).asList(),
           WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
-      outsideLoopContext = new LocalContext(context);
+      outsideLoopContext = LocalContext.fnSubcontext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
                               arrayVar.type().memberType(), false, true);
       exprWalker.retrieveRef(realArray, arrayVar, false);
@@ -1224,7 +1224,7 @@ public class ASTWalker {
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
 
     // Create new context for loop body to execute when condition passes
-    Context loopBodyContext = new LocalContext(loopIterContext);
+    Context loopBodyContext = LocalContext.fnSubcontext(loopIterContext);
 
     // If this iteration is good, run all of the stuff in the block
     block(loopBodyContext, forLoop.getBody());
@@ -1249,7 +1249,7 @@ public class ASTWalker {
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals
     // of loop vars
-    Context loopFinalizeContext = new LocalContext(loopIterContext);
+    Context loopFinalizeContext = LocalContext.fnSubcontext(loopIterContext);
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         exprWalker.copyByValue(loopFinalizeContext,
@@ -1294,7 +1294,7 @@ public class ASTWalker {
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
     backend.loopBreak();
     backend.startElseBlock();
-    Context bodyContext = new LocalContext(iterContext);
+    Context bodyContext = LocalContext.fnSubcontext(iterContext);
     block(bodyContext, loop.getBody());
 
     // Check the condition type now that all loop body vars have been declared
@@ -1433,8 +1433,23 @@ public class ASTWalker {
       }
     }
 
+    /*
+     * Store top-level variables in such a way that they are global accessible.
+     * This is done to handle the fact that for some purposes, the top-level code
+     * is considered a local context.
+     */
+    Alloc storage;
+    DefType defType;
+    if (context.isTopLevel()) {
+      storage = Alloc.GLOBAL_VAR;
+      defType = DefType.GLOBAL_USER;
+    } else {
+      defType = DefType.LOCAL_USER;
+      storage = Alloc.STACK;
+    }
+
     Var var = varCreator.createMappedVariable(context, definedType,
-        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER,
+        vDesc.getName(), storage, defType,
         VarProvenance.userVar(context.getSourceLoc()), mappedVar);
     return var;
   }
@@ -1893,7 +1908,7 @@ public class ASTWalker {
     varAnalyzer.walkFunction(context, lineMap(), moduleName, function,
                                      iList, oList, block);
 
-    LocalContext functionContext = new LocalContext(context, function);
+    LocalContext functionContext = LocalContext.fnContext(context, function);
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
 
@@ -1983,7 +1998,7 @@ public class ASTWalker {
       }
     }
 
-    LocalContext appContext = new LocalContext(context, function);
+    LocalContext appContext = LocalContext.fnContext(context, function);
     appContext.addDeclaredVariables(outArgs);
     appContext.addDeclaredVariables(inArgs);
 

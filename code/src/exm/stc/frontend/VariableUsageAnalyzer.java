@@ -32,7 +32,6 @@ import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
-import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
@@ -94,7 +93,7 @@ class VariableUsageAnalyzer {
     VariableUsageInfo globVui = setupGlobalUsage(context);
 
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
-    Context fnContext = new LocalContext(context, function);
+    Context fnContext = LocalContext.fnContext(context, function);
 
     // Add input and output variables to initial variable info
     for (Var i: iList) {
@@ -128,14 +127,14 @@ class VariableUsageAnalyzer {
    * @param stmts
    * @throws UserException
    */
-  public void walkTopLevel(Context context, SwiftAST program,
+  public void walkTopLevel(GlobalContext context, SwiftAST program,
                           Iterator<ParsedModule> moduleIt)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: top level");
 
     VariableUsageInfo globVui = setupGlobalUsage(context);
 
-    Context fnContext = new LocalContext(context, Constants.ENTRY_FUNCTION);
+    Context fnContext = LocalContext.topLevelContext(context);
     VariableUsageInfo topLevelVui = globVui.createNested();
 
     while (moduleIt.hasNext()) {
@@ -204,8 +203,8 @@ class VariableUsageAnalyzer {
                     LogHelper.tokName(token));
     switch (token) {
       case ExMParser.BLOCK:
-        VariableUsageInfo childVu = walkBlock(new LocalContext(context),
-                                            tree, vu.createNested());
+        VariableUsageInfo childVu = walkBlock(
+            LocalContext.fnSubcontext(context), tree, vu.createNested());
         vu.mergeNestedScopes(context, Arrays.asList(childVu), true);
         break;
 
@@ -366,10 +365,10 @@ class VariableUsageAnalyzer {
     // Collect and merge up info from branches
     ArrayList<VariableUsageInfo> ifBranchVus = new ArrayList<VariableUsageInfo>();
 
-    ifBranchVus.add(walkBlock(new LocalContext(context),
+    ifBranchVus.add(walkBlock(LocalContext.fnSubcontext(context),
         ifStmt.getThenBlock(), vu.createNested()));
     if (ifStmt.hasElse()) {
-      ifBranchVus.add(walkBlock(new LocalContext(context),
+      ifBranchVus.add(walkBlock(LocalContext.fnSubcontext(context),
           ifStmt.getElseBlock(), vu.createNested()));
     }
 
@@ -481,7 +480,7 @@ class VariableUsageAnalyzer {
     ArrayList<VariableUsageInfo> caseVus = new ArrayList<VariableUsageInfo>();
     // Walk the different cases and merge info into this variable usage
     for (SwiftAST caseBody: sw.getCaseBodies()) {
-      caseVus.add(walkBlock(new LocalContext(context), caseBody,
+      caseVus.add(walkBlock(LocalContext.fnSubcontext(context), caseBody,
                                         vu.createNested()));
     }
     syncFilePos(context, tree);
@@ -618,7 +617,7 @@ class VariableUsageAnalyzer {
     for (SwiftAST expr: wait.getWaitExprs()) {
       walkExpr(context, vu, expr);
     }
-    LocalContext waitContext = new LocalContext(context);
+    LocalContext waitContext = LocalContext.fnSubcontext(context);
     VariableUsageInfo waitVU = vu.createNested();
     walkBlock(waitContext, wait.getBlock(), waitVU);
 

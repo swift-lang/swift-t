@@ -396,6 +396,10 @@ public class STCMiddleEnd {
     assert(!var.mappedDecl()|| Types.isMappable(var));
     assert(var.type().isConcrete()) : var;
     currBlock().addVariable(var);
+    if (var.storage() == Alloc.GLOBAL_VAR) {
+      // TODO: track global variables
+      throw new STCRuntimeError("Global vars not implemented");
+    }
   }
 
 

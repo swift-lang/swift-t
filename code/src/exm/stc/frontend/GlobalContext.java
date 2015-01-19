@@ -31,7 +31,6 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -74,14 +73,6 @@ public class GlobalContext extends Context {
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
 
-  /**
-   * TODO: alternative to LocalContext that allows selective visibility
-   * to variables - compiler-generated should not be globally visible.
-   * @return
-   */
-  private final Context topLevelCodeContext =
-      new LocalContext(this, Constants.ENTRY_FUNCTION);
-
   public GlobalContext(String inputFile, Logger logger,
                         ForeignFunctions foreignFuncs) {
     super(logger, 0);
@@ -96,6 +87,11 @@ public class GlobalContext extends Context {
       throw new STCRuntimeError("Unexpected exception while initializing exec " +
       		"targets", e);
     }
+  }
+
+  @Override
+  public boolean isTopLevel() {
+    return true;
   }
 
   @Override
@@ -181,10 +177,6 @@ public class GlobalContext extends Context {
   @Override
   public GlobalContext getGlobals() {
     return this;
-  }
-
-  public Context getTopLevelCodeContext() {
-    return topLevelCodeContext;
   }
 
   @Override
