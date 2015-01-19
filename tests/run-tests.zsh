@@ -580,12 +580,19 @@ do
 
     if grep -F -q "THIS-TEST-SHOULD-CAUSE-WARNING" ${SWIFT_FILE}
     then
-      if grep -q "^WARN" ${STC_ERR_FILE}
+      if ! grep -q "^WARN" ${STC_ERR_FILE}
       then
-          :
-      else
           EXIT_CODE=$TEST_TRUE_FAIL
           printf "No warning in stc output\n"
+      fi
+    fi
+    
+    if grep -F -q "THIS-TEST-SHOULD-NOT-CAUSE-WARNING" ${SWIFT_FILE}
+    then
+      if grep -q "^WARN" ${STC_ERR_FILE}
+      then
+          EXIT_CODE=$TEST_TRUE_FAIL
+          printf "Unexpected warning in stc output\n"
       fi
     fi
     report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
