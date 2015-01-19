@@ -108,6 +108,7 @@ public class RCPlacer {
         if (logger.isTraceEnabled()) {
           logger.trace(rcVar + " is refcount var for key " + e.getKey());
         }
+
         newRCs.add(Pair.create(rcVar, e.getValue()));
         it.remove();
       }
@@ -179,8 +180,10 @@ public class RCPlacer {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.DECR)) {
         assert (e.getValue() <= 0);
         Var var = increments.getRefCountVar(e.getKey());
-        Arg amount = Arg.newInt(e.getValue() * -1);
-        block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
+        if (RefCounting.trackRefCount(var, rcType)) {
+          Arg amount = Arg.newInt(e.getValue() * -1);
+          block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
+        }
       }
     }
 
@@ -206,7 +209,7 @@ public class RCPlacer {
         assert(var != null);
         Long incr = e.getValue();
         assert(incr >= 0);
-        if (incr > 0) {
+        if (incr > 0 && RefCounting.trackRefCount(var, rcType)) {
           boolean varInit = stmt != null &&
                    stmt.type() == StatementType.INSTRUCTION &&
                    stmt.instruction().isInitialized(var);
@@ -218,8 +221,6 @@ public class RCPlacer {
           } else {
             insertIncrAfter(block, stmtIt, var, incr, rcType);
           }
-        } else if (incr < 0) {
-          insertDecrAfter(block, stmtIt, var, incr * -1, rcType);
         }
       }
     }
@@ -817,10 +818,10 @@ public class RCPlacer {
    *
    * @param block
    * @param increments
-   * @param type
+   * @param rcType
    */
   private void batchDecrementsForeach(Block block,
-      RCTracker increments, RefCountType type) {
+      RCTracker increments, RefCountType rcType) {
     if (!RCUtil.batchEnabled()) {
       return;
     }
@@ -829,22 +830,24 @@ public class RCPlacer {
     Continuation parent = block.getParentCont();
     AbstractForeachLoop loop = (AbstractForeachLoop) parent;
     Counters<Var> changes = new Counters<Var>();
-    for (Entry<AliasKey, Long> e : increments.rcIter(type, RCDir.DECR)) {
+    for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
       Var var = increments.getRefCountVar(e.getKey());
-      long count = e.getValue();
-      assert(count <= 0);
-      if (count < 0 && RCUtil.definedOutsideCont(loop, block, var)) {
-        // Decrement vars defined outside block
-        long amount = count * -1;
-        Arg amountArg = Arg.newInt(amount);
-        loop.addEndDecrement(new RefCount(var, type, amountArg));
-        changes.add(var, amount);
-        Logging.getSTCLogger().trace("Piggyback " + var + " " + type + " " +
-                                     amount + " on foreach");
+      if (RefCounting.trackRefCount(var, rcType)) {
+        long count = e.getValue();
+        assert(count <= 0);
+        if (count < 0 && RCUtil.definedOutsideCont(loop, block, var)) {
+          // Decrement vars defined outside block
+          long amount = count * -1;
+          Arg amountArg = Arg.newInt(amount);
+          loop.addEndDecrement(new RefCount(var, rcType, amountArg));
+          changes.add(var, amount);
+          Logging.getSTCLogger().trace("Piggyback " + var + " " + rcType + " " +
+                                       amount + " on foreach");
+        }
       }
     }
     // Build and merge to avoid concurrent modification problems
-    increments.merge(changes, type, RCDir.DECR);
+    increments.merge(changes, rcType, RCDir.DECR);
   }
 
   private void addDecrementsAsCleanups(Block block, RCTracker increments,
@@ -852,9 +855,11 @@ public class RCPlacer {
     Counters<Var> changes = new Counters<Var>();
     for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
       Var var = increments.getRefCountVar(e.getKey());
-      long count = e.getValue();
-      assert(count <= 0);
-      addDecrement(block, changes, rcType, var, count);
+      if (RefCounting.trackRefCount(var, rcType)) {
+        long count = e.getValue();
+        assert(count <= 0);
+        addDecrement(block, changes, rcType, var, count);
+      }
     }
     // Build and merge to avoid concurrent modification problems
     increments.merge(changes, rcType, RCDir.DECR);
@@ -926,12 +931,14 @@ public class RCPlacer {
     while (it.hasNext()) {
       Entry<AliasKey, Long> e = it.next();
       Var var = increments.getRefCountVar(e.getKey());
-      long count = e.getValue();
-      if (var.storage() != Alloc.ALIAS
-          || parentAssignedAliasVars.contains(var)) {
-        // add increments that we can at top
-        addRefIncrementAtTop(block, rcType, var, count);
-        it.remove();
+      if (RefCounting.trackRefCount(var, rcType)) {
+        long count = e.getValue();
+        if (var.storage() != Alloc.ALIAS
+            || parentAssignedAliasVars.contains(var)) {
+          // add increments that we can at top
+          addRefIncrementAtTop(block, rcType, var, count);
+          it.remove();
+        }
       }
     }
     // Now put increments for alias vars after point when var declared
