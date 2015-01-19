@@ -3175,23 +3175,41 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void declareGlobalVars(List<VarDecl> vars) {
-
-    // TODO: support for global files
     this.globalVars.addAll(vars);
   }
 
-  private Command initGlobalVars() {
+  private Sequence initGlobalVars() {
     List<String> varNames = new ArrayList<String>();
     List<TclList> createArgs = new ArrayList<TclList>();
+    List<VarDecl> globalFileVars = new ArrayList<VarDecl>();
+    Sequence commands = new Sequence();
+
 
     for (VarDecl decl: globalVars) {
-      // TODO: don't handle allocating files properly
       assert(decl.var.storage() == Alloc.GLOBAL_VAR);
-      varNames.add(prefixVar(decl.var));
+      if (Types.isFile(decl.var)) {
+        globalFileVars.add(decl);
+      } else {
+        varNames.add(prefixVar(decl.var));
 
-      createArgs.add(createArgs(decl.var, decl.initReaders, decl.initWriters));
+        createArgs.add(createArgs(decl.var, decl.initReaders, decl.initWriters));
+      }
     }
-    return Turbine.batchDeclareGlobals(varNames, createArgs);
+
+    commands.add(Turbine.batchDeclareGlobals(varNames, createArgs));
+
+    List<String> fileVarNames = new ArrayList<String>();
+    List<TclList> fileCreateArgs = new ArrayList<TclList>();
+    List<Boolean> isMapped = new ArrayList<Boolean>();
+    for (VarDecl fileDecl: globalFileVars) {
+      fileVarNames.add(prefixVar(fileDecl.var));
+      fileCreateArgs.add(createArgs(fileDecl.var, fileDecl.initReaders,
+                                    fileDecl.initWriters));
+    }
+    commands.add(Turbine.batchDeclareGlobalFiles(fileVarNames, fileCreateArgs,
+                                                 isMapped));
+
+    return commands;
   }
 
   private static Value varToExpr(Var v) {
