@@ -1067,24 +1067,12 @@ handle_multicreate(int caller)
 
   adlb_datum_id new_ids[count];
 
-  adlb_data_code dc = ADLB_DATA_SUCCESS;
-  for (int i = 0; i < count; i++) {
-    if (specs[i].id != ADLB_DATA_ID_NULL) {
-      dc = ADLB_DATA_ERROR_INVALID;
-      DEBUG("non-null data id: %"PRId64"", specs[i].id);
-      break;
-    }
-    adlb_datum_id new_id;
-    dc = xlb_data_unique(&new_id);
-    new_ids[i] = new_id;
-    if (dc != ADLB_DATA_SUCCESS)
-      break;
-    dc = xlb_data_create(new_id, specs[i].type, &specs[i].type_extra,
-                     &specs[i].props);
-    if (dc != ADLB_DATA_SUCCESS)
-      break;
+  for (int i = 0; i < count; i++)
+  {
+    new_ids[i] = ADLB_DATA_ID_NULL;
   }
 
+  adlb_data_code dc = xlb_data_multicreate(specs, count, new_ids);
 
   RSEND(new_ids, (int)sizeof(new_ids), MPI_BYTE, caller,
         ADLB_TAG_RESPONSE);

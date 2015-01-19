@@ -1272,7 +1272,28 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
 
   if (id != ADLB_DATA_ID_NULL) {
     to_server_rank = ADLB_Locate(id);
+    if (xlb_am_server && to_server_rank == xlb_comm_rank)
+    {
+      adlb_data_code dc = xlb_data_create(id, type, &type_extra, &props);
+      ADLB_DATA_CHECK(dc);
+      return ADLB_SUCCESS;
+    }
   } else {
+    if (xlb_am_server)
+    {
+      adlb_datum_id unique_id;
+      adlb_data_code dc = xlb_data_unique(&unique_id);
+      ADLB_DATA_CHECK(dc);
+
+      dc = xlb_data_create(unique_id, type, &type_extra, &props);
+      ADLB_DATA_CHECK(dc);
+
+      if (new_id != NULL)
+      {
+        *new_id = unique_id;
+      }
+      return ADLB_SUCCESS;
+    }
     to_server_rank = xlb_my_server;
   }
   ADLB_create_spec data = { id, type, type_extra, props };
@@ -1316,15 +1337,26 @@ adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count)
 {
   MPI_Request request;
   MPI_Status status;
-  int server = choose_data_server();
 
   // Allocated ids (ADLB_DATA_ID_NULL if failed)
   adlb_datum_id ids[count];
-  IRECV(ids, (int)sizeof(ids), MPI_BYTE, server, ADLB_TAG_RESPONSE);
 
-  SEND(specs, (int)sizeof(ADLB_create_spec) * count, MPI_BYTE,
-       server, ADLB_TAG_MULTICREATE);
-  WAIT(&request, &status);
+  if (xlb_am_server)
+  {
+    adlb_data_code dc;
+    dc = xlb_data_multicreate(specs, count, ids);
+    ADLB_DATA_CHECK(dc);
+  }
+  else
+  {
+    int server = choose_data_server();
+
+    IRECV(ids, (int)sizeof(ids), MPI_BYTE, server, ADLB_TAG_RESPONSE);
+
+    SEND(specs, (int)sizeof(ADLB_create_spec) * count, MPI_BYTE,
+         server, ADLB_TAG_MULTICREATE);
+    WAIT(&request, &status);
+  }
 
   // Check success by inspecting ids
   for (int i = 0; i < count; i++) {

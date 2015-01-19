@@ -284,6 +284,27 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code xlb_data_multicreate(const ADLB_create_spec *specs,
+          int count, adlb_datum_id *new_ids)
+{
+  adlb_data_code dc;
+  for (int i = 0; i < count; i++) {
+    if (specs[i].id != ADLB_DATA_ID_NULL) {
+      DEBUG("non-null data id: %"PRId64"", specs[i].id);
+      return ADLB_DATA_ERROR_INVALID;
+    }
+    adlb_datum_id new_id;
+    dc = xlb_data_unique(&new_id);
+    DATA_CHECK(dc);
+    new_ids[i] = new_id;
+
+    dc = xlb_data_create(new_id, specs[i].type, &specs[i].type_extra,
+                     &specs[i].props);
+    DATA_CHECK(dc);
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
 
 /*
   Initialize datum with props.  This will garbage collect datum

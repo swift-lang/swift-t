@@ -188,6 +188,7 @@ int ADLB_Locate(adlb_datum_id id);
 
 // Applications should not call these directly but
 // should use the typed forms defined below
+// Can be called locally on server where data resides
 adlb_code ADLBP_Create(adlb_datum_id id, adlb_data_type type,
                        adlb_type_extra type_extra,
                        adlb_create_props props,
@@ -199,6 +200,7 @@ adlb_code ADLB_Create(adlb_datum_id id, adlb_data_type type,
 // Create multiple variables.
 // Currently we assume that spec[i].id is ADLB_DATA_ID_NULL and
 // will be filled in with a new id
+// Can be called locally on server where data resides
 adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count);
 adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count);
 
