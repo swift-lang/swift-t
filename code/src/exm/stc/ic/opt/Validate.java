@@ -39,9 +39,8 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
-import exm.stc.ic.tree.ICTree.GlobalConstants;
-import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Program.AllGlobals;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
 
@@ -100,8 +99,7 @@ public class Validate implements OptimizerPass {
 
     for (Function fn : program.getFunctions()) {
       checkParentLinks(logger, program, fn);
-      checkUniqueVarNames(logger, program.constants(), program.globalVars(),
-                          fn);
+      checkUniqueVarNames(logger, program.allGlobals(), fn);
       InitVariables.checkVarInit(logger, fn);
       if (checkExecContext) {
         checkExecCx(logger, program, fn);
@@ -116,23 +114,13 @@ public class Validate implements OptimizerPass {
    * @param program
    * @param fn
    */
-  private void checkUniqueVarNames(Logger logger, GlobalConstants constants,
-        GlobalVars globalVars, Function fn) {
+  private void checkUniqueVarNames(Logger logger, AllGlobals globals, Function fn) {
     Map<String, Var> declared = new HashMap<String, Var>();
-    for (Var constVar: constants.vars()) {
-      if (declared.containsKey(constVar.name())) {
-        throw new STCRuntimeError("Duplicate global constant "
-                                          + constVar.name());
+    for (Var global: globals) {
+      if (declared.containsKey(global.name())) {
+        throw new STCRuntimeError("Duplicate global " + global.name());
       }
-      declared.put(constVar.name(), constVar);
-    }
-
-    for (Var globalVar: globalVars.vars()) {
-      if (declared.containsKey(globalVar.name())) {
-        throw new STCRuntimeError("Duplicate global var "
-                                          + globalVar.name());
-      }
-      declared.put(globalVar.name(), globalVar);
+      declared.put(global.name(), global);
     }
 
     for (Var in: fn.getInputList()) {

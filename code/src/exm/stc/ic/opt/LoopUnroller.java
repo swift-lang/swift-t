@@ -38,12 +38,13 @@ public class LoopUnroller implements OptimizerPass {
     return Settings.OPT_UNROLL_LOOPS;
   }
 
+  @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       logger.debug("looking to unroll loops in " + f.getName());
       if (unrollLoops(logger, prog, f, f.mainBlock())) {
         // Unrolling can introduce duplicate vars
-        UniqueVarNames.makeVarNamesUnique(f, prog.constants().vars());
+        UniqueVarNames.makeVarNamesUnique(f, prog.allGlobals());
         FlattenNested.flattenNestedBlocks(f.mainBlock());
       }
     }
@@ -52,7 +53,7 @@ public class LoopUnroller implements OptimizerPass {
   private static boolean unrollLoops(Logger logger, Program prog, Function f,
       Block block) {
     boolean unrolled = false;
-    
+
     ListIterator<Continuation> it = block.continuationIterator();
     while (it.hasNext()) {
       Continuation c = it.next();

@@ -15,7 +15,6 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +35,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Program.AllGlobals;
 import exm.stc.ic.tree.ICTree.RenameMode;
 
 public class UniqueVarNames implements OptimizerPass {
@@ -58,11 +58,7 @@ public class UniqueVarNames implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program in) {
     for (Function f: in.getFunctions()) {
-      List<Var> allGlobals = new ArrayList<Var>();
-      allGlobals.addAll(in.constants().vars());
-      allGlobals.addAll(in.globalVars().vars());
-
-      makeVarNamesUnique(f, allGlobals);
+      makeVarNamesUnique(f, in.allGlobals());
     }
   }
 
@@ -180,12 +176,9 @@ public class UniqueVarNames implements OptimizerPass {
     }
   }
 
-  public static void makeVarNamesUnique(Function fn,
-            Collection<Var> globals) {
+  public static void makeVarNamesUnique(Function fn, AllGlobals globals) {
     Vars declarations = new Vars();
-    for (Var global: globals) {
-      declarations.addDeclaration(global);
-    }
+    declarations.addDeclarations(globals);
 
     HierarchicalMap<Var, Arg> renames = new HierarchicalMap<Var, Arg>();
     for (Var v: fn.getInputList()) {
@@ -207,6 +200,12 @@ public class UniqueVarNames implements OptimizerPass {
     public void addDeclaration(Var var) {
       usedNames.add(var.name());
       vars.put(var.name(), var);
+    }
+
+    public void addDeclarations(Collection<Var> vars) {
+      for (Var var: vars) {
+        addDeclaration(var);
+      }
     }
   }
 }

@@ -52,9 +52,8 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
-import exm.stc.ic.tree.ICTree.GlobalConstants;
-import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Program.AllGlobals;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.Opcode;
@@ -448,8 +447,8 @@ public class FunctionInline implements OptimizerPass {
     ListIterator<Statement> insertPos;
 
     // rename vars
-    chooseUniqueNames(logger, prog.constants(), contextFunction, inlineBlock,
-                      renames);
+    chooseUniqueNames(logger, prog.allGlobals(), contextFunction,
+                      inlineBlock, renames);
 
     if (logger.isTraceEnabled())
         logger.trace("inlining renames: " + renames);
@@ -508,15 +507,12 @@ public class FunctionInline implements OptimizerPass {
    * @param replacements updated with new renames
    */
   private static void chooseUniqueNames(Logger logger,
-      GlobalConstants constants, GlobalVars globalVars,
+      AllGlobals allGlobals,
       Function targetFunction, Block inlineBlock,
       Map<Var, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
-    for (Var globalConst: constants.vars()) {
-      excludedNames.add(globalConst.name());
-    }
-    for (Var globalVar: globalVars.vars()) {
-      excludedNames.add(globalVar.name());;
+    for (Var global: allGlobals) {
+      excludedNames.add(global.name());
     }
 
     StackLite<Block> blocks = new StackLite<Block>();
