@@ -93,6 +93,7 @@ class Turbine {
   private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
   private static final Token MULTICREATE = adlbFn("multicreate");
   private static final Token CREATE_GLOBALS = adlbFn("create_globals");
+  private static final Token MAKE_FILE_TDS = turbFn("make_file_tds");
 
   // Container insert
   private static final Token C_V_INSERT = turbFn("container_insert");
@@ -1784,9 +1785,29 @@ class Turbine {
       List<TclList> parameters) {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
 
-    exprs.add(Square.fnCall(CREATE_GLOBALS, parameters));
+    exprs.add(createGlobals(parameters));
 
     for (String varName : varNames) {
+      exprs.add(new Token(varName));
+    }
+    return new Command(LASSIGN, exprs);
+  }
+
+  private static Square createGlobals(List<TclList> parameters) {
+    return Square.fnCall(CREATE_GLOBALS, parameters);
+  }
+
+  public static Command batchDeclareGlobalFiles(List<String> fileVarNames,
+                List<TclList> parameters, List<Boolean> isMappeds) {
+    TclList isMappedList = new TclList();
+    for (Boolean isMapped: isMappeds) {
+      isMappedList.add(LiteralInt.boolValue(isMapped));
+    }
+
+    ArrayList<Expression> exprs = new ArrayList<Expression>();
+    exprs.add(Square.fnCall(MAKE_FILE_TDS, createGlobals(parameters), isMappedList));
+
+    for (String varName: fileVarNames) {
       exprs.add(new Token(varName));
     }
     return new Command(LASSIGN, exprs);
