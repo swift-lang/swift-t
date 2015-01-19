@@ -369,12 +369,6 @@ public class TurbineGenerator implements CompilerBackend {
         tree.add(Turbine.enableReferenceCounting());
       }
 
-      boolean xptEnabled = Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)
-    		  				         && options.checkpointRequired();
-      if (xptEnabled) {
-        tree.add(Turbine.xptInit());
-      }
-
       // Initialize struct types
       tree.append(structTypeDeclarations());
 
@@ -391,9 +385,6 @@ public class TurbineGenerator implements CompilerBackend {
                                           " " + CONSTINIT_FUNCTION_NAME));
       tree.add(new Command("turbine::finalize"));
 
-      if (xptEnabled) {
-        tree.add(Turbine.xptFinalize());
-      }
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
     }
