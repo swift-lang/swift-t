@@ -48,6 +48,7 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Program.AllGlobals;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.Opcode;
 
@@ -93,15 +94,15 @@ public class FixupVariables implements OptimizerPass {
     for (Function fn : prog.getFunctions()) {
 
       if (updateLists) {
-        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+        fixupFunction(logger, prog.allGlobals(), fn,
                       referencedGlobals, FixupVarMode.REBUILD);
         // Need to do a second pass to resolve recursive dependencies,
         // e.g. loop_continue instructions that pass things back to
         // the top of the loop
-        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+        fixupFunction(logger, prog.allGlobals(), fn,
                       referencedGlobals, FixupVarMode.ADD);
       } else {
-        fixupFunction(logger, prog.constants(), prog.globalVars(), fn,
+        fixupFunction(logger, prog.allGlobals(), fn,
                       referencedGlobals, FixupVarMode.NO_UPDATE);
       }
     }
@@ -110,8 +111,8 @@ public class FixupVariables implements OptimizerPass {
       removeUnusedGlobals(prog.constants(), prog.globalVars(), referencedGlobals);
   }
 
-  public static void fixupFunction(Logger logger, GlobalConstants constants,
-      GlobalVars globalVars,  Function fn, Set<Var> referencedGlobals,
+  public static void fixupFunction(Logger logger,
+      AllGlobals globals,  Function fn, Set<Var> referencedGlobals,
       FixupVarMode fixupMode) {
     HierarchicalSet<Var> fnargs = new HierarchicalSet<Var>();
     for (Var v : fn.getInputList()) {
@@ -120,8 +121,7 @@ public class FixupVariables implements OptimizerPass {
     for (Var v : fn.getOutputList()) {
       fnargs.add(v);
     }
-    fnargs.addAll(constants.vars());
-    fnargs.addAll(globalVars.vars());
+    fnargs.addAll(globals);
 
     AliasTracker aliases = new AliasTracker();
 

@@ -170,17 +170,16 @@ public class ValueNumber implements OptimizerPass {
       Function f) throws OptUnsafeError {
     Congruences congruent = new Congruences(logger, foreignFuncs, constants,
                                             reorderingAllowed);
-    for (Var v : constants.vars()) {
+    for (Var v: constants.vars()) {
       // First, all constants can be treated as being set
-      if (v.storage() == Alloc.GLOBAL_CONST) {
-        Arg val = constants.lookupByVar(v);
-        assert (val != null) : v.name();
+      assert(v.storage() == Alloc.GLOBAL_CONST);
+      Arg val = constants.lookupByVar(v);
+      assert (val != null) : v.name();
 
-        ValLoc assign = ComputedValue.assignValLoc(v, val,
-                                        IsAssign.TO_LOCATION, false);
-        int stmtIndex = -1;
-        congruent.update(constants, f.getName(), assign, stmtIndex);
-      }
+      ValLoc assign = ComputedValue.assignValLoc(v, val,
+                                      IsAssign.TO_LOCATION, false);
+      int stmtIndex = -1;
+      congruent.update(constants, f.getName(), assign, stmtIndex);
     }
 
     if (finalizedVarEnabled) {

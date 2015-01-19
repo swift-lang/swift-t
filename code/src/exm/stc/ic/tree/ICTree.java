@@ -59,6 +59,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.WrappedForeignFunction;
+import exm.stc.common.util.MultiCollection;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -296,6 +297,17 @@ public class ICTree {
 
     public GlobalVars globalVars() {
       return globalVars;
+    }
+
+    public static class AllGlobals extends MultiCollection<Var> {
+
+      private AllGlobals(Collection<? extends Collection<? extends Var>> iterables) {
+        super(iterables);
+      }
+
+    }
+    public AllGlobals allGlobals() {
+      return new AllGlobals(Arrays.asList(constants.vars(), globalVars.vars()));
     }
 
     public ForeignFunctions foreignFunctions() {
