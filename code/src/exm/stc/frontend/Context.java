@@ -234,7 +234,6 @@ public abstract class Context {
 
     addDef(name, kind);
     variables.put(name, variable);
-System.err.println("PUT " + variable);
     return variable;
   }
 
