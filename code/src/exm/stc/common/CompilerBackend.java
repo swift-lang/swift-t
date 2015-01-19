@@ -112,13 +112,13 @@ public interface CompilerBackend {
   public void addGlobalConst(Var var, Arg val);
 
   /**
-   * Add a writable global variable.
+   * Declare all writable global variable.
    *
-   * Called before any functions or executable code is generated.
+   * Called once before any functions or executable code is generated.
    *
    * @param name
    */
-  public void addGlobalVar(Var var);
+  public void declareGlobalVars(List<Var> vars);
 
   /**
    * Let backend know about struct type that will be used.
