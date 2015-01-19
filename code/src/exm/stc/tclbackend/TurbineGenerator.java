@@ -287,6 +287,8 @@ public class TurbineGenerator implements CompilerBackend {
   private final List<Pair<Integer, DebugSymbolData>> debugSymbols
               = new ArrayList<Pair<Integer, DebugSymbolData>>();
 
+  private final List<Var> globalVars = new ArrayList<Var>();
+
   public TurbineGenerator(Logger logger, String timestamp)
   {
     this.logger = logger;
@@ -351,8 +353,7 @@ public class TurbineGenerator implements CompilerBackend {
       tree.add(new Command("lappend auto_path \"" + p + "\""));
   }
 
-  private void turbineStartup()
-  {
+  private void turbineStartup() {
     // TODO: don't need defaults anymore with newer Turbine engines,
     //       remove once we move to new version.
     tree.add(new Command("turbine::defaults"));
@@ -383,6 +384,8 @@ public class TurbineGenerator implements CompilerBackend {
       tree.add(Turbine.checkConstants());
 
       tree.append(compileTimeArgs());
+
+      tree.add(initGlobalVars());
 
       tree.add(new Command("turbine::start " + ENTRY_FUNCTION_NAME +
                                           " " + CONSTINIT_FUNCTION_NAME));
@@ -3177,8 +3180,23 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void addGlobalVar(Var var) {
-    // TODO: unimplemented
+  public void declareGlobalVars(List<Var> vars) {
+    this.globalVars.addAll(vars);
+  }
+
+  private Command initGlobalVars() {
+    List<String> varNames = new ArrayList<String>();
+    List<TclList> createArgs = new ArrayList<TclList>();
+
+    for (Var var: globalVars) {
+      assert(var.storage() == Alloc.GLOBAL_VAR);
+      varNames.add(prefixVar(var));
+
+      // TODO: variable number of writers, skip readers
+      createArgs.add(createArgs(var, Arg.ONE, Arg.ONE));
+
+    }
+    return Turbine.batchDeclareGlobals(varNames, createArgs);
   }
 
   private static Value varToExpr(Var v) {

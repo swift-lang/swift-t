@@ -1780,13 +1780,13 @@ class Turbine {
     return new Command(LASSIGN, exprs);
   }
 
-  public static Command batchDeclareGlobals(List<String> batchedVarNames,
-      List<TclList> batched) {
+  public static Command batchDeclareGlobals(List<String> varNames,
+      List<TclList> parameters) {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
 
-    exprs.add(Square.fnCall(CREATE_GLOBALS, batched));
+    exprs.add(Square.fnCall(CREATE_GLOBALS, parameters));
 
-    for (String varName : batchedVarNames) {
+    for (String varName : varNames) {
       exprs.add(new Token(varName));
     }
     return new Command(LASSIGN, exprs);

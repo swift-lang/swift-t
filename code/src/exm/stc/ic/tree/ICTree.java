@@ -512,9 +512,7 @@ public class ICTree {
     }
 
     public void generate(Logger logger, CompilerBackend gen) {
-      for (Var var: vars) {
-        gen.addGlobalVar(var);
-      }
+      gen.declareGlobalVars(vars());
     }
 
     public void prettyPrint(StringBuilder out) {
