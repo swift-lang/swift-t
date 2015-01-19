@@ -37,7 +37,6 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
@@ -521,7 +520,7 @@ public class FunctionInline implements OptimizerPass {
     while(!blocks.isEmpty()) {
       Block block = blocks.pop();
       for (Var v: block.getVariables()) {
-        if (v.defType() != DefType.GLOBAL_CONST) {
+        if (!v.defType().isGlobal()) {
           updateName(logger, block, targetFunction, replacements, excludedNames, v);
         }
       }

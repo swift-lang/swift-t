@@ -102,6 +102,14 @@ public class Var implements Comparable<Var>, Typed {
     public boolean allocUponBlockEntry() {
       return this == STACK || this == TEMP || this == GLOBAL_VAR;
     }
+
+    public boolean isGlobal() {
+      return this == GLOBAL_CONST || this == GLOBAL_VAR;
+    }
+
+    public boolean isConst() {
+      return this == GLOBAL_CONST;
+    }
   }
 
   /**
@@ -128,6 +136,10 @@ public class Var implements Comparable<Var>, Typed {
 
     public boolean isGlobal() {
       return this == DefType.GLOBAL_CONST || this == DefType.GLOBAL_USER;
+    }
+
+    public boolean isConst() {
+      return this == DefType.GLOBAL_CONST;
     }
   }
 
@@ -264,7 +276,8 @@ public class Var implements Comparable<Var>, Typed {
     if (storage == Alloc.ALIAS) {
       return Ternary.TRUE;
     } else if (storage == Alloc.GLOBAL_CONST ||
-               storage == Alloc.LOCAL)
+               storage == Alloc.LOCAL ||
+               storage == Alloc.GLOBAL_VAR)
     {
       return Ternary.FALSE;
     } else if (storage != Alloc.ALIAS &&

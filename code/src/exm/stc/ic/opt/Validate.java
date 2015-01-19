@@ -30,8 +30,6 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -42,6 +40,7 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
+import exm.stc.ic.tree.ICTree.GlobalVars;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
@@ -63,7 +62,6 @@ public class Validate implements OptimizerPass {
                    boolean checkCleanups,
                    boolean noNestedBlocks,
                    boolean checkExecContext) {
-    super();
     this.checkVarPassing = checkVarPassing;
     this.checkCleanups = checkCleanups;
     this.noNestedBlocks = noNestedBlocks;
@@ -102,7 +100,8 @@ public class Validate implements OptimizerPass {
 
     for (Function fn : program.getFunctions()) {
       checkParentLinks(logger, program, fn);
-      checkUniqueVarNames(logger, program.constants(), fn);
+      checkUniqueVarNames(logger, program.constants(), program.globalVars(),
+                          fn);
       InitVariables.checkVarInit(logger, fn);
       if (checkExecContext) {
         checkExecCx(logger, program, fn);
@@ -113,11 +112,12 @@ public class Validate implements OptimizerPass {
    * Check that var names are unique within each function, and
    * that all references to variable have same attributes
    * @param logger
+   * @param globalVars
    * @param program
    * @param fn
    */
   private void checkUniqueVarNames(Logger logger, GlobalConstants constants,
-        Function fn) {
+        GlobalVars globalVars, Function fn) {
     Map<String, Var> declared = new HashMap<String, Var>();
     for (Var constVar: constants.vars()) {
       if (declared.containsKey(constVar.name())) {
@@ -125,6 +125,14 @@ public class Validate implements OptimizerPass {
                                           + constVar.name());
       }
       declared.put(constVar.name(), constVar);
+    }
+
+    for (Var globalVar: globalVars.vars()) {
+      if (declared.containsKey(globalVar.name())) {
+        throw new STCRuntimeError("Duplicate global var "
+                                          + globalVar.name());
+      }
+      declared.put(globalVar.name(), globalVar);
     }
 
     for (Var in: fn.getInputList()) {
@@ -187,7 +195,7 @@ public class Validate implements OptimizerPass {
   private void checkVarReferences(Logger logger, Function f,
       Block block, Map<String, Var> declared, Set<Var> unavailable) {
     for (Var v: block.getVariables()) {
-      if (v.storage() == Alloc.GLOBAL_CONST) {
+      if (v.storage().isGlobal()) {
         checkVarReference(f, declared, unavailable, v, v);
       }
     }
@@ -285,7 +293,7 @@ public class Validate implements OptimizerPass {
   private void checkVarUnique(Logger logger,
           Function fn, Map<String, Var> declared, Var var) {
     checkUsed(fn, var);
-    if (var.defType() == DefType.GLOBAL_CONST) {
+    if (var.defType().isGlobal()) {
       Var declaredGlobal = declared.get(var.name());
       if (declaredGlobal == null) {
         throw new STCRuntimeError("Missing global constant: " + var.name());
@@ -302,7 +310,7 @@ public class Validate implements OptimizerPass {
   }
 
   private void checkUsed(Function fn, Var var) {
-    assert(var.storage() == Alloc.GLOBAL_CONST || fn.varNameUsed(var.name())) :
+    assert(var.storage().isGlobal() || fn.varNameUsed(var.name())) :
           "Variable name not marked as used " + var + ".\n" +
           fn.usedVarNames();
   }
