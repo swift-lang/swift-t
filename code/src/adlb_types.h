@@ -590,7 +590,7 @@ adlb_data_code
 ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type);
 
 /**
- * Parse 64-bit integer from fixed-length string
+ * Parse signed 64-bit integer from fixed-length string
  */
 adlb_data_code
 ADLB_Int64_parse(const char *str, size_t length, int64_t *result);

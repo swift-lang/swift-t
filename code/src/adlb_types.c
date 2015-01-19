@@ -1037,7 +1037,7 @@ ADLB_Int64_parse(const char *str, size_t length, int64_t *result)
       }
       val = 10 * val;
 
-      if (val - limit < digit)
+      if (val != 0 && val - limit < digit)
       {
         return ADLB_DATA_ERROR_INVALID;
       }
