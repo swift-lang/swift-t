@@ -1882,6 +1882,7 @@ ADLBP_Unique(adlb_datum_id* result)
 
 adlb_code ADLBP_Alloc_global(int count, adlb_datum_id *start)
 {
+  DEBUG("Alloc_global: rank: %i count: %i", xlb_comm_rank, count);
   assert(start != NULL);
 
   adlb_data_code dc;
