@@ -119,7 +119,7 @@ public abstract class Context {
    * @return whether this is logically a top-level context
    */
   public abstract boolean isTopLevel();
-  
+
   /**
    * @return global info about foreign functions
    */
@@ -157,21 +157,38 @@ public abstract class Context {
     /* Conflicts (e.g. shadowing, two declarations in same context) are not
      * allowed, with exceptions:
      */
-    if (oldDef != null && !shadowingAllowed(oldDef, newDef)) {
-      // Not allowed
-      String loc = buildLocationString(oldDef.file, oldDef.line, oldDef.col, false);
-      throw new DoubleDefineException(this, oldDef.kind.humanReadable() +
-          " called " + name + " already defined at " + loc);
+    if (oldDef != null) {
+      checkShadowing(name, newDef, oldDef);
     }
   }
 
-  private static boolean shadowingAllowed(DefInfo oldDef, DefInfo newDef) {
+  private void checkShadowing(String name, DefInfo newDef, DefInfo oldDef)
+      throws DoubleDefineException {
     /*
      * Local variables can shadow global function and type definitions
+     * without warning.  Local variables can shadow global variables but
+     * this triggers a warning.
      */
-    return newDef.level > ROOT_LEVEL && oldDef.level == ROOT_LEVEL &&
-        newDef.kind == DefKind.VARIABLE &&
-        (oldDef.kind == DefKind.FUNCTION || oldDef.kind == DefKind.TYPE);
+    assert(newDef.level >= oldDef.level);
+    if (newDef.level == oldDef.level ||
+        oldDef.level != ROOT_LEVEL) {
+      throw new DoubleDefineException(this, shadowMessage(name, oldDef));
+    }
+
+    if (newDef.kind == DefKind.VARIABLE &&
+        (oldDef.kind == DefKind.FUNCTION || oldDef.kind == DefKind.TYPE)) {
+      // This is ok
+      return;
+    } else {
+      // This should produce warning
+      LogHelper.uniqueWarn(this, shadowMessage(name, oldDef));
+    }
+  }
+
+  private String shadowMessage(String name, DefInfo oldDef) {
+    String loc = buildLocationString(oldDef.file, oldDef.line, oldDef.col, false);
+    return oldDef.kind.humanReadable() + " called " + name +
+            " already defined at " + loc;
   }
 
   /**

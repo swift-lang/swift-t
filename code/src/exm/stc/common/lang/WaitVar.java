@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
@@ -19,7 +20,7 @@ public class WaitVar implements Comparable<WaitVar> {
     this.var = var;
     this.explicit = explicit;
   }
-  
+
   /**
    * Remove duplicate entries.  If one is explicit, retained one
    * must be explicit
@@ -30,7 +31,7 @@ public class WaitVar implements Comparable<WaitVar> {
     ListIterator<WaitVar> it = list.listIterator();
     if (!it.hasNext())
       return;
-    
+
     WaitVar last = it.next();
     while (it.hasNext()) {
       WaitVar curr = it.next();
@@ -81,7 +82,7 @@ public class WaitVar implements Comparable<WaitVar> {
     }
     return waitVars2;
   }
-  
+
   public static WaitVar find(List<WaitVar> waitVars,
       Var var) {
     for (WaitVar wv: waitVars) {
@@ -91,17 +92,34 @@ public class WaitVar implements Comparable<WaitVar> {
     return null;
   }
 
+  public static void replaceVars(List<WaitVar> waitVars, Map<Var, Arg> renames) {
+    boolean replaced = false;
+    ListIterator<WaitVar> it = waitVars.listIterator();
+    while (it.hasNext()) {
+      WaitVar wv = it.next();
+      Arg replacement = renames.get(wv.var);
+      if (replacement != null && replacement.isVar()) {
+        it.set(new WaitVar(replacement.getVar(), wv.explicit));
+        replaced = true;
+      }
+    }
+    if (replaced) {
+      removeDuplicates(waitVars);
+    }
+  }
+
   /**
    * For pretty printing
    */
+  @Override
   public String toString() {
     return var.name() + (explicit ? ":EXPLICIT" : "");
   }
-  
+
   @Override
   public boolean equals(Object other) {
     if (!(other instanceof WaitVar))
-        throw new STCRuntimeError("Comparing WaitVar with: " + other + 
+        throw new STCRuntimeError("Comparing WaitVar with: " + other +
                                   " of class " + other.getClass());
     WaitVar owv = (WaitVar)other;
     return owv.explicit == explicit &&
@@ -112,6 +130,6 @@ public class WaitVar implements Comparable<WaitVar> {
   public int hashCode() {
     return Integer.rotateLeft(var.hashCode(), 1) & (explicit ? 0 : 1);
   }
-  
+
   public static final List<WaitVar> NONE = Collections.emptyList();
 }

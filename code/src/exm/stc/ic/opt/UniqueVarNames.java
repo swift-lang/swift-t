@@ -180,21 +180,24 @@ public class UniqueVarNames implements OptimizerPass {
     }
   }
 
-  public static void makeVarNamesUnique(Function in,
+  public static void makeVarNamesUnique(Function fn,
             Collection<Var> globals) {
     Vars declarations = new Vars();
     for (Var global: globals) {
       declarations.addDeclaration(global);
     }
-    for (Var v: in.getInputList()) {
-      declarations.addDeclaration(v);
+
+    HierarchicalMap<Var, Arg> renames = new HierarchicalMap<Var, Arg>();
+    for (Var v: fn.getInputList()) {
+      updateName(fn, fn.mainBlock(), declarations, renames, v);
     }
-    for (Var v: in.getOutputList()) {
-      declarations.addDeclaration(v);
+    for (Var v: fn.getOutputList()) {
+      updateName(fn, fn.mainBlock(), declarations, renames, v);
     }
 
-    makeVarNamesUnique(in, in.mainBlock(), declarations,
-                       new HierarchicalMap<Var, Arg>());
+    fn.renameVars(renames, RenameMode.REPLACE_VAR, false);
+
+    makeVarNamesUnique(fn, fn.mainBlock(), declarations, renames);
   }
 
   private static class Vars {
