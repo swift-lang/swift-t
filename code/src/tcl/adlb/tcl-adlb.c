@@ -1457,8 +1457,8 @@ ADLB_Create_Globals_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     specs[i].id = start + i;
 
-    // Split work among ranks
-    if (i % adlb_comm_size == adlb_comm_rank)
+    // Initialize local variables on server
+    if (ADLB_Locate(specs[i].id) == adlb_comm_rank)
     {
       ac = ADLB_Create(specs[i].id, specs[i].type, specs[i].type_extra,
                        specs[i].props, NULL);
