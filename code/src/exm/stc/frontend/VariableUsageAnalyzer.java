@@ -106,6 +106,7 @@ class VariableUsageAnalyzer {
       argVui.declare(fnContext, o.name(), o.type(), false);
       // We should assume that return variables will be read
       argVui.read(fnContext, o.name());
+
       fnContext.declareVariable(o.type(), o.name(), o.storage(),
           o.defType(), VarProvenance.unknown(), o.mappedDecl());
     }
