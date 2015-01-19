@@ -65,6 +65,10 @@ adlb_code xlb_xpt_index_init(void)
                          &props);
     ADLB_DATA_CHECK(dc);
   }
+
+  // Wait to ensure that all containers created before exiting
+  BARRIER();
+
   xpt_index_init = true;
   return ADLB_SUCCESS;
 }
