@@ -65,6 +65,7 @@ public class Counters<K> {
     } else {
       map.put(key, count);
     }
+
     return count;
   }
 

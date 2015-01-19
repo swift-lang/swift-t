@@ -25,7 +25,7 @@ public class RCUtil {
   }
 
   /**
-   * 
+   *
    * @param cont
    * @param block
    * @param var
@@ -37,7 +37,7 @@ public class RCUtil {
     return !block.getVariables().contains(var)
         && !cont.constructDefinedVars().contains(var);
   }
-  
+
   static boolean mergeEnabled() {
     try {
       return Settings.getBoolean(Settings.OPT_MERGE_REFCOUNTS);
@@ -45,7 +45,7 @@ public class RCUtil {
       throw new STCRuntimeError(e.getMessage());
     }
   }
-  
+
   static boolean cancelEnabled() {
     try {
       return Settings.getBoolean(Settings.OPT_CANCEL_REFCOUNTS);
@@ -53,7 +53,7 @@ public class RCUtil {
       throw new STCRuntimeError(e.getMessage());
     }
   }
-  
+
   static boolean piggybackEnabled() {
     try {
       return Settings.getBoolean(Settings.OPT_PIGGYBACK_REFCOUNTS);
