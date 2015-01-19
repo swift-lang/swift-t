@@ -716,6 +716,24 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/*
+ * adlb::worker_barrier
+ * Barrier for all workers.
+ * Should only be called by workers (i.e. non-adlb servers) and
+ * must be called by all workers.
+ */
+static int
+ADLB_Worker_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  int rc;
+
+  rc = MPI_Barrier(ADLB_GetComm_workers());
+  ASSERT(rc == MPI_SUCCESS);
+  return TCL_OK;
+}
+
 /**
    usage: returns MPI rank in given comm or, by default, adlb_comm
 */
@@ -1452,7 +1470,7 @@ ADLB_Create_Globals_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     rc = parse_variable_spec_list(interp, objv, objv[i + 1], &specs[i]);
     TCL_CHECK(rc);
-    
+
     specs[i].props.permanent = true;
 
     specs[i].id = start + i;
@@ -5851,6 +5869,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("comm_workers", ADLB_GetCommWorkers_Cmd);
   COMMAND("comm_leaders", ADLB_GetCommLeaders_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
+  COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
   COMMAND("size",      ADLB_Size_Cmd);
