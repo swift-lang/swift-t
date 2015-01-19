@@ -26,6 +26,7 @@ import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
@@ -352,7 +353,8 @@ public class RefcountPass implements OptimizerPass {
       // Alias variables aren't allocated here. Struct variables have
       // members separately allocated, so don't want to double-decrement
       // struct members.
-      if (var.storage() != Alloc.ALIAS) {
+      if (var.storage() != Alloc.ALIAS &&
+          (var.storage() != Alloc.GLOBAL_VAR || OptUtil.isEntryBlock(fn, block))) {
         // Work out base refcounts that we'll have to start with for var
         long baseReadRC = RefCounting.baseReadRefCount(var, true, false);
         long baseWriteRC = RefCounting.baseWriteRefCount(var, true, false);

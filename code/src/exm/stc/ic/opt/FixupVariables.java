@@ -43,6 +43,7 @@ import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
@@ -282,15 +283,26 @@ public class FixupVariables implements OptimizerPass {
       this.aliasWritten.remove(var);
     }
 
+
+    void removeWritten(Collection<Var> vars) {
+      for (Var var: vars) {
+        removeWritten(var);
+      }
+    }
+
     /**
      * Remove variable without canonicalizing them
      * @param vars
      */
     void removeReadWrite(Collection<Var> vars) {
       for (Var var: vars) {
-        removeRead(var);
-        removeWritten(var);
+        removeReadWrite(var);
       }
+    }
+
+    void removeReadWrite(Var var) {
+      removeRead(var);
+      removeWritten(var);
     }
   }
 
@@ -310,9 +322,10 @@ public class FixupVariables implements OptimizerPass {
       HierarchicalSet<Var> visible, Set<Var> referencedGlobals,
       AliasTracker aliases, FixupVarMode fixupMode) {
 
-    if (fixupMode == FixupVarMode.REBUILD)
+    if (fixupMode == FixupVarMode.REBUILD) {
       // Remove global imports to be readded later if needed
       removeGlobalImports(block);
+    }
 
     // blockVars: variables defined in this block
     Set<Var> blockVars = new HashSet<Var>();
@@ -349,9 +362,15 @@ public class FixupVariables implements OptimizerPass {
 
     // Global constants can be imported in control blocks only
     Set<Var> globals = addGlobalImports(block, execCx, visible, fixupMode,
-                                        result.allSets());
+                                        result.read, result.written,
+                                        result.aliasWritten);
 
     referencedGlobals.addAll(globals);
+
+    /*
+     * Remove read references to globals.  Retain write since we'll need write
+     * refcounts to be passed in.
+     */
     result.removeReadWrite(globals);
 
     return result;
@@ -601,7 +620,8 @@ public class FixupVariables implements OptimizerPass {
    */
   private static Set<Var> addGlobalImports(Block block,
           ExecContext execCx, HierarchicalSet<Var> visible,
-          FixupVarMode fixupMode, List<Set<Var>> neededSets) {
+          FixupVarMode fixupMode, Set<Var> read, Set<Var> written,
+          Set<Var> aliasWritten) {
     // if global constant missing, just add it
     Set<Var> existingGlobals = new HashSet<Var>();
     if (fixupMode == FixupVarMode.ADD) {
@@ -612,21 +632,47 @@ public class FixupVariables implements OptimizerPass {
       }
     }
 
-    for (Set<Var> neededSet: neededSets) {
-      for (Var var: neededSet) {
-        if (visible.contains(var)) {
-          if (var.storage().isGlobal() &&
-              canImportGlobal(execCx, var.storage())) {
-            // Add at top in case used as mapping var
-            if (fixupMode != FixupVarMode.NO_UPDATE
-                && !existingGlobals.contains(var))
-              block.addVariable(var, true);
-            existingGlobals.add(var);
-          }
-        }
+    addGlobalImports(block, execCx, visible, fixupMode, existingGlobals,
+                      read, false);
+    addGlobalImports(block, execCx, visible, fixupMode, existingGlobals,
+                      written, true);
+    addGlobalImports(block, execCx, visible, fixupMode, existingGlobals,
+                      aliasWritten, true);
+
+    return existingGlobals;
+  }
+
+  private static void addGlobalImports(Block block, ExecContext execCx,
+      HierarchicalSet<Var> visible, FixupVarMode fixupMode,
+      Set<Var> existingGlobals, Set<Var> neededSet, boolean written) {
+    for (Var var: neededSet) {
+      if (visible.contains(var) &&
+          var.storage().isGlobal() &&
+          canImportGlobal(execCx, var.storage()) &&
+          !forcePassGlobal(block.getType(), var.storage(), written)) {
+        // Add at top in case used as mapping var
+        if (fixupMode != FixupVarMode.NO_UPDATE
+            && !existingGlobals.contains(var))
+          block.addVariable(var, true);
+        existingGlobals.add(var);
       }
     }
-    return existingGlobals;
+  }
+
+  /**
+   * We may want to force passing of globals from parent blocks if written so
+   * that reference count management is correct.
+   * @param type
+   * @param storage
+   * @param written
+   * @return
+   */
+  private static boolean forcePassGlobal(BlockType type, Alloc storage, boolean written) {
+    if (written) {
+      return type != BlockType.MAIN_BLOCK;
+    } else {
+      return false;
+    }
   }
 
   private static void removeUnusedGlobals(GlobalConstants constants,

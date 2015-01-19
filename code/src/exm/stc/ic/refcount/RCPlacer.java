@@ -17,7 +17,6 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -29,6 +28,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.refcount.RCTracker.RefCountCandidates;
@@ -80,7 +80,7 @@ public class RCPlacer {
       cancelIncrements(logger, fn, block, increments, rcType);
 
       // Add decrements to block
-      placeDecrements(logger, fn, block, increments, rcType);
+      placeDecrements(logger, globals, fn, block, increments, rcType);
 
       // Add any remaining increments
       placeIncrements(globals, fn, block, increments, rcType, parentAssignedAliasVars);
@@ -131,11 +131,11 @@ public class RCPlacer {
    * @param increments
    * @param type
    */
-  private void placeDecrements(Logger logger, Function fn, Block block,
-      RCTracker increments, RefCountType type) {
+  private void placeDecrements(Logger logger, GlobalVars globals, Function fn,
+      Block block, RCTracker increments, RefCountType type) {
 
     // First try to piggyback on variable declarations
-    piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
+    piggybackDecrementsOnDeclarations(logger, globals, fn, block, increments, type);
 
     // Then see if we can do the decrement on top of another operation
     piggybackOnStatements(logger, fn, block, increments, RCDir.DECR, type);
@@ -481,8 +481,9 @@ public class RCPlacer {
    *          updated to reflect changes
    * @param type
    */
-  private void piggybackDecrementsOnDeclarations(Logger logger, Function fn,
-      Block block, final RCTracker tracker, final RefCountType rcType) {
+  private void piggybackDecrementsOnDeclarations(Logger logger,
+      GlobalVars globals, Function fn, Block block,
+      RCTracker tracker, RefCountType rcType) {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
@@ -524,8 +525,25 @@ public class RCPlacer {
     for (Var immDecrVar: immDecrCandidates) {
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
       long incr = tracker.getCount(rcType, immDecrVar, RCDir.DECR);
-      block.modifyInitRefcount(immDecrVar, rcType, incr);
-      tracker.cancel(immDecrVar, rcType, -incr);
+      piggybackDecrement(globals, fn, block, tracker, rcType, immDecrVar, incr);
+    }
+  }
+
+
+  private void piggybackDecrement(GlobalVars globals, Function fn,
+        Block block, final RCTracker tracker,
+      final RefCountType rcType, Var var, long incr) {
+    assert(incr <= 0) : var + " " + incr;
+    if (incr < 0) {
+      if (var.storage() == Alloc.GLOBAL_VAR) {
+        if (OptUtil.isEntryBlock(fn, block)) {
+          globals.modifyInitRefcount(var, rcType, incr);
+          tracker.cancel(var, rcType, -incr);
+        }
+      } else {
+        block.modifyInitRefcount(var, rcType, incr);
+        tracker.cancel(var, rcType, -incr);
+      }
     }
   }
 
@@ -1043,13 +1061,13 @@ public class RCPlacer {
       if (blockVar.storage() != Alloc.ALIAS) {
         long incr = increments.getCount(rcType, blockVar, RCDir.INCR);
         assert(incr >= 0);
-        setInitRefcount(globals, fn, block, increments, rcType, blockVar, incr);
+        piggybackIncrement(globals, fn, block, increments, rcType, blockVar, incr);
       }
     }
   }
 
 
-  private void setInitRefcount(GlobalVars globals, Function fn, Block block,
+  private void piggybackIncrement(GlobalVars globals, Function fn, Block block,
       RCTracker increments, RefCountType rcType, Var var, long incr) {
     assert(incr >= 0);
     assert(incr == 0 || RefCounting.trackRefCount(var, rcType)) : var + " " + incr;
@@ -1059,8 +1077,7 @@ public class RCPlacer {
     }
 
     if (var.storage() == Alloc.GLOBAL_VAR) {
-      if (block.getType() == BlockType.MAIN_BLOCK &&
-          fn.getName().equals(Constants.ENTRY_FUNCTION)) {
+      if (OptUtil.isEntryBlock(fn, block)) {
         // Globals in entry function are like regular block vars
         globals.modifyInitRefcount(var, rcType, incr);
         increments.cancel(var, rcType, -incr);

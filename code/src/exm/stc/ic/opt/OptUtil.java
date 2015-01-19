@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -46,10 +47,21 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmVar;
 import exm.stc.ic.tree.ICInstructions.Instruction.VarCreator;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
 
 public class OptUtil {
+
+  /**
+   * @param fn
+   * @param block
+   * @return true if is block is the main entry point for the program
+   */
+  public static boolean isEntryBlock(Function fn, Block block) {
+    return block.getType() == BlockType.MAIN_BLOCK &&
+        fn.getName().equals(Constants.ENTRY_FUNCTION);
+  }
 
   /**
    * Generate optimiser variable name guaranteed to be unique
