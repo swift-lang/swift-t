@@ -90,7 +90,7 @@ class VariableUsageAnalyzer {
     this.lineMapping = lineMapping;
     this.currModuleName = currModuleName;
 
-    VariableUsageInfo globVui = setupGlobalUsage(context);
+    VariableUsageInfo globVui = setupGlobalUsage(context, false);
 
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
     Context fnContext = LocalContext.fnContext(context, function);
@@ -99,6 +99,8 @@ class VariableUsageAnalyzer {
     for (Var i: iList) {
       argVui.declare(fnContext, i.name(), i.type(), false);
       argVui.assign(fnContext, i.name(), AssignOp.ASSIGN);
+      argVui.setReadOnly(fnContext, i.name());
+
       fnContext.declareVariable(i.type(), i.name(), i.storage(),
             i.defType(), VarProvenance.unknown(), i.mappedDecl());
     }
@@ -133,7 +135,7 @@ class VariableUsageAnalyzer {
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: top level");
 
-    VariableUsageInfo globVui = setupGlobalUsage(context);
+    VariableUsageInfo globVui = setupGlobalUsage(context, true);
 
     Context fnContext = LocalContext.topLevelContext(context);
     VariableUsageInfo topLevelVui = globVui.createNested();
@@ -161,13 +163,16 @@ class VariableUsageAnalyzer {
     LogHelper.debug(context, "analyzer: done: top level");
   }
 
-  private VariableUsageInfo setupGlobalUsage(Context context) {
+  private VariableUsageInfo setupGlobalUsage(Context context, boolean topLevel) {
     VariableUsageInfo globVui = new VariableUsageInfo();
     // Add global constants
     for (Var global: context.getScopeVariables()) {
       globVui.declare(context,
           global.name(), global.type(), false);
       globVui.assign(context, global.name(), AssignOp.ASSIGN);
+      if (!topLevel || global.defType() == DefType.GLOBAL_CONST) {
+        globVui.setReadOnly(context, global.name());
+      }
     }
     return globVui;
   }

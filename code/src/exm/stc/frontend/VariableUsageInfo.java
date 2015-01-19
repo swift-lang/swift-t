@@ -146,6 +146,11 @@ public class VariableUsageInfo {
     return null;
   }
 
+  public void setReadOnly(Context context, String name) {
+    VInfo vi = lookupVariableInfo(name);
+    vi.setReadOnly();
+  }
+
   /**
    * Create a variableusage info for a nested scope by doing a deep copy of
    * this object, but setting the usage info to empty
@@ -214,6 +219,7 @@ public class VariableUsageInfo {
         // variables from outer scopes might be read or written elsewhere
         continue;
       }
+
       /* This works for both arrays and scalars, because isRead/isAssigned
        * can detect whether
        * With arrays, this can't detect which particular indices were read or written
@@ -351,6 +357,8 @@ public class VariableUsageInfo {
     private Ternary partAssigned; /** If array is only partially assigned */
     private Ternary appended;
     private Ternary read;
+    private boolean readOnly;
+
     /**
      * The depth of indexing at which array assignment occurred
      */
@@ -358,7 +366,15 @@ public class VariableUsageInfo {
 
     public VInfo(Type type, boolean mapped, String name, boolean locallyDeclared) {
       this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-          Ternary.FALSE, Ternary.FALSE, -1);
+          Ternary.FALSE, Ternary.FALSE, -1, false);
+    }
+
+    public void setReadOnly() {
+      readOnly = true;
+    }
+
+    public boolean isReadOnly() {
+      return readOnly;
     }
 
     public boolean hasMapping() {
@@ -369,7 +385,7 @@ public class VariableUsageInfo {
         boolean locallyDeclared, String name,
         Ternary assigned, Ternary partAssigned,
         Ternary appended, Ternary read,
-        int maxReadDepth) {
+        int maxReadDepth, boolean readOnly) {
       this.type = type;
       this.hasMapping = hasMapping;
       this.structFields = structFields;
@@ -380,12 +396,12 @@ public class VariableUsageInfo {
       this.appended = appended;
       this.read = read;
       this.maxReadDepth = maxReadDepth;
-
+      this.readOnly = readOnly;
     }
 
     private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
         Ternary assigned, Ternary partAssigned, Ternary read, Ternary appended,
-         int maxReadDepth) {
+         int maxReadDepth, boolean readOnly) {
       this.type = type;
       this.hasMapping = mapped;
       if (Types.isStruct(type)) {
@@ -404,6 +420,7 @@ public class VariableUsageInfo {
       this.appended = appended;
       this.read = read;
       this.maxReadDepth = maxReadDepth;
+      this.readOnly = readOnly;
     }
 
     public String getName() {
@@ -484,7 +501,7 @@ public class VariableUsageInfo {
 
       return new VInfo(type, hasMapping, structFieldsNew,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
-          Ternary.FALSE, Ternary.FALSE, -1);
+          Ternary.FALSE, Ternary.FALSE, -1, readOnly);
     }
 
 
@@ -509,6 +526,12 @@ public class VariableUsageInfo {
       Logger logger = Logging.getSTCLogger();
       if (logger.isTraceEnabled()) {
         logger.trace("\nASSIGN: " + this.name + " " + fieldPath);
+      }
+
+      if (readOnly) {
+        return Collections.singletonList(new Violation(ViolationType.ERROR,
+                  "Assigning variable " + name + " not permitted in " +
+                  "this context", context));
       }
 
       List<Violation> violations;
