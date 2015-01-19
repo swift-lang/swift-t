@@ -678,22 +678,24 @@ public class TurbineGenerator implements CompilerBackend {
                              Arg amount) {
     assert(amount.isImmInt());
     if (rcType == RefCountType.READERS) {
-      assert(RefCounting.trackReadRefCount(var));
-      if (dir == RCDir.INCR) {
-        incrementReaders(Arrays.asList(var), argToExpr(amount));
-      } else {
-        assert(dir == RCDir.DECR);
-        decrementReaders(Arrays.asList(var), argToExpr(amount));
+      if (RefCounting.trackReadRefCount(var)) {
+        if (dir == RCDir.INCR) {
+          incrementReaders(Arrays.asList(var), argToExpr(amount));
+        } else {
+          assert(dir == RCDir.DECR);
+          decrementReaders(Arrays.asList(var), argToExpr(amount));
+        }
       }
     } else {
       assert(rcType == RefCountType.WRITERS);
-      assert(RefCounting.trackWriteRefCount(var));
-      if (dir == RCDir.INCR) {
-        incrementWriters(Arrays.asList(var), argToExpr(amount));
-      } else {
-        assert(dir == RCDir.DECR);
-        // Close array by removing the slot we created at startup
-        decrementWriters(Arrays.asList(var), argToExpr(amount));
+      if (RefCounting.trackWriteRefCount(var)) {
+        if (dir == RCDir.INCR) {
+          incrementWriters(Arrays.asList(var), argToExpr(amount));
+        } else {
+          assert(dir == RCDir.DECR);
+          // Close array by removing the slot we created at startup
+          decrementWriters(Arrays.asList(var), argToExpr(amount));
+        }
       }
     }
   }
