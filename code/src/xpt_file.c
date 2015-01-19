@@ -500,6 +500,7 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state)
   // Then try to force sync to disk
   int rc = fsync(state->fd);
   CHECK_MSG(rc != EOF, "Error flushing checkpoint file");
+  DEBUG("Finished flushing checkpoint file");
 
   return ADLB_SUCCESS;
 }
