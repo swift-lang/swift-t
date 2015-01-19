@@ -86,7 +86,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
                                buffer, &length);
   CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in "
             "container %"PRId64, id);
-  if (length < 0)
+  if (rc == ADLB_NOTHING)
   {
     // Not present
     return ADLB_NOTHING;
