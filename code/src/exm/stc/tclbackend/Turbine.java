@@ -1773,12 +1773,16 @@ class Turbine {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
 
 
-    exprs.add(Square.fnCall(MULTICREATE, batched));
+    exprs.add(multicreate(batched));
 
     for (String varName: batchedVarNames) {
       exprs.add(new Token(varName));
     }
     return new Command(LASSIGN, exprs);
+  }
+
+  private static Square multicreate(List<TclList> batched) {
+    return Square.fnCall(MULTICREATE, batched);
   }
 
   public static Command batchDeclareGlobals(List<String> varNames,
@@ -1795,6 +1799,22 @@ class Turbine {
 
   private static Square createGlobals(List<TclList> parameters) {
     return Square.fnCall(CREATE_GLOBALS, parameters);
+  }
+
+  public static TclTree batchDeclareFiles(List<String> fileVarNames,
+      List<TclList> parameters, List<Boolean> isMappeds) {
+    TclList isMappedList = new TclList();
+    for (Boolean isMapped: isMappeds) {
+      isMappedList.add(LiteralInt.boolValue(isMapped));
+    }
+
+    ArrayList<Expression> exprs = new ArrayList<Expression>();
+    exprs.add(Square.fnCall(MAKE_FILE_TDS, multicreate(parameters), isMappedList));
+
+    for (String varName: fileVarNames) {
+      exprs.add(new Token(varName));
+    }
+    return new Command(LASSIGN, exprs);
   }
 
   public static Command batchDeclareGlobalFiles(List<String> fileVarNames,

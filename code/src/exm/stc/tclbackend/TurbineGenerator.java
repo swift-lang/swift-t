@@ -560,9 +560,13 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void declare(List<VarDecl> decls) {
-    List<VarDecl> batchedFiles = new ArrayList<VarDecl>();
-    List<TclList> batched = new ArrayList<TclList>();
+
+    List<TclList> batchedArgs = new ArrayList<TclList>();
     List<String> batchedVarNames = new ArrayList<String>();
+
+    List<TclList> batchedFileArgs = new ArrayList<TclList>();
+    List<String> batchedFileVarNames = new ArrayList<String>();
+    List<Boolean> batchedFileIsMappeds = new ArrayList<Boolean>();
 
     for (VarDecl decl: decls) {
       Var var = decl.var;
@@ -595,11 +599,13 @@ public class TurbineGenerator implements CompilerBackend {
       }
 
       if (Types.isFile(var)) {
-        batchedFiles.add(decl);
+        batchedFileArgs.add(createArgs(var, initReaders, initWriters));
+        batchedFileVarNames.add(prefixVar(var));
+        batchedFileIsMappeds.add(var.mappedDecl());
       } else if (Types.isPrimFuture(var) || Types.isPrimUpdateable(var) ||
           Types.isArray(var) || Types.isRef(var) || Types.isBag(var) ||
           Types.isStruct(var)) {
-        batched.add(createArgs(var, initReaders, initWriters));
+        batchedArgs.add(createArgs(var, initReaders, initWriters));
         batchedVarNames.add(prefixVar(var));
       } else if (Types.isPrimValue(var) || Types.isContainerLocal(var) ||
                   Types.isStructLocal(var)) {
@@ -611,32 +617,15 @@ public class TurbineGenerator implements CompilerBackend {
       }
     }
 
-    if (!batched.isEmpty()) {
-      pointAdd(Turbine.batchDeclare(batchedVarNames, batched));
+    if (!batchedArgs.isEmpty()) {
+      pointAdd(Turbine.batchDeclare(batchedVarNames, batchedArgs));
 
-      // Log in small batches to avoid turbine log limitations
-      // and overly long lines
-      // TODO: deprecate in favour of debug symbols
-      final int logBatch = 5;
-      for (int start = 0; start < batchedVarNames.size(); start += logBatch) {
-        List<Expression> logExprs = new ArrayList<Expression>();
-        logExprs.add(new Token("allocated"));
-        int end = Math.min(batchedVarNames.size(), start + logBatch);
-        for (String tclVarName: batchedVarNames.subList(start, end)) {
-          logExprs.add(new Token(" " + tclVarName + "=<"));
-          logExprs.add(new Value(tclVarName));
-          logExprs.add(new Token(">"));
-        }
-        TclString msg = new TclString(logExprs, ExprContext.VALUE_STRING);
-        pointAdd(Turbine.log(msg));
-      }
+      pointAdd(logVariableCreation(batchedVarNames));
     }
 
-    // Allocate files after so that mapped args are visible
-    for (VarDecl file: batchedFiles) {
-      // TODO: allocate filename/signal vars in batch and build file
-      //      handle here
-      allocateFile(file.var, file.initReaders, nextDebugSymbol(file.var));
+    if (!batchedFileArgs.isEmpty()) {
+      pointAdd(Turbine.batchDeclareFiles(
+          batchedFileVarNames, batchedFileArgs, batchedFileIsMappeds));
     }
 
     for (VarDecl decl: decls) {
@@ -664,6 +653,27 @@ public class TurbineGenerator implements CompilerBackend {
     // TODO: include debug symbol
     pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
                              argToExpr(initReaders), debugSymbol));
+  }
+
+  private Sequence logVariableCreation(List<String> varNames) {
+    // Log in small batches to avoid turbine log limitations
+    // and overly long lines
+    // TODO: deprecate in favour of debug symbols
+    Sequence result = new Sequence();
+    final int logBatch = 5;
+    for (int start = 0; start < varNames.size(); start += logBatch) {
+      List<Expression> logExprs = new ArrayList<Expression>();
+      logExprs.add(new Token("allocated"));
+      int end = Math.min(varNames.size(), start + logBatch);
+      for (String tclVarName: varNames.subList(start, end)) {
+        logExprs.add(new Token(" " + tclVarName + "=<"));
+        logExprs.add(new Value(tclVarName));
+        logExprs.add(new Token(">"));
+      }
+      TclString msg = new TclString(logExprs, ExprContext.VALUE_STRING);
+      result.add(Turbine.log(msg));
+    }
+    return result;
   }
 
   @Override
@@ -3181,14 +3191,20 @@ public class TurbineGenerator implements CompilerBackend {
   private Sequence initGlobalVars() {
     List<String> varNames = new ArrayList<String>();
     List<TclList> createArgs = new ArrayList<TclList>();
-    List<VarDecl> globalFileVars = new ArrayList<VarDecl>();
+
+    List<String> fileVarNames = new ArrayList<String>();
+    List<TclList> fileCreateArgs = new ArrayList<TclList>();
+    List<Boolean> isMapped = new ArrayList<Boolean>();
+
     Sequence commands = new Sequence();
 
 
     for (VarDecl decl: globalVars) {
       assert(decl.var.storage() == Alloc.GLOBAL_VAR);
       if (Types.isFile(decl.var)) {
-        globalFileVars.add(decl);
+        fileVarNames.add(prefixVar(decl.var));
+        fileCreateArgs.add(createArgs(decl.var, decl.initReaders,
+                                      decl.initWriters));
       } else {
         varNames.add(prefixVar(decl.var));
 
@@ -3198,14 +3214,6 @@ public class TurbineGenerator implements CompilerBackend {
 
     commands.add(Turbine.batchDeclareGlobals(varNames, createArgs));
 
-    List<String> fileVarNames = new ArrayList<String>();
-    List<TclList> fileCreateArgs = new ArrayList<TclList>();
-    List<Boolean> isMapped = new ArrayList<Boolean>();
-    for (VarDecl fileDecl: globalFileVars) {
-      fileVarNames.add(prefixVar(fileDecl.var));
-      fileCreateArgs.add(createArgs(fileDecl.var, fileDecl.initReaders,
-                                    fileDecl.initWriters));
-    }
     commands.add(Turbine.batchDeclareGlobalFiles(fileVarNames, fileCreateArgs,
                                                  isMapped));
 
