@@ -372,14 +372,15 @@ public class TurbineGenerator implements CompilerBackend {
       // Initialize struct types
       tree.append(structTypeDeclarations());
 
-      tree.append(debugSymbolInit());
-
       // Insert code to check versions
       tree.add(Turbine.checkConstants());
 
       tree.append(compileTimeArgs());
 
       tree.add(initGlobalVars());
+
+      // Global vars need to be allocated debug symbols
+      tree.append(debugSymbolInit());
 
       tree.add(new Command("turbine::start " + ENTRY_FUNCTION_NAME +
                                           " " + CONSTINIT_FUNCTION_NAME));
