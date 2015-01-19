@@ -512,6 +512,11 @@ public class ICTree {
       vars.add(var);
     }
 
+    public void removeVariable(Var var) {
+      // Remove all
+      while(vars.remove(var));
+    }
+
     public void generate(Logger logger, CompilerBackend gen) {
       gen.declareGlobalVars(vars());
     }

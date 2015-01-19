@@ -1371,26 +1371,12 @@ public class ICContinuations {
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
-      replaceVars(renames);
+      WaitVar.replaceVars(waitVars, renames);
 
       ICUtil.replaceArgValsInMap(renames, props);
     }
 
-    private void replaceVars(Map<Var, Arg> renames) {
-      boolean replaced = false;
-      ListIterator<WaitVar> it = waitVars.listIterator();
-      while (it.hasNext()) {
-        WaitVar wv = it.next();
-        Arg replacement = renames.get(wv.var);
-        if (replacement != null && replacement.isVar()) {
-          it.set(new WaitVar(replacement.getVar(), wv.explicit));
-          replaced = true;
-        }
-      }
-      if (replaced) {
-        WaitVar.removeDuplicates(waitVars);
-      }
-    }
+
 
     public WaitMode getMode() {
       return mode;
