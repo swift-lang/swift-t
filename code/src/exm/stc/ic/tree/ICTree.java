@@ -307,7 +307,7 @@ public class ICTree {
 
     }
     public AllGlobals allGlobals() {
-      return new AllGlobals(Arrays.asList(constants.vars(), globalVars.vars()));
+      return new AllGlobals(Arrays.asList(constants.vars(), globalVars.getVariables()));
     }
 
     public ForeignFunctions foreignFunctions() {
@@ -510,31 +510,121 @@ public class ICTree {
     }
   }
 
-  public static class GlobalVars {
-    private static final List<Var> vars = new ArrayList<Var>();
+  /**
+   * Variables defined in a context
+   */
+  public static class Variables {
+    protected final ArrayList<Var> variables;
 
-    public List<Var> vars() {
-      return Collections.unmodifiableList(vars);
+    /** Initial reference counts for vars defined in block */
+    protected final HashMap<Var, Arg> initReadRefcounts;
+    protected final HashMap<Var, Arg> initWriteRefcounts;
+
+
+    public Variables() {
+      this (new ArrayList<Var>(), new HashMap<Var, Arg>(),
+                           new HashMap<Var, Arg>());
+    }
+
+    private Variables(ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
+        HashMap<Var, Arg> initWriteRefcounts) {
+      this.variables = variables;
+      this.initReadRefcounts = initReadRefcounts;
+      this.initWriteRefcounts = initWriteRefcounts;
+    }
+
+    @Override
+    public Variables clone() {
+      return new Variables(new ArrayList<Var>(variables),
+          new HashMap<Var, Arg>(initReadRefcounts),
+          new HashMap<Var, Arg>(initWriteRefcounts));
+    }
+
+    public boolean contains(Var var) {
+      return variables.contains(var);
+    }
+
+    public List<Var> getVariables() {
+      return Collections.unmodifiableList(variables);
+    }
+
+    public ListIterator<Var> variableIterator() {
+      return variables.listIterator();
     }
 
     public void addVariable(Var var) {
-      assert(var.storage() == Alloc.GLOBAL_VAR);
-      assert(var.defType() == DefType.GLOBAL_USER);
+      variables.add(var);
+    }
 
-      vars.add(var);
+    public void addVariable(Var variable, boolean atTop) {
+      if (atTop) {
+        this.variables.add(0, variable);
+      } else {
+        this.variables.add(variable);
+      }
+    }
+
+    public void addAllVariables(List<Var> variables2) {
+      variables.addAll(variables2);
     }
 
     public void removeVariable(Var var) {
       // Remove all
-      while(vars.remove(var));
+      while(variables.remove(var));
+    }
+
+    public void removeAllVariables(Set<Var> vars) {
+      while(variables.removeAll(vars));
+    }
+
+    public Arg getInitReadRefcount(Var v) {
+      return initReadRefcounts.get(v);
+    }
+
+    public Arg getInitWriteRefcount(Var v) {
+      return initWriteRefcounts.get(v);
+    }
+
+    /**
+     * Set the initial reference count of a variable to something
+     * @param blockVar
+     * @param refcountType
+     * @param val
+     */
+    public void setInitRefcount(Var blockVar, RefCountType rcType,
+                                   long val) {
+      assert(val >= 0);
+      HashMap<Var, Arg> refcountMap;
+      if (rcType == RefCountType.READERS) {
+        refcountMap = this.initReadRefcounts;
+      } else {
+        assert(rcType == RefCountType.WRITERS);
+        refcountMap = this.initWriteRefcounts;
+      }
+      assert(!refcountMap.containsKey(blockVar)) :
+        "Tried to reassign refcount for var " + blockVar;
+
+      refcountMap.put(blockVar, Arg.newInt(val));
+    }
+
+  }
+
+  public static class GlobalVars extends Variables {
+
+    @Override
+    public void addVariable(Var var) {
+      assert(var.storage() == Alloc.GLOBAL_VAR);
+      assert(var.defType() == DefType.GLOBAL_USER);
+
+      super.addVariable(var);
     }
 
     public void generate(Logger logger, CompilerBackend gen) {
-      gen.declareGlobalVars(vars());
+      gen.declareGlobalVars(getVariables());
     }
 
     public void prettyPrint(StringBuilder out) {
-      for (Var var: vars) {
+      for (Var var: variables) {
         prettyPrintVarBasic(out, var);
         out.append("\n");
       }
@@ -951,8 +1041,7 @@ public class ICTree {
 
     private Block(BlockType type, Continuation parentCont, Function parentFunction) {
       this(type, parentCont, parentFunction, true, new LinkedList<Statement>(),
-          new ArrayList<Var>(), new HashMap<Var, Arg>(), new HashMap<Var, Arg>(),
-          new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
+          new Variables(), new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
 
     /**
@@ -965,15 +1054,12 @@ public class ICTree {
         Continuation parentCont, Function parentFunction,
         boolean emptyBlock,
         LinkedList<Statement> instructions,
-        ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
-        HashMap<Var, Arg> initWriteRefcounts,
+        Variables variables,
         ArrayList<Continuation> conds,
         ArrayList<CleanupAction> cleanupActions) {
       this.type = type;
       this.statements = instructions;
       this.variables = variables;
-      this.initReadRefcounts = initReadRefcounts;
-      this.initWriteRefcounts = initWriteRefcounts;
       this.continuations = conds;
       this.cleanupActions = cleanupActions;
 
@@ -1008,7 +1094,7 @@ public class ICTree {
 
     private void setParentFunction(Function parentFunction) {
       this.parentFunction = parentFunction;
-      parentFunction.addUsedVarNames(this.variables);
+      parentFunction.addUsedVarNames(this.variables.getVariables());
     }
 
     /**
@@ -1063,9 +1149,7 @@ public class ICTree {
                        Function parentFunction) {
       Block cloned = new Block(newType, parentCont, parentFunction,
           false, ICUtil.cloneStatements(this.statements),
-          new ArrayList<Var>(this.variables),
-          new HashMap<Var, Arg>(this.initReadRefcounts),
-          new HashMap<Var, Arg>(this.initWriteRefcounts),
+          this.variables.clone(),
           new ArrayList<Continuation>(),
           ICUtil.cloneCleanups(this.cleanupActions));
       for (Continuation c: this.continuations) {
@@ -1086,11 +1170,7 @@ public class ICTree {
 
     private final ArrayList<CleanupAction> cleanupActions;
 
-    private final ArrayList<Var> variables;
-
-    /** Initial reference counts for vars defined in block */
-    private final HashMap<Var, Arg> initReadRefcounts;
-    private final HashMap<Var, Arg> initWriteRefcounts;
+    private final Variables variables;
 
     /** conditional statements for block */
     private final ArrayList<Continuation> continuations;
@@ -1137,7 +1217,7 @@ public class ICTree {
     }
 
     public List<Var> getVariables() {
-      return Collections.unmodifiableList(variables);
+      return variables.getVariables();
     }
 
     public boolean declaredHere(Var var) {
@@ -1185,11 +1265,11 @@ public class ICTree {
     }
 
     private void generateBlockVariables(Logger logger, CompilerBackend gen) {
-      List<VarDecl> declarations = new ArrayList<VarDecl>(variables.size());
-      for (Var v: variables) {
+      List<VarDecl> declarations = new ArrayList<VarDecl>();
+      for (Var v: variables.getVariables()) {
         logger.trace("generating variable decl for " + v.toString());
-        Arg initReaders = initReadRefcounts.get(v);
-        Arg initWriters = initWriteRefcounts.get(v);
+        Arg initReaders = variables.getInitReadRefcount(v);
+        Arg initWriters = variables.getInitWriteRefcount(v);
 
         if (initReaders == null) {
           logger.trace("Init readers: " + v.name() + " null");
@@ -1238,16 +1318,19 @@ public class ICTree {
     }
 
     public void prettyPrint(StringBuilder sb, String indent) {
-      for (Var v: variables) {
+      for (Var v: variables.getVariables()) {
         sb.append(indent);
 
         prettyPrintVarBasic(sb, v);
 
-        if (initReadRefcounts.containsKey(v)) {
-          sb.append(" <readers=" + initReadRefcounts.get(v) + ">");
+        Arg initRead = variables.getInitReadRefcount(v);
+        if (initRead != null) {
+          sb.append(" <readers=" + initRead + ">");
         }
-        if (initWriteRefcounts.containsKey(v)) {
-          sb.append(" <writers=" + initWriteRefcounts.get(v) + ">");
+
+        Arg initWrite = variables.getInitWriteRefcount(v);
+        if (initWrite != null) {
+          sb.append(" <writers=" + initWrite + ">");
         }
         sb.append("\n");
       }
@@ -1422,8 +1505,9 @@ public class ICTree {
     }
 
     public ListIterator<Var> variableIterator() {
-      return variables.listIterator();
+      return variables.variableIterator();
     }
+
     public List<Statement> getStatements() {
       return Collections.unmodifiableList(statements);
     }
@@ -1487,7 +1571,7 @@ public class ICTree {
     }
 
     private void renameInDefs(Map<Var, Arg> renames, RenameMode mode) {
-      ListIterator<Var> it = variables.listIterator();
+      ListIterator<Var> it = variables.variableIterator();
       while (it.hasNext()) {
         // The original variable and the current one
         Var var;
@@ -1584,7 +1668,7 @@ public class ICTree {
 
 
     public void addVariables(List<Var> variables) {
-      this.variables.addAll(variables);
+      this.variables.addAllVariables(variables);
       if (this.parentFunction != null) {
         this.parentFunction.addUsedVarNames(variables);
       }
@@ -1595,11 +1679,7 @@ public class ICTree {
     }
 
     public void addVariable(Var variable, boolean atTop) {
-      if (atTop) {
-        this.variables.add(0, variable);
-      } else {
-        this.variables.add(variable);
-      }
+      this.variables.addVariable(variable, atTop);
       if (this.parentFunction != null) {
         parentFunction.addUsedVarName(variable);
       }
@@ -1663,7 +1743,7 @@ public class ICTree {
     public void insertInline(Block b,
           ListIterator<Continuation> contPos,
           ListIterator<Statement> pos) {
-      Set<Var> varSet = new HashSet<Var>(this.variables);
+      Set<Var> varSet = new HashSet<Var>(this.variables.getVariables());
       for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
         if (!varSet.contains(newVar)) {
@@ -1695,7 +1775,7 @@ public class ICTree {
     }
 
     public void removeVarDeclarations(Set<Var> vars) {
-      variables.removeAll(vars);
+      variables.removeAllVariables(vars);
       ListIterator<CleanupAction> it = cleanupActions.listIterator();
       while (it.hasNext()) {
         CleanupAction a = it.next();
@@ -1825,27 +1905,12 @@ public class ICTree {
       setInitRefcount(blockVar, rcType, baseRC + incr);
     }
 
-    /**
-     * Set the initial reference count of a variable to something
-     * @param blockVar
-     * @param refcountType
-     * @param val
-     */
+
     public void setInitRefcount(Var blockVar, RefCountType rcType,
                                    long val) {
-      assert(val >= 0);
-      HashMap<Var, Arg> refcountMap;
-      if (rcType == RefCountType.READERS) {
-        refcountMap = this.initReadRefcounts;
-      } else {
-        assert(rcType == RefCountType.WRITERS);
-        refcountMap = this.initWriteRefcounts;
-      }
-      assert(!refcountMap.containsKey(blockVar)) :
-        "Tried to reassign refcount for block var " + blockVar;
-
-      refcountMap.put(blockVar, Arg.newInt(val));
+      variables.setInitRefcount(blockVar, rcType, val);
     }
+
   }
 
   public static enum StatementType {

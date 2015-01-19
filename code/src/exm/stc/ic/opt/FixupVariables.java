@@ -633,7 +633,7 @@ public class FixupVariables implements OptimizerPass {
        GlobalVars globalVars, Set<Var> referencedGlobals) {
     Set<Var> globalsToRemove = new HashSet<Var>();
     globalsToRemove.addAll(constants.map().keySet());
-    globalsToRemove.addAll(globalVars.vars());
+    globalsToRemove.addAll(globalVars.getVariables());
 
     globalsToRemove.removeAll(referencedGlobals);
     for (Var unused: globalsToRemove) {

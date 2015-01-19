@@ -101,7 +101,7 @@ public class MultiCollection<T> implements Collection<T> {
   }
 
   @Override
-  public <T> T[] toArray(T[] a) {
+  public <S> S[] toArray(S[] a) {
     throw new UnsupportedOperationException("toArray not supported");
   }
 
