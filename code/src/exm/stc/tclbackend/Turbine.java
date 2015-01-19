@@ -1871,14 +1871,6 @@ class Turbine {
     return new Command(XPT_UNPACK, unpackArgs);
   }
 
-  public static Command xptInit() {
-    return new Command(XPT_INIT);
-  }
-
-  public static Command xptFinalize() {
-    return new Command(XPT_FINALIZE);
-  }
-
   public static Expression xptWriteEnabled() {
     return Square.fnCall(XPT_WRITE_ENABLED);
   }
