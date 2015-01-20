@@ -3205,6 +3205,7 @@ public class TurbineGenerator implements CompilerBackend {
         fileVarNames.add(prefixVar(decl.var));
         fileCreateArgs.add(createArgs(decl.var, decl.initReaders,
                                       decl.initWriters));
+        isMapped.add(decl.var.mappedDecl());
       } else {
         varNames.add(prefixVar(decl.var));
 
