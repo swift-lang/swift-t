@@ -1768,33 +1768,29 @@ class Turbine {
                   typeList), typeListStartIx, new LiteralInt(writeDecr)));
   }
 
-  public static Command batchDeclare(List<String> batchedVarNames,
+  public static TclTree batchDeclare(List<String> batchedVarNames,
           List<TclList> batched) {
-    ArrayList<Expression> exprs = new ArrayList<Expression>();
+    assert(batchedVarNames.size() == batched.size());
 
-
-    exprs.add(multicreate(batched));
-
-    for (String varName: batchedVarNames) {
-      exprs.add(new Token(varName));
+    if (batchedVarNames.size() == 0) {
+      return new Sequence();
     }
-    return new Command(LASSIGN, exprs);
+
+    return lassign(multicreate(batched), batchedVarNames);
   }
 
   private static Square multicreate(List<TclList> batched) {
     return Square.fnCall(MULTICREATE, batched);
   }
 
-  public static Command batchDeclareGlobals(List<String> varNames,
+  public static TclTree batchDeclareGlobals(List<String> varNames,
       List<TclList> parameters) {
-    ArrayList<Expression> exprs = new ArrayList<Expression>();
-
-    exprs.add(createGlobals(parameters));
-
-    for (String varName : varNames) {
-      exprs.add(new Token(varName));
+    assert(varNames.size() == parameters.size());
+    if (varNames.size() == 0) {
+      return new Sequence();
     }
-    return new Command(LASSIGN, exprs);
+
+    return lassign(createGlobals(parameters), varNames);
   }
 
   private static Square createGlobals(List<TclList> parameters) {
@@ -1805,35 +1801,46 @@ class Turbine {
       List<TclList> parameters, List<Boolean> isMappeds) {
     assert(parameters.size() == fileVarNames.size());
     assert(isMappeds.size() == fileVarNames.size());
+    if (fileVarNames.size() == 0) {
+      return new Sequence();
+    }
 
     TclList isMappedList = new TclList();
     for (Boolean isMapped: isMappeds) {
       isMappedList.add(LiteralInt.boolValue(isMapped));
     }
 
-    ArrayList<Expression> exprs = new ArrayList<Expression>();
-    exprs.add(Square.fnCall(MAKE_FILE_TDS, multicreate(parameters), isMappedList));
-
-    for (String varName: fileVarNames) {
-      exprs.add(new Token(varName));
-    }
-    return new Command(LASSIGN, exprs);
+    return lassign(
+        Square.fnCall(MAKE_FILE_TDS, multicreate(parameters), isMappedList),
+        fileVarNames);
   }
 
-  public static Command batchDeclareGlobalFiles(List<String> fileVarNames,
+  public static TclTree batchDeclareGlobalFiles(List<String> fileVarNames,
                 List<TclList> parameters, List<Boolean> isMappeds) {
     assert(parameters.size() == fileVarNames.size());
     assert(isMappeds.size() == fileVarNames.size());
 
+    if (fileVarNames.size() == 0) {
+      return new Sequence();
+    }
+
     TclList isMappedList = new TclList();
     for (Boolean isMapped: isMappeds) {
       isMappedList.add(LiteralInt.boolValue(isMapped));
     }
 
-    ArrayList<Expression> exprs = new ArrayList<Expression>();
-    exprs.add(Square.fnCall(MAKE_FILE_TDS, createGlobals(parameters), isMappedList));
 
-    for (String varName: fileVarNames) {
+    return lassign(
+        Square.fnCall(MAKE_FILE_TDS, createGlobals(parameters), isMappedList),
+        fileVarNames);
+  }
+
+  private static TclTree lassign(Expression expr, List<String> varNames) {
+    assert(varNames.size() >= 1) : "need at least one variable for lassign";
+    List<Expression> exprs = new ArrayList<Expression>();
+    exprs.add(expr);
+
+    for (String varName: varNames) {
       exprs.add(new Token(varName));
     }
     return new Command(LASSIGN, exprs);
