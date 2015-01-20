@@ -1803,6 +1803,9 @@ class Turbine {
 
   public static TclTree batchDeclareFiles(List<String> fileVarNames,
       List<TclList> parameters, List<Boolean> isMappeds) {
+    assert(parameters.size() == fileVarNames.size());
+    assert(isMappeds.size() == fileVarNames.size());
+
     TclList isMappedList = new TclList();
     for (Boolean isMapped: isMappeds) {
       isMappedList.add(LiteralInt.boolValue(isMapped));
@@ -1819,6 +1822,9 @@ class Turbine {
 
   public static Command batchDeclareGlobalFiles(List<String> fileVarNames,
                 List<TclList> parameters, List<Boolean> isMappeds) {
+    assert(parameters.size() == fileVarNames.size());
+    assert(isMappeds.size() == fileVarNames.size());
+
     TclList isMappedList = new TclList();
     for (Boolean isMapped: isMappeds) {
       isMappedList.add(LiteralInt.boolValue(isMapped));
