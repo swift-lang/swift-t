@@ -1,5 +1,4 @@
 import io;
-// SKIP-THIS-TEST
 
 /* Check support for referencing top-level variable from other functions*/
 
