@@ -828,7 +828,9 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       }
       else
       {
-        DEBUG("Update refcount now for <%"PRId64">", hdr->incr.id);
+        DEBUG("Update refcount now for <%"PRId64"> r: %i w: %i",
+              hdr->incr.id, hdr->incr.change.read_refcount,
+              hdr->incr.change.write_refcount);
         adlb_data_code dc = xlb_incr_refc_local(hdr->incr.id,
                                     hdr->incr.change, true);
         CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
