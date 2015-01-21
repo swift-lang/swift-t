@@ -1618,11 +1618,11 @@ class Turbine {
    * @param args
    * @return Tcl code to execute external executable
    */
-  public static Command exec(String cmd, Expression stdinFilename,
+  public static Command exec(Expression cmd, Expression stdinFilename,
           Expression stdoutFilename, Expression stderrFilename,
           List<Expression> args) {
     ArrayList<Expression> args2 = new ArrayList<Expression>(args.size() + 4);
-    args2.add(new TclString(cmd, true));
+    args2.add(cmd);
 
     Dict kwOpts =
             execKeywordOpts(stdinFilename, stdoutFilename, stderrFilename);
@@ -1863,7 +1863,7 @@ class Turbine {
    *          may be null if no continuation to call
    * @return
    */
-  public static Command asyncExec(AsyncExecutor executor, String cmdName,
+  public static Command asyncExec(AsyncExecutor executor, Expression cmdName,
           List<Token> outVarNames, List<Expression> taskArgExprs,
           List<Pair<String, Expression>> taskPropExprs,
           List<Expression> stageIns, List<Expression> stageOuts,
@@ -1880,7 +1880,7 @@ class Turbine {
     }
 
     List<Expression> execArgs = new ArrayList<Expression>();
-    execArgs.add(new TclString(cmdName, true));
+    execArgs.add(cmdName);
     //execArgs.add(new TclList(outVarNames));
 
     execArgs.add(new TclList(taskArgExprs));

@@ -1939,6 +1939,30 @@ public class ASTWalker {
     context.setFunctionProperty(function, FnProp.TARGETABLE);
   }
 
+  private static class AppCmdArgs {
+    final boolean openedWait;
+    final Var cmd;
+    final List<Var> args;
+
+    public AppCmdArgs(boolean openedWait, Var cmd, List<Var> args) {
+      this.openedWait = openedWait;
+      this.cmd = cmd;
+      this.args = args;
+    }
+  }
+
+  private static class AppCmdLocalArgs {
+    final Arg cmd;
+    final List<Arg> args;
+    final Redirects<Arg> redirects;
+
+    public AppCmdLocalArgs(Arg cmd, List<Arg> args, Redirects<Arg> redirects) {
+      this.cmd = cmd;
+      this.args = args;
+      this.redirects = redirects;
+    }
+  }
+
   private void compileAppFunction(Context context, SwiftAST tree)
       throws UserException {
     LogHelper.info(context.getLevel(), "compileAppFunction");
@@ -2035,29 +2059,22 @@ public class ASTWalker {
     assert(appBody.getChildCount() >= 1);
 
     // Extract command from AST
-    SwiftAST cmd = appBody.child(0);
-    assert(cmd.getType() == ExMParser.COMMAND);
-    assert(cmd.getChildCount() >= 1);
-    SwiftAST appNameT = cmd.child(0);
-    assert(appNameT.getType() == ExMParser.STRING);
-    String appName = Literals.extractLiteralString(context, appNameT);
+    SwiftAST cmdT = appBody.child(0);
+    assert(cmdT.getType() == ExMParser.COMMAND);
+    assert(cmdT.getChildCount() >= 1);
 
     // Evaluate any argument expressions
-    Pair<List<Var>, Boolean> evaledArgs = evalAppCmdArgs(context, cmd);
-
-    List<Var> cmdArgs = evaledArgs.val1;
-    boolean openedEvalWait = evaledArgs.val2;
+    AppCmdArgs evaledArgs = evalAppCmdArgs(context, cmdT);
 
     // Process any redirections
     Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
 
-    checkAppOutputs(context, appName, outArgs, cmdArgs, redirFutures,
-                    suppressions);
+    checkAppOutputs(context, outArgs, evaledArgs.args, redirFutures, suppressions);
 
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<WaitVar>> wait = selectAppWaitVars(context,
-                                  cmdArgs, inArgs, outArgs, redirFutures);
+                                evaledArgs.cmd, evaledArgs.args, inArgs, outArgs, redirFutures);
     Map<String, Var> fileNames = wait.val1;
     List<WaitVar> waitVars = wait.val2;
 
@@ -2071,13 +2088,13 @@ public class ASTWalker {
     backend.startWaitStatement(waitName, VarRepr.backendWaitVars(waitVars),
         WaitMode.TASK_DISPATCH, true, ExecTarget.dispatched(targetCx), props);
     // On worker, just execute the required command directly
-    Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
-                                          cmdArgs, redirFutures, fileNames);
-    List<Arg> localArgs = retrieved.val1;
-    Redirects<Arg> localRedirects = retrieved.val2;
+    AppCmdLocalArgs retrieved = retrieveAppArgs(context, evaledArgs.cmd, evaledArgs.args,
+                                            redirFutures, fileNames);
 
-    // Create dummy dependencies for input files to avoid wait
-    // being optimised out
+    /*
+     * Create dummy dependencies for input files to avoid wait being optimised
+     * out.
+     */
     List<Arg> localInFiles = new ArrayList<Arg>();
     for (Var inArg: inArgs) {
       if (Types.isFile(inArg)) {
@@ -2103,22 +2120,22 @@ public class ASTWalker {
       }
     }
 
-    List<Arg> beLocalArgs = VarRepr.backendArgs(localArgs);
+    List<Arg> beLocalArgs = VarRepr.backendArgs(retrieved.args);
     List<Var> beLocalOutputs = VarRepr.backendVars(localOutputs);
     List<Arg> beLocalInfiles = VarRepr.backendArgs(localInFiles);
     Redirects<Arg> beLocalRedirects = new Redirects<Arg>(
-                VarRepr.backendArg(localRedirects.stdin, true),
-                VarRepr.backendArg(localRedirects.stdout, true),
-                VarRepr.backendArg(localRedirects.stderr, true));
+                VarRepr.backendArg(retrieved.redirects.stdin, true),
+                VarRepr.backendArg(retrieved.redirects.stdout, true),
+                VarRepr.backendArg(retrieved.redirects.stderr, true));
     if (asyncExec == null) {
-      backend.runExternal(appName, beLocalArgs, beLocalInfiles, beLocalOutputs,
+      backend.runExternal(retrieved.cmd, beLocalArgs, beLocalInfiles, beLocalOutputs,
                         beLocalRedirects, hasSideEffects, deterministic);
     } else {
       String aeName = context.constructName("async-exec");
       Map<String, Arg> taskProps = new HashMap<String, Arg>();
       beLocalRedirects.addProps(taskProps);
 
-      backend.startAsyncExec(aeName, asyncExec, appName,
+      backend.startAsyncExec(aeName, asyncExec, retrieved.cmd,
           beLocalOutputs, beLocalArgs,
           taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
@@ -2151,7 +2168,7 @@ public class ASTWalker {
       backend.endAsyncExec();
     }
     backend.endWaitStatement();
-    if (openedEvalWait) {
+    if (evaledArgs.openedWait) {
       backend.endWaitStatement();
     }
   }
@@ -2223,7 +2240,7 @@ public class ASTWalker {
    * @param redir
    * @throws UserException
    */
-  private void checkAppOutputs(Context context, String function,
+  private void checkAppOutputs(Context context,
       List<Var> outArgs, List<Var> args,
       Redirects<Var> redirFutures, Set<Suppression> suppressions)
           throws UserException {
@@ -2267,7 +2284,8 @@ public class ASTWalker {
     }
     if (deferredError) {
       throw new UserException(context, "Compilation failed due to type "
-          + "error in definition of function " + function);
+          + "error in definition of function " +
+          context.getFunctionContext().getFunctionName());
     }
   }
 
@@ -2281,29 +2299,31 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    * @throws DoubleDefineException
    */
-  private Pair<List<Arg>, Redirects<Arg>> retrieveAppArgs(Context context,
-          List<Var> args, Redirects<Var> redirFutures,
+  private AppCmdLocalArgs retrieveAppArgs(Context context,
+          Var cmd, List<Var> args, Redirects<Var> redirFutures,
           Map<String, Var> fileNames)
           throws UserException, UndefinedTypeException, DoubleDefineException {
+    Arg localCmd = exprWalker.retrieveToVar(context, cmd).asArg();
+
     List<Arg> localInputs = new ArrayList<Arg>();
     for (Var in: args) {
-      localInputs.add(Arg.newVar(retrieveAppArg(context, fileNames, in)));
+      localInputs.add(retrieveAppArg(context, fileNames, in).asArg());
     }
     Redirects<Arg> redirValues = new Redirects<Arg>();
     if (redirFutures.stdin != null) {
-      redirValues.stdin = Arg.newVar(retrieveAppArg(context, fileNames,
-                                                 redirFutures.stdin));
+      redirValues.stdin = retrieveAppArg(context, fileNames,
+                                         redirFutures.stdin).asArg();
     }
     if (redirFutures.stdout != null) {
-      redirValues.stdout = Arg.newVar(retrieveAppArg(context, fileNames,
-                                                 redirFutures.stdout));
+      redirValues.stdout = retrieveAppArg(context, fileNames,
+                                           redirFutures.stdout).asArg();
     }
     if (redirFutures.stderr != null) {
       redirValues.stderr = Arg.newVar(retrieveAppArg(context, fileNames,
                                                  redirFutures.stderr));
     }
 
-    return Pair.create(localInputs, redirValues);
+    return new AppCmdLocalArgs(localCmd, localInputs, redirValues);
   }
 
 
@@ -2337,15 +2357,25 @@ public class ASTWalker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private Pair<List<Var>, Boolean>
-      evalAppCmdArgs(Context context, SwiftAST cmdArgs)
+  private AppCmdArgs evalAppCmdArgs(Context context, SwiftAST cmdArgs)
           throws TypeMismatchException, UserException {
+
+    SwiftAST cmdT = cmdArgs.child(0);
+    Type cmdType = TypeChecker.findExprType(context, cmdT);
+    if (!Types.isString(cmdType)) {
+      throw new TypeMismatchException(context, "First argument of app command "
+                                      + "must be string for command to invoke");
+    }
+    Var cmd = exprWalker.eval(context, cmdT, Types.F_STRING, false, null);
+
     List<Var> refArgs = new ArrayList<Var>();
     List<Var> args = new ArrayList<Var>();
-    // Skip first arg: that is id
+
+    // Include all subsequent args
     for (SwiftAST cmdArg: cmdArgs.children(1)) {
       if (cmdArg.getType() == ExMParser.APP_FILENAME) {
         assert(cmdArg.getChildCount() == 1);
+
         String fileVarName = cmdArg.child(0).getText();
         Var file = context.lookupVarUser(fileVarName);
         if (!Types.isFile(file)) {
@@ -2383,14 +2413,22 @@ public class ASTWalker {
       }
     }
 
-    if (refArgs.isEmpty()) {
-      return Pair.create(args, false);
+    if (refArgs.isEmpty() && !Types.isRef(cmd)) {
+      return new AppCmdArgs(false, cmd, args);
     } else {
       // Replace refs with dereferenced
       backend.startWaitStatement(
           context.getFunctionContext().constructName("ref-argwait"),
           VarRepr.backendVars(refArgs),
           WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
+
+      if (Types.isRef(cmd)) {
+        // Replace old arg with dereferenced version
+        Var derefedCmd = varCreator.createTmpAlias(context,
+                            Types.retrievedType(cmd));
+        exprWalker.retrieveRef(derefedCmd, cmd, false);
+        cmd = derefedCmd;
+      }
 
       for (int i = 0; i < args.size(); i++) {
         Var oldArg = args.get(i);
@@ -2404,7 +2442,7 @@ public class ASTWalker {
       }
 
       // Caller will close wait
-      return Pair.create(args, true);
+      return new AppCmdArgs(true, cmd, args);
     }
 
   }
@@ -2414,6 +2452,7 @@ public class ASTWalker {
    * upon.  This is somewhat complex since we sometimes need to block
    * on filenames/file statuses/etc
    * @param context
+   * @param cmd
    * @param redirFutures
    * @param cmdArgs arguments for command line
    * @param inArgs input arguments for app function
@@ -2423,12 +2462,13 @@ public class ASTWalker {
    * @throws UndefinedTypeException
    */
   private Pair<Map<String, Var>, List<WaitVar>> selectAppWaitVars(
-          Context context, List<Var> cmdArgs, List<Var> inArgs,
+          Context context, Var cmd, List<Var> cmdArgs, List<Var> inArgs,
           List<Var> outArgs, Redirects<Var> redirFutures)
                                                 throws UserException,
           UndefinedTypeException {
     // All command arguments including redirects
     List<Var> allCmdArgs = new ArrayList<Var>();
+    allCmdArgs.add(cmd);
     allCmdArgs.addAll(cmdArgs);
     allCmdArgs.addAll(redirFutures.redirections(true, true));
 

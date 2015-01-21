@@ -1636,7 +1636,7 @@ public class ICContinuations {
     /**
      * Name of command for executor
      */
-    private final String cmdName;
+    private Arg cmdName;
 
     /**
      * Output variables assigned by task, generally
@@ -1660,7 +1660,7 @@ public class ICContinuations {
     private final boolean hasSideEffects;
 
     public AsyncExec(String procName, AsyncExecutor executor,
-          String cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
+          Arg cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
           List<Var> taskOutputs, List<Arg> taskArgs,
           Map<String, Arg> taskProps, boolean hasSideEffects) {
       this(procName, new Block(BlockType.ASYNC_EXEC_CONTINUATION, null),
@@ -1671,7 +1671,7 @@ public class ICContinuations {
 
     private AsyncExec(String procName, Block block, boolean newBlock,
         AsyncExecutor executor,
-        String cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
+        Arg cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<Var> taskOutputs,
         List<Arg> taskArgs, Map<String, Arg> taskProps,
         boolean hasSideEffects) {
@@ -1719,7 +1719,7 @@ public class ICContinuations {
       sb.append(currentIndent + "async_exec ");
       sb.append(executor.toString());
       sb.append(" ");
-      sb.append(cmdName);
+      sb.append(cmdName.toString());
       sb.append(" (");
       ICUtil.prettyPrintVarList(sb, taskOutputs);
       sb.append(") (");
@@ -1749,6 +1749,8 @@ public class ICContinuations {
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
+      cmdName = ICUtil.replaceArg(renames, cmdName, false);
+
       if (mode == RenameMode.REFERENCE ||
           mode == RenameMode.REPLACE_VAR)
       {
@@ -1796,6 +1798,7 @@ public class ICContinuations {
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       ArrayList<Var> res = new ArrayList<Var>();
+      ICUtil.addIfVar(res, this.cmdName);
       ICUtil.addVars(res, this.taskArgs);
       ICUtil.addVars(res, this.taskProps.values());
       return res; // can later eliminate waitVars, etc
