@@ -12,7 +12,7 @@ Use +run-tests.zsh+ to run the tests.  This automates the following
 simplified command lines:
 ----
 stc 100-test.swift 100-test.tcl
-turbine -n 3 100-test.tcl
+turbine -n 2 100-test.tcl
 ----
 
 This creates stc logs, intermediate code, and output files.
@@ -37,6 +37,8 @@ Available arguments:
 
 == Supporting files
 
+Supporting files are optional. 
+
 * Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
   create input files, etc.  Must return exit code 0 or test fails.
   This is sourced by the test script in a zsh subshell in such a way
@@ -44,7 +46,7 @@ Available arguments:
   Turbine when running that test.
 * Check script: TEST.check.sh: Is run after STC and Turbine.  Can
   check outputs, remove files, etc.  Must return exit code 0 or test
-  fails.  E.g., can examine TEST.out for correctness Expected output:
+  fails.  E.g., can examine TEST.out for correctness.
 * TEST.exp: Each line of this file must be in TEST.out or test fails.
 * TEST.args: Arguments for run time, passed to user Swift program
 * TEST.stcargs: Arguments for STC, used to modify STC behavior
@@ -55,11 +57,11 @@ Included in comments in TEST.swift to modify test behavior
 
 NOTE: Tests that do not run should be linked to issues in exm-issues
 
-* SKIP-THIS-TEST: Skips test THIS-TEST-SHOULD-NOT-COMPILE: If
-  TEST.swift compiles, test fails.  Used to test for Swift code that
-  STC should reject.
+* SKIP-THIS-TEST: Skips test entirely.
+* THIS-TEST-SHOULD-NOT-COMPILE: If TEST.swift compiles, test fails.  
+  Used to test for Swift code that STC should reject.
 * THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails.
-  Used to test for Swift logic that should crash Turbine
+  Used to test for Swift logic that should crash Turbine.
 
 == Numbering
 
@@ -79,7 +81,13 @@ The tests are numbered for lexical sorting by shell glob.
 *        560: files
 *        580: foreach
 *        590: blobs
-600::       User builtins, interesting CPP uses
+600::    Various uses
+*        600: User builtins
+*        620: User includes (CPP)   
+*        630: app functions
+*        640-679: Advanced type usage
+*        680: Advanced app function features
+*        690: File features (copies, etc.)
 700::       STC standard library
 *        700: strings
 *        710: argc/argv
