@@ -285,7 +285,7 @@ app_body:
 
 // The app function command line
 command:
-        c=STRING command_args? -> ^( COMMAND $c command_args? )
+        command_args -> ^( COMMAND command_args )
     ;
 
 command_args:

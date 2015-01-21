@@ -375,11 +375,11 @@ public class STCMiddleEnd {
   }
 
   public void startAsyncExec(String procName,
-      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
+      AsyncExecutor executor, Arg cmd, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasSideEffects) {
 
-    AsyncExec stmt = new AsyncExec(procName, executor, cmdName,
+    AsyncExec stmt = new AsyncExec(procName, executor, cmd,
           PassedVar.NONE, Var.NONE,
           taskOutputs, taskArgs, taskProps, hasSideEffects);
     currBlock().addContinuation(stmt);
@@ -440,9 +440,11 @@ public class STCMiddleEnd {
                 outputs, inputs, mode, props, program.foreignFunctions()));
   }
 
-  public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
+  public void runExternal(Arg cmd, List<Arg> args, List<Arg> inFiles,
                           List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
+    assert(Types.isStringVal(cmd));
+
     for (Var o: outFiles) {
       assert(Types.isFileVal(o) || Types.isVoidVal(o));
     }

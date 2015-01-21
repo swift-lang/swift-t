@@ -1619,7 +1619,6 @@ public class ICInstructions {
       gen.callForeignFunctionLocal(functionName, outputs, inputs);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<Pair<Var, InitType>> getInitialized() {
       return Collections.emptyList();
@@ -1679,7 +1678,7 @@ public class ICInstructions {
   }
 
   public static class RunExternal extends Instruction {
-    private final String cmd;
+    private Arg cmd;
     private final ArrayList<Arg> inFiles;
     private final ArrayList<Var> outFiles;
     private final ArrayList<Arg> args;
@@ -1687,7 +1686,7 @@ public class ICInstructions {
     private final boolean hasSideEffects;
     private final boolean deterministic;
 
-    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles,
+    public RunExternal(Arg cmd, List<Arg> inFiles, List<Var> outFiles,
                List<Arg> args, Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
@@ -1702,6 +1701,7 @@ public class ICInstructions {
 
     @Override
     public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
+      cmd = ICUtil.replaceArg(renames, cmd, false);
       ICUtil.replaceArgsInList(renames, args);
       ICUtil.replaceArgsInList(renames, inFiles);
       redirects.stdin = ICUtil.replaceArg(renames, redirects.stdin, true);
@@ -1715,7 +1715,7 @@ public class ICInstructions {
     @Override
     public String toString() {
       StringBuilder res = new StringBuilder();
-      res.append(formatFunctionCall(op, cmd, outFiles, args));
+      res.append(formatFunctionCall(op, cmd.toString(), outFiles, args));
       String redirectString = redirects.toString();
       if (redirectString.length() > 0) {
         res.append(" " + redirectString);
@@ -1739,6 +1739,7 @@ public class ICInstructions {
     @Override
     public List<Arg> getInputs() {
       ArrayList<Arg> res = new ArrayList<Arg>();
+      res.add(cmd);
       res.addAll(args);
       res.addAll(inFiles);
       for (Arg redirFilename: redirects.redirections(true, true)) {
@@ -1808,11 +1809,12 @@ public class ICInstructions {
         List<ValLoc> cvs = new ArrayList<ValLoc>(outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
           List<Arg> cvArgs = new ArrayList<Arg>(args.size() + 1);
+          cvArgs.add(cmd);
           cvArgs.addAll(args);
           cvArgs.add(Arg.newInt(i)); // Disambiguate outputs
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
-          ValLoc cv = ValLoc.buildResult(op, cmd,
+          ValLoc cv = ValLoc.buildResult(op, ComputedValue.NO_SUBOP,
                      cvArgs, outFiles.get(i).asArg(), Closed.YES_NOT_RECURSIVE,
                      IsAssign.TO_LOCATION);
           cvs.add(cv);

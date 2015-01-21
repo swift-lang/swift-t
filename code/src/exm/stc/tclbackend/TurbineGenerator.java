@@ -1438,7 +1438,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void runExternal(String cmd, List<Arg> args,
+  public void runExternal(Arg cmd, List<Arg> args,
           List<Var> outFiles, List<Arg> inFiles,
           Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
@@ -1468,7 +1468,7 @@ public class TurbineGenerator implements CompilerBackend {
                                        stderrFilename));
 
     pointAdd(Turbine.turbineLog(logMsg));
-    pointAdd(Turbine.exec(cmd, stdinFilename,
+    pointAdd(Turbine.exec(argToExpr(cmd), stdinFilename,
                 stdoutFilename, stderrFilename, tclArgs));
 
     // Handle closing of outputs
@@ -3447,7 +3447,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void startAsyncExec(String procName, List<Var> passIn,
-      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
+      AsyncExecutor executor, Arg cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasContinuation) {
 
@@ -3512,10 +3512,11 @@ public class TurbineGenerator implements CompilerBackend {
     // TODO: proper failure continuation
     List<Expression> failureContinuation = new ArrayList<Expression>();
     failureContinuation.add(new Token("error"));
-    failureContinuation.add(
-        new TclString("Execution of " + cmdName + " failed", true));
+    failureContinuation.add(new TclString(Arrays.asList(
+        new TclString("Execution of", true), argToExpr(cmdName),
+        new TclString("failed", true)), ExprContext.VALUE_STRING));
 
-    pointAdd(Turbine.asyncExec(executor, cmdName, outVarNames,
+    pointAdd(Turbine.asyncExec(executor, argToExpr(cmdName), outVarNames,
               taskArgExprs, taskPropExprs, stageIns, stageOuts,
               continuation, failureContinuation));
 

@@ -37,14 +37,14 @@ import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Statement;
 
 /**
- * Miscellaneous useful utilities that are used in multiple places in the intermediate 
+ * Miscellaneous useful utilities that are used in multiple places in the intermediate
  * code
  *
  */
 public class ICUtil {
 
   public static final String indent = "  ";
-  
+
   /** Print a formal argument list, e.g. "(int a, int b, int c)" */
   public static void prettyPrintFormalArgs(StringBuilder sb,
                                                   List<Var> args) {
@@ -84,7 +84,7 @@ public class ICUtil {
    * @param sb
    * @param vars
    */
-  public static void prettyPrintVarList(StringBuilder sb, 
+  public static void prettyPrintVarList(StringBuilder sb,
                 Collection<Var> vars) {
     boolean first = true;
     for (Var v: vars) {
@@ -96,13 +96,13 @@ public class ICUtil {
       sb.append(v.name());
     }
   }
-  
+
   /**
    * print a comma separated list of objects by calling toString()
    * @param sb
    * @param list
    */
-  public static void prettyPrintList(StringBuilder sb, 
+  public static void prettyPrintList(StringBuilder sb,
                 Collection<? extends Object> list) {
     boolean first = true;
     for (Object o: list) {
@@ -114,7 +114,7 @@ public class ICUtil {
       sb.append(o.toString());
     }
   }
-  
+
   /**
    * Print multiple as one list
    * @param sb
@@ -141,7 +141,7 @@ public class ICUtil {
    * @param sb
    * @param args
    */
-  public static void prettyPrintArgList(StringBuilder sb, 
+  public static void prettyPrintArgList(StringBuilder sb,
                 Collection<Arg> args) {
     boolean first = true;
     for (Arg a: args) {
@@ -154,14 +154,14 @@ public class ICUtil {
     }
   }
 
-  public static <K extends Comparable<K>, V> String 
+  public static <K extends Comparable<K>, V> String
           prettyPrintMap(Map<K, V> map, int indent) {
     StringBuilder sb = new StringBuilder();
     prettyPrintMap(sb, map, indent);
     return sb.toString();
   }
-  
-  public static <K extends Comparable<K>, V> void 
+
+  public static <K extends Comparable<K>, V> void
           prettyPrintMap(StringBuilder sb, Map<K, V> map, int indent) {
     ArrayList<K> keys = new ArrayList<K>(map.keySet());
     Collections.sort(keys);
@@ -181,7 +181,7 @@ public class ICUtil {
     prettyPrintProps(result, props);
     return result.toString();
   }
-  
+
   public static void prettyPrintProps(StringBuilder sb, TaskProps props) {
     for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
       sb.append(" " + e.getKey().toString().toLowerCase() +
@@ -199,7 +199,7 @@ public class ICUtil {
       List<Var> vars, boolean removeDupes) {
     replaceVarsInList(replacements, vars, removeDupes, true);
   }
-  
+
   public static void replaceVarsInList(Map<Var, Arg> replacements,
         List<Var> vars, boolean removeDupes, boolean removeMapped) {
     // Remove new duplicates
@@ -207,7 +207,7 @@ public class ICUtil {
     if (removeDupes) {
       alreadySeen = new ArrayList<Var>(vars.size());
     }
-    
+
     ListIterator<Var> it = vars.listIterator();
     while (it.hasNext()) {
       Var v = it.next();
@@ -234,7 +234,7 @@ public class ICUtil {
       }
     }
   }
-  
+
   public static void removeDuplicates(List<Var> varList) {
     ListIterator<Var> it = varList.listIterator();
     HashSet<Var> alreadySeen = new HashSet<Var>();
@@ -252,7 +252,7 @@ public class ICUtil {
       List<Arg> args) {
     replaceArgsInList(renames, args, false);
   }
-  
+
   public static void replaceArgsInList(Map<Var, Arg> renames,
       List<Arg> args, boolean nullsOk) {
     if (renames.isEmpty()) {
@@ -275,7 +275,7 @@ public class ICUtil {
       }
     }
   }
-  
+
   /**
    * If oa is a variable with a name in the renames map, replace
    * @param renames
@@ -284,7 +284,7 @@ public class ICUtil {
    *    will be thrown
    * @return null if oa is null. If oa is variable and
    *      is in renames, return the replacements.  If it isn't,
-   *      return the argument 
+   *      return the argument
    */
   public static Arg replaceArg(Map<Var, Arg> renames, Arg oa, boolean nullsOk) {
     assert(nullsOk || oa != null);
@@ -298,7 +298,7 @@ public class ICUtil {
     }
     return oa;
   }
-  
+
   public static <K> void replaceArgValsInMap(Map<Var, Arg> renames, Map<K, Arg> map) {
     for (Entry<K, Arg> e: map.entrySet()) {
       Arg val = e.getValue();
@@ -318,7 +318,7 @@ public class ICUtil {
     }
     return output;
   }
-  
+
   public static ArrayList<CleanupAction> cloneCleanups(
       List<CleanupAction> actions) {
     ArrayList<CleanupAction> output = new ArrayList<CleanupAction>();
@@ -330,7 +330,7 @@ public class ICUtil {
 
   public static ArrayList<Continuation> cloneContinuations(
       List<Continuation> conts, Block parent) {
-    ArrayList<Continuation> newContinuations = 
+    ArrayList<Continuation> newContinuations =
                         new ArrayList<Continuation>(conts.size());
     for (Continuation old: conts) {
       Continuation newC = old.clone();
@@ -347,15 +347,15 @@ public class ICUtil {
     }
     return newBlocks;
   }
-  
-  /** 
+
+  /**
    * Replace the current instruction with the provided sequence
    * After this is done, next() will return the instruction after
    * the inserted sequence
    */
   public static void replaceInsts(
               Block block,
-              ListIterator<Statement> it, 
+              ListIterator<Statement> it,
               List<? extends Statement> replacements) {
     for (Statement stmt: replacements) {
       stmt.setParent(block);
@@ -378,7 +378,7 @@ public class ICUtil {
     for (int i = 0; i < n; i++) {
       it.previous();
     }
-  }  
+  }
 
   /**
    * Return a list of all the variables contained in the
@@ -394,9 +394,13 @@ public class ICUtil {
 
   public static void addVars(Collection<Var> res, Collection<Arg> args) {
     for (Arg a: args) {
-      if (a.isVar()) {
-        res.add(a.getVar());
-      }
+      addIfVar(res, a);
+    }
+  }
+
+  public static void addIfVar(Collection<Var> res, Arg a) {
+    if (a.isVar()) {
+      res.add(a.getVar());
     }
   }
 

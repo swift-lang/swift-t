@@ -325,7 +325,8 @@ public interface CompilerBackend {
    * @param hasContinuation true if we have a continuation to run after task
    */
   public void startAsyncExec(String procName, List<Var> passIn,
-      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
+      AsyncExecutor executor, Arg
+      cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasContinuation);
 
@@ -495,7 +496,7 @@ public interface CompilerBackend {
    * Generate command to run an external application immediately
    * @param redirects
    */
-  public void runExternal(String cmd, List<Arg> args,
+  public void runExternal(Arg cmd, List<Arg> args,
            List<Var> outFiles, List<Arg> inFiles,
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
