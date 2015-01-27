@@ -807,14 +807,7 @@ class Turbine {
       putArgs.add(task);
       putArgs.add(priorityVar);
       putArgs.add(par);
-
-      try {
-        if (Settings.getBoolean(Settings.SOFT_TARGET)) {
-          putArgs.add(props.softTarget);
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
-      }
+      putArgs.add(props.softTarget);
 
       // Use put, which takes more arguments
       res.add(new Command(ADLB_PUT, putArgs));

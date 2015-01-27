@@ -22,7 +22,6 @@ import java.util.TreeMap;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
@@ -116,9 +115,6 @@ public class FunctionCall {
       } else if (annotName.equals(Annotations.FNCALL_SOFT_LOCATION)) {
         putAnnotationNoDupes(context, annotations, TaskPropKey.LOCATION, expr);
         softLocation = true;
-        if (!Settings.getBoolean(Settings.SOFT_TARGET)) {
-          throw new UserException(context, "Soft targeting not enabled");
-        }
       } else {
         throw new InvalidAnnotationException(context, "function call",
                                              annotName, false);
