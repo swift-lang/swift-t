@@ -24,7 +24,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
@@ -283,13 +282,6 @@ public class FixupVariables implements OptimizerPass {
       this.aliasWritten.remove(var);
     }
 
-
-    void removeWritten(Collection<Var> vars) {
-      for (Var var: vars) {
-        removeWritten(var);
-      }
-    }
-
     /**
      * Remove variable without canonicalizing them
      * @param vars
@@ -378,16 +370,11 @@ public class FixupVariables implements OptimizerPass {
 
   private static boolean canImportGlobal(ExecContext execCx, Alloc storage) {
     if (storage == Alloc.GLOBAL_CONST) {
-      return canImportGlobalConsts(execCx);
+      return true;
     } else {
       assert(storage == Alloc.GLOBAL_VAR);
       return true;
     }
-  }
-
-  private static boolean canImportGlobalConsts(ExecContext execCx) {
-    return execCx.isControlContext() ||
-            !Settings.SEPARATE_TURBINE_ENGINE;
   }
 
   /**

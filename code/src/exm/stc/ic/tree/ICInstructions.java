@@ -29,7 +29,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Logging;
-import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
@@ -1552,9 +1551,7 @@ public class ICInstructions {
     public ExecTarget execMode() {
       switch (op) {
         case CALL_SYNC:
-          return Settings.SEPARATE_TURBINE_ENGINE ?
-                 ExecTarget.syncControl() :
-                 ExecTarget.syncAny();
+          return ExecTarget.syncAny();
         case CALL_LOCAL:
           return ExecTarget.nonDispatchedAny();
         case CALL_LOCAL_CONTROL:

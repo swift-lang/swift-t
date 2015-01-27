@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.common.Settings;
 import exm.stc.common.util.Pair;
 
 /**
@@ -178,12 +177,9 @@ public class ExecContext {
    * @return true if this and other context are same at runtime
    */
   public boolean compatibleWith(ExecContext other) {
-    if (!Settings.SEPARATE_TURBINE_ENGINE) {
-      if ((this.isControlContext() && other.isDefaultWorkContext()) ||
-          this.isDefaultWorkContext() && other.isControlContext()) {
-        // Merged control and worker contexts
-        return true;
-      }
+    if ((this.isControlContext() && other.isDefaultWorkContext()) ||
+        this.isDefaultWorkContext() && other.isControlContext()) {
+      // Merged control and worker contexts
       return true;
     }
 
