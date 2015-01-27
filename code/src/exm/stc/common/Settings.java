@@ -40,11 +40,6 @@ import exm.stc.common.util.Pair;
  * */
 public class Settings {
 
-  // Whether we're using a separate engine (old design)
-  public static boolean SEPARATE_TURBINE_ENGINE = false;
-  public static final String SEPARATE_TURBINE_ENGINE_KEY =
-                              "stc.turbine.separate-engine";
-
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
 
@@ -148,7 +143,6 @@ public class Settings {
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
-    defaults.setProperty(SEPARATE_TURBINE_ENGINE_KEY, "false");
     defaults.setProperty(RPATH, "");
     defaults.setProperty(INPUT_FILENAME, "");
     defaults.setProperty(OUTPUT_FILENAME, "");
@@ -311,7 +305,6 @@ public class Settings {
    */
   private static void validateProperties() throws InvalidOptionException {
     // Check that boolean values are correct
-    SEPARATE_TURBINE_ENGINE = getBoolean(SEPARATE_TURBINE_ENGINE_KEY);
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
     getBoolean(OPT_SHARED_CONSTANTS);

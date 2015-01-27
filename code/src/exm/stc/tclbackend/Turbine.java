@@ -168,17 +168,10 @@ class Turbine {
   private static final Token INSERT_STRUCT = adlbFn("insert_struct");
 
   // Rule functions
-  private static final Token SPAWN_RULE = turbFn("spawn_rule");
   private static final Token RULE = turbFn("rule");
   private static final Token DEEPRULE = turbFn("deeprule");
   private static final Token ADLB_PUT = adlbFn("put");
   private static final Token ADLB_SPAWN = adlbFn("spawn");
-  private static final LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
-
-  // Rule command names
-  private static final Token RULE_COMMAND = new Token("command");
-  private static final Token RULE_PRIORITY_COMMAND = new Token(
-          "priority_command");
 
   // Keyword arg names for rule
   private static final Token RULE_KEYWORD_PAR = new Token("parallelism");
@@ -213,7 +206,6 @@ class Turbine {
   }
 
   private static final LiteralInt TURBINE_WORKER_WORK_ID = new LiteralInt(0);
-  private static final LiteralInt TURBINE_CONTROL_WORK_ID = new LiteralInt(1);
 
   // Custom implementations of operators
   private static final Token DIVIDE_INTEGER = turbFn("divide_integer_impl");
@@ -339,10 +331,6 @@ class Turbine {
 
   private static Token adlbFn(String functionName) {
     return new Token("adlb::" + functionName);
-  }
-
-  private static Value turbConst(String name) {
-    return new Value("::turbine::" + name);
   }
 
   public static Command declareCustomWorkTypes(List<Expression> args) {
@@ -649,23 +637,12 @@ class Turbine {
   private static Expression tclRuleType(ExecTarget t) {
     assert(t.isAsync());
 
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      if (!t.isDispatched()) {
-        return turbConst("LOCAL");
-      } else if (t.targetContext().isControlContext()) {
-        return turbConst("CONTROL");
-      } else {
-        checkSeparateEngineWorkContext(t.targetContext());
-        return turbConst("WORK");
-      }
+    if (t.isDispatched()) {
+      // Same as ADLB work types
+      return adlbWorkTypeVal(t.targetContext());
     } else {
-      if (t.isDispatched()) {
-        // Same as ADLB work types
-        return adlbWorkTypeVal(t.targetContext());
-      } else {
-        // Just implement as control
-        return adlbWorkTypeVal(ExecContext.control());
-      }
+      // Just implement as control
+      return adlbWorkTypeVal(ExecContext.control());
     }
   }
 
@@ -700,12 +677,8 @@ class Turbine {
       res.add(setPriority(props.priority));
     // Use different command on worker
     Token ruleCmd;
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      ruleCmd = (execCx.isControlContext()) ? RULE : SPAWN_RULE;
-    } else {
-      // No worker/control distinction
-      ruleCmd = RULE;
-    }
+    // No worker/control distinction
+    ruleCmd = RULE;
 
     List<Expression> args = new ArrayList<Expression>();
 
@@ -772,20 +745,16 @@ class Turbine {
     assert(type.isAsync()) : type;
 
     ExecContext targetContext = type.targetContext();
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      // Default is executing locally
-      return !type.isDispatched();
+
+    if (targetContext.isWildcardContext()) {
+      // Don't care about target
+      return true;
+    } else if (targetContext.isControlContext() ||
+            targetContext.isDefaultWorkContext()) {
+      // Target matches (control and worker are the same)
+      return true;
     } else {
-      if (targetContext.isWildcardContext()) {
-        // Don't care about target
-        return true;
-      } else if (targetContext.isControlContext() ||
-              targetContext.isDefaultWorkContext()) {
-        // Target matches (control and worker are the same)
-        return true;
-      } else {
-        return false;
-      }
+      return false;
     }
   }
 
@@ -811,23 +780,12 @@ class Turbine {
     // Different task formats for work types
     if (targetContext.isAnyWorkContext()) {
       // TODO: handle priorities?
-      if (Settings.SEPARATE_TURBINE_ENGINE) {
-        taskTokens.add(TURBINE_NULL_RULE);
-      }
       taskTokens.addAll(action);
     } else {
       assert (targetContext.isControlContext() ||
               targetContext.isWildcardContext());
-      if (!Settings.SEPARATE_TURBINE_ENGINE) {
-        // Treat as work task - no prefix
-        // TODO: handle priorities?
-      } else if (props.priority == null) {
-        taskTokens.add(RULE_COMMAND);
-      } else {
-        assert (priorityVar != null);
-        taskTokens.add(RULE_PRIORITY_COMMAND);
-        taskTokens.add(priorityVar);
-      }
+      // Treat as work task - no prefix
+      // TODO: handle priorities?
       taskTokens.addAll(action);
     }
 
@@ -895,21 +853,11 @@ class Turbine {
   }
 
   public static Expression adlbWorkType(ExecContext target) {
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      if (target.isControlContext()) {
-        return new Value("turbine::CONTROL_TASK");
-      } else {
-        assert(target.isAnyWorkContext());
-        checkSeparateEngineWorkContext(target);
-        return new Value("turbine::WORK_TASK");
-      }
+    if (target.isDefaultWorkContext() ||
+           target.isControlContext()) {
+      return new Value("turbine::WORK_TASK");
     } else {
-      if (target.isDefaultWorkContext() ||
-             target.isControlContext()) {
-        return new Value("turbine::WORK_TASK");
-      } else {
-        return nonDefaultWorkType(target.workContext());
-      }
+      return nonDefaultWorkType(target.workContext());
     }
   }
 
@@ -935,28 +883,11 @@ class Turbine {
    * work ids
    */
   public static Expression adlbWorkTypeVal(ExecContext target) {
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      if (target.isControlContext()) {
-        return TURBINE_CONTROL_WORK_ID;
-      } else {
-        assert(target.isAnyWorkContext());
-        checkSeparateEngineWorkContext(target);
-        return TURBINE_WORKER_WORK_ID;
-      }
+    if (target.isControlContext() ||
+        target.isDefaultWorkContext()) {
+      return TURBINE_WORKER_WORK_ID;
     } else {
-      if (target.isControlContext() ||
-          target.isDefaultWorkContext()) {
-        return TURBINE_WORKER_WORK_ID;
-      } else {
-        return nonDefaultWorkType(target.workContext());
-      }
-    }
-  }
-
-  private static void checkSeparateEngineWorkContext(ExecContext target) {
-    if (!target.isDefaultWorkContext() && !target.isControlContext()) {
-      throw new STCRuntimeError("Work context " + target +
-              " not supported with old Turbine engines");
+      return nonDefaultWorkType(target.workContext());
     }
   }
 

@@ -357,13 +357,10 @@ public class TurbineGenerator implements CompilerBackend {
     // TODO: don't need defaults anymore with newer Turbine engines,
     //       remove once we move to new version.
     tree.add(new Command("turbine::defaults"));
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      tree.add(new Command("turbine::init $engines $servers \"Swift\""));
-    } else {
-      tree.add(initCustomWorkTypes());
-      tree.add(new Command("turbine::init $servers \"Swift\""));
-      tree.add(checkWorkTypes());
-    }
+    tree.add(initCustomWorkTypes());
+    tree.add(new Command("turbine::init $servers \"Swift\""));
+    tree.add(checkWorkTypes());
+
     try {
       if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         tree.add(Turbine.enableReferenceCounting());
@@ -646,13 +643,6 @@ public class TurbineGenerator implements CompilerBackend {
     createArgs.add(new LiteralInt(nextDebugSymbol(var)));
     TclList createArgsL = new TclList(createArgs);
     return createArgsL;
-  }
-
-  private void allocateFile(Var var, Arg initReaders, int debugSymbol) {
-    Expression mappedExpr = LiteralInt.boolValue(var.mappedDecl());
-    // TODO: include debug symbol
-    pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
-                             argToExpr(initReaders), debugSymbol));
   }
 
   private Sequence logVariableCreation(List<String> varNames) {

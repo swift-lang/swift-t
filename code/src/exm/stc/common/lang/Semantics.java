@@ -2,7 +2,6 @@ package exm.stc.common.lang;
 
 import java.util.Set;
 
-import exm.stc.common.Settings;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
@@ -91,22 +90,11 @@ public class Semantics {
    * @return a concrete context (not wildcard)
    */
   public static ExecContext wildcardActualContext(ExecContext outer, boolean dispatch) {
-    if (Settings.SEPARATE_TURBINE_ENGINE) {
-      if (dispatch) {
-        // Send back to control by default
-        return ExecContext.control();
-      } else {
-        // Can only run local rule on engine
-        assert(outer.isControlContext());
-        return outer;
-      }
+    if (dispatch || !stickyContexts()) {
+      // Preferentially send back to control
+      return ExecContext.control();
     } else {
-      if (dispatch || !stickyContexts()) {
-        // Preferentially send back to control
-        return ExecContext.control();
-      } else {
-        return outer;
-      }
+      return outer;
     }
   }
 
