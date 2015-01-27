@@ -45,6 +45,4 @@ Experimental/other features:
 refcounting: reference counting-based garbage collection (experimental)
 auto-declare: allow omission of explicit type declarations by using
         local type inference (experimental)
-no-stack: disable the explicit distributed stack (on by default)
-no-stack-vars: disable putting user variables in the distributed stack (on by default)
 soft-target: enable support for soft-targeting (requires support from Turbine)

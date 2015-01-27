@@ -85,7 +85,6 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
-import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.Turbine.TypeName;
 import exm.stc.tclbackend.Turbine.XptPersist;
 import exm.stc.tclbackend.tree.Command;
@@ -623,15 +622,6 @@ public class TurbineGenerator implements CompilerBackend {
     if (!batchedFileArgs.isEmpty()) {
       pointAdd(Turbine.batchDeclareFiles(
           batchedFileVarNames, batchedFileArgs, batchedFileIsMappeds));
-    }
-
-    for (VarDecl decl: decls) {
-      // Store the name->TD in the stack
-      if (decl.var.storage() == Alloc.STACK && !noStackVars()) {
-        Command s = Turbine.storeInStack(decl.var.name(), prefixVar(decl.var));
-        // Store the name->TD in the stack
-        pointAdd(s);
-      }
     }
   }
 
@@ -2162,9 +2152,6 @@ public class TurbineGenerator implements CompilerBackend {
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
-    if (!isEntryPoint) {
-      args.add(Turbine.LOCAL_STACK_NAME);
-    }
     args.addAll(outputs);
     args.addAll(inputs);
 
@@ -2179,34 +2166,6 @@ public class TurbineGenerator implements CompilerBackend {
     s.add(Turbine.turbineLog("enter function: " +
                              functionName));
 
-    if (noStack() && isEntryPoint) {
-      s.add(Turbine.createDummyStackFrame());
-    }
-
-    if (!noStack()) {
-      TclTree[] setupStack;
-      if (isEntryPoint) {
-        setupStack = Turbine.createStackFrame(StackFrameType.MAIN);
-      } else {
-        setupStack = Turbine.createStackFrame(StackFrameType.FUNCTION);
-      }
-      s.add(setupStack);
-      if (!noStackVars()) {
-        for (Var v : iList)
-        {
-          Command command = Turbine.storeInStack(v.name(),
-                                      prefixVar(v));
-          s.add(command);
-        }
-        for (Var v : oList)
-        {
-          Command command = Turbine.storeInStack(v.name(),
-                                            prefixVar(v));
-          s.add(command);
-        }
-      }
-    }
-
     pointPush(s);
     functionStack.push(functionName);
   }
@@ -2220,10 +2179,6 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void startNestedBlock() {
     Sequence block = new Sequence();
-    if (!noStack()) {
-      TclTree[] t = Turbine.createStackFrame(StackFrameType.NESTED);
-      block.add(t);
-    }
     Sequence point = point();
     point.add(block);
     pointPush(block);
@@ -2256,12 +2211,6 @@ public class TurbineGenerator implements CompilerBackend {
 
     Sequence thenBlock = new Sequence();
     Sequence elseBlock = hasElse ? new Sequence() : null;
-    if (!noStack()) {
-      thenBlock.add(Turbine.createStackFrame(StackFrameType.NESTED));
-      if (hasElse) {
-        elseBlock.add(Turbine.createStackFrame(StackFrameType.NESTED));
-      }
-    }
 
     If i = new If(argToExpr(condition),
         thenBlock, elseBlock);
@@ -2323,7 +2272,6 @@ public class TurbineGenerator implements CompilerBackend {
       }
 
       List<String> args = new ArrayList<String>();
-      args.add(Turbine.LOCAL_STACK_NAME);
       for (Var v: passIn) {
         args.add(prefixVar(v));
       }
@@ -2514,7 +2462,6 @@ public class TurbineGenerator implements CompilerBackend {
     private List<Expression> buildAction(String procName, List<Expression> args) {
       ArrayList<Expression> ruleTokens = new ArrayList<Expression>();
       ruleTokens.add(new Token(procName));
-      ruleTokens.add(Turbine.LOCAL_STACK_VAL);
       ruleTokens.addAll(args);
 
       return ruleTokens;
@@ -2571,9 +2518,6 @@ public class TurbineGenerator implements CompilerBackend {
     for (int c=0; c < casecount; c++) {
       Sequence casebody = new Sequence();
       // there might be new locals in the case
-      if (!noStack()) {
-        casebody.add(Turbine.createStackFrame(StackFrameType.NESTED));
-      }
       caseBodies.add(casebody);
     }
 
@@ -2887,7 +2831,6 @@ public class TurbineGenerator implements CompilerBackend {
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     List<String> commonFormalArgs = new ArrayList<String>();
-    commonFormalArgs.add(Turbine.LOCAL_STACK_NAME);
     for (PassedVar pv: passedVars) {
       commonFormalArgs.add(prefixVar(pv.var.name()));
     }
@@ -2903,7 +2846,6 @@ public class TurbineGenerator implements CompilerBackend {
 
 
     List<Expression> commonArgs = new ArrayList<Expression>();
-    commonArgs.add(Turbine.LOCAL_STACK_VAL);
     for (PassedVar pv: passedVars) {
       commonArgs.add(varToExpr(pv.var));
     }
@@ -3268,28 +3210,6 @@ public class TurbineGenerator implements CompilerBackend {
     return TclNamer.prefixVars(vars);
   }
 
-  private boolean noStackVars() {
-    boolean no_stack_vars;
-    try {
-      no_stack_vars = Settings.getBoolean(Settings.TURBINE_NO_STACK_VARS);
-    } catch (InvalidOptionException e) {
-      e.printStackTrace();
-      throw new STCRuntimeError(e.getMessage());
-    }
-    return no_stack_vars;
-  }
-
-  private boolean noStack() {
-    boolean no_stack;
-    try {
-      no_stack = Settings.getBoolean(Settings.TURBINE_NO_STACK);
-    } catch (InvalidOptionException e) {
-      e.printStackTrace();
-      throw new STCRuntimeError(e.getMessage());
-    }
-    return no_stack;
-  }
-
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
       List<Arg> initVals, List<Var> usedVariables,
@@ -3300,8 +3220,6 @@ public class TurbineGenerator implements CompilerBackend {
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
     ArrayList<Expression> firstIterArgs = new ArrayList<Expression>();
-    loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
-    firstIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
     for (Var loopVar: loopVars) {
       String tclVar = prefixVar(loopVar);
@@ -3388,7 +3306,6 @@ public class TurbineGenerator implements CompilerBackend {
       }
     } else {
       // Setup rule call to execute next iteration later
-      nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
       for (Arg v: newVals) {
         nextIterArgs.add(argToExpr(v));
