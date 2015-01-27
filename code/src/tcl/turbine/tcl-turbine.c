@@ -406,9 +406,16 @@ static inline void
 rule_set_name_default(char* name, int size, const char* action)
 {
   char* q = strchr(action, ' ');
-  long n = q-action+1;
-  strncpy(name, action, (size_t)n);
-  name[n] = '\0';
+  if (q == NULL)
+  {
+    strncpy(name, action, (size_t)size);
+  }
+  else
+  {
+    long n = q-action+1;
+    strncpy(name, action, (size_t)n);
+    name[n] = '\0';
+  }
 }
 
 static int
