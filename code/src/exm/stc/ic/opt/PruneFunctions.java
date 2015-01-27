@@ -69,13 +69,13 @@ public class PruneFunctions implements OptimizerPass {
     public void visit(Logger logger, Function currFn, Instruction inst) {
       if (inst instanceof CommonFunctionCall) {
         CommonFunctionCall fnCall = (CommonFunctionCall)inst;
-        depGraph.put(currFn.getName(), fnCall.functionName());
+        depGraph.put(currFn.name(), fnCall.functionName());
       } else if (inst.op == Opcode.ASYNC_OP) {
         // Async ops can be implemented with builtins
         List<String> fnNames = foreignFuncs.findOpImpl(((Builtin)inst).subop);
         if (fnNames != null) {
           for (String fnName: fnNames) {
-            depGraph.put(currFn.getName(), fnName);
+            depGraph.put(currFn.name(), fnName);
           }
         }
       }
@@ -142,7 +142,7 @@ public class PruneFunctions implements OptimizerPass {
     Iterator<Function> fIt = program.functionIterator();
     while (fIt.hasNext()) {
       Function f = fIt.next();
-      if (!needed.contains(f.getName())) {
+      if (!needed.contains(f.name())) {
         fIt.remove();
       }
     }

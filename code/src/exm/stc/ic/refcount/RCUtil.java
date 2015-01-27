@@ -34,7 +34,7 @@ public class RCUtil {
    */
   static boolean definedOutsideCont(Continuation cont, Block block, Var var) {
     assert (block.getParentCont() == cont);
-    return !block.getVariables().contains(var)
+    return !block.variables().contains(var)
         && !cont.constructDefinedVars().contains(var);
   }
 

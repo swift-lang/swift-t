@@ -174,6 +174,11 @@ public class ICOptimizer {
       // ValueNumber tends to generate most dead code
       pipe.addPass(new DeadCodeEliminator());
 
+      if (iteration % 3 == 0) {
+        // Dead code eliminator will have just eliminated references
+        pipe.addPass(new DemoteGlobals());
+      }
+
       // ValueNumber adds blocking vars to function
       pipe.addPass(new FunctionSignature());
 

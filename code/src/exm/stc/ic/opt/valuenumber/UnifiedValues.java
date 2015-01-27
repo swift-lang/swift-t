@@ -284,7 +284,7 @@ public class UnifiedValues {
       // Add in additional computed values resulting from copy
       Congruences branchState = branchStates.get(i);
       int branchStmts = branchBlock.getStatements().size();
-      branchState.update(consts, fn.getName(), copyVal, branchStmts);
+      branchState.update(consts, fn.name(), copyVal, branchStmts);
     }
     return unifiedLoc;
   }

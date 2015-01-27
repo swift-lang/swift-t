@@ -63,7 +63,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together
-      fuseNonRecursive(f.getName(), block);
+      fuseNonRecursive(f.name(), block);
     }
     
     // Recurse on child blocks

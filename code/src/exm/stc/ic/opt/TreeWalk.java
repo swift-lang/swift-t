@@ -37,11 +37,15 @@ public class TreeWalk {
    * @param walker
    */
   public static void walk(Logger logger, Program prog, TreeWalker walker) {
-    for (Function f: prog.getFunctions()) {
-      walk(logger, f.mainBlock(), f, walker, true);
+    for (Function function: prog.functions()) {
+      walk(logger, function, walker);
     }
   }
-  
+
+  public static void walk(Logger logger, Function function, TreeWalker walker) {
+    walk(logger, function.mainBlock(), function, walker, true);
+  }
+
   /**
    * Walk pre-order
    * @param logger
@@ -52,7 +56,7 @@ public class TreeWalk {
    */
   public static void walk(Logger logger, Block block, Function function,
                           TreeWalker walker, boolean recursive) {
-    for (Var declared: block.getVariables()) {
+    for (Var declared: block.variables()) {
       walker.visitDeclaration(declared);
     }
     for (Statement stmt: block.getStatements()) {
@@ -67,11 +71,11 @@ public class TreeWalk {
           throw new STCRuntimeError("Unknown statement type" + stmt.type());
       }
     }
-    
+
     for (Continuation c: block.getContinuations()) {
       walk(logger, function, c, recursive, walker);
     }
-    
+
     for (CleanupAction ca: block.getCleanups()) {
       walker.visit(logger, function, ca);
     }
@@ -86,7 +90,7 @@ public class TreeWalk {
       }
     }
   }
-  
+
 
   /**
    * Visits this continuation and any descendants that execute synchronously
@@ -104,7 +108,7 @@ public class TreeWalk {
       }
     }
   }
-  
+
   public static void walkSyncChildren(
       Logger logger, Function fn,
       Block block, boolean includeThisBlock, TreeWalker walker) {
@@ -133,7 +137,7 @@ public class TreeWalk {
             throw new STCRuntimeError("Unknown statement type " + stmt.type());
         }
       }
-      
+
       for (Continuation c: curr.getContinuations()) {
         walkSyncChildren(logger, fn, walker, stack, c);
       }
@@ -155,28 +159,28 @@ public class TreeWalk {
     protected void visit(Continuation cont) {
       // Nothing
     }
-    
+
     public void visit(Logger logger, Function functionContext, Block block) {
       visit(block);
     }
     protected void visit(Block block) {
       // Nothing
     }
-    
+
     public void visitDeclaration(Logger logger, Function functionContext, Var declared) {
       visitDeclaration(declared);
     }
     protected void visitDeclaration(Var declared) {
       // Nothing
     }
-    
+
     public void visit(Logger logger, Function functionContext, Instruction inst) {
       visit(inst);
     }
     protected void visit(Instruction inst) {
       // nothing
     }
-    
+
     public void visit(Logger logger, Function functionContext, CleanupAction cleanup) {
       visit(cleanup);
     }

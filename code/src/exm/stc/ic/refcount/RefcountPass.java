@@ -84,8 +84,8 @@ public class RefcountPass implements OptimizerPass {
     functionMap = program.getFunctionMap();
     placer = new RCPlacer(functionMap);
 
-    for (Function f: program.getFunctions()) {
-      logger.trace("Entering function " + f.getName());
+    for (Function f: program.functions()) {
+      logger.trace("Entering function " + f.name());
       recurseOnBlock(logger, program.globalVars(), f, f.mainBlock(),
                      new RCTracker(), new TopDownInfo());
     }
@@ -260,7 +260,7 @@ public class RefcountPass implements OptimizerPass {
     if (logger.isTraceEnabled()) {
       logger.trace("");
       logger.trace("Adding increments for block " + block.getType() + " of " +
-          fn.getName());
+          fn.name());
       logger.trace("==============================");
       logger.trace(increments);
     }
@@ -347,7 +347,7 @@ public class RefcountPass implements OptimizerPass {
       }
     }
 
-    for (Var var: block.getVariables()) {
+    for (Var var: block.variables()) {
       // Any variables allocated in block will need to be freed when
       // they go out of scope, so do initial decrement of reference counts.
       // Alias variables aren't allocated here. Struct variables have

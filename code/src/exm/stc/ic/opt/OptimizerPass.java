@@ -37,7 +37,7 @@ public interface OptimizerPass {
 
     @Override
     public void optimize(Logger logger, Program program) throws UserException {
-      for (Function f: program.getFunctions()) {
+      for (Function f: program.functions()) {
         optimize(logger, f);
       }
     }

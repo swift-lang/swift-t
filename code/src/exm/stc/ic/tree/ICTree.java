@@ -125,7 +125,7 @@ public class ICTree {
       Map<String, List<Boolean>> blockVectors = new
               HashMap<String, List<Boolean>> (functions.size());
       for (Function f: functions) {
-        blockVectors.put(f.getName(), f.getBlockingInputVector());
+        blockVectors.put(f.name(), f.getBlockingInputVector());
       }
       if (logger.isTraceEnabled())
         logger.trace("blocking inputs: " + blockVectors);
@@ -195,7 +195,7 @@ public class ICTree {
 
     public void addFunction(Function fn) {
       this.functions.add(fn);
-      this.functionsByName.put(fn.getName(), fn);
+      this.functionsByName.put(fn.name(), fn);
     }
 
     public void addFunctions(Collection<Function> c) {
@@ -204,14 +204,14 @@ public class ICTree {
       }
     }
 
-    public List<Function> getFunctions() {
+    public List<Function> functions() {
       return Collections.unmodifiableList(this.functions);
     }
 
     public Set<String> getFunctionNames() {
       Set<String> res = new HashSet<String>();
       for (Function f: functions) {
-        res.add(f.getName());
+        res.add(f.name());
       }
       return res;
     }
@@ -235,8 +235,8 @@ public class ICTree {
         @Override
         public void set(Function e) {
           internal.set(e);
-          functionsByName.remove(lastReturned.getName());
-          functionsByName.put(e.getName(), e);
+          functionsByName.remove(lastReturned.name());
+          functionsByName.put(e.name(), e);
         }
 
         @Override
@@ -282,7 +282,7 @@ public class ICTree {
         @Override
         public void add(Function e) {
           internal.add(e);
-          functionsByName.put(e.getName(), e);
+          functionsByName.put(e.name(), e);
         }
       };
     }
@@ -307,7 +307,7 @@ public class ICTree {
 
     }
     public AllGlobals allGlobals() {
-      return new AllGlobals(Arrays.asList(constants.vars(), globalVars.getVariables()));
+      return new AllGlobals(Arrays.asList(constants.vars(), globalVars.variables()));
     }
 
     public ForeignFunctions foreignFunctions() {
@@ -544,7 +544,7 @@ public class ICTree {
       return variables.contains(var);
     }
 
-    public List<Var> getVariables() {
+    public List<Var> variables() {
       return Collections.unmodifiableList(variables);
     }
 
@@ -760,7 +760,7 @@ public class ICTree {
   public static class Function {
     private Block mainBlock;
     private final String name;
-    public String getName() {
+    public String name() {
       return name;
     }
 
@@ -961,7 +961,7 @@ public class ICTree {
 
       while (!work.isEmpty()) {
         Block b = work.pop();
-        addUsedVarNames(b.getVariables());
+        addUsedVarNames(b.variables());
         for (Statement s: b.getStatements()) {
           if (s.type() == StatementType.CONDITIONAL) {
             Conditional c = s.conditional();
@@ -1155,7 +1155,7 @@ public class ICTree {
 
     private void setParentFunction(Function parentFunction) {
       this.parentFunction = parentFunction;
-      parentFunction.addUsedVarNames(this.variables.getVariables());
+      parentFunction.addUsedVarNames(this.variables.variables());
     }
 
     /**
@@ -1277,8 +1277,8 @@ public class ICTree {
       continuations.remove(i);
     }
 
-    public List<Var> getVariables() {
-      return variables.getVariables();
+    public List<Var> variables() {
+      return variables.variables();
     }
 
     public boolean declaredHere(Var var) {
@@ -1331,7 +1331,7 @@ public class ICTree {
     }
 
     public void prettyPrint(StringBuilder sb, String indent) {
-      for (Var v: variables.getVariables()) {
+      for (Var v: variables.variables()) {
         sb.append(indent);
 
         prettyPrintVarBasic(sb, v);
@@ -1756,8 +1756,8 @@ public class ICTree {
     public void insertInline(Block b,
           ListIterator<Continuation> contPos,
           ListIterator<Statement> pos) {
-      Set<Var> varSet = new HashSet<Var>(this.variables.getVariables());
-      for (Var newVar: b.getVariables()) {
+      Set<Var> varSet = new HashSet<Var>(this.variables.variables());
+      for (Var newVar: b.variables()) {
         // Check for duplicates (may be duplicate globals)
         if (!varSet.contains(newVar)) {
           addVariable(newVar);

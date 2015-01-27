@@ -61,7 +61,7 @@ public class DeadCodeEliminator implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program program) throws UserException {
-    for (Function f: program.getFunctions()) {
+    for (Function f: program.functions()) {
       eliminate(logger, f, program.globalVars());
     }
   }
@@ -114,7 +114,7 @@ public class DeadCodeEliminator implements OptimizerPass {
 
     /* Set of vars that are definitely required */
     HashSet<Var> needed = new HashSet<Var>();
-    needed.addAll(globalVars.getVariables());
+    needed.addAll(globalVars.variables());
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
@@ -132,7 +132,7 @@ public class DeadCodeEliminator implements OptimizerPass {
                  modifiedComponents, components);
 
     if (logger.isTraceEnabled()) {
-      logger.trace("Dead code elimination in function " + f.getName() + "\n" +
+      logger.trace("Dead code elimination in function " + f.name() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
                    "dependencies: \n" + printDepGraph(dependencyGraph, 4) +
@@ -356,7 +356,7 @@ public class DeadCodeEliminator implements OptimizerPass {
 
   private static void walkBlockVars(Block block,
       HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
-    for (Var v: block.getVariables()) {
+    for (Var v: block.variables()) {
       if (!v.storage().isGlobal()) {
         removeCandidates.add(v);
       }
