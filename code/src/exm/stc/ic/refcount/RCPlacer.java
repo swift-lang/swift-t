@@ -904,12 +904,6 @@ public class RCPlacer {
     }
   }
 
-  private void insertDecrAfter(Block block, ListIterator<Statement> stmtIt,
-      Var var, Long val, RefCountType type) {
-    Arg amount = Arg.newInt(val);
-    block.addCleanup(var, RefCountOp.decrRef(type, var, amount));
-  }
-
   private void insertIncr(Block block,
       ListIterator<Statement> stmtIt, Var var, Long val,
       RefCountType type, boolean before) {

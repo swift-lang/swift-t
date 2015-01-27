@@ -21,7 +21,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -359,24 +358,6 @@ public class DeadCodeEliminator implements OptimizerPass {
     for (Var v: block.variables()) {
       if (!v.storage().isGlobal()) {
         removeCandidates.add(v);
-      }
-    }
-  }
-
-  // TODO: do this somewhere else?
-  private static void pushdownDeclarations(Block block,
-      Map<Var, Block> candidates) {
-    if (candidates.size() > 0) {
-      ListIterator<Var> varIt = block.variableIterator();
-      while (varIt.hasNext()) {
-        Var var = varIt.next();
-        Block newHome = candidates.get(var);
-        // Don't push declaration down into loop
-        if (newHome != null && !newHome.getParentCont().isLoop()) {
-          varIt.remove();
-          newHome.addVariable(var);
-          block.moveCleanups(var, newHome);
-        }
       }
     }
   }
