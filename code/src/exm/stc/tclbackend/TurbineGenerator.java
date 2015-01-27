@@ -120,6 +120,7 @@ public class TurbineGenerator implements CompilerBackend {
   /**
    * Stored options
    */
+  @SuppressWarnings("unused")
   private CodeGenOptions options = null;
 
   private ForeignFunctions foreignFuncs = null;
@@ -1557,7 +1558,7 @@ public class TurbineGenerator implements CompilerBackend {
                            Var fieldContents) {
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, fieldContents));
-    Expression subscript = structSubscript(struct, fields);
+    //Expression subscript = structSubscript(struct, fields);
     // TODO
     throw new STCRuntimeError("TODO: Not yet implemented");
   }
@@ -1567,7 +1568,7 @@ public class TurbineGenerator implements CompilerBackend {
                            Var fieldContents) {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
-    Expression subscript = structSubscript(structRef, fields);
+    //Expression subscript = structSubscript(structRef, fields);
     // TODO
     throw new STCRuntimeError("Not yet implemented");
   }
@@ -1577,7 +1578,7 @@ public class TurbineGenerator implements CompilerBackend {
       Arg fieldContents) {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
-    Expression subscript = structSubscript(structRef, fields);
+    //Expression subscript = structSubscript(structRef, fields);
     // TODO
     throw new STCRuntimeError("Not yet implemented");
   }

@@ -2460,7 +2460,6 @@ public class TurbineOp extends Instruction {
         + values.toString());
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public List<Pair<Var, Instruction.InitType>> getInitialized() {
     switch (op) {
