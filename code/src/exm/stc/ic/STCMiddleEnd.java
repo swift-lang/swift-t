@@ -711,7 +711,7 @@ public class STCMiddleEnd {
     }
 
     WaitStatement wait = new WaitStatement(
-        currFunction.getName() + ":wait:" + src.name(), waitVars,
+        currFunction.name() + ":wait:" + src.name(), waitVars,
         PassedVar.NONE, Var.NONE,
         waitMode, false, taskMode, new TaskProps());
     block.addContinuation(wait);

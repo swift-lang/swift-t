@@ -164,32 +164,32 @@ public class FunctionInline implements OptimizerPass {
 
     // Map from caller to callee for IC functions only
     Map<String, String> functionCalls = new HashMap<String, String>();
-    for (Function callee: program.getFunctions()) {
-      for (String caller: finder.functionUsages.get(callee.getName())) {
-        functionCalls.put(caller, callee.getName());
+    for (Function callee: program.functions()) {
+      for (String caller: finder.functionUsages.get(callee.name())) {
+        functionCalls.put(caller, callee.name());
       }
     }
 
     MultiMap<String, String> inlineCandidates = new MultiMap<String, String>();
     Set<String> toRemove = new HashSet<String>();
     // Narrow inline candidates by number of calls, remove unused functions
-    for (Function f: program.getFunctions()) {
-      List<String> callLocs = finder.functionUsages.get(f.getName());
+    for (Function f: program.functions()) {
+      List<String> callLocs = finder.functionUsages.get(f.name());
       int functionSize = finder.getFunctionSize(f);
-      if (f.getName().equals(Constants.ENTRY_FUNCTION)) {
+      if (f.name().equals(Constants.ENTRY_FUNCTION)) {
         // Do nothing
       } else if (callLocs == null || callLocs.size() == 0) {
         // Function not referenced - prune it!
-        toRemove.add(f.getName());
-      } else if (callLocs.size() == 1 && !callLocs.get(0).equals(f.getName())) {
+        toRemove.add(f.name());
+      } else if (callLocs.size() == 1 && !callLocs.get(0).equals(f.name())) {
         // Always inline functions that were only called once
-        alwaysInline.add(f.getName());
-        inlineCandidates.putAll(f.getName(), callLocs);
+        alwaysInline.add(f.name());
+        inlineCandidates.putAll(f.name(), callLocs);
       } else if (callLocs.size() * functionSize  <= inlineThreshold) {
-        inlineCandidates.putAll(f.getName(), callLocs);
-        if (!functionCalls.containsKey(f.getName())) {
+        inlineCandidates.putAll(f.name(), callLocs);
+        if (!functionCalls.containsKey(f.name())) {
           // Doesn't call other functions, safe to inline always
-          alwaysInline.add(f.getName());
+          alwaysInline.add(f.name());
         }
       }
     }
@@ -265,14 +265,14 @@ public class FunctionInline implements OptimizerPass {
     Iterator<Function> functionIter = program.functionIterator();
     while (functionIter.hasNext()) {
       Function f = functionIter.next();
-      List<String> occurrences = inlineLocations.get(f.getName());
-      if (toRemove.contains(f.getName())) {
+      List<String> occurrences = inlineLocations.get(f.name());
+      if (toRemove.contains(f.name())) {
         changed = true;
         functionIter.remove();
       }
       if (occurrences != null && occurrences.size() > 0) {
         changed = true;
-        toInline.put(f.getName(), f);
+        toInline.put(f.name(), f);
         if (occurrences != null) {
           callSiteFunctions.addAll(occurrences);
         }
@@ -295,8 +295,8 @@ public class FunctionInline implements OptimizerPass {
    */
   private void doInlining(Logger logger, Program program,
       Set<String> callSiteFunctions, MultiMap<String, String> inlineLocations, Map<String, Function> toInline) {
-    for (Function f: program.getFunctions()) {
-      if (callSiteFunctions.contains(f.getName())) {
+    for (Function f: program.functions()) {
+      if (callSiteFunctions.contains(f.name())) {
         doInlining(logger, program, f, f.mainBlock(), inlineLocations,
                    toInline, alwaysInline, blacklist);
       }
@@ -305,7 +305,7 @@ public class FunctionInline implements OptimizerPass {
 
   public static void inlineAllOccurrences(Logger logger, Program prog,
                                     Map<String, Function> toInline) {
-    for (Function f: prog.getFunctions()) {
+    for (Function f: prog.functions()) {
       inlineAllOccurrences(logger, prog, f, toInline);
     }
   }
@@ -381,7 +381,7 @@ public class FunctionInline implements OptimizerPass {
       } else {
         // Check that location is marked for inlining
         List<String> inlineCallers = inlineLocations.get(fcall.functionName());
-        canInlineHere = inlineCallers.contains(contextFunction.getName());
+        canInlineHere = inlineCallers.contains(contextFunction.name());
       }
       if (canInlineHere) {
         // Do the inlining.  Note that the iterator will be positioned
@@ -409,7 +409,7 @@ public class FunctionInline implements OptimizerPass {
     // Remove function call instruction
     it.remove();
 
-    logger.debug("inlining " + toInline.getName() + " into " + contextFunction.getName());
+    logger.debug("inlining " + toInline.name() + " into " + contextFunction.name());
 
     // Create copy of function code so variables can be renamed
     Block inlineBlock = toInline.mainBlock().clone(BlockType.NESTED_BLOCK,
@@ -452,7 +452,7 @@ public class FunctionInline implements OptimizerPass {
 
     if (logger.isTraceEnabled())
         logger.trace("inlining renames: " + renames);
-    inlineBlock.renameVars(contextFunction.getName(), renames,
+    inlineBlock.renameVars(contextFunction.name(), renames,
                            RenameMode.REPLACE_VAR, true);
 
     if (!fnCall.execMode().isAsync()) {
@@ -479,7 +479,7 @@ public class FunctionInline implements OptimizerPass {
       }
 
       WaitStatement wait = new WaitStatement(
-          contextFunction.getName() + "-" + toInline.getName() + "-call",
+          contextFunction.name() + "-" + toInline.name() + "-call",
           blockingInputs, PassedVar.NONE, Var.NONE,
           waitMode, false, fnCall.execMode(), fnCall.getTaskProps());
       block.addContinuation(wait);
@@ -490,11 +490,11 @@ public class FunctionInline implements OptimizerPass {
     // Do the insertion
     insertBlock.insertInline(inlineBlock, insertPos);
     logger.debug("Call to function " + fnCall.functionName() +
-          " inlined into " + contextFunction.getName());
+          " inlined into " + contextFunction.name());
 
     // Prevent repeated inlinings
     if (!alwaysInline.contains(fnCall.functionName())) {
-      blacklist.add(Pair.create(contextFunction.getName(),
+      blacklist.add(Pair.create(contextFunction.name(),
                               fnCall.functionName()));
     }
   }
@@ -520,7 +520,7 @@ public class FunctionInline implements OptimizerPass {
     // Walk block to find local vars
     while(!blocks.isEmpty()) {
       Block block = blocks.pop();
-      for (Var v: block.getVariables()) {
+      for (Var v: block.variables()) {
         if (!v.defType().isGlobal()) {
           updateName(logger, block, targetFunction, replacements, excludedNames, v);
         }
@@ -548,7 +548,7 @@ public class FunctionInline implements OptimizerPass {
     excludedNames.add(newName);
     UniqueVarNames.replaceCleanup(block, var, newVar);
     logger.trace("Replace " + var + " with " + newVar
-            + " for inline into function " + targetFunction.getName());
+            + " for inline into function " + targetFunction.name());
   }
 
   private static class FuncCallFinder extends TreeWalker {
@@ -570,19 +570,19 @@ public class FunctionInline implements OptimizerPass {
                                       Instruction inst) {
       if (isFunctionCall(inst)) {
         String calledFunction = ((FunctionCall)inst).functionName();
-        functionUsages.put(calledFunction, functionContext.getName());
+        functionUsages.put(calledFunction, functionContext.name());
       }
 
-      int prev[] = functionSizes.get(functionContext.getName());
+      int prev[] = functionSizes.get(functionContext.name());
       if (prev == null) {
-        functionSizes.put(functionContext.getName(), new int[] {1});
+        functionSizes.put(functionContext.name(), new int[] {1});
       } else {
         prev[0] = prev[0] + 1;
       }
     }
 
     public int getFunctionSize(Function function) {
-      int size[] = functionSizes.get(function.getName());
+      int size[] = functionSizes.get(function.name());
       if (size == null) {
         return 0;
       } else {

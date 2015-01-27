@@ -80,7 +80,7 @@ public class HoistLoops implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program prog) {
-    for (Function f: prog.getFunctions()) {
+    for (Function f: prog.functions()) {
       HoistTracking global = new HoistTracking();
       // Global constants already written
       for (Var gv: prog.allGlobals()) {
@@ -117,7 +117,7 @@ public class HoistLoops implements OptimizerPass {
     boolean changed = false;
     Block curr = state.block;
 
-    for (Var v: curr.getVariables()) {
+    for (Var v: curr.variables()) {
       state.declare(v);
     }
 

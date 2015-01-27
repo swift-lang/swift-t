@@ -24,7 +24,7 @@ COMPILER_OPTS=()
 O0_OPTS=()
 O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "algebra"
          "finalized-var"
-         "flatten-nested" "shared-constants" "unroll-loops"
+         "flatten-nested" "shared-constants" "demote-globals" "unroll-loops"
          "controlflow-fusion" "propagate-aliases"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
@@ -52,6 +52,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         shared-constants) echo "stc.opt.shared-constants"
+                    return 0
+                    ;;
+        demote-globals) echo "stc.opt.demote-globals"
                     return 0
                     ;;
         dead-code-elim) echo "stc.opt.dead-code-elim"

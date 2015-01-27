@@ -141,27 +141,27 @@ public class ValueNumber implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) throws UserException {
     this.logger = logger;
-    for (Function f: prog.getFunctions()) {
+    for (Function f: prog.functions()) {
       runPass(prog, f);
       liftWaitRec(logger, prog, f, f.mainBlock());
     }
   }
 
   private void runPass(Program prog, Function f) {
-    logger.trace("Optimizing function @" + f.getName());
+    logger.trace("Optimizing function @" + f.name());
     try {
       // First pass finds all congruence classes and expands some instructions
       Map<Block, Congruences> congMap;
       congMap = findCongruences(prog, f, ExecContext.control());
 
       // Second pass replaces values based on congruence classes
-      replaceVals(prog.constants(), f.getName(), f.mainBlock(), congMap,
+      replaceVals(prog.constants(), f.name(), f.mainBlock(), congMap,
                   InitState.enterFunction(f));
 
       // Third pass inlines continuations
       inlinePass(prog.constants(), f.mainBlock(), congMap);
     } catch (OptUnsafeError e) {
-      logger.debug("Optimization cancelled for function " + f.getName());
+      logger.debug("Optimization cancelled for function " + f.name());
     }
   }
 
@@ -179,7 +179,7 @@ public class ValueNumber implements OptimizerPass {
       ValLoc assign = ComputedValue.assignValLoc(v, val,
                                       IsAssign.TO_LOCATION, false);
       int stmtIndex = -1;
-      congruent.update(constants, f.getName(), assign, stmtIndex);
+      congruent.update(constants, f.name(), assign, stmtIndex);
     }
 
     if (finalizedVarEnabled) {
@@ -236,7 +236,7 @@ public class ValueNumber implements OptimizerPass {
         return;
     }
 
-    logger.trace("liftWait() on " + f.getName() + " " + block.getType());
+    logger.trace("liftWait() on " + f.name() + " " + block.getType());
 
     List<WaitVar> blockingVariables;
     blockingVariables = findBlockingVariables(logger, program, f, block);
@@ -249,7 +249,7 @@ public class ValueNumber implements OptimizerPass {
         case MAIN_BLOCK: {
           List<Var> locals = f.getInputList();
           if (logger.isTraceEnabled()) {
-            logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
+            logger.trace("Blocking " + f.name() + ": " + blockingVariables);
           }
           for (WaitVar wv : blockingVariables) {
             // Global constants are already set
@@ -421,7 +421,7 @@ public class ValueNumber implements OptimizerPass {
         // conditional z which has the value from all branches stored
         UnifiedValues unified = findCongruencesContRec(program, f, execCx,
                             stmt.conditional(), stmtIndex, state, result);
-        state.addUnifiedValues(program.constants(), f.getName(), stmtIndex, unified);
+        state.addUnifiedValues(program.constants(), f.name(), stmtIndex, unified);
       }
     }
 
@@ -546,7 +546,7 @@ public class ValueNumber implements OptimizerPass {
                     cont.variablePassing().isLocal(), stmtIndex);
 
       blockState.varDeclarations(cont.constructDefinedVars());
-      blockState.varDeclarations(contBlock.getVariables());
+      blockState.varDeclarations(contBlock.variables());
 
       if (contClosedVars != null) {
         for (BlockingVar bv: contClosedVars) {
@@ -836,7 +836,7 @@ public class ValueNumber implements OptimizerPass {
       logger.trace("resVals: " + resVals);
       logger.trace("aliases: " + aliases);
     }
-    state.update(consts, function.getName(), resVals, aliases, stmtIndex);
+    state.update(consts, function.name(), resVals, aliases, stmtIndex);
   }
 
   /**
@@ -880,7 +880,7 @@ public class ValueNumber implements OptimizerPass {
       insertContext = block;
       insertPoint = stmts;
     } else {
-      WaitStatement wait = new WaitStatement(fn.getName() + "-"
+      WaitStatement wait = new WaitStatement(fn.name() + "-"
           + inst.shortOpName(), WaitVar.NONE, PassedVar.NONE, Var.NONE,
           WaitMode.TASK_DISPATCH, false, req.mode, inst.getTaskProps());
       insertContext = wait.getBlock();
@@ -909,7 +909,7 @@ public class ValueNumber implements OptimizerPass {
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
           Fetched.makeList(req.out, outFetched, true), inVals);
-    OptUtil.fixupImmChange(fn.getName(), block, insertContext, inst, change, alt,
+    OptUtil.fixupImmChange(fn.name(), block, insertContext, inst, change, alt,
                            outFetched, req.out);
 
     if (logger.isTraceEnabled()) {

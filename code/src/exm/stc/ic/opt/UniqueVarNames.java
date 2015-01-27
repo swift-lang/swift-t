@@ -57,7 +57,7 @@ public class UniqueVarNames implements OptimizerPass {
    */
   @Override
   public void optimize(Logger logger, Program in) {
-    for (Function f: in.getFunctions()) {
+    for (Function f: in.functions()) {
       makeVarNamesUnique(f, in.allGlobals());
     }
   }
@@ -70,7 +70,7 @@ public class UniqueVarNames implements OptimizerPass {
    */
   private static void makeVarNamesUnique(Function fn,
       Block block, Vars existing, HierarchicalMap<Var, Arg> renames) {
-    for (Var v: block.getVariables()) {
+    for (Var v: block.variables()) {
       if (!v.defType().isGlobal()) {
         updateName(fn, block, existing, renames, v);
       }
@@ -78,7 +78,7 @@ public class UniqueVarNames implements OptimizerPass {
 
     if (!renames.isEmpty()) {
       // Rename variables in Block (and nested blocks) according to map
-      block.renameVars(fn.getName(), renames, RenameMode.REPLACE_VAR, false);
+      block.renameVars(fn.name(), renames, RenameMode.REPLACE_VAR, false);
     }
 
     // Recurse through nested blocks, making sure that all used variable
@@ -112,7 +112,7 @@ public class UniqueVarNames implements OptimizerPass {
 
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
-        cont.renameVars(fn.getName(), contVarRenames, RenameMode.REPLACE_VAR,
+        cont.renameVars(fn.name(), contVarRenames, RenameMode.REPLACE_VAR,
                         false);
         renames.putAll(contVarRenames);
       }

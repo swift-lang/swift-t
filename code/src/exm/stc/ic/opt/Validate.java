@@ -97,7 +97,7 @@ public class Validate implements OptimizerPass {
       FixupVariables.fixupProgram(logger, program, false);
     }
 
-    for (Function fn : program.getFunctions()) {
+    for (Function fn : program.functions()) {
       checkParentLinks(logger, program, fn);
       checkUniqueVarNames(logger, program.allGlobals(), fn);
       InitVariables.checkVarInit(logger, fn);
@@ -137,7 +137,7 @@ public class Validate implements OptimizerPass {
   private void checkUniqueVarNames(Logger logger,
       Function fn, Block block, Map<String, Var> declared,
       HierarchicalSet<Var> unavailable) {
-    for (Var v: block.getVariables()) {
+    for (Var v: block.variables()) {
       checkVarUnique(logger, fn, declared, v);
     }
 
@@ -182,7 +182,7 @@ public class Validate implements OptimizerPass {
    */
   private void checkVarReferences(Logger logger, Function f,
       Block block, Map<String, Var> declared, Set<Var> unavailable) {
-    for (Var v: block.getVariables()) {
+    for (Var v: block.variables()) {
       if (v.storage().isGlobal()) {
         checkVarReference(f, declared, unavailable, v, v);
       }
@@ -250,7 +250,7 @@ public class Validate implements OptimizerPass {
   }
 
   private void checkCleanups(Logger logger, Function fn, Block block) {
-    Set<Var> blockVars = new HashSet<Var>(block.getVariables());
+    Set<Var> blockVars = new HashSet<Var>(block.variables());
 
     if (block.getType() == BlockType.MAIN_BLOCK) {
       // Cleanup actions for args valid in outer block of function
@@ -272,7 +272,7 @@ public class Validate implements OptimizerPass {
       // TODO: might indicate error sometimes?
       if (!blockVars.contains(ca.var())) {
         logger.debug("Cleanup action for var not defined in " +
-            "block: " + ca.var() + " in function " + fn.getName() + ". " +
+            "block: " + ca.var() + " in function " + fn.name() + ". " +
             " Valid variables are: " + blockVars);
       }
     }
@@ -292,7 +292,7 @@ public class Validate implements OptimizerPass {
     } else {
       if (declared.containsKey(var.name()))
         throw new STCRuntimeError("Duplicate variable name "
-                + var.name() + " in function " + fn.getName());
+                + var.name() + " in function " + fn.name());
     }
     declared.put(var.name(), var);
   }
@@ -306,7 +306,7 @@ public class Validate implements OptimizerPass {
   private void checkAvail(Function fn, Var referencedVar, Set<Var> unavailable,
                           Object context) {
     assert(!unavailable.contains(referencedVar)) :
-      referencedVar + " was unavailable in scope function " + fn.getName()
+      referencedVar + " was unavailable in scope function " + fn.name()
                     + ": " + context;
   }
 
@@ -326,8 +326,8 @@ public class Validate implements OptimizerPass {
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
     assert(fn2 == fn) :
-      "Parent function should be " + fn.getName() + " but was "
-      + (fn2 == null ? null : fn2.getName());
+      "Parent function should be " + fn.name() + " but was "
+      + (fn2 == null ? null : fn2.name());
 
     for (Continuation c: block.allComplexStatements()) {
       if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {

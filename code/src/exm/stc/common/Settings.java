@@ -38,8 +38,7 @@ import exm.stc.common.util.Pair;
  * List of Java properties not processed here:
  * stc.logfile: used to set up logging in Main
  * */
-public class Settings
-{
+public class Settings {
 
   // Whether we're using a separate engine (old design)
   public static boolean SEPARATE_TURBINE_ENGINE = false;
@@ -54,6 +53,7 @@ public class Settings
   public static final String IC_OUTPUT_FILE = "stc.ic.output-file";
   public static final String OPT_CONSTANT_FOLD = "stc.opt.constant-fold";
   public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
+  public static final String OPT_DEMOTE_GLOBALS = "stc.opt.demote-globals";
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
   public static final String OPT_VALUE_NUMBER = "stc.opt.value-number";
@@ -164,6 +164,7 @@ public class Settings
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
     defaults.setProperty(OPT_CONSTANT_FOLD, "true");
     defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
+    defaults.setProperty(OPT_DEMOTE_GLOBALS, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
     defaults.setProperty(OPT_EXPAND_LOOPS, "true");
@@ -313,6 +314,8 @@ public class Settings
     SEPARATE_TURBINE_ENGINE = getBoolean(SEPARATE_TURBINE_ENGINE_KEY);
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
+    getBoolean(OPT_SHARED_CONSTANTS);
+    getBoolean(OPT_DEMOTE_GLOBALS);
     getBoolean(OPT_DEAD_CODE_ELIM);
     getBoolean(OPT_DISABLE_ASSERTS);
     getBoolean(OPT_VALUE_NUMBER);

@@ -128,7 +128,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
              true);
     if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {
-        logger.trace("Exploding " + inst + " in function " + fn.getName());
+        logger.trace("Exploding " + inst + " in function " + fn.name());
       }
       
       // Remove old instruction now that we're certain to replace it
@@ -155,7 +155,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
                                   new OptVarCreator(insideWaitBlock),
                                   Fetched.makeList(req.out, localOutputs, true),
                                   Fetched.makeList(req.in, inVals, false));
-      OptUtil.fixupImmChange(fn.getName(), block, insideWaitBlock, inst,
+      OptUtil.fixupImmChange(fn.name(), block, insideWaitBlock, inst,
                  change, instBuffer, localOutputs, req.out);
       
       // Remove old instruction, add new one inside wait block
@@ -231,7 +231,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
     }
     
     WaitStatement wait = new WaitStatement(
-            fn.getName() + "-" + inst.shortOpName(),
+            fn.name() + "-" + inst.shortOpName(),
             waitVars, PassedVar.NONE, Var.NONE,
             waitMode, recursive, taskMode, props);
     block.addContinuation(wait);

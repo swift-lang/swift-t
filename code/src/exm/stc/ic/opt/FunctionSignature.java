@@ -67,10 +67,10 @@ public class FunctionSignature implements OptimizerPass {
       if (newFn != null) {
         fnIt.remove(); // Remove old function
         fnIt.add(newFn);
-        usedFunctionNames.add(newFn.getName());
+        usedFunctionNames.add(newFn.name());
 
         // We should inline
-        toInline.put(fn.getName(), fn);
+        toInline.put(fn.name(), fn);
       }
     }
 
@@ -106,7 +106,7 @@ public class FunctionSignature implements OptimizerPass {
       assert(fv.val2 != null);
     }
     List<Var> newIList = buildNewInputList(fn, switched);
-    String newName = selectUniqueName(fn.getName(), usedFunctionNames);
+    String newName = selectUniqueName(fn.name(), usedFunctionNames);
 
     // Block that calls into new version
     Block callNewFunction = callNewFunctionCode(foreignFuncs, fn, newName,
@@ -121,7 +121,7 @@ public class FunctionSignature implements OptimizerPass {
       Var tmpfuture = new Var(fv.val1.type(), fv.val1.name(),
                        Alloc.STACK, DefType.LOCAL_USER,
                        VarProvenance.renamed(fv.val1));
-      newBlock.renameVars(fn.getName(),
+      newBlock.renameVars(fn.name(),
             Collections.singletonMap(fv.val1, tmpfuture.asArg()),
             RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);

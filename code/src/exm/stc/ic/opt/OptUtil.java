@@ -60,7 +60,7 @@ public class OptUtil {
    */
   public static boolean isEntryBlock(Function fn, Block block) {
     return block.getType() == BlockType.MAIN_BLOCK &&
-        fn.getName().equals(Constants.ENTRY_FUNCTION);
+        fn.name().equals(Constants.ENTRY_FUNCTION);
   }
 
   /**
@@ -214,7 +214,7 @@ public class OptUtil {
     assert(oldVar.name().equals(newVar.name()));
     Block curr = block;
     while (true) {
-      if (curr.replaceVarDeclaration(block.getFunction().getName(),
+      if (curr.replaceVarDeclaration(block.getFunction().name(),
                                      oldVar, newVar)) {
         // Success
         return;

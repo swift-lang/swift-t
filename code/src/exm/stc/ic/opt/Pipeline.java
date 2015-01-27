@@ -182,7 +182,7 @@ public class Pipeline extends FunctionOptimizerPass {
 
             @Override
             protected void visit(Block block) {
-              varsDeclaredWithinChildTask.addAll(block.getVariables());
+              varsDeclaredWithinChildTask.addAll(block.variables());
             }};
 
     // Find variables used in child task

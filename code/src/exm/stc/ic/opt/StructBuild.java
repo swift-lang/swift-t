@@ -49,7 +49,7 @@ public class StructBuild extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
-    logger.trace("Struct build in " + f.getName());
+    logger.trace("Struct build in " + f.name());
     structBuildRec(logger, f.mainBlock());
   }
 

@@ -92,7 +92,7 @@ public class FixupVariables implements OptimizerPass {
   public static void fixupProgram(Logger logger, Program prog,
                                   boolean updateLists) {
     Set<Var> referencedGlobals = new HashSet<Var>();
-    for (Function fn : prog.getFunctions()) {
+    for (Function fn : prog.functions()) {
 
       if (updateLists) {
         fixupFunction(logger, prog.allGlobals(), fn,
@@ -151,17 +151,17 @@ public class FixupVariables implements OptimizerPass {
 
     if (res.read.size() > 0) {
       throw new STCRuntimeError("Reference in IC function "
-          + fn.getName() + " to undefined variables " + res.read.toString());
+          + fn.name() + " to undefined variables " + res.read.toString());
     }
 
     if (res.written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
-          + fn.getName() + " to variables " + res.written.toString());
+          + fn.name() + " to variables " + res.written.toString());
     }
 
     if (res.aliasWritten.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
-          + fn.getName() + " to variables " + res.aliasWritten.toString());
+          + fn.name() + " to variables " + res.aliasWritten.toString());
     }
   }
 
@@ -331,7 +331,7 @@ public class FixupVariables implements OptimizerPass {
     Set<Var> blockVars = new HashSet<Var>();
 
     // update block variables and visible variables
-    for (Var v: block.getVariables()) {
+    for (Var v: block.variables()) {
       blockVars.add(v);
       visible.add(v);
     }
@@ -515,7 +515,7 @@ public class FixupVariables implements OptimizerPass {
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
-            + function.getName());
+            + function.name());
       }
 
       boolean writeOnly = !inner.read.contains(needed);
@@ -546,7 +546,7 @@ public class FixupVariables implements OptimizerPass {
           // Only pass global const if needed
           if (canImportGlobal(contCx, addtl.var.storage())) {
             for (Block b: continuation.getBlocks()) {
-              if (!b.getVariables().contains(addtl.var)) {
+              if (!b.variables().contains(addtl.var)) {
                 b.addVariable(addtl.var);
               }
             }
@@ -583,7 +583,7 @@ public class FixupVariables implements OptimizerPass {
       if (!visible.contains(v)) {
         throw new STCRuntimeError("Variable " + v
             + " should have been " + "visible but wasn't in "
-            + function.getName());
+            + function.name());
       }
       if (RefCounting.trackWriteRefCount(v)) {
         keepOpen.add(v);
@@ -625,7 +625,7 @@ public class FixupVariables implements OptimizerPass {
     // if global constant missing, just add it
     Set<Var> existingGlobals = new HashSet<Var>();
     if (fixupMode == FixupVarMode.ADD) {
-      for (Var v: block.getVariables()) {
+      for (Var v: block.variables()) {
         if (v.storage().isGlobal()) {
           existingGlobals.add(v);
         }
@@ -679,7 +679,7 @@ public class FixupVariables implements OptimizerPass {
        GlobalVars globalVars, Set<Var> referencedGlobals) {
     Set<Var> globalsToRemove = new HashSet<Var>();
     globalsToRemove.addAll(constants.map().keySet());
-    globalsToRemove.addAll(globalVars.getVariables());
+    globalsToRemove.addAll(globalVars.variables());
 
     globalsToRemove.removeAll(referencedGlobals);
     for (Var unused: globalsToRemove) {

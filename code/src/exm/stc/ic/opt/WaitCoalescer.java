@@ -192,8 +192,8 @@ public class WaitCoalescer implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program prog) {
-    for (Function f: prog.getFunctions()) {
-      logger.trace("Wait coalescer entering function " + f.getName());
+    for (Function f: prog.functions()) {
+      logger.trace("Wait coalescer entering function " + f.name());
       rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.control());
     }
   }
@@ -486,7 +486,7 @@ public class WaitCoalescer implements OptimizerPass {
 
     // Check that wait variables not defined in this block
     for (WaitVar waitVar: innerWait.getWaitVars()) {
-      if (waitBlock.getVariables().contains(waitVar.var)) {
+      if (waitBlock.variables().contains(waitVar.var)) {
         logger.trace("Squash failed: wait var declared inside");
         return false;
       }
@@ -593,7 +593,7 @@ public class WaitCoalescer implements OptimizerPass {
         }
         // Create a new wait statement waiting on the intersection
         // of the above.
-        WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
+        WaitStatement newWait = new WaitStatement(fn.name() + "-optmerged",
             mergedWaitVars, PassedVar.NONE, Var.NONE,
             WaitMode.WAIT_ONLY, allRecursive, ExecTarget.nonDispatchedAny(),
             new TaskProps());

@@ -489,8 +489,8 @@ public class RCPlacer {
     }
 
     final Set<Var> immDecrCandidates = Sets.createSet(
-                        block.getVariables().size());
-    for (Var blockVar : block.getVariables()) {
+                        block.variables().size());
+    for (Var blockVar : block.variables()) {
       if (blockVar.storage() != Alloc.ALIAS) {
         // NOTE: this block var will be it's own root since
         // it's allocated here
@@ -1057,7 +1057,7 @@ public class RCPlacer {
       return;
     }
 
-    for (Var blockVar : block.getVariables()) {
+    for (Var blockVar : block.variables()) {
       if (blockVar.storage() != Alloc.ALIAS) {
         long incr = increments.getCount(rcType, blockVar, RCDir.INCR);
         assert(incr >= 0);

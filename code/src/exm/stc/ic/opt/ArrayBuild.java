@@ -57,7 +57,7 @@ public class ArrayBuild implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) throws UserException {
     Map<String, Function> funcMap = prog.getFunctionMap();
-    for (Function f: prog.getFunctions()) {
+    for (Function f: prog.functions()) {
       ArrayInfo info = buildInfo(logger, funcMap, f);
       optimize(logger, f, info);
     }
@@ -288,7 +288,7 @@ public class ArrayBuild implements OptimizerPass {
     if (block.getType() ==  BlockType.MAIN_BLOCK) {
       addBlockCandidates(block, info, candidates, f.getOutputList());
     }
-    addBlockCandidates(block, info, candidates, block.getVariables());
+    addBlockCandidates(block, info, candidates, block.variables());
   }
 
   private void updateInfo(Logger logger, Map<String, Function> funcMap, 
