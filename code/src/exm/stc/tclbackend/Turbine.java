@@ -192,19 +192,6 @@ class Turbine {
   private static final Token DEREFERENCE_BLOB = turbFn("dereference_blob");
   private static final Token DEREFERENCE_FILE = turbFn("dereference_file");
 
-  // Callstack functions
-  private static final Token STACK_LOOKUP = turbFn("stack_lookup");
-  static final String LOCAL_STACK_NAME = "stack";
-  static final Value LOCAL_STACK_VAL = new Value(LOCAL_STACK_NAME, false, true);
-  static final String PARENT_STACK_NAME = "stack";
-  private static final Value STACK = new Value(LOCAL_STACK_NAME);
-  private static final Value PARENT_STACK = new Value(PARENT_STACK_NAME);
-  private static final Token PARENT_STACK_ENTRY = new Token("_parent");
-
-  public enum StackFrameType {
-    MAIN, FUNCTION, NESTED
-  }
-
   private static final LiteralInt TURBINE_WORKER_WORK_ID = new LiteralInt(0);
 
   // Custom implementations of operators
@@ -347,45 +334,6 @@ class Turbine {
     return new Command(ARGV_ADD_CONSTANT, argName, argVal);
   }
 
-  public static TclTree[] createStackFrame(StackFrameType type) {
-    TclTree[] result;
-    // Index into result
-    int index = 0;
-
-    if (type == StackFrameType.MAIN)
-      result = new TclTree[1];
-    else
-      result = new TclTree[3];
-
-    if (type == StackFrameType.NESTED || type == StackFrameType.FUNCTION) {
-      // Make sure that there is a variable in scope called parent
-      // (parent is passed in as an argument)
-      result[index++] = new SetVariable("parent", STACK);
-    }
-
-    result[index++] =
-            allocateContainer(LOCAL_STACK_NAME, ADLB_STRING_TYPE,
-                    ADLB_REF_TYPE, LiteralInt.ONE, LiteralInt.ONE);
-
-    if (type != StackFrameType.MAIN) {
-      // main is the only procedure without a parent stack frame
-      result[index++] =
-              new Command(C_V_INSERT, STACK, PARENT_STACK_ENTRY, PARENT_STACK);
-    }
-    return result;
-  }
-
-  public static TclTree createDummyStackFrame() {
-    return new SetVariable(LOCAL_STACK_NAME, new LiteralInt(0));
-  }
-
-  public static Command storeInStack(String stackVarName, String tclVarName) {
-    Token name = new Token(stackVarName);
-    Value value = new Value(tclVarName);
-    Command result = new Command(C_V_INSERT, STACK, name, value);
-    return result;
-  }
-
   public static TclTree allocate(String tclName, TypeName typePrefix, int debugSymbol) {
     return allocate(tclName, typePrefix, LiteralInt.ONE,
                     LiteralInt.ONE, debugSymbol, false);
@@ -416,22 +364,6 @@ class Turbine {
     Expression initWriters = LiteralInt.ONE;
     return new Command(ALLOCATE_FILE, new Token(tclName), isMapped,
            initReaders, initWriters, new LiteralInt(debugSymbol));
-  }
-
-  public static SetVariable stackLookup(String stackName, String tclVarName,
-          String containerVarName) {
-    Token v = new Token(containerVarName);
-    Square square = new Square(STACK_LOOKUP, new Value(stackName), v);
-    SetVariable sv = new SetVariable(tclVarName, square);
-    return sv;
-  }
-
-  public static SetVariable lookupParentStack(String parentScope,
-          String childScope) {
-    Square square =
-            new Square(STACK_LOOKUP, new Value(childScope), PARENT_STACK_ENTRY);
-    SetVariable sv = new SetVariable(parentScope, square);
-    return sv;
   }
 
   /**
@@ -1517,7 +1449,6 @@ class Turbine {
   public static TclTree callFunctionSync(String function,
           List<Expression> outVars, List<Expression> inVars) {
     List<Expression> args = new ArrayList<Expression>();
-    args.add(LOCAL_STACK_VAL);
     args.addAll(outVars);
     args.addAll(inVars);
     return new Command(function, args);

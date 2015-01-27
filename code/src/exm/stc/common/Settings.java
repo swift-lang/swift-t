@@ -97,8 +97,6 @@ public class Settings {
   public static final String OPT_HOIST_REFCOUNTS = "stc.opt.hoist-refcounts";
 
   public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
-  public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
-  public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String ENABLE_REFCOUNTING = "stc.refcounting";
   public static final String ENABLE_CHECKPOINTING = "stc.checkpointing";
@@ -202,10 +200,6 @@ public class Settings {
     // Turbine code generation
     // Turbine version
     defaults.setProperty(TURBINE_VERSION, "unknown");
-    //If set to true, don't allocate any stacks at all
-    defaults.setProperty(TURBINE_NO_STACK, "true");
-    //If set to true, don't store any variables in stack
-    defaults.setProperty(TURBINE_NO_STACK_VARS, "true");
     properties = new Properties(defaults);
   }
 
@@ -335,8 +329,6 @@ public class Settings {
     getBoolean(OPT_PIGGYBACK_REFCOUNTS);
     getBoolean(OPT_BATCH_REFCOUNTS);
     getBoolean(OPT_HOIST_REFCOUNTS);
-    getBoolean(TURBINE_NO_STACK);
-    getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ENABLE_REFCOUNTING);
     getBoolean(ENABLE_CHECKPOINTING);
     getBoolean(AUTO_DECLARE);
@@ -351,11 +343,6 @@ public class Settings {
     getLong(OPT_MAX_ITERATIONS);
 
     checkOneOf(DEBUG_LEVEL, Arrays.asList("off", "comments", "debugger"));
-
-    if (getBoolean(TURBINE_NO_STACK)) {
-      // no stack implies cannot put anything in stack
-      properties.setProperty(TURBINE_NO_STACK_VARS, "true");
-    }
   }
 
   public static String get(String key)
