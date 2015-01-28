@@ -23,6 +23,6 @@ main {
         // Hopefully these both turned into local
         trace(i+i);
         trace(k+1);
-        assertEqual(k, round(2**i), "2^" + fromint(i));
+        assertEqual(k, toInt(2**i), "2^" + fromint(i));
     }
 }

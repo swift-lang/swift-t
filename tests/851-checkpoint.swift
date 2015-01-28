@@ -43,7 +43,7 @@ main {
     A[i] = itof(blob_size(x));
     abag += blob_size(x);
   }
-  a = b + round(sum_float(A)/itof(size(A)));
+  a = b + toInt(sum_float(A)/itof(size(A)));
 }
 
 

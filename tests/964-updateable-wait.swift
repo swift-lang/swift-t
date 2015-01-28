@@ -11,7 +11,7 @@ main {
 
     wait (counter) {
         // This should run after counter is finalized
-        assertEqual(round(counter), limit, "counter == limit");
+        assertEqual(toInt(counter), limit, "counter == limit");
     }
     wait (sleep(0.1)) { 
         foreach i in [1:limit] {

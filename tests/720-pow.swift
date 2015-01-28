@@ -6,7 +6,7 @@ main
   int n = 3;
   int d = 2;
 
-  int T = floor(pow_integer(n,d));
+  int T = toInt(pow_integer(n,d));
 
   foreach i in [0:T-1]
   {
