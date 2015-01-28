@@ -205,11 +205,16 @@ public class BuiltinOps {
       default:
         throw new STCRuntimeError("impossible");
       }
+
+      return new Expression[] {
+              TclExpr.exprFn(fname, argExpr.get(0))};
+    }
+    case FLOATTOINT: {
       // Need to apply int( conversion, as the rounding function still return
       // a floating point (albeit one with no fractional part)
       return new Expression[] {
           TclExpr.exprFn(TclExpr.INT_CONV,
-              TclExpr.exprFn(fname, argExpr.get(0)))};
+              TclExpr.exprFn(TclExpr.FLOOR, argExpr.get(0)))};
     }
     case MAX_FLOAT:
     case MAX_INT:

@@ -25,7 +25,7 @@ main {
 
   wait (count, saw1000) {
     assert(saw1000 == 1, "Expected to see 1000");
-    assert(round(count) == 10001, "Expected count 10001");
+    assert(toInt(count) == 10001, "Expected count 10001");
 
   }
 }

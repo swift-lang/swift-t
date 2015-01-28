@@ -27,12 +27,12 @@ public class OpEvaluator {
 
   /**
    * Try to do compile-time evaluation of operator
-   * 
+   *
    * @param op
    * @param inputs inputs to operator.  Null or a variable if not constant
    * @return output value of op if it could be evaluated at compile-time, null
    *         otherwise.  Also returns null if the operator is simply a copy,
-   *         since no reduction can occur then 
+   *         since no reduction can occur then
    */
   public static Arg eval(BuiltinOpcode op, List<Arg> inputs) {
     if (Operators.isShortCircuitable(op)) {
@@ -79,7 +79,7 @@ public class OpEvaluator {
   /**
    * Constant folding for short-circuitable operations where we don't always
    * need to know both arguments to evaluate
-   * 
+   *
    * @param constArgs
    *          unknown args are null.  Currently assume 2 args
    * @return
@@ -105,7 +105,7 @@ public class OpEvaluator {
       if (constInputs.size() == 2) {
         // Can directly evaluate
         boolean arg2 = constInputs.get(1).getBool();
-        switch (op) { 
+        switch (op) {
           case OR:
             return Arg.newBool(arg1 || arg2);
           case AND:
@@ -166,7 +166,7 @@ public class OpEvaluator {
     } else if (constInputs.size() == 2) {
       String arg1 = constInputs.get(0).getString();
       String arg2 = constInputs.get(1).getString();
-      switch (op) { 
+      switch (op) {
         case EQ_STRING:
           return Arg.newBool(arg1.equals(arg2));
         case NEQ_STRING:
@@ -195,11 +195,13 @@ public class OpEvaluator {
         case SQRT:
           return Arg.newFloat(Math.sqrt(arg1));
         case ROUND:
-          return Arg.newInt(Math.round(arg1));
+          return Arg.newFloat(Math.rint(arg1));
         case CEIL:
-          return Arg.newInt((long) Math.ceil(arg1));
+          return Arg.newFloat(Math.ceil(arg1));
         case FLOOR:
-          return Arg.newInt((long) Math.floor(arg1));
+          return Arg.newFloat(Math.floor(arg1));
+        case FLOATTOINT:
+          return Arg.newInt((long)Math.floor(arg1));
         case FLOATTOSTR:
           // TODO: format might not be consistent with TCL
           return Arg.newString(Double.toString(arg1));
@@ -264,7 +266,7 @@ public class OpEvaluator {
     } else if (constInputs.size() == 2) {
       long arg1 = constInputs.get(0).getInt();
       long arg2 = constInputs.get(1).getInt();
-      switch (op) { 
+      switch (op) {
         case PLUS_INT:
           return Arg.newInt(arg1 + arg2);
         case MINUS_INT:
@@ -292,7 +294,7 @@ public class OpEvaluator {
         case MIN_INT:
           return Arg.newInt(Math.min(arg1, arg2));
         case POW_INT:
-          return Arg.newFloat(Math.pow((double) arg1, (double) arg2));
+          return Arg.newFloat(Math.pow(arg1, arg2));
         default:
           return null;
       }
@@ -304,7 +306,7 @@ public class OpEvaluator {
       evalBoolOp(BuiltinOpcode op, List<Arg> constInputs) {
     if (constInputs.size() == 1) {
       boolean arg1 = constInputs.get(0).getBool();
-      switch (op) { 
+      switch (op) {
         case NOT:
           return Arg.newBool(!arg1);
         default:
@@ -317,7 +319,7 @@ public class OpEvaluator {
     }
     return null;
   }
-  
+
   /**
    * Evaluate operator with mixed argument types
    * @param op
@@ -325,7 +327,7 @@ public class OpEvaluator {
    * @return
    */
   private static Arg evalOtherOp(BuiltinOpcode op, List<Arg> inputs) {
-    switch (op) { 
+    switch (op) {
       case SUBSTRING:
         String str = inputs.get(0).getString();
         long start = inputs.get(1).getInt();
