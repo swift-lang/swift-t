@@ -20,11 +20,11 @@
 #define MATH_SWIFT
 
 @pure @builtin_op=FLOOR
-(int o) floor           (float i) "turbine"  "0.0.2" "floor";
+(float o) floor           (float i) "turbine"  "0.0.2" "floor";
 @pure @builtin_op=CEIL
-(int o) ceil            (float i) "turbine"  "0.0.2" "ceil";
+(float o) ceil            (float i) "turbine"  "0.0.2" "ceil";
 @pure @builtin_op=ROUND
-(int o) round           (float i) "turbine"  "0.0.2" "round";
+(float o) round           (float i) "turbine"  "0.0.2" "round";
 @pure @builtin_op=LOG
 (float o) log           (float i) "turbine"  "0.0.2" "log_e";
 @pure @builtin_op=EXP

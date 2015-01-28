@@ -287,9 +287,20 @@ namespace eval turbine {
 
     proc floor_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {int(floor($a_value))} ]
+        set c_value [ expr {floor($a_value)} ]
         log "floor: $a_value => $c_value"
-        store_integer $c $c_value
+        store_float $c $c_value
+    }
+
+    proc floattoint { c a } {
+        rule "$a" "floattoint_body $c $a"
+    }
+
+    proc floattoint_body { c a } {
+        set a_value [ retrieve_decr_float $a ]
+        set c_value [ expr {int(floor($a_value))} ]
+        log "floattoint: $a_value => $c_value"
+        store_int $c $c_value
     }
 
     proc ceil { c a } {
@@ -298,9 +309,9 @@ namespace eval turbine {
 
     proc ceil_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {int(ceil($a_value))} ]
+        set c_value [ expr {ceil($a_value)} ]
         log "ceil: $a_value => $c_value"
-        store_integer $c $c_value
+        store_float $c $c_value
     }
 
     proc round { c a } {
@@ -309,9 +320,9 @@ namespace eval turbine {
 
     proc round_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {int(round($a_value))} ]
+        set c_value [ expr {round($a_value)} ]
         log "round: $a_value => $c_value"
-        store_integer $c $c_value
+        store_float $c $c_value
     }
 
     proc itof { c a } {

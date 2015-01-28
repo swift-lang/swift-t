@@ -56,6 +56,8 @@ type external void;
 (float o) pow_float     (float i1, float i2) "turbine" "0.0.2" "pow_float";
 
 // Type conversion
+@pure @builtin_op=FLOATTOINT
+(int o) toInt(float i) "turbine" "0.0.2" "floattoint";
 @pure @builtin_op=INTTOSTR
 (string o) fromint(int i)  "turbine" "0.0.2" "fromint";
 @pure @builtin_op=STRTOINT
