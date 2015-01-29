@@ -56,7 +56,6 @@ static int fill_notif_payload(char *payload, adlb_datum_id id,
   }
   else
   {
-    // TODO: support binary subscript
     len_str = sprintf(payload, "close %"PRId64" %.*s", id,
              (int)subscript.length, (const char*)subscript.key);
   }

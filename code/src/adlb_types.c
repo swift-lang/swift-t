@@ -950,7 +950,6 @@ static char *data_repr_container(const adlb_container *c)
     }
     else
     {
-      // TODO: support binary keys
       cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"=",
                               (char*)table_bp_get_key(item));
     }

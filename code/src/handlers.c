@@ -1130,7 +1130,6 @@ handle_store(int caller)
     RECV(subscript_buf, (int)hdr.subscript_len, MPI_BYTE, caller,
          ADLB_TAG_STORE_SUBSCRIPT);
     subscript.key = subscript_buf;
-    // TODO: support binary subscript
     DEBUG("Store: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(hdr.id,
                                         ADLB_DSYM_NULL, subscript));
   }
@@ -1350,7 +1349,6 @@ handle_subscribe(int caller)
   xlb_unpack_id_sub(xfer_pos, &id, &subscript);
 
 
-  // TODO: support binary keys
   if (adlb_has_sub(subscript))
   {
     DEBUG("subscribe: "ADLB_PRIDSUB,
@@ -1383,7 +1381,6 @@ handle_notify(int caller)
 
   xlb_engine_code tc;
 
-  // TODO: support binary keys
   if (hdr->subscript_len > 0)
   {
     adlb_subscript sub = { .key = hdr->subscript,
@@ -1508,7 +1505,6 @@ handle_insert_atomic(int caller)
   resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
                                    &resp.value_present);
 
-  // TODO: support binary subscript
   DEBUG("Insert_atomic: "ADLB_PRIDSUB" => %i",
         ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
         resp.created);
@@ -1675,7 +1671,6 @@ handle_container_reference(int caller)
   MSG_UNPACK_BIN(xfer_read, &transfer_refs);
   MSG_UNPACK_BIN(xfer_read, &ref_write_decr);
 
-  // TODO: support binary subscript
   DEBUG("Container_reference: "ADLB_PRIDSUB" => "ADLB_PRIDSUB" "
         "(%s) r: %i w: %i",
         ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),

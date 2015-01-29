@@ -2008,7 +2008,6 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
     }
     else
     {
-      // TODO: support binary subscript
       DEBUG("ADLB_Subscribe: "ADLB_PRIDSUB" => %i",
           ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript), *subscribed);
     }
@@ -2029,7 +2028,6 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
     }
     else
     {
-      // TODO: support binary subscript
       DEBUG("ADLB_Subscribe: "ADLB_PRIDSUB" => error",
             ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript));
     }
@@ -2079,7 +2077,6 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   ac = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
   ADLB_CHECK(ac);
 
-  // TODO: support binary subscript
   DEBUG("ADLB_Container_reference: "ADLB_PRIDSUB" => "ADLB_PRIDSUB
     " (%i)", ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
     ADLB_PRIDSUB_ARGS(ref_id, ADLB_DSYM_NULL, ref_subscript), ref_type);

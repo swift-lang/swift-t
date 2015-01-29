@@ -640,7 +640,6 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
   if (table_bp_search(&id_sub_subscribed, id_sub_key, id_sub_key_len,
                       &tmp))
   {
-    // TODO: support binary subscript
     DEBUG_ENGINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
                     id, (int)subscript.length, subscript.key);
     *subscribed = true;
