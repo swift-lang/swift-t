@@ -500,14 +500,26 @@ file tmp = write("first line\nsecond line");
 trace("Temporary filename is: " + filename(tmp));
 ----
 
+anchor:unmapped_files[]
 Temporary files are created as necessary if unmapped files are
-written to.  For example, the file +tmp+ in the above code snippet.
-This feature is implemented by calling GNU +mktemp+ with suffix
-+.turbine+; thus, the directory is set with environment variable
-+TMPDIR+ which defaults to +/tmp+.
+written to, for example, the file +tmp+ in the code snippet above.
+This file is created in +/tmp+ by default unless
+<<env_swift_tmp,overridden by +SWIFT_TMP+>>.
 
-Currently Swift/T assumes that the file system is shared among
-all nodes.
+The way this feature is implemented depends on the Tcl version:
+
+8.5:: Implemented by calling system command +mktemp+.  The directory
+may be set with environment variable +TMPDIR+ which defaults to
++/tmp+, or +SWIFT_PATH+.  The filename will contain +.turbine+ in the
+middle or as a suffix, depending on +mktemp+ implementation.
+
+8.6:: Implemented with a Tcl builtin.  File always has suffix
++.turbine+.
+
+Swift/T assumes that the file system is shared among all nodes.  Set
++SWIFT_TMP+ to a shared file system for best results when running
+across nodes.  (The directory +/tmp+ is usually a fast local file
+system and cleared on system reboot.)
 
 [NOTE]
 ======
@@ -1976,6 +1988,14 @@ goes to tandard output by default.
 
 Space-separated list of Swift/T extension (Tcl) package locations.
 Either variable name may be used.
+
+anchor:env_swift_tmp[]
+
++SWIFT_TMP+::
++TMP+::
+
+Directory location for <<unmapped_files,unmapped files>>.
++SWIFT_PATH+ overrides +TMP+.  The default is +/tmp+.
 
 +TURBINE_USER_LIB+::
 
