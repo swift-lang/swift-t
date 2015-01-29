@@ -280,7 +280,7 @@ namespace eval turbine {
     proc input_file_copy_body { outfile filepath } {
       set outfile_path_val [ get_filename_val $outfile ]
       set filepath_val [ retrieve_decr_string $filepath ]
-      physical_file_copy $outfile_path_val $filepath_val 
+      physical_file_copy $outfile_path_val $filepath_val
       close_file $outfile
     }
 
@@ -319,7 +319,7 @@ namespace eval turbine {
 
     proc input_url { out filepath } {
       set outfile [ lindex $out 0 ]
-      
+
       set mapped [ is_file_mapped $outfile ]
       if { $mapped } {
         set outfile_path [ get_file_path $outfile ]
@@ -360,9 +360,9 @@ namespace eval turbine {
 
     proc input_url_local { out_url_varname url } {
       upvar 1 $out_url_varname out_url
-      
+
       set out_url_mapped [ local_file_mapped $out_url ]
-      
+
       if { $out_url_mapped } {
         set out_url_path [ local_file_path $out_url ]
         input_url_mapped_error $out_url_path $url
@@ -449,13 +449,25 @@ namespace eval turbine {
 
     # return the filename of a unique temporary file
     # TODO: Do this w/o exec #364
-    proc mktemp {} {
+    proc mktemp { } {
         global env
-        # TODO: re-add this argument (#364): --suffix=.turbine
-        if [ string equal $env(TURBINE_MAC) "no" ] {
-            set result [ exec mktemp --suffix=.turbine ]
+        if { [ info tclversion ] >= 8.6 } {
+            if [ info exists env(SWIFT_TMP) ] {
+                set tmpdir $env(SWIFT_TMP)
+            } elseif [ info exists env(TMP) ] {
+                set tmpdir $env(TMP)
+            } else {
+                set tmpdir "/tmp"
+            }
+            file tempfile result $tmpdir/.turbine
         } else {
-            set result [ exec mktemp -t turbine.XXXXXX ]
+            # Tcl 8.5 or older: fall back on system mktemp command
+            # TODO: re-add this argument (#364): --suffix=.turbine
+            if [ string equal $env(TURBINE_MAC) "no" ] {
+                set result [ exec mktemp --suffix=.turbine ]
+            } else {
+                set result [ exec mktemp -t turbine.XXXXXX ]
+            }
         }
         # puts "mktemp: $result"
         return $result
@@ -517,7 +529,7 @@ namespace eval turbine {
     proc local_file_path { local_file } {
         return [ lindex $local_file 0 ]
     }
-    
+
     proc local_file_mapped { local_file } {
         return [ lindex $local_file 2 ]
     }
