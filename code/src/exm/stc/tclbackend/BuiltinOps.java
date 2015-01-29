@@ -40,20 +40,19 @@ import exm.stc.tclbackend.tree.Token;
 
 public class BuiltinOps {
 
-
   public static TclTree genLocalOpTcl(BuiltinOpcode op, Var out, List<Arg> in,
       ArrayList<Expression> argExpr) {
 
     if (op == BuiltinOpcode.ASSERT || op == BuiltinOpcode.ASSERT_EQ) {
       // Should have void output
       assert(out != null && Types.isVoidVal(out));
-      String tclFn;
+      Token tclFn;
       switch (op) {
       case ASSERT:
-        tclFn = "turbine::assert_impl";
+        tclFn = Turbine.TURBINE_ASSERT_IMPL;
         break;
       case ASSERT_EQ:
-        tclFn = "turbine::assertEqual_impl";
+        tclFn = Turbine.TURBINE_ASSERT_EQUAL_IMPL;
         break;
       default:
         throw new STCRuntimeError("Can't handle local op: "
@@ -78,8 +77,9 @@ public class BuiltinOps {
         } else if (op == BuiltinOpcode.EQ_STRING
                   || op == BuiltinOpcode.NEQ_STRING) {
           assert(argExpr.size() == 2);
-          rhs = new Square(new Token("string"), new Token("equal"),
-              argExpr.get(0), argExpr.get(1));
+          Expression s1 = argExpr.get(0);
+          Expression s2 = argExpr.get(1);
+          rhs = Turbine.stringEqual(s1, s2);
           if (op == BuiltinOpcode.NEQ_STRING) {
             // Negate previous result
             rhs = new TclExpr(true, TclExpr.NOT, rhs);
@@ -102,11 +102,10 @@ public class BuiltinOps {
         } else if (op == BuiltinOpcode.POW_INT) {
           assert(argExpr.size() == 2);
           assert(in.get(0).isImmInt() && in.get(1).isImmInt());
-          rhs = new Square(new Token("turbine::pow_integer_impl"), argExpr.get(0),
-                                                                  argExpr.get(1));
+          rhs = new Square(Turbine.POW_INTEGER_IMPL, argExpr.get(0), argExpr.get(1));
         } else if (op == BuiltinOpcode.SUBSTRING) {
           assert(argExpr.size() == 3);
-          rhs = new Square(new Token("turbine::substring_impl"),
+          rhs = new Square(Turbine.SUBSTRING_IMPL,
               argExpr.get(0), argExpr.get(1), argExpr.get(2));
         } else if (op == BuiltinOpcode.INTTOSTR || op == BuiltinOpcode.FLOATTOSTR) {
           assert(argExpr.size() == 1);
@@ -115,8 +114,8 @@ public class BuiltinOps {
         } else if (op == BuiltinOpcode.STRTOINT ||
             op == BuiltinOpcode.STRTOFLOAT ) {
           assert(argExpr.size() == 1);
-          String tclCheck = (op == BuiltinOpcode.STRTOINT) ?
-                    "turbine::check_str_int" : "turbine::check_str_float";
+          Token tclCheck = (op == BuiltinOpcode.STRTOINT) ?
+              Turbine.TOINT_IMPL : Turbine.TOFLOAT_IMPL;
           rhs = Square.fnCall(tclCheck, argExpr.get(0));
 
 

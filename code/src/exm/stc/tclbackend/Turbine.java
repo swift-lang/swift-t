@@ -50,6 +50,7 @@ import exm.stc.tclbackend.tree.Value;
  * Automates creation of Turbine-specific Tcl constructs
  *
  * @author wozniak
+ * @author armstron
  *
  *         This class is package-private: only TurbineGenerator uses it
  * */
@@ -243,6 +244,16 @@ class Turbine {
 
   // Special values
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
+
+  // Library function implementations
+  public static final Token TOFLOAT_IMPL = turbFn("tofloat_impl");
+  public static final Token TOINT_IMPL = turbFn("toint_impl");
+  public static final Token SUBSTRING_IMPL = turbFn("substring_impl");
+  public static final Token POW_INTEGER_IMPL = turbFn("pow_integer_impl");
+  public static final Token TURBINE_ASSERT_EQUAL_IMPL
+              = turbFn("assertEqual_impl");
+  public static final Token TURBINE_ASSERT_IMPL
+              = turbFn("assert_impl");
 
   // Checkpointing
   public static Token XPT_INIT = turbFn("xpt_init");
@@ -1703,6 +1714,10 @@ class Turbine {
 
   public static Command log(TclString logMsg) {
     return new Command(TURBINE_LOG, logMsg);
+  }
+
+  public static Expression stringEqual(Expression s1, Expression s2) {
+    return new Square(new Token("string"), new Token("equal"), s1, s2);
   }
 
   /**
