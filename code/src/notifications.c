@@ -291,7 +291,7 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
   assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
 
   TRACE("notify_server(<%"PRId64">[%.*s]) => server %i",
-         id, subscript_len, (char*)subscript.key, server);
+         id, (int)subscript_len, (char*)subscript.key, server);
 
   // Stack allocate small buffer
   size_t hdr_len = sizeof(struct packed_notify_hdr) + subscript_len;
