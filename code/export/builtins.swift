@@ -41,6 +41,12 @@ type external void;
 @pure @builtin_op=STRCAT
 (string o) strcat(string|int|float... args) "turbine" "0.0.2" "strcat";
 
+@pure
+(int n) length(string s)
+"turbine" "0.0.2"
+[ "set <<n>> [ string length <<s>> ]" ];
+
+
 // This is used by the string/ directory catenation operator
 @pure @builtin_op=DIRCAT
 (string o) dircat(string... args) "turbine" "0.0.2" "dircat";
