@@ -1558,7 +1558,6 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
 
   if (sub_kind != ADLB_SUB_NONE)
-    // TODO: support binary subscript
     DEBUG_ADLB("adlb::exists <%"PRId64">[%.*s] => %s", handle.id,
                 (int)handle.sub.val.length,
                 (const char*)handle.sub.val.key, bool2string(b));
@@ -2372,7 +2371,6 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
             "Error parsing packed container entry");
 
     Tcl_Obj *key_obj, *val_obj;
-    // TODO: interpreting key as string; support binary keys
 
     rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL, val_type,
             ADLB_TYPE_EXTRA_NULL, val, val_len, &val_obj);
@@ -3096,7 +3094,6 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
             "message received, key for record %i/%i extends beyond end "
             "of data", i + 1, records);
       // Key currently must be string
-      // TODO: support binary key
       key = Tcl_NewStringObj(data + pos, (int)key_len - 1);
       pos += key_len;
     }
@@ -3727,12 +3724,10 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = adlb_tclobj2bin(interp, objv, type, extra,
                       member_obj, false, &xfer_buf, &member);
 
-  // TODO: support binary subscript
   TCL_CHECK_MSG(rc, "<%"PRId64">[%.*s] failed, could not "
         "extract data!", handle.id, (int)handle.sub.val.length,
         (const char*)handle.sub.val.key);
 
-  // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert <%"PRId64">[\"%.*s\"]=<%s>",
      handle.id, (int)handle.sub.val.length,
      (const char*)handle.sub.val.key,
@@ -3759,7 +3754,6 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Store(handle.id, handle.sub.val, type,
                   member.data, member.length, decr, store_rc);
 
-  // TODO: support binary subscript
   CHECK_ADLB_STORE(rc, handle.id, handle.sub.val);
 
   // Free if needed
@@ -3850,7 +3844,6 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
 
-  // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%.*s\"]",
              handle.id, (int)handle.sub.val.length,
              (const char*)handle.sub.val.key);
@@ -3887,7 +3880,6 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   // Check for no subscript
   TCL_CONDITION(adlb_has_sub(handle.sub.val), "No subscript");
 
-  // TODO: support binary subscript
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]", handle.id,
       (int)handle.sub.val.length, (const char*)handle.sub.val.key);
 
@@ -3929,7 +3921,6 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
           "extra trailing arguments starting at argument %i", argpos);
 
   do {
-    // TODO: support binary subscript
     rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type,
                       xfer, &len);
     if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING) // Check outside loop
