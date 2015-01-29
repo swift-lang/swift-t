@@ -3053,6 +3053,7 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
                       adlb_type_extra kv_type, Tcl_Obj** result)
 {
   int rc;
+  adlb_data_code dc;
   int list_buf_len = 0;
   if (include_keys && include_vals)
   {
@@ -3077,45 +3078,37 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
   // Position in buffer
   size_t pos = 0;
 
-  // TODO: should switch to using ADLB_Unpack buffer instead of
-  // duplicating this logic
   for (int i = 0; i < records; i++)
   {
     Tcl_Obj *key = NULL, *val = NULL;
     if (include_keys)
     {
-      size_t key_len = 0;
-      int consumed = vint_decode_size_t(data + pos, length - pos,
-                                        &key_len);
-      TCL_CONDITION(consumed >= 0, "Corrupted message received: bad key "
-                    "length for record %i/%i", i+1, records);
-      pos += (size_t)consumed;
-      TCL_CONDITION(key_len <= length - pos, "Truncated/corrupted "
-            "message received, key for record %i/%i extends beyond end "
-            "of data", i + 1, records);
+      const void *key_data;
+      size_t key_len; // Length including null terminator
+
+      dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL,
+            data, length, &pos, &key_data, &key_len);
+      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+          "Error unpacking key buffer for record %i/%i", i+1, records);
+
       // Key currently must be string
-      key = Tcl_NewStringObj(data + pos, (int)key_len - 1);
-      pos += key_len;
+      key = Tcl_NewStringObj(key_data, (int)key_len - 1);
     }
 
     if (include_vals)
     {
-
+      const void *val_data;
       size_t val_len = 0;
-      int consumed = vint_decode_size_t(data + pos, length - pos,
-                                        &val_len);
-      TCL_CONDITION(consumed >= 0, "Corrupted message received: bad "
-            "value length for record %i/%i", i + 1, records);
 
-      pos += (size_t)consumed;
-      TCL_CONDITION(val_len <= length - pos, "Truncated/corrupted "
-            "message received, key for record %i/%i extends beyond end "
-            "of data", i + 1, records);
+      dc = ADLB_Unpack_buffer(kv_type.CONTAINER.val_type,
+            data, length, &pos, &val_data, &val_len);
+      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+          "Error unpacking value buffer for record %i/%i", i+1, records);
+
       rc = adlb_datum2tclobj(interp, objv, id,
           kv_type.CONTAINER.val_type, ADLB_TYPE_EXTRA_NULL,
-          data + pos, val_len, &val);
-
-      pos += val_len;
+          val_data, val_len, &val);
+      TCL_CHECK(rc);
     }
 
     if (include_keys && include_vals)
