@@ -137,6 +137,14 @@ Tcl_Obj* turbine_tcl_list_new(int count, char** strings);
 Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
                                   int* vals, int count);
 
+
+/**
+   Return error message for user consumption.
+   Message is created from concatenating args.
+   Return value is error code.
+ */
+int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[]);
+
 /**
    Print error message and return a Tcl error
    Requires Tcl_Interp interp and Tcl_Obj* objv in scope

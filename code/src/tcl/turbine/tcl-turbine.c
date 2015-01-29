@@ -855,7 +855,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
   Convert decimal string to int
  */
 static int
-Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
+Turbine_ToIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -878,26 +878,33 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     int my_errno = errno;
     errno = 0; // reset errno
+    Tcl_Obj *msg = NULL;
     if (my_errno == ERANGE)
     {
-      TCL_RETURN_ERROR("Integer representation of '%s' is out of range "
-          "of %zi bit integers", str, sizeof(Tcl_WideInt) * 8);
+      msg = Tcl_ObjPrintf("toint: Integer representation of '%s' is "
+              "out of range of %zi bit integers", str,
+              sizeof(Tcl_WideInt) * 8);
     }
     else if (my_errno == EINVAL)
     {
-      TCL_RETURN_ERROR("'%s' cannot be interpreted as an integer ", str);
+      msg = Tcl_ObjPrintf("toint: '%s' cannot be interpreted as an "
+                            "integer ", str);
     }
     else
     {
-      TCL_RETURN_ERROR("Internal error: unexpected my_errno %d when "
-                       "converting '%s' to integer", my_errno, str);
+      msg = Tcl_ObjPrintf("toint: Internal error: unexpected errno "
+                  "%d when converting '%s' to integer", my_errno, str);
     }
+    Tcl_Obj *msgs[1] = { msg };
+    return turbine_user_error(interp, 1, msgs);
   }
   long consumed = end_str - str;
   if (consumed == 0)
   {
     // Handle case where no input consumed
-    TCL_RETURN_ERROR("'%s' cannot be interpreted as an integer ", str);
+    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("toint: '%s' cannot be "
+                         "interpreted as an integer ", str) };
+    return turbine_user_error(interp, 1, msgs);
   }
 
   if (consumed < len)
@@ -907,7 +914,9 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
     {
       if (!isspace(str[i]))
       {
-        TCL_RETURN_ERROR("Invalid trailing characters in '%s'", str);
+        Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("toint: Invalid trailing "
+                                           "characters in '%s'", str) };
+        return turbine_user_error(interp, 1, msgs);
       }
     }
   }
@@ -1605,7 +1614,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("finalize",    Turbine_Finalize_Cmd);
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
-  COMMAND("check_str_int", Turbine_StrInt_Cmd);
+  COMMAND("toint_impl", Turbine_ToIntImpl_Cmd);
 
   COMMAND("sync_exec", Sync_Exec_Cmd);
 

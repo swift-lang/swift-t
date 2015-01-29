@@ -33,8 +33,8 @@ namespace eval turbine {
     namespace import c::new c::typeof
     namespace import c::insert c::log
 
-    # Use C version of check_str_int
-    namespace import c::check_str_int
+    # Use C version of toint_impl
+    namespace import c::toint_impl
 
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {
@@ -328,10 +328,8 @@ namespace eval turbine {
 
     proc toint_body { input result } {
         set t [ retrieve_decr $input ]
-
-        if { [ catch { set i [ check_str_int $t ] } e ] } {
-            turbine_error "toint: could not convert string '${t}' to integer!"
-        }
+        set i [ toint_impl $t ]
+        
         store_integer $result $i
     }
 
@@ -355,10 +353,10 @@ namespace eval turbine {
         set t [ retrieve_decr $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
-        store_float $result [ check_str_float $t ]
+        store_float $result [ tofloat_impl $t ]
     }
 
-    proc check_str_float { input } {
+    proc tofloat_impl { input } {
       if { ! [ string is double $input ] } {
         error "could not convert string '${input}' to float"
       }

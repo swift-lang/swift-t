@@ -21,6 +21,21 @@
 
 #include "src/tcl/util.h"
 
+int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
+{
+  assert(nargs >= 0);
+
+  Tcl_Obj *call_args[nargs + 1];
+  call_args[0] = Tcl_NewStringObj("::turbine::turbine_error", -1);
+
+  for (int i = 0; i < nargs; i++)
+  {
+    call_args[i + 1] = args[i];
+  }
+
+  return Tcl_EvalObjv(interp, nargs + 1, call_args, 0);
+}
+
 turbine_code
 turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
                       int64_t* output, int* count)
