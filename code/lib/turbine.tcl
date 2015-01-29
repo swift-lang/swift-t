@@ -464,6 +464,7 @@ namespace eval turbine {
 
     proc finalize { } {
         log "turbine finalizing"
+        mktemp_cleanup
         turbine::c::finalize
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
             adlb::finalize 0

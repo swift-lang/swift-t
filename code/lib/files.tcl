@@ -447,10 +447,13 @@ namespace eval turbine {
         copy_file [ list $v ] [ list $handle ]
     }
 
+    variable mktemp_files
+
     # return the filename of a unique temporary file
     # TODO: Do this w/o exec #364
     proc mktemp { } {
         global env
+        variable mktemp_files
         if { [ info tclversion ] >= 8.6 } {
             if [ info exists env(SWIFT_TMP) ] {
                 set tmpdir $env(SWIFT_TMP)
@@ -470,7 +473,15 @@ namespace eval turbine {
             }
         }
         # puts "mktemp: $result"
+        lappend mktemp_files $result
         return $result
+    }
+
+    proc mktemp_cleanup { } {
+        variable mktemp_files
+        if [ info exists mktemp_files ] {
+            file delete $mktemp_files
+        }
     }
 
     # set the filename to a string
