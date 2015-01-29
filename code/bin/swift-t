@@ -1,4 +1,4 @@
-#!/bin/zsh 
+#!/bin/zsh
 
 set -efu
 
@@ -29,11 +29,9 @@ help()
   printf "\t You may provide STC and/or Turbine options\n\n"
   # These options are available in the swift-t interface:
   printf  "STC OPTIONS\n\n"
-  cat ${STC_HOME}/etc/help-options-1.txt   
+  cat ${STC_HOME}/etc/help-options-1.txt
   # These options are only available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-3.txt   
-  # These are details about Turbine features accessible from swift-t
-  cat ${STC_HOME}/etc/help-turbine.txt
+  cat ${STC_HOME}/etc/help-options-3.txt
   print
   printf "TURBINE OPTIONS\n\n"
   cat ${TURBINE_HOME}/etc/help-options-1.txt
@@ -46,9 +44,9 @@ help()
   print "TOOL USAGE"
   print
   print "You may want to run STC and Turbine individually."
-  print "Use 'stc -h' to see STC help and optimization list" 
-  print "Use 'turbine -h' to see Turbine help" 
-  print 
+  print "Use 'stc -h' to see STC help and optimization list"
+  print "Use 'turbine -h' to see Turbine help"
+  print
   cat ${STC_HOME}/etc/help-footer.txt
   print
   exit 0
@@ -84,7 +82,7 @@ do
     v) report_version ;;
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
-    o) PROGRAM_TCL=${OPTARG} ;; 
+    o) PROGRAM_TCL=${OPTARG} ;;
     u) CHECK_DATES=1 ;;
 
     # STC arguments:
@@ -122,12 +120,12 @@ make_temp()
   local PROGRAM_DIR=$2
   local NAME=$3
   # Linux:
-  MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' ) 
-  if (( ${MKTEMP_VERSION} > 2 )) 
+  MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
+  if (( ${MKTEMP_VERSION} > 2 ))
   then
     # Modern mktemp.  .tic at the end.
     local SUFFIX_ARG
-    SUFFIX_ARG=( --suffix .${SUFFIX} ) 
+    SUFFIX_ARG=( --suffix .${SUFFIX} )
   else
     # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
     local SUFFIX_ARG=""
@@ -138,7 +136,7 @@ make_temp()
 }
 
 EXEC_SWIFT=""
-if [[ ${EXEC_STRING} == "" ]] 
+if [[ ${EXEC_STRING} == "" ]]
 then
   # Normal filename.swift to compile/run
   if [[ ${#*} == 0 ]]
@@ -148,10 +146,10 @@ then
   fi
   PROGRAM_SWIFT=$1
   shift
-else 
+else
   # Create/compile/run/delete -E string
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-  
+
   echo ${EXEC_STRING} >> ${PROGRAM_SWIFT}
 fi
 ARGS=( ${*} )
@@ -175,7 +173,7 @@ verbose()
 
 message "Swift/T"
 
-make_stc_output() 
+make_stc_output()
 {
   # Set up STC file arguments
   if [[ ${PROGRAM_TCL} == "" ]]
@@ -191,19 +189,19 @@ make_stc_output()
 DELETE_PROGRAM_TCL=0
 SKIP_COMPILE=0
 
-if (( CHECK_DATES )) 
+if (( CHECK_DATES ))
 then
   if [[ -e ${PROGRAM_TCL} ]] && \
-     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]] 
+     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]]
   then
     SKIP_COMPILE=1
     message "${PROGRAM_TCL} is up-to-date."
   fi
 fi
 
-if (( ! SKIP_COMPILE )) 
+if (( ! SKIP_COMPILE ))
 then
-  # Run STC 
+  # Run STC
   make_stc_output
   message "Compiling: ${PROGRAM_SWIFT}"
   message "       to: ${PROGRAM_TCL}"
