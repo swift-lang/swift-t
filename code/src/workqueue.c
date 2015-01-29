@@ -51,7 +51,7 @@
 // minimum percentage imbalance to trigger steal if stealers queue not empty
 #define XLB_STEAL_IMBALANCE 0.1
 
-#define XLB_SOFT_TARGET_PRIORITY_PENALTY -65536
+#define XLB_SOFT_TARGET_PRIORITY_PENALTY 65536
 
 
 static void
@@ -227,7 +227,7 @@ xlb_workq_add(xlb_work_unit* wu)
       // Soft-targeted work has reduced priority compared with non-targeted work
       int base_priority = wu->opts.priority;
       int modified_priority;
-      if (base_priority < INT_MIN - XLB_SOFT_TARGET_PRIORITY_PENALTY)
+      if (base_priority < INT_MIN + XLB_SOFT_TARGET_PRIORITY_PENALTY)
       {
         // Avoid underflow
         modified_priority = INT_MIN;
