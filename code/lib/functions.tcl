@@ -328,7 +328,11 @@ namespace eval turbine {
 
     proc toint_body { input result } {
         set t [ retrieve_decr $input ]
-        store_integer $result [ check_str_int $t ]
+        
+        if { [ catch { set i [ check_str_int $t ] } e ] } {
+            turbine_error "could not convert string '${t}' to integer!"
+        }
+        store_integer $result $i
     }
 
     proc fromint { result input } {
