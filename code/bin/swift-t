@@ -64,9 +64,10 @@ report_version()
 PROGRAM_TCL=""
 CHECK_DATES=0
 VERBOSE=0
+EXEC_STRING=""
 
 # Process all flags: split among this script, STC, or Turbine
-SWIFT_T_CHARS="ho:t:vV"
+SWIFT_T_CHARS="hE:i:o:t:vV"
 STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
 TURBINE_CHARS="e:i:lm:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
@@ -77,6 +78,8 @@ do
   case ${OPTION} in
 
     # Swift/T arguments:
+    E) EXEC_STRING+=${OPTARG} ;;
+    i) EXEC_STRING+="import ${OPTARG};" ;;
     h) help ; exit 0 ;;
     v) report_version ;;
     V) (( ++VERBOSE ))
@@ -112,35 +115,45 @@ done
 shift $(( OPTIND - 1 ))
 
 # Handle temp file creation across platforms
-# Always has .tic somewhere
+# Always has .SUFFIX somewhere
 make_temp()
 {
-  local PROGRAM_DIR=$1
-  local NAME=$2
+  local SUFFIX=$1
+  local PROGRAM_DIR=$2
+  local NAME=$3
   # Linux:
   MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' ) 
   if (( ${MKTEMP_VERSION} > 2 )) 
   then
     # Modern mktemp.  .tic at the end.
-    local SUFFIX
-    SUFFIX=( --suffix .tic ) 
+    local SUFFIX_ARG
+    SUFFIX_ARG=( --suffix .${SUFFIX} ) 
   else
-    # Old (BSD?) mktemp.  .tic. will be in the middle of the name
-    local SUFFIX=""
-    NAME=${NAME}.tic
+    # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
+    local SUFFIX_ARG=""
+    NAME=${NAME}.${SUFFIX}
   fi
-  mktemp ${SUFFIX} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
+  mktemp ${SUFFIX_ARG} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
   # TODO: Mac?
 }
 
-if [[ ${#*} == 0 ]]
+EXEC_SWIFT=""
+if [[ ${EXEC_STRING} == "" ]] 
 then
-  usage
-  return 1
+  # Normal filename.swift to compile/run
+  if [[ ${#*} == 0 ]]
+  then
+    usage
+    return 1
+  fi
+  PROGRAM_SWIFT=$1
+  shift
+else 
+  # Create/compile/run/delete -E string
+  PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
+  
+  echo ${EXEC_STRING} >> ${PROGRAM_SWIFT}
 fi
-
-PROGRAM_SWIFT=$1
-shift
 ARGS=( ${*} )
 
 if [[ ! -r ${PROGRAM_SWIFT} ]]
@@ -170,7 +183,7 @@ make_stc_output()
     PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
     PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
     NAME=${PROGRAM_FILE%.swift}
-    PROGRAM_TCL=$( make_temp ${PROGRAM_DIR} ${NAME} )
+    PROGRAM_TCL=$( make_temp "tic" ${PROGRAM_DIR} ${NAME} )
     DELETE_PROGRAM_TCL=1
   fi
 }
@@ -207,3 +220,11 @@ then
   message "Removing: ${PROGRAM_TCL}"
   rm ${PROGRAM_TCL}
 fi
+
+if [[ ${EXEC_STRING} != "" ]]
+then
+  message "Removing: ${PROGRAM_SWIFT}"
+  rm ${PROGRAM_SWIFT}
+fi
+
+exit 0
