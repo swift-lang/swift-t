@@ -63,7 +63,9 @@ the manual build process).
    You may need to install an additional Tcl development package
    in addition to the standard tcl package,
    e.g. +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu systems.
-* Source distributions are available at the http://www.tcl.tk[Tcl web site]
+* Source distributions are available at the http://www.tcl.tk[Tcl web
+site]
+* Tcl 8.5 is also acceptable.
 +
 3. Install or locate SWIG
 +
@@ -146,14 +148,14 @@ Then, to run the program, use Turbine:
 turbine -n 4 program.tcl
 ----
 
-You may compile and run in one step with: 
+You may compile and run in one step with:
 
 ----
 swift-t -n 4 program.swift
 ----
 
 In this case, +program.tic+ is created in a temporary file and then
-deleted after execution.  
+deleted after execution.
 
 +swift-t+ accepts arguments for both STC and Turbine.
 Provide +-h+ to any tool (+swift-t+, +stc+, +turbine+) to obtain help.
@@ -1124,8 +1126,8 @@ time.  This allows a specialized, optimized version of code to be
 compiled for a particular set of arguments.  See the +-A
 _name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
 argument is re-specified at run-time, an error will occur.
-+ 
-If argument +a+ is not provided, the +default+ value is used.  So: 
++
+If argument +a+ is not provided, the +default+ value is used.  So:
 +
 +argv("b", "f0.txt") -> "f0.txt"+
 
@@ -1203,9 +1205,9 @@ whitespace is trimmed, and blank lines are omitted.
 +file_mtime(string) -> int+::
 
 Attempt to find a file with the given name in the filesystem: return
-its POSIX modification time in seconds since the Unix epoch. 
+its POSIX modification time in seconds since the Unix epoch.
 
-+file_type(file) -> string+:: 
++file_type(file) -> string+::
 
 Returns a string giving the type of file, which will be one of
 +"file"+, +"directory"+, +"characterSpecial"+, +"blockSpecial"+,
@@ -1447,7 +1449,7 @@ leaf function definitions.
 
 Alternative work-types include custom user-defined work types,
 along with tasks for external executors such as Coasters or GeMTC
-for remote command-line and GPU tasks respectively. 
+for remote command-line and GPU tasks respectively.
 It is also possible to define custom types of CPU leaf functions.
 
 ==== Custom work types
