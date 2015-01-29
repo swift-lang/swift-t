@@ -300,7 +300,7 @@ namespace eval turbine {
         set a_value [ retrieve_decr_float $a ]
         set c_value [ expr {int(floor($a_value))} ]
         log "floattoint: $a_value => $c_value"
-        store_int $c $c_value
+        store_integer $c $c_value
     }
 
     proc ceil { c a } {
