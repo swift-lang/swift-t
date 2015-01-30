@@ -280,6 +280,12 @@ rbtree_add(struct rbtree* target, rbtree_key_t key, void* data)
   return true;
 }
 
+struct rbtree_node*
+rbtree_node_create(rbtree_key_t key, void* data)
+{
+  return create_node(key, data);
+}
+
 void
 rbtree_add_node(struct rbtree* target,
                 struct rbtree_node* node)
