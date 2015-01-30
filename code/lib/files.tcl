@@ -485,8 +485,10 @@ namespace eval turbine {
         getenv_integer "SWIFT_TMP_AUTODELETE" 1 delete
         if { ! $delete } return
         if [ info exists mktemp_files ] {
-            # Note: this does not raise error if file not present
-            file delete $mktemp_files
+            foreach f $mktemp_files {
+              # Note: this does not raise error if file not present
+              file delete $f
+            }
         }
     }
 
