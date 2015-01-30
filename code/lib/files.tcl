@@ -472,13 +472,18 @@ namespace eval turbine {
                 set result [ exec mktemp -t turbine.XXXXXX ]
             }
         }
-        # puts "mktemp: $result"
+        # If we are not deleting temp files, we log them so the user
+        # can keep track of them
+        getenv_integer "SWIFT_TMP_AUTODELETE" 1 delete
+        if { ! $delete } { log "mktemp: $result" }
         lappend mktemp_files $result
         return $result
     }
 
     proc mktemp_cleanup { } {
         variable mktemp_files
+        getenv_integer "SWIFT_TMP_AUTODELETE" 1 delete
+        if { ! $delete } return
         if [ info exists mktemp_files ] {
             file delete $mktemp_files
         }
