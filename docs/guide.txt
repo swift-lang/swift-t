@@ -1997,6 +1997,11 @@ anchor:env_swift_tmp[]
 Directory location for <<unmapped_files,unmapped files>>.
 +SWIFT_PATH+ overrides +TMP+.  The default is +/tmp+.
 
++SWIFT_TMP_AUTODELETE=0+:: By default, Swift/T deletes
+<<unmapped_files,unmapped files>> when they are no longer used.
+Setting this to 0 logs these temporary files when created and prevents
+Swift/T from automatically deleting them.
+
 +TURBINE_USER_LIB+::
 
 Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
@@ -2004,7 +2009,7 @@ Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
 
-+TURBINE_LOG_RANKS=1+:: Using +turbine -l+ or equivalent prepend the
++TURBINE_LOG_RANKS=1+:: Using +turbine -l+ or equivalent prepends the
 MPI rank number to each output line.  This works with typical MPICH or
 OpenMPI systems, however, this is not available on some systems, so
 set this to emulate the rank output on such systems.
