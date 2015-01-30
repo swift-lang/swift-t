@@ -485,13 +485,13 @@ namespace eval turbine {
         getenv_integer "SWIFT_TMP_AUTODELETE" 1 delete
         if { ! $delete } return
         if [ info exists mktemp_files ] {
+            # Note: this does not raise error if file not present
             file delete $mktemp_files
         }
     }
 
     # set the filename to a string
     proc set_filename_val { file_handle filename {write_decr 0}} {
-      # TODO: different struct store function?
       adlb::insert [ get_file_td $file_handle ] 0 $filename string $write_decr
     }
 
