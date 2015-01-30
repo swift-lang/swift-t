@@ -62,7 +62,7 @@ static xlb_work_unit_id unique = 1;
 
 /**
    Heaps for target rank/type combinations, heap sorted by negative priority.
-   This only include worker ranks that belong to this server.
+   This only includes worker ranks that belong to this server.
    You can obtain the heap for a rank with targeted_work_ix(rank, type)
    Only contains targeted work
 */
@@ -218,7 +218,7 @@ xlb_workq_add(xlb_work_unit* wu)
     }
     else
     {
-      // All non-soft-targeted tasks should only be on matching server
+      // All hard-targeted tasks should only be on matching server
       assert(wu->opts.soft_target);
     }
 
