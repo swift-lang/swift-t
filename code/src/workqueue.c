@@ -241,11 +241,8 @@ xlb_workq_add(xlb_work_unit* wu)
       TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
 
       struct rbtree* T = &typed_work[wu->type];
-      struct rbtree_node *N = malloc(sizeof(struct rbtree_node));
+      struct rbtree_node *N = rbtree_node_create(-modified_priority, wu);
       ADLB_MALLOC_CHECK(N);
-
-      N->key = -modified_priority;
-      N->data = wu;
       wu->__internal = N; // Store entry to node to allow deletion later
       
       rbtree_add_node(T, N);
