@@ -878,13 +878,15 @@ rbtree_random_loop(struct rbtree_node* p)
 {
   int random_bits_left = 0;
   int randval = 0;
-  while (true) {
+  while (true)
+  {
     if (p->left != NULL)
     {
       if (p->right != NULL)
       {
         // Both not null
-        if (random_bits_left == 0) {
+        if (random_bits_left == 0)
+        {
           randval = rand();
           random_bits_left = INT_BITS;
         }
@@ -916,6 +918,8 @@ rbtree_random_loop(struct rbtree_node* p)
       }
     }
   }
+  // This is unreachable: squelch no-return warning
+  return NULL;
 }
 
 static void rbtree_print_loop(struct rbtree_node* node, int level);
