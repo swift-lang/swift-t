@@ -226,7 +226,7 @@ then
                               which disables parallel tasks; or
                            2) use an MPI 3 implementation])
 fi
-rm -f mpi_version.cpp.txt
+rm -f mpi_version.c.txt
 
 XLB_ENABLE_XPT=yes
 AC_ARG_ENABLE(checkpoint,
