@@ -38,7 +38,15 @@
 #define unused
 #endif
 
-int array_length(void** array);
+/**
+   Determine the length of an array of pointers ending in NULL
+ */
+int array_length(const void** array);
+
+/**
+   Find the index with the maximal integer in array of given size
+ */
+int array_max_integer(const int* array, int size);
 
 #define append(string,  args...) \
   string += sprintf(string, ## args)

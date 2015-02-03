@@ -38,11 +38,8 @@
 
 #include "src/tools.h"
 
-/**
-   Determine the length of an array of pointers
- */
 int
-array_length(void** array)
+array_length(const void** array)
 {
   int result = 0;
   while (*array)
@@ -51,6 +48,19 @@ array_length(void** array)
     result++;
   }
   return result;
+}
+
+int
+array_max_integer(const int* array, int size)
+{
+  valgrind_assert_msg(size > 0,
+                      "array_max_integer(): array size is 0!");
+  int index = 0;
+  int max   = array[index];
+  for (int i = 1; i < size; i++)
+    if (array[i] > max)
+      index = i;
+  return index;
 }
 
 static const int buffer_size = 2*1024;
