@@ -86,8 +86,6 @@ static inline int targeted_work_ix(int rank, int type)
   return ix;
 }
 
-// Calculate index for one of my workers
-
 /**
    typed_work
    Array of trees: one for each work type
