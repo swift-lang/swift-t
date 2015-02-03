@@ -104,7 +104,10 @@ static struct rbtree* typed_work;
  */
 static struct rbtree* parallel_work;
 
-// Track number of parallel tasks
+/*
+  Track number of parallel tasks so we can skip the moderately expensive
+  parallel task matching logic when there are no parallel tasks
+ */
 int64_t xlb_workq_parallel_task_count;
 
 work_type_counters *xlb_task_counters;

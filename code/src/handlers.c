@@ -900,13 +900,6 @@ xlb_check_parallel_tasks(int type)
 
   TRACE("\t tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
 
-  // Fast path for no parallel task case
-  if (xlb_workq_parallel_tasks() == 0)
-  {
-    result = ADLB_NOTHING;
-    goto end;
-  }
-
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
   {
@@ -930,6 +923,13 @@ static adlb_code
 xlb_recheck_parallel_queues(void)
 {
   TRACE("check_steal(): rechecking parallel...");
+
+  // Fast path for no parallel task case
+  if (xlb_workq_parallel_tasks() == 0)
+  {
+    return ADLB_SUCCESS;
+  }
+
   for (int t = 0; t < xlb_types_size; t++)
   {
     adlb_code rc = xlb_check_parallel_tasks(t);
