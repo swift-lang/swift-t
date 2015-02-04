@@ -50,6 +50,7 @@ main()
     assert(rc == TURBINE_SUCCESS);
   }
 
+  MPI_Comm_free(&comm);
   MPI_Finalize();
   return 0;
 }
