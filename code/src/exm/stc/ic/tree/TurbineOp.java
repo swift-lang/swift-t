@@ -3569,21 +3569,26 @@ public class TurbineOp extends Instruction {
                            VarCount.NONE);
       }
       case STRUCT_STORE_SUB:
-      case STRUCTREF_STORE_SUB: {
+      case STRUCTREF_STORE_SUB:
+      case STRUCT_COPY_IN:
+      case STRUCTREF_COPY_IN:{
+        Var struct = getOutput(0);
         Arg mem = getInput(0);
         List<VarCount> readers = VarCount.NONE;
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
           readers = VarCount.one(mem.getVar()).asList();
         }
-        return Pair.create(readers, VarCount.NONE);
-      }
-      case STRUCT_COPY_IN:
-      case STRUCTREF_COPY_IN: {
-        // Read refcount for field
-        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
-                           VarCount.NONE);
-      }
 
+        Pair<Long, Long> fieldRefCounts =
+            RefCounting.baseStructFieldWriteRefCount(struct,
+                      Arg.extractStrings(getInputsTail(1)),
+                      getOutput(0).defType());
+
+        // Will consume tracked refcounts
+        Long trackedFieldRefCounts = fieldRefCounts.val1;
+        return Pair.create(readers,
+              new VarCount(struct, trackedFieldRefCounts).asList());
+      }
       case STRUCT_CREATE_NESTED:{
         long readDecr = getInput(2).getInt();
         long writeDecr = getInput(3).getInt();
