@@ -24,6 +24,7 @@ import java.util.TreeMap;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidAnnotationException;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
@@ -127,7 +128,9 @@ public class FunctionCall {
     DefInfo def = context.lookupDef(f);
     List<SwiftAST> annotations = tree.children(2);
 
-    if (def.kind == DefKind.FUNCTION) {
+    if (def == null) {
+      throw UndefinedFunctionException.unknownFunction(context, f);
+    } else if (def.kind == DefKind.FUNCTION) {
       FunctionType ftype = context.lookupFunction(f);
       assert(ftype != null);
       return regularFunctionFromAST(context, annotations, f, arglist, ftype);
@@ -138,8 +141,8 @@ public class FunctionCall {
         return structConstructorFromAST(context, annotations, f, arglist, type);
       }
     }
-
-    throw UndefinedFunctionException.unknownFunction(context, f);
+    throw new TypeMismatchException(f + " is not a function and "
+                                    + "cannot be called");
   }
 
   private static FunctionCall regularFunctionFromAST(Context context,
