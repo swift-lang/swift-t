@@ -18,11 +18,14 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.util.Pair;
 
 /**
  * Define how types should be refcounting
@@ -240,18 +243,12 @@ public class RefCounting {
     long untrackedSum = 0;
     for (StructField field: structT.fields()) {
 
-      long fieldUntracked = baseRefCount(field.type(), defType,
-                              RefCountType.WRITERS, false, true);
-      if (Types.isMutableRef(field.type())) {
-        // Need to have tracked refcount as proxy
-        Type referencedType = field.type().getImplType().memberType();
-        trackedSum += baseRefCount(referencedType, defType,
-                              RefCountType.WRITERS, true, false);
-      } else {
-        untrackedSum += fieldUntracked;
-        trackedSum += baseRefCount(field.type(), defType,
-                              RefCountType.WRITERS, true, false);
-      }
+      Type fieldType = field.type();
+
+      Pair<Long, Long> fieldRefcounts = baseStructFieldWriteRefCount(fieldType, defType);
+
+      trackedSum += fieldRefcounts.val1;
+      untrackedSum += fieldRefcounts.val2;
     }
 
     long structCount = 0;
@@ -268,6 +265,44 @@ public class RefCounting {
       structCount += untrackedSum;
     }
     return structCount;
+  }
+
+  public static Pair<Long, Long> baseStructFieldWriteRefCount(Var struct,
+      List<String> fieldPath, DefType defType) {
+    Type fieldType;
+    try {
+      fieldType = Types.structFieldType(struct, fieldPath);
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError("unexpected: " + e.getMessage());
+    }
+    return baseStructFieldWriteRefCount(fieldType, defType);
+  }
+
+  /**
+   * @param fieldType
+   * @param defType
+   * @return (tracked, untracked) refcounts for a field of type fieldType
+   *          in a struct with DefType defType.
+   */
+  public static Pair<Long, Long> baseStructFieldWriteRefCount(Type fieldType,
+      DefType defType) {
+    long fieldUntracked = baseRefCount(fieldType, defType,
+                            RefCountType.WRITERS, false, true);
+    long tracked;
+    long untracked;
+    if (Types.isMutableRef(fieldType)) {
+      // Need to have tracked refcount as proxy
+      Type referencedType = fieldType.getImplType().memberType();
+      tracked = baseRefCount(referencedType, defType, RefCountType.WRITERS,
+                             true, false);
+      untracked = 0;
+    } else {
+      tracked = baseRefCount(fieldType, defType, RefCountType.WRITERS,
+                             true, false);
+      untracked = fieldUntracked;
+    }
+
+    return Pair.create(tracked, untracked);
   }
 
 }
