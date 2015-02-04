@@ -28,6 +28,14 @@ type external void;
 @pure
 (void o) make_void() "turbine" "0.0.2" "make_void";
 
+// Location values
+// TODO: naming? convert to enum?
+global const LocationStrictness HARD = "HARD";
+global const LocationStrictness SOFT = "SOFT";
+
+global const LocationAccuracy RANK = "RANK";
+global const LocationStrictness NODE = "NODE";
+
 // Arithmetic
 @pure @minmax @builtin_op=POW_INT
 (float o) pow_integer(int base, int exponent) "turbine" "0.0.2" "pow_integer";
