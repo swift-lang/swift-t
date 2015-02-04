@@ -3769,12 +3769,12 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::insert_struct <id> <subscript> <member>
+   usage: adlb::struct_insert <id> <subscript> <member>
                         <type> [<extra for type>]
                        [<write refcount decr>] [<read refcount decr>]
 */
 static int
-ADLB_Insert_Struct_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_Struct_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
                        int objc, Tcl_Obj *const objv[])
 {
   return ADLB_Insert_Impl(cdata, interp, objc, objv, ADLB_SUB_STRUCT);
@@ -3958,7 +3958,7 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
   Lookup something in an ADLB struct
-   usage: adlb::lookup_struct <id> <subscript>
+   usage: adlb::struct_lookup <id> <subscript>
         [<decr readers>] [<incr readers referand>]
         [<decr writers>] [<incr writers referand>]
    subscript: integer, or list of integers for struct indices
@@ -3967,7 +3967,7 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
    returns the member
 */
 static int
-ADLB_Lookup_Struct_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_Struct_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
     return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_STRUCT, false);
@@ -5900,10 +5900,10 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("write_refcount_incr", ADLB_Write_Refcount_Incr_Cmd);
   COMMAND("write_refcount_decr", ADLB_Write_Refcount_Decr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
-  COMMAND("insert_struct",    ADLB_Insert_Struct_Cmd);
+  COMMAND("struct_insert",    ADLB_Struct_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
-  COMMAND("lookup_struct",    ADLB_Lookup_Struct_Cmd);
+  COMMAND("struct_lookup",    ADLB_Struct_Lookup_Cmd);
   COMMAND("lookup_spin", ADLB_Lookup_Spin_Cmd);
   COMMAND("subscribe",  ADLB_Subscribe_Cmd);
   COMMAND("lock",      ADLB_Lock_Cmd);

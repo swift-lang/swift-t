@@ -546,12 +546,14 @@ namespace eval turbine {
 
     # usage: container_insert <id> <subscript> <member> <type>
     #                           [<read_drops>] [<write_drops>]
-    # @param read_drops = 0 by default
-    # @param write_drops = 0 by default
+    # read_drops: 0 by default
+    # write_drops: 0 by default
+    # type: a list with additional type info if needed,
+    #       e.g. for containers
     proc container_insert { id subscript member type \
           {read_drops 0} {write_drops 0} } {
         log "insert: <$id>\[\"$subscript\"\]=<$member>"
-        adlb::insert $id $subscript $member $type $read_drops $write_drops
+        adlb::insert $id $subscript $member {*}$type $read_drops $write_drops
     }
 
     # Raises error if subscript is not found

@@ -601,7 +601,7 @@ namespace eval turbine {
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
-    
+
     # SC
     # Create datum s.f inside of struct s
     # s.f may already exist, if so, that's fine
@@ -737,6 +737,48 @@ namespace eval turbine {
         set struct [ adlb::acquire_ref $structr ref 1 1 ]
         adlb::struct_reference $struct $subscript $result $type \
                     $write_decr $read_transfer $write_transfer
+    }
+
+    proc struct_insert_r { struct subscript r t \
+          {write_refcount_decrs 1} {write_refcount_incr 1}} {
+
+        if { $write_refcount_incr } {
+            write_refcount_incr $struct
+        }
+
+        rule $r \
+          "struct_insert_r_body $struct $subscript $r $t $write_refcount_decrs" \
+          name "SIR-$struct-$subscript"
+    }
+
+    proc struct_insert_r_body {struct subscript r t write_refcount_decrs} {
+        set d [ adlb::acquire_ref $r $t 1 1 ]
+        adlb::struct_insert $struct $subscript $d {*}$t $write_refcount_decrs
+    }
+
+    proc structref_insert_v { sr subscript v t {write_refcount_decrs 1}} {
+        # Need to use list to ensure correct serialization of v
+        rule $sr \
+          [ list structref_insert_v_body $sr $subscript $v $t \
+                  $write_refcount_decrs ] \
+          name "SRIV-$struct-$subscript"
+    }
+
+    proc structref_insert_v_body {sr subscript v t write_refcount_decrs} {
+        set struct [ adlb::acquire_ref $sr ref 1 1 ]
+        adlb::struct_insert $struct $subscript $v {*}$t $write_refcount_decrs
+    }
+
+    proc structref_insert_r { sr subscript r t {write_refcount_decrs 1}} {
+        rule "$sr $r" \
+          "structref_insert_r_body $sr $subscript $r $t $write_refcount_decrs" \
+          name "SRIR-$struct-$subscript"
+    }
+
+    proc structref_insert_r_body {sr subscript r t write_refcount_decrs} {
+        set struct [ adlb::acquire_ref $sr ref 1 1 ]
+        set d [ adlb::acquire_ref $r $t 1 1 ]
+        adlb::struct_insert $struct $subscript $d {*}$t $write_refcount_decrs
     }
 
     # Wait, recursively for container contents
