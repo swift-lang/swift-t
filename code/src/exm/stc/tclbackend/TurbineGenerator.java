@@ -1559,7 +1559,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   private long structFieldWriteDecr(Type fieldType) {
     return RefCounting.baseRefCount(fieldType, DefType.LOCAL_COMPILER,
-                                          RefCountType.WRITERS, false, true);
+                                      RefCountType.WRITERS, true, true);
   }
 
   @Override
