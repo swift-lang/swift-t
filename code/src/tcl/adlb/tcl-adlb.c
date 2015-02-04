@@ -930,7 +930,8 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     int tmp;
     Tcl_GetIntFromObj(interp, objv[6], &tmp);
-    opts.soft_target = (tmp != 0);
+    opts.strictness = (tmp == 1) ?
+        ADLB_TGT_STRICT_HARD : ADLB_TGT_STRICT_SOFT;
   }
 
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
