@@ -832,10 +832,10 @@ public class TurbineOp extends Instruction {
 
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
+    in.add(fieldVar.asArg());
     for (String field: fields) {
       in.add(Arg.newString(field));
     }
-    in.add(fieldVar.asArg());
     return new TurbineOp(Opcode.STRUCT_COPY_IN, structVar.asList(), in);
   }
 
@@ -843,10 +843,10 @@ public class TurbineOp extends Instruction {
       List<String> fields, Arg fieldVal) {
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
+    in.add(fieldVal);
     for (String field: fields) {
       in.add(Arg.newString(field));
     }
-    in.add(fieldVal);
     return new TurbineOp(Opcode.STRUCTREF_STORE_SUB, structVar.asList(), in);
   }
 
@@ -863,10 +863,10 @@ public class TurbineOp extends Instruction {
 
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
+    in.add(fieldVar.asArg());
     for (String field: fields) {
       in.add(Arg.newString(field));
     }
-    in.add(fieldVar.asArg());
     return new TurbineOp(Opcode.STRUCTREF_COPY_IN, structRef.asList(), in);
   }
 

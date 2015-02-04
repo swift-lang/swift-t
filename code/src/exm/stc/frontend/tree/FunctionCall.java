@@ -15,6 +15,7 @@
  */
 package exm.stc.frontend.tree;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -27,25 +28,57 @@ import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.Context.DefInfo;
+import exm.stc.frontend.Context.DefKind;
 import exm.stc.frontend.LogHelper;
 
 public class FunctionCall {
+  public static enum FunctionCallKind {
+    REGULAR_FUNCTION,
+    STRUCT_CONSTRUCTOR,
+  }
+
+  private final FunctionCallKind kind;
   private final String function;
   private final List<SwiftAST> args;
   private final FunctionType type;
   private final Map<TaskPropKey, SwiftAST> annotationExprs;
   private final boolean softLocation;
 
-  private FunctionCall(String function, List<SwiftAST> args,
-                       FunctionType type, Map<TaskPropKey, SwiftAST> annotationExprs,
-                       boolean softLocation) {
+  private FunctionCall(FunctionCallKind kind, String function,
+      List<SwiftAST> args, FunctionType type,
+      Map<TaskPropKey, SwiftAST> annotationExprs, boolean softLocation) {
+    this.kind = kind;
     this.function = function;
     this.args = args;
     this.type = type;
     this.annotationExprs = annotationExprs;
     this.softLocation = softLocation;
+  }
+
+  private static FunctionCall regularFunctionCall(String f, SwiftAST arglist,
+      FunctionType ftype, Map<TaskPropKey, SwiftAST> annotations,
+      boolean softLocation) {
+    return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, f,
+            arglist.children(), ftype, annotations, softLocation);
+  }
+
+  private static FunctionCall structConstructor(String f, SwiftAST arglist,
+      FunctionType ftype) {
+    assert(ftype.getOutputs().size() == 1 &&
+        Types.isStruct(ftype.getOutputs().get(0)));
+    return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, f, arglist.children(),
+                      ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
+  }
+
+  public FunctionCallKind kind() {
+    return kind;
   }
 
   public String function() {
@@ -91,14 +124,30 @@ public class FunctionCall {
 
     SwiftAST arglist = tree.child(1);
 
-    FunctionType ftype = context.lookupFunction(f);
-    if (ftype == null) {
-      throw UndefinedFunctionException.unknownFunction(context, f);
+    DefInfo def = context.lookupDef(f);
+    List<SwiftAST> annotations = tree.children(2);
+
+    if (def.kind == DefKind.FUNCTION) {
+      FunctionType ftype = context.lookupFunction(f);
+      assert(ftype != null);
+      return regularFunctionFromAST(context, annotations, f, arglist, ftype);
+    } else if (def.kind == DefKind.TYPE) {
+      Type type = context.lookupTypeUnsafe(f);
+      assert(type != null);
+      if (Types.isStruct(type)) {
+        return structConstructorFromAST(context, annotations, f, arglist, type);
+      }
     }
 
+    throw UndefinedFunctionException.unknownFunction(context, f);
+  }
+
+  private static FunctionCall regularFunctionFromAST(Context context,
+      List<SwiftAST> annotationTs, String f, SwiftAST arglist, FunctionType ftype)
+      throws UserException, InvalidAnnotationException {
     Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
     boolean softLocation = false;
-    for (SwiftAST annTree: tree.children(2)) {
+    for (SwiftAST annTree: annotationTs) {
       assert(annTree.getType() == ExMParser.CALL_ANNOTATION);
       assert(annTree.getChildCount() == 2);
       SwiftAST tag = annTree.child(0);
@@ -121,7 +170,7 @@ public class FunctionCall {
       }
     }
 
-    return new FunctionCall(f, arglist.children(), ftype, annotations, softLocation);
+    return regularFunctionCall(f, arglist, ftype, annotations, softLocation);
   }
 
   private static void putAnnotationNoDupes(Context context,
@@ -132,6 +181,27 @@ public class FunctionCall {
       throw new UserException(context, "Duplicate function call annotation: " +
                     key.toString().toLowerCase() + " defined multiple times");
     }
+  }
+
+  private static FunctionCall structConstructorFromAST(Context context,
+      List<SwiftAST> annotations, String func, SwiftAST arglist, Type type)
+          throws InvalidAnnotationException {
+    assert(Types.isStruct(type));
+
+    if (annotations.size() > 0) {
+      throw new InvalidAnnotationException(context, "Do not support "
+          + "annotations for struct constructor (call to " + func + ")");
+    }
+
+    StructType structType = (StructType)type.getImplType();
+    List<Type> constructorInputs = new ArrayList<Type>();
+    for (StructField field: structType.fields()) {
+      constructorInputs.add(field.type());
+    }
+
+    FunctionType constructorType = new FunctionType(constructorInputs, type.asList(), false);
+
+    return structConstructor(func, arglist, constructorType);
   }
 
 }

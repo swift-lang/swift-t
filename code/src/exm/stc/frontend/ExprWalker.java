@@ -17,6 +17,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,7 @@ import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.FunctionCall;
+import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
 import exm.stc.frontend.tree.Literals;
 import exm.stc.ic.STCMiddleEnd;
 
@@ -651,7 +653,8 @@ public class ExprWalker {
       }
     }
 
-    callFunction(context, f.function(), concrete, oList, argVars, propVals);
+    callFunction(context, f.function(), f.kind(), concrete, oList, argVars,
+                 propVals);
     if (openedWait) {
       backend.endWaitStatement();
     }
@@ -1014,7 +1017,7 @@ public class ExprWalker {
   }
 
   private void callFunction(Context context, String function,
-      FunctionType concrete,
+      FunctionCallKind kind, FunctionType concrete,
       List<Var> oList, List<Var> iList, TaskProps props)
       throws UndefinedTypeException, UserException {
 
@@ -1083,14 +1086,15 @@ public class ExprWalker {
       backend.checkpointLookupEnabled(lookupEnabled);
 
       backend.startIfStatement(lookupEnabled.asArg(), true);
-      checkpointedFunctionCall(context, function, concrete, oList,
+      checkpointedFunctionCall(context, function, kind, concrete, oList,
                                realIList, props, true);
       backend.startElseBlock();
-      checkpointedFunctionCall(context, function, concrete, oList,
+      checkpointedFunctionCall(context, function, kind, concrete, oList,
                                 realIList, props, false);
       backend.endIfStatement();
     } else {
-      backendFunctionCall(context, function, concrete, oList, realIList, props);
+      backendFunctionCall(context, function, kind, concrete, oList, realIList,
+                          props);
     }
     if (waitContext != null) {
       backend.endWaitStatement();
@@ -1099,7 +1103,7 @@ public class ExprWalker {
 
 
   private void checkpointedFunctionCall(Context context, String function,
-      FunctionType concrete, List<Var> oList, List<Var> iList,
+      FunctionCallKind kind, FunctionType concrete, List<Var> oList, List<Var> iList,
       TaskProps props, boolean lookupCheckpoint) throws UserException {
 
     /*
@@ -1145,7 +1149,7 @@ public class ExprWalker {
     }
 
     // Actually call function
-    backendFunctionCall(context, function, concrete, oList, iList, props);
+    backendFunctionCall(context, function, kind, concrete, oList, iList, props);
 
 
     Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
@@ -1288,11 +1292,18 @@ public class ExprWalker {
    * @throws UserException
    */
   private void backendFunctionCall(Context context, String function,
+      FunctionCallKind kind,
       FunctionType concrete, List<Var> oList, List<Var> iList,
       TaskProps props) throws UserException {
     props.assertInternalTypesValid();
-    FunctionType def = context.lookupFunction(function);
 
+    if (kind == FunctionCallKind.STRUCT_CONSTRUCTOR) {
+      backendStructConstructor(context, function, concrete, oList, iList);
+      return;
+    }
+    assert(kind == FunctionCallKind.REGULAR_FUNCTION);
+
+    FunctionType def = context.lookupFunction(function);
     if (def == null) {
       throw new STCRuntimeError("Couldn't locate function definition for " +
           "previously defined function " + function);
@@ -1397,6 +1408,31 @@ public class ExprWalker {
     // can replace instruction with local version and correct props
     backend.functionCall(wrapperFnName, function, realInputs, backendOList,
                          mode, VarRepr.backendProps(props));
+  }
+
+  private void backendStructConstructor(Context context, String function,
+      FunctionType concrete, List<Var> outputs, List<Var> inputs) {
+    assert(outputs.size() == 1);
+    Var struct = outputs.get(0);
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType();
+    assert(st.fieldCount() == inputs.size());
+
+    for (int i = 0; i < st.fieldCount(); i++) {
+      StructField field = st.fields().get(i);
+      Var input = inputs.get(i);
+      assert(input.type().assignableTo(field.type()));
+      List<String> fieldPath = Collections.singletonList(field.name());
+
+      // Store or copy in the fields separately as appropriate
+      if (VarRepr.storeRefInStruct(field)) {
+        backend.structStoreSub(VarRepr.backendVar(struct), fieldPath,
+                               VarRepr.backendVar(input).asArg());
+      } else {
+        backend.structCopyIn(VarRepr.backendVar(struct), fieldPath,
+                               VarRepr.backendVar(input));
+      }
+    }
   }
 
   /**
