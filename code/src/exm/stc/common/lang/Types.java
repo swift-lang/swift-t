@@ -2930,6 +2930,15 @@ public class Types {
   }
 
   /**
+   * @param typed
+   * @return whether we can use generic copy functionality to copy this
+   */
+  public static boolean simpleCopySupported(Typed typed) {
+    return isScalarFuture(typed) || isRef(typed) ||
+        isStruct(typed) || isContainer(typed);
+  }
+
+  /**
    * More convenient way of representing array types for some analysies
    *
    */

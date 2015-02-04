@@ -1622,9 +1622,19 @@ public class TurbineGenerator implements CompilerBackend {
     assert(alias.storage() == Alloc.ALIAS) : alias;
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, alias));
+
+    int[] fieldIndices = structFieldIndices(struct.type(), fields);
+    Expression aliasExpr;
+
     // Simple create alias as handle
-    Expression aliasExpr = Turbine.structAlias(varToExpr(struct),
-                       structFieldIndices(struct.type(), fields));
+    if (TurbineTypes.standardRefRepr(alias)) {
+      aliasExpr = Turbine.structAlias(varToExpr(struct), fieldIndices);
+    } else if (Types.isFile(alias)) {
+      aliasExpr = Turbine.structFileAlias(varToExpr(struct), fieldIndices);
+    } else {
+      throw new STCRuntimeError("Unexpected type " + alias.type());
+    }
+
     pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
   }
 
@@ -1719,8 +1729,19 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Unimplemented.subscriptAliasSupported(arrayVar));
 
     // Simple create alias as handle
-    Expression aliasExpr = Turbine.arrayAlias(varToExpr(arrayVar),
-                                              argToExpr(arrIx));
+    Expression aliasExpr;
+
+
+    if (TurbineTypes.standardRefRepr(alias)) {
+      aliasExpr = Turbine.arrayAlias(varToExpr(arrayVar),
+                                                argToExpr(arrIx));
+    } else if (Types.isFile(alias)) {
+      aliasExpr = Turbine.arrayFileAlias(varToExpr(arrayVar),
+                                                argToExpr(arrIx));
+    } else {
+      throw new STCRuntimeError("Unexpected type " + alias.type());
+    }
+
     pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
   }
 

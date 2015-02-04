@@ -454,7 +454,7 @@ public class ComputedValue<T> {
   }
 
   public boolean isStructFieldCopy() {
-    return op == Opcode.STRUCT_CREATE_ALIAS;
+    return op == Opcode.STRUCT_COPY_OUT;
   }
 
   /**

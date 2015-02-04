@@ -1,3 +1,5 @@
+// SKIP-THIS-TEST
+
 import assert;
 
 type s1 {

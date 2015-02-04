@@ -608,6 +608,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemType(array, member));
+    assert(Types.simpleCopySupported(member));
 
     return new TurbineOp(Opcode.ARR_COPY_IN_IMM,
                          array, ix, member.asArg());
@@ -624,6 +625,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isElemType(array, member));
+    assert(Types.simpleCopySupported(member));
+
     return new TurbineOp(Opcode.ARR_COPY_IN_FUTURE, array, ix.asArg(),
                           member.asArg());
   }
@@ -640,6 +643,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isArrayRef(array, true));
     assert(Types.isElemType(array, member));
+    assert(Types.simpleCopySupported(member));
+
     return new TurbineOp(Opcode.AREF_COPY_IN_IMM,
                          array, ix, member.asArg());
   }
@@ -649,6 +654,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArrayRef(array, true));
     assert(Types.isElemType(array, member));
+    assert(Types.simpleCopySupported(member));
+
     return new TurbineOp(Opcode.AREF_COPY_IN_FUTURE,
                          array, ix.asArg(), member.asArg());
   }
@@ -829,6 +836,7 @@ public class TurbineOp extends Instruction {
       List<String> fields, Var fieldVar) {
     assert(Types.isStruct(structVar));
     assert(Types.isStructField(structVar, fields, fieldVar));
+    assert(Types.simpleCopySupported(fieldVar));
 
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
@@ -860,6 +868,7 @@ public class TurbineOp extends Instruction {
                         List<String> fields, Var fieldVar) {
     assert(Types.isStructRef(structRef, true));
     assert(Types.isStructField(structRef, fields, fieldVar));
+    assert(Types.simpleCopySupported(fieldVar));
 
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
