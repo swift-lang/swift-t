@@ -1,4 +1,6 @@
-// SKIP-THIS-TEST
+// SKIP-O2-TEST
+// SKIP-O3-TEST
+// See issue #767
 
 import assert;
 
