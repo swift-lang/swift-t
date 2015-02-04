@@ -30,6 +30,10 @@ import exm.stc.tclbackend.tree.Token;
  */
 public class TurbineTypes {
 
+  public static List<TypeName> dataDeclFullType(Typed typed) {
+    return fullReprType(typed, false);
+  }
+
   /**
    * Return the full type required to create data by ADLB.
    * In case of simple data, just the name - e.g. "int", or "mystruct"
@@ -38,15 +42,18 @@ public class TurbineTypes {
    * @param createArgs
    * @return
    */
-  public static List<TypeName> dataDeclFullType(Typed typed) {
+  public static List<TypeName> fullReprType(Typed typed, boolean valType) {
     List<TypeName> typeExprList = new ArrayList<TypeName>();
     // Basic data type
-    typeExprList.add(reprType(typed));
+    typeExprList.add(reprType(typed, valType));
+
     // Subscript and value type for containers only
-    if (Types.isArray(typed)) {
+    if ((valType && Types.isArrayLocal(typed)) ||
+        (!valType && Types.isArray(typed))) {
       typeExprList.add(arrayKeyType(typed, true)); // key
       typeExprList.add(arrayValueType(typed, true)); // value
-    } else if (Types.isBag(typed)) {
+    } else if ((valType && Types.isBagLocal(typed)) ||
+        (!valType && Types.isBag(typed))) {
       typeExprList.add(bagValueType(typed, true));
     }
     return typeExprList;
@@ -75,6 +82,10 @@ public class TurbineTypes {
 
     StructType st = (StructType)typed.type().getImplType();
     return new TypeName("s:" + st.getStructTypeName());
+  }
+
+  public static TypeName reprType(Typed t, boolean valType) {
+    return valType ? valReprType(t) : reprType(t);
   }
 
   /**

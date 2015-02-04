@@ -1538,19 +1538,28 @@ public class TurbineGenerator implements CompilerBackend {
     int[] indices = structFieldIndices(struct, fields);
 
     // Work out write refcounts for field (might be > 1 if struct)
+    Type fieldType = structFieldType(struct, fields);
+    long writeDecr = structFieldWriteDecr(fieldType);
+
+    pointAdd(Turbine.structInsert(varToExpr(struct),
+        Turbine.structSubscript(indices), argToExpr(fieldContents),
+        TurbineTypes.fullReprType(fieldContents, true),
+        new LiteralInt(writeDecr)));
+  }
+
+  private Type structFieldType(Var struct, List<String> fields) {
     Type fieldType;
     try {
       fieldType = Types.structFieldType(struct, fields);
     } catch (TypeMismatchException e) {
       throw new STCRuntimeError(e.getMessage());
     }
-    long writeDecr = RefCounting.baseRefCount(fieldType, DefType.LOCAL_COMPILER,
-                                          RefCountType.WRITERS, false, true);
+    return fieldType;
+  }
 
-    pointAdd(Turbine.insertStruct(varToExpr(struct),
-        Turbine.structSubscript(indices), argToExpr(fieldContents),
-        Collections.singletonList(TurbineTypes.valReprType(fieldContents)),
-        new LiteralInt(writeDecr)));
+  private long structFieldWriteDecr(Type fieldType) {
+    return RefCounting.baseRefCount(fieldType, DefType.LOCAL_COMPILER,
+                                          RefCountType.WRITERS, false, true);
   }
 
   @Override
@@ -1558,9 +1567,15 @@ public class TurbineGenerator implements CompilerBackend {
                            Var fieldContents) {
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, fieldContents));
-    //Expression subscript = structSubscript(struct, fields);
-    // TODO
-    throw new STCRuntimeError("TODO: Not yet implemented");
+    Expression subscript = structSubscript(struct, fields);
+
+    Type fieldType = structFieldType(struct, fields);
+    long writeDecr = structFieldWriteDecr(fieldType);
+
+    pointAdd(Turbine.structCopyIn(varToExpr(struct), subscript,
+        varToExpr(fieldContents),
+        TurbineTypes.fullReprType(fieldContents, false),
+        new LiteralInt(writeDecr)));
   }
 
   @Override
@@ -1568,9 +1583,15 @@ public class TurbineGenerator implements CompilerBackend {
                            Var fieldContents) {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
-    //Expression subscript = structSubscript(structRef, fields);
-    // TODO
-    throw new STCRuntimeError("Not yet implemented");
+    Expression subscript = structSubscript(structRef, fields);
+
+    Type fieldType = structFieldType(structRef, fields);
+    long writeDecr = structFieldWriteDecr(fieldType);
+
+    pointAdd(Turbine.structCopyIn(varToExpr(structRef), subscript,
+        varToExpr(fieldContents),
+        TurbineTypes.fullReprType(fieldContents, false),
+        new LiteralInt(writeDecr)));
   }
 
   @Override
@@ -1578,9 +1599,15 @@ public class TurbineGenerator implements CompilerBackend {
       Arg fieldContents) {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
-    //Expression subscript = structSubscript(structRef, fields);
-    // TODO
-    throw new STCRuntimeError("Not yet implemented");
+    Expression subscript = structSubscript(structRef, fields);
+
+    Type fieldType = structFieldType(structRef, fields);
+    long writeDecr = structFieldWriteDecr(fieldType);
+
+    pointAdd(Turbine.structCopyIn(varToExpr(structRef), subscript,
+        argToExpr(fieldContents),
+        TurbineTypes.fullReprType(fieldContents, false),
+        new LiteralInt(writeDecr)));
   }
 
   /**

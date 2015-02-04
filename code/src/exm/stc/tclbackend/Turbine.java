@@ -163,10 +163,12 @@ class Turbine {
 
   // Struct functions
   private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
-  private static final Token STRUCTREF_REFERENCE =
-                                                turbFn("structref_reference");
-  private static final Token LOOKUP_STRUCT = adlbFn("lookup_struct");
-  private static final Token INSERT_STRUCT = adlbFn("insert_struct");
+  private static final Token STRUCTREF_REFERENCE = turbFn("structref_reference");
+  private static final Token STRUCT_LOOKUP = adlbFn("struct_lookup");
+  private static final Token STRUCT_INSERT = adlbFn("struct_insert");
+  private static final Token STRUCT_INSERT_R = turbFn("struct_insert_r");
+  private static final Token STRUCTREF_INSERT_R = turbFn("structref_insert_r");
+  private static final Token STRUCTREF_INSERT_V = turbFn("structref_insert_v");
 
   // Rule functions
   private static final Token RULE = turbFn("rule");
@@ -1053,10 +1055,10 @@ class Turbine {
       assert(decrWrite != null);
       inputs.add(incrWrite);
     }
-    return Square.fnCall(LOOKUP_STRUCT, inputs);
+    return Square.fnCall(STRUCT_LOOKUP, inputs);
   }
 
-  public static Command insertStruct(Value struct,
+  public static Command structInsert(Value struct,
       Expression subscript, Expression member, List<TypeName> type,
       Expression decrWrite) {
     List<Expression> args = new ArrayList<Expression>();
@@ -1065,8 +1067,57 @@ class Turbine {
     args.add(member);
     args.addAll(type);
     args.add(decrWrite);
-    return new Command(INSERT_STRUCT, args);
+    return new Command(STRUCT_INSERT, args);
   }
+
+  public static Command structCopyIn(Value struct,
+      Expression subscript, Expression member, List<TypeName> type,
+      Expression decrWrite) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(struct);
+    args.add(subscript);
+    args.add(member);
+    if (type.size() > 1) {
+      args.add(new TclList(type));
+    } else {
+      args.add(type.get(0));
+    }
+    args.add(decrWrite);
+    return new Command(STRUCT_INSERT_R, args);
+  }
+
+  public static Command structRefInsert(Value structRef,
+      Expression subscript, Expression member, List<TypeName> type,
+      Expression decrWrite) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(structRef);
+    args.add(subscript);
+    args.add(member);
+    if (type.size() > 1) {
+      args.add(new TclList(type));
+    } else {
+      args.add(type.get(0));
+    }
+    args.add(decrWrite);
+    return new Command(STRUCTREF_INSERT_V, args);
+  }
+
+  public static Command structRefCopyIn(Value structRef,
+      Expression subscript, Expression member, List<TypeName> type,
+      Expression decrWrite) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(structRef);
+    args.add(subscript);
+    args.add(member);
+    if (type.size() > 1) {
+      args.add(new TclList(type));
+    } else {
+      args.add(type.get(0));
+    }
+    args.add(decrWrite);
+    return new Command(STRUCTREF_INSERT_R, args);
+  }
+
 
   /**
    * Copy subscript of a variable to another variable
