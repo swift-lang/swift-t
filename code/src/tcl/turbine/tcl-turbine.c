@@ -514,7 +514,9 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-        opts->opts.soft_target = false;
+        // May have already processed key "strictness"
+        if (opts->opts.strictness == ADLB_TGT_STRICT_NONE)
+          opts->opts.strictness = ADLB_TGT_STRICT_HARD;
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
@@ -527,6 +529,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
           // Ensure sent back here
           opts->work_type = TURBINE_ADLB_WORK_TYPE_WORK;
           opts->target = adlb_comm_rank;
+          opts->opts.strictness = ADLB_TGT_STRICT_HARD;
         }
         else
         {
@@ -536,13 +539,20 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
       }
       break;
     case 's':
-      if (strcmp(k, "soft_target") == 0)
+      if (strcmp(k, "strictness") == 0)
       {
-        int t;
-        rc = Tcl_GetIntFromObj(interp, val, &t);
-        TCL_CHECK_MSG(rc, "target argument must be integer");
-        opts->target = t;
-        opts->opts.soft_target = true;
+        char* s = Tcl_GetString(val);
+        if (strcmp(s, "HARD") == 0)
+          opts->opts.strictness = ADLB_TGT_STRICT_HARD;
+        else if (strcmp(s, "SOFT") == 0)
+          opts->opts.strictness = ADLB_TGT_STRICT_SOFT;
+        else
+        {
+          Tcl_Obj* msg =
+              Tcl_ObjPrintf("invalid strictness value: %s", s);
+          Tcl_Obj* msgs[1] = { msg };
+          return turbine_user_error(interp, 1, msgs);
+        }
         return TCL_OK;
       }
       break;
