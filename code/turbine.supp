@@ -20,7 +20,7 @@
 #       meminit prevents uninitialized data warnings
 
 {
-  tcl-alloc-1
+  tcl-malloc-1
   Memcheck:Leak
   fun:malloc
   fun:Tcl_Alloc
@@ -28,7 +28,7 @@
 }
 
 {
-  tcl-alloc-2
+  tcl-malloc-2
   Memcheck:Leak
   fun:malloc
   fun:TclpAlloc
@@ -36,7 +36,7 @@
 }
 
 {
-  tcl-alloc-3
+  tcl-malloc-3
   Memcheck:Leak
   fun:malloc
   fun:GetBlocks
@@ -44,18 +44,93 @@
   ...
 }
 
-{ 
-  tcl-thread-alloc-1
+{
+  tcl-thread-malloc-4
+  Memcheck:Leak
   fun:malloc
-  fun:TclThreadAllocObj 
+  fun:TclThreadAllocObj
   ...
 }
+
+{
+  tcl-thread-malloc-5
+  Memcheck:Leak
+  fun:malloc
+  fun:TclpThreadCreateKey
+  ...
+}
+
+{
+  tcl-table-malloc-1
+  Memcheck:Leak
+  fun:malloc
+  fun:TSDTableCreate
+  fun:TclThreadStorageKeySet
+  ...
+}
+
+{
+  tcl-mutex-malloc-1
+  Memcheck:Leak
+  fun:malloc
+  fun:TclpNewAllocMutex
+  ...
+}
+
+{
+  tcl-dlopen-1
+  Memcheck:Leak
+  fun:calloc
+  ...
+  fun:TclpDlopen
+  ...
+}
+
+{
+  tcl-cache-calloc-1
+  Memcheck:Leak
+  fun:calloc
+  fun:GetCache
+  fun:TclpAlloc
+  ...
+}
+
+{
+  tcl-pthread-calloc-1
+  Memcheck:Leak
+  fun:calloc
+  ...
+  fun:TclpThreadCreate
+  ...
+}
+
 
 {
   tcl-realloc-1
   Memcheck:Leak
   fun:realloc
   fun:TclpRealloc
+  ...
+}
+
+{
+  tcl-vasprintf-realloc-2
+  Memcheck:Leak
+  fun:realloc
+  fun:vasprintf
+  fun:asprintf
+  fun:dlerror
+  fun:FindSymbol
+  ...
+}
+
+{
+  tcl-table-realloc-1
+  Memcheck:Leak
+  fun:realloc
+  fun:TSDTableGrow
+  fun:TclThreadStorageKeySet
+  fun:Tcl_GetThreadData
   ...
 }
 
