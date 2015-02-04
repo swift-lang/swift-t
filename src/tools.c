@@ -369,5 +369,6 @@ slurp(const char* filename)
   }
   result[length] = '\0';
 
+  fclose(file);
   return result;
 }
