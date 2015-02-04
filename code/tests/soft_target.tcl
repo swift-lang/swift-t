@@ -26,7 +26,7 @@ proc must_run_on { msg rank sleep_ms } {
 }
 
 proc print_msg { msg sleep_ms } {
-  puts "[ adlb::rank ]: $msg"
+    puts "[ adlb::rank ]: $msg"
     after $sleep_ms
 }
 
@@ -36,7 +36,7 @@ proc rules { } {
     # First check that rules go to target when there is limited work
     for { set rank 1 } { $rank <= 2 } { incr rank } {
       turbine::rule {} [ list must_run_on "part1" $rank 100 ] \
-            type $turbine::WORK soft_target $rank
+            type $turbine::WORK target $rank strictness SOFT
     }
     
     # Give time for previous work to start running
@@ -45,7 +45,7 @@ proc rules { } {
     # Second check that rules go to multiple ranks when lots of work
     for { set i 0 } { $i <= 30 } { incr i } {
       turbine::rule {} [ list print_msg "RAN SOFT_TARGETED ON WORKER" 20 ] \
-                    soft_target 1
+                    target 1 strictness SOFT
     }
     # Drop into main worker loop, so some tasks should run on this rank
 }
