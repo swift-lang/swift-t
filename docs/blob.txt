@@ -1,0 +1,210 @@
+
+
+:toc:
+
+= Blob Utilities
+
+The blob utilities are intended to allow users to convert Swift
+blobs into C pointer and length arguments for C leaf functions.
+
+The blob utilities are SWIG-wrapped C functions, thus accessible
+from Tcl functions called by Swift.
+
+For usage examples, see the link:leaf.html[Swift/T Leaf Function Guide].
+
+The blob utilities may also be used by user C leaf functions.
+Simply include +turbine/include/blob.h+.
+
+This documentation is generated from +blob.h+ by +maint/doc.sh+.
+The functions are implemented in +blob.c+.
+ 
+== Struct +turbine_blob+ 
+
+Simple struct for variable-length data blob.
+
+This data type is represented by SWIG in Tcl as a regular pointer-
+you can pass it in and out of functions, display it, etc.
+
+Based on this struct, SWIG will generate the following
+Tcl functions, assuming +blob+ is a +blob*+:
+ 
++new_turbine_blob+:: Returns a fresh +turbine_blob*+.
+
+
++delete_turbine_blob blob+:: +free()+ the +blob+. Cf. +blobutils_destroy()+.
+
+
++turbine_blob_pointer_set blob p+:: Set +blob->pointer=p+,  where +p+ is a +void*+.
+
+
++turbine_blob_pointer_get blob+:: Returns +blob->pointer+, a +void*+.
+
+
++turbine_blob_length_set blob i+:: Set +blob->pointer=i+, where +i+ is an integer.
+
+
++turbine_blob_length_get blob+:: Returns +blob->length+, an +int+.
+
+
+[listing]
+typedef struct
+{
+  void* pointer;
+  int length;
+} turbine_blob;
+
+
+== Functions 
+
+=== Pointers and sizes 
+
+Functions for blob creation, memory allocation/deallocation,
+pointer arithmetic, and +sizeof()+. 
+
+
++blobutils_create pointer length+:: Create a turbine_blob from
+   an long integer representing the pointer and the length.
+
+
++blobutils_create_ptr pointer length+:: Create a turbine_blob from
+   the pointer and the length.
+
+
++blobutils_malloc length+:: Allocate memory (not a blob) of given size.
+
+
++blobutils_free pointer+:: Call +free()+ on the given pointer.
+
+
++blobutils_destroy+:: Deallocate a blob _and_ frees the data pointer.
+
+
++blobutils_ptr_add pointer offset+:: Return the result of
+        adding offset to pointer.
+
+
++blobutils_sizeof_ptr+:: Obtain +sizeof(void*)+
+
+
++blobutils_sizeof_int+:: Obtain +sizeof(int)+
+
+
++blobutils_sizeof_int32+:: Obtain +sizeof(int32)+
+
+
++blobutils_sizeof_float+:: Obtain +sizeof(double)+.
+    (In Swift/T, all floats are 64-bit)
+
+=== Casts 
+
+
+Cast functions for simple SWIG type transformations.
+Not all possible type pairs are yet implemented.
+In our naming scheme, if a type is not given, +void*+ is assumed.
+ 
+
+
++blobutils_cast_to_ptr i+:: Integer to +void*+.
+
+
++blobutils_cast_int64_to_ptr i+:: Integer (64-bit) to +void*+.
+
+
++blobutils_cast_to_ptrptr p+:: Integer to +void**+.
+
+
++blobutils_cast_to_char_ptrptr p+:: Integer to +char**+.
+
+
++blobutils_cast_to_ptrptr s+:: +char*+ to +void*+.
+
+
++blobutils_cast_to_int p+:: +void*+ to +int+.
+
+
++blobutils_cast_to_long p+:: +void*+ to +long+.
+
+
++blobutils_cast_to_long_long p+:: +void*+ to +long long+.
+
+
++blobutils_cast_to_int64 p+:: +void*+ to +int64_t+.
+
+
++blobutils_cast_int_to_int_ptr i+:: +int+ to +int*+.
+
+
++blobutils_cast_int_to_const_int_ptr i+:: +int+ to +const int*+.
+
+
++blobutils_cast_int_to_dbl_ptr i+:: +int+ to +double*+.
+
+
++blobutils_cast_int_to_const_dbl_ptr i+:: +int+ to +const double*+.
+
+
++blobutils_cast_to_int_ptr p+:: +void*+ to +int*+.
+
+
++blobutils_cast_to_int64_ptr p+:: +void*+ to +int64_t*+.
+
+
++blobutils_cast_to_int32_ptr p+:: +void*+ to +int32_t*+.
+
+
++blobutils_cast_to_dbl_ptr p+:: +void*+ to +double*+.
+
+=== Array manipulation 
+
+These functions treat their inputs as arrays and do manipulation. 
+
+
++blobutils_zeroes_float p n+:: Set all +n+ entries of +double+ array +p+ to 0.0.
+
+
++blobutils_get_ptr pointer index+:: Assume blob is array of +void*+ - do array lookup.
+         That is, return +pointer[index]+.
+
+
++blobutils_set_ptr pointer index p+:: Assume blob is array of +void*+ - do array store.
+   That is, set +pointer[index]=p+.
+
+
++blobutils_get_float pointer index+:: Assume blob is array of double- do array lookup.
+    That is, return +pointer[index]+.
+
+
++blobutils_set_float p index d+:: Assume blob is array of +double+ - do array store.
+   That is, set +p[index]=d+.
+
+
++blobutils_get_int pointer index+:: Assume blob is array of +int+ - do array lookup.
+    That is, return +pointer[index]+.
+
+
++blobutils_get_int32 pointer index+:: Assume blob is array of +int32_t+ - do array lookup.
+    That is, return +pointer[index]+.
+
+
++blobutils_set_int pointer index i+:: Assume blob is array of +int+ - do array store.
+    That is, set +pointer[index]=i+.
+
+=== I/O 
+
+Blob I/O functions. 
+
+
++blobutils_write output blob+:: Write blob +blob+ to file with name given in +output+.
+        Returns +true+ on success, else +false+.
+
+
++blobutils_read input blob+:: Read blob +blob+ from file with name given in +output+.
+        Returns +true+ on success, else +false+.
+
+=== String utilities 
+
+Functions for string operations. 
+
+
++blobutils_strdup s+:: Duplicate s.
+
