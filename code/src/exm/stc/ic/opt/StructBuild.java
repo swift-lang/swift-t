@@ -66,6 +66,7 @@ public class StructBuild extends FunctionOptimizerPass {
           List<Arg> inputs = inst.getInputs();
           List<Arg> fields = inputs.subList(1, inputs.size());
           assignedPaths.put(struct, Arg.extractStrings(fields));
+          System.err.println(inst);
         }
       }
     }
@@ -77,7 +78,8 @@ public class StructBuild extends FunctionOptimizerPass {
       List<List<String>> assigned = assignedPaths.get(candidate);
 
       logger.trace("Check candidate " + candidate.name() + "\n" +
-                   "expected: " + expectedPaths);
+                   "expected: " + expectedPaths + "\n" +
+                   "assigned: " + assigned);
 
       for (List<String> path: assigned) {
         Type fieldType;
@@ -140,9 +142,7 @@ public class StructBuild extends FunctionOptimizerPass {
       Set<List<String>> paths) {
     for (StructField f: type.fields()) {
       prefix.push(f.name());
-      if (Types.isRef(f.type())) {
-        // Don't assign
-      } else if (Types.isStruct(f.type())) {
+      if (Types.isStruct(f.type())) {
         addAssignablePaths((StructType)f.type().getImplType(), prefix,
                            paths);
       } else {
