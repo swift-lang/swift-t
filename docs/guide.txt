@@ -674,6 +674,12 @@ people[2].name = "Abe";  // Not supported!
 people[2].age = 90;      // Not supported!
 ----
 
+It is possible to construct a struct by invoking the type name
+as if it is a function:
+----
+person p3 = person("Nguyen", 42);
+----
+
 === Defining new types
 
 Swift has two ways to define new types based on existing types.
