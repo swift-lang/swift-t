@@ -29,6 +29,8 @@
 #include <math.h>
 #include <ctype.h>
 
+#include <tools.h>
+
 #define HEAP_LEFT(i) (i * 2 + 1)
 #define HEAP_RIGHT(i) (i * 2 + 2)
 #define HEAP_PARENT(i) ((i - 1) / 2)
@@ -225,6 +227,7 @@ static inline void heap_del_entry(heap_t *heap, heap_ix_t i)
   }
 }
 
+unused
 static bool heap_pop_val(heap_t *heap, heap_val_t *result)
 {
   if (heap_size(heap) == 0) {
@@ -232,7 +235,7 @@ static bool heap_pop_val(heap_t *heap, heap_val_t *result)
     return false;
   }
 
-  result = heap_root_val(heap);
+  *result = heap_root_val(heap);
   heap_del_root(heap);
 
   return true;
