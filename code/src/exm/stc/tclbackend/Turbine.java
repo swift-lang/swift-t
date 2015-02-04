@@ -1083,7 +1083,7 @@ class Turbine {
 
   public static Command structCopyIn(Value struct,
       Expression subscript, Expression member, List<TypeName> type,
-      Expression decrWrite) {
+      Expression decrWrite, Expression incrWrite) {
     List<Expression> args = new ArrayList<Expression>();
     args.add(struct);
     args.add(subscript);
@@ -1094,6 +1094,7 @@ class Turbine {
       args.add(type.get(0));
     }
     args.add(decrWrite);
+    args.add(incrWrite);
     return new Command(STRUCT_INSERT_R, args);
   }
 

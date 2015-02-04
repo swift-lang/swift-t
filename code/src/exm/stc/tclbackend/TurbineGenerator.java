@@ -1575,7 +1575,7 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(Turbine.structCopyIn(varToExpr(struct), subscript,
         varToExpr(fieldContents),
         TurbineTypes.fullReprType(fieldContents, false),
-        new LiteralInt(writeDecr)));
+        new LiteralInt(writeDecr), LiteralInt.ZERO));
   }
 
   @Override
@@ -1588,7 +1588,7 @@ public class TurbineGenerator implements CompilerBackend {
     Type fieldType = structFieldType(structRef, fields);
     long writeDecr = structFieldWriteDecr(fieldType);
 
-    pointAdd(Turbine.structCopyIn(varToExpr(structRef), subscript,
+    pointAdd(Turbine.structRefCopyIn(varToExpr(structRef), subscript,
         varToExpr(fieldContents),
         TurbineTypes.fullReprType(fieldContents, false),
         new LiteralInt(writeDecr)));
@@ -1604,7 +1604,7 @@ public class TurbineGenerator implements CompilerBackend {
     Type fieldType = structFieldType(structRef, fields);
     long writeDecr = structFieldWriteDecr(fieldType);
 
-    pointAdd(Turbine.structCopyIn(varToExpr(structRef), subscript,
+    pointAdd(Turbine.structRefInsert(varToExpr(structRef), subscript,
         argToExpr(fieldContents),
         TurbineTypes.fullReprType(fieldContents, false),
         new LiteralInt(writeDecr)));
