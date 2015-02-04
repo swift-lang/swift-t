@@ -1008,6 +1008,11 @@ class Turbine {
     return Square.fnCall(MAKE_CONTAINER_SUBSCRIPT, var, sub);
   }
 
+  public static Expression arrayFileAlias(Value var, Expression sub) {
+    // TODO
+    throw new STCRuntimeError("Unimplemented");
+  }
+
   /**
    * Construct a new handle to a subscript of the struct
    *
@@ -1025,6 +1030,12 @@ class Turbine {
       args.add(new LiteralInt(field));
     }
     return Square.fnCall(MAKE_STRUCT_SUBSCRIPT, args);
+  }
+
+
+  public static Expression structFileAlias(Value var, int fieldIndices[]) {
+    // TODO
+    throw new STCRuntimeError("Unimplemented");
   }
 
   /**

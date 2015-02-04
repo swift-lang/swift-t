@@ -279,19 +279,10 @@ public class ExprWalker {
 
     Var backendSrc = VarRepr.backendVar(src);
     Var backendDst = VarRepr.backendVar(dst);
-    if (Types.isScalarFuture(src) ||
-        Types.isStruct(src) || Types.isContainer(src) ||
-        Types.isRef(src)) {
+    if (Types.simpleCopySupported(src)) {
        backendAsyncCopy(context, dst, src);
     } else if (Types.isFile(src)) {
-      if (dst.isMapped() == Ternary.FALSE ||
-          dst.type().fileKind().supportsPhysicalCopy()) {
-          backend.copyFile(backendDst, backendSrc);
-      } else {
-        throw new TypeMismatchException("Do not support physical copy " +
-            "to (possibly) mapped variable " + dst.name() + " with " +
-            "type " + dst.type().typeName());
-      }
+      copyFileByValue(dst, src);
     } else {
       throw new STCRuntimeError(context.getFileLine() +
           " copying type " + src + " by value not yet "
@@ -347,10 +338,7 @@ public class ExprWalker {
                               fieldPath);
       } else if (!storedAsRef && outVar == null) {
         // Just create alias to data in struct for later use
-        result = varCreator.createStructFieldAlias(context,
-                            struct, fieldType, fieldPath);
-        backend.structCreateAlias(VarRepr.backendVar(result),
-                                  backendStruct, fieldPath);
+        result = structCreateAlias(context, struct, fieldPath);
       } else {
         assert(!storedAsRef && outVar != null);
         // Copy data in struct to existing output variable
@@ -1411,7 +1399,8 @@ public class ExprWalker {
   }
 
   private void backendStructConstructor(Context context, String function,
-      FunctionType concrete, List<Var> outputs, List<Var> inputs) {
+      FunctionType concrete, List<Var> outputs, List<Var> inputs)
+          throws UserException {
     assert(outputs.size() == 1);
     Var struct = outputs.get(0);
     assert(Types.isStruct(struct));
@@ -1429,9 +1418,31 @@ public class ExprWalker {
         backend.structStoreSub(VarRepr.backendVar(struct), fieldPath,
                                VarRepr.backendVar(input).asArg());
       } else {
-        backend.structCopyIn(VarRepr.backendVar(struct), fieldPath,
-                               VarRepr.backendVar(input));
+        structCopyIn(context, struct, fieldPath, input);
       }
+    }
+  }
+
+  /**
+   * Copy in.
+   * @param struct
+   * @param fieldPath
+   * @param input
+   * @throws TypeMismatchException
+   * @throws DoubleDefineException
+   * @throws UndefinedTypeException
+   */
+  private void structCopyIn(Context context, Var struct,
+                      List<String> fieldPath, Var input)
+                          throws UserException {
+    if (Types.simpleCopySupported(input)) {
+      backend.structCopyIn(VarRepr.backendVar(struct), fieldPath,
+          VarRepr.backendVar(input));
+    } else if (Types.isFile(input)) {
+      Var fieldAlias = structCreateAlias(context, struct, fieldPath);
+      copyFileByValue(fieldAlias, input);
+    } else {
+      throw new STCRuntimeError("Unexpected type: " + input);
     }
   }
 
@@ -1562,6 +1573,20 @@ public class ExprWalker {
     backend.asyncCopy(VarRepr.backendVar(dst), VarRepr.backendVar(src));
   }
 
+  private void copyFileByValue(Var dst, Var src)
+      throws TypeMismatchException {
+    Var backendSrc = VarRepr.backendVar(src);
+    Var backendDst = VarRepr.backendVar(dst);
+    if (dst.isMapped() == Ternary.FALSE ||
+        dst.type().fileKind().supportsPhysicalCopy()) {
+        backend.copyFile(backendDst, backendSrc);
+    } else {
+      throw new TypeMismatchException("Do not support physical copy " +
+          "to (possibly) mapped variable " + dst.name() + " with " +
+          "type " + dst.type().typeName());
+    }
+  }
+
   private void derefThenCopyContainer(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
     assert(Types.isContainerRef(src));
@@ -1574,6 +1599,18 @@ public class ExprWalker {
     retrieveRef(derefed, src, false);
     backendAsyncCopy(context, dst, derefed);
     backend.endWaitStatement();
+  }
+
+  private Var structCreateAlias(Context context, Var struct,
+      List<String> fieldPath) throws UserException {
+    Type fieldType = TypeChecker.findStructFieldType(context, fieldPath,
+                                                     struct.type());
+
+    Var result = varCreator.createStructFieldAlias(context,
+                        struct, fieldType, fieldPath);
+    backend.structCreateAlias(VarRepr.backendVar(result),
+                  VarRepr.backendVar(struct), fieldPath);
+    return result;
   }
 
   /**

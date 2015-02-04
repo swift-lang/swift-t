@@ -111,11 +111,24 @@ public class TurbineTypes {
   }
 
   public static TypeName refReprType(Typed memberType) {
-      if (Types.isFile(memberType)) {
-        return Turbine.ADLB_FILE_REF_TYPE;
-      } else {
-        return Turbine.ADLB_REF_TYPE;
-      }
+    if (standardRefRepr(memberType)) {
+      return Turbine.ADLB_REF_TYPE;
+    } else if (Types.isFile(memberType)) {
+      return Turbine.ADLB_FILE_REF_TYPE;
+    } else {
+      throw new STCRuntimeError("Unexpected ref type: " + memberType);
+    }
+  }
+
+  /**
+   * Return true if we use a standard ref to represent a ref to this type
+   * @param typed
+   * @return
+   */
+  public static boolean standardRefRepr(Typed typed) {
+    return Types.isContainer(typed) || Types.isStruct(typed) ||
+            Types.isRef(typed) || Types.isScalarFuture(typed) ||
+            Types.isScalarUpdateable(typed);
   }
 
   /**
