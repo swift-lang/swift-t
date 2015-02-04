@@ -202,8 +202,6 @@ public class TypeChecker {
     }
     Type fieldType = structType.fieldTypeByName(fieldName);
     if (fieldType == null) {
-      // TODO: remove
-      new Exception().printStackTrace();
       throw new TypeMismatchException(context, "Field named " + fieldName +
           " does not exist in structure type " + structType.typeName() + ". " +
           "Valid fields are: " + structType.fields());
