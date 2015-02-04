@@ -225,6 +225,19 @@ static inline void heap_del_entry(heap_t *heap, heap_ix_t i)
   }
 }
 
+static bool heap_pop_val(heap_t *heap, heap_val_t *result)
+{
+  if (heap_size(heap) == 0) {
+    result = NULL;
+    return false;
+  }
+
+  result = heap_root_val(heap);
+  heap_del_root(heap);
+
+  return true;
+}
+
 /* Increase the key of an entry in the heap.  This may cause it to
  * need to be moved down the heap.  Keep on swapping it down until
  * it is resolved */
