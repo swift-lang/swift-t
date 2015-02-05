@@ -14,7 +14,7 @@ import assert;
 
 main {
   foreach i in [1:50] {
-    int engine_rank = randomEngineRank();
+    int engine_rank = random_engine().rank;
     assertEqual(@location=location_from_rank(engine_rank)f(0),
                 engine_rank, "f(0)"); 
 
