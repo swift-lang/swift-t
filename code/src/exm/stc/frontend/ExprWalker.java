@@ -59,6 +59,8 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -620,10 +622,15 @@ public class ExprWalker {
     TaskProps propVals = new TaskProps();
     boolean openedWait = false;
     Context callContext = context;
-    if (!f.annotations().isEmpty()) {
+    boolean mustEvalAnnotations = !f.annotations().isEmpty() ||
+                                  f.location() != null;
+
+    if (mustEvalAnnotations) {
       List<Pair<TaskPropKey, Var>> propFutures =
             new ArrayList<Pair<TaskPropKey, Var>>();
       List<Var> waitVars = new ArrayList<Var>();
+      Var locationVar = null;
+
       for (TaskPropKey ann: f.annotations().keySet()) {
         checkCallAnnotation(context, f, ann);
 
@@ -633,6 +640,11 @@ public class ExprWalker {
         Var future = eval(context, expr, concreteType, false, renames);
         waitVars.add(future);
         propFutures.add(Pair.create(ann, future));
+      }
+      if (f.location() != null) {
+        locationVar = eval(context, f.location(), Types.F_LOCATION, false,
+                           renames);
+        waitVars.add(locationVar);
       }
 
       backend.startWaitStatement(context.constructName("ann-wait"),
@@ -644,8 +656,11 @@ public class ExprWalker {
         Var value = retrieveToVar(callContext, x.val2);
         propVals.put(x.val1, value.asArg());
       }
+      if (locationVar != null) {
+        populateFromLocationStruct(context, locationVar, propVals);
+      }
 
-      if (f.softLocation()) {
+      if (f.softLocationOverride()) {
         // Override strictness if @soft_location was used
         propVals.put(TaskPropKey.LOC_STRICTNESS,
                      TaskProps.LOC_STRICTNESS_SOFT_ARG);
@@ -658,6 +673,45 @@ public class ExprWalker {
       backend.endWaitStatement();
     }
 
+  }
+
+  /**
+   * Fill extract members from struct and add to dictionary
+   * @param context
+   * @param loc
+   * @param propVals
+   */
+  private void populateFromLocationStruct(Context context, Var loc,
+          TaskProps propVals) {
+    assert(loc.type().assignableTo(Types.F_LOCATION));
+    Var locRank = new Var(Types.V_INT, loc + ":rank",
+        Alloc.LOCAL, DefType.LOCAL_COMPILER,
+        VarProvenance.exprTmp(context.getSourceLoc()));
+
+    Var locStrictness = new Var(Types.V_LOC_STRICTNESS,
+            loc + ":strictness",
+            Alloc.LOCAL, DefType.LOCAL_COMPILER,
+            VarProvenance.exprTmp(context.getSourceLoc()));
+
+    Var locAccuracy = new Var(Types.V_LOC_ACCURACY,
+        loc + ":loc_accuracy", Alloc.LOCAL, DefType.LOCAL_COMPILER,
+        VarProvenance.exprTmp(context.getSourceLoc()));
+
+    /*
+     * Retrieve seperately from the strict.  In principle this could be
+     * inefficient but in practice we hope the optimiser should be able
+     * to resolve these.
+     */
+    backend.structRetrieveSub(VarRepr.backendVar(locRank),
+              VarRepr.backendVar(loc), Arrays.asList("rank"));
+    backend.structRetrieveSub(VarRepr.backendVar(locStrictness),
+              VarRepr.backendVar(loc), Arrays.asList("strictness"));
+    backend.structRetrieveSub(VarRepr.backendVar(locAccuracy),
+              VarRepr.backendVar(loc), Arrays.asList("accuracy"));
+
+    propVals.put(TaskPropKey.LOC_RANK, locRank.asArg());
+    propVals.put(TaskPropKey.LOC_STRICTNESS, locStrictness.asArg());
+    propVals.put(TaskPropKey.LOC_ACCURACY, locAccuracy.asArg());
   }
 
   private void checkCallAnnotation(Context context, FunctionCall f,
