@@ -927,6 +927,12 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[4], &opts.priority);
   Tcl_GetIntFromObj(interp, objv[5], &opts.parallelism);
 
+  if (target_rank >= 0)
+  {
+    opts.strictness = ADLB_TGT_STRICT_HARD;
+    opts.accuracy = ADLB_TGT_ACCRY_RANK;
+  }
+
   if (objc >= 7)
   {
     rc = adlb_parse_strictness(interp, objv[6], &opts.strictness);
