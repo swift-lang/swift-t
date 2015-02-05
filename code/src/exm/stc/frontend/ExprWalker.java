@@ -639,7 +639,10 @@ public class ExprWalker {
         waitVars.add(future);
         propFutures.add(Pair.create(ann, future));
       }
+
       if (f.location() != null) {
+        checkCanTarget(context, f);
+
         locationVar = eval(context, f.location(), Types.F_LOCATION, false,
                            renames);
         waitVars.add(locationVar);
@@ -727,11 +730,14 @@ public class ExprWalker {
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
-    } else if (ann == TaskPropKey.LOC_RANK) {
-      if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
-        throw new UserException(context, "Tried to call non-targetable"
-            + " function " + f.function() + " with target");
-      }
+    }
+  }
+
+  private void checkCanTarget(Context context, FunctionCall f)
+      throws UserException {
+    if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
+      throw new UserException(context, "Tried to call non-targetable"
+          + " function " + f.function() + " with target");
     }
   }
 
