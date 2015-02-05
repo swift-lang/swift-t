@@ -142,6 +142,11 @@ public class ICTree {
       logger.debug("Done generating required packages");
 
       logger.debug("generating struct types");
+      for (Type builtin: Types.getBuiltInTypes().values()) {
+        if (Types.isStruct(builtin)) {
+          gen.declareStructType((StructType)builtin.getImplType());
+        }
+      }
       for (StructType st: structTypes) {
         gen.declareStructType(st);
       }
