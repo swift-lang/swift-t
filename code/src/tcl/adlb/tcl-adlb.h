@@ -64,6 +64,14 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_datum_id id, adlb_data_type type, adlb_type_extra extra,
             const void *data, size_t length, Tcl_Obj** result);
 
+int
+adlb_parse_strictness(Tcl_Interp *interp, Tcl_Obj *obj,
+      adlb_target_strictness *strictness);
+
+int
+adlb_parse_accuracy(Tcl_Interp *interp, Tcl_Obj *obj,
+      adlb_target_accuracy *accuracy);
+
 /**
   Different ways of interpreting subscripts
  */

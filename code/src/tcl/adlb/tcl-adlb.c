@@ -914,7 +914,8 @@ static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
              int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc == 6 || objc == 7, "Expected 5 or 6 arguments");
+  TCL_CONDITION(objc >= 6 && objc <= 8, "Expected 5 to 7 arguments");
+  int rc;
 
   int target_rank;
   int work_type;
@@ -926,22 +927,24 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetIntFromObj(interp, objv[4], &opts.priority);
   Tcl_GetIntFromObj(interp, objv[5], &opts.parallelism);
 
-  if (objc == 7)
+  if (objc >= 7)
   {
-    int tmp;
-    Tcl_GetIntFromObj(interp, objv[6], &tmp);
-    opts.strictness = (tmp == 1) ?
-        ADLB_TGT_STRICT_HARD : ADLB_TGT_STRICT_SOFT;
+    rc = adlb_parse_strictness(interp, objv[6], &opts.strictness);
+    TCL_CHECK(rc);
+  }
+  if (objc >= 8)
+  {
+    rc = adlb_parse_accuracy(interp, objv[7], &opts.accuracy);
+    TCL_CHECK(rc);
   }
 
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
              target_rank, work_type, cmd, priority);
 
 
-  int rc = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
+  adlb_code ac = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
                     work_type, opts);
-
-  ASSERT(rc == ADLB_SUCCESS);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "ADLB_Put failed!");
   return TCL_OK;
 }
 
@@ -2763,6 +2766,44 @@ report_type_mismatch(adlb_data_type expected,
   printf("type mismatch: expected: %s - received: %s\n",
                       ADLB_Data_type_tostring(expected),
                       ADLB_Data_type_tostring(actual));
+}
+
+int
+adlb_parse_strictness(Tcl_Interp *interp, Tcl_Obj *obj,
+      adlb_target_strictness *strictness)
+{
+  char* s = Tcl_GetString(obj);
+  if (strcmp(s, "HARD") == 0)
+    *strictness = ADLB_TGT_STRICT_HARD;
+  else if (strcmp(s, "SOFT") == 0)
+    *strictness = ADLB_TGT_STRICT_SOFT;
+  else
+  {
+    Tcl_Obj* msg = Tcl_ObjPrintf("invalid strictness value: %s", s);
+    Tcl_Obj* msgs[1] = { msg };
+    return turbine_user_error(interp, 1, msgs);
+  }
+
+  return TCL_OK;
+}
+
+int
+adlb_parse_accuracy(Tcl_Interp *interp, Tcl_Obj *obj,
+      adlb_target_accuracy *accuracy)
+{
+  char* s = Tcl_GetString(obj);
+  if (strcmp(s, "RANK") == 0)
+    *accuracy = ADLB_TGT_ACCRY_RANK;
+  else if (strcmp(s, "NODE") == 0)
+    *accuracy = ADLB_TGT_ACCRY_NODE;
+  else
+  {
+    Tcl_Obj* msg = Tcl_ObjPrintf("invalid accuracy value: %s", s);
+    Tcl_Obj* msgs[1] = { msg };
+    return turbine_user_error(interp, 1, msgs);
+  }
+
+  return TCL_OK;
 }
 
 /**

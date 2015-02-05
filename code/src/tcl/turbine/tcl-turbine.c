@@ -492,19 +492,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
     case 'a':
       if (strcmp(k, "accuracy") == 0)
       {
-        char* s = Tcl_GetString(val);
-        if (strcmp(s, "RANK") == 0)
-          opts->opts.accuracy = ADLB_TGT_ACCRY_RANK;
-        else if (strcmp(s, "NODE") == 0)
-          opts->opts.accuracy = ADLB_TGT_ACCRY_NODE;
-        else
-        {
-          Tcl_Obj* msg =
-              Tcl_ObjPrintf("invalid accuracy value: %s", s);
-          Tcl_Obj* msgs[1] = { msg };
-          return turbine_user_error(interp, 1, msgs);
-        }
-        return TCL_OK;
+        return adlb_parse_accuracy(interp, val, &opts->opts.accuracy);
       }
       break;
     case 'n':
@@ -559,19 +547,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
     case 's':
       if (strcmp(k, "strictness") == 0)
       {
-        char* s = Tcl_GetString(val);
-        if (strcmp(s, "HARD") == 0)
-          opts->opts.strictness = ADLB_TGT_STRICT_HARD;
-        else if (strcmp(s, "SOFT") == 0)
-          opts->opts.strictness = ADLB_TGT_STRICT_SOFT;
-        else
-        {
-          Tcl_Obj* msg =
-              Tcl_ObjPrintf("invalid strictness value: %s", s);
-          Tcl_Obj* msgs[1] = { msg };
-          return turbine_user_error(interp, 1, msgs);
-        }
-        return TCL_OK;
+        return adlb_parse_strictness(interp, val, &opts->opts.strictness);
       }
       break;
   }
