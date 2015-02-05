@@ -489,6 +489,24 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
   switch (k[0])
   {
+    case 'a':
+      if (strcmp(k, "accuracy") == 0)
+      {
+        char* s = Tcl_GetString(val);
+        if (strcmp(s, "RANK") == 0)
+          opts->opts.accuracy = ADLB_TGT_ACCRY_RANK;
+        else if (strcmp(s, "NODE") == 0)
+          opts->opts.accuracy = ADLB_TGT_ACCRY_NODE;
+        else
+        {
+          Tcl_Obj* msg =
+              Tcl_ObjPrintf("invalid accuracy value: %s", s);
+          Tcl_Obj* msgs[1] = { msg };
+          return turbine_user_error(interp, 1, msgs);
+        }
+        return TCL_OK;
+      }
+      break;
     case 'n':
       if (strcmp(k, "name") == 0)
       {
