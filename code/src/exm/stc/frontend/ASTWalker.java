@@ -155,7 +155,6 @@ public class ASTWalker {
 
     GlobalContext context = new GlobalContext(mainFilePath,
                       Logging.getSTCLogger(), foreignFuncs);
-    LocalContext topLevelContext = LocalContext.topLevelContext(context);
 
     // Assume root module for now
     String mainModuleName =  FilenameUtils.getBaseName(originalMainFilePath);
@@ -170,28 +169,27 @@ public class ASTWalker {
      * 2. compile top-level code, so that any variables can be referenced in funcitons
      * 3. compile functions
      */
-    loadDefinitions(context, topLevelContext, mainModule, builtins);
+    loadDefinitions(context, mainModule, builtins);
 
-    compileTopLevel(context, topLevelContext, mainModule);
+    compileTopLevel(context, mainModule);
 
-    compileFunctions(context, topLevelContext);
+    compileFunctions(context);
   }
 
   private void loadDefinitions(GlobalContext context,
-      LocalContext topLevelContext, LocatedModule mainModule,
-      LocatedModule builtins) throws ModuleLoadException, UserException {
-    loadModule(context, topLevelContext, FrontendPass.DEFINITIONS, builtins);
-    loadModule(context, topLevelContext, FrontendPass.DEFINITIONS, mainModule);
+      LocatedModule mainModule, LocatedModule builtins) throws UserException {
+    loadModule(context, null, FrontendPass.DEFINITIONS, builtins);
+    loadModule(context, null, FrontendPass.DEFINITIONS, mainModule);
   }
 
-  private void compileTopLevel(GlobalContext context, LocalContext topLevelContext,
-      LocatedModule mainModule)
+  private void compileTopLevel(GlobalContext context, LocatedModule mainModule)
       throws UserException, UndefinedFunctionException, ModuleLoadException {
+
+    LocalContext topLevelContext = LocalContext.topLevelContext(context);
 
     Pair<ParsedModule, Boolean> loadedMainModule = modules.loadIfNeeded(context, mainModule);
     assert(!loadedMainModule.val2);
 
-    // TODO: need to run as separate pass over all modules!
     varAnalyzer.walkTopLevel(context, loadedMainModule.val1.ast,
                             moduleIterator(context));
 
@@ -213,17 +211,16 @@ public class ASTWalker {
     backend.endFunction();
   }
 
-  private void compileFunctions(GlobalContext context,
-      LocalContext topLevelContext) throws ModuleLoadException, UserException {
+  private void compileFunctions(GlobalContext context) throws UserException {
     for (LocatedModule loadedModule: modules.loadedModules()) {
-      loadModule(context, topLevelContext, FrontendPass.COMPILE_FUNCTIONS,
-                loadedModule);
+      loadModule(context, null, FrontendPass.COMPILE_FUNCTIONS, loadedModule);
     }
   }
 
   /**
    * Walk the statements in a file.
    * @param context
+   * @param topLevelContext required for some passes
    * @param module the parsed file to compile
    * @param pass controls whether we just load top-level defs, or whether
    *          we attempt to compile the module
@@ -260,7 +257,7 @@ public class ASTWalker {
   private void walkTopLevel(GlobalContext context, LocalContext topLevelContext, SwiftAST fileTree,
       FrontendPass pass) throws UserException {
     if (pass == FrontendPass.DEFINITIONS) {
-      walkTopLevelDefs(context, topLevelContext, fileTree);
+      walkTopLevelDefs(context, fileTree);
     } else if (pass == FrontendPass.COMPILE_TOPLEVEL){
       walkTopLevelCompileStatements(topLevelContext, fileTree);
     } else {
@@ -278,9 +275,8 @@ public class ASTWalker {
    * @throws DoubleDefineException
    * @throws UndefinedTypeException
    */
-  private void walkTopLevelDefs(GlobalContext context,
-       LocalContext topLevelContext, SwiftAST fileTree)
-      throws UserException, DoubleDefineException, UndefinedTypeException {
+  private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
+      throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
     syncFilePos(context, fileTree);
 
@@ -289,7 +285,7 @@ public class ASTWalker {
       syncFilePos(context, stmt);
       switch (type) {
       case ExMParser.IMPORT:
-        importModule(context, topLevelContext, stmt, FrontendPass.DEFINITIONS);
+        importModule(context, stmt, FrontendPass.DEFINITIONS);
         break;
 
       case ExMParser.DEFINE_BUILTIN_FUNCTION:
@@ -455,8 +451,7 @@ public class ASTWalker {
    * @throws UserException
    */
   private void importModule(GlobalContext context,
-      LocalContext topLevelContext, SwiftAST tree, FrontendPass pass)
-          throws UserException {
+      SwiftAST tree, FrontendPass pass) throws UserException {
     assert(tree.getType() == ExMParser.IMPORT);
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
@@ -465,22 +460,25 @@ public class ASTWalker {
     if (pass == FrontendPass.DEFINITIONS) {
       LocatedModule module = LocatedModule.fromModuleNameAST(context,
                                                     moduleID, false);
-      loadModule(context, topLevelContext, pass, module);
+      loadModule(context, null, pass, module);
     }
   }
 
   /**
    * Compile or load definitions for a module (depending on pass), if needed.
    * Avoids double-compiling or double loading a module.
-   * @param context
+   * @param globalCx
+   * @param topLevelCx required for top-level compile pass
    * @param pass
    * @param module
    * @throws ModuleLoadException
    * @throws UserException
    */
-  private void loadModule(GlobalContext context, LocalContext topLevelContext,
+  private void loadModule(GlobalContext globalCx, LocalContext topLevelCx,
       FrontendPass pass, LocatedModule module) throws UserException {
-    Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(context, module);
+    assert(!(pass == FrontendPass.COMPILE_TOPLEVEL && topLevelCx == null));
+
+    Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(globalCx, module);
     ParsedModule parsed = loaded.val1;
     boolean newlyLoaded = loaded.val2;
 
@@ -490,13 +488,13 @@ public class ASTWalker {
       if (newlyLoaded) {
         // Use our custom printTree
         if (LogHelper.isDebugEnabled()) {
-          LogHelper.debug(context, "Loading new module " +
+          LogHelper.debug(globalCx, "Loading new module " +
                                       module.canonicalName);
-          LogHelper.debug(context, parsed.ast.printTree());
+          LogHelper.debug(globalCx, parsed.ast.printTree());
         }
 
 
-        walkFile(context,topLevelContext, module, parsed, pass);
+        walkFile(globalCx, topLevelCx, module, parsed, pass);
       }
     } else {
       assert(pass == FrontendPass.COMPILE_FUNCTIONS ||
@@ -504,7 +502,7 @@ public class ASTWalker {
       // Should have been loaded at defs stage
       assert(!newlyLoaded);
 
-      walkFile(context, topLevelContext, module, parsed, pass);
+      walkFile(globalCx, topLevelCx, module, parsed, pass);
     }
   }
 
