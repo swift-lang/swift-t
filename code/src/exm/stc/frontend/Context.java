@@ -487,6 +487,9 @@ public abstract class Context {
   abstract public Var createStructFieldTmp(Var struct,
       Type fieldType, List<String> fieldPath, Alloc storage);
 
+  abstract public Var createStructFieldTmpVal(Var struct,
+      Type fieldType, List<String> fieldPath, Alloc storage);
+
   /** Get info about the enclosing function */
   abstract public FunctionContext getFunctionContext();
 

@@ -59,8 +59,6 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -680,25 +678,23 @@ public class ExprWalker {
    * @param context
    * @param loc
    * @param propVals
+   * @throws UserException
    */
   private void populateFromLocationStruct(Context context, Var loc,
-          TaskProps propVals) {
+          TaskProps propVals) throws UserException {
     assert(loc.type().assignableTo(Types.F_LOCATION));
-    Var locRank = new Var(Types.V_INT, loc + ":rank",
-        Alloc.LOCAL, DefType.LOCAL_COMPILER,
-        VarProvenance.exprTmp(context.getSourceLoc()));
 
-    Var locStrictness = new Var(Types.V_LOC_STRICTNESS,
-            loc + ":strictness",
-            Alloc.LOCAL, DefType.LOCAL_COMPILER,
-            VarProvenance.exprTmp(context.getSourceLoc()));
+    Var locRank = varCreator.createStructFieldTmpVal(context, loc,
+                  Types.V_INT, Collections.singletonList("rank"), Alloc.LOCAL);
 
-    Var locAccuracy = new Var(Types.V_LOC_ACCURACY,
-        loc + ":loc_accuracy", Alloc.LOCAL, DefType.LOCAL_COMPILER,
-        VarProvenance.exprTmp(context.getSourceLoc()));
+    Var locStrictness = varCreator.createStructFieldTmpVal(context, loc,
+        Types.V_LOC_STRICTNESS, Collections.singletonList("strictness"), Alloc.LOCAL);
+
+    Var locAccuracy = varCreator.createStructFieldTmpVal(context, loc,
+        Types.V_LOC_ACCURACY, Collections.singletonList("accuracy"), Alloc.LOCAL);
 
     /*
-     * Retrieve seperately from the strict.  In principle this could be
+     * Retrieve seperately from the struct.  In principle this could be
      * inefficient but in practice we hope the optimiser should be able
      * to resolve these.
      */

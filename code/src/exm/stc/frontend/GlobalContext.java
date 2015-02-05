@@ -260,6 +260,12 @@ public class GlobalContext extends Context {
   }
 
   @Override
+  public Var createStructFieldTmpVal(Var struct, Type fieldType,
+      List<String> fieldPath, Alloc storage) {
+    throw new UnsupportedOperationException("not yet implemented");
+  }
+
+  @Override
   public FunctionContext getFunctionContext() {
     return null;
   }
