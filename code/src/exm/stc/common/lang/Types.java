@@ -2865,7 +2865,11 @@ public class Types {
     return type.type().structureType() == StructureType.TUPLE;
   }
 
-  public static boolean isTypeVar(Typed type) {
+  public static boolean isSubType(Typed typed) {
+	  return typed.type() instanceof SubType;
+  }
+
+public static boolean isTypeVar(Typed type) {
     return type.type().structureType() == StructureType.TYPE_VARIABLE;
   }
 

@@ -118,8 +118,11 @@ public class Literals {
     return negate ? -1.0 * num : num;
   }
 
-  public static String extractStringLit(Context context, SwiftAST tree) throws InvalidSyntaxException {
-    assert(tree.getType() == ExMParser.STRING_LITERAL);
+  public static String extractStringLit(Context context, SwiftAST tree)
+      throws InvalidSyntaxException {
+    if (tree.getType() != ExMParser.STRING_LITERAL) {
+      return null;
+    }
     assert(tree.getChildCount() == 1);
     // E.g. "hello world\n" with plain escape codes and quotes
 

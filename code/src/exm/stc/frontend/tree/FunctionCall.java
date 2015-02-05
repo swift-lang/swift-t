@@ -43,6 +43,7 @@ public class FunctionCall {
   public static enum FunctionCallKind {
     REGULAR_FUNCTION,
     STRUCT_CONSTRUCTOR,
+    SUBTYPE_CONSTRUCTOR,
   }
 
   private final FunctionCallKind kind;
@@ -77,6 +78,14 @@ public class FunctionCall {
     return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, f, arglist.children(),
                       ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
   }
+
+  private static FunctionCall subtypeConstructor(String f, SwiftAST arglist,
+	      FunctionType ftype) {
+	    assert(ftype.getOutputs().size() == 1 &&
+	        Types.isSubType(ftype.getOutputs().get(0)));
+	    return new FunctionCall(FunctionCallKind.SUBTYPE_CONSTRUCTOR, f, arglist.children(),
+	                      ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
+	  }
 
   public FunctionCallKind kind() {
     return kind;
@@ -139,6 +148,8 @@ public class FunctionCall {
       assert(type != null);
       if (Types.isStruct(type)) {
         return structConstructorFromAST(context, annotations, f, arglist, type);
+      } else if (Types.isSubType(type)) {
+        return subtypeConstructorFromAST(context, annotations, f, arglist, type);
       }
     }
     throw new TypeMismatchException(f + " is not a function and "
@@ -205,6 +216,24 @@ public class FunctionCall {
     FunctionType constructorType = new FunctionType(constructorInputs, type.asList(), false);
 
     return structConstructor(func, arglist, constructorType);
+  }
+
+
+  private static FunctionCall subtypeConstructorFromAST(Context context,
+      List<SwiftAST> annotations, String func, SwiftAST arglist, Type type)
+          throws InvalidAnnotationException {
+    assert(Types.isSubType(type));
+
+    if (annotations.size() > 0) {
+      throw new InvalidAnnotationException(context, "Do not support "
+          + "annotations for subtype constructor (call to " + func + ")");
+    }
+
+    Type baseType = type.stripSubTypes();
+    FunctionType constructorType = new FunctionType(baseType.asList(),
+    											type.asList(), false);
+
+    return subtypeConstructor(func, arglist, constructorType);
   }
 
 }

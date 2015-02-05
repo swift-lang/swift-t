@@ -1,12 +1,10 @@
 import assert;
 
-
-// SKIP-THIS-TEST
 type superint int;
 
-main {
-    int x = 0;
-    superint y = 2;
-    trace(x, y);
-    assert(y == 2, "y == 2");
-}
+superint y;
+
+y = superint(2);
+
+trace(y);
+assertEqual(y, 2, "y");

@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -80,7 +81,16 @@ public class GlobalContext extends Context {
     this.foreignFuncs = foreignFuncs;
 
     // Add all predefined types into type name dict
-    types.putAll(Types.getBuiltInTypes());
+    Map<String, Type> builtInTypes = Types.getBuiltInTypes();
+    for (Entry<String, Type> type: builtInTypes.entrySet()) {
+      types.put(type.getKey(), type.getValue());
+      try {
+        addDef(type.getKey(), DefKind.TYPE);
+      } catch (DoubleDefineException e) {
+        throw new STCRuntimeError(e.getMessage());
+      }
+    }
+
     try {
       addExecContexts(ExecContext.builtinExecContexts());
     } catch (DoubleDefineException e) {
