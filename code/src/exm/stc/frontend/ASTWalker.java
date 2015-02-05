@@ -191,7 +191,6 @@ public class ASTWalker {
     Pair<ParsedModule, Boolean> loadedMainModule = modules.loadIfNeeded(context, mainModule);
     assert(!loadedMainModule.val2);
 
-    // TODO: need to run as separate pass over all modules!
     varAnalyzer.walkTopLevel(context, loadedMainModule.val1.ast,
                             moduleIterator(context));
 
