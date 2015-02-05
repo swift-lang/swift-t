@@ -141,7 +141,8 @@ public class VarRepr {
       return lookup;
     }
 
-    if (Types.isContainer(type) || Types.isContainerRef(type)) {
+    if (Types.isContainer(type) || Types.isContainerRef(type) ||
+        Types.isContainerLocal(type)) {
       Type frontendElemType = Types.containerElemType(type);
       Type backendElemType = backendTypeInternal(frontendElemType,
                                                  checkInstantiate);
@@ -155,7 +156,7 @@ public class VarRepr {
       if (!frontendDerefT.equals(backendDerefT)) {
         type = new RefType(backendDerefT, Types.isMutableRef(type));
       }
-    } else if (Types.isStruct(type)) {
+    } else if (Types.isStruct(type) || Types.isStructLocal(type)) {
       type = backendStructType((StructType)type, checkInstantiate);
     }
 
@@ -179,7 +180,8 @@ public class VarRepr {
     List<StructField> backendFields = new ArrayList<StructField>();
 
     for (StructField frontendF: frontend.fields()) {
-      Type fieldT = backendTypeInternal(frontendF.type(), checkInstantiate);
+      Type fieldT = backendTypeInternal(frontendF.type().getImplType(),
+                                        checkInstantiate);
       if (storeRefInStruct(fieldT)) {
         // Need to store as ref to separate data
         fieldT = new RefType(fieldT, true);

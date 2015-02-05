@@ -835,7 +835,8 @@ public class TurbineOp extends Instruction {
   public static Instruction structCopyIn(Var structVar,
       List<String> fields, Var fieldVar) {
     assert(Types.isStruct(structVar));
-    assert(Types.isStructField(structVar, fields, fieldVar));
+    assert(Types.isStructField(structVar, fields, fieldVar)) :
+        structVar + " " + fields + " = " + fieldVar;
     assert(Types.simpleCopySupported(fieldVar));
 
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
