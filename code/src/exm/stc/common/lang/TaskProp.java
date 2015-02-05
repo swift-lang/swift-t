@@ -23,6 +23,10 @@ public class TaskProp {
     public static final String LOC_STRICTNESS_SOFT = "SOFT";
     public static final Arg LOC_STRICTNESS_SOFT_ARG =
                 Arg.newString(LOC_STRICTNESS_SOFT);
+    public static final String LOC_STRICTNESS_DEFAULT =
+                LOC_STRICTNESS_HARD;
+    public static final Arg LOC_STRICTNESS_DEFAULT_ARG =
+                Arg.newString(LOC_STRICTNESS_DEFAULT);
 
     public static final String LOC_ACCURACY_RANK = "RANK";
     public static final Arg LOC_ACCURACY_RANK_ARG =
@@ -30,6 +34,10 @@ public class TaskProp {
     public static final String LOC_ACCURACY_NODE = "NODE";
     public static final Arg LOC_ACCURACY_NODE_ARG =
                 Arg.newString(LOC_ACCURACY_NODE);
+    public static final String LOC_ACCURACY_DEFAULT =
+                LOC_ACCURACY_RANK;
+    public static final Arg LOC_ACCURACY_DEFAULT_ARG =
+                Arg.newString(LOC_ACCURACY_DEFAULT);
 
     /**
      * Called to assert that bad types didn't make it past typechecking
@@ -67,9 +75,9 @@ public class TaskProp {
         case LOC_RANK:
           return Location.ANY_LOCATION;
         case LOC_STRICTNESS:
-          return LOC_STRICTNESS_HARD_ARG;
+          return LOC_STRICTNESS_DEFAULT_ARG;
         case LOC_ACCURACY:
-          return LOC_ACCURACY_RANK_ARG;
+          return LOC_ACCURACY_DEFAULT_ARG;
         default:
           throw new STCRuntimeError("Unknown default value for "
               + key);

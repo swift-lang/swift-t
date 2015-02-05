@@ -24,15 +24,12 @@ public class TclString extends Expression
 {
   public static final TclTree EMPTY = new TclString("", false);
   private final StringBuilder sb;
+  private final boolean escape;
 
   public TclString(String string, boolean escape)
   {
-    this.sb = new StringBuilder();
-    if (escape) {
-      this.sb.append(tclEscapeString(string));
-    } else {
-      this.sb.append(string);
-    }
+    this.sb = new StringBuilder(string);
+    this.escape = escape;
   }
 
   /**
@@ -78,17 +75,32 @@ public class TclString extends Expression
   @Override
   public void appendTo(StringBuilder outSb, ExprContext mode)
   {
+    CharSequence str;
+    if (this.escape) {
+      str = tclEscapeString(this.sb.toString());
+    } else {
+      str = this.sb;
+    }
+
     if (mode == ExprContext.TCL_CODE) {
       outSb.append('\"');
-      outSb.append(this.sb);
+      outSb.append(str);
       outSb.append('\"');
     } else if (mode == ExprContext.LIST_STRING) {
       throw new STCRuntimeError("Don't support string escaping for inclusion " +
       		                      "within string");
     } else {
       assert(mode == ExprContext.VALUE_STRING);
-      outSb.append(this.sb);
+      outSb.append(str);
     }
+  }
+
+  public boolean isEscaped() {
+    return escape;
+  }
+
+  public String value() {
+    return sb.toString();
   }
 
   @Override

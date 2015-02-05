@@ -1329,25 +1329,21 @@ public class TurbineGenerator implements CompilerBackend {
     }
 
     // Properties can be null
-    Arg priority = props.get(TaskPropKey.PRIORITY);
-    TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOC_RANK));
-    // TODO: get turbine property keys
-    Expression softTarget = argToExpr(
-        props.getWithDefault(TaskPropKey.LOC_STRICTNESS));
-    Expression parExpr = TclUtil.argToExpr(props.get(TaskPropKey.PARALLELISM),
-                                           true);
+    RuleProps ruleProps = buildRuleProps(props);
 
-    setPriority(priority);
+    setPriority(ruleProps.priority);
 
     Token tclFunction = new Token(tclf.pkg + "::" + tclf.symbol);
     List<Expression> funcArgs = new ArrayList<Expression>();
     funcArgs.add(oList);
     funcArgs.add(iList);
-    funcArgs.addAll(Turbine.ruleKeywordArgs(target, softTarget, parExpr));
+    funcArgs.addAll(Turbine.ruleKeywordArgs(ruleProps.targetRank,
+        ruleProps.targetStrictness, ruleProps.targetAccuracy,
+        ruleProps.parallelism));
     Command c = new Command(tclFunction, funcArgs);
     pointAdd(c);
 
-    clearPriority(priority);
+    clearPriority(ruleProps.priority);
   }
 
   @Override
@@ -1404,20 +1400,19 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private RuleProps buildRuleProps(TaskProps props) {
-    Expression priority = TclUtil.argToExpr(
-                    props.get(TaskPropKey.PRIORITY), true);
-    TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOC_RANK));
+    Expression priority = argToExpr(props.get(TaskPropKey.PRIORITY), true);
 
-    // TODO: get turbine property keys
-    Arg softTargetArg = props.getWithDefault(TaskPropKey.LOC_STRICTNESS);
-    assert(softTargetArg.type().assignableTo(Types.V_LOC_STRICTNESS));
-    Expression softTarget = argToExpr(softTargetArg);
+    TclTarget rank = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOC_RANK));
 
-    Expression parallelism = TclUtil.argToExpr(
-                      props.get(TaskPropKey.PARALLELISM), true);
+    Expression strictness = argToExpr(
+        props.getWithDefault(TaskPropKey.LOC_STRICTNESS));
 
-    RuleProps ruleProps = new RuleProps(target, softTarget, parallelism, priority);
-    return ruleProps;
+    Expression accuracy = argToExpr(
+        props.getWithDefault(TaskPropKey.LOC_ACCURACY));
+
+    Expression parallelism = argToExpr(props.get(TaskPropKey.PARALLELISM), true);
+
+    return new RuleProps(rank, strictness, accuracy, parallelism, priority);
   }
 
   @Override
@@ -1482,16 +1477,16 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private void clearPriority(Arg priority) {
+  private void clearPriority(Expression priority) {
     if (priority != null) {
       pointAdd(Turbine.resetPriority());
     }
   }
 
-  private void setPriority(Arg priority) {
+  private void setPriority(Expression priority) {
     if (priority != null) {
       logger.trace("priority: " + priority);
-      pointAdd(Turbine.setPriority(argToExpr(priority)));
+      pointAdd(Turbine.setPriority(priority));
     }
   }
 
@@ -3248,6 +3243,9 @@ public class TurbineGenerator implements CompilerBackend {
     return TclUtil.argToExpr(in);
   }
 
+  private Expression argToExpr(Arg in, boolean passThroughNull) {
+    return TclUtil.argToExpr(in, passThroughNull);
+  }
 
   private static String prefixVar(String varname) {
     return TclNamer.prefixVar(varname);

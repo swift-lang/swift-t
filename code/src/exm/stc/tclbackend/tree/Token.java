@@ -28,7 +28,7 @@ public class Token extends Expression
   {
     this.token = token;
   }
-  
+
   public Token(int target)
   {
     this.token = String.valueOf(target);
@@ -39,7 +39,10 @@ public class Token extends Expression
   {
     sb.append(token);
   }
-  
+
+  public String value() {
+    return this.token;
+  }
 
   @Override
   public boolean supportsStringList() {
