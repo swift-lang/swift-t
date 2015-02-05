@@ -30,11 +30,11 @@ type external void;
 
 // Location values
 // TODO: naming? convert to enum?
-global const LocationStrictness HARD = "HARD";
-global const LocationStrictness SOFT = "SOFT";
+LocationStrictness HARD = LocationStrictness("HARD");
+LocationStrictness SOFT = LocationStrictness("SOFT");
 
-global const LocationAccuracy RANK = "RANK";
-global const LocationStrictness NODE = "NODE";
+LocationAccuracy RANK = LocationAccuracy("RANK");
+LocationAccuracy NODE = LocationAccuracy("NODE");
 
 // Arithmetic
 @pure @minmax @builtin_op=POW_INT
