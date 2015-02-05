@@ -60,8 +60,18 @@ public class Settings {
   public static final String OPT_CONTROLFLOW_FUSION =
                                             "stc.opt.controlflow-fusion";
   public static final String OPT_FUNCTION_INLINE = "stc.opt.function-inline";
+  public static final String OPT_FULL_FUNCTION_INLINE = "stc.opt.full-function-inline";
   public static final String OPT_FUNCTION_INLINE_THRESHOLD =
                               "stc.opt.function-inline-threshold";
+  public static final String OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD =
+                              "stc.opt.function-always-inline-threshold";
+
+  public static final int FUNCTION_INLINE_THRESHOLD_DEFAULT = 50;
+  public static final int FUNCTION_INLINE_THRESHOLD_FULL = 500;
+
+  // Try to inline very short functions, e.g. wrappers
+  public static final int FUNCTION_ALWAYS_INLINE_THRESHOLD_DEFAULT = 5;
+
   public static final String OPT_FUNCTION_SIGNATURE =
                               "stc.opt.function-signature";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
@@ -125,6 +135,7 @@ public class Settings {
   /** Record assumption that we need to pass waited-on vars into block */
   public static final String MUST_PASS_WAIT_VARS = "stc.must_pass_wait_vars";
 
+  private static final Properties defaults;
   private static final Properties properties;
 
   private static final List<String> modulePath = new ArrayList<String>();
@@ -134,7 +145,7 @@ public class Settings {
             new ArrayList<Pair<String, String>>();
 
   static {
-    Properties defaults = new Properties();
+    defaults = new Properties();
     // Set defaults here
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
@@ -171,9 +182,13 @@ public class Settings {
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
-    defaults.setProperty(OPT_FUNCTION_INLINE, "false");
+    defaults.setProperty(OPT_FUNCTION_INLINE, "true");
+    defaults.setProperty(OPT_FULL_FUNCTION_INLINE, "false");
+    defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD,
+               Long.toString(FUNCTION_INLINE_THRESHOLD_DEFAULT));
+    defaults.setProperty(OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD,
+              Long.toString(FUNCTION_ALWAYS_INLINE_THRESHOLD_DEFAULT));
     defaults.setProperty(OPT_FUNCTION_SIGNATURE, "true");
-    defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_REORDER_INSTS, "false");
     defaults.setProperty(OPT_ARRAY_BUILD, "true");
@@ -309,11 +324,9 @@ public class Settings {
     getBoolean(OPT_WAIT_COALESCE);
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
-    getBoolean(OPT_FUNCTION_INLINE);
     getBoolean(OPT_FUNCTION_SIGNATURE);
     getBoolean(OPT_HOIST);
     getBoolean(OPT_REORDER_INSTS);
-    getLong(OPT_FUNCTION_INLINE_THRESHOLD);
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(OPT_EXPAND_LOOPS);
     getBoolean(OPT_FULL_UNROLL);
@@ -342,7 +355,24 @@ public class Settings {
 
     getLong(OPT_MAX_ITERATIONS);
 
+    initInlineProperties();
+
     checkOneOf(DEBUG_LEVEL, Arrays.asList("off", "comments", "debugger"));
+  }
+
+  private static void initInlineProperties() throws InvalidOptionException {
+    // Enabling full inlining should modify other settings
+    boolean fullInline = getBoolean(OPT_FULL_FUNCTION_INLINE);
+
+    if (fullInline) {
+      defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD,
+                Long.toString(FUNCTION_INLINE_THRESHOLD_FULL));
+      properties.setProperty(OPT_FUNCTION_INLINE, "true");
+    }
+
+    getBoolean(OPT_FUNCTION_INLINE);
+    getLong(OPT_FUNCTION_INLINE_THRESHOLD);
+    getLong(OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD);
   }
 
   public static String get(String key)

@@ -80,9 +80,16 @@ public class FunctionInline implements OptimizerPass {
    */
   private final long inlineThreshold;
 
+  /**
+   * Always inline functions with <# instructions in function> < this
+   */
+  private final long alwaysInlineThreshold;
+
   public FunctionInline() {
     try {
       inlineThreshold = Settings.getLong(Settings.OPT_FUNCTION_INLINE_THRESHOLD);
+      alwaysInlineThreshold =
+          Settings.getLong(Settings.OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD);
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
     }
@@ -185,7 +192,8 @@ public class FunctionInline implements OptimizerPass {
         // Always inline functions that were only called once
         alwaysInline.add(f.name());
         inlineCandidates.putAll(f.name(), callLocs);
-      } else if (callLocs.size() * functionSize  <= inlineThreshold) {
+      } else if (functionSize <= alwaysInlineThreshold &&
+          callLocs.size() * functionSize  <= inlineThreshold) {
         inlineCandidates.putAll(f.name(), callLocs);
         if (!functionCalls.containsKey(f.name())) {
           // Doesn't call other functions, safe to inline always

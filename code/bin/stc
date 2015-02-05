@@ -29,8 +29,10 @@ O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "algebra"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
 O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting"
-         "function-signature" "array-build" "loop-simplify")
-O3_OPTS=("pipeline" "function-inline" "reorder-insts" "expand-loops" "full-unroll")
+         "function-signature" "array-build" "loop-simplify"
+         "function-inline")
+O3_OPTS=("pipeline" "reorder-insts" "expand-loops" "full-unroll"
+         "full-function-inline")
 EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
@@ -85,6 +87,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         function-inline) echo "stc.opt.function-inline"
+                    return 0;
+                    ;;
+        full-function-inline) echo "stc.opt.function-inline"
                     return 0;
                     ;;
         function-signature) echo "stc.opt.function-signature"
