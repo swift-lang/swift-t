@@ -19,7 +19,7 @@ main {
   foreach i in [1:100] {
     L1 = random_worker();
     act1 = test_fn(":)", L1);
-    exp1 = "Hello from " + fromint(L1) + ": :)";
+    exp1 = "Hello from " + L1.rank + ": :)";
     trace("\"" + act1 + "\"") =>
     assertEqual(act1, exp1, "test 1");
   }
