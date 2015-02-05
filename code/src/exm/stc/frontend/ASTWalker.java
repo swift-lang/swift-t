@@ -1996,14 +1996,20 @@ public class ASTWalker {
     TaskProps props = new TaskProps();
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
-    Var loc = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
+    Var locRank = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "loc_rank",
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
-    backendInArgs.add(loc);
-    Var softLoc = new Var(Types.V_BOOL, Var.VALUEOF_VAR_PREFIX + "soft_location",
-        Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
-    backendInArgs.add(softLoc);
-    props.put(TaskPropKey.LOCATION, loc.asArg());
-    props.put(TaskPropKey.SOFT_LOCATION, softLoc.asArg());
+    backendInArgs.add(locRank);
+    Var locStrictness = new Var(Types.V_LOC_STRICTNESS,
+        Var.VALUEOF_VAR_PREFIX + "loc_strictness", Alloc.LOCAL, DefType.INARG,
+        VarProvenance.exprTmp(context.getSourceLoc()));
+    backendInArgs.add(locStrictness);
+    Var locAccuracy = new Var(Types.V_LOC_ACCURACY,
+        Var.VALUEOF_VAR_PREFIX + "loc_accuracy", Alloc.LOCAL, DefType.INARG,
+        VarProvenance.exprTmp(context.getSourceLoc()));
+    backendInArgs.add(locAccuracy);
+    props.put(TaskPropKey.LOC_RANK, locRank.asArg());
+    props.put(TaskPropKey.LOC_STRICTNESS, locStrictness.asArg());
+    props.put(TaskPropKey.LOC_ACCURACY, locAccuracy.asArg());
 
 
     syncFilePos(context, tree);

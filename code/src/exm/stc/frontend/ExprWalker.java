@@ -646,7 +646,9 @@ public class ExprWalker {
       }
 
       if (f.softLocation()) {
-        propVals.put(TaskPropKey.SOFT_LOCATION, Arg.TRUE);
+        // Override strictness if @soft_location was used
+        propVals.put(TaskPropKey.LOC_STRICTNESS,
+                     TaskProps.LOC_STRICTNESS_SOFT_ARG);
       }
     }
 
@@ -675,7 +677,7 @@ public class ExprWalker {
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
-    } else if (ann == TaskPropKey.LOCATION) {
+    } else if (ann == TaskPropKey.LOC_RANK) {
       if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
         throw new UserException(context, "Tried to call non-targetable"
             + " function " + f.function() + " with target");
@@ -1394,10 +1396,14 @@ public class ExprWalker {
     }
     if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
-      Arg location = props.getWithDefault(TaskPropKey.LOCATION);
+      Arg location = props.getWithDefault(TaskPropKey.LOC_RANK);
       realInputs.add(VarRepr.backendArg(location));
-      Arg softLocation = props.getWithDefault(TaskPropKey.SOFT_LOCATION);
-      realInputs.add(VarRepr.backendArg(softLocation));
+
+      Arg locStrictness = props.getWithDefault(TaskPropKey.LOC_STRICTNESS);
+      realInputs.add(VarRepr.backendArg(locStrictness));
+
+      Arg locAccuracy = props.getWithDefault(TaskPropKey.LOC_ACCURACY);
+      realInputs.add(VarRepr.backendArg(locAccuracy));
     }
 
     // Other code always creates sync wrapper

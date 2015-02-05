@@ -174,9 +174,9 @@ public class FunctionCall {
       } else if (annotName.equals(Annotations.FNCALL_PRIO)) {
         putAnnotationNoDupes(context, annotations, TaskPropKey.PRIORITY, expr);
       } else if (annotName.equals(Annotations.FNCALL_LOCATION)) {
-        putAnnotationNoDupes(context, annotations, TaskPropKey.LOCATION, expr);
+        putAnnotationNoDupes(context, annotations, TaskPropKey.LOC_RANK, expr);
       } else if (annotName.equals(Annotations.FNCALL_SOFT_LOCATION)) {
-        putAnnotationNoDupes(context, annotations, TaskPropKey.LOCATION, expr);
+        putAnnotationNoDupes(context, annotations, TaskPropKey.LOC_RANK, expr);
         softLocation = true;
       } else {
         throw new InvalidAnnotationException(context, "function call",

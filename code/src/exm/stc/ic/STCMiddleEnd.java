@@ -1028,16 +1028,22 @@ public class STCMiddleEnd {
 
     if (isTargetable) {
       // declare compiler arg for target
-      Var location = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
+      Var locRank = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "loc_rank",
           Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
-      realInArgs.add(location);
-      props.put(TaskPropKey.LOCATION, location.asArg());
+      realInArgs.add(locRank);
+      props.put(TaskPropKey.LOC_RANK, locRank.asArg());
 
-      Var softLocation = new Var(Types.V_BOOL,
-          Var.VALUEOF_VAR_PREFIX + "soft_location",
+      Var locStrictness = new Var(Types.V_LOC_STRICTNESS,
+          Var.VALUEOF_VAR_PREFIX + "loc_strictness",
           Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
-      realInArgs.add(softLocation);
-      props.put(TaskPropKey.SOFT_LOCATION, softLocation.asArg());
+      realInArgs.add(locStrictness);
+      props.put(TaskPropKey.LOC_STRICTNESS, locStrictness.asArg());
+
+      Var locAccuracy = new Var(Types.V_LOC_ACCURACY,
+          Var.VALUEOF_VAR_PREFIX + "loc_accuracy",
+          Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
+      realInArgs.add(locAccuracy);
+      props.put(TaskPropKey.LOC_ACCURACY, locAccuracy.asArg());
     }
 
     Function fn = new Function(wrapperName, realInArgs, outArgs,

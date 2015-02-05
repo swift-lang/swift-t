@@ -372,11 +372,10 @@ public class WaitCoalescer implements OptimizerPass {
       logger.trace("compatibleLocPar(" + location1 + " " + location2 +
                     " " + par1 + " " + par2 + ")");
     }
-    boolean targeted1 = !Location.isAnyLocation(location1.location, true);
-    boolean targeted2 = !Location.isAnyLocation(location2.location, true);
+    boolean targeted1 = !Location.isAnyLocation(location1.rank, true);
+    boolean targeted2 = !Location.isAnyLocation(location2.rank, true);
     if (targeted1 && targeted2) {
-      if (!location1.location.equals(location2.location) ||
-          !location1.softTarget.equals(location2.softTarget)) {
+      if (!location1.identicalTarget(location2)) {
         return false;
       }
     } else if (targeted1 || targeted2) {
