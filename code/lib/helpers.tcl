@@ -137,3 +137,21 @@ proc draw { L } {
 proc cat { args } {
     return [ join $args " " ]
 }
+
+namespace eval turbine {
+  
+  # Create a dictionary with integer keys numbered from start with contents
+  # of list
+  proc dict_from_list { l {start_index 0}} {
+    set d [ dict create ]
+    set i $start_index
+
+    foreach x $l {
+      dict append d $i $x
+      incr i
+    }
+
+    return $d
+  }
+
+}

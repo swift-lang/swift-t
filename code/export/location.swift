@@ -3,16 +3,31 @@
  */
 
 @pure
-(location loc) location_from_rank(int rank) {
+(location loc) locationFromRank(int rank) {
   loc = location(rank, HARD, RANK);
 }
 
-(location loc) random_worker() {
-  loc = location_from_rank(random_worker_rank());
+/*
+  deprecated: old naming scheme
+ */
+@pure
+(location loc) location_from_rank(int rank) {
+  loc = locationFromRank(rank);
 }
 
-(int rank) random_worker_rank() "turbine" "0.1.1" [
-   "set <<loc>> [ ::turbine::random_worker ]"
+(location loc) randomWorker() {
+  loc = locationFromRank(randomWorkerRank());
+}
+
+/*
+  deprecated: old naming scheme
+ */
+(location loc) random_worker() {
+  loc = randomWorker();
+}
+
+(int rank) randomWorkerRank() "turbine" "0.1.1" [
+   "set <<rank>> [ ::turbine::random_worker ]"
 ];
 
 /*
@@ -22,14 +37,47 @@
   loc = random_worker();
 }
 
-// TODO: convert
-(location rank) hostmap_one(string name) "turbine" "0.0.2" [
+(location loc) hostmapOne(string name) {
+  loc = locationFromRank(hostmapOneRank(name));
+}
+
+/*
+  deprecated: old naming scheme
+ */
+(location loc) hostmap_one(string name) {
+  loc = hostmapOne(name);
+}
+
+(int rank) hostmapOneRank(string name) "turbine" "0.0.2" [
     "set <<rank>> [ draw [ adlb::hostmap_lookup <<name>> ] ]"
 ];
 
-// TODO: convert
-(location rank) hostmap_one_worker(string name) "turbine" "0.0.2" [
+(location loc) hostmapOneWorker(string name) {
+  loc = locationFromRank(hostmapOneWorkerRank(name));
+}
+
+/*
+  deprecated: old naming scheme
+ */
+(location loc) hostmap_one_worker(string name) {
+  loc = hostmapOneWorker(name);
+}
+
+(int rank) hostmapOneWorkerRank(string name) "turbine" "0.0.2" [
     "set <<rank>> [ ::turbine::random_rank WORKER [ adlb::hostmap_lookup <<name>> ] ]"
 ];
 
-(string results[]) hostmap_list() "turbine" "0.4.0" "hostmap_list";
+/*
+  List available hosts
+  Pure because it will be same throughout the run
+ */
+(string results[]) hostmapList() "turbine" "0.7.0" [
+  "set <<results>> [ ::turbine::hostmap_dict ]"
+];
+
+/*
+  deprecated: old naming scheme
+ */
+(string results[]) hostmap_list() {
+  results = hostmapList();
+}

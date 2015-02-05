@@ -67,18 +67,10 @@ namespace eval turbine {
     return [ expr {$rank >= [ turbine_workers ]} ]
   }
 
-  proc hostmap_list { results input } {
-
+  proc hostmap_list { } {
       # There is no input
-
       set names [ adlb::hostmap_list ]
 
-      set i 0
-      foreach name $names {
-          literal t string $name
-          container_insert $results $i $t ref
-      }
-      # close container
-      write_refcount_decr $results
+      return [ dict_from_list $names ]
   }
 }
