@@ -382,12 +382,7 @@ report_result()
   local OPT_LEVEL=$2
   local EXIT_CODE=$3
 
-  if [ ${#STC_OPT_LEVELS} -eq 1 ]
-  then
-    local TEST_DESC=${TEST_PATH}
-  else
-    local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
-  fi
+  local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
 
   if (( EXIT_CODE == TEST_OK ))
   then
@@ -520,13 +515,9 @@ do
     fi
 
 
-    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
-    if [ ${#STC_OPT_LEVELS} -gt 1 ]
-    then
-      # Disambiguate test output if running multiple opt levels at same
-      # time so it's not overwritten
-      TEST_OUT_PATH+=".O${OPT_LEVEL}"
-    fi
+    # Disambiguate test output of different opt levels
+    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
+    
     TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err

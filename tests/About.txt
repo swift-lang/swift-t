@@ -35,6 +35,13 @@ Available arguments:
 +-P <PATTERN>+:: Skip tests with name containing string PATTERN
 +-V+ Verbose: turn on +set -x+ to debug +run-tests.zsh+ itself
 
+Environment variables:
+
+Environment variables are generally passed to subprocesses: stc, turbine, etc.
+Some useful ones are:
+
++STC_LOG_TRACE+:: if set to true, produce trace-level log output from STC (default is debug-level
+
 == Supporting files
 
 Supporting files are optional. 
