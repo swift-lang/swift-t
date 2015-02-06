@@ -43,12 +43,22 @@
          manifest="META-INF/MANIFEST.MF"/>
   </target>
 
-  <!-- We compile the packages separately
+  <!-- We compile STC java and antlr-generated code separately
        This is so we can get all warnings on our code but suppress
        warnings on ANTLR-generated code that is outside our control
   -->
-  <target name="compile"
-          depends="compile.antlr,compile.ui,compile.gen,compile.ast,compile.ic,compile.frontend">
+  <target name="compile" depends="compile.antlr">
+    <javac srcdir="src"
+           destdir="${build.dir}"
+           excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**,exm/stc/tests/**"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${classpath}">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
   </target>
 
   <!-- Check if the ANTLR code is up-to-date -->
@@ -99,98 +109,6 @@
     <!-- Delete all compiled java classes to avoid mismatch with token number
          constants in compiled .class files-->
     <antcall target="clean.java" />
-  </target>
-
-  <!-- Compile the AST sources -->
-  <target name="compile.ast"
-          depends="compile.common,compile.antlr">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/ast/*.java,exm/stc/ast/**/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}">
-      <compilerarg value="-Xlint"/>
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-  <!-- Compile the frontend sources -->
-  <target name="compile.frontend"
-          depends="compile.common,compile.antlr,compile.ast">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/frontend/*.java,exm/stc/frontend/**/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}">
-      <compilerarg value="-Xlint"/>
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-
-  <!-- Compile the IC sources -->
-  <target name="compile.ic"
-          depends="compile.frontend,compile.gen,compile.common">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/ic/*.java,exm/stc/ic/**/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}">
-      <compilerarg value="-Xlint"/>
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-
-  <!-- Compile the UI -->
-  <target name="compile.ui"
-          depends="compile.antlr,compile.common">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/ui/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}">
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-  <!-- Compile the common utilities-->
-  <target name="compile.common">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/common/*.java,exm/stc/common/**/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}">
-    </javac>
-  </target>
-
-  <!-- Compile the code generator -->
-  <target name="compile.gen"
-          depends="compile.common">
-    <javac srcdir="src"
-           destdir="${build.dir}"
-           includes="exm/stc/tclbackend/*.java,exm/stc/tclbackend/**/*.java, exm/stc/swigcbackend/*.java, exm/stc/swigcbackend/**/*.java"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath=".:${antlr.jar}:${log4j.jar}">
-    </javac>
   </target>
 
   <target name="javadoc">
