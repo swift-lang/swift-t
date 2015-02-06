@@ -1049,11 +1049,18 @@ public class Congruences implements AliasFinder {
                throws OptUnsafeError {
     // TODO: need to refine this merge to compensate for sets being
     //      named differently in child
+
+    /*
+     * Variables are closed at first statement after current one (e.g. if a
+     * variable is closed on both branches of an if statement, then it is
+     * closed at the first statement after if statement, not at the if statement)
+     */
+    int closedIndex = stmtIndex + 1;
     for (Var closed: unified.closed) {
-      markClosed(closed, stmtIndex, false);
+      markClosed(closed, closedIndex, false);
     }
     for (Var closed: unified.recursivelyClosed) {
-      markClosed(closed, stmtIndex, true);
+      markClosed(closed, closedIndex, true);
     }
 
     update(consts, errContext, unified.availableVals, null, stmtIndex);
