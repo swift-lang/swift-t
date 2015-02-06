@@ -2543,11 +2543,19 @@ public class ASTWalker {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
             defnTree.getType() == ExMParser.TYPEDEF );
     int children = defnTree.getChildCount();
-    assert(children == 2);
+    assert(children == 1 || children == 2);
     String typeName = defnTree.child(0).getText();
-    SwiftAST baseTypeT = defnTree.child(1);
 
-    Type baseType = TypeTree.extractStandaloneType(context, baseTypeT);
+    Type baseType;
+    if (children == 2) {
+      SwiftAST baseTypeT = defnTree.child(1);
+      baseType = TypeTree.extractStandaloneType(context, baseTypeT);
+    } else {
+      LogHelper.warn(context, "type definition with implied file is deprecated."
+                        + "Suggested replacement is: type " + typeName + " file;");
+      baseType = Types.F_FILE;
+    }
+
 
     Type newType;
     if (aliasOnly) {
