@@ -25,14 +25,22 @@
             value="lib/commons-io-2.4.jar"/>
   <property name="commons-lang.jar"
             value="lib/commons-lang3-3.1.jar"/>
-            
+  <property name="junit4.jar"
+            value="lib/junit-4.12.jar"/>
+  <!-- Needed for JUnit -->
+  <property name="hamcrest.jar"
+            value="lib/hamcrest-core-1.3.jar"/>
+          
   <property name="grammar"
             value="src/exm/stc/ast/ExM.g"/>
   <property name="classpath"
-            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}"/>
+            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${junit4.jar}:${hamcrest.jar}"/>
   <property name="build.dir"
             value="classes"/>
   <target name="build.all" depends="jar" />
+
+  <property name="test.out.dir"
+            value="test-output"/>
 
   <target name="jar"
           depends="compile">
@@ -50,7 +58,7 @@
   <target name="compile" depends="compile.antlr">
     <javac srcdir="src"
            destdir="${build.dir}"
-           excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**,exm/stc/tests/**"
+           excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**"
            listfiles="${lf}"
            debug="true"
            debuglevel="source,lines,vars"
@@ -147,6 +155,27 @@
         <filter token="TURBINE_HOME" value="${turbine.home}"/>
       </filterset>
     </copy>
+  </target>
+
+  <target name="test" depends="jar">
+    <mkdir dir="${test.out.dir}"/>
+    <junit printsummary="yes" haltonfailure="yes">
+      <classpath>
+        <pathelement location="${stc.jar}"/>
+        <pathelement path="${classpath}"/>
+      </classpath>
+
+      <batchtest todir="${test.out.dir}" fork="true">
+        <resources>
+          <zipfileset src="${stc.jar}" includes="exm/stc/tests/**/*.class"/>
+        </resources>
+
+        <formatter type="plain"/>
+        <formatter type="xml"/>
+
+      </batchtest>
+
+    </junit>
   </target>
 
   <!-- Install: User must have set dist.dir -->
