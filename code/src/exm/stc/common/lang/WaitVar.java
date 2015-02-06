@@ -131,5 +131,9 @@ public class WaitVar implements Comparable<WaitVar> {
     return Integer.rotateLeft(var.hashCode(), 1) & (explicit ? 0 : 1);
   }
 
+  public List<WaitVar> asList() {
+    return Collections.singletonList(this);
+  }
+
   public static final List<WaitVar> NONE = Collections.emptyList();
 }
