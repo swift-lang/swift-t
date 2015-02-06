@@ -301,6 +301,8 @@ command_args_more:
 command_arg:
         variable
     |   literal
+    |   array_constructor
+    |   array_kv_constructor
     |   LPAREN expr RPAREN -> expr
     |   ATSIGN var_name -> ^( APP_FILENAME var_name )
     ;
