@@ -3,7 +3,6 @@ package exm.stc.ic.refcount;
 import java.util.Map.Entry;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
@@ -39,43 +38,23 @@ public class RCUtil {
   }
 
   static boolean mergeEnabled() {
-    try {
-      return Settings.getBoolean(Settings.OPT_MERGE_REFCOUNTS);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    return Settings.getBooleanUnchecked(Settings.OPT_MERGE_REFCOUNTS);
   }
 
   static boolean cancelEnabled() {
-    try {
-      return Settings.getBoolean(Settings.OPT_CANCEL_REFCOUNTS);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    return Settings.getBooleanUnchecked(Settings.OPT_CANCEL_REFCOUNTS);
   }
 
   static boolean piggybackEnabled() {
-    try {
-      return Settings.getBoolean(Settings.OPT_PIGGYBACK_REFCOUNTS);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    return Settings.getBooleanUnchecked(Settings.OPT_PIGGYBACK_REFCOUNTS);
   }
 
   static boolean batchEnabled() {
-    try {
-      return Settings.getBoolean(Settings.OPT_BATCH_REFCOUNTS);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    return Settings.getBooleanUnchecked(Settings.OPT_BATCH_REFCOUNTS);
   }
 
   static boolean hoistEnabled() {
-    try {
-      return Settings.getBoolean(Settings.OPT_HOIST_REFCOUNTS);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    return Settings.getBooleanUnchecked(Settings.OPT_HOIST_REFCOUNTS);
   }
 
   /**

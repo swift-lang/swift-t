@@ -267,7 +267,7 @@ public class LValue {
       return null;
     }
 
-    if (!Settings.getBoolean(Settings.AUTO_DECLARE)) {
+    if (!Settings.getBooleanUnchecked(Settings.AUTO_DECLARE)) {
       throw UndefinedVarError.fromName(context, this.varName);
     }
 

@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
@@ -1337,18 +1336,14 @@ class Turbine {
    * @return
    */
   public static TclTree incrRef(Expression var, Expression change) {
-    try {
-      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-        if (change == null) {
-          return new Command(REFCOUNT_INCR, var);
-        } else {
-          return new Command(REFCOUNT_INCR, var, change);
-        }
+    if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+      if (change == null) {
+        return new Command(REFCOUNT_INCR, var);
       } else {
-        return new Token("");
+        return new Command(REFCOUNT_INCR, var, change);
       }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    } else {
+      return new Token("");
     }
   }
 
@@ -1360,18 +1355,14 @@ class Turbine {
    * @return
    */
   public static TclTree decrRef(Expression var, Expression change) {
-    try {
-      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-        if (change == null) {
-          return new Command(REFCOUNT_DECR, var);
-        } else {
-          return new Command(REFCOUNT_DECR, var, change);
-        }
+    if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+      if (change == null) {
+        return new Command(REFCOUNT_DECR, var);
       } else {
-        return new Token("");
+        return new Command(REFCOUNT_DECR, var, change);
       }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    } else {
+      return new Token("");
     }
   }
 
@@ -1391,34 +1382,26 @@ class Turbine {
    * @return
    */
   public static TclTree incrFileRef(Expression var, Expression change) {
-    try {
-      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-        if (change == null) {
-          return new Command(FILE_REFCOUNT_INCR, var);
-        } else {
-          return new Command(FILE_REFCOUNT_INCR, var, change);
-        }
+    if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+      if (change == null) {
+        return new Command(FILE_REFCOUNT_INCR, var);
       } else {
-        return new Token("");
+        return new Command(FILE_REFCOUNT_INCR, var, change);
       }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    } else {
+      return new Token("");
     }
   }
 
   public static TclTree decrFileRef(Expression var, Expression change) {
-    try {
-      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-        if (change == null) {
-          return new Command(FILE_REFCOUNT_DECR, var);
-        } else {
-          return new Command(FILE_REFCOUNT_DECR, var, change);
-        }
+    if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+      if (change == null) {
+        return new Command(FILE_REFCOUNT_DECR, var);
       } else {
-        return new Token("");
+        return new Command(FILE_REFCOUNT_DECR, var, change);
       }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    } else {
+      return new Token("");
     }
   }
 

@@ -433,6 +433,20 @@ public class Settings {
     }
   }
 
+  /**
+   * Return long int, raise runtime exception on error
+   * @param key
+   * @return
+   */
+  public static long getLongUnchecked(String key)
+      throws STCRuntimeError {
+    try {
+      return getLong(key);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError("unexpected error", e);
+    }
+  }
+
   public static int getInt(String key) throws InvalidOptionException {
     String strVal = properties.getProperty(key);
     if (strVal == null) {
@@ -443,6 +457,20 @@ public class Settings {
     } catch (NumberFormatException e) {
       throw new InvalidOptionException("Invalid integral value for option " +
       key + ": " + strVal);
+    }
+  }
+
+  /**
+   * Return int, raise runtime exception on error
+   * @param key
+   * @return
+   */
+  public static int getIntUnchecked(String key)
+      throws STCRuntimeError {
+    try {
+      return getInt(key);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError("unexpected error", e);
     }
   }
 
@@ -462,6 +490,20 @@ public class Settings {
       throw new InvalidOptionException(
           "option string for " + key + " must be true or false, but was '" +
               strVal + "'");
+    }
+  }
+
+  /**
+   * Return boolean, raise runtime exception on error
+   * @param key
+   * @return
+   */
+  public static boolean getBooleanUnchecked(String key)
+      throws STCRuntimeError {
+    try {
+      return getBoolean(key);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError("unexpected error", e);
     }
   }
 }

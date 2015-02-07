@@ -40,7 +40,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -361,31 +360,26 @@ public class TurbineGenerator implements CompilerBackend {
     tree.add(new Command("turbine::init $servers \"Swift\""));
     tree.add(checkWorkTypes());
 
-    try {
-      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-        tree.add(Turbine.enableReferenceCounting());
-      }
-
-      // Initialize struct types
-      tree.append(structTypeDeclarations());
-
-      // Insert code to check versions
-      tree.add(Turbine.checkConstants());
-
-      tree.append(compileTimeArgs());
-
-      tree.add(initGlobalVars());
-
-      // Global vars need to be allocated debug symbols
-      tree.append(debugSymbolInit());
-
-      tree.add(new Command("turbine::start " + ENTRY_FUNCTION_NAME +
-                                          " " + CONSTINIT_FUNCTION_NAME));
-      tree.add(new Command("turbine::finalize"));
-
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+      tree.add(Turbine.enableReferenceCounting());
     }
+
+    // Initialize struct types
+    tree.append(structTypeDeclarations());
+
+    // Insert code to check versions
+    tree.add(Turbine.checkConstants());
+
+    tree.append(compileTimeArgs());
+
+    tree.add(initGlobalVars());
+
+    // Global vars need to be allocated debug symbols
+    tree.append(debugSymbolInit());
+
+    tree.add(new Command("turbine::start " + ENTRY_FUNCTION_NAME +
+                                        " " + CONSTINIT_FUNCTION_NAME));
+    tree.add(new Command("turbine::finalize"));
   }
 
   /**
@@ -586,13 +580,9 @@ public class TurbineGenerator implements CompilerBackend {
         continue;
       }
 
-      try {
-        if (!Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
-          // Have initial* set to regular amount to avoid bugs with reference counting
-          initReaders = Arg.ONE;
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
+      if (!Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
+        // Have initial* set to regular amount to avoid bugs with reference counting
+        initReaders = Arg.ONE;
       }
 
       if (Types.isFile(var)) {

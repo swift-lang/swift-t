@@ -16,7 +16,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions;
@@ -146,15 +145,10 @@ class CongruentSets {
       this.constShareEnabled = parent.constShareEnabled;
       this.constFoldEnabled = parent.constFoldEnabled;
     } else {
-      try {
-        this.constShareEnabled = Settings.getBoolean(
+      this.constShareEnabled = Settings.getBooleanUnchecked(
                                         Settings.OPT_SHARED_CONSTANTS);
-        this.constFoldEnabled = Settings.getBoolean(
+      this.constFoldEnabled = Settings.getBooleanUnchecked(
                                         Settings.OPT_CONSTANT_FOLD);
-      } catch (InvalidOptionException e) {
-        e.printStackTrace();
-        throw new STCRuntimeError(e.getMessage());
-      }
     }
   }
 

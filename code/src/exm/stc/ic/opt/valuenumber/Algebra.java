@@ -9,8 +9,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Var;
@@ -21,7 +19,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.tree.Opcode;
 
 public class Algebra {
-  
+
 
   /**
    * @param state
@@ -39,9 +37,9 @@ public class Algebra {
     }
     return Collections.emptyList();
   }
-  
+
   /**
-   * 
+   *
    * Do basic algebra, useful for adjacent array indices
    * TODO: could be more sophisticated, e.g. build operator tree
    *     and reduce to canonical form
@@ -56,36 +54,32 @@ public class Algebra {
    */
   private static List<ArgCV> tryAlgebra(Congruences state,
           Opcode op, BuiltinOpcode subop, Arg in1, Arg in2) {
-    try {
-      if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
-        return Collections.emptyList();
-      }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
+    if (!Settings.getBooleanUnchecked(Settings.OPT_ALGEBRA)) {
+      return Collections.emptyList();
     }
-    
+
     Logger logger = Logging.getSTCLogger();
     if (logger.isTraceEnabled()) {
       logger.trace("tryAlgebra " + op + " " + subop + " "
           + in1 + " " + in2);
     }
-    
-    Pair<Var, Long> args = convertToCanonicalAdd(subop, in1, in2); 
+
+    Pair<Var, Long> args = convertToCanonicalAdd(subop, in1, in2);
     if (args == null) {
       return Collections.emptyList();
     }
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("canonical: " + args);
     }
-    
+
     // Now arg1 should be var, arg2 constant
     List<ArgOrCV> vals = state.findCongruent(args.val1.asArg(),
                                              CongruenceType.VALUE);
     if (logger.isTraceEnabled()) {
       logger.trace("found congruent: " + vals);
     }
-    List<ArgCV> res = new ArrayList<ArgCV>(); 
+    List<ArgCV> res = new ArrayList<ArgCV>();
     for (ArgOrCV val: vals) {
       if (val.isCV()) {
         ArgCV newCV = tryAlgebra(op, subop, args, val.cv());
@@ -123,7 +117,7 @@ public class Algebra {
           return ComputedValue.makeCopy(add.val1.asArg());
         } else {
           // Otherwise add them together
-          return new ArgCV(op, BuiltinOpcode.PLUS_INT, 
+          return new ArgCV(op, BuiltinOpcode.PLUS_INT,
                    Arrays.asList(add.val1.asArg(), Arg.newInt(c)));
         }
       }
@@ -131,7 +125,7 @@ public class Algebra {
     return null;
   }
 
-  
+
   private static Pair<Var, Long> convertToCanonicalAdd(BuiltinOpcode subop,
           Arg in1, Arg in2) {
     Var varArg;
@@ -155,7 +149,7 @@ public class Algebra {
       constArg = in1.getInt();
       varArg = in2.getVar();
     }
-    
+
     return Pair.create(varArg, constArg);
   }
 

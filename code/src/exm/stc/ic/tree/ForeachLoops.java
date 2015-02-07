@@ -15,8 +15,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
@@ -815,43 +813,27 @@ public class ForeachLoops {
     }
 
     private boolean isExpandLoopsEnabled() {
-      try {
-        return Settings.getBoolean(Settings.OPT_EXPAND_LOOPS);
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
-      }
+      return Settings.getBooleanUnchecked(Settings.OPT_EXPAND_LOOPS);
     }
 
     private boolean isFullUnrollEnabled() {
-      try {
-        return Settings.getBoolean(Settings.OPT_FULL_UNROLL);
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
-      }
+      return Settings.getBooleanUnchecked(Settings.OPT_FULL_UNROLL);
     }
 
 
     private int getUnrollMaxIters(boolean fullExpand) {
-      try {
-        if (fullExpand) {
-          return Settings.getInt(Settings.OPT_EXPAND_LOOP_THRESHOLD_ITERS);
-        } else {
-          return Settings.getInt(Settings.OPT_UNROLL_LOOP_THRESHOLD_ITERS);
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
+      if (fullExpand) {
+        return Settings.getIntUnchecked(Settings.OPT_EXPAND_LOOP_THRESHOLD_ITERS);
+      } else {
+        return Settings.getIntUnchecked(Settings.OPT_UNROLL_LOOP_THRESHOLD_ITERS);
       }
     }
 
     private int getUnrollMaxExtraInsts(boolean fullExpand) {
-      try {
-        if (fullExpand) {
-          return Settings.getInt(Settings.OPT_EXPAND_LOOP_THRESHOLD_INSTS);
-        } else {
-          return Settings.getInt(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS);
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
+      if (fullExpand) {
+        return Settings.getIntUnchecked(Settings.OPT_EXPAND_LOOP_THRESHOLD_INSTS);
+      } else {
+        return Settings.getIntUnchecked(Settings.OPT_UNROLL_LOOP_THRESHOLD_INSTS);
       }
     }
 
