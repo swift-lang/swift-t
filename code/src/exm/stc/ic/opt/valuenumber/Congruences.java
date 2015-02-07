@@ -923,10 +923,9 @@ public class Congruences implements AliasFinder {
     return new ClosedCVSet(stmtIndex, false);
   }
 
-  public Set<ArgCV> getRecursivelyLocs(int stmtIndex) {
+  public Set<ArgCV> getRecursivelyClosedLocs(int stmtIndex) {
     return new ClosedCVSet(stmtIndex, true);
   }
-
 
   /**
    * Return set of vars that were closed in this scope but

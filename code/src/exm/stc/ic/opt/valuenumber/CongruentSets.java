@@ -685,9 +685,9 @@ class CongruentSets {
     do {
       if (logger.isTraceEnabled()) {
         logger.trace("Iterating over components of: " + oldComponent + ": " +
-                    curr.lookupComponentIndex(oldComponent));
+                    curr.componentIndex.get(oldComponent));
       }
-      for (ArgCV outerCV: curr.lookupComponentIndex(oldComponent)) {
+      for (ArgCV outerCV: curr.componentIndex.get(oldComponent)) {
         ArgCV newOuterCV1 = outerCV;
         if (newComponent != null &&
             outerCV.canSubstituteInputs(congType)) {
@@ -801,15 +801,6 @@ class CongruentSets {
       logger.trace("Add component: " + input + "=>" + cv);
     }
     componentIndex.put(input, cv);
-  }
-
-  private Set<ArgCV> lookupComponentIndex(Arg oldComponent) {
-    Set<ArgCV> res = this.componentIndex.get(oldComponent);
-    if (res != null) {
-      return res;
-    } else {
-      return Collections.emptySet();
-    }
   }
 
   private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,
