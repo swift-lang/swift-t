@@ -33,7 +33,7 @@
             value="lib/hamcrest-core-1.3.jar"/>
   <property name="jacocoant.jar"
             value="lib/jacocoant-0.7.2.jar"/>
-        
+
   <property name="src.dir" value="src"/>
   <property name="grammar"
             value="${src.dir}/exm/stc/ast/ExM.g"/>
@@ -193,7 +193,7 @@
     </jacoco:coverage>
   </target>
 
-  <target name="test.coverage.report" depends="test">
+  <target name="junit.coverage.report" depends="test">
     <fail>
       <condition><not>
         <equals arg1="${coverage.enabled}" arg2="true"/>
@@ -213,8 +213,31 @@
               <fileset dir="${src.dir}"/>
           </sourcefiles>
       </structure>
-                       
-      <html destdir="${test.out.dir}/coverage"/>
+
+      <html destdir="${test.out.dir}/junit-coverage"/>
+    </jacoco:report>
+  </target>
+
+  <!-- Generate full coverage report based on all tests.  Assumes
+       that Junit tests and run-tests.zsh have been run - report
+       is generated based on whatever execution files we can find. -->
+  <target name="full.coverage.report">
+    <jacoco:report>
+      <executiondata>
+        <file file="${test.coverage.output}"/>
+        <fileset dir="../tests" includes="*.jacoco.exec"/>
+      </executiondata>
+
+      <structure name="STC Full Test Coverage">
+          <classfiles>
+            <fileset dir="${build.dir}" includes="exm/stc/**/*.class"/>
+          </classfiles>
+          <sourcefiles encoding="UTF-8">
+              <fileset dir="${src.dir}"/>
+          </sourcefiles>
+      </structure>
+
+      <html destdir="${test.out.dir}/full-coverage"/>
     </jacoco:report>
   </target>
 
