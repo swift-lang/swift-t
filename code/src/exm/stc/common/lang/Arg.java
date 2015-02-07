@@ -26,7 +26,6 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
 public class Arg implements Comparable<Arg>, Typed {
-  public static final Arg VOID = Arg.newVoid();
   public static final Arg ZERO = Arg.newInt(0);
   public static final Arg ONE = Arg.newInt(1);
   public static final Arg TRUE = Arg.newBool(true);
@@ -36,7 +35,7 @@ public class Arg implements Comparable<Arg>, Typed {
 
 
   public static enum ArgKind {
-    VOIDVAL, INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
+    INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR
   }
 
   public final ArgKind kind;
@@ -76,15 +75,6 @@ public class Arg implements Comparable<Arg>, Typed {
     return new ArrayList<Arg>(inputs);
   }
 
-  @Override
-  public Arg clone() {
-    return new Arg(kind, stringlit, var, intlit, floatlit, boollit);
-  }
-
-  public static Arg newVoid() {
-    return new Arg(ArgKind.VOIDVAL, null, null, -1, -1, false);
-  }
-
   public static Arg newInt(long v) {
     return new Arg(ArgKind.INTVAL, null, null, v, -1, false);
   }
@@ -111,49 +101,36 @@ public class Arg implements Comparable<Arg>, Typed {
     return kind;
   }
 
-  public String getString() {
-    if (kind == ArgKind.STRINGVAL) {
-      return stringlit;
-    } else {
-      throw new STCRuntimeError("getStringVal for non-string type " + kind
-                                 + " " + this);
+  private void checkKind(ArgKind expected) {
+    if (this.kind != expected) {
+      throw new STCRuntimeError(this.kind + " where " + expected +
+                                " was expected");
     }
+  }
+
+  public String getString() {
+    checkKind(ArgKind.STRINGVAL);
+    return stringlit;
   }
 
   public long getInt() {
-    if (kind == ArgKind.INTVAL) {
-      return intlit;
-    } else {
-      throw new STCRuntimeError("getIntVal for non-int type " + kind
-                                 + " " + this);
-    }
+    checkKind(ArgKind.INTVAL);
+    return intlit;
   }
 
   public double getFloat() {
-    if (kind == ArgKind.FLOATVAL) {
-      return floatlit;
-    } else {
-      throw new STCRuntimeError("getFloatVal for non-float type " + kind
-                                 + " " + this);
-    }
+    checkKind(ArgKind.FLOATVAL);
+    return floatlit;
   }
 
   public boolean getBool() {
-    if (kind == ArgKind.BOOLVAL) {
-      return boollit;
-    } else {
-      throw new STCRuntimeError("getBoolLit for non-bool type " + kind
-                                 + " " + this);
-    }
+    checkKind(ArgKind.BOOLVAL);
+    return boollit;
   }
 
   public Var getVar() {
-    if (kind == ArgKind.VAR) {
-      return var;
-    } else {
-      throw new STCRuntimeError("getVariable for non-variable type " + kind
-                                + " " + this);
-    }
+    checkKind(ArgKind.VAR);
+    return var;
   }
 
   /**
@@ -181,12 +158,6 @@ public class Arg implements Comparable<Arg>, Typed {
    */
   public Type typeInternal(boolean futureContext) {
   switch (kind) {
-    case VOIDVAL:
-      if (futureContext) {
-        return Types.F_VOID;
-      } else {
-        return Types.V_VOID;
-      }
     case INTVAL:
       if (futureContext) {
         return Types.F_INT;
@@ -223,10 +194,6 @@ public class Arg implements Comparable<Arg>, Typed {
     return kind == ArgKind.VAR;
   }
 
-  public boolean isVoid() {
-    return kind == ArgKind.VOIDVAL;
-  }
-
   public boolean isInt() {
     return kind == ArgKind.INTVAL;
   }
@@ -241,11 +208,6 @@ public class Arg implements Comparable<Arg>, Typed {
 
   public boolean isString() {
     return kind == ArgKind.STRINGVAL;
-  }
-
-  public boolean isImmVoid() {
-    return kind == ArgKind.VOIDVAL
-        || (kind == ArgKind.VAR && Types.isVoidVal(var));
   }
 
   /**
@@ -281,8 +243,6 @@ public class Arg implements Comparable<Arg>, Typed {
   @Override
   public String toString() {
     switch (kind) {
-    case VOIDVAL:
-      return "void";
     case INTVAL:
       return Long.toString(this.intlit);
     case STRINGVAL:
@@ -318,9 +278,6 @@ public class Arg implements Comparable<Arg>, Typed {
   private int calcHashCode() {
     int hash1;
     switch (kind) {
-    case VOIDVAL:
-      hash1 = 5543643;
-      break;
     case INTVAL:
       hash1 = ((Long) this.intlit).hashCode();
       break;
@@ -353,8 +310,6 @@ public class Arg implements Comparable<Arg>, Typed {
       return false;
     }
     switch (this.kind) {
-    case VOIDVAL:
-      return true;
     case INTVAL:
       return this.intlit == other.intlit;
     case STRINGVAL:
@@ -376,8 +331,6 @@ public class Arg implements Comparable<Arg>, Typed {
     int typeComp = kind.compareTo(o.kind);
     if (typeComp == 0) {
       switch (kind) {
-      case VOIDVAL:
-        return 0;
       case BOOLVAL:
         return ((Boolean) boollit).compareTo(o.boollit);
       case INTVAL:
@@ -413,7 +366,6 @@ public class Arg implements Comparable<Arg>, Typed {
     switch (kind) {
       case VAR:
         return var.isMapped();
-      case VOIDVAL:
       case INTVAL:
       case FLOATVAL:
       case STRINGVAL:

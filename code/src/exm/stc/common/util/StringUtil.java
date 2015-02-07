@@ -21,15 +21,6 @@ import java.util.List;
 public class StringUtil {
 
   /**
-   * Return a String containing the given number of spaces
-   */
-  public static String spaces(int c) {
-    StringBuilder sb = new StringBuilder(c);
-    spaces(sb, c);
-    return sb.toString();
-  }
-
-  /**
    * Append the given number of spaces into given StringBuilder
    */
   public static void spaces(StringBuilder sb, int c) {
@@ -43,17 +34,13 @@ public class StringUtil {
     return concat(array, 0, " ");
   }
 
-  public static String concat(String... strings) {
-    return concat(' ', strings);
-  }
-
   public static String concat(Object[] objs) {
     return concat(' ', objs);
   }
   public static String concat(char c, Object[] objs) {
     return concat(c, Arrays.asList(objs));
   }
-  
+
   public static String concat(char c, List<? extends Object> objs) {
     String[] strings = new String[objs.size()];
     int i = 0;
@@ -88,14 +75,6 @@ public class StringUtil {
         sb.append(c);
     }
     return sb.toString();
-  }
-
-  /**
-   * Put a variable number of Strings into a List of Strings
-   */
-  public static List<String> stringList(String... args) {
-    List<String> result = Arrays.asList(args);
-    return result;
   }
 
   /**
