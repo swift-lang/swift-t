@@ -132,11 +132,6 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     // make sure they end up in correct order
     Map<Integer, VisitState> visited = new HashMap<Integer, VisitState>();
 
-    for (Integer alreadyAdded: newStatements) {
-      visited.put(alreadyAdded, VisitState.DONE);
-      before.remove(alreadyAdded);
-    }
-
     if (logger.isTraceEnabled()) {
       logger.trace(before);
     }
