@@ -1,6 +1,7 @@
 
 <project name="stc"
-         default="build.all">
+         default="build.all"
+         xmlns:jacoco="antlib:org.jacoco.ant">
 
   <!-- ExM STC build file
 
@@ -30,6 +31,8 @@
   <!-- Needed for JUnit -->
   <property name="hamcrest.jar"
             value="lib/hamcrest-core-1.3.jar"/>
+  <property name="jacocoant.jar"
+            value="lib/jacocoant-0.7.2.jar"/>
           
   <property name="grammar"
             value="src/exm/stc/ast/ExM.g"/>
@@ -41,6 +44,15 @@
 
   <property name="test.out.dir"
             value="test-output"/>
+
+  <!-- Code coverage -->
+  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml"
+           classpath="${jacocoant.jar}" />
+  <!-- Allow coverage to be disabled if needed -->
+  <property name="coverage.enabled"
+            value="true"/>
+  <property name="coverage.output"
+            value="${test.out.dir}/jacoco.exec"/>
 
   <target name="jar"
           depends="compile">
@@ -159,23 +171,26 @@
 
   <target name="test" depends="jar">
     <mkdir dir="${test.out.dir}"/>
-    <junit printsummary="yes" haltonfailure="yes">
-      <classpath>
-        <pathelement location="${stc.jar}"/>
-        <pathelement path="${classpath}"/>
-      </classpath>
+    <jacoco:coverage enabled="${coverage.enabled}"
+                     destfile="${coverage.output}">
+      <junit fork="true" printsummary="yes" haltonfailure="yes">
+        <classpath>
+          <pathelement location="${stc.jar}"/>
+          <pathelement path="${classpath}"/>
+        </classpath>
 
-      <batchtest todir="${test.out.dir}" fork="true">
-        <resources>
-          <zipfileset src="${stc.jar}" includes="exm/stc/tests/**/*.class"/>
-        </resources>
+        <batchtest todir="${test.out.dir}" fork="true">
+          <resources>
+            <zipfileset src="${stc.jar}" includes="exm/stc/tests/**/*.class"/>
+          </resources>
 
-        <formatter type="plain"/>
-        <formatter type="xml"/>
+          <formatter type="plain"/>
+          <formatter type="xml"/>
 
-      </batchtest>
+        </batchtest>
 
-    </junit>
+      </junit>
+    </jacoco:coverage>
   </target>
 
   <!-- Install: User must have set dist.dir -->
