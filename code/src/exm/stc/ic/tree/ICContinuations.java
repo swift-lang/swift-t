@@ -30,7 +30,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
@@ -1467,18 +1466,14 @@ public class ICContinuations {
 
     @Override
     public List<PassedVar> getMustPassVars() {
-      try {
-        if (Settings.getBoolean(Settings.MUST_PASS_WAIT_VARS)) {
-          List<PassedVar> res = new ArrayList<PassedVar>();
-          for (WaitVar wv: waitVars) {
-            res.add(new PassedVar(wv.var, false));
-          }
-          return res;
-        } else {
-          return PassedVar.NONE;
+      if (Settings.getBooleanUnchecked(Settings.MUST_PASS_WAIT_VARS)) {
+        List<PassedVar> res = new ArrayList<PassedVar>();
+        for (WaitVar wv: waitVars) {
+          res.add(new PassedVar(wv.var, false));
         }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
+        return res;
+      } else {
+        return PassedVar.NONE;
       }
     }
 

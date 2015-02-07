@@ -29,7 +29,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -86,13 +85,10 @@ public class FunctionInline implements OptimizerPass {
   private final long alwaysInlineThreshold;
 
   public FunctionInline() {
-    try {
-      inlineThreshold = Settings.getLong(Settings.OPT_FUNCTION_INLINE_THRESHOLD);
-      alwaysInlineThreshold =
-          Settings.getLong(Settings.OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    inlineThreshold = Settings.getLongUnchecked(
+        Settings.OPT_FUNCTION_INLINE_THRESHOLD);
+    alwaysInlineThreshold = Settings.getLongUnchecked(
+        Settings.OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD);
   }
 
   private static boolean isFunctionCall(Instruction inst) {

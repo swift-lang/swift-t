@@ -28,7 +28,6 @@ import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -581,15 +580,10 @@ public class ExprWalker {
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList);
 
-    try {
-      // If this is an assert statement, disable it
-      if (context.getForeignFunctions().isAssertVariant(f.function()) &&
-              Settings.getBoolean(Settings.OPT_DISABLE_ASSERTS)) {
-        return;
-      }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError("Expected option to be present: " +
-                                                          e.toString());
+    // If this is an assert statement, disable it
+    if (context.getForeignFunctions().isAssertVariant(f.function()) &&
+            Settings.getBooleanUnchecked(Settings.OPT_DISABLE_ASSERTS)) {
+      return;
     }
 
     // evaluate argument expressions left to right, creating temporaries
