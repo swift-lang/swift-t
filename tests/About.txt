@@ -27,6 +27,7 @@ Available arguments:
 +-e+:: Show error outputs from tests
 +-f <OPTION>+:: Use +stc -f OPTION+
 +-F <OPTION>+:: Use +stc -F OPTION+
++-J:: Enable JaCoCo code coverage.
 +-k <SKIP>+:: Skip the first SKIP tests
 +-l+:: Enable Turbine data leak check
 +-n <COUNT>+:: Run only COUNT tests
@@ -126,6 +127,19 @@ Optionally add setup script, check script, expected output.
 
 Use ./clean.sh to clean up files created by the test suite
 
-# Local Variables:
-# mode: doc;
-# End:
+== JUnit tests
+
+STC also has pure Java unit/integration tests in addition to these system
+tests.  These can be run by invoking +ant test+ in the code directory.
+
+== Code Coverage
+
+If you enable JaCoCo code coverage, a .jacoco.exec file will be generated
+for each test.  You can generate a coverage report from these by running
++ant full.coverage.report+ in the stc code directory.  If you have a
+non-standard layout, you may need to specify the location of the
+directory with .jacoco.exec files with +-Dsystem.test.out.dir=path/to/test/output+.
+
+// Local Variables:
+// mode: doc;
+// End:

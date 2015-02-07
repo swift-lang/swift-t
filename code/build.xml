@@ -53,6 +53,9 @@
             value="true"/>
   <property name="test.coverage.output"
             value="${test.out.dir}/jacoco.exec"/>
+  <!-- Output directory for system tests -->
+  <property name="system.test.out.dir"
+            value="../tests"/>
 
   <target name="jar"
           depends="compile">
@@ -225,7 +228,7 @@
     <jacoco:report>
       <executiondata>
         <file file="${test.coverage.output}"/>
-        <fileset dir="../tests" includes="*.jacoco.exec"/>
+        <fileset dir="${system.test.out.dir}" includes="*.jacoco.exec"/>
       </executiondata>
 
       <structure name="STC Full Test Coverage">
