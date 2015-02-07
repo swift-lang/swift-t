@@ -227,7 +227,7 @@
   <target name="full.coverage.report">
     <jacoco:report>
       <executiondata>
-        <file file="${test.coverage.output}"/>
+        <fileset dir="." includes="${test.coverage.output}"/>
         <fileset dir="${system.test.out.dir}" includes="*.jacoco.exec"/>
       </executiondata>
 
