@@ -30,7 +30,14 @@ ADDTL_STC_ARGS=()
 LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
-while getopts "cCDek:n:p:P:VO:f:F:alo:" OPTION
+# Test coverage
+JACOCO_COVERAGE=0
+JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
+
+# Save user JVM flags
+STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
+
+while getopts "cCDeJk:n:p:P:VO:f:F:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -53,6 +60,10 @@ do
     k)
       # skip some tests
       SKIP_COUNT=${OPTARG}
+      ;;
+    J)
+      # Jacoco coverage
+      JACOCO_COVERAGE=1
       ;;
     n)
       # run a limited number of tests
@@ -188,6 +199,14 @@ compile_test()
   then
     # Enable trace-level logging
     export STC_LOG_TRACE=true
+  fi
+
+  # Restore original ones if we overwrote earlier
+  export STC_JVM_FLAGS=${STC_JVM_FLAGS_USER}
+
+  if (( JACOCO_COVERAGE ))
+  then
+    STC_JVM_FLAGS+="-javaagent:${JACOCO_AGENT_JAR}=destfile=${STC_JACOCO_FILE}"
   fi
 
   pushd $STC_TESTS_DIR
@@ -523,6 +542,7 @@ do
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
     STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
     STC_IC_FILE=${TEST_OUT_PATH}.ic
+    STC_JACOCO_FILE=${TEST_OUT_PATH}.jacoco.exec
 
     compile_test ${OPT_LEVEL}
 
