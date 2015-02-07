@@ -411,7 +411,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
               getAllInputs(inst),
               inst.getOutputs(),
               inst.getModifiedOutputs(),
-              Pair.extract1(inst.getInitialized()),
+              inst.getInitialized(),
               inst.getPiecewiseAssignedOutputs());
         }
         case CONDITIONAL: {
@@ -491,7 +491,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       info.inputVars.addAll(getAllInputs(inst));
       info.outputs.addAll(inst.getOutputs());
       info.modifiedOutputs.addAll(inst.getModifiedOutputs());
-      info.initialized.addAll(Pair.extract1(inst.getInitialized()));
+      info.initialized.addAll(inst.getInitialized());
       info.piecewiseAssigned.addAll(inst.getPiecewiseAssignedOutputs());
     }
 

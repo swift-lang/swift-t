@@ -276,8 +276,6 @@ public class ExprWalker {
                            throws UserException {
     assert(src.type().assignableTo(dst.type()));
 
-    Var backendSrc = VarRepr.backendVar(src);
-    Var backendDst = VarRepr.backendVar(dst);
     if (Types.simpleCopySupported(src)) {
        backendAsyncCopy(context, dst, src);
     } else if (Types.isFile(src)) {

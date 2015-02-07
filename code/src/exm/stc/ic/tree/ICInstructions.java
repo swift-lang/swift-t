@@ -544,14 +544,10 @@ public class ICInstructions {
       return Var.NONE;
     }
 
-    public static enum InitType {
-      PARTIAL, // In case multiple init instructions are needed
-      FULL;    // If this fully initializes variable
-    }
     /**
      * @return list of vars initialized by this instruction
      */
-    public List<Pair<Var, InitType>> getInitialized() {
+    public List<Var> getInitialized() {
       return Collections.emptyList();
     }
 
@@ -561,8 +557,8 @@ public class ICInstructions {
      * @return
      */
     public boolean isInitialized(Var var) {
-      for (Pair<Var, InitType> init: getInitialized()) {
-        if (var.equals(init.val1)) {
+      for (Var init: getInitialized()) {
+        if (var.equals(init)) {
           return true;
         }
       }
@@ -1617,7 +1613,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Pair<Var, InitType>> getInitialized() {
+    public List<Var> getInitialized() {
       return Collections.emptyList();
     }
 

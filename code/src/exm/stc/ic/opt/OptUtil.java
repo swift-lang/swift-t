@@ -41,7 +41,6 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmVar;
 import exm.stc.ic.tree.ICInstructions.Instruction.VarCreator;
@@ -330,9 +329,8 @@ public class OptUtil {
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
       boolean initOutput = false;
-      for (Pair<Var, InitType> init: oldInst.getInitialized()) {
-        if (init.val2 == InitType.FULL &&
-            init.val1.equals(oldOut)) {
+      for (Var init: oldInst.getInitialized()) {
+        if (init.equals(oldOut)) {
           initOutput = true;
           break;
         }
