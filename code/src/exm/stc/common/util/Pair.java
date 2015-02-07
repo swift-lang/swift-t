@@ -61,7 +61,7 @@ public class Pair<T1, T2> {
     if (val1 == null) {
       if (other.val1 != null)
         return false;
-    } else if (other.val2 == null) {
+    } else if (other.val1 == null) {
       return false;
     } else if (!val1.equals(other.val1))
       return false;
