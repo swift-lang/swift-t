@@ -203,7 +203,7 @@
     <copy verbose="${lf}" file="scripts/stc-config.sh" todir="${dist.dir}/scripts"/>
 
     <copy verbose="${lf}" todir="${dist.dir}/lib">
-      <fileset dir="lib" includes="*.jar"/>
+      <fileset dir="lib" includes="*.jar" excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
     </copy>
     <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
     <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>
