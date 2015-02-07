@@ -3,7 +3,6 @@ package exm.stc.ic.refcount;
 import java.util.Map.Entry;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.aliases.AliasKey;
@@ -71,18 +70,14 @@ public class RCUtil {
     // Check that all refcounts are zero
     if (noIncrements) {
       for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.INCR)) {
-        if (e.getValue() != 0) {
-          throw new STCRuntimeError("Refcount " + rcType  + " incr not 0 "
-                + "after pass " + e.toString() + " in block " + block);
-        }
+        assert(e.getValue() == 0) : "Refcount " + rcType  + " incr not 0 "
+                + "after pass " + e.toString() + " in block " + block;
       }
     }
     if (noDecrements) {
       for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
-        if (e.getValue() != 0) {
-          throw new STCRuntimeError("Refcount " + rcType  + " decr not 0 "
-                + "after pass " + e.toString() + " in block " + block);
-        }
+        assert (e.getValue() == 0) : "Refcount " + rcType  + " decr not 0 "
+                      + "after pass " + e.toString() + " in block " + block;
       }
     }
   }
