@@ -7,7 +7,7 @@
 # Output: Given OUTPUT file or standard output
 # Exit code: Result from java
 
-# See help.txt or run "stc -h" for full options list
+# Run "stc -h" for full options list
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
@@ -431,6 +431,8 @@ JVM_FLAGS=()
 JVM_FLAGS+="-Xss8m"
 # Enable assertions
 JVM_FLAGS+="-enableassertions"
+# Include any from environment (overriding defaults)
+JVM_FLAGS+=${=STC_JVM_FLAGS}
 
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"

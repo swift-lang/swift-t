@@ -1,3 +1,9 @@
+ENVIRONMENT VARIABLES
+
+  STC_LOG_TRACE
+    If stc logging is enabled, this enables trace-level logging
+  STC_JVM_FLAGS
+     Additional flags to pass to JVM for compilation
 
 SEE ALSO
 
