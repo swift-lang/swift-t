@@ -36,7 +36,6 @@ import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -967,10 +966,9 @@ public class RCPlacer {
       }
       switch (stmt.type()) {
         case INSTRUCTION: {
-          for (Pair<Var, InitType> init: stmt.instruction().getInitialized()) {
-            if (init.val1.storage() == Alloc.ALIAS) {
-              assert(init.val2 == InitType.FULL);
-              addIncrForVar(block, increments, rcType, stmtIt, init.val1);
+          for (Var init: stmt.instruction().getInitialized()) {
+            if (init.storage() == Alloc.ALIAS) {
+              addIncrForVar(block, increments, rcType, stmtIt, init);
             }
           }
           break;
@@ -1011,10 +1009,9 @@ public class RCPlacer {
     HashSet<Var> result = new HashSet<Var>();
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() == StatementType.INSTRUCTION) {
-        for (Pair<Var, InitType> init: stmt.instruction().getInitialized()) {
-          if (init.val1.storage() == Alloc.ALIAS) {
-            assert(init.val2 == InitType.FULL);
-            result.add(init.val1);
+        for (Var init: stmt.instruction().getInitialized()) {
+          if (init.storage() == Alloc.ALIAS) {
+            result.add(init);
           }
         }
       } else {

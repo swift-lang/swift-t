@@ -1649,8 +1649,8 @@ public class TurbineOp extends Instruction {
         if (renames.containsKey(output)) {
           // Avoid replacing aliases that were initialized
           boolean isInit = false;
-          for (Pair<Var, Instruction.InitType> p: getInitialized()) {
-            if (output.equals(p.val1)) {
+          for (Var initVar: getInitialized()) {
+            if (output.equals(initVar)) {
               isInit = true;
               break;
             }
@@ -2470,7 +2470,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<Pair<Var, Instruction.InitType>> getInitialized() {
+  public List<Var> getInitialized() {
     switch (op) {
       case LOAD_REF:
       case COPY_REF:
@@ -2478,7 +2478,7 @@ public class TurbineOp extends Instruction {
       case STRUCT_CREATE_NESTED:
       case GET_FILENAME_ALIAS:
         // Initialises alias
-        return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
+        return getOutput(0).asList();
 
       case ARR_RETRIEVE:
       case ARR_CREATE_ALIAS:
@@ -2487,22 +2487,22 @@ public class TurbineOp extends Instruction {
         // May initialise alias if we're looking up a reference
         Var output = getOutput(0);
         if (output.storage() == Alloc.ALIAS) {
-          return Arrays.asList(Pair.create(output, InitType.FULL));
+          return output.asList();
         } else {
-          return Collections.emptyList();
+          return Var.NONE;
         }
       }
 
       case INIT_UPDATEABLE_FLOAT:
         // Initializes updateable
-        return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
+        return getOutput(0).asList();
 
       case INIT_LOCAL_OUTPUT_FILE:
       case LOAD_FILE:
         // Initializes output file value
-        return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
+        return getOutput(0).asList();
       default:
-        return Collections.emptyList();
+        return Var.NONE;
     }
   }
 

@@ -12,13 +12,11 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
-import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -132,28 +130,22 @@ public class InitVariables {
         }
       }
       List<Var> regularOutputs = inst.getOutputs();
-      List<Pair<Var, InitType>> initialized = inst.getInitialized();
+      List<Var> initialized = inst.getInitialized();
 
       if (initialized.size() > 0) {
         regularOutputs = new ArrayList<Var>(regularOutputs);
-        for (Pair<Var, InitType> init: initialized) {
-          Var initVar = init.val1;
-          InitType initType = init.val2;
+        for (Var initVar: initialized) {
           assert(Types.outputRequiresInitialization(initVar) ||
-                 Types.inputRequiresInitialization(initVar)) : inst + " " + init;
+                 Types.inputRequiresInitialization(initVar)) :
+                   inst + " " + initVar;
           // some functions initialise and assign the future at once
           if (!initAndAssignLocalFile(inst))
             ICUtil.remove(regularOutputs, initVar);
 
-          if (initType == InitType.FULL) {
-            if (validate && initVars.contains(initVar)) {
-              throw new STCRuntimeError("double initialized variable " + init);
-            }
-            initVars.add(initVar);
-          } else {
-            assert(initType == InitType.PARTIAL);
-            updatePartialInit(inst, initVar);
+          if (validate && initVars.contains(initVar)) {
+            throw new STCRuntimeError("double initialized variable " + initVar);
           }
+          initVars.add(initVar);
         }
       }
       for (Var out: regularOutputs) {
@@ -169,16 +161,6 @@ public class InitVariables {
           }
         }
       }
-    }
-
-    /**
-     * Update state for partially initialized variable.
-     * @param inst
-     * @param initVar
-     */
-    private void updatePartialInit(Instruction inst, Var initVar) {
-      throw new STCRuntimeError("Can't handle partial init for type " +
-                                   initVar.type());
     }
 
     /**
