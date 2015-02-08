@@ -105,7 +105,7 @@ public class FunctionCall {
     return args;
   }
 
-  public FunctionType type() {
+  public FunctionType fnType() {
     return type;
   }
 

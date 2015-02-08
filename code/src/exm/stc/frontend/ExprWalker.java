@@ -17,7 +17,6 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -25,30 +24,18 @@ import java.util.Map;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.Logging;
-import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
-import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
-import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
-import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
-import exm.stc.common.lang.Intrinsics;
-import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.Operators.OpInputType;
-import exm.stc.common.lang.TaskProp;
-import exm.stc.common.lang.TaskProp.TaskPropKey;
-import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
@@ -62,14 +49,13 @@ import exm.stc.common.lang.WaitMode;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.frontend.Context.FnProp;
-import exm.stc.frontend.TypeChecker.MatchedOp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
-import exm.stc.frontend.tree.FunctionCall;
-import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
 import exm.stc.frontend.tree.Literals;
+import exm.stc.frontend.typecheck.OpTypeChecker;
+import exm.stc.frontend.typecheck.OpTypeChecker.MatchedOp;
+import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -77,14 +63,14 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class ExprWalker {
 
+  private final FunctionCallEvaluator fnCall;
   private final VarCreator varCreator;
-  private final WrapperGen wrappers;
   private final STCMiddleEnd backend;
   private final LoadedModules modules;
 
   public ExprWalker(WrapperGen wrappers, VarCreator creator,
                     STCMiddleEnd backend, LoadedModules modules) {
-    this.wrappers = wrappers;
+    this.fnCall = new FunctionCallEvaluator(creator, wrappers, this, backend);
     this.varCreator = creator;
     this.backend = backend;
     this.modules = modules;
@@ -108,7 +94,7 @@ public class ExprWalker {
     syncFilePos(context, tree);
 
     if (token == ExMParser.CALL_FUNCTION) {
-      callFunctionExpression(context, tree, oList, renames);
+      fnCall.evalFunctionCall(context, tree, oList, renames);
       return;
     } else if (token == ExMParser.TUPLE) {
       tupleExpression(context, tree, oList, renames);
@@ -536,7 +522,7 @@ public class ExprWalker {
     int op_argcount = tree.getChildCount() - 1;
 
     // Use the AST token label to find the actual operator
-    MatchedOp opMatch = TypeChecker.getOpFromTree(context, tree, out.type());
+    MatchedOp opMatch = OpTypeChecker.getOpFromTree(context, tree, out.type());
     Op op = opMatch.op;
     List<Type> exprTypes = opMatch.exprTypes;
 
@@ -568,172 +554,6 @@ public class ExprWalker {
     asyncOp(op.code, out, iList);
   }
 
-  /**
-   * Generate code for a call to a function, where the arguments might be
-   * expressions
-   *
-   * @param context
-   * @param tree
-   * @param oList
-   * @throws UserException
-   * @throws UndefinedVarError
-   * @throws UndefinedFunctionException
-   */
-  private void callFunctionExpression(Context context, SwiftAST tree,
-      List<Var> oList, Map<String, String> renames) throws UserException {
-    assert(tree.getType() == ExMParser.CALL_FUNCTION);
-
-    FunctionCall f = FunctionCall.fromAST(context, tree, true);
-
-    // This will check the type of the function call
-    FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
-                                f.function(), f.type(), f.args(), oList);
-
-    // If this is an assert statement, disable it
-    if (context.getForeignFunctions().isAssertVariant(f.function()) &&
-            Settings.getBooleanUnchecked(Settings.OPT_DISABLE_ASSERTS)) {
-      return;
-    }
-
-    // evaluate argument expressions left to right, creating temporaries
-    ArrayList<Var> argVars = new ArrayList<Var>(f.args().size());
-
-
-    for (int i = 0; i < f.args().size(); i++) {
-      SwiftAST argtree = f.args().get(i);
-      Type expType = concrete.getInputs().get(i);
-
-      Type exprType = TypeChecker.findExprType(context, argtree);
-      Type argType = TypeChecker.concretiseFnArg(context, f.function(), i,
-                                      expType, exprType).val2;
-      argVars.add(eval(context, argtree, argType, false, renames));
-    }
-
-    // Process priority after arguments have been evaluated, so that
-    // the argument evaluation is outside the wait statement
-    TaskProps propVals = new TaskProps();
-    boolean openedWait = false;
-    Context callContext = context;
-    boolean mustEvalAnnotations = !f.annotations().isEmpty() ||
-                                  f.location() != null;
-
-    if (mustEvalAnnotations) {
-      List<Pair<TaskPropKey, Var>> propFutures =
-            new ArrayList<Pair<TaskPropKey, Var>>();
-      List<Var> waitVars = new ArrayList<Var>();
-      Var locationVar = null;
-
-      for (TaskPropKey ann: f.annotations().keySet()) {
-        checkCallAnnotation(context, f, ann);
-
-        SwiftAST expr = f.annotations().get(ann);
-        Type exprType = TypeChecker.findExprType(callContext, expr);
-        Type concreteType = TaskProp.checkFrontendType(callContext, ann, exprType);
-        Var future = eval(context, expr, concreteType, false, renames);
-        waitVars.add(future);
-        propFutures.add(Pair.create(ann, future));
-      }
-
-      if (f.location() != null) {
-        checkCanTarget(context, f);
-
-        locationVar = eval(context, f.location(), Types.F_LOCATION, false,
-                           renames);
-        waitVars.add(locationVar);
-      }
-
-      backend.startWaitStatement(context.constructName("ann-wait"),
-              VarRepr.backendVars(waitVars),
-              WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
-      openedWait = true;
-      callContext = LocalContext.fnSubcontext(context);
-      for (Pair<TaskPropKey,Var> x: propFutures) {
-        Var value = retrieveToVar(callContext, x.val2);
-        propVals.put(x.val1, value.asArg());
-      }
-      if (locationVar != null) {
-        populateFromLocationStruct(context, locationVar, propVals);
-      }
-
-      if (f.softLocationOverride()) {
-        // Override strictness if @soft_location was used
-        propVals.put(TaskPropKey.LOC_STRICTNESS,
-                     TaskProps.LOC_STRICTNESS_SOFT_ARG);
-      }
-    }
-
-    callFunction(context, f.function(), f.kind(), concrete, oList, argVars,
-                 propVals);
-    if (openedWait) {
-      backend.endWaitStatement();
-    }
-
-  }
-
-  /**
-   * Fill extract members from struct and add to dictionary
-   * @param context
-   * @param loc
-   * @param propVals
-   * @throws UserException
-   */
-  private void populateFromLocationStruct(Context context, Var loc,
-          TaskProps propVals) throws UserException {
-    assert(loc.type().assignableTo(Types.F_LOCATION));
-
-    Var locRank = varCreator.createStructFieldTmpVal(context, loc,
-                  Types.V_INT, Collections.singletonList("rank"), Alloc.LOCAL);
-
-    Var locStrictness = varCreator.createStructFieldTmpVal(context, loc,
-        Types.V_LOC_STRICTNESS, Collections.singletonList("strictness"), Alloc.LOCAL);
-
-    Var locAccuracy = varCreator.createStructFieldTmpVal(context, loc,
-        Types.V_LOC_ACCURACY, Collections.singletonList("accuracy"), Alloc.LOCAL);
-
-    /*
-     * Retrieve seperately from the struct.  In principle this could be
-     * inefficient but in practice we hope the optimiser should be able
-     * to resolve these.
-     */
-    backend.structRetrieveSub(VarRepr.backendVar(locRank),
-              VarRepr.backendVar(loc), Arrays.asList("rank"));
-    backend.structRetrieveSub(VarRepr.backendVar(locStrictness),
-              VarRepr.backendVar(loc), Arrays.asList("strictness"));
-    backend.structRetrieveSub(VarRepr.backendVar(locAccuracy),
-              VarRepr.backendVar(loc), Arrays.asList("accuracy"));
-
-    propVals.put(TaskPropKey.LOC_RANK, locRank.asArg());
-    propVals.put(TaskPropKey.LOC_STRICTNESS, locStrictness.asArg());
-    propVals.put(TaskPropKey.LOC_ACCURACY, locAccuracy.asArg());
-  }
-
-  private void checkCallAnnotation(Context context, FunctionCall f,
-      TaskPropKey ann) throws UserException {
-    if (context.isIntrinsic(f.function())) {
-      // Handle annotation specially
-      IntrinsicFunction intF = context.lookupIntrinsic(f.function());
-      List<TaskPropKey> validProps = Intrinsics.validProps(intF);
-      if (!validProps.contains(ann)) {
-          throw new InvalidAnnotationException(context, "Cannot specify " +
-                "property " + ann + " for intrinsic function " + f.function());
-      }
-    } else if (ann == TaskPropKey.PARALLELISM) {
-      if (!context.hasFunctionProp(f.function(), FnProp.PARALLEL)) {
-        throw new UserException(context, "Tried to call non-parallel"
-            + " function " + f.function() + " with parallelism.  "
-            + " Maybe you meant to annotate the function definition with "
-            + "@" + Annotations.FN_PAR);
-      }
-    }
-  }
-
-  private void checkCanTarget(Context context, FunctionCall f)
-      throws UserException {
-    if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
-      throw new UserException(context, "Tried to call non-targetable"
-          + " function " + f.function() + " with target");
-    }
-  }
 
   /**
    * Evaluate a tuple expression.
@@ -857,8 +677,6 @@ public class ExprWalker {
     throw new STCRuntimeError("No viable array type for lookup up "
               + arrExprType + " into " + oVar);
   }
-
-
 
   /**
    * Lookup the turbine ID of a struct member
@@ -1064,193 +882,8 @@ public class ExprWalker {
     }
     return backendKeys;
   }
-
-  private void callFunction(Context context, String function,
-      FunctionCallKind kind, FunctionType concrete,
-      List<Var> oList, List<Var> iList, TaskProps props)
-      throws UndefinedTypeException, UserException {
-
-    // The expected types might not be same as current input types, work out
-    // what we need to do to make them the same
-    ArrayList<Var> realIList = new ArrayList<Var>(iList.size());
-    ArrayList<Var> derefVars = new ArrayList<Var>();
-    ArrayList<Var> waitVars = new ArrayList<Var>();
-    Context waitContext = null;
-
-    assert(concrete.getInputs().size() == iList.size());
-    for (int i = 0; i < iList.size(); i++) {
-      Var input = iList.get(i);
-      Type inputType = input.type();
-      Type expType = concrete.getInputs().get(i);
-      if (inputType.getImplType().assignableTo(expType.getImplType())) {
-        realIList.add(input);
-      } else if (Types.isAssignableRefTo(inputType, expType)) {
-        if (waitContext == null) {
-          waitContext = LocalContext.fnSubcontext(context);
-        }
-        Var derefed;
-        derefed = waitContext.createTmpAliasVar(expType);
-        waitVars.add(input);
-        derefVars.add(derefed);
-        realIList.add(derefed);
-        Logging.getSTCLogger().trace("Deref function input " + input +
-                                     " to " + derefed);
-      } else if (Types.isUpdateableEquiv(inputType, expType)) {
-        realIList.add(snapshotUpdateable(context, input));
-      } else {
-        throw new STCRuntimeError(context.getFileLine() +
-                " Shouldn't be here, don't know how to"
-            + " convert " + inputType.toString() + " to " + expType.toString());
-      }
-    }
-
-    if (waitContext != null) {
-      FunctionContext fc = context.getFunctionContext();
-
-      // Only want to maintain priority for wait
-      TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
-      backend.startWaitStatement( fc.constructName("call-" + function),
-           VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
-           false, false, ExecTarget.nonDispatchedControl(),
-           VarRepr.backendProps(waitProps));
-
-      assert(waitVars.size() == derefVars.size());
-      // Generate code to fetch actual array IDs  inside
-      // wait statement
-      for (int i = 0; i < waitVars.size(); i++) {
-        Var derefVar = derefVars.get(i);
-        varCreator.backendInit(derefVar);
-        assert(Types.isRef(waitVars.get(i).type()));
-        retrieveRef(derefVar, waitVars.get(i), false);
-      }
-    }
-
-    boolean checkpointed =
-        context.hasFunctionProp(function, FnProp.CHECKPOINTED);
-
-    if (checkpointed) {
-
-      Var lookupEnabled = VarRepr.backendVar(
-                varCreator.createTmpLocalVal(context, Types.V_BOOL));
-      backend.checkpointLookupEnabled(lookupEnabled);
-
-      backend.startIfStatement(lookupEnabled.asArg(), true);
-      checkpointedFunctionCall(context, function, kind, concrete, oList,
-                               realIList, props, true);
-      backend.startElseBlock();
-      checkpointedFunctionCall(context, function, kind, concrete, oList,
-                                realIList, props, false);
-      backend.endIfStatement();
-    } else {
-      backendFunctionCall(context, function, kind, concrete, oList, realIList,
-                          props);
-    }
-    if (waitContext != null) {
-      backend.endWaitStatement();
-    }
-  }
-
-
-  private void checkpointedFunctionCall(Context context, String function,
-      FunctionCallKind kind, FunctionType concrete, List<Var> oList, List<Var> iList,
-      TaskProps props, boolean lookupCheckpoint) throws UserException {
-
-    /*
-     * wait (checkpoint_key_futures) {
-     *   checkpoint_key = lookup(checkpoint_key_futures)
-     *   checkpoint_exists, vals = lookup_checkpoint(checkpoint_key)
-     *   if (checkpoint_exists) {
-     *     ... Set output variables
-     *     ... Done
-     *   } else {
-     *     ... call function
-     *     wait (output_futures) {
-     *       output_vals = lookup(output_futures)
-     *       write_checkpoint(checkpoint_key, output_vals)
-     *     }
-     *   }
-     * }
-     */
-
-    List<Var> checkpointKeyFutures = iList; // TODO: right?
-
-    if (lookupCheckpoint)
-    {
-      // Need to wait for lookup key before checking if checkpoint exists
-      // Do recursive wait to get container contents
-      backend.startWaitStatement(
-          context.constructName(function + "-checkpoint-wait"),
-          VarRepr.backendVars(checkpointKeyFutures), WaitMode.WAIT_ONLY,
-          false, true, ExecTarget.nonDispatchedAny());
-      Var keyBlob = packCheckpointKey(context, function,
-                                       checkpointKeyFutures);
-
-     // TODO: nicer names for vars?
-      Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-      Var checkpointExists = varCreator.createTmpLocalVal(context,
-                                                       Types.V_BOOL);
-
-      backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
-
-      backend.startIfStatement(VarRepr.backendArg(checkpointExists), true);
-      setVarsFromCheckpoint(context, oList, existingVal);
-      backend.startElseBlock();
-    }
-
-    // Actually call function
-    backendFunctionCall(context, function, kind, concrete, oList, iList, props);
-
-
-    Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
-    backend.checkpointWriteEnabled(writeEnabled);
-
-    backend.startIfStatement(VarRepr.backendArg(writeEnabled), false);
-    // checkpoint output values once set
-    List<Var> checkpointVal = oList; // TODO: right?
-
-    List<Var> waitVals;
-    if (lookupCheckpoint) {
-      // Already waited for inputs
-      waitVals = checkpointVal;
-    } else {
-      // Didn't wait for inputs
-      waitVals = new ArrayList<Var>();
-      waitVals.addAll(checkpointKeyFutures);
-      waitVals.addAll(checkpointVal);
-    }
-    backend.startWaitStatement(
-        context.constructName(function + "-checkpoint-wait"),
-        VarRepr.backendVars(waitVals), WaitMode.WAIT_ONLY,
-        false, true, ExecTarget.nonDispatchedAny());
-
-    // Lookup checkpoint key again since variable might not be able to be
-    // passed through wait.  Rely on optimizer to clean up redundancy
-    Var keyBlob2 = packCheckpointKey(context, function, checkpointKeyFutures);
-
-    Var valBlob = packCheckpointVal(context, checkpointVal);
-
-    backend.writeCheckpoint(keyBlob2.asArg(), valBlob.asArg());
-    backend.endWaitStatement(); // Close wait for values
-    backend.endIfStatement(); // Close if for write enabled
-    if (lookupCheckpoint)
-    {
-      backend.endIfStatement(); // Close else block
-      backend.endWaitStatement(); // Close wait for keys
-    }
-  }
-
-  private Var packCheckpointKey(Context context,
-      String functionName, List<Var> vars) throws UserException,
-      UndefinedTypeException, DoubleDefineException {
-    return packCheckpointData(context, functionName, vars);
-  }
-
-  private Var packCheckpointVal(Context context, List<Var> vars)
-       throws UserException, UndefinedTypeException, DoubleDefineException {
-    return packCheckpointData(context, null, vars);
-  }
-
   /**
+<<<<<<< .working
    * Take set of (recursively closed) variables and create a
    * unique key from their values.
    * @param context
@@ -1512,7 +1145,7 @@ public class ExprWalker {
    * @throws DoubleDefineException
    * @throws UndefinedTypeException
    */
-  private void structCopyIn(Context context, Var struct,
+  void structCopyIn(Context context, Var struct,
                       List<String> fieldPath, Var input)
                           throws UserException {
     if (Types.simpleCopySupported(input)) {
@@ -1617,7 +1250,7 @@ public class ExprWalker {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private Var snapshotUpdateable(Context context, Var src)
+  Var snapshotUpdateable(Context context, Var src)
       throws UserException, UndefinedTypeException {
     assert(Types.isPrimUpdateable(src));
     // Create a future alias to the updateable type so that

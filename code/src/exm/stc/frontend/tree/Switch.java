@@ -27,7 +27,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class Switch {
   private final int caseCount;
