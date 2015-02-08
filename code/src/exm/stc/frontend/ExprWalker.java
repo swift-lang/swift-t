@@ -579,7 +579,7 @@ public class ExprWalker {
 
     // This will check the type of the function call
     FunctionType concrete = FunctionTypeChecker.concretiseFunctionCall(context,
-                                f.function(), f.type(), f.args(), oList);
+                                                                     f, oList);
 
     // If this is an assert statement, disable it
     if (context.getForeignFunctions().isAssertVariant(f.function()) &&
