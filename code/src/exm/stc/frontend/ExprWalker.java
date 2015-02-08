@@ -575,7 +575,7 @@ public class ExprWalker {
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
 
     // This will check the type of the function call
-    FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
+    FunctionType concrete = FunctionTypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList);
 
     // If this is an assert statement, disable it
@@ -593,8 +593,8 @@ public class ExprWalker {
       Type expType = concrete.getInputs().get(i);
 
       Type exprType = TypeChecker.findExprType(context, argtree);
-      Type argType = TypeChecker.concretiseFnArg(context, f.function(), i,
-                                      expType, exprType).val2;
+      Type argType = FunctionTypeChecker.concretiseFnArg(context, f.function(),
+                                      i, expType, exprType).val2;
       argVars.add(eval(context, argtree, argType, false, renames));
     }
 
