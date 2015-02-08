@@ -1,6 +1,7 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -286,7 +287,7 @@ public class FunctionCallEvaluator {
       populateFromLocationStruct(context, locationVar, propVals);
     }
 
-    if (f.softLocationOverride()) {
+    if (fc.softLocationOverride()) {
       // Override strictness if @soft_location was used
       propVals.put(TaskPropKey.LOC_STRICTNESS,
                    TaskProps.LOC_STRICTNESS_SOFT_ARG);
@@ -429,6 +430,7 @@ public class FunctionCallEvaluator {
     }
   }
 
+
   /**
    * Generate backend instruction for function call
    * @param context
@@ -447,7 +449,11 @@ public class FunctionCallEvaluator {
     if (kind == FunctionCallKind.STRUCT_CONSTRUCTOR) {
       backendStructConstructor(context, function, concrete, oList, iList);
       return;
+    } else if (kind == FunctionCallKind.SUBTYPE_CONSTRUCTOR) {
+      backendSubtypeConstructor(context, function, concrete, oList, iList);
+      return;
     }
+
     assert(kind == FunctionCallKind.REGULAR_FUNCTION);
 
     FunctionType def = context.lookupFunction(function);
@@ -514,7 +520,8 @@ public class FunctionCallEvaluator {
     String wrapperFnName; // The name of the wrapper to call
     if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
       // Wrapper may need to be generated
-      wrapperFnName = wrappers.generateWrapper(context, function, concrete);
+      wrapperFnName = wrappers.generateWrapper(context, function,
+                                               concrete);
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Wrapper has same name for apps
@@ -539,10 +546,14 @@ public class FunctionCallEvaluator {
     }
     if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
-      Arg location = props.getWithDefault(TaskPropKey.LOCATION);
+      Arg location = props.getWithDefault(TaskPropKey.LOC_RANK);
       realInputs.add(VarRepr.backendArg(location));
-      Arg softLocation = props.getWithDefault(TaskPropKey.SOFT_LOCATION);
-      realInputs.add(VarRepr.backendArg(softLocation));
+
+      Arg locStrictness = props.getWithDefault(TaskPropKey.LOC_STRICTNESS);
+      realInputs.add(VarRepr.backendArg(locStrictness));
+
+      Arg locAccuracy = props.getWithDefault(TaskPropKey.LOC_ACCURACY);
+      realInputs.add(VarRepr.backendArg(locAccuracy));
     }
 
     // Other code always creates sync wrapper
@@ -575,7 +586,7 @@ public class FunctionCallEvaluator {
       }
     }
   }
-  
+
   private void checkCanTarget(Context context, FunctionCall f)
       throws UserException {
     if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
@@ -583,7 +594,7 @@ public class FunctionCallEvaluator {
           + " function " + f.function() + " with target");
     }
   }
-  
+
   /**
    * Fill extract members from struct and add to dictionary
    * @param context
@@ -737,5 +748,17 @@ public class FunctionCallEvaluator {
       }
     }
   }
+
+  private void backendSubtypeConstructor(Context context, String function,
+        FunctionType concrete, List<Var> outputs, List<Var> inputs)
+            throws UserException {
+      assert(outputs.size() == 1);
+      assert(inputs.size() == 1);
+      Var dst = outputs.get(0);
+      Var src = inputs.get(0);
+      assert(Types.isSubType(dst));
+      exprWalker.copyByValue(context, dst, src, false);
+    }
+
 
 }
