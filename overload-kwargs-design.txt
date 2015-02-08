@@ -1,0 +1,172 @@
+
+We need to support type types of functions:
+
+  Non-overloaded: VarArgs|OptArgs + PolyArgs + KWArgs +(PosArgs -> OptArgs) - PosArgsBeforeKWArgs
+  Overloaded: VarArgs + Overloading
+
+Function Definitions
+====================
+Here is pseudocode for processing function definitions.
+
+
+define(name, type, defaults) {
+  defs = getFunctionDefs(name);
+  if (defs.size() == 0) {
+    defineNonOverload(name, type, defaults);
+  } else { 
+    defineOverload(name, type, defs);
+  }
+}
+
+/**
+ * Define an overloaded function.  We only support VarArgs in conjunction
+ * with overloading.
+ */
+defineOverload(name, type, overloads) {
+  checkNoPolyOrOptArgs(type);
+
+  if (overloads.size() == 1) {
+    // First overload - previous wasn't checked
+    checkNoPolyOrOptArgs(overloads.get(0));
+  }
+
+  // Do pairwise checks for ambiguity
+  for (overload in overloads) {
+    checkNoAmbiguity(type, overload);
+  }
+
+  internalName = chooseInternalName(...);
+
+  registerOverloaded(name, functionType, internalName);
+}
+
+defineNonOverload(...) {
+  # TODO: how to represent kwargs, etc in function type
+  registerNonoverloaded(...)
+}
+
+compile() {
+  internalName = lookupInternalName(functionName);
+  ...
+}
+
+checkNoAmbiguity() {
+  // Need to handle non-varargs and varargs functions
+
+  if (2x varargs) {
+    // Extend shorter varargs to upto last required arg of longer varargs
+  } else {
+    // Extend varargs to length of non-varargs
+  }
+
+  // Check pairwise to see if a type alternative of one is assignable
+  // to the other
+  for (arg1, arg2 in  ...) {
+    if (unambiguousArg(arg1, arg2)) {
+      // OK!
+      return;
+    }
+  }
+  // No unambiguous args
+  throw exception;
+}
+
+unambiguousArg(arg1, arg2) {
+  return unambiguousArg2(arg1, arg2) && unambiguousArg2(arg2, arg1); 
+}
+
+unambiguousArg2(arg1, arg2) {
+  // TODO: is checking all alts like this necessary?
+  for (alt in UnionType.alternatives(arg1)) {
+    if (arg1.assignableTo(arg2)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+Function Call
+=============
+Here is pseudocode for resolving function calls to function definitions
+
+
+functionCallTypeCheck(tree, ...) {
+  inputArgTypes = functionInputArgTypes(tree);
+
+  defs = getFunctionDefs()
+
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    altOutputs = concretiseFunction(defs.get(0), failOnNoMatch=true);
+  } else {
+    altOutputs = [];
+    for (def in defs) {
+      altOutputs += concretiseFunction(def, failOnNoMatch=false);
+    }
+
+    if (altOutputs.size() == 0) {
+      throw exception
+    }
+  }
+
+  return altOutputs;
+}
+
+concretiseFunction() {
+  # Note: matchPositionals is roughly the same as current expandVarArgs func
+  matchPositionals();
+  matchKeywords();
+  fillDefaults();
+
+  # Existing typechecking logic
+  checkArgs()
+
+  fillTypeVars()
+  fillAmbiguous()
+
+  return viableAltOutputs();
+}
+
+functionCall(tree, ..., out) {
+  defs = getFunctionDefs()
+  inputArgTypes = functionInputArgTypes(tree, ...);
+
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    functionCall(..., defs.get(0));
+  } else {
+    selectOverload(tree, inputArgTypes, out);
+  }
+}
+
+selectOverload(..., ) {
+  # Iterate over alternatives
+  # Select 0 or 1 alt output args from each alternative
+  # Warn if multiple alternatives matched (should not happen if checkNoAmbiguity() works right)
+}
+
+Function Pointers
+=================
+We need some special code for disambiguating function pointers by context.
+Function pointer typechecking is handled as any other expression.
+
+functionPointer(..., out) {
+  # Note: this must resolve both function pointers in vars and global functions
+  defs = getFunctionDefs(name);
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    evalFunctionPointer(..., defs.get(0));
+  } else {
+    matchingDefs = selectFunctionPointer(defs, out.type());
+    assert(matchingDefs.size() > 0); // Should be caught by typechecker
+
+    if (matchingDefs.size() > 1) {
+      warn about ambiguitity
+    }
+    evalFunctionPointer(..., matchingDefs.get(0));
+  }
+}
