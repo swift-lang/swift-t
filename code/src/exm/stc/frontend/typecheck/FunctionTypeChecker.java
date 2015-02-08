@@ -1,4 +1,4 @@
-package exm.stc.frontend;
+package exm.stc.frontend.typecheck;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +21,8 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.tree.FunctionCall;
 
 /**

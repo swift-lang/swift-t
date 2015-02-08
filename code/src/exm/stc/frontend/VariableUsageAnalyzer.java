@@ -59,6 +59,7 @@ import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
 import exm.stc.frontend.tree.Wait;
+import exm.stc.frontend.typecheck.TypeChecker;
 /**
  * This module collects information about variable dataflow in the program, e.g.
  * if a variable is read or not, whether it is assigned twice, etc.

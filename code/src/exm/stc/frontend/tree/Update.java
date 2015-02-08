@@ -25,7 +25,7 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class Update {
   public Update(Var target, SwiftAST expr, Operators.UpdateMode mode) {

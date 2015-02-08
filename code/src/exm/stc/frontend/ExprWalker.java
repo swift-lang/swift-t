@@ -63,13 +63,16 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
-import exm.stc.frontend.TypeChecker.MatchedOp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.FunctionCall;
 import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
 import exm.stc.frontend.tree.Literals;
+import exm.stc.frontend.typecheck.FunctionTypeChecker;
+import exm.stc.frontend.typecheck.OpTypeChecker;
+import exm.stc.frontend.typecheck.OpTypeChecker.MatchedOp;
+import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -525,7 +528,7 @@ public class ExprWalker {
     int op_argcount = tree.getChildCount() - 1;
 
     // Use the AST token label to find the actual operator
-    MatchedOp opMatch = TypeChecker.getOpFromTree(context, tree, out.type());
+    MatchedOp opMatch = OpTypeChecker.getOpFromTree(context, tree, out.type());
     Op op = opMatch.op;
     List<Type> exprTypes = opMatch.exprTypes;
 

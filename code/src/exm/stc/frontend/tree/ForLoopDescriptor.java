@@ -41,8 +41,8 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
-import exm.stc.frontend.TypeChecker;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 /**
  * For loops are complex, so this class takes the AST of a for loop and
