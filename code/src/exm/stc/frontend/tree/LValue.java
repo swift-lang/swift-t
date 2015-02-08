@@ -39,7 +39,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
-import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class LValue {
   /** A predecessor before reduction */
