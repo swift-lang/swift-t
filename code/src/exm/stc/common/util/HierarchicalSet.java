@@ -30,12 +30,12 @@ import exm.stc.common.exceptions.STCRuntimeError;
 public class HierarchicalSet<T> implements Set<T> {
   private final HierarchicalSet<T> parent;
   private final Set<T> set;
-  
-  
+
+
   private HierarchicalSet(HierarchicalSet<T> parent, Set<T> set) {
     this.parent = parent;
     if (set == null) {
-      this.set = new HashSet<T>(); 
+      this.set = new HashSet<T>();
     } else {
       this.set = set;
     }
@@ -44,10 +44,11 @@ public class HierarchicalSet<T> implements Set<T> {
   public HierarchicalSet() {
     this(null, null);
   }
+
   public HierarchicalSet(Set<T> innerSet) {
     this(null, innerSet);
   }
-  
+
   /**
    * Make a new hierarchical set with this as the parent
    * @return
@@ -65,7 +66,7 @@ public class HierarchicalSet<T> implements Set<T> {
   public HierarchicalSet<T> makeChild(Set<T> innerSet) {
     return new HierarchicalSet<T>(this, innerSet);
   }
-  
+
   @Override
   public boolean add(T e) {
     return set.add(e);
@@ -92,7 +93,7 @@ public class HierarchicalSet<T> implements Set<T> {
     }
     return false;
   }
-  
+
 
   @Override
   public boolean containsAll(Collection<?> c) {
@@ -146,7 +147,7 @@ public class HierarchicalSet<T> implements Set<T> {
   public <S> S[] toArray(S[] a) {
     throw new STCRuntimeError("not implemented");
   }
-  
+
   @Override
   public String toString() {
     StringBuffer accum = new StringBuffer();
@@ -163,7 +164,7 @@ public class HierarchicalSet<T> implements Set<T> {
   private boolean writeItems(StringBuffer accum, boolean first) {
     for (T i: set) {
       if (first) {
-        first = false; 
+        first = false;
       } else {
         accum.append(",");
       }
@@ -173,7 +174,7 @@ public class HierarchicalSet<T> implements Set<T> {
   }
 
   private final class HSIt implements Iterator<T> {
-    
+
     private HSIt() {
       curr = HierarchicalSet.this;
       currIt = curr.set.iterator();
@@ -181,7 +182,7 @@ public class HierarchicalSet<T> implements Set<T> {
 
     HierarchicalSet<T> curr;
     Iterator<T> currIt;
-    
+
     @Override
     public boolean hasNext() {
       if (currIt != null && currIt.hasNext()) {
@@ -189,7 +190,7 @@ public class HierarchicalSet<T> implements Set<T> {
       }
       return advance();
     }
-  
+
     private boolean advance() {
       if (currIt == null) {
         return false;
@@ -213,7 +214,7 @@ public class HierarchicalSet<T> implements Set<T> {
       }
       throw new NoSuchElementException();
     }
-  
+
     @Override
     public void remove() {
       throw new STCRuntimeError("not implemented");

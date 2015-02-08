@@ -225,6 +225,8 @@ chainable_stmt:
 new_type_definition:
         TYPE tname=ID LBRACE type_field* RBRACE ->
             ^( DEFINE_NEW_STRUCT_TYPE $tname type_field*)
+    |   TYPE tname=ID SEMICOLON ->
+            ^( DEFINE_NEW_TYPE $tname )
     |   TYPE tname=ID baset=standalone_type SEMICOLON ->
             ^( DEFINE_NEW_TYPE $tname $baset )
     |   TYPEDEF tname=ID baset=standalone_type SEMICOLON ->
@@ -299,6 +301,8 @@ command_args_more:
 command_arg:
         variable
     |   literal
+    |   array_constructor
+    |   array_kv_constructor
     |   LPAREN expr RPAREN -> expr
     |   ATSIGN var_name -> ^( APP_FILENAME var_name )
     ;

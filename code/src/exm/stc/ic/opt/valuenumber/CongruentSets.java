@@ -16,7 +16,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions;
@@ -24,6 +23,7 @@ import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.SetMultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
@@ -86,7 +86,13 @@ class CongruentSets {
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
    */
-  private final Map<Arg, Set<ArgCV>> componentIndex;
+  private final SetMultiMap<Arg, ArgCV> componentIndex;
+
+  /**
+   * Track children where Arg may be a canonical value, so that we
+   * can update it if needed.
+   */
+  private final SetMultiMap<Arg, CongruentSets> subscribedChildren;
 
   /**
    * Whether unpassable variables are inherited from parent.
@@ -128,7 +134,8 @@ class CongruentSets {
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
     this.equivalences = new MultiMap<ArgCV, ArgCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
-    this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
+    this.componentIndex = new SetMultiMap<Arg, ArgCV>();
+    this.subscribedChildren = new SetMultiMap<Arg, CongruentSets>();
     this.varsFromParent = varsFromParent;
     this.unpassableDeclarations = new HashSet<Var>();
     this.mergeQueue = new LinkedList<ToMerge>();
@@ -138,15 +145,10 @@ class CongruentSets {
       this.constShareEnabled = parent.constShareEnabled;
       this.constFoldEnabled = parent.constFoldEnabled;
     } else {
-      try {
-        this.constShareEnabled = Settings.getBoolean(
+      this.constShareEnabled = Settings.getBooleanUnchecked(
                                         Settings.OPT_SHARED_CONSTANTS);
-        this.constFoldEnabled = Settings.getBoolean(
+      this.constFoldEnabled = Settings.getBooleanUnchecked(
                                         Settings.OPT_CONSTANT_FOLD);
-      } catch (InvalidOptionException e) {
-        e.printStackTrace();
-        throw new STCRuntimeError(e.getMessage());
-      }
     }
   }
 
@@ -477,11 +479,11 @@ class CongruentSets {
   public void addToSet(GlobalConstants consts, ArgOrCV val, Arg canonicalVal) {
     assert(val != null);
     assert(canonicalVal != null);
-    addSetEntry(val, canonicalVal);
+    addSetEntry(consts, val, canonicalVal);
     processQueues(consts);
   }
 
-  private void addSetEntry(ArgOrCV val, Arg canonicalVal) {
+  private void addSetEntry(GlobalConstants consts, ArgOrCV val, Arg canonicalVal) {
     logger.trace("Add " + val + " to " + canonicalVal);
     boolean newEntry = setCanonicalEntry(val, canonicalVal);
     if (!newEntry) {
@@ -490,6 +492,10 @@ class CongruentSets {
 
     if (val.isCV()) {
       checkForRecanonicalization(canonicalVal, val.cv());
+    } else {
+      assert(val.isArg());
+      // val may have been canonical value in a child
+      propagateCanonicalToChildren(consts, val.arg(), canonicalVal);
     }
 
     // Also add any equivalent values
@@ -499,7 +505,7 @@ class CongruentSets {
         logger.trace("Add set entry from equiv: "
                      + equiv + " in " + canonicalVal);
       }
-      addSetEntry(new ArgOrCV(equiv), canonicalVal);
+      addSetEntry(consts, new ArgOrCV(equiv), canonicalVal);
     }
 
   }
@@ -546,6 +552,7 @@ class CongruentSets {
       }
       while (!recanonicalizeQueue.isEmpty()) {
         Arg component = recanonicalizeQueue.removeFirst();
+
         updateCanonicalComponents(consts, component, null);
       }
       // Outer loop in case processing one queue results in additions
@@ -572,7 +579,10 @@ class CongruentSets {
             newCanon + " " + newCanon.type();
 
     // Handle situation where oldCanonical is part of another ArgOrCV
-   updateCanonicalComponents(consts, oldCanon, newCanon);
+    updateCanonicalComponents(consts, oldCanon, newCanon);
+
+    // Handle case where oldCanonical was canonical in children
+    propagateCanonicalToChildren(consts, oldCanon, newCanon);
 
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
@@ -598,6 +608,38 @@ class CongruentSets {
     this.mergedInto.put(newCanon, oldCanon);
 
     logger.trace("Done merging " + oldCanon + " into " + newCanon);
+  }
+
+  /**
+   * Allow changes for canon to propagate from parent and other ancestors
+   * @param newCanon
+   */
+  private void subscribeToParent(Arg newCanon) {
+    CongruentSets curr = this;
+    while (curr.parent != null) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("SUBSCRIBED_CHILDREN subscribe "
+            + System.identityHashCode(curr) + " to "
+            + System.identityHashCode(curr.parent) + " for " + newCanon);
+      }
+
+      curr.parent.subscribedChildren.put(newCanon, curr);
+      curr = curr.parent;
+    }
+  }
+
+  private void propagateCanonicalToChildren(GlobalConstants consts,
+      Arg oldCanon, Arg newCanon) {
+    Set<CongruentSets> children = subscribedChildren.get(oldCanon);
+    for (CongruentSets child: children) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("SUBSCRIBED_CHILDREN propagate "
+              + System.identityHashCode(this) + " to "
+              + System.identityHashCode(child) + " for " + oldCanon);
+      }
+
+      child.addToSet(consts, new ArgOrCV(oldCanon), newCanon);
+    }
   }
 
   public Iterable<ArgOrCV> availableThisScope() {
@@ -637,9 +679,9 @@ class CongruentSets {
     do {
       if (logger.isTraceEnabled()) {
         logger.trace("Iterating over components of: " + oldComponent + ": " +
-                    curr.lookupComponentIndex(oldComponent));
+                    curr.componentIndex.get(oldComponent));
       }
-      for (ArgCV outerCV: curr.lookupComponentIndex(oldComponent)) {
+      for (ArgCV outerCV: curr.componentIndex.get(oldComponent)) {
         ArgCV newOuterCV1 = outerCV;
         if (newComponent != null &&
             outerCV.canSubstituteInputs(congType)) {
@@ -660,7 +702,8 @@ class CongruentSets {
           }
           Arg canonical = findCanonicalInternal(outerCV);
           if (canonical != null) {
-            addUpdatedCV(oldComponent, newComponent, newOuterCV2, canonical);
+            addUpdatedCV(consts, oldComponent, newComponent, newOuterCV2,
+                         canonical);
           } else {
             if (logger.isTraceEnabled()) {
               logger.trace("Could not update " + outerCV);
@@ -680,13 +723,13 @@ class CongruentSets {
    * @param newCV canonicalized computed value
    * @param canonical existing set that it is a member of
    */
-  private void addUpdatedCV(Arg oldComponent, Arg newComponent, ArgOrCV newCV,
-                            Arg canonical) {
+  private void addUpdatedCV(GlobalConstants consts, Arg oldComponent,
+      Arg newComponent, ArgOrCV newCV, Arg canonical) {
     // Add new CV, handling special cases where CV bridges two sets
     Arg newCanonical = findCanonicalInternal(newCV);
     if (newCanonical == null || newCanonical.equals(canonical)) {
       // Add to same set
-      addSetEntry(newCV, canonical);
+      addSetEntry(consts, newCV, canonical);
     } else {
       // Already in a set, mark that we need to merge
       mergeQueue.add(new ToMerge(canonical, newCanonical));
@@ -733,6 +776,10 @@ class CongruentSets {
 
     Arg prev = canonical.put(val, canonicalVal);
     canonicalInv.put(canonicalVal, val);
+
+    // Need to update structure if it changes in parent
+    subscribeToParent(canonicalVal);
+
     return prev == null;
   }
 
@@ -747,21 +794,7 @@ class CongruentSets {
     if (logger.isTraceEnabled()) {
       logger.trace("Add component: " + input + "=>" + cv);
     }
-    Set<ArgCV> set = componentIndex.get(input);
-    if (set == null) {
-      set = new HashSet<ArgCV>();
-      componentIndex.put(input, set);
-    }
-    set.add(cv);
-  }
-
-  private Set<ArgCV> lookupComponentIndex(Arg oldComponent) {
-    Set<ArgCV> res = this.componentIndex.get(oldComponent);
-    if (res != null) {
-      return res;
-    } else {
-      return Collections.emptySet();
-    }
+    componentIndex.put(input, cv);
   }
 
   private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,

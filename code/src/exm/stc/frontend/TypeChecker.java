@@ -500,24 +500,6 @@ public class TypeChecker {
     return null; // if no alternatives
   }
 
-  /**
-   * Concrete input type for operator
-   * @throws TypeMismatchException
-   */
-  public static Pair<Type, Type>
-    concretiseInputType(Context context, Type expectedT, Type argExprT)
-        throws TypeMismatchException {
-    Pair<Type, Type> res = whichAlternativeType(expectedT, argExprT, true);
-    if (res == null) {
-      throw new TypeMismatchException(context, "Expected type " + expectedT
-                                    + " but had type " + argExprT);
-    }
-
-    assert(res.val1.isConcrete()) : "Non-concrete arg type: " + res.val1;
-    assert(res.val2.isConcrete()) : "Non-concrete arg type: " + res.val2;
-    return res;
-  }
-
   private static Type tuple(Context context, SwiftAST tree) throws UserException {
     assert(tree.getType() == ExMParser.TUPLE);
 
@@ -1003,14 +985,6 @@ public class TypeChecker {
     }
   }
 
-  public static Type checkAssignment(Context context,
-      Type rValType, Type lValType, String lValName,
-      Map<String, Type> rValTypeVarBindings) throws TypeMismatchException {
-    return checkAssignment(context, AssignOp.ASSIGN, rValType, lValType,
-                          lValName, rValTypeVarBindings);
-  }
-
-
   public static Type checkSingleAssignment(Context context,
       Type rValType, Type lValType, String lValName) throws TypeMismatchException {
     return checkAssignment(context, AssignOp.ASSIGN, rValType, lValType,
@@ -1103,15 +1077,6 @@ public class TypeChecker {
         + op.toString().toLowerCase() + " to "
         + lValName + ": LVal has type "
         + lValType.toString() + " but RVal has type " + rValType.toString());
-  }
-
-  /**
-   * Create dictionary with null type var bindings
-   * @param ftype
-   * @return
-   */
-  public static MultiMap<String, Type> typeVarBindings(FunctionType ftype) {
-    return new MultiMap<String, Type>();
   }
 
   /**

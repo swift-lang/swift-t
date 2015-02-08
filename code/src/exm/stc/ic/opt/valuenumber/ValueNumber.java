@@ -28,7 +28,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -121,11 +120,7 @@ public class ValueNumber implements OptimizerPass {
   public ValueNumber(boolean reorderingAllowed) {
     this.reorderingAllowed = reorderingAllowed;
 
-    try {
-      finalizedVarEnabled = Settings.getBoolean(Settings.OPT_FINALIZED_VAR);
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+    finalizedVarEnabled = Settings.getBooleanUnchecked(Settings.OPT_FINALIZED_VAR);
   }
 
   @Override

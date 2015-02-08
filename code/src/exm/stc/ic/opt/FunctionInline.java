@@ -29,7 +29,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -39,6 +38,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
+import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -73,13 +73,22 @@ public class FunctionInline implements OptimizerPass {
    */
   private final Set<String> alwaysInline = new HashSet<String>();
 
+  /**
+   * Threshold for inlining: computed as <# of callsites> *
+   *  <# instructions in function>
+   */
+  private final long inlineThreshold;
+
+  /**
+   * Always inline functions with <# instructions in function> < this
+   */
+  private final long alwaysInlineThreshold;
+
   public FunctionInline() {
-    try {
-      inlineThreshold = Settings.getLong(Settings.OPT_FUNCTION_INLINE_THRESHOLD);
-    } catch (InvalidOptionException e) {
-      e.printStackTrace();
-      throw new STCRuntimeError(e.getMessage());
-    }
+    inlineThreshold = Settings.getLongUnchecked(
+        Settings.OPT_FUNCTION_INLINE_THRESHOLD);
+    alwaysInlineThreshold = Settings.getLongUnchecked(
+        Settings.OPT_FUNCTION_ALWAYS_INLINE_THRESHOLD);
   }
 
   private static boolean isFunctionCall(Instruction inst) {
@@ -87,12 +96,6 @@ public class FunctionInline implements OptimizerPass {
            inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL ||
            inst.op == Opcode.CALL_FOREIGN;
   }
-
-  /**
-   * Threshold for inlining: if function called less than or equal to
-   * this number of times, then inline.
-   */
-  public final long inlineThreshold;
 
   @Override
   public String getPassName() {
@@ -175,7 +178,7 @@ public class FunctionInline implements OptimizerPass {
     // Narrow inline candidates by number of calls, remove unused functions
     for (Function f: program.functions()) {
       List<String> callLocs = finder.functionUsages.get(f.name());
-      int functionSize = finder.getFunctionSize(f);
+      long functionSize = finder.getFunctionSize(f);
       if (f.name().equals(Constants.ENTRY_FUNCTION)) {
         // Do nothing
       } else if (callLocs == null || callLocs.size() == 0) {
@@ -185,7 +188,8 @@ public class FunctionInline implements OptimizerPass {
         // Always inline functions that were only called once
         alwaysInline.add(f.name());
         inlineCandidates.putAll(f.name(), callLocs);
-      } else if (callLocs.size() * functionSize  <= inlineThreshold) {
+      } else if (functionSize <= alwaysInlineThreshold &&
+          callLocs.size() * functionSize  <= inlineThreshold) {
         inlineCandidates.putAll(f.name(), callLocs);
         if (!functionCalls.containsKey(f.name())) {
           // Doesn't call other functions, safe to inline always
@@ -354,7 +358,6 @@ public class FunctionInline implements OptimizerPass {
           break;
         }
         case CONDITIONAL: {
-          // TODO: is it possible here to have inlining loop?
           Conditional cnd = stmt.conditional();
           for (Block cb: cnd.getBlocks()) {
             doInlining(logger, prog, contextFunction, cb, inlineLocations,
@@ -563,7 +566,7 @@ public class FunctionInline implements OptimizerPass {
     /**
      * Function sizes in instructions
      */
-    private Map<String, int[]> functionSizes = new HashMap<String, int[]>();
+    private Counters<String> functionSizes = new Counters<String>();
 
     @Override
     public void visit(Logger logger, Function functionContext,
@@ -573,21 +576,12 @@ public class FunctionInline implements OptimizerPass {
         functionUsages.put(calledFunction, functionContext.name());
       }
 
-      int prev[] = functionSizes.get(functionContext.name());
-      if (prev == null) {
-        functionSizes.put(functionContext.name(), new int[] {1});
-      } else {
-        prev[0] = prev[0] + 1;
-      }
+      // Count number of instructions
+      functionSizes.increment(functionContext.name());
     }
 
-    public int getFunctionSize(Function function) {
-      int size[] = functionSizes.get(function.name());
-      if (size == null) {
-        return 0;
-      } else {
-        return size[0];
-      }
+    public long getFunctionSize(Function function) {
+      return functionSizes.getCount(function.name());
     }
 
   }

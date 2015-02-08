@@ -32,12 +32,10 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.HierarchicalMap;
-import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
@@ -310,12 +308,12 @@ public class HoistLoops implements OptimizerPass {
       for (Var out: inst.getModifiedOutputs()) {
         write(out, piecewiseOutputs.contains(out));
       }
-      for (Pair<Var, InitType> init: inst.getInitialized()) {
-        initialize(init.val1, init.val2);
+      for (Var init: inst.getInitialized()) {
+        initialize(init);
       }
     }
 
-    public void initialize(Var v, InitType initType) {
+    public void initialize(Var v) {
       assert(Types.outputRequiresInitialization(v) ||
              Types.inputRequiresInitialization(v));
       // Track partial or full initialization

@@ -2397,30 +2397,10 @@ public class ASTWalker {
         args.add(file);
       } else {
         Type exprType = TypeChecker.findExprType(context, cmdArg);
-        Type baseType = exprType; // Type after expanding arrays
-        while (true) {
-          // Iteratively reduce until we get base type
-          if (Types.isArray(baseType)) {
-            NestedContainerInfo info = new NestedContainerInfo(baseType);
-            baseType = info.baseType;
-          } else if (Types.isRef(baseType)) {
-            baseType = Types.retrievedType(baseType);
-          } else {
-            break;
-          }
-        }
-
-        if (Types.isString(baseType) || Types.isInt(baseType) ||
-            Types.isFloat(baseType) || Types.isBool(baseType) ||
-            Types.isFile(baseType)) {
-            Var arg = exprWalker.eval(context, cmdArg, exprType, false, null);
-            args.add(arg);
-            if (Types.isRef(arg)) {
-              refArgs.add(arg);
-            }
-        } else {
-          throw new TypeMismatchException(context, "Cannot convert type " +
-                        baseType.typeName() + " to app command line arg");
+        Var arg = evalAppCmdArg(context, cmdArg, exprType);
+        args.add(arg);
+        if (Types.isRef(arg)) {
+          refArgs.add(arg);
         }
       }
     }
@@ -2456,7 +2436,45 @@ public class ASTWalker {
       // Caller will close wait
       return new AppCmdArgs(true, cmd, args);
     }
+  }
 
+  private Var evalAppCmdArg(Context context, SwiftAST cmdArg, Type exprType)
+      throws TypeMismatchException, UserException {
+    Type validExprType = concretiseAppCmdArgType(exprType);
+
+    if (validExprType == null) {
+      throw new TypeMismatchException(context, "Cannot convert type " +
+                    exprType.typeName() + " to app command line arg");
+    }
+
+    Var arg = exprWalker.eval(context, cmdArg, validExprType, false, null);
+    return arg;
+  }
+
+  private Type concretiseAppCmdArgType(Type argType) {
+    for (Type altArgType: UnionType.getAlternatives(argType)) {
+      Type baseType = altArgType; // Type after expanding arrays
+      while (true) {
+        // Iteratively reduce until we get base type
+        if (Types.isArray(baseType)) {
+          NestedContainerInfo info = new NestedContainerInfo(baseType);
+          baseType = info.baseType;
+        } else if (Types.isRef(baseType)) {
+          baseType = Types.retrievedType(baseType);
+        } else {
+          break;
+        }
+      }
+
+      if (Types.isString(baseType) || Types.isInt(baseType) ||
+          Types.isFloat(baseType) || Types.isBool(baseType) ||
+          Types.isFile(baseType)) {
+        return altArgType;
+      } else if (Types.isWildcard(baseType)) {
+        return Types.concretiseArbitrarily(altArgType);
+      }
+    }
+    return null;
   }
 
   /**
@@ -2549,11 +2567,19 @@ public class ASTWalker {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
             defnTree.getType() == ExMParser.TYPEDEF );
     int children = defnTree.getChildCount();
-    assert(children == 2);
+    assert(children == 1 || children == 2);
     String typeName = defnTree.child(0).getText();
-    SwiftAST baseTypeT = defnTree.child(1);
 
-    Type baseType = TypeTree.extractStandaloneType(context, baseTypeT);
+    Type baseType;
+    if (children == 2) {
+      SwiftAST baseTypeT = defnTree.child(1);
+      baseType = TypeTree.extractStandaloneType(context, baseTypeT);
+    } else {
+      LogHelper.warn(context, "type definition with implied file is deprecated."
+                        + "Suggested replacement is: type " + typeName + " file;");
+      baseType = Types.F_FILE;
+    }
+
 
     Type newType;
     if (aliasOnly) {

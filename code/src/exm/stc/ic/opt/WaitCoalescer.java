@@ -41,7 +41,6 @@ import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
-import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.StackLite;
@@ -1103,7 +1102,7 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
-  private static ListFactory<InstOrCont> LL_FACT =
+  private static LinkedListFactory<InstOrCont> LL_FACT =
                     new LinkedListFactory<InstOrCont>();
   private static MultiMap<Var, InstOrCont> buildWaiterMap(Program prog,
                                                           Block block) {

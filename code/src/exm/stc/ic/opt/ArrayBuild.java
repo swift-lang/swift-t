@@ -28,7 +28,6 @@ import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -64,13 +63,13 @@ public class ArrayBuild implements OptimizerPass {
   }
 
   private static class ArrayInfo {
-    
-    private final Map<Block, AliasTracker> aliasMap 
+
+    private final Map<Block, AliasTracker> aliasMap
                       = new HashMap<Block, AliasTracker>();
 
     private final Map<Pair<AliasKey, Block>, BlockVarInfo> varMap
                       = new HashMap<Pair<AliasKey, Block>, BlockVarInfo>();
-    
+
     /**
      * Mark correspondence between block and aliases
      * @param block
@@ -79,13 +78,13 @@ public class ArrayBuild implements OptimizerPass {
     void addAliasTracker(Block block, AliasTracker aliases) {
       aliasMap.put(block, aliases);
     }
-    
+
     BlockVarInfo getEntry(Block block, Var arr) {
       AliasTracker aliases = aliasMap.get(block);
       assert(aliases != null) : "Alias map must be init";
       return getEntry(block, aliases.getCanonical(arr));
     }
-    
+
     BlockVarInfo getEntry(Block block, AliasKey arr) {
       Pair<AliasKey, Block> key = Pair.create(arr, block);
       BlockVarInfo entry = varMap.get(key);
@@ -93,7 +92,7 @@ public class ArrayBuild implements OptimizerPass {
         entry = new BlockVarInfo();
         varMap.put(key, entry);
       }
-      
+
       return entry;
     }
 
@@ -108,23 +107,23 @@ public class ArrayBuild implements OptimizerPass {
       return aliases;
     }
   }
-  
+
   static class BlockVarInfo {
     /** If var was declared in this block */
     boolean declaredHere = false;
 
     /** If immediate insert instruction found in this block */
     boolean insertImmHere = false;
-    
+
     /** If another modification instruction found in this block */
     boolean otherModHere = false;
 
     /** If insert imm was used in this block or descendants */
     boolean insertImmRec = false;
-    
+
     /** If another mod was used in this block or descendants */
     boolean otherModRec = false;
-    
+
     /** If, for any possible execution of this block, insertImm is
      * called at most once on this variable in a single block in
      * this subtree.  Also false if insertImm never used in subtree */
@@ -133,11 +132,11 @@ public class ArrayBuild implements OptimizerPass {
     public boolean isModifiedHere() {
       return insertImmHere || otherModHere;
     }
-    
+
     public boolean isModifiedInSubtree() {
       return otherModRec || insertImmRec;
     }
-    
+
     @Override
     public String toString() {
       return "declaredHere: " + declaredHere + ", " +
@@ -159,19 +158,19 @@ public class ArrayBuild implements OptimizerPass {
    * blocks of function
    * @param logger
    * @param f
-   * @param funcMap 
+   * @param funcMap
    * @return
    */
   private ArrayInfo buildInfo(Logger logger, Map<String, Function> funcMap,
                               Function f) {
-    // Set to track candidates in scope 
+    // Set to track candidates in scope
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
     ArrayInfo info = new ArrayInfo();
-    
+
     // First build up complete alias info for each block, to avoid
     // complications with alias info being incrementally refined
     buildAliasInfoRec(logger, f, f.mainBlock(), info, new AliasTracker());
-    
+
     buildInfoRec(logger, funcMap,f, f.mainBlock(), info, candidates);
     return info;
   }
@@ -189,7 +188,7 @@ public class ArrayBuild implements OptimizerPass {
   private void buildAliasInfoRec(Logger logger, Function f, Block block,
           ArrayInfo info, AliasTracker aliases) {
     info.addAliasTracker(block, aliases);
-    
+
     for (Statement stmt: block.getStatements()) {
       switch(stmt.type()) {
         case INSTRUCTION:
@@ -204,7 +203,7 @@ public class ArrayBuild implements OptimizerPass {
           throw new STCRuntimeError("Unexpected " + stmt.type());
       }
     }
-    
+
     for (Continuation c: block.getContinuations()) {
       for (Block child: c.getBlocks()) {
         buildAliasInfoRec(logger, f, child, info, aliases.makeChild());
@@ -225,7 +224,7 @@ public class ArrayBuild implements OptimizerPass {
      * analysis since there is not a single canonical non-alias
      * variable for the nested array.
      */
-    return Types.isArray(var) && 
+    return Types.isArray(var) &&
             !(canonicalOnly && var.storage() == Alloc.ALIAS);
   }
 
@@ -242,15 +241,15 @@ public class ArrayBuild implements OptimizerPass {
     }
   }
 
-  private void buildInfoRec(Logger logger, Map<String, Function> funcMap, 
+  private void buildInfoRec(Logger logger, Map<String, Function> funcMap,
       Function f, Block block, ArrayInfo info,
       HierarchicalSet<Var> candidates) {
     addBlockCandidates(f, block, info, candidates);
-    
+
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(logger, funcMap, block, info, stmt.instruction(), 
+          updateInfo(logger, funcMap, block, info, stmt.instruction(),
                       candidates);
           break;
         default:
@@ -258,16 +257,16 @@ public class ArrayBuild implements OptimizerPass {
           break;
       }
     }
-    
+
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
         buildInfoRec(logger, funcMap, f, inner, info, candidates.makeChild());
       }
     }
-    
+
     // Compute bottom-up properties
     updateInfoBottomUp(logger, block, info, candidates);
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("Collected info on block: " +
                   System.identityHashCode(block) + " " + block.getType());
@@ -291,9 +290,9 @@ public class ArrayBuild implements OptimizerPass {
     addBlockCandidates(block, info, candidates, block.variables());
   }
 
-  private void updateInfo(Logger logger, Map<String, Function> funcMap, 
+  private void updateInfo(Logger logger, Map<String, Function> funcMap,
       Block block, ArrayInfo info, Instruction inst, Set<Var> candidates) {
-    
+
     if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
       if (candidates.contains(arr)) {
@@ -330,13 +329,13 @@ public class ArrayBuild implements OptimizerPass {
 
   private boolean initsAlias(Instruction inst, Var out) {
     if (out.storage() == Alloc.ALIAS) {
-      for (Pair<Var, InitType> e: inst.getInitialized()) {
-        if (out.equals(e.val1) && e.val2 == InitType.FULL) {
+      for (Var init: inst.getInitialized()) {
+        if (out.equals(init)) {
           return true;
         }
       }
     }
-    
+
     return false;
   }
 
@@ -354,12 +353,12 @@ public class ArrayBuild implements OptimizerPass {
       BlockVarInfo ci = info.getEntry(block, candidate);
       ci.insertImmRec = ci.insertImmHere;
       ci.otherModRec = ci.otherModHere;
-      
+
       // Count number of blocks in subtree that are "valid"
       int insertImmOnceCounter = ci.insertImmHere ? 1 : 0;
       // True if insert immediate might happen on multiple blocks
       boolean insertImmOnceInvalid = false;
-      
+
       for (Continuation cont: block.allComplexStatements()) {
         int iiBlockCount = 0; // Count subblocks with insertImm
         for (Block contBlock: cont.getBlocks()) {
@@ -397,21 +396,21 @@ public class ArrayBuild implements OptimizerPass {
 
   private void optimize(Logger logger, Function f, ArrayInfo info) {
     InitState init = InitState.enterFunction(f);
-    
+
     optRecurseOnBlock(logger, f, f.mainBlock(), info, init,
                 new HierarchicalSet<Var>(), new HierarchicalSet<Var>());
   }
 
   private void optRecurseOnBlock(Logger logger, Function f, Block block,
-      ArrayInfo info, InitState init, 
+      ArrayInfo info, InitState init,
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
     addBlockCandidates(f, block, info, cands);
-    
+
     for (Var cand: cands) {
       if (!invalid.contains(cand)) {
         AliasTracker blockAliases = info.getAliases(block);
         AliasKey candKey = blockAliases.getCanonical(cand);
-        
+
         BlockVarInfo vi = info.getEntry(block, cand);
         if (logger.isTraceEnabled()) {
           logger.trace("Candidate: " + cand + " in block " +
@@ -427,7 +426,7 @@ public class ArrayBuild implements OptimizerPass {
           // TODO
           // Criteria 2: declared in ancestor && not modified on any
           //        non-mutually-exclusive path
-          
+
           // Optimize here: cases where only inserted in this block,
           // or no inserts at all
           logger.trace("Can optimize!");
@@ -443,7 +442,7 @@ public class ArrayBuild implements OptimizerPass {
         }
       }
     }
-    
+
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
@@ -457,7 +456,7 @@ public class ArrayBuild implements OptimizerPass {
           break;
       }
     }
-    
+
     for (Continuation cont: block.getContinuations()) {
       optRecurseOnCont(logger, f, cont, info, init, cands, invalid);
     }
@@ -467,7 +466,7 @@ public class ArrayBuild implements OptimizerPass {
       Continuation cont, ArrayInfo info, InitState init,
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
     InitState contInit = init.enterContinuation(cont);
-    
+
     List<InitState> blockInits = new ArrayList<InitState>();
     for (Block inner: cont.getBlocks()) {
       InitState blockInit = contInit.enterBlock(inner);
@@ -475,7 +474,7 @@ public class ArrayBuild implements OptimizerPass {
                      invalid.makeChild());
       blockInits.add(blockInit);
     }
-    
+
     if (InitState.canUnifyBranches(cont)) {
       init.unifyBranches(cont, blockInits);
     }
@@ -490,16 +489,16 @@ public class ArrayBuild implements OptimizerPass {
   private void replaceInserts(Logger logger, Block block,
           AliasTracker blockAliases, InitState init,
           Var cand, AliasKey candKey) {
-    
+
     // First remove the old instructions and gather keys and vals
-    Pair<List<Arg>, List<Arg>> keyVals = 
+    Pair<List<Arg>, List<Arg>> keyVals =
             removeOldInserts(block, blockAliases, candKey);
     List<Arg> keys = keyVals.val1;
     List<Arg> vals = keyVals.val2;
-    
+
     ListIterator<Statement> insertPos;
     insertPos = findArrayBuildPos(logger, block, init, cand, keys, vals);
-    
+
     insertPos.add(TurbineOp.arrayBuild(cand, keys, vals));
   }
 
@@ -514,7 +513,7 @@ public class ArrayBuild implements OptimizerPass {
   private ListIterator<Statement> findArrayBuildPos(Logger logger,
       Block block, InitState outerInit,
       Var array, List<Arg> keys, List<Arg> vals) {
-    
+
     // Place the array build instruction as early as possible, once all
     // inputs are initialized
     Set<Var> needsInit = new HashSet<Var>();
@@ -525,7 +524,7 @@ public class ArrayBuild implements OptimizerPass {
         needsInit.add(array);
       }
     }
-    
+
     for (Arg key: keys) {
       if (key.isVar()) {
         // Assert to check assumptions match init var analysis
@@ -538,11 +537,11 @@ public class ArrayBuild implements OptimizerPass {
     }
     for (Arg val: vals) {
       if (val.isVar()) {
-        Var var = val.getVar(); 
+        Var var = val.getVar();
        if (InitVariables.assignBeforeRead(var) &&
            !outerInit.assignedVals.contains(var)) {
          // Must assign value
-         needsInit.add(var);         
+         needsInit.add(var);
        } else if (InitVariables.varMustBeInitialized(var, false) &&
            !outerInit.initVars.contains(var)) {
           // Must init alias
@@ -550,7 +549,7 @@ public class ArrayBuild implements OptimizerPass {
         }
       }
     }
-    
+
     InitState blockInit = outerInit.enterBlock(block);
 
     // Move forward until all variables are initialized

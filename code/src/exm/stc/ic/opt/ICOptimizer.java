@@ -20,9 +20,7 @@ import java.io.PrintStream;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.ic.opt.valuenumber.ValueNumber;
 import exm.stc.ic.refcount.RefcountPass;
@@ -51,14 +49,9 @@ public class ICOptimizer {
       prog.log(icOutput, "Initial IC before optimization");
     }
 
-    long nIterations;
-    try {
-      nIterations = Settings.getLong(Settings.OPT_MAX_ITERATIONS);
-    } catch (InvalidOptionException ex) {
-      throw new STCRuntimeError(ex.getMessage());
-    }
+    long nIterations = Settings.getLongUnchecked(Settings.OPT_MAX_ITERATIONS);
 
-    boolean debug = Settings.getBoolean(Settings.COMPILER_DEBUG);
+    boolean debug = Settings.getBooleanUnchecked(Settings.COMPILER_DEBUG);
 
     preprocess(icOutput, logger, debug, prog);
     iterate(icOutput, logger, prog, debug, nIterations);

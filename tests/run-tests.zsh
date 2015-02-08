@@ -30,7 +30,14 @@ ADDTL_STC_ARGS=()
 LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
-while getopts "cCDek:n:p:P:VO:f:F:alo:" OPTION
+# Test coverage
+JACOCO_COVERAGE=0
+JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
+
+# Save user JVM flags
+STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
+
+while getopts "cCDeJk:n:p:P:VO:f:F:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -53,6 +60,10 @@ do
     k)
       # skip some tests
       SKIP_COUNT=${OPTARG}
+      ;;
+    J)
+      # Jacoco coverage
+      JACOCO_COVERAGE=1
       ;;
     n)
       # run a limited number of tests
@@ -188,6 +199,14 @@ compile_test()
   then
     # Enable trace-level logging
     export STC_LOG_TRACE=true
+  fi
+
+  # Restore original ones if we overwrote earlier
+  export STC_JVM_FLAGS=${STC_JVM_FLAGS_USER}
+
+  if (( JACOCO_COVERAGE ))
+  then
+    STC_JVM_FLAGS+="-javaagent:${JACOCO_AGENT_JAR}=destfile=${STC_JACOCO_FILE}"
   fi
 
   pushd $STC_TESTS_DIR
@@ -382,12 +401,7 @@ report_result()
   local OPT_LEVEL=$2
   local EXIT_CODE=$3
 
-  if [ ${#STC_OPT_LEVELS} -eq 1 ]
-  then
-    local TEST_DESC=${TEST_PATH}
-  else
-    local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
-  fi
+  local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
 
   if (( EXIT_CODE == TEST_OK ))
   then
@@ -520,18 +534,15 @@ do
     fi
 
 
-    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
-    if [ ${#STC_OPT_LEVELS} -gt 1 ]
-    then
-      # Disambiguate test output if running multiple opt levels at same
-      # time so it's not overwritten
-      TEST_OUT_PATH+=".O${OPT_LEVEL}"
-    fi
+    # Disambiguate test output of different opt levels
+    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
+    
     TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
     STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
     STC_IC_FILE=${TEST_OUT_PATH}.ic
+    STC_JACOCO_FILE=${TEST_OUT_PATH}.jacoco.exec
 
     compile_test ${OPT_LEVEL}
 

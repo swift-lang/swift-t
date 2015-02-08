@@ -15,7 +15,6 @@
  */
 package exm.stc.common.lang;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +25,6 @@ import java.util.Set;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
-import exm.stc.common.util.MultiMap.ListFactory;
 
 /**
  * Static class to track info about semantics of foreign functions.
@@ -74,12 +72,7 @@ public class ForeignFunctions {
 
   /** inverse of localEquivalents */
   private MultiMap<BuiltinOpcode, String> equivalentOpsInv
-          = new MultiMap<BuiltinOpcode, String>(new ListFactory<String>() {
-            @Override
-            public List<String> make() { // Will only have one entry most of time
-              return new ArrayList<String>(1);
-            }
-          });
+                          = new MultiMap<BuiltinOpcode, String>();
 
   /** Built-ins which are known to be deterministic */
   private HashSet<String> commutative = new HashSet<String>();

@@ -132,11 +132,6 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     // make sure they end up in correct order
     Map<Integer, VisitState> visited = new HashMap<Integer, VisitState>();
 
-    for (Integer alreadyAdded: newStatements) {
-      visited.put(alreadyAdded, VisitState.DONE);
-      before.remove(alreadyAdded);
-    }
-
     if (logger.isTraceEnabled()) {
       logger.trace(before);
     }
@@ -411,7 +406,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
               getAllInputs(inst),
               inst.getOutputs(),
               inst.getModifiedOutputs(),
-              Pair.extract1(inst.getInitialized()),
+              inst.getInitialized(),
               inst.getPiecewiseAssignedOutputs());
         }
         case CONDITIONAL: {
@@ -491,7 +486,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       info.inputVars.addAll(getAllInputs(inst));
       info.outputs.addAll(inst.getOutputs());
       info.modifiedOutputs.addAll(inst.getModifiedOutputs());
-      info.initialized.addAll(Pair.extract1(inst.getInitialized()));
+      info.initialized.addAll(inst.getInitialized());
       info.piecewiseAssigned.addAll(inst.getPiecewiseAssignedOutputs());
     }
 
