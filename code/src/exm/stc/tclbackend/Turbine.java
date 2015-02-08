@@ -87,9 +87,6 @@ class Turbine {
   public static final String STRUCT_TYPENAME = "struct";
   public static final TypeName ADLB_STRUCT_TYPE = new TypeName(STRUCT_TYPENAME);
 
-  private static final Token ALLOCATE_CONTAINER_CUSTOM =
-          turbFn("allocate_container_custom");
-  private static final Token ALLOCATE_FILE = turbFn("allocate_file");
   private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
   private static final Token MULTICREATE = adlbFn("multicreate");
   private static final Token CREATE_GLOBALS = adlbFn("create_globals");
@@ -346,11 +343,6 @@ class Turbine {
     return new Command(ARGV_ADD_CONSTANT, argName, argVal);
   }
 
-  public static TclTree allocate(String tclName, TypeName typePrefix, int debugSymbol) {
-    return allocate(tclName, typePrefix, LiteralInt.ONE,
-                    LiteralInt.ONE, debugSymbol, false);
-  }
-
   public static TclTree allocatePermanent(String tclName, TypeName typePrefix,
                                           int debugSymbol) {
     return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
@@ -363,19 +355,6 @@ class Turbine {
     return new Command(ALLOCATE_CUSTOM, new Token(tclName), typePrefix,
             initReadRefcount, initWriteRefcount, new LiteralInt(debugSymbol),
             LiteralInt.boolValue(permanent));
-  }
-
-  public static TclTree allocateContainer(String name, TypeName indexType,
-          TypeName valType, Expression initReaders, Expression initWriters) {
-    return new Command(ALLOCATE_CONTAINER_CUSTOM, new Token(name), indexType,
-            valType, initReaders, initWriters);
-  }
-
-  public static TclTree allocateFile(Expression isMapped, String tclName,
-          Expression initReaders, int debugSymbol) {
-    Expression initWriters = LiteralInt.ONE;
-    return new Command(ALLOCATE_FILE, new Token(tclName), isMapped,
-           initReaders, initWriters, new LiteralInt(debugSymbol));
   }
 
   /**
@@ -472,10 +451,6 @@ class Turbine {
             refType, acquireReadExpr, acquireWriteExpr, decrRead));
   }
 
-  public static SetVariable structRefGet(String target, Value variable) {
-    return structDecrGet(target, variable, LiteralInt.ZERO);
-  }
-
   public static SetVariable structDecrGet(String target, Value variable,
           Expression decr) {
     return new SetVariable(target, new Square(ACQUIRE_STRUCT_REF, variable,
@@ -497,11 +472,6 @@ class Turbine {
           TypeName srcType, Expression incrReferand, Expression decr) {
     return new SetVariable(dst, new Square(ADLB_ACQUIRE_REF, src, srcType,
             incrReferand, decr));
-  }
-
-  public static Command adlbStore(Value dst, Expression src,
-          List<? extends Expression> dstTypeInfo) {
-    return adlbStore(dst, src, dstTypeInfo, null, null);
   }
 
   public static Command adlbStore(Value dst, Expression src,
@@ -1129,7 +1099,6 @@ class Turbine {
     return new Command(STRUCTREF_INSERT_R, args);
   }
 
-
   /**
    * Copy subscript of a variable to another variable
    *
@@ -1336,12 +1305,9 @@ class Turbine {
    * @return
    */
   public static TclTree incrRef(Expression var, Expression change) {
+    assert(change != null);
     if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
-      if (change == null) {
-        return new Command(REFCOUNT_INCR, var);
-      } else {
-        return new Command(REFCOUNT_INCR, var, change);
-      }
+      return new Command(REFCOUNT_INCR, var, change);
     } else {
       return new Token("");
     }
@@ -1355,23 +1321,12 @@ class Turbine {
    * @return
    */
   public static TclTree decrRef(Expression var, Expression change) {
+    assert(change != null);
     if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
-      if (change == null) {
-        return new Command(REFCOUNT_DECR, var);
-      } else {
-        return new Command(REFCOUNT_DECR, var, change);
-      }
+      return new Command(REFCOUNT_DECR, var, change);
     } else {
       return new Token("");
     }
-  }
-
-  public static TclTree incrRef(Value var) {
-    return incrRef(var, new LiteralInt(1));
-  }
-
-  public static TclTree decrRef(Value var) {
-    return decrRef(var, new LiteralInt(1));
   }
 
   /**
@@ -1382,24 +1337,18 @@ class Turbine {
    * @return
    */
   public static TclTree incrFileRef(Expression var, Expression change) {
+    assert(change != null);
     if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
-      if (change == null) {
-        return new Command(FILE_REFCOUNT_INCR, var);
-      } else {
-        return new Command(FILE_REFCOUNT_INCR, var, change);
-      }
+      return new Command(FILE_REFCOUNT_INCR, var, change);
     } else {
       return new Token("");
     }
   }
 
   public static TclTree decrFileRef(Expression var, Expression change) {
+    assert(change != null);
     if (Settings.getBooleanUnchecked(Settings.ENABLE_REFCOUNTING)) {
-      if (change == null) {
-        return new Command(FILE_REFCOUNT_DECR, var);
-      } else {
-        return new Command(FILE_REFCOUNT_DECR, var, change);
-      }
+      return new Command(FILE_REFCOUNT_DECR, var, change);
     } else {
       return new Token("");
     }
@@ -1480,23 +1429,8 @@ class Turbine {
     return enumerate(resultVar, arr, includeKeys, start, len, null);
   }
 
-  /**
-   * Get all of container
-   *
-   * @param resultVar
-   * @param arr
-   * @return
-   */
-  public static SetVariable enumerateAll(String resultVar, Value arr) {
-    return enumerateAll(resultVar, arr, true);
-  }
-
   public static Command turbineLog(String msg) {
     return new Command(TURBINE_LOG, new TclString(msg, true));
-  }
-
-  public static Command turbineLog(String... tokens) {
-    return new Command(TURBINE_LOG, new TclList(tokens));
   }
 
   public static TclTree turbineLog(List<Expression> logMsg) {
@@ -1641,20 +1575,6 @@ class Turbine {
 
   public static Command copyFileContents(Value dst, Value src) {
     return new Command(turbFn("copy_local_file_contents"), dst, src);
-  }
-
-  public static Command arrayBuild(Value array, List<Expression> arrKeyExprs,
-          List<Expression> arrValExprs, Expression writeDecr, TypeName keyType,
-          List<TypeName> valType) {
-    List<Pair<Expression, Expression>> kvs =
-            new ArrayList<Pair<Expression, Expression>>();
-    for (int i = 0; i < arrKeyExprs.size(); i++) {
-      Expression k = arrKeyExprs.get(i);
-      Expression v = arrValExprs.get(i);
-      kvs.add(Pair.create(k, v));
-    }
-    return arrayBuild(array, Dict.dictCreate(true, kvs), writeDecr, keyType,
-            valType);
   }
 
   public static Command arrayBuild(Value array, Expression kvDict,
