@@ -21,7 +21,6 @@ import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -45,15 +44,17 @@ public class FunctionTypeChecker {
     return exprTypeFromMatches(concretiseInputs(context, f, false));
   }
 
-  public static FunctionType concretiseFunctionCall(Context context,
-          FunctionCall fc, List<Var> outputs) throws UserException {
+  public static Pair<FnID, FunctionType> concretiseFunctionCall(
+          Context context, FunctionCall fc, List<Var> outputs)
+          throws UserException {
     List<FnMatch> matches = concretiseInputs(context, fc, true);
     assert(matches.size() == 1) : "Should have resolved overload";
     FnMatch match = matches.get(0);
 
     List<Type> outTs = Var.extractTypes(outputs);
+    FunctionType concreteOutTs = concretiseOutputs(context, match, outputs, outTs);
 
-    return concretiseOutputs(context, match, outputs, outTs);
+    return Pair.create(match.id, concreteOutTs);
   }
 
   /**
@@ -148,9 +149,8 @@ public class FunctionTypeChecker {
       argTypes.add(TypeChecker.findExprType(context, arg));
     }
 
-    FnID id = Unimplemented.makeFunctionID(fc.function());
-
-    FnCallInfo info = new FnCallInfo(fc.function(), id, fc.fnType(), argTypes);
+    FnCallInfo info = new FnCallInfo(fc.originalName(), fc.overloads(),
+                                     argTypes);
 
     return concretiseInputsOverloaded(context, info, resolveOverload);
   }

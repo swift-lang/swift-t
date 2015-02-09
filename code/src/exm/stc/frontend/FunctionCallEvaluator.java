@@ -12,7 +12,6 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
@@ -20,8 +19,8 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.TaskProp;
@@ -32,7 +31,6 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
-import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitMode;
@@ -76,28 +74,29 @@ public class FunctionCallEvaluator {
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
 
     // This will check the type of the function call
-    FunctionType concrete = FunctionTypeChecker.concretiseFunctionCall(context,
-                                                                     f, outVars);
+    Pair<FnID, FunctionType> concrete =
+        FunctionTypeChecker.concretiseFunctionCall(context, f, outVars);
 
-    // TODO: need to resolve to specific function ID
-    FnID id = Unimplemented.makeFunctionID(f.function());
+    FnID concreteID = concrete.val1;
+    FunctionType concreteType = concrete.val2;
 
     // Some functions, e.g. asserts, can be omitted after typechecking
-    if (omitFunctionCall(context, id)) {
+    if (omitFunctionCall(context, concreteID)) {
       return;
     }
 
     // First evaluate inputs before opening any waits
-    List<Var> inVars = evalFunctionInputs(context, renames, f, concrete);
+    List<Var> inVars = evalFunctionInputs(context, renames, concreteID,
+                                          concreteType, f.args());
 
     // Process priority after arguments have been evaluated, so that
     // the argument evaluation is outside the wait statement
     boolean openedWait = false;
 
     TaskProps propVals = new TaskProps();
-    openedWait = evalCallProperties(context, id, f, propVals, renames);
+    openedWait = evalCallProperties(context, concreteID, f, propVals, renames);
 
-    evalFunctionCallInner(context, id, f.kind(), concrete, outVars,
+    evalFunctionCallInner(context, concreteID, f.kind(), concreteType, outVars,
                           inVars, propVals);
 
     if (openedWait) {
@@ -146,19 +145,19 @@ public class FunctionCallEvaluator {
   }
 
   private List<Var> evalFunctionInputs(Context context,
-      Map<String, String> renames, FunctionCall f, FunctionType concrete)
-      throws UserException, TypeMismatchException {
+      Map<String, String> renames, FnID id, FunctionType concrete,
+      List<SwiftAST> argTrees) throws UserException {
     // evaluate argument expressions left to right, creating temporaries
-    List<Var> argVars = new ArrayList<Var>(f.args().size());
+    List<Var> argVars = new ArrayList<Var>(argTrees.size());
 
-    for (int i = 0; i < f.args().size(); i++) {
-      SwiftAST argtree = f.args().get(i);
+    for (int i = 0; i < argTrees.size(); i++) {
+      SwiftAST argTree = argTrees.get(i);
       Type expType = concrete.getInputs().get(i);
 
-      Type exprType = TypeChecker.findExprType(context, argtree);
-      Type argType = FunctionTypeChecker.concretiseFnArg(context, f.function(),
-                                      i, expType, exprType).val2;
-      argVars.add(exprWalker.eval(context, argtree, argType, false, renames));
+      Type exprType = TypeChecker.findExprType(context, argTree);
+      Type argType = FunctionTypeChecker.concretiseFnArg(context,
+                    id.originalName(), i, expType, exprType).val2;
+      argVars.add(exprWalker.eval(context, argTree, argType, false, renames));
     }
     return argVars;
   }
@@ -546,19 +545,19 @@ public class FunctionCallEvaluator {
       List<TaskPropKey> validProps = Intrinsics.validProps(intF);
       if (!validProps.contains(ann)) {
           throw new InvalidAnnotationException(context, "Cannot specify " +
-                "property " + ann + " for intrinsic function " + f.function());
+                "property " + ann + " for intrinsic function " + f.originalName());
       }
     } else if (ann == TaskPropKey.PARALLELISM) {
       if (!context.hasFunctionProp(id, FnProp.PARALLEL)) {
         throw new UserException(context, "Tried to call non-parallel"
-            + " function " + f.function() + " with parallelism.  "
+            + " function " + f.originalName() + " with parallelism.  "
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
     } else if (ann == TaskPropKey.LOCATION) {
       if (!context.hasFunctionProp(id, FnProp.TARGETABLE)) {
         throw new UserException(context, "Tried to call non-targetable"
-            + " function " + f.function() + " with target");
+            + " function " + f.originalName() + " with target");
       }
     }
   }
