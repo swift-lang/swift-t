@@ -39,6 +39,7 @@ import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -151,7 +152,9 @@ public class GlobalContext extends Context {
                                                   overload.val2);
     }
 
-    // TODO: update registered type as union type
+    if (overloads.size() > 0) {
+      addOverloadToType(name, type);
+    }
 
     addFunctionOverload(name, overloadID, type);
 
@@ -161,6 +164,26 @@ public class GlobalContext extends Context {
   private void addFunctionOverload(String name, FnID fnID,
                                    FunctionType type) {
     functionOverloads.put(name, Pair.create(fnID, type));
+  }
+
+  /**
+   * We represent overloaded functions in variable map as a function
+   * variable with a union type.  This adds a new type to the union.
+   *
+   * @param name
+   * @param type
+   */
+  private void addOverloadToType(String name, FunctionType type) {
+    Var existing = lookupVarUnsafe(name);
+    List<Type> alts = new ArrayList<Type>();
+    alts.addAll(UnionType.getAlternatives(existing.type()));
+    alts.add(type);
+    replaceVarUnsafe(name, existing.substituteType(
+                        UnionType.makeUnion(alts)));
+  }
+
+  private void replaceVarUnsafe(String name, Var newVar) {
+    this.variables.put(name, newVar);
   }
 
   @Override
