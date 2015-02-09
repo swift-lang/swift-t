@@ -478,7 +478,7 @@ public class RCPlacer {
    * @param block
    * @param tracker
    *          updated to reflect changes
-   * @param type
+   * @param abstractType
    */
   private void piggybackDecrementsOnDeclarations(Logger logger,
       GlobalVars globals, Function fn, Block block,

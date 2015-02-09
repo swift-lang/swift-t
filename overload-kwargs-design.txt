@@ -32,7 +32,7 @@ defineOverload(name, type, overloads) {
 
   // Do pairwise checks for ambiguity
   for (overload in overloads) {
-    checkNoAmbiguity(type, overload);
+    checkOverloadsAmbiguity(type, overload);
   }
 
   internalName = chooseInternalName(...);
@@ -49,42 +49,6 @@ compile() {
   internalName = lookupInternalName(functionName);
   ...
 }
-
-checkNoAmbiguity() {
-  // Need to handle non-varargs and varargs functions
-
-  if (2x varargs) {
-    // Extend shorter varargs to upto last required arg of longer varargs
-  } else {
-    // Extend varargs to length of non-varargs
-  }
-
-  // Check pairwise to see if a type alternative of one is assignable
-  // to the other
-  for (arg1, arg2 in  ...) {
-    if (unambiguousArg(arg1, arg2)) {
-      // OK!
-      return;
-    }
-  }
-  // No unambiguous args
-  throw exception;
-}
-
-unambiguousArg(arg1, arg2) {
-  return unambiguousArg2(arg1, arg2) && unambiguousArg2(arg2, arg1); 
-}
-
-unambiguousArg2(arg1, arg2) {
-  // TODO: is checking all alts like this necessary?
-  for (alt in UnionType.alternatives(arg1)) {
-    if (arg1.assignableTo(arg2)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 
 Function Call
 =============
@@ -145,7 +109,7 @@ functionCall(tree, ..., out) {
 selectOverload(..., ) {
   # Iterate over alternatives
   # Select 0 or 1 alt output args from each alternative
-  # Warn if multiple alternatives matched (should not happen if checkNoAmbiguity() works right)
+  # Warn if multiple alternatives matched (should not happen if checkOverloadsAmbiguity() works right)
 }
 
 Function Pointers
