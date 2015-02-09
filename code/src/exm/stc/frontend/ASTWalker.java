@@ -71,7 +71,6 @@ import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -205,10 +204,15 @@ public class ASTWalker {
     }
 
     // Main function runs after top-level code if present
-    FunctionType mainFn = context.lookupFunction(Constants.MAIN_FUNCTION);
-    if (mainFn != null) {
-      backend.functionCall(FnID.MAIN_FUNCTION,
-             Arg.NONE, Var.NONE, ExecTarget.syncControl(), new TaskProps());
+    List<Pair<FnID, FunctionType>> mainOverloads = context.lookupFunction(
+                                                  Constants.MAIN_FUNCTION);
+    if (mainOverloads.size() == 1) {
+      FnID mainID = mainOverloads.get(0).val1;
+      backend.functionCall(mainID, Arg.NONE, Var.NONE,
+          ExecTarget.syncControl(), new TaskProps());
+    } else if (mainOverloads.size() >= 2) {
+      throw new DoubleDefineException(context, "Multiple definitions of " +
+                                      Constants.MAIN_FUNCTION);
     }
 
     backend.endFunction();
@@ -1555,9 +1559,7 @@ public class ASTWalker {
    */
   private FnID newFunctionDef(Context context, String name, FunctionType ft)
       throws UserException {
-    context.defineFunction(name, ft);
-    // TODO: if overloaded, different name - handle in context
-    return Unimplemented.makeFunctionID(name);
+    return context.defineFunction(name, ft);
   }
 
   private void defineBuiltinFunction(Context context, SwiftAST tree)

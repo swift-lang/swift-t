@@ -35,7 +35,6 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
-import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.Context.DefInfo;
@@ -147,9 +146,8 @@ public class FunctionCall {
     if (def == null) {
       throw UndefinedFunctionException.unknownFunction(context, f);
     } else if (def.kind == DefKind.FUNCTION) {
-      FunctionType ftype = context.lookupFunction(f);
-      assert(ftype != null);
-      return regularFunctionFromAST(context, annotations, f, arglist, ftype);
+      return regularFunctionFromAST(context, annotations, f, arglist,
+                                    context.lookupFunction(f));
     } else if (def.kind == DefKind.TYPE) {
       Type type = context.lookupTypeUnsafe(f);
       assert(type != null);
@@ -162,7 +160,8 @@ public class FunctionCall {
   }
 
   private static FunctionCall regularFunctionFromAST(Context context,
-      List<SwiftAST> annotationTs, String f, SwiftAST arglist, FunctionType ftype)
+      List<SwiftAST> annotationTs, String originalName, SwiftAST arglist,
+      List<Pair<FnID, FunctionType>> overloads)
       throws UserException, InvalidAnnotationException {
     Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
     boolean softLocation = false;
@@ -189,11 +188,7 @@ public class FunctionCall {
       }
     }
 
-    // TODO: lookup overloads here
-    FnID id = Unimplemented.makeFunctionID(f);
-    Pair<FnID, FunctionType> fn = Pair.create(id, ftype);
-
-    return regularFunctionCall(f, fn.asList(), arglist, annotations,
+    return regularFunctionCall(originalName, overloads, arglist, annotations,
                                softLocation);
   }
 

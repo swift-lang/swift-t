@@ -26,8 +26,8 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -36,6 +36,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Pair;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -116,25 +117,16 @@ public class LocalContext extends Context {
   @Override
   public Var createTmpVar(Type type, boolean storeInStack)
                                                       throws UserException {
-      String name;
-      do {
-        int counter = getFunctionContext().getCounterVal("intermediate_var");
-        name = Var.TMP_VAR_PREFIX + counter;
-      } while (lookupDef(name) != null); // In case variable name in use
-
-      Alloc storage = storeInStack ?
-                  Alloc.STACK : Alloc.TEMP;
-      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
-                             VarProvenance.exprTmp(getSourceLoc()), false);
+    String name = uniqueName(Var.TMP_VAR_PREFIX, null, "intermediate_var");
+    Alloc storage = storeInStack ?
+                Alloc.STACK : Alloc.TEMP;
+    return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
+                           VarProvenance.exprTmp(getSourceLoc()), false);
   }
 
   @Override
   public Var createTmpAliasVar(Type type) throws UserException {
-    String name;
-    do {
-      int counter = getFunctionContext().getCounterVal("alias_var");
-      name = Var.ALIAS_VAR_PREFIX + counter;
-    } while (lookupDef(name) != null);
+    String name = uniqueName(Var.ALIAS_VAR_PREFIX, null, "alias_var");
 
     return declareVariable(type, name, Alloc.ALIAS, DefType.LOCAL_COMPILER,
                            VarProvenance.exprTmp(getSourceLoc()), false);
@@ -168,42 +160,17 @@ public class LocalContext extends Context {
       storage = Alloc.ALIAS;
     }
 
-    String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
-                                    "value_var");
+    String name = uniqueName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
+                            "value_var");
     return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
                            prov, false);
-  }
-
-  /**
-   * Helper to choose variable name.
-   * @param prefix Prefix that must be at start
-   * @param preferredSuffix Preferred suffix
-   * @param counterName name of counter to use to make unique if needed
-   * @return
-   */
-  private String chooseVariableName(String prefix, String preferredSuffix,
-      String counterName) {
-    if (preferredSuffix != null) {
-      prefix += preferredSuffix;
-      // see if we can give it a nice name
-      if (lookupDef(prefix) == null) {
-        return prefix;
-      }
-    }
-
-    String name = null;
-    do {
-      int counter = getFunctionContext().getCounterVal(counterName);
-      name = prefix + counter;
-    } while (lookupDef(name) != null);
-    return name;
   }
 
   @Override
   public Var createFilenameAliasVariable(Var fileVar) {
     String fileVarName = fileVar != null ? fileVar.name() : null;
-    String name = chooseVariableName(Var.FILENAME_OF_PREFIX,
-        fileVarName, "filename_of");
+    String name = uniqueName(Var.FILENAME_OF_PREFIX, fileVarName,
+                             "filename_of");
     try {
       return declareVariable(Types.F_STRING, name,
           Alloc.ALIAS, DefType.LOCAL_COMPILER,
@@ -215,9 +182,14 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public void defineFunction(String name, FunctionType type)
+  public FnID defineFunction(String name, FunctionType type)
                                     throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
+  }
+
+  @Override
+  public List<Pair<FnID, FunctionType>> lookupFunction(String name) {
+    return globals.lookupFunction(name);
   }
 
   @Override

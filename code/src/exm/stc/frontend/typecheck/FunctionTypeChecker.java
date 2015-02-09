@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import exm.stc.ast.SwiftAST;
-import exm.stc.common.exceptions.AmbiguousOverloadException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -179,7 +179,7 @@ public class FunctionTypeChecker {
     // TODO: additional resolution step?
     // what about if args are (int|float) and overloads are f(int) and f(float)?
     assert(matches.size() <= 1 || !resolveOverload) :
-          "Unexpected ambiguous overload";
+          "Unexpected ambiguous overload " + matches;
 
     return matches;
   }
@@ -655,18 +655,30 @@ public class FunctionTypeChecker {
     throw new TypeMismatchException(context, sb.toString());
   }
 
+  public static void checkOverloadAllowed(Context context,
+      FnID overloadID, FunctionType type) throws InvalidOverloadException {
+    for (Type inType: type.getInputs()) {
+      if (!inType.isConcrete()) {
+        throw new InvalidOverloadException(context,
+            "Invalid input argument type " + inType.typeName() + " for " +
+            "overloaded function " + overloadID.originalName() + ". " +
+            "Overloaded functions cannot have polymorphic input arguments");
+      }
+    }
+  }
+
   /**
    * Check to see if overloaded functions are potentially ambiguous
    * @param fakeContext
    * @param ft
    * @param ft2
-   * @throws AmbiguousOverloadException
+   * @throws InvalidOverloadException
    */
-  static void checkOverloadsAmbiguity(Context context, String functionName,
-      FunctionType ft1, FunctionType ft2) throws AmbiguousOverloadException {
+  public static void checkOverloadsAmbiguity(Context context, String functionName,
+      FunctionType ft1, FunctionType ft2) throws InvalidOverloadException {
 
     if (ft1.getOutputs().size() != ft2.getOutputs().size()) {
-      throw new AmbiguousOverloadException("Overloads must have same number"
+      throw new InvalidOverloadException("Overloads must have same number"
           + "of output arguments: " + ft1.getOutputs().size() + " vs " +
           ft2.getOutputs().size() + " for " + functionName);
     }
@@ -702,7 +714,7 @@ public class FunctionTypeChecker {
     }
 
     // No unambiguous args
-    throw new AmbiguousOverloadException("Overloads of function " + functionName
+    throw new InvalidOverloadException("Overloads of function " + functionName
         + " are potentially ambiguous.  Function input types are: " + typeList(in1) +
         " and " + typeList(in2));
   }
@@ -799,10 +811,14 @@ public class FunctionTypeChecker {
 
     public FnMatch(FnID id, FunctionType type,
         List<FunctionType> concreteCandidates) {
-      super();
       this.id = id;
       this.abstractType = type;
       this.concreteAlts = concreteCandidates;
+    }
+
+    @Override
+    public String toString() {
+      return "FnMatch: " + id + " " + abstractType + " " + concreteAlts;
     }
   }
 

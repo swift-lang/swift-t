@@ -35,8 +35,8 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -46,6 +46,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.SourceLoc;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Pair;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -313,8 +314,24 @@ public abstract class Context {
     return lookupFunction(name) != null;
   }
 
-  public abstract void defineFunction(String name, FunctionType type)
+  /**
+   * Define function and return unique internal identifier
+   * @param name
+   * @param type
+   * @return
+   * @throws UserException if the definition is invalid, e.g. conflicts
+   *                        with existing definition
+   */
+  public abstract FnID defineFunction(String name, FunctionType type)
                                           throws UserException;
+
+  /**
+   * Lookup the type of a function
+   * @param name
+   * @return unique identifiers and types of overloads or
+   *        empty list if not defined
+   */
+  public abstract List<Pair<FnID, FunctionType>> lookupFunction(String name);
 
   public abstract void setFunctionProperty(FnID id, FnProp prop);
 
@@ -328,19 +345,6 @@ public abstract class Context {
 
   public boolean isIntrinsic(FnID id) {
     return lookupIntrinsic(id) != null;
-  }
-
-  /**
-   * Lookup the type of a function
-   * @param name
-   * @return
-   */
-  public FunctionType lookupFunction(String name) {
-    Var var = lookupVarUnsafe(name);
-    if (var == null || !Types.isFunction(var)) {
-      return null;
-    }
-    return (FunctionType)var.type();
   }
 
   public String getInputFile() {
@@ -500,6 +504,30 @@ public abstract class Context {
     return getFunctionContext().constructName(constructType);
   }
 
+  /**
+   * Helper to choose variable name.
+   * @param prefix Prefix that must be at start
+   * @param preferredSuffix Preferred suffix
+   * @param counterName name of counter to use to make unique if needed
+   * @return
+   */
+  protected String uniqueName(String prefix, String preferredSuffix,
+      String counterName) {
+    if (preferredSuffix != null) {
+      prefix += preferredSuffix;
+      // see if we can give it a nice name
+      if (lookupDef(prefix) == null) {
+        return prefix;
+      }
+    }
+
+    String name = null;
+    do {
+      int counter = getFunctionContext().getCounterVal(counterName);
+      name = prefix + counter;
+    } while (lookupDef(name) != null);
+    return name;
+  }
   /**
    *
    * @param type
