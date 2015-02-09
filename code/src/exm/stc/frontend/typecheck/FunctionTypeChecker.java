@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.AmbiguousOverloadException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
@@ -41,7 +42,7 @@ public class FunctionTypeChecker {
       throws UndefinedFunctionException, UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree, false);
 
-    return exprTypeFromMatches(f, concretiseInputs(context, f, false));
+    return exprTypeFromMatches(concretiseInputs(context, f, false));
   }
 
   public static FunctionType concretiseFunctionCall(Context context,
@@ -638,6 +639,12 @@ public class FunctionTypeChecker {
   static void checkOverloadsAmbiguity(Context context, String functionName,
       FunctionType ft1, FunctionType ft2) throws AmbiguousOverloadException {
 
+    if (ft1.getOutputs().size() != ft2.getOutputs().size()) {
+      throw new AmbiguousOverloadException("Overloads must have same number"
+          + "of output arguments: " + ft1.getOutputs().size() + " vs " +
+          ft2.getOutputs().size() + " for " + functionName);
+    }
+
     // Need to handle non-varargs and varargs functions
     List<Type> in1 = ft1.getInputs(), in2 = ft2.getInputs();
 
@@ -696,7 +703,15 @@ public class FunctionTypeChecker {
     return sb.toString();
   }
 
-  private static Type exprTypeFromMatches(FunctionCall f, List<FnMatch> matches) {
+  /**
+   * Construct expression type from list of function matches.
+   *
+   * Note: this assumes that all alternatives have same number of outputs
+   * @param f
+   * @param matches
+   * @return
+   */
+  private static Type exprTypeFromMatches(List<FnMatch> matches) {
     assert(matches.size() >= 1);
 
     List<FunctionType> alts = new ArrayList<FunctionType>();
@@ -711,7 +726,8 @@ public class FunctionTypeChecker {
     } else {
       // Ambiguous type variable binding (based on inputs)
       assert(alts.size() >= 2);
-      int numOutputs = f.fnType().getOutputs().size();
+      int numOutputs = numOutputs(alts);
+
       if (numOutputs == 0) {
         return TupleType.makeTuple();
       } else {
@@ -727,6 +743,18 @@ public class FunctionTypeChecker {
         return TupleType.makeTuple(altOutputs);
       }
     }
+  }
+
+  private static int numOutputs(List<FunctionType> alts) {
+    int numOutputs = alts.get(0).getOutputs().size();
+
+    for (FunctionType alt: alts) {
+      if (numOutputs != alt.getOutputs().size()) {
+        throw new STCRuntimeError("Expected same number of outputs: " + alts);
+      }
+    }
+
+    return numOutputs;
   }
 
   /**
