@@ -28,12 +28,13 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -42,13 +43,19 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.frontend.typecheck.FunctionTypeChecker;
 
 /**
  * Global context for entire program
  *
  */
 public class GlobalContext extends Context {
+
+  private final MultiMap<String, Pair<FnID, FunctionType>> functionOverloads =
+                              new MultiMap<String, Pair<FnID, FunctionType>>();
+
   /**
    * Properties of functions
    */
@@ -101,10 +108,60 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public void defineFunction(String name, FunctionType type)
+  public List<Pair<FnID, FunctionType>> lookupFunction(String name) {
+    return functionOverloads.get(name);
+  }
+
+  @Override
+  public FnID defineFunction(String name, FunctionType type)
       throws UserException {
-    declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                    VarProvenance.userVar(getSourceLoc()), false);
+
+    DefInfo def = lookupDef(name);
+    if (def != null && def.kind == DefKind.FUNCTION) {
+      // Function already exists, need to add overload
+      return overloadFunction(name, type);
+    } else {
+      declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                      VarProvenance.userVar(getSourceLoc()), false);
+      FnID fnID = new FnID(name, name);
+      addFunctionOverload(name, fnID, type);
+      return fnID;
+    }
+  }
+
+  private FnID overloadFunction(String name, FunctionType type)
+      throws InvalidOverloadException {
+
+    String uniqueName = uniqueName(Var.OVERLOAD_PREFIX, name,
+                                   Var.OVERLOAD_PREFIX + name);
+    FnID overloadID = new FnID(uniqueName, name);
+
+    List<Pair<FnID, FunctionType>> overloads = functionOverloads.get(name);
+    if (overloads.size() == 1) {
+      // First overload wasn't checked
+      FunctionTypeChecker.checkOverloadAllowed(this, overloads.get(0).val1,
+                                                     overloads.get(0).val2);
+    }
+
+    FunctionTypeChecker.checkOverloadAllowed(this, overloadID, type);
+
+    // Pairwise checks for ambiguity
+    for (Pair<FnID, FunctionType> overload: overloads) {
+      FunctionTypeChecker.checkOverloadsAmbiguity(this, name, type,
+                                                  overload.val2);
+    }
+
+    // TODO: update registered type as union type
+
+    addFunctionOverload(name, overloadID, type);
+    throw new STCRuntimeError("Overloading unimplemented");
+
+    //return overloadID;
+  }
+
+  private void addFunctionOverload(String name, FnID fnID,
+                                   FunctionType type) {
+    functionOverloads.put(name, Pair.create(fnID, type));
   }
 
   @Override

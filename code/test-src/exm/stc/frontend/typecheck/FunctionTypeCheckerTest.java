@@ -16,7 +16,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import exm.stc.common.Logging;
-import exm.stc.common.exceptions.AmbiguousOverloadException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -329,10 +329,10 @@ public class FunctionTypeCheckerTest {
 
   /**
    * Check for unambiguous cases that shouldn't raise exception
-   * @throws AmbiguousOverloadException
+   * @throws InvalidOverloadException
    */
   @Test
-  public void testUnambiguousOverloads() throws AmbiguousOverloadException {
+  public void testUnambiguousOverloads() throws InvalidOverloadException {
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
         makeFT(Arrays.asList(Types.F_INT), false));
@@ -352,12 +352,12 @@ public class FunctionTypeCheckerTest {
 
   /**
    * Check for trivial ambiguous case
-   * @throws AmbiguousOverloadException
+   * @throws InvalidOverloadException
    */
   @Test
-  public void testAmbiguousOverloadBasic1() throws AmbiguousOverloadException {
+  public void testAmbiguousOverloadBasic1() throws InvalidOverloadException {
 
-    exception.expect(AmbiguousOverloadException.class);
+    exception.expect(InvalidOverloadException.class);
 
     FunctionType ft = makeFT(Arrays.asList(Types.V_INT, Types.V_FLOAT), false);
 
@@ -365,9 +365,9 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void testAmbiguousOverloadBasic2() throws AmbiguousOverloadException {
+  public void testAmbiguousOverloadBasic2() throws InvalidOverloadException {
 
-    exception.expect(AmbiguousOverloadException.class);
+    exception.expect(InvalidOverloadException.class);
 
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
@@ -375,8 +375,8 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void testAmbiguousOverloadBasic3() throws AmbiguousOverloadException {
-    exception.expect(AmbiguousOverloadException.class);
+  public void testAmbiguousOverloadBasic3() throws InvalidOverloadException {
+    exception.expect(InvalidOverloadException.class);
 
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT, Types.F_INT), true),
@@ -384,8 +384,8 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void testAmbiguousOverloadBasic4() throws AmbiguousOverloadException {
-    exception.expect(AmbiguousOverloadException.class);
+  public void testAmbiguousOverloadBasic4() throws InvalidOverloadException {
+    exception.expect(InvalidOverloadException.class);
 
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT), false),
@@ -393,8 +393,8 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void testAmbiguousOverloadBasic5() throws AmbiguousOverloadException {
-    exception.expect(AmbiguousOverloadException.class);
+  public void testAmbiguousOverloadBasic5() throws InvalidOverloadException {
+    exception.expect(InvalidOverloadException.class);
 
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_FLOAT), false),
@@ -402,8 +402,8 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void testAmbiguousOverloadOutputs() throws AmbiguousOverloadException {
-    exception.expect(AmbiguousOverloadException.class);
+  public void testAmbiguousOverloadOutputs() throws InvalidOverloadException {
+    exception.expect(InvalidOverloadException.class);
 
     checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_FLOAT, Types.F_FLOAT),

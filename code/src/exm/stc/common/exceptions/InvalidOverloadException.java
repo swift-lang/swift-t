@@ -17,13 +17,13 @@ package exm.stc.common.exceptions;
 
 import exm.stc.frontend.Context;
 
-public class AmbiguousOverloadException
+public class InvalidOverloadException
                 extends UserException {
-  public AmbiguousOverloadException(Context context, String message) {
+  public InvalidOverloadException(Context context, String message) {
     super(context, message);
   }
 
-  public AmbiguousOverloadException(String message) {
+  public InvalidOverloadException(String message) {
     super(message);
   }
 

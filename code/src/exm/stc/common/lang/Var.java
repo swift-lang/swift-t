@@ -56,6 +56,8 @@ public class Var implements Comparable<Var>, Typed {
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
   public static final String FILENAME_OF_PREFIX = "__filename:";
   public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
+  public static final String OVERLOAD_PREFIX = "__ol:";
+
   /* Separate prefixes to avoid name clashes for optimizer
    *    inserted variables */
   public static final String OPT_VAR_PREFIX = "__o:";
