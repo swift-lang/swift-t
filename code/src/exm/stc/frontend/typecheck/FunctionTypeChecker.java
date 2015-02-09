@@ -1,7 +1,6 @@
 package exm.stc.frontend.typecheck;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -157,21 +156,30 @@ public class FunctionTypeChecker {
 
   static List<FnMatch> concretiseInputsOverloaded(Context context,
       FnCallInfo fc, boolean resolveOverload) throws TypeMismatchException {
-    // TODO: multiple alternatives in case of overloading
     assert(fc.fnTypes.size() >= 1);
     boolean overloaded = fc.fnTypes.size() >= 2;
-    assert(!overloaded) : "overloading unimplemented";
-    FnID id = fc.fnTypes.get(0).val1;
-    FunctionType fnType = fc.fnTypes.get(0).val2;
 
-    FnMatch match = concretiseInputsNonOverloaded(context, id, fnType,
-                                          fc.argTypes, !overloaded);
+    List<FnMatch> matches = new ArrayList<FnMatch>();
 
-    List<FnMatch> matches = match == null ? Collections.<FnMatch>emptyList()
-                                          : Collections.singletonList(match);
+    for (Pair<FnID, FunctionType> fnType: fc.fnTypes) {
+      FnMatch match = concretiseInputsNonOverloaded(context, fnType.val1,
+                                  fnType.val2, fc.argTypes, !overloaded);
+
+      if (match != null) {
+        matches.add(match);
+      }
+    }
+
+    if (matches.size() == 0) {
+      // No matching overloads
+      noMatchingOverloadsException(context, fc);
+    }
 
     // We should have resolved it to a single overload if requested.
-    assert(matches.size() <= 1 || !resolveOverload);
+    // TODO: additional resolution step?
+    // what about if args are (int|float) and overloads are f(int) and f(float)?
+    assert(matches.size() <= 1 || !resolveOverload) :
+          "Unexpected ambiguous overload";
 
     return matches;
   }
@@ -182,6 +190,9 @@ public class FunctionTypeChecker {
     // Expand varargs
     List<Type> expandedInArgs = expandVarArgs(context, id, fnType,
                                               argTypes, throwOnFail);
+    if (expandedInArgs == null) {
+      return null;
+    }
     assert(expandedInArgs.size() == argTypes.size());
 
     /*
@@ -627,6 +638,21 @@ public class FunctionTypeChecker {
         (argPos + 1) + " to have one of the following types: "
         + expType.typeName() + ", but had type: " + actType.typeName()
         + errContext);
+  }
+
+  private static void noMatchingOverloadsException(Context context,
+      FnCallInfo fc) throws TypeMismatchException {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Function input argument types: ");
+    sb.append(typeList(fc.argTypes));
+    sb.append("did not match any overload of function " + fc.name + ".\n");
+    sb.append("Overload input types were: \n");
+    for (Pair<FnID, FunctionType> fnType: fc.fnTypes) {
+      sb.append(typeList(fnType.val2.getInputs()));
+      sb.append('\n');
+    }
+
+    throw new TypeMismatchException(context, sb.toString());
   }
 
   /**
