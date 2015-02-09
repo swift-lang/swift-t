@@ -40,7 +40,7 @@ public class FunctionTypeCheckerTest {
   private static final Type FLOAT_OR_INT =
       UnionType.createUnionType(Types.F_FLOAT, Types.F_INT);
   private static final Type INT_OR_STRING =
-      UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
+      UnionType.createUnionType(Types.F_INT, Types.F_STRING);
 
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
@@ -148,11 +148,11 @@ public class FunctionTypeCheckerTest {
         Pair.create(stringFnID, stringFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assert(matches.size() == 0);
+    assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assert(match.id.equals(stringFnID));
-    assert(match.concreteAlts.size() == 1);
-    assert(match.concreteAlts.get(0).equals(stringFn));
+    assertEquals(stringFnID, match.id);
+    assertEquals(1, match.concreteAlts.size());
+    assertEquals(stringFn, match.concreteAlts.get(0));
   }
 
   /**
@@ -172,11 +172,11 @@ public class FunctionTypeCheckerTest {
                       Pair.create(stringFnID, stringFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assert(matches.size() == 0);
+    assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assert(match.id.equals(stringFnID));
-    assert(match.concreteAlts.size() == 1);
-    assert(match.concreteAlts.get(0).equals(stringFn));
+    assertEquals(stringFnID, match.id);
+    assertEquals(1, match.concreteAlts.size());
+    assertEquals(stringFn, match.concreteAlts.get(0));
   }
 
   @Test
@@ -230,11 +230,11 @@ public class FunctionTypeCheckerTest {
         Pair.create(floatFnID, floatFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assert(matches.size() == 0);
+    assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assert(match.id.equals(intFnID));
-    assert(match.concreteAlts.size() == 1);
-    assert(match.concreteAlts.get(0).equals(intFn));
+    assertEquals(intFnID, match.id);
+    assertEquals(1, match.concreteAlts.size());
+    assertEquals(intFn, match.concreteAlts.get(0));
   }
 
   /**
@@ -262,32 +262,32 @@ public class FunctionTypeCheckerTest {
                                              overloadList);
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assert(matches.size() == 0);
+    assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assert(match.id.equals(intFnID));
-    assert(match.concreteAlts.size() == 1);
-    assert(match.concreteAlts.get(0).equals(intFn));
+    assertEquals(intFnID, match.id);
+    assertEquals(1, match.concreteAlts.size());
+    assertEquals(intFn, match.concreteAlts.get(0));
 
     FnCallInfo fc2 = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
                                               overloadListRev);
 
     List<FnMatch> matches2 = concretiseInputsOverloaded(FAKE_CONTEXT, fc2, true);
-    assert(matches2.size() == 0);
+    assertEquals(1, matches2.size());
     FnMatch match2 = matches2.get(0);
-    assert(match2.id.equals(intFnID));
-    assert(match2.concreteAlts.size() == 1);
-    assert(match2.concreteAlts.get(0).equals(intFn));
+    assertEquals(intFnID, match2.id);
+    assertEquals(1, match2.concreteAlts.size());
+    assertEquals(intFn, match2.concreteAlts.get(0));
 
 
     FnCallInfo fc3 = makeOverloadedFnCallInfo(Arrays.asList(FLOAT_OR_INT),
                                               overloadListRev);
 
     List<FnMatch> matches3 = concretiseInputsOverloaded(FAKE_CONTEXT, fc3, true);
-    assert(matches2.size() == 0);
+    assertEquals(1, matches2.size());
     FnMatch match3 = matches3.get(0);
-    assert(match3.id.equals(floatFnID));
-    assert(match3.concreteAlts.size() == 1);
-    assert(match3.concreteAlts.get(0).equals(floatFn));
+    assertEquals(floatFnID, match3.id);
+    assertEquals(1, match3.concreteAlts.size());
+    assertEquals(floatFn, match3.concreteAlts.get(0));
   }
 
   @Test
