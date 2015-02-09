@@ -202,10 +202,23 @@ public class FunctionTypeCheckerTest {
         makeFT(Arrays.asList((Type)FLOAT_SUB_TYPE), false));
   }
 
+  @Test
+  public void testAmbiguousOverloadOutputs() throws AmbiguousOverloadException {
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_FLOAT, Types.F_FLOAT),
+               Arrays.asList(Types.F_FLOAT), false),
+        makeFT(Arrays.asList(Types.F_FILE), Arrays.asList(Types.F_INT), false));
+  }
+
   private FunctionType makeFT(List<Type> inputs, boolean varArgs) {
-    FunctionType ft = new FunctionType(inputs,
-                                       Collections.<Type>emptyList(), varArgs);
-    return ft;
+    return makeFT(Collections.<Type>emptyList(), inputs, varArgs);
+  }
+
+  private FunctionType makeFT(List<Type> outputs, List<Type> inputs,
+      boolean varArgs) {
+    return new FunctionType(inputs, outputs, varArgs);
   }
 
 }
