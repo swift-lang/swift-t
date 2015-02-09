@@ -8,8 +8,8 @@ import org.junit.Test;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -20,7 +20,6 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
-import exm.stc.ic.opt.valuenumber.ValueNumber;
 import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -32,6 +31,7 @@ import exm.stc.ic.tree.TurbineOp;
 
 public class ValueNumberRegression {
 
+  private static final FnID FAKE_FN_ID = new FnID("fake", "fake");
 
   @BeforeClass
   public static void setupLogging() {
@@ -42,7 +42,7 @@ public class ValueNumberRegression {
   public void testValueNumber() throws UserException {
     ForeignFunctions ff = new ForeignFunctions();
     Program prog = new Program(ff);
-    Function entry = new Function(Constants.ENTRY_FUNCTION, Var.NONE, Var.NONE,
+    Function entry = new Function(FnID.ENTRY_FUNCTION, Var.NONE, Var.NONE,
         ExecTarget.syncControl());
     prog.addFunction(entry);
 
@@ -53,7 +53,7 @@ public class ValueNumberRegression {
     Var cond = main.declare(Types.V_BOOL, "cond", Alloc.STACK,
         DefType.LOCAL_USER, VarProvenance.unknown(), false);
 
-    main.addStatement(new LocalFunctionCall("fake" ,"fake", Arg.NONE,
+    main.addStatement(new LocalFunctionCall(FAKE_FN_ID, Arg.NONE,
                               cond.asList(), prog.foreignFunctions()));
 
     // If statement condition that can't be resolved to constant

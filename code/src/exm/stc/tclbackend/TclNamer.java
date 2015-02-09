@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Var;
 
 public class TclNamer {
@@ -119,7 +120,7 @@ public class TclNamer {
     return result;
   }
 
-  public static String swiftFuncName(String function) {
-    return FN_PREFIX + function;
+  public static String swiftFuncName(FnID function) {
+    return FN_PREFIX + function.uniqueName();
   }
 }

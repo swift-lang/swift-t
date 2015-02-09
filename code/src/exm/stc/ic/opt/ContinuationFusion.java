@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
+import exm.stc.common.lang.FnID;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
@@ -33,12 +34,12 @@ import exm.stc.ic.tree.ICTree.Function;
 /**
  * Fuse together equivalent continuations e.g. if statements with
  *  same condition, loops with same bounds
- *  
+ *
  *  Currently we do:
  *  * if statements with same condition
  *  * range loops with same bounds and same loop settings
  *  * foreach loops over same array with same loop settings
- *  
+ *
  * Doing this for loops has the potential to reduce overhead, but the biggest
  * gains might be from the optimizations that can follow on after the fusion
  */
@@ -63,9 +64,9 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together
-      fuseNonRecursive(f.name(), block);
+      fuseNonRecursive(f.id(), block);
     }
-    
+
     // Recurse on child blocks
     for (Continuation c: block.allComplexStatements()) {
       for (Block child: c.getBlocks()) {
@@ -74,28 +75,28 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     }
   }
 
-  private static void fuseNonRecursive(String function, Block block) {
+  private static void fuseNonRecursive(FnID function, Block block) {
     Iterator<Continuation> it = block.continuationIterator();
-    
-    /* We want to check all pairs of continuations.  
+
+    /* We want to check all pairs of continuations.
      * Use the simple n^2 algorithm rather than creating any index data
      * structure, shouldn't be a problem on any non-ridiculous programs.
      */
-    
-    // First create a copy of the list and keep all of the Continuations 
+
+    // First create a copy of the list and keep all of the Continuations
     // that fall after the first
     assert(block.getContinuations().size() > 1);
     LinkedList<Continuation> mergeCands = new LinkedList<Continuation>(
                                               block.getContinuations());
     mergeCands.removeFirst(); // Don't compare first with itself
-    
+
     while(it.hasNext()) {
-      // Iterate over all continuations except last 
+      // Iterate over all continuations except last
       if (mergeCands.isEmpty()) {
         break;
       }
       Continuation c = it.next();
-      
+
       // Check continuations [i..n) to see if they can be fused with this
       switch(c.getType()) {
         case IF_STATEMENT:
@@ -111,7 +112,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
         default:
           // don't do anything, can't handle
           break;
-      } 
+      }
       mergeCands.removeFirst();
     }
   }
@@ -146,7 +147,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseForeachLoop(String function,
+  private static void fuseForeachLoop(FnID function,
       Iterator<Continuation> it, LinkedList<Continuation> mergeCands,
       ForeachLoop loop1) {
     for (Continuation c2: mergeCands) {
@@ -167,7 +168,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseRangeLoop(String function, Iterator<Continuation> it,
+  private static void fuseRangeLoop(FnID function, Iterator<Continuation> it,
       LinkedList<Continuation> mergeCands, RangeLoop loop1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.RANGE_LOOP) {

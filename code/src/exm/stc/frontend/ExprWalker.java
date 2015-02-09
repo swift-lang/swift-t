@@ -32,6 +32,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.Operators.OpInputType;
@@ -775,11 +776,11 @@ public class ExprWalker {
         fn = SpecialFunction.RANGE_FLOAT;
       }
     }
-    String impl = context.getForeignFunctions().findSpecialImpl(fn);
-    if (impl == null) {
+    FnID fnID = context.getForeignFunctions().findSpecialImpl(fn);
+    if (fnID == null) {
       throw new STCRuntimeError("could not find implementation for " + fn);
     }
-    backend.builtinFunctionCall(impl, impl, VarRepr.backendVars(inArgs),
+    backend.builtinFunctionCall(fnID, VarRepr.backendVars(inArgs),
                                 VarRepr.backendVars(oVar));
   }
 

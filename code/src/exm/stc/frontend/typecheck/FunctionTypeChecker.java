@@ -11,12 +11,14 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -65,7 +67,6 @@ public class FunctionTypeChecker {
           FunctionCall fc, List<Var> outputs) throws UserException {
     List<Type> outTs = new ArrayList<Type>(outputs.size());
     for (Var output: outputs) {
-      checkFunctionOutputValid(context, fc, output);
       outTs.add(output.type());
     }
     List<FunctionType> alts = concretiseFunctionCall(context, fc);
@@ -120,6 +121,8 @@ public class FunctionTypeChecker {
 
       // Choose first viable alternative
       if (match) {
+        FnID id = Unimplemented.makeFunctionID(fc.function());
+        checkFunctionOutputsValid(context, id, fc, outputs);
         return alt;
       }
     }
@@ -201,16 +204,23 @@ public class FunctionTypeChecker {
     return null; // if no alternatives
   }
 
+  private static void checkFunctionOutputsValid(Context context,
+      FnID id, FunctionCall fc, List<Var> outputs) throws TypeMismatchException {
+    for (Var output: outputs) {
+      checkFunctionOutputValid(context, id, fc, output);
+    }
+  }
+
   /**
    * Check that function output var is valid
    * @param output
    * @throws TypeMismatchException
    */
   private static void checkFunctionOutputValid(Context context,
-      FunctionCall f, Var output) throws TypeMismatchException {
+      FnID id, FunctionCall f, Var output) throws TypeMismatchException {
     if (Types.isFile(output) && output.isMapped() == Ternary.FALSE &&
         !output.type().fileKind().supportsTmpImmediate() &&
-        !context.getForeignFunctions().canInitOutputMapping(f.function())) {
+        !context.getForeignFunctions().canInitOutputMapping(id)) {
       /*
        * We can't create temporary files for this type.  If we detect any
        * where a definitely unmapped var is an output to a function, then

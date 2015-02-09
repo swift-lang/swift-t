@@ -10,16 +10,16 @@ public class Checkpointing {
 
   /**
    * Check if we can checkpoint function with these inputs and outputs
-   * @param functionName name, for any error messages
+   * @param id function id, for any error messages
    * @param ftype
    */
   public static void checkCanCheckpoint(Context context,
-        String functionName, FunctionType ftype) 
+        FnID id, FunctionType ftype)
             throws TypeMismatchException, UserException {
     // TODO: should we be able to checkpoint all types?
-    
+
     if (!Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
-      throw new UserException(context, "STC checkpointing feature " + 
+      throw new UserException(context, "STC checkpointing feature " +
                                          "not enabled");
     }
   }

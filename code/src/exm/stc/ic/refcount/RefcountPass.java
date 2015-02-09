@@ -16,6 +16,7 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -63,7 +64,7 @@ public class RefcountPass implements OptimizerPass {
    * Map of names to functions, used inside pass. Must be initialized before
    * pass runs.
    */
-  private Map<String, Function> functionMap = null;
+  private Map<FnID, Function> functionMap = null;
 
   private RCPlacer placer = null;
 
@@ -85,7 +86,7 @@ public class RefcountPass implements OptimizerPass {
     placer = new RCPlacer(functionMap);
 
     for (Function f: program.functions()) {
-      logger.trace("Entering function " + f.name());
+      logger.trace("Entering function " + f.id());
       recurseOnBlock(logger, program.globalVars(), f, f.mainBlock(),
                      new RCTracker(), new TopDownInfo());
     }
@@ -260,7 +261,7 @@ public class RefcountPass implements OptimizerPass {
     if (logger.isTraceEnabled()) {
       logger.trace("");
       logger.trace("Adding increments for block " + block.getType() + " of " +
-          fn.name());
+          fn.id());
       logger.trace("==============================");
       logger.trace(increments);
     }

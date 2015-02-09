@@ -36,6 +36,7 @@ import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -315,18 +316,18 @@ public abstract class Context {
   public abstract void defineFunction(String name, FunctionType type)
                                           throws UserException;
 
-  public abstract void setFunctionProperty(String name, FnProp prop);
+  public abstract void setFunctionProperty(FnID id, FnProp prop);
 
-  public abstract List<FnProp> getFunctionProps(String function);
+  public abstract List<FnProp> getFunctionProps(FnID id);
 
-  public abstract boolean hasFunctionProp(String name, FnProp prop);
+  public abstract boolean hasFunctionProp(FnID id, FnProp prop);
 
-  public abstract void addIntrinsic(String function, IntrinsicFunction intrinsic);
+  public abstract void addIntrinsic(FnID id, IntrinsicFunction intrinsic);
 
-  public abstract IntrinsicFunction lookupIntrinsic(String function);
+  public abstract IntrinsicFunction lookupIntrinsic(FnID id);
 
-  public boolean isIntrinsic(String function) {
-    return lookupIntrinsic(function) != null;
+  public boolean isIntrinsic(FnID id) {
+    return lookupIntrinsic(id) != null;
   }
 
   /**

@@ -272,7 +272,7 @@ public class Validate implements OptimizerPass {
       // TODO: might indicate error sometimes?
       if (!blockVars.contains(ca.var())) {
         logger.debug("Cleanup action for var not defined in " +
-            "block: " + ca.var() + " in function " + fn.name() + ". " +
+            "block: " + ca.var() + " in function " + fn.id() + ". " +
             " Valid variables are: " + blockVars);
       }
     }
@@ -292,7 +292,7 @@ public class Validate implements OptimizerPass {
     } else {
       if (declared.containsKey(var.name()))
         throw new STCRuntimeError("Duplicate variable name "
-                + var.name() + " in function " + fn.name());
+                + var.name() + " in function " + fn.id());
     }
     declared.put(var.name(), var);
   }
@@ -306,7 +306,7 @@ public class Validate implements OptimizerPass {
   private void checkAvail(Function fn, Var referencedVar, Set<Var> unavailable,
                           Object context) {
     assert(!unavailable.contains(referencedVar)) :
-      referencedVar + " was unavailable in scope function " + fn.name()
+      referencedVar + " was unavailable in scope function " + fn.id()
                     + ": " + context;
   }
 
@@ -326,8 +326,8 @@ public class Validate implements OptimizerPass {
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
     assert(fn2 == fn) :
-      "Parent function should be " + fn.name() + " but was "
-      + (fn2 == null ? null : fn2.name());
+      "Parent function should be " + fn.id() + " but was "
+      + (fn2 == null ? null : fn2.id());
 
     for (Continuation c: block.allComplexStatements()) {
       if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {

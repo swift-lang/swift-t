@@ -16,6 +16,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -1636,7 +1637,8 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
+  public void renameVars(FnID function, Map<Var, Arg> renames,
+                         RenameMode mode) {
     if (mode == RenameMode.VALUE) {
       // Fall through
     } else if (mode == RenameMode.REPLACE_VAR) {
@@ -2510,7 +2512,7 @@ public class TurbineOp extends Instruction {
    * @return list of outputs for which previous value is read
    */
   @Override
-  public List<Var> getReadOutputs(Map<String, Function> fns) {
+  public List<Var> getReadOutputs(Map<FnID, Function> fns) {
     switch (op) {
     case STRUCT_CREATE_NESTED:
     case ARR_CREATE_NESTED_IMM:
@@ -3380,7 +3382,7 @@ public class TurbineOp extends Instruction {
 
   @Override
   public Pair<List<VarCount>, List<VarCount>> inRefCounts(
-                Map<String, Function> functions) {
+                Map<FnID, Function> functions) {
     switch (op) {
       case STORE_REF:
         long readRefsIn = getInput(1).getInt();
@@ -3620,7 +3622,7 @@ public class TurbineOp extends Instruction {
 
   @Override
   public Pair<List<VarCount>, List<VarCount>> outRefCounts(
-                 Map<String, Function> functions) {
+                 Map<FnID, Function> functions) {
     switch (this.op) {
       case COPY_REF: {
         // We incremented refcounts for orig. var, now need to decrement

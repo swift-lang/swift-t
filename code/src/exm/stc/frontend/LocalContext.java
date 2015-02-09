@@ -27,6 +27,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -220,28 +221,28 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public void setFunctionProperty(String name, FnProp prop) {
+  public void setFunctionProperty(FnID id, FnProp prop) {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 
   @Override
-  public boolean hasFunctionProp(String name, FnProp prop) {
-    return parent.hasFunctionProp(name, prop);
+  public boolean hasFunctionProp(FnID id, FnProp prop) {
+    return parent.hasFunctionProp(id, prop);
   }
 
   @Override
-  public List<FnProp> getFunctionProps(String function) {
-    return parent.getFunctionProps(function);
+  public List<FnProp> getFunctionProps(FnID id) {
+    return parent.getFunctionProps(id);
   }
 
   @Override
-  public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
+  public void addIntrinsic(FnID id, IntrinsicFunction intrinsic) {
     throw new STCRuntimeError("Cannot add intrinsic in local context");
   }
 
   @Override
-  public IntrinsicFunction lookupIntrinsic(String function) {
-    return parent.lookupIntrinsic(function);
+  public IntrinsicFunction lookupIntrinsic(FnID id) {
+    return parent.lookupIntrinsic(id);
   }
 
   @Override
