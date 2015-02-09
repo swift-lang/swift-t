@@ -1,5 +1,8 @@
 package exm.stc.frontend.typecheck;
 
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.checkOverloadsAmbiguity;
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.concretiseInputsOverloaded;
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.selectArgType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -32,7 +35,8 @@ public class FunctionTypeCheckerTest {
   private static final FnID FAKE_FN_ID = new FnID("foobar", "foobar");
 
   private static final SubType FLOAT_SUB_TYPE = new SubType(Types.F_FLOAT, "float2");
-  private static final Type INT_OR_FLOAT = UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
+  private static final Type INT_OR_FLOAT =
+      UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
 
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
@@ -49,36 +53,36 @@ public class FunctionTypeCheckerTest {
   public void testSelectArgTypeSimple() {
     assertEquals("Basic matching should work",
         Pair.create(Types.F_FLOAT, Types.F_FLOAT),
-        FunctionTypeChecker.selectArgType(Types.F_FLOAT, Types.F_FLOAT, false));
+        selectArgType(Types.F_FLOAT, Types.F_FLOAT, false));
   }
 
   @Test
   public void testSelectArgTypeSubtype() {
     assertEquals("Subtype upcasting should work",
         Pair.create(Types.F_FLOAT, FLOAT_SUB_TYPE),
-        FunctionTypeChecker.selectArgType(Types.F_FLOAT, FLOAT_SUB_TYPE, false));
+        selectArgType(Types.F_FLOAT, FLOAT_SUB_TYPE, false));
 
     assertTrue("Subtype downcasting not allowed",
-        FunctionTypeChecker.selectArgType(FLOAT_SUB_TYPE, Types.F_FLOAT, false) == null);
+        selectArgType(FLOAT_SUB_TYPE, Types.F_FLOAT, false) == null);
   }
 
   @Test
   public void testSelectArgTypeUnion() {
     assertEquals("Int matches IntOrFloat",
         Pair.create(Types.F_INT, Types.F_INT),
-        FunctionTypeChecker.selectArgType(Types.F_INT, INT_OR_FLOAT, false));
+        selectArgType(Types.F_INT, INT_OR_FLOAT, false));
 
     assertEquals("Float matches IntOrFloat",
         Pair.create(Types.F_INT, Types.F_INT),
-        FunctionTypeChecker.selectArgType(Types.F_INT, INT_OR_FLOAT, false));
+        selectArgType(Types.F_INT, INT_OR_FLOAT, false));
 
     assertEquals("IntOrFloat matches IntOrFloat",
         Pair.create(Types.F_INT, Types.F_INT),
-        FunctionTypeChecker.selectArgType(INT_OR_FLOAT, INT_OR_FLOAT, false));
+        selectArgType(INT_OR_FLOAT, INT_OR_FLOAT, false));
 
     assertEquals("IntOrFloat matches Float",
         Pair.create(Types.F_FLOAT, Types.F_FLOAT),
-        FunctionTypeChecker.selectArgType(INT_OR_FLOAT, Types.F_FLOAT, false));
+        selectArgType(INT_OR_FLOAT, Types.F_FLOAT, false));
   }
 
   private static final FunctionType VARARGS_TYPE = new FunctionType(
@@ -86,12 +90,12 @@ public class FunctionTypeCheckerTest {
                             Arrays.asList(Types.F_STRING), true);
 
   @Test
-  public void matchNoVarArgs() throws TypeMismatchException {
+  public void testMatchNoVarArgs() throws TypeMismatchException {
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
         Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT));
 
     List<FnMatch> matches;
-    matches = FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
 
     assertEquals("One matching overload", 1, matches.size());
     FnMatch match = matches.get(0);
@@ -102,11 +106,11 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void matchMultiVarArgs() throws TypeMismatchException {
+  public void testMatchMultiVarArgs() throws TypeMismatchException {
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                                     Arrays.asList(Types.F_INT));
     List<FnMatch> matches;
-    matches = FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
 
     assertEquals("One matching overload", 1, matches.size());
     FnMatch match = matches.get(0);
@@ -116,11 +120,98 @@ public class FunctionTypeCheckerTest {
   }
 
   @Test
-  public void matchVarArgsFail() throws TypeMismatchException {
+  public void testMatchVarArgsFail() throws TypeMismatchException {
     exception.expect(TypeMismatchException.class);
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                       Arrays.asList(Types.F_INT, Types.F_STRING));
-    FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+  }
+
+  /**
+   * Simple overload resolution test
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverload() throws TypeMismatchException {
+    FunctionType intFn = makeSimpleFT(Types.F_INT);
+    FunctionType stringFn = makeSimpleFT(Types.F_STRING);
+    FnID intFnID = new FnID("int", "int");
+    FnID stringFnID = new FnID("string", "string");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(Types.F_STRING), Arrays.asList(
+        Pair.create(intFnID, intFn),
+        Pair.create(stringFnID, stringFn)));
+
+    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    assert(matches.size() == 0);
+    FnMatch match = matches.get(0);
+    assert(match.id.equals(stringFnID));
+    assert(match.concreteAlts.size() == 1);
+    assert(match.concreteAlts.get(0).equals(stringFn));
+  }
+
+  /**
+   * Overload resolution test with some matching args
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverloadPartialMatch() throws TypeMismatchException {
+    FunctionType stringFn = makeSimpleFT(Types.F_INT, Types.F_FILE, Types.F_STRING);
+    FunctionType blobFn = makeSimpleFT(Types.F_INT, Types.F_FILE, Types.F_BLOB);
+    FnID blobFnID = new FnID("a", "a");
+    FnID stringFnID = new FnID("b", "a");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(Types.F_INT, Types.F_FILE, Types.F_STRING),
+        Arrays.asList(Pair.create(blobFnID, blobFn),
+                      Pair.create(stringFnID, stringFn)));
+
+    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    assert(matches.size() == 0);
+    FnMatch match = matches.get(0);
+    assert(match.id.equals(stringFnID));
+    assert(match.concreteAlts.size() == 1);
+    assert(match.concreteAlts.get(0).equals(stringFn));
+  }
+
+  @Test
+  public void testSelectOverloadNoMatch() throws TypeMismatchException {
+    exception.expect(TypeMismatchException.class);
+
+    FunctionType intFn = makeSimpleFT(Types.F_INT);
+    FunctionType stringFn = makeSimpleFT(Types.F_STRING);
+    FnID intFnID = new FnID("int", "int");
+    FnID stringFnID = new FnID("string", "string");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(Types.F_FLOAT), Arrays.asList(
+        Pair.create(intFnID, intFn),
+        Pair.create(stringFnID, stringFn)));
+
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+  }
+
+  @Test
+  public void testSelectOverloadNoMatch2() throws TypeMismatchException {
+    exception.expect(TypeMismatchException.class);
+
+    FunctionType intFn = makeSimpleFT(Types.F_INT);
+    FunctionType stringFn = makeSimpleFT(Types.F_STRING);
+    FnID intFnID = new FnID("int", "int");
+    FnID stringFnID = new FnID("string", "string");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(Types.F_FLOAT, Types.F_FLOAT), Arrays.asList(
+        Pair.create(intFnID, intFn),
+        Pair.create(stringFnID, stringFn)));
+
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+  }
+
+  private FnCallInfo makeOverloadedFnCallInfo(List<Type> argTypes,
+      List<Pair<FnID, FunctionType>> fTypes) {
+    return new FnCallInfo("overloaded_function", fTypes, argTypes);
   }
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
@@ -134,19 +225,19 @@ public class FunctionTypeCheckerTest {
    */
   @Test
   public void testUnambiguousOverloads() throws AmbiguousOverloadException {
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
         makeFT(Arrays.asList(Types.F_INT), false));
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT), false),
         makeFT(Arrays.asList(Types.F_FLOAT), false));
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT), false),
         makeFT(Arrays.asList(Types.F_FLOAT), true));
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT, Types.F_INT), true),
         makeFT(Arrays.asList(Types.F_INT), false));
   }
@@ -162,7 +253,7 @@ public class FunctionTypeCheckerTest {
 
     FunctionType ft = makeFT(Arrays.asList(Types.V_INT, Types.V_FLOAT), false);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "", ft, ft);
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "", ft, ft);
   }
 
   @Test
@@ -170,7 +261,7 @@ public class FunctionTypeCheckerTest {
 
     exception.expect(AmbiguousOverloadException.class);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
         makeFT(Arrays.asList(Types.F_INT), true));
   }
@@ -179,7 +270,7 @@ public class FunctionTypeCheckerTest {
   public void testAmbiguousOverloadBasic3() throws AmbiguousOverloadException {
     exception.expect(AmbiguousOverloadException.class);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT, Types.F_INT), true),
         makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false));
   }
@@ -188,7 +279,7 @@ public class FunctionTypeCheckerTest {
   public void testAmbiguousOverloadBasic4() throws AmbiguousOverloadException {
     exception.expect(AmbiguousOverloadException.class);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_INT), false),
         makeFT(Arrays.asList(INT_OR_FLOAT), false));
   }
@@ -197,7 +288,7 @@ public class FunctionTypeCheckerTest {
   public void testAmbiguousOverloadBasic5() throws AmbiguousOverloadException {
     exception.expect(AmbiguousOverloadException.class);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_FLOAT), false),
         makeFT(Arrays.asList((Type)FLOAT_SUB_TYPE), false));
   }
@@ -206,10 +297,14 @@ public class FunctionTypeCheckerTest {
   public void testAmbiguousOverloadOutputs() throws AmbiguousOverloadException {
     exception.expect(AmbiguousOverloadException.class);
 
-    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+    checkOverloadsAmbiguity(FAKE_CONTEXT, "",
         makeFT(Arrays.asList(Types.F_FLOAT, Types.F_FLOAT),
                Arrays.asList(Types.F_FLOAT), false),
         makeFT(Arrays.asList(Types.F_FILE), Arrays.asList(Types.F_INT), false));
+  }
+
+  private FunctionType makeSimpleFT(Type ...inputs) {
+    return makeFT(Arrays.asList(inputs), false);
   }
 
   private FunctionType makeFT(List<Type> inputs, boolean varArgs) {
