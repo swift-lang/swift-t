@@ -1,4 +1,4 @@
-package exm.stc.tests;
+package exm.stc.ic.opt.valuenumber;
 
 import static org.junit.Assert.assertTrue;
 

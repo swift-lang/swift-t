@@ -1,4 +1,4 @@
-package exm.stc.tests;
+package exm.stc.frontend.typecheck;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -21,7 +21,6 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.GlobalContext;
-import exm.stc.frontend.typecheck.FunctionTypeChecker;
 import exm.stc.frontend.typecheck.FunctionTypeChecker.FnCallInfo;
 
 public class FunctionTypeCheckerTest {
@@ -75,22 +74,16 @@ public class FunctionTypeCheckerTest {
         FunctionTypeChecker.selectArgType(INT_OR_FLOAT, Types.F_FLOAT, false));
   }
 
-  private final class ConcretiseTester extends FunctionTypeChecker {
-    public List<FunctionType> testConcretise(FnCallInfo fc)
-        throws TypeMismatchException {
-      return concretiseFunctionCall(FAKE_CONTEXT, fc);
-    }
-  }
-
   private static final FunctionType VARARGS_TYPE = new FunctionType(
-  Arrays.asList(Types.F_INT, INT_OR_FLOAT),
-  Arrays.asList(Types.F_STRING), true);
+                            Arrays.asList(Types.F_INT, INT_OR_FLOAT),
+                            Arrays.asList(Types.F_STRING), true);
 
   @Test
   public void matchNoVarArgs() throws TypeMismatchException {
-    List<FunctionType> concreteTypes = new ConcretiseTester().testConcretise(
-        new FnCallInfo("varargsFunction", VARARGS_TYPE, Arrays.asList(
-                   Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT)));
+    List<FunctionType> concreteTypes;
+    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+        Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT));
+    concreteTypes = FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
 
     assertEquals("One matching type", 1, concreteTypes.size());
     assertEquals("Varargs expanded", Arrays.asList(Types.F_INT, Types.F_FLOAT,
@@ -99,8 +92,10 @@ public class FunctionTypeCheckerTest {
 
   @Test
   public void matchMultiVarArgs() throws TypeMismatchException {
-    List<FunctionType> concreteTypes = new ConcretiseTester().testConcretise(
-        new FnCallInfo("varargsFunction", VARARGS_TYPE, Arrays.asList(Types.F_INT)));
+    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+                                    Arrays.asList(Types.F_INT));
+    List<FunctionType> concreteTypes;
+    concreteTypes = FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
 
     assertEquals("One matching type", 1, concreteTypes.size());
     assertEquals("Varargs expanded", Arrays.asList(Types.F_INT),
@@ -110,8 +105,9 @@ public class FunctionTypeCheckerTest {
   @Test
   public void matchVarArgsFail() throws TypeMismatchException {
     exception.expect(TypeMismatchException.class);
-    new ConcretiseTester().testConcretise(new FnCallInfo("varargsFunction",
-        VARARGS_TYPE, Arrays.asList(Types.F_INT, Types.F_STRING)));
+    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+                      Arrays.asList(Types.F_INT, Types.F_STRING));
+    FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
   }
 
 }
