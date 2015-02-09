@@ -34,8 +34,8 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
@@ -1085,7 +1085,7 @@ public class STCMiddleEnd {
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                             filenameVars, instBuffer, false, mustMapOutFiles,
                             true);
-    instBuffer.add(new LocalFunctionCall(wrapperID, inVals, outVals,
+    instBuffer.add(new LocalFunctionCall(builtinID, inVals, outVals,
                                          program.foreignFunctions()));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
