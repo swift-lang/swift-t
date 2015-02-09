@@ -37,6 +37,10 @@ public class FunctionTypeCheckerTest {
   private static final SubType FLOAT_SUB_TYPE = new SubType(Types.F_FLOAT, "float2");
   private static final Type INT_OR_FLOAT =
       UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
+  private static final Type FLOAT_OR_INT =
+      UnionType.createUnionType(Types.F_FLOAT, Types.F_INT);
+  private static final Type INT_OR_STRING =
+      UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
 
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
@@ -207,6 +211,110 @@ public class FunctionTypeCheckerTest {
         Pair.create(stringFnID, stringFn)));
 
     concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+  }
+
+  /**
+   * Check that union args are handled correctly when resolving overloads
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverloadUnion1() throws TypeMismatchException {
+    FunctionType intFn = makeSimpleFT(Types.F_INT);
+    FunctionType floatFn = makeSimpleFT(Types.F_FLOAT);
+    FnID intFnID = new FnID("int", "int");
+    FnID floatFnID = new FnID("float", "float");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(INT_OR_STRING), Arrays.asList(
+        Pair.create(intFnID, intFn),
+        Pair.create(floatFnID, floatFn)));
+
+    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    assert(matches.size() == 0);
+    FnMatch match = matches.get(0);
+    assert(match.id.equals(intFnID));
+    assert(match.concreteAlts.size() == 1);
+    assert(match.concreteAlts.get(0).equals(intFn));
+  }
+
+  /**
+   * Check that union args are handled correctly when they could match
+   * multiple overloads
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverloadUnion2() throws TypeMismatchException {
+    FunctionType intFn = makeSimpleFT(Types.F_INT);
+    FunctionType floatFn = makeSimpleFT(Types.F_FLOAT);
+    FnID intFnID = new FnID("int", "int");
+    FnID floatFnID = new FnID("float", "float");
+
+    Pair<FnID, FunctionType> intPair = Pair.create(intFnID, intFn);
+    Pair<FnID, FunctionType> floatPair = Pair.create(floatFnID, floatFn);
+    List<Pair<FnID, FunctionType>> overloadList = Arrays.asList(
+            intPair, floatPair);
+
+    List<Pair<FnID, FunctionType>> overloadListRev = Arrays.asList(
+        floatPair, intPair);
+
+    // Expression is first an int, so should resolve to int function
+    FnCallInfo fc = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
+                                             overloadList);
+
+    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    assert(matches.size() == 0);
+    FnMatch match = matches.get(0);
+    assert(match.id.equals(intFnID));
+    assert(match.concreteAlts.size() == 1);
+    assert(match.concreteAlts.get(0).equals(intFn));
+
+    FnCallInfo fc2 = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
+                                              overloadListRev);
+
+    List<FnMatch> matches2 = concretiseInputsOverloaded(FAKE_CONTEXT, fc2, true);
+    assert(matches2.size() == 0);
+    FnMatch match2 = matches2.get(0);
+    assert(match2.id.equals(intFnID));
+    assert(match2.concreteAlts.size() == 1);
+    assert(match2.concreteAlts.get(0).equals(intFn));
+
+
+    FnCallInfo fc3 = makeOverloadedFnCallInfo(Arrays.asList(FLOAT_OR_INT),
+                                              overloadListRev);
+
+    List<FnMatch> matches3 = concretiseInputsOverloaded(FAKE_CONTEXT, fc3, true);
+    assert(matches2.size() == 0);
+    FnMatch match3 = matches3.get(0);
+    assert(match3.id.equals(floatFnID));
+    assert(match3.concreteAlts.size() == 1);
+    assert(match3.concreteAlts.get(0).equals(floatFn));
+  }
+
+  @Test
+  public void testSelectOverloadVarArgs1() throws TypeMismatchException {
+    FunctionType ft1 = makeFT(Arrays.asList(Types.F_STRING, Types.F_STRING), true);
+    FunctionType ft2 = makeFT(Arrays.asList(FLOAT_OR_INT), true);
+    FnID fid1 = new FnID("1", "");
+    FnID fid2 = new FnID("2", "");
+
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+                            Arrays.asList(Types.F_STRING, Types.F_STRING),
+                            Arrays.asList(Pair.create(fid1, ft1),
+                                          Pair.create(fid2, ft2)));
+
+    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    assert(matches.size() == 0);
+    FnMatch match = matches.get(0);
+    assert(match.id.equals(fid1));
+    assert(match.concreteAlts.size() == 1);
+    assert(match.concreteAlts.get(0).equals(ft1));
+
+  }
+
+  @Test
+  public void testSelectOverloadVarArgs2() throws TypeMismatchException {
+    makeFT(Arrays.asList(Types.F_STRING, Types.F_STRING), false);
+    makeFT(Arrays.asList(Types.F_STRING, FLOAT_OR_INT), true);
   }
 
   private FnCallInfo makeOverloadedFnCallInfo(List<Type> argTypes,
