@@ -3,6 +3,7 @@ package exm.stc.ic.opt;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -58,17 +59,17 @@ public class FunctionSignature implements OptimizerPass {
    */
   @Override
   public void optimize(Logger logger, Program program) {
-    Set<FnID> usedFunctionNames = program.getFunctionIDs();
+    Set<FnID> usedFnIDs = new HashSet<FnID>(program.getFunctionMap().keySet());
     Map<FnID, Function> toInline = new HashMap<FnID, Function>();
     ListIterator<Function> fnIt = program.functionIterator();
     while (fnIt.hasNext()) {
       Function fn = fnIt.next();
       Function newFn = switchToValuePassing(logger, program.foreignFunctions(),
-                                            fn, usedFunctionNames);
+                                            fn, usedFnIDs);
       if (newFn != null) {
         fnIt.remove(); // Remove old function
         fnIt.add(newFn);
-        usedFunctionNames.add(newFn.id());
+        usedFnIDs.add(newFn.id());
 
         // We should inline
         toInline.put(fn.id(), fn);
@@ -80,7 +81,7 @@ public class FunctionSignature implements OptimizerPass {
   }
 
   private Function switchToValuePassing(Logger logger, ForeignFunctions foreignFuncs,
-            Function fn, Set<FnID> usedFunctionNames) {
+            Function fn, Set<FnID> usedFnIDs) {
     if (fn.blockingInputs().isEmpty())
       return null;
 
@@ -107,7 +108,7 @@ public class FunctionSignature implements OptimizerPass {
       assert(fv.val2 != null);
     }
     List<Var> newIList = buildNewInputList(fn, switched);
-    FnID newID = selectUniqueID(fn.id(), usedFunctionNames);
+    FnID newID = selectUniqueID(fn.id(), usedFnIDs);
 
     // Block that calls into new version
     Block callNewFunction = callNewFunctionCode(foreignFuncs, fn, newID,
