@@ -256,7 +256,7 @@ public class FunctionTypeChecker {
     return concretiseFunctionCall(context, info);
   }
 
-  protected static List<FunctionType> concretiseFunctionCall(Context context,
+  static List<FunctionType> concretiseFunctionCall(Context context,
       FnCallInfo fc) throws TypeMismatchException {
     // Expand varargs
     List<Type> expandedInputs = expandVarArgs(context, fc);
