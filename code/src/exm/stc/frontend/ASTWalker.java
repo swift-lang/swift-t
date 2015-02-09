@@ -102,6 +102,7 @@ import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
 import exm.stc.frontend.tree.Wait;
+import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TclFunRef;
 import exm.stc.tclbackend.TclOpTemplate;

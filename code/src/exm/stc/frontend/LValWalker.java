@@ -24,6 +24,7 @@ import exm.stc.common.lang.WaitMode;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
+import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 
 /**

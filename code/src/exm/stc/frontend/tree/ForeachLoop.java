@@ -35,8 +35,8 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
-import exm.stc.frontend.TypeChecker;
 import exm.stc.frontend.VarRepr;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class ForeachLoop {
   private static final int DEFAULT_SPLIT_DEGREE = 16;

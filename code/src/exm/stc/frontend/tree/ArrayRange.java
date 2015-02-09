@@ -28,7 +28,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class ArrayRange {
   private final SwiftAST start;

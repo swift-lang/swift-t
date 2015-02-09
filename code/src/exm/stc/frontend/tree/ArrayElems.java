@@ -29,7 +29,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class ArrayElems {
 

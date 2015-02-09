@@ -18,6 +18,8 @@
             value="lib/antlr-3.5-complete-no-st3.jar"/>
   <property name="stc.jar"
             value="lib/stc.jar"/>
+  <property name="stc.test.jar"
+            value="lib/stc-tests.jar"/>
   <property name="log4j.jar"
             value="lib/log4j-1.2.16.jar"/>
   <property name="commons-cli.jar"
@@ -34,6 +36,11 @@
   <property name="jacocoant.jar"
             value="lib/jacocoant-0.7.2.jar"/>
 
+  <property name="stc.env.template"
+            value="conf/stc-env.sh.template"/>
+  <property name="stc.env"
+            value="conf/stc-env.sh"/>
+
   <property name="src.dir" value="src"/>
   <property name="grammar"
             value="${src.dir}/exm/stc/ast/ExM.g"/>
@@ -42,8 +49,12 @@
   <property name="build.dir" value="classes"/>
   <target name="build.all" depends="jar" />
 
+  <property name="test.src.dir" value="test-src"/>
+  <property name="test.build.dir" value="test-classes"/>
   <property name="test.out.dir"
             value="test-output"/>
+  <property name="test.classpath"
+            value="${classpath}:${stc.jar}"/>
 
   <!-- Code coverage -->
   <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml"
@@ -59,9 +70,16 @@
 
   <target name="jar"
           depends="compile">
-    <mkdir dir="${build.dir}"/>
     <jar destfile="${stc.jar}"
          basedir="${build.dir}"
+         includes="**/*.class"
+         manifest="META-INF/MANIFEST.MF"/>
+  </target>
+  
+  <target name="test.jar"
+          depends="compile.tests">
+    <jar destfile="${stc.test.jar}"
+         basedir="${test.build.dir}"
          includes="**/*.class"
          manifest="META-INF/MANIFEST.MF"/>
   </target>
@@ -71,6 +89,7 @@
        warnings on ANTLR-generated code that is outside our control
   -->
   <target name="compile" depends="compile.antlr">
+    <mkdir dir="${build.dir}"/>
     <javac srcdir="${src.dir}"
            destdir="${build.dir}"
            excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**"
@@ -83,9 +102,23 @@
       <compilerarg value="-Xlint:-cast"/>
     </javac>
   </target>
+  
+  <target name="compile.tests" depends="jar">
+    <mkdir dir="${test.build.dir}"/>
+    <javac srcdir="${test.src.dir}"
+           destdir="${test.build.dir}"
+           listfiles="${lf}"
+           debug="true"
+           debuglevel="source,lines,vars"
+           includeantruntime="false"
+           classpath="${test.classpath}">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-cast"/>
+    </javac>
+  </target>
 
   <!-- Check if the ANTLR code is up-to-date -->
-  <uptodate srcfile="${grammar}"
+ <uptodate srcfile="${grammar}"
             targetfile="${stc.jar}"
             property="antlr.uptodate"/>
 
@@ -164,7 +197,7 @@
     <!-- Empty turbine home unless already provided -->
     <property name="turbine.home"
               value=""/>
-    <copy file="conf/stc-env.sh.template" toFile="conf/stc-env.sh"
+    <copy file="${stc.env.template}" toFile="${stc.env}"
           overwrite="true">
       <filterset>
         <filter token="TURBINE_HOME" value="${turbine.home}"/>
@@ -172,19 +205,19 @@
     </copy>
   </target>
 
-  <target name="test" depends="jar,compile">
+  <target name="test" depends="test.jar">
     <mkdir dir="${test.out.dir}"/>
     <jacoco:coverage enabled="${coverage.enabled}"
                      destfile="${test.coverage.output}">
       <junit fork="true" printsummary="yes" haltonfailure="yes">
         <classpath>
-          <pathelement location="${stc.jar}"/>
-          <pathelement path="${classpath}"/>
+          <pathelement location="${stc.test.jar}"/>
+          <pathelement path="${test.classpath}"/>
         </classpath>
 
         <batchtest todir="${test.out.dir}" fork="true">
           <resources>
-            <fileset dir="${build.dir}" includes="exm/stc/tests/**/*.class"/>
+            <fileset dir="${test.build.dir}" includes="**/*.class"/>
           </resources>
 
           <formatter type="plain"/>
@@ -276,17 +309,34 @@
   </target>
 
   <available property="build.dir.exists" file="${build.dir}"/>
+  <available property="test.build.dir.exists" file="${test.build.dir}"/>
+  <available property="test.out.dir.exists" file="${test.out.dir}"/>
 
   <target name="clean"
-          depends="clean.java">
+          depends="clean.java,clean.tests,clean.test.out">
     <delete file="${stc.jar}"/>
+    <delete file="${stc.test.jar}"/>
+    <delete file="${stc.env}"/>
     <!-- Delete all ANTLR-generated stuff -->
     <delete dir="${antlr.out}"/>
     <delete file="source.txt"/>
   </target>
+
   <target name="clean.java" if="build.dir.exists">
     <delete includeemptydirs="true">
-      <fileset dir="${build.dir}" includes="**/*"/>
+      <fileset dir="${build.dir}"/>
+    </delete>
+  </target>
+
+  <target name="clean.tests" if="test.build.dir.exists">
+    <delete includeemptydirs="true">
+      <fileset dir="${test.build.dir}"/>
+    </delete>
+  </target>
+  
+  <target name="clean.test.out" if="test.out.dir.exists">
+    <delete includeemptydirs="true">
+      <fileset dir="${test.out.dir}"/>
     </delete>
   </target>
 
