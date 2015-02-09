@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.common.exceptions.AmbiguousOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
@@ -492,18 +493,28 @@ public class FunctionTypeChecker {
     }
 
     if (fc.fnType.hasVarargs()) {
-      List<Type> expandedInputs;
-      expandedInputs = new ArrayList<Type>();
-      expandedInputs.addAll(abstractInputs.subList(0,
-          abstractInputs.size() - 1));
-      Type varArgType = abstractInputs.get(abstractInputs.size() - 1);
-      for (int i = abstractInputs.size() - 1; i < numArgs; i++) {
-        expandedInputs.add(varArgType);
-      }
-      return expandedInputs;
+      return expandVarArgs(abstractInputs, numArgs);
     } else {
       return abstractInputs;
     }
+  }
+
+  /**
+   * Expand varArgs to at most maxLen
+   * @param inputs
+   * @param maxLen
+   * @return
+   */
+  private static List<Type> expandVarArgs(List<Type> inputs,
+                                          int maxLen) {
+    List<Type> expandedInputs = new ArrayList<Type>();
+    expandedInputs.addAll(inputs.subList(0, inputs.size() - 1));
+
+    Type varArgType = inputs.get(inputs.size() - 1);
+    for (int i = inputs.size() - 1; i < maxLen; i++) {
+      expandedInputs.add(varArgType);
+    }
+    return expandedInputs;
   }
 
   private static List<Type> bindTypeVariables(List<Type> types,
@@ -568,5 +579,73 @@ public class FunctionTypeChecker {
       this.fnType = fnType;
       this.argTypes = argTypes;
     }
+  }
+
+  /**
+   * Check to see if overloaded functions are potentially ambiguous
+   * @param fakeContext
+   * @param ft
+   * @param ft2
+   * @throws AmbiguousOverloadException
+   */
+  static void checkOverloadsAmbiguity(Context context, String functionName,
+      FunctionType ft1, FunctionType ft2) throws AmbiguousOverloadException {
+
+    // Need to handle non-varargs and varargs functions
+    List<Type> in1 = ft1.getInputs(), in2 = ft2.getInputs();
+
+    if (ft1.hasVarargs() && ft2.hasVarargs()) {
+      // Extend shorter varargs up to last required arg of longer varargs
+      int maxRequiredLen = Math.min(in1.size() - 1, in2.size() - 1);
+      in1 = expandVarArgs(in1, maxRequiredLen);
+      in1 = expandVarArgs(in2, maxRequiredLen);
+
+    } else if (ft1.hasVarargs() || ft2.hasVarargs()) {
+      // Attempt to expand varargs to match length of non-varargs
+      if (ft1.hasVarargs()) {
+        in1 = expandVarArgs(in1, in2.size());
+      } else {
+        in2 = expandVarArgs(in2, in1.size());
+      }
+    }
+
+    if (in1.size() != in2.size()) {
+      return;
+    }
+
+    // Check pairwise to see if a type alternative of one is assignable to the other
+    for (int i = 0; i < in1.size(); i++) {
+      if (unambiguousArg(in1.get(i), in2.get(i))) {
+        // OK!
+        return;
+      }
+    }
+
+    // No unambiguous args
+    throw new AmbiguousOverloadException("Overloads of function " + functionName
+        + " are potentially ambiguous.  Function input types are: " + typeList(in1) +
+        " and " + typeList(in2));
+  }
+
+  private static String typeList(List<Type> types) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("(");
+
+    boolean first = false;
+    for (Type t: types) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(", ");
+      }
+      sb.append(t.typeName());
+    }
+    sb.append(")");
+
+    return sb.toString();
+  }
+
+  private static boolean unambiguousArg(Type inType1, Type inType2) {
+    return !inType1.assignableTo(inType2) && !inType2.assignableTo(inType1);
   }
 }

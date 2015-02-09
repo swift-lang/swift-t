@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.BeforeClass;
@@ -12,6 +13,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import exm.stc.common.Logging;
+import exm.stc.common.exceptions.AmbiguousOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Types;
@@ -25,6 +27,7 @@ import exm.stc.frontend.typecheck.FunctionTypeChecker.FnCallInfo;
 
 public class FunctionTypeCheckerTest {
 
+  private static final SubType FLOAT_SUB_TYPE = new SubType(Types.F_FLOAT, "float2");
   private static final Type INT_OR_FLOAT = UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
@@ -46,13 +49,12 @@ public class FunctionTypeCheckerTest {
 
   @Test
   public void testSelectArgTypeSubtype() {
-    SubType float2 = new SubType(Types.F_FLOAT, "float2");
     assertEquals("Subtype upcasting should work",
-        Pair.create(Types.F_FLOAT, float2),
-        FunctionTypeChecker.selectArgType(Types.F_FLOAT, float2, false));
+        Pair.create(Types.F_FLOAT, FLOAT_SUB_TYPE),
+        FunctionTypeChecker.selectArgType(Types.F_FLOAT, FLOAT_SUB_TYPE, false));
 
     assertTrue("Subtype downcasting not allowed",
-        FunctionTypeChecker.selectArgType(float2, Types.F_FLOAT, false) == null);
+        FunctionTypeChecker.selectArgType(FLOAT_SUB_TYPE, Types.F_FLOAT, false) == null);
   }
 
   @Test
@@ -108,6 +110,86 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
                       Arrays.asList(Types.F_INT, Types.F_STRING));
     FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
+  }
+
+  /**
+   * Check for unambiguous cases that shouldn't raise exception
+   * @throws AmbiguousOverloadException
+   */
+  @Test
+  public void testUnambiguousOverloads() throws AmbiguousOverloadException {
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
+        makeFT(Arrays.asList(Types.F_INT), false));
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT), false),
+        makeFT(Arrays.asList(Types.F_FLOAT), false));
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT), false),
+        makeFT(Arrays.asList(Types.F_FLOAT), true));
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT, Types.F_INT, Types.F_INT), true),
+        makeFT(Arrays.asList(Types.F_INT), false));
+  }
+
+  /**
+   * Check for trivial ambiguous case
+   * @throws AmbiguousOverloadException
+   */
+  @Test
+  public void testAmbiguousOverloadBasic1() throws AmbiguousOverloadException {
+
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionType ft = makeFT(Arrays.asList(Types.V_INT, Types.V_FLOAT), false);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "", ft, ft);
+  }
+
+  @Test
+  public void testAmbiguousOverloadBasic2() throws AmbiguousOverloadException {
+
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false),
+        makeFT(Arrays.asList(Types.F_INT), true));
+  }
+
+  @Test
+  public void testAmbiguousOverloadBasic3() throws AmbiguousOverloadException {
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT, Types.F_INT, Types.F_INT), true),
+        makeFT(Arrays.asList(Types.F_INT, Types.F_INT), false));
+  }
+
+  @Test
+  public void testAmbiguousOverloadBasic4() throws AmbiguousOverloadException {
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_INT), false),
+        makeFT(Arrays.asList(INT_OR_FLOAT), false));
+  }
+
+  @Test
+  public void testAmbiguousOverloadBasic5() throws AmbiguousOverloadException {
+    exception.expect(AmbiguousOverloadException.class);
+
+    FunctionTypeChecker.checkOverloadsAmbiguity(FAKE_CONTEXT, "",
+        makeFT(Arrays.asList(Types.F_FLOAT), false),
+        makeFT(Arrays.asList((Type)FLOAT_SUB_TYPE), false));
+  }
+
+  private FunctionType makeFT(List<Type> inputs, boolean varArgs) {
+    FunctionType ft = new FunctionType(inputs,
+                                       Collections.<Type>emptyList(), varArgs);
+    return ft;
   }
 
 }
