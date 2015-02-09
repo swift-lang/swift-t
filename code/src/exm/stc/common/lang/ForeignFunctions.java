@@ -17,7 +17,6 @@ package exm.stc.common.lang;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +24,7 @@ import java.util.Set;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.SetMultiMap;
 
 /**
  * Static class to track info about semantics of foreign functions.
@@ -48,89 +48,124 @@ public class ForeignFunctions {
         SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL};
   }
 
+  private static enum Prop {
+    IS_ALREADY_DEFINED, // If already defined
+    IS_PURE, // If has no side-effects and is deterministic
+    IS_COMMUTATIVE, // Order of arguments doesn't matter
+    IS_COPY, // Functions which copy value of input to output
+    IS_MINMAX,
+    IS_ASSERT_VARIANT,
+    ;
+  }
+
   /**
    * Track all foreign functions used in the program
    */
-  private final Set<String> foreignFunctions = new HashSet<String>();
+  private final SetMultiMap<FnID, Prop> props =
+                  new SetMultiMap<FnID, Prop>();
 
   /**
    * Map from implementation function name to special function anme
    */
-  private final HashMap<String, SpecialFunction> specialImpls =
-                                        new HashMap<String, SpecialFunction>();
+  private final HashMap<FnID, SpecialFunction> specialImpls =
+                                new HashMap<FnID, SpecialFunction>();
 
   // Inverse map
-  private final MultiMap<SpecialFunction, String> specialImplsInv =
-                                       new MultiMap<SpecialFunction, String>();
-
-  /** Names of built-ins which don't have side effects */
-  private HashSet<String> pure = new HashSet<String>();
+  private final MultiMap<SpecialFunction, FnID> specialImplsInv =
+                               new MultiMap<SpecialFunction, FnID>();
 
   /** Names of built-ins which have a local equivalent operation */
-  private HashMap<String, BuiltinOpcode>
-            equivalentOps = new HashMap<String, BuiltinOpcode>();
+  private HashMap<FnID, BuiltinOpcode>
+            equivalentOps = new HashMap<FnID, BuiltinOpcode>();
 
   /** inverse of localEquivalents */
-  private MultiMap<BuiltinOpcode, String> equivalentOpsInv
-                          = new MultiMap<BuiltinOpcode, String>();
-
-  /** Built-ins which are known to be deterministic */
-  private HashSet<String> commutative = new HashSet<String>();
-
-  /**
-   * Functions which just copy value of input to output
-   */
-  private HashSet<String> copyFunctions = new HashSet<String>();
-  private HashSet<String> minMaxFunctions = new HashSet<String>();
-
+  private MultiMap<BuiltinOpcode, FnID> equivalentOpsInv
+                          = new MultiMap<BuiltinOpcode, FnID>();
 
   /**
    * Functions that have a local implementation
    * Map from Swift function name to function name of local
    */
-  private Map<String, String> localImpls = new HashMap<String, String>();
-  private MultiMap<String, String> localImplsInv = new MultiMap<String, String>();
+  private Map<FnID, FnID> localImpls =
+                    new HashMap<FnID, FnID>();
+  private MultiMap<FnID, FnID> localImplsInv =
+                    new MultiMap<FnID, FnID>();
 
-  private HashMap<String, ExecTarget> taskModes
-    = new HashMap<String, ExecTarget>();
+  private HashMap<FnID, ExecTarget> taskModes =
+                    new HashMap<FnID, ExecTarget>();
 
-  public void addForeignFunction(String functionName) {
-    if (!foreignFunctions.add(functionName)) {
-      throw new STCRuntimeError("Tried to add foreign function "
-                                      + functionName + " twice");
+  private void addProp(FnID id, Prop prop) {
+    props.put(id, prop);
+  }
+
+  private boolean hasProp(FnID id, Prop prop) {
+    return props.get(id).contains(prop);
+  }
+
+  public void copyProperties(FnID newID, FnID oldID) {
+    addForeignFunction(newID);
+
+    props.putAll(newID, props.get(oldID));
+    SpecialFunction special = specialImpls.get(oldID);
+    if (special != null) {
+      addSpecialImpl(special, newID);;
+    }
+
+    BuiltinOpcode equiv = equivalentOps.get(oldID);
+    if (equiv != null) {
+      addOpEquiv(newID, equiv);
+    }
+
+    FnID localID = getLocalImpl(oldID);
+    if (localID != null) {
+      addLocalImpl(newID, localID);
+    }
+
+    ExecTarget taskMode = taskModes.get(oldID);
+    if (taskMode != null) {
+      addTaskMode(newID, taskMode);
     }
   }
 
-  public boolean isForeignFunction(String functionName) {
-    return foreignFunctions.contains(functionName);
+  public void addForeignFunction(FnID id) {
+    if (hasProp(id, Prop.IS_ALREADY_DEFINED)) {
+      throw new STCRuntimeError("Tried to add foreign function "
+                                      + id + " twice");
+    }
+
+    addProp(id, Prop.IS_ALREADY_DEFINED);
+  }
+
+  public boolean isForeignFunction(FnID id) {
+    return hasProp(id, Prop.IS_ALREADY_DEFINED);
   }
 
   /**
-   * @param functionName
+   * @param id
    * @return true if the function expects inputs and outputs to be recursively
    *              unpacked for local version (i.e. no ADLB ids in input)
    */
-  public boolean recursivelyUnpackedInOut(String functionName) {
+  public boolean recursivelyUnpackedInOut(FnID id) {
     // For now, all foreign functions expect this
-    return isForeignFunction(functionName);
+    return isForeignFunction(id);
   }
 
   /**
-   * @param specialName
+   * @param sourceName name of function in source
    * @return enum value if this is a valid name of a special function,
    *         otherwise null
    */
-  public SpecialFunction findSpecialFunction(String specialName) {
+  public SpecialFunction findSpecialFunction(String sourceName) {
     try {
-      return SpecialFunction.valueOf(specialName.toUpperCase());
+      return SpecialFunction.valueOf(sourceName.toUpperCase());
     } catch (IllegalArgumentException ex){
       return null;
     }
   }
 
-  public void addSpecialImpl(SpecialFunction special, String implName) {
-    specialImpls.put(implName, special);
-    specialImplsInv.put(special, implName);
+  public void addSpecialImpl(SpecialFunction special, FnID implID) {
+    specialImpls.put(implID, special);
+    specialImplsInv.put(special, implID);
   }
 
   /**
@@ -140,9 +175,9 @@ public class ForeignFunctions {
    * @param specials
    * @return
    */
-  public boolean isSpecialImpl(String function,
+  public boolean isSpecialImpl(FnID id,
                           SpecialFunction ...specials) {
-    SpecialFunction act = specialImpls.get(function);
+    SpecialFunction act = specialImpls.get(id);
     if (act != null) {
       for (SpecialFunction special: specials) {
         if (act == special) {
@@ -153,15 +188,15 @@ public class ForeignFunctions {
     return false;
   }
 
-  public boolean canInitOutputMapping(String function) {
-    return isSpecialImpl(function, SpecialFunction.CAN_INIT_OUTPUT_MAPPING);
+  public boolean canInitOutputMapping(FnID id) {
+    return isSpecialImpl(id, SpecialFunction.CAN_INIT_OUTPUT_MAPPING);
   }
   /**
    * True if it is a funciton that never will initialize an output file's mapping,
    * so generated code must do it for it
    */
-  public boolean neverInitsOutputMapping(String function) {
-    return !canInitOutputMapping(function);
+  public boolean neverInitsOutputMapping(FnID id) {
+    return !canInitOutputMapping(id);
   }
 
   /**
@@ -169,8 +204,8 @@ public class ForeignFunctions {
    * @param special
    * @return
    */
-  public String findSpecialImpl(SpecialFunction special) {
-    List<String> impls = specialImplsInv.get(special);
+  public FnID findSpecialImpl(SpecialFunction special) {
+    List<FnID> impls = specialImplsInv.get(special);
     if (impls.isEmpty()) {
       return null;
     } else {
@@ -178,73 +213,69 @@ public class ForeignFunctions {
     }
   }
 
-  public void addPure(String builtinFunction) {
-    pure.add(builtinFunction);
+  public void addPure(FnID id) {
+    addProp(id, Prop.IS_PURE);
   }
 
-  public boolean isPure(String builtinFunction) {
-    return pure.contains(builtinFunction);
+  public boolean isPure(FnID id) {
+    return hasProp(id, Prop.IS_PURE);
   }
 
 
-  public void addOpEquiv(String functionName, BuiltinOpcode op) {
-    equivalentOps.put(functionName, op);
-    equivalentOpsInv.put(op, functionName);
+  public void addOpEquiv(FnID id, BuiltinOpcode op) {
+    equivalentOps.put(id, op);
+    equivalentOpsInv.put(op, id);
   }
 
-  public boolean hasOpEquiv(String builtinFunction) {
+  public boolean hasOpEquiv(FnID builtinFunction) {
     return equivalentOps.containsKey(builtinFunction);
   }
 
-  public BuiltinOpcode getOpEquiv(String builtinFunction) {
+  public BuiltinOpcode getOpEquiv(FnID builtinFunction) {
     return equivalentOps.get(builtinFunction);
   }
 
   /**
    * Find an implementation of a built-in op
    */
-  public List<String> findOpImpl(BuiltinOpcode op) {
+  public List<FnID> findOpImpl(BuiltinOpcode op) {
     return equivalentOpsInv.get(op);
   }
 
-  public void addCommutative(String builtInFunction) {
-    commutative.add(builtInFunction);
+  public void addCommutative(FnID id) {
+    addProp(id, Prop.IS_COMMUTATIVE);
   }
 
-  public boolean isCommutative(String builtinFunction) {
-    return commutative.contains(builtinFunction);
+  public boolean isCommutative(FnID id) {
+    return hasProp(id, Prop.IS_COMMUTATIVE);
   }
 
-  public void addCopy(String builtInFunction) {
-    copyFunctions.add(builtInFunction);
+  public void addCopy(FnID id) {
+    addProp(id, Prop.IS_COPY);
   }
 
-  public boolean isCopyFunction(String builtinFunction) {
-    return copyFunctions.contains(builtinFunction);
+  public boolean isCopyFunction(FnID id) {
+    return hasProp(id, Prop.IS_COPY);
   }
 
-  public void addMinMax(String builtInFunction) {
-    minMaxFunctions.add(builtInFunction);
+  public void addMinMax(FnID id) {
+    addProp(id, Prop.IS_MINMAX);
   }
 
-  public boolean isMinMaxFunction(String builtinFunction) {
-    return minMaxFunctions.contains(builtinFunction);
+  public boolean isMinMaxFunction(FnID id) {
+    return hasProp(id, Prop.IS_MINMAX);
   }
 
-  public void addAssertVariable(String builtinFunction) {
-    assertVariants.add(builtinFunction);
+  public void addAssertVariant(FnID id) {
+    addProp(id, Prop.IS_ASSERT_VARIANT);
   }
-
-  /** Keep track of assert variants so they can be disabled as an optimization */
-  private final HashSet<String> assertVariants = new
-                HashSet<String>();
 
   /**
-   * @param fnName true if the named builtin is some kind of assert statemetn
+   * @param id true if the named builtin is some kind of assert statemetn
    * @return
    */
-  public boolean isAssertVariant(String fnName) {
-    return assertVariants.contains(fnName);
+  public boolean isAssertVariant(FnID id) {
+    return hasProp(id, Prop.IS_ASSERT_VARIANT);
   }
 
   /**
@@ -252,39 +283,39 @@ public class ForeignFunctions {
    * @param swiftFunction
    * @param localFunction
    */
-  public void addLocalImpl(String swiftFunction, String localFunction) {
+  public void addLocalImpl(FnID swiftFunction, FnID localFunction) {
     localImpls.put(swiftFunction, localFunction);
     localImplsInv.put(localFunction, swiftFunction);
   }
 
-  public boolean hasLocalImpl(String swiftFunction) {
+  public boolean hasLocalImpl(FnID swiftFunction) {
     return localImpls.containsKey(swiftFunction);
   }
 
-  public String getLocalImpl(String swiftFunction) {
+  public FnID getLocalImpl(FnID swiftFunction) {
     return localImpls.get(swiftFunction);
   }
 
-  public boolean isLocalImpl(String localFunction) {
+  public boolean isLocalImpl(FnID localFunction) {
     return localImplsInv.containsKey(localFunction);
   }
 
-  public Set<String> getLocalImplKeys() {
+  public Set<FnID> getLocalImplKeys() {
     return Collections.unmodifiableSet(localImpls.keySet());
   }
 
-  public void addTaskMode(String functionName, ExecTarget mode) {
-    taskModes.put(functionName, mode);
+  public void addTaskMode(FnID id, ExecTarget mode) {
+    taskModes.put(id, mode);
   }
 
   /**
    * Return the intended task mode for the function (e.g. if it should run on worker
    * or locally)
-   * @param functionName
+   * @param id
    * @return non-null target
    */
-  public ExecTarget getTaskMode(String functionName) {
-    ExecTarget mode = taskModes.get(functionName);
+  public ExecTarget getTaskMode(FnID id) {
+    ExecTarget mode = taskModes.get(id);
     if (mode != null) {
       return mode;
     } else {

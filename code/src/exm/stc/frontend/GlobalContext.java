@@ -33,6 +33,7 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -51,14 +52,14 @@ public class GlobalContext extends Context {
   /**
    * Properties of functions
    */
-  private final Set<Pair<String, FnProp>> functionProps =
-                        new HashSet<Pair<String, FnProp>>();
+  private final Set<Pair<FnID, FnProp>> functionProps =
+                        new HashSet<Pair<FnID, FnProp>>();
 
   /**
    * Track function name to intrinsic op mapping
    */
-  private final Map<String, IntrinsicFunction> intrinsics =
-                        new HashMap<String, IntrinsicFunction>();
+  private final Map<FnID, IntrinsicFunction> intrinsics =
+                        new HashMap<FnID, IntrinsicFunction>();
 
   /**
    * Track info about foreign functions
@@ -107,20 +108,20 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public void setFunctionProperty(String name, FnProp prop) {
-    functionProps.add(new Pair<String, FnProp>(name, prop));
+  public void setFunctionProperty(FnID id, FnProp prop) {
+    functionProps.add(new Pair<FnID, FnProp>(id, prop));
   }
 
   @Override
-  public boolean hasFunctionProp(String name, FnProp prop) {
-    return functionProps.contains(new Pair<String, FnProp>(name, prop));
+  public boolean hasFunctionProp(FnID id, FnProp prop) {
+    return functionProps.contains(new Pair<FnID, FnProp>(id, prop));
   }
 
   @Override
-  public List<FnProp> getFunctionProps(String function) {
+  public List<FnProp> getFunctionProps(FnID id) {
     List<FnProp> props = new ArrayList<FnProp>();
-    for (Pair<String, FnProp> pair: functionProps) {
-      if (pair.val1.equals(function)) {
+    for (Pair<FnID, FnProp> pair: functionProps) {
+      if (pair.val1.equals(id)) {
         props.add(pair.val2);
       }
     }
@@ -129,12 +130,13 @@ public class GlobalContext extends Context {
 
 
   @Override
-  public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
+  public void addIntrinsic(FnID function,
+                           IntrinsicFunction intrinsic) {
     intrinsics.put(function, intrinsic);
   }
 
   @Override
-  public IntrinsicFunction lookupIntrinsic(String function) {
+  public IntrinsicFunction lookupIntrinsic(FnID function) {
     return intrinsics.get(function);
   }
 

@@ -17,6 +17,7 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -59,10 +60,9 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 public class RCPlacer {
 
   private final Logger logger = Logging.getSTCLogger();
-  private final Map<String, Function> functionMap;
+  private final Map<FnID, Function> functionMap;
 
-  public RCPlacer(Map<String, Function> functionMap) {
-    super();
+  public RCPlacer(Map<FnID, Function> functionMap) {
     this.functionMap = functionMap;
   }
 

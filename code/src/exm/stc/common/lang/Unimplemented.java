@@ -8,7 +8,7 @@ import exm.stc.common.lang.Types.Typed;
  */
 public class Unimplemented {
 
-  
+
   /**
    * Check if an array supports subscript aliasing
    * @return
@@ -23,5 +23,10 @@ public class Unimplemented {
     } else {
       return false;
     }
+  }
+
+  public static FnID makeFunctionID(String originalName) {
+    // TODO: need to implement proper mapping mechanisms
+    return new FnID(originalName, originalName);
   }
 }

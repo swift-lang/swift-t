@@ -8,7 +8,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
@@ -46,7 +46,7 @@ public class PruneFunctions implements OptimizerPass {
 
     addLocalImpls(foreignFuncs, deps);
 
-    Set<String> needed = findNeeded(deps);
+    Set<FnID> needed = findNeeded(deps);
 
     pruneFunctions(program, needed);
 
@@ -63,19 +63,19 @@ public class PruneFunctions implements OptimizerPass {
     }
 
     final ForeignFunctions foreignFuncs;
-    final MultiMap<String, String> depGraph = new MultiMap<String, String>();
+    final MultiMap<FnID, FnID> depGraph = new MultiMap<FnID, FnID>();
 
     @Override
     public void visit(Logger logger, Function currFn, Instruction inst) {
       if (inst instanceof CommonFunctionCall) {
         CommonFunctionCall fnCall = (CommonFunctionCall)inst;
-        depGraph.put(currFn.name(), fnCall.functionName());
+        depGraph.put(currFn.id(), fnCall.functionID());
       } else if (inst.op == Opcode.ASYNC_OP) {
         // Async ops can be implemented with builtins
-        List<String> fnNames = foreignFuncs.findOpImpl(((Builtin)inst).subop);
-        if (fnNames != null) {
-          for (String fnName: fnNames) {
-            depGraph.put(currFn.name(), fnName);
+        List<FnID> fnIDs = foreignFuncs.findOpImpl(((Builtin)inst).subop);
+        if (fnIDs != null) {
+          for (FnID fnID: fnIDs) {
+            depGraph.put(currFn.id(), fnID);
           }
         }
       }
@@ -87,17 +87,17 @@ public class PruneFunctions implements OptimizerPass {
    * @param deps
    * @return
    */
-  private Set<String> findNeeded(DepFinder deps) {
-    Set<String> needed = new HashSet<String>();
-    StackLite<String> workQueue = new StackLite<String>();
+  private Set<FnID> findNeeded(DepFinder deps) {
+    Set<FnID> needed = new HashSet<FnID>();
+    StackLite<FnID> workQueue = new StackLite<FnID>();
 
     // Entry point is always needed
-    addFunction(needed, workQueue, Constants.ENTRY_FUNCTION);
+    addFunction(needed, workQueue, FnID.ENTRY_FUNCTION);
 
     while (!workQueue.isEmpty()) {
-      String curr = workQueue.pop();
-      List<String> fnNames = deps.depGraph.remove(curr);
-      addFunctions(needed, workQueue, fnNames);
+      FnID curr = workQueue.pop();
+      List<FnID> fnIDs = deps.depGraph.remove(curr);
+      addFunctions(needed, workQueue, fnIDs);
     }
     return needed;
   }
@@ -107,42 +107,42 @@ public class PruneFunctions implements OptimizerPass {
    * @param deps
    */
   private void addLocalImpls(ForeignFunctions foreignFuncs, DepFinder deps) {
-    for (String func: foreignFuncs.getLocalImplKeys()) {
+    for (FnID func: foreignFuncs.getLocalImplKeys()) {
       deps.depGraph.put(func, foreignFuncs.getLocalImpl(func));
     }
   }
 
-  private void addFunction(Set<String> needed, StackLite<String> workQueue,
-                           String fnName) {
-    boolean added = needed.add(fnName);
+  private void addFunction(Set<FnID> needed, StackLite<FnID> workQueue,
+                           FnID fnID) {
+    boolean added = needed.add(fnID);
     if (added) {
       // Need to chase dependencies
-      workQueue.add(fnName);
+      workQueue.add(fnID);
     }
   }
 
-  private void addFunctions(Set<String> needed, StackLite<String> workQueue,
-      List<String> fnNames) {
-    for (String fnName: fnNames) {
-      addFunction(needed, workQueue, fnName);
+  private void addFunctions(Set<FnID> needed, StackLite<FnID> workQueue,
+      List<FnID> fnIDs) {
+    for (FnID fnID: fnIDs) {
+      addFunction(needed, workQueue, fnID);
     }
   }
 
-  private void pruneBuiltins(Program program, Set<String> needed) {
+  private void pruneBuiltins(Program program, Set<FnID> needed) {
     Iterator<BuiltinFunction> bIt = program.builtinIterator();
     while (bIt.hasNext()) {
       BuiltinFunction f = bIt.next();
-      if (!needed.contains(f.getName())) {
+      if (!needed.contains(f.id())) {
         bIt.remove();
       }
     }
   }
 
-  private void pruneFunctions(Program program, Set<String> needed) {
+  private void pruneFunctions(Program program, Set<FnID> needed) {
     Iterator<Function> fIt = program.functionIterator();
     while (fIt.hasNext()) {
       Function f = fIt.next();
-      if (!needed.contains(f.name())) {
+      if (!needed.contains(f.id())) {
         fIt.remove();
       }
     }
