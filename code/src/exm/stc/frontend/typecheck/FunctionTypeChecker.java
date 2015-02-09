@@ -1,6 +1,7 @@
 package exm.stc.frontend.typecheck;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -39,97 +40,19 @@ public class FunctionTypeChecker {
   public static Type findFuncCallExprType(Context context, SwiftAST tree)
       throws UndefinedFunctionException, UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree, false);
-    List<FunctionType> alts = concretiseFunctionCall(context, f);
-    if (alts.size() == 1) {
-      // Function type determined entirely by input type
-      return TupleType.makeTuple(alts.get(0).getOutputs());
-    } else {
-      // Ambiguous type variable binding (based on inputs)
-      assert(alts.size() >= 2);
-      int numOutputs = f.fnType().getOutputs().size();
-      if (numOutputs == 0) {
-        return TupleType.makeTuple();
-      } else {
-        // Turn into a list of UnionTypes
-        List<Type> altOutputs = new ArrayList<Type>();
-        for (int out = 0; out < numOutputs; out++) {
-          List<Type> altOutput = new ArrayList<Type>();
-          for (FunctionType ft: alts) {
-            altOutput.add(ft.getOutputs().get(out));
-          }
-          altOutputs.add(UnionType.makeUnion(altOutput));
-        }
-        return TupleType.makeTuple(altOutputs);
-      }
-    }
+
+    return exprTypeFromMatches(f, concretiseInputs(context, f, false));
   }
 
   public static FunctionType concretiseFunctionCall(Context context,
           FunctionCall fc, List<Var> outputs) throws UserException {
-    List<Type> outTs = new ArrayList<Type>(outputs.size());
-    for (Var output: outputs) {
-      outTs.add(output.type());
-    }
-    List<FunctionType> alts = concretiseFunctionCall(context, fc);
-    assert(alts.size() > 0);
-    for (FunctionType alt: alts) {
-      assert(alt.getOutputs().size() == outputs.size());
+    List<FnMatch> matches = concretiseInputs(context, fc, true);
+    assert(matches.size() == 1) : "Should have resolved overload";
+    FnMatch match = matches.get(0);
 
-      MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
+    List<Type> outTs = Var.extractTypes(outputs);
 
-      boolean match = true;
-      for (int i = 0; i < outTs.size(); i++) {
-        Type outT = outTs.get(i);
-        Type outArgT = alt.getOutputs().get(i);
-
-        if (outArgT.isConcrete()) {
-          if (!outArgT.assignableTo(outT)) {
-            match = false;
-            break;
-          }
-        } else {
-          Map<String, Type> bindings = outArgT.matchTypeVars(outT);
-          if (bindings == null) {
-            match = false;
-            break;
-          }
-
-          tvConstraints.putAll(bindings);
-          LogHelper.trace(context, "Bind " + bindings + " for " +
-              outT + " <- " + alt.getOutputs());
-        }
-      }
-
-      if (!tvConstraints.isEmpty()) {
-        // Need to check if we can match types
-        Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
-            fc.function(), fc.fnType().getTypeVars(), tvConstraints);
-
-        Map<String, Type> chosenBindings = new HashMap<String, Type>();
-        for (Entry<String, List<Type>> e: bindings.entrySet()) {
-          assert(e.getValue().size() >= 1);
-          // Choose first
-          chosenBindings.put(e.getKey(), e.getValue().get(0));
-        }
-        alt = (FunctionType)alt.bindTypeVars(chosenBindings);
-      }
-
-      // Bind any free types
-      alt = (FunctionType)alt.bindAllTypeVars(Types.F_VOID);
-
-      LogHelper.trace(context, "Call " + fc.function() + " alternative "
-          + "function type " + alt + " match: " + match);
-
-      // Choose first viable alternative
-      if (match) {
-        FnID id = Unimplemented.makeFunctionID(fc.function());
-        checkFunctionOutputsValid(context, id, fc, outputs);
-        return alt;
-      }
-    }
-    throw new TypeMismatchException(context, "Could not find consistent " +
-        "binding for type variables.  Viable function signatures based on " +
-        "input arguments were: " + alts + " but output types were " + outTs);
+    return concretiseOutputs(context, match, outputs, outTs);
   }
 
   /**
@@ -205,10 +128,176 @@ public class FunctionTypeChecker {
     return null; // if no alternatives
   }
 
+  /**
+   * Narrow possible function call types based on inputs.
+   * @param context
+   * @param abstractType function type with varargs, typevars, union types
+   * @param args input argument expressions
+   * @param resolveOverload if true, resolve to a single overload
+   * @return list of possible concrete function types with varargs, typevars
+   *          and union type args removed.  Grouped by which overload they
+   *          match.  Each match should have at least one concrete function
+   *          type associated with it.
+   * @throws UserException
+   */
+  private static List<FnMatch> concretiseInputs(Context context,
+      FunctionCall fc, boolean resolveOverload) throws UserException {
+    List<Type> argTypes = new ArrayList<Type>(fc.args().size());
+    for (SwiftAST arg: fc.args()) {
+      argTypes.add(TypeChecker.findExprType(context, arg));
+    }
+
+    FnID id = Unimplemented.makeFunctionID(fc.function());
+
+    FnCallInfo info = new FnCallInfo(fc.function(), id, fc.fnType(), argTypes);
+
+    return concretiseInputsOverloaded(context, info, resolveOverload);
+  }
+
+  static List<FnMatch> concretiseInputsOverloaded(Context context,
+      FnCallInfo fc, boolean resolveOverload) throws TypeMismatchException {
+    // TODO: multiple alternatives in case of overloading
+    assert(fc.fnTypes.size() >= 1);
+    boolean overloaded = fc.fnTypes.size() >= 2;
+    assert(!overloaded) : "overloading unimplemented";
+    FnID id = fc.fnTypes.get(0).val1;
+    FunctionType fnType = fc.fnTypes.get(0).val2;
+
+    FnMatch match = concretiseInputsNonOverloaded(context, id, fnType,
+                                          fc.argTypes, !overloaded);
+
+    List<FnMatch> matches = match == null ? Collections.<FnMatch>emptyList()
+                                          : Collections.singletonList(match);
+
+    // We should have resolved it to a single overload if requested.
+    assert(matches.size() <= 1 || !resolveOverload);
+
+    return matches;
+  }
+
+  private static FnMatch concretiseInputsNonOverloaded(Context context,
+      FnID id, FunctionType fnType, List<Type> argTypes, boolean throwOnFail)
+      throws TypeMismatchException {
+    // Expand varargs
+    List<Type> expandedInArgs = expandVarArgs(context, id, fnType,
+                                              argTypes, throwOnFail);
+    assert(expandedInArgs.size() == argTypes.size());
+
+    /*
+     *  Narrow down possible bindings - choose union types and find possible
+     *  typevar bindings.
+     */
+    List<Type> concreteArgTypes = new ArrayList<Type>(argTypes.size());
+    MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
+    for (int i = 0; i < argTypes.size(); i++) {
+      Type exp = expandedInArgs.get(i);
+      Type act = argTypes.get(i);
+      // a more specific type than expected
+      Type exp2 = narrowArgType(context, id, i, exp, act, tvConstraints,
+                                throwOnFail);
+      if (exp2 == null) {
+        assert(!throwOnFail);
+        return null;
+      }
+      concreteArgTypes.add(exp2);
+    }
+    LogHelper.trace(context, "Call " + id.uniqueName() + " specificInputs: " +
+        concreteArgTypes + " possible bindings: " + tvConstraints);
+
+    // Narrow down type variable bindings depending on constraints
+    Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
+                  id, fnType.getTypeVars(), tvConstraints, throwOnFail);
+
+    LogHelper.trace(context, "Call " + id.uniqueName() + " unified bindings: " +
+        tvConstraints);
+
+    List<FunctionType> possibilities = findPossibleFunctionTypes(context,
+                                   id, fnType, concreteArgTypes, bindings);
+
+    LogHelper.trace(context, "Call " + id.uniqueName() + " possible concrete types: " +
+        possibilities);
+
+    if (possibilities.size() == 0) {
+      if (throwOnFail) {
+        throw new TypeMismatchException(context, "Arguments for call to " +
+          "function " + id.originalName() + " were incompatible with function " +
+          "type.  Function input types were: " + fnType.getInputs() +
+          ", argument types were " + argTypes);
+      }
+      return null;
+    }
+
+    return new FnMatch(id, fnType, possibilities);
+  }
+
+  private static FunctionType concretiseOutputs(Context context,
+      FnMatch fn, List<Var> outputs, List<Type> outTs)
+      throws TypeMismatchException {
+    assert(fn.concreteAlts.size() > 0);
+    for (FunctionType alt: fn.concreteAlts) {
+      assert(alt.getOutputs().size() == outputs.size());
+
+      MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
+
+      boolean outputsMatch = true;
+      for (int i = 0; i < outTs.size(); i++) {
+        Type outT = outTs.get(i);
+        Type outArgT = alt.getOutputs().get(i);
+
+        if (outArgT.isConcrete()) {
+          if (!outArgT.assignableTo(outT)) {
+            outputsMatch = false;
+            break;
+          }
+        } else {
+          Map<String, Type> bindings = outArgT.matchTypeVars(outT);
+          if (bindings == null) {
+            outputsMatch = false;
+            break;
+          }
+
+          tvConstraints.putAll(bindings);
+          LogHelper.trace(context, "Bind " + bindings + " for " +
+              outT + " <- " + alt.getOutputs());
+        }
+      }
+
+      if (!tvConstraints.isEmpty()) {
+        // Need to check if we can match types
+        Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
+            fn.id, fn.abstractType.getTypeVars(), tvConstraints, true);
+
+        Map<String, Type> chosenBindings = new HashMap<String, Type>();
+        for (Entry<String, List<Type>> e: bindings.entrySet()) {
+          assert(e.getValue().size() >= 1);
+          // Choose first
+          chosenBindings.put(e.getKey(), e.getValue().get(0));
+        }
+        alt = (FunctionType)alt.bindTypeVars(chosenBindings);
+      }
+
+      // Bind any free types
+      alt = (FunctionType)alt.bindAllTypeVars(Types.F_VOID);
+
+      LogHelper.trace(context, "Call " + fn.id + " alternative "
+          + "function type " + alt + " match: " + outputsMatch);
+
+      // Choose first viable alternative
+      if (outputsMatch) {
+        checkFunctionOutputsValid(context, fn.id, outputs);
+        return alt;
+      }
+    }
+
+    throw new TypeMismatchException(context, "Could not find consistent " +
+        "binding for type variables.  Viable function signatures based on " +
+        "input arguments were: " + fn + " but output types were " + outTs);
+  }
+
   private static void checkFunctionOutputsValid(Context context,
-      FnID id, FunctionCall fc, List<Var> outputs) throws TypeMismatchException {
+      FnID id, List<Var> outputs) throws TypeMismatchException {
     for (Var output: outputs) {
-      checkFunctionOutputValid(context, id, fc, output);
+      checkFunctionOutputValid(context, id, output);
     }
   }
 
@@ -218,7 +307,7 @@ public class FunctionTypeChecker {
    * @throws TypeMismatchException
    */
   private static void checkFunctionOutputValid(Context context,
-      FnID id, FunctionCall f, Var output) throws TypeMismatchException {
+      FnID id, Var output) throws TypeMismatchException {
     if (Types.isFile(output) && output.isMapped() == Ternary.FALSE &&
         !output.type().fileKind().supportsTmpImmediate() &&
         !context.getForeignFunctions().canInitOutputMapping(id)) {
@@ -247,93 +336,28 @@ public class FunctionTypeChecker {
   }
 
   /**
-   * @param context
-   * @param abstractType function type with varargs, typevars, union types
-   * @param args input argument expressions
-   * @param noWarn don't issue warnings
-   * @return list of possible concrete function types with varargs, typevars
-   *          and union type args removed
-   * @throws UserException
-   */
-  private static List<FunctionType> concretiseFunctionCall(Context context,
-      FunctionCall fc) throws UserException {
-    List<Type> argTypes = new ArrayList<Type>(fc.args().size());
-    for (SwiftAST arg: fc.args()) {
-      argTypes.add(TypeChecker.findExprType(context, arg));
-    }
-
-    FnCallInfo info = new FnCallInfo(fc.function(), fc.fnType(), argTypes);
-
-    return concretiseFunctionCall(context, info);
-  }
-
-  static List<FunctionType> concretiseFunctionCall(Context context,
-      FnCallInfo fc) throws TypeMismatchException {
-    // Expand varargs
-    List<Type> expandedInputs = expandVarArgs(context, fc);
-
-    // Narrow down possible bindings - choose union types
-    // find possible typevar bindings
-    List<Type> specificInputs = new ArrayList<Type>(fc.argTypes.size());
-    MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
-    for (int i = 0; i < fc.argTypes.size(); i++) {
-      Type exp = expandedInputs.get(i);
-      Type act = fc.argTypes.get(i);
-      // a more specific type than expected
-      Type exp2;
-      exp2 = narrowArgType(context, fc, i, exp, act, tvConstraints);
-      specificInputs.add(exp2);
-    }
-    LogHelper.trace(context, "Call " + fc.name + " specificInputs: " +
-        specificInputs + " possible bindings: " + tvConstraints);
-
-    // Narrow down type variable bindings depending on constraints
-    Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
-        fc.name, fc.fnType.getTypeVars(), tvConstraints);
-
-    LogHelper.trace(context, "Call " + fc.name + " unified bindings: " +
-        tvConstraints);
-
-    List<FunctionType> possibilities = findPossibleFunctionTypes(context,
-                                           fc, specificInputs, bindings);
-
-    LogHelper.trace(context, "Call " + fc.name + " possible concrete types: " +
-        possibilities);
-
-    if (possibilities.size() == 0) {
-      throw new TypeMismatchException(context, "Arguments for call to " +
-          "function " + fc.name + " were incompatible with function " +
-          "type.  Function input types were: " + fc.fnType.getInputs() +
-          ", argument types were " + fc.argTypes);
-    }
-
-    return possibilities;
-  }
-
-  /**
    * Narrow down the possible argument types for a function call
    * @param context
-   * @param fc
+   * @param id
    * @param arg number of argument
    * @param formalArgT Formal argument type from abstract function type
    * @param argExprT Type of argument expression for function
    * @param tvConstrains Filled in with constraints for each type variable
+   * @param throwOnFail throw TypeMismatchException on failed match,
+   *                    otherwise return null
    * @return
    * @throws TypeMismatchException
    */
-  private static Type narrowArgType(Context context, FnCallInfo fc, int arg,
+  private static Type narrowArgType(Context context, FnID id, int arg,
       Type formalArgT, Type argExprT,
-      MultiMap<String, Type> tvConstrains)
+      MultiMap<String, Type> tvConstrains, boolean throwOnFail)
           throws TypeMismatchException {
-    Type narrowedFormalArgT;
     if (formalArgT.hasTypeVar()) {
-      narrowedFormalArgT = checkFunArgTV(context, fc, arg, formalArgT,
-          argExprT, tvConstrains);
+      return checkFunArgTV(context, id, arg, formalArgT, argExprT,
+                           tvConstrains, throwOnFail);
     } else {
-      narrowedFormalArgT = checkFunArg(context, fc, arg, formalArgT, argExprT);
+      return checkFunArg(context, id, arg, formalArgT, argExprT, throwOnFail);
     }
-
-    return narrowedFormalArgT;
   }
 
 
@@ -343,23 +367,27 @@ public class FunctionTypeChecker {
    * what type the input argument expression should be interpreted as having.
    * Does not handle type variables
    * @param context
-   * @param function
+   * @param id
    * @param argNum
    * @param formalArgT
    * @param argExprT
-   * @return selected formal argument type
+   * @param throwOnFail if true, throw exception on fail, otherwise return null
+   * @return selected formal argument type or null
    * @throws TypeMismatchException
    */
   private static Type checkFunArg(Context context,
-      FnCallInfo fc, int argNum, Type formalArgT,
-      Type argExprT) throws TypeMismatchException {
+      FnID id, int argNum, Type formalArgT, Type argExprT,
+      boolean throwOnFail) throws TypeMismatchException {
     assert(!formalArgT.hasTypeVar()) : formalArgT;
 
     Pair<Type, Type> alt = selectArgType(formalArgT, argExprT, false);
 
     if (alt == null) {
-      throw argumentTypeException(context, argNum, formalArgT, argExprT,
-          " in call to function " + fc.name);
+      if (throwOnFail) {
+        throw argumentTypeException(context, argNum, formalArgT, argExprT,
+          " in call to function " + id.originalName());
+      }
+      return null;
     }
 
     Type res = alt.val1;
@@ -372,17 +400,18 @@ public class FunctionTypeChecker {
    * Returns which formal argument type is selected.
    * Only handles case where formalArgT has a type variable
    * @param context
-   * @param func
+   * @param id
    * @param arg
    * @param formalArgT
    * @param argExprT
    * @param tvConstraints fill in constraints for type variables
+   * @param throwOnFail
    * @return
    * @throws TypeMismatchException
    */
-  private static Type checkFunArgTV(Context context, FnCallInfo fc, int arg,
+  private static Type checkFunArgTV(Context context, FnID id, int arg,
       Type formalArgT, Type argExprT,
-      MultiMap<String, Type> tvConstraints)
+      MultiMap<String, Type> tvConstraints, boolean throwOnFail)
           throws TypeMismatchException {
     if (Types.isUnion(formalArgT)) {
       throw new TypeMismatchException(context, "Union type " + formalArgT +
@@ -414,7 +443,7 @@ public class FunctionTypeChecker {
       }
     } else {
       Map<String, Type> matchedTypeVars = formalArgT.matchTypeVars(argExprT);
-      if (matchedTypeVars == null) {
+      if (throwOnFail && matchedTypeVars == null) {
         throw new TypeMismatchException(context, "Could not match type " +
             "variables for formal arg type " + formalArgT + " and argument " +
             " expression type: " + argExprT);
@@ -425,10 +454,19 @@ public class FunctionTypeChecker {
     return formalArgT;
   }
 
+  /**
+   * Find all possible function types from different type variable bindings.
+   * @param context
+   * @param id
+   * @param fnType
+   * @param specificInputs
+   * @param bindings
+   * @return at least one possible function type
+   */
   private static List<FunctionType> findPossibleFunctionTypes(Context context,
-      FnCallInfo fc, List<Type> specificInputs, Map<String, List<Type>> bindings)
-          throws TypeMismatchException {
-    List<String> typeVars = new ArrayList<String>(fc.fnType.getTypeVars());
+      FnID id, FunctionType fnType, List<Type> specificInputs,
+      Map<String, List<Type>> bindings) {
+    List<String> typeVars = new ArrayList<String>(fnType.getTypeVars());
 
     // Handle case where type variables are unbound
     for (ListIterator<String> it = typeVars.listIterator(); it.hasNext(); ) {
@@ -447,8 +485,7 @@ public class FunctionTypeChecker {
         currBinding.put(tv, bindings.get(tv).get(currChoices[i]));
       }
 
-      possibilities.add(constructFunctionType(fc.fnType, specificInputs,
-          currBinding));
+      possibilities.add(constructFunctionType(fnType, specificInputs, currBinding));
 
       int pos = currChoices.length - 1;
       while (pos >= 0 &&
@@ -464,6 +501,8 @@ public class FunctionTypeChecker {
         }
       }
     }
+
+    assert(possibilities.size() >= 1);
     return possibilities;
   }
 
@@ -475,24 +514,43 @@ public class FunctionTypeChecker {
     return new FunctionType(concreteInputs, concreteOutputs, false);
   }
 
-  private static List<Type> expandVarArgs(Context context, FnCallInfo fc)
+  /**
+   * Expand variable-length argument list if any
+   * @param context
+   * @param id
+   * @param fnType
+   * @param argTypes
+   * @param throwOnFail on failure, return null if false
+   *                      or throw exception if true
+   * @return
+   * @throws TypeMismatchException
+   */
+  private static List<Type> expandVarArgs(Context context,
+      FnID id, FunctionType fnType, List<Type> argTypes,
+      boolean throwOnFail)
       throws TypeMismatchException {
-    List<Type> abstractInputs = fc.fnType.getInputs();
-    int numArgs = fc.argTypes.size();
+    List<Type> abstractInputs = fnType.getInputs();
+    int numArgs = argTypes.size();
 
-    if (fc.fnType.hasVarargs()) {
+    if (fnType.hasVarargs()) {
       if (numArgs < abstractInputs.size() - 1) {
-        throw new TypeMismatchException(context,  "Too few arguments in "
-            + "call to function " + fc.name + ": expected >= "
+        if (throwOnFail) {
+          throw new TypeMismatchException(context,  "Too few arguments in "
+            + "call to function " + id.originalName() + ": expected >= "
             + (abstractInputs.size() - 1) + " but got " + numArgs);
+        }
+        return null;
       }
     } else if (abstractInputs.size() != numArgs) {
-      throw new TypeMismatchException(context,  "Wrong number of arguments in "
-          + "call to function " + fc.name + ": expected "
-          + abstractInputs.size() + " but got " + numArgs);
+      if (throwOnFail) {
+        throw new TypeMismatchException(context,  "Wrong number of arguments in "
+            + "call to function " + id.originalName() + ": expected "
+            + abstractInputs.size() + " but got " + numArgs);
+      }
+      return null;
     }
 
-    if (fc.fnType.hasVarargs()) {
+    if (fnType.hasVarargs()) {
       return expandVarArgs(abstractInputs, numArgs);
     } else {
       return abstractInputs;
@@ -505,8 +563,7 @@ public class FunctionTypeChecker {
    * @param maxLen
    * @return
    */
-  private static List<Type> expandVarArgs(List<Type> inputs,
-                                          int maxLen) {
+  private static List<Type> expandVarArgs(List<Type> inputs, int maxLen) {
     List<Type> expandedInputs = new ArrayList<Type>();
     expandedInputs.addAll(inputs.subList(0, inputs.size() - 1));
 
@@ -528,13 +585,15 @@ public class FunctionTypeChecker {
 
   /**
    * @param candidates MultiMap, with possible bindings for each type variable
+   * @param throwOnFail if true, raise exception on matching failure,
+   *                    otherwise return null
    * @return map of type variable name to possible types.  If list is null,
-   *    this means no constraint on type variable.
+   *         this means matching failed
    * @throws TypeMismatchException if no viable binding
    */
   private static Map<String, List<Type>> unifyTypeVarConstraints(
-      Context context, String function, List<String> typeVars,
-      MultiMap<String, Type> candidates)
+      Context context, FnID id, List<String> typeVars,
+      MultiMap<String, Type> candidates, boolean throwOnFail)
           throws TypeMismatchException {
     Map<String, List<Type>> possible = new HashMap<String, List<Type>>();
     /* Check whether type variables were left unbound */
@@ -542,16 +601,18 @@ public class FunctionTypeChecker {
       List<Type> cands = candidates.get(typeVar);
       if (cands == null || cands.size() == 0) {
         LogHelper.debug(context, "Type variable " + typeVar + " for call to " +
-            "function " + function + " was unbound");
+            "function " + id.originalName() + " was unbound");
       } else {
         List<Type> intersection = Types.typeIntersection(cands);
         if (intersection.size() == 0) {
-          throw new TypeMismatchException(context,
+          if (throwOnFail) {
+            throw new TypeMismatchException(context,
               "Type variable " + typeVar + " for call to function " +
-                  function + " could not be bound to concrete type: no " +
+                  id.originalName() + " could not be bound to concrete type: no " +
                   "intersection between types: " + cands);
+          }
+          return null;
         }
-
 
         possible.put(typeVar, intersection);
       }
@@ -565,20 +626,6 @@ public class FunctionTypeChecker {
         (argPos + 1) + " to have one of the following types: "
         + expType.typeName() + ", but had type: " + actType.typeName()
         + errContext);
-  }
-
-  public static class FnCallInfo {
-    public final String name;
-    public final FunctionType fnType;
-    public final List<Type> argTypes;
-
-
-    public FnCallInfo(String name, FunctionType fnType,
-                     List<Type> argTypes) {
-      this.name = name;
-      this.fnType = fnType;
-      this.argTypes = argTypes;
-    }
   }
 
   /**
@@ -627,6 +674,10 @@ public class FunctionTypeChecker {
         " and " + typeList(in2));
   }
 
+  private static boolean unambiguousArg(Type inType1, Type inType2) {
+    return !inType1.assignableTo(inType2) && !inType2.assignableTo(inType1);
+  }
+
   private static String typeList(List<Type> types) {
     StringBuilder sb = new StringBuilder();
     sb.append("(");
@@ -645,7 +696,77 @@ public class FunctionTypeChecker {
     return sb.toString();
   }
 
-  private static boolean unambiguousArg(Type inType1, Type inType2) {
-    return !inType1.assignableTo(inType2) && !inType2.assignableTo(inType1);
+  private static Type exprTypeFromMatches(FunctionCall f, List<FnMatch> matches) {
+    assert(matches.size() >= 1);
+
+    List<FunctionType> alts = new ArrayList<FunctionType>();
+    for (FnMatch match: matches) {
+      assert(match.concreteAlts.size() >= 1);
+      alts.addAll(match.concreteAlts);
+    }
+
+    if (alts.size() == 1) {
+      // Function type determined entirely by input type
+      return TupleType.makeTuple(alts.get(0).getOutputs());
+    } else {
+      // Ambiguous type variable binding (based on inputs)
+      assert(alts.size() >= 2);
+      int numOutputs = f.fnType().getOutputs().size();
+      if (numOutputs == 0) {
+        return TupleType.makeTuple();
+      } else {
+        // Turn into a list of UnionTypes
+        List<Type> altOutputs = new ArrayList<Type>();
+        for (int out = 0; out < numOutputs; out++) {
+          List<Type> altOutput = new ArrayList<Type>();
+          for (FunctionType ft: alts) {
+            altOutput.add(ft.getOutputs().get(out));
+          }
+          altOutputs.add(UnionType.makeUnion(altOutput));
+        }
+        return TupleType.makeTuple(altOutputs);
+      }
+    }
+  }
+
+  /**
+   * Represent a matched function
+   * @author tim
+   */
+  public static class FnMatch {
+    /** ID of function selected among overloads */
+    public final FnID id;
+
+    /** Abstract type of function selected among overloads */
+    public final FunctionType abstractType;
+
+    /** Possible concrete types */
+    public final List<FunctionType> concreteAlts;
+
+    public FnMatch(FnID id, FunctionType type,
+        List<FunctionType> concreteCandidates) {
+      super();
+      this.id = id;
+      this.abstractType = type;
+      this.concreteAlts = concreteCandidates;
+    }
+  }
+
+  public static class FnCallInfo {
+    public final String name;
+    public final List<Pair<FnID, FunctionType>> fnTypes;
+    public final List<Type> argTypes;
+
+    public FnCallInfo(String name, FnID id, FunctionType fnType,
+                      List<Type> argTypes) {
+      this(name, Pair.create(id, fnType).asList(), argTypes);
+    }
+
+    public FnCallInfo(String name,  List<Pair<FnID, FunctionType>> fnTypes,
+                      List<Type> argTypes) {
+      this.name = name;
+      this.fnTypes = fnTypes;
+      this.argTypes = argTypes;
+    }
   }
 }

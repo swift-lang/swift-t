@@ -16,6 +16,7 @@
 package exm.stc.common.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -33,12 +34,12 @@ public class Pair<T1, T2> {
     this.val1 = first;
     this.val2 = second;
   }
-  
+
   public static <T1, T2> Pair<T1, T2> create(T1 f, T2 s) {
     return new Pair<T1, T2>(f, s);
   }
 
-  
+
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -56,7 +57,7 @@ public class Pair<T1, T2> {
       return false;
     }
     assert(obj instanceof Pair) : "Comparing pair with non-pair";
-    
+
     Pair<?, ?> other = (Pair<?, ?>) obj;
     if (val1 == null) {
       if (other.val1 != null)
@@ -79,7 +80,11 @@ public class Pair<T1, T2> {
   public String toString() {
     return "(" + val1 + ", " + val2 + ")";
   }
-  
+
+  public List<Pair<T1, T2>> asList() {
+    return Collections.singletonList(this);
+  }
+
   public static <T, S> List<T> extract1(List<Pair<T, S>> list) {
     ArrayList<T> res = new ArrayList<T>(list.size());
     for (Pair<T, S> p: list) {
@@ -87,7 +92,7 @@ public class Pair<T1, T2> {
     }
     return res;
   }
-  
+
   public static <T, S> List<S> extract2(List<Pair<T, S>> list) {
     ArrayList<S> res = new ArrayList<S>(list.size());
     for (Pair<T, S> p: list) {

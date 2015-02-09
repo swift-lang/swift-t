@@ -15,6 +15,7 @@ import org.junit.rules.ExpectedException;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.AmbiguousOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -24,11 +25,15 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.GlobalContext;
 import exm.stc.frontend.typecheck.FunctionTypeChecker.FnCallInfo;
+import exm.stc.frontend.typecheck.FunctionTypeChecker.FnMatch;
 
 public class FunctionTypeCheckerTest {
 
+  private static final FnID FAKE_FN_ID = new FnID("foobar", "foobar");
+
   private static final SubType FLOAT_SUB_TYPE = new SubType(Types.F_FLOAT, "float2");
   private static final Type INT_OR_FLOAT = UnionType.createUnionType(Types.F_INT, Types.F_FLOAT);
+
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
       new ForeignFunctions());
@@ -82,34 +87,45 @@ public class FunctionTypeCheckerTest {
 
   @Test
   public void matchNoVarArgs() throws TypeMismatchException {
-    List<FunctionType> concreteTypes;
-    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+    FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
         Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT));
-    concreteTypes = FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
 
-    assertEquals("One matching type", 1, concreteTypes.size());
-    assertEquals("Varargs expanded", Arrays.asList(Types.F_INT, Types.F_FLOAT,
-                      Types.F_INT, Types.F_FLOAT), concreteTypes.get(0).getInputs());
+    List<FnMatch> matches;
+    matches = FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+
+    assertEquals("One matching overload", 1, matches.size());
+    FnMatch match = matches.get(0);
+    assertEquals("One matching type", 1, match.concreteAlts.size());
+    assertEquals("Varargs expanded",
+        Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT),
+        match.concreteAlts.get(0).getInputs());
   }
 
   @Test
   public void matchMultiVarArgs() throws TypeMismatchException {
-    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+    FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                                     Arrays.asList(Types.F_INT));
-    List<FunctionType> concreteTypes;
-    concreteTypes = FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
+    List<FnMatch> matches;
+    matches = FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
 
-    assertEquals("One matching type", 1, concreteTypes.size());
+    assertEquals("One matching overload", 1, matches.size());
+    FnMatch match = matches.get(0);
+    assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Varargs expanded", Arrays.asList(Types.F_INT),
-                 concreteTypes.get(0).getInputs());
+                  match.concreteAlts.get(0).getInputs());
   }
 
   @Test
   public void matchVarArgsFail() throws TypeMismatchException {
     exception.expect(TypeMismatchException.class);
-    FnCallInfo fc = new FnCallInfo("varargsFunction", VARARGS_TYPE,
+    FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                       Arrays.asList(Types.F_INT, Types.F_STRING));
-    FunctionTypeChecker.concretiseFunctionCall(FAKE_CONTEXT, fc);
+    FunctionTypeChecker.concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+  }
+
+  private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
+    return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
+                          argTypes);
   }
 
   /**

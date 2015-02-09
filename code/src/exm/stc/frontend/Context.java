@@ -136,7 +136,7 @@ public abstract class Context {
   /**
    * Add definition for current location in file
    * @param name
-   * @param type
+   * @param abstractType
    * @throws DoubleDefineException
    */
   protected void addDef(String name, DefKind kind)

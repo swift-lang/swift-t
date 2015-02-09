@@ -225,7 +225,7 @@ public class ExprWalker {
    * In 2+ cases, assumed to be tuple.
    * @param context
    * @param tree
-   * @param type expression type, may be tuple type
+   * @param abstractType expression type, may be tuple type
    * @param storeInStack
    * @param renames
    * @return
@@ -256,7 +256,7 @@ public class ExprWalker {
    * @param context
    * @param dst
    * @param src
-   * @param type
+   * @param abstractType
    * @throws UserException
    */
   public void copyByValue(Context context, Var dst, Var src)
