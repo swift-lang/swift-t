@@ -154,9 +154,8 @@ public class GlobalContext extends Context {
     // TODO: update registered type as union type
 
     addFunctionOverload(name, overloadID, type);
-    throw new STCRuntimeError("Overloading unimplemented");
 
-    //return overloadID;
+    return overloadID;
   }
 
   private void addFunctionOverload(String name, FnID fnID,
