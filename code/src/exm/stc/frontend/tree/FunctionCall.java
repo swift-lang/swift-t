@@ -28,12 +28,15 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Unimplemented;
+import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.Context.DefInfo;
 import exm.stc.frontend.Context.DefKind;
@@ -46,52 +49,65 @@ public class FunctionCall {
   }
 
   private final FunctionCallKind kind;
-  private final String function;
+  private final String originalName;
+  private final List<Pair<FnID, FunctionType>> overloads;
   private final List<SwiftAST> args;
-  private final FunctionType type;
   private final Map<TaskPropKey, SwiftAST> annotationExprs;
   private final boolean softLocation;
 
-  private FunctionCall(FunctionCallKind kind, String function,
-      List<SwiftAST> args, FunctionType type,
+  private FunctionCall(FunctionCallKind kind, String originalName,
+      List<Pair<FnID, FunctionType>> overloads, List<SwiftAST> args,
       Map<TaskPropKey, SwiftAST> annotationExprs, boolean softLocation) {
     this.kind = kind;
-    this.function = function;
+    this.originalName = originalName;
+    this.overloads = overloads;
     this.args = args;
-    this.type = type;
     this.annotationExprs = annotationExprs;
     this.softLocation = softLocation;
   }
 
-  private static FunctionCall regularFunctionCall(String f, SwiftAST arglist,
-      FunctionType ftype, Map<TaskPropKey, SwiftAST> annotations,
-      boolean softLocation) {
-    return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, f,
-            arglist.children(), ftype, annotations, softLocation);
+  private static FunctionCall regularFunctionCall(String originalName,
+      List<Pair<FnID, FunctionType>> overloads, SwiftAST arglist,
+      Map<TaskPropKey, SwiftAST> annotations, boolean softLocation) {
+    return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, originalName,
+                  overloads, arglist.children(), annotations, softLocation);
   }
 
-  private static FunctionCall structConstructor(String f, SwiftAST arglist,
-      FunctionType ftype) {
+  private static FunctionCall structConstructor(String typeName,
+      SwiftAST arglist, FunctionType ftype) {
     assert(ftype.getOutputs().size() == 1 &&
         Types.isStruct(ftype.getOutputs().get(0)));
-    return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, f, arglist.children(),
-                      ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
+
+    Pair<FnID, FunctionType> fn = Pair.create(constructorID(typeName), ftype);
+
+    return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
+        fn.asList(), arglist.children(),
+        Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
+  }
+
+  /**
+   * Make function ID for type.  There should be no overloading of these.
+   * @param typeName
+   * @return
+   */
+  private static FnID constructorID(String typeName) {
+    return new FnID(typeName, typeName);
   }
 
   public FunctionCallKind kind() {
     return kind;
   }
 
-  public String function() {
-    return function;
+  public String originalName() {
+    return originalName;
+  }
+
+  public List<Pair<FnID, FunctionType>> overloads() {
+    return overloads;
   }
 
   public List<SwiftAST> args() {
     return args;
-  }
-
-  public FunctionType fnType() {
-    return type;
   }
 
   public Map<TaskPropKey, SwiftAST> annotations() {
@@ -173,7 +189,12 @@ public class FunctionCall {
       }
     }
 
-    return regularFunctionCall(f, arglist, ftype, annotations, softLocation);
+    // TODO: lookup overloads here
+    FnID id = Unimplemented.makeFunctionID(f);
+    Pair<FnID, FunctionType> fn = Pair.create(id, ftype);
+
+    return regularFunctionCall(f, fn.asList(), arglist, annotations,
+                               softLocation);
   }
 
   private static void putAnnotationNoDupes(Context context,
