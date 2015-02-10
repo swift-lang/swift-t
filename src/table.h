@@ -68,6 +68,12 @@ bool table_set(struct table* target, const char* key,
 bool table_search(const struct table* target, const char* key,
                   void **value);
 
+/**
+   Return pointer to key or NULL if not found.
+   Could be used to save memory if key is referenced elsewhere.
+ */
+char* table_locate_key(const struct table* T, const char* key);
+
 bool table_contains(const struct table* table, const char* key);
 
 bool table_remove(struct table* table, const char* key, void** data);

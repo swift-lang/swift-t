@@ -362,6 +362,14 @@ table_locate_entry(const struct table *T, const char *key, table_entry **prev)
   return NULL;
 }
 
+char*
+table_locate_key(const struct table* T, const char* key)
+{
+  table_entry* e = table_locate_entry(T, key, NULL);
+  if (e == NULL) return NULL;
+  return e->key;
+}
+
 /**
    If found, caller is responsible for old_value -
           it was provided by the user
