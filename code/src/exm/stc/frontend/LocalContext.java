@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
@@ -36,7 +37,6 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.Pair;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -182,13 +182,13 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public FnID defineFunction(String name, FunctionType type)
-                                    throws DoubleDefineException {
+  public FnID defineFunction(String name, FunctionType type,
+                List<Arg> defaultVals) throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 
   @Override
-  public List<Pair<FnID, FunctionType>> lookupFunction(String name) {
+  public List<FnOverload> lookupFunction(String name) {
     return globals.lookupFunction(name);
   }
 

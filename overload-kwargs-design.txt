@@ -4,6 +4,18 @@ We need to support type types of functions:
   Non-overloaded: VarArgs|OptArgs + PolyArgs + KWArgs +(PosArgs -> OptArgs) - PosArgsBeforeKWArgs
   Overloaded: VarArgs + Overloading
 
+Function Types
+==============
+* Handle keyword args only in frontend - THIS
+  -> No support for function pointers with keyword args
+
+Alternatives:
+1. Handle optional args only in frontend - THIS
+2. Canonicalise optional args/keyword names in type
+  2a. Default constants in type (caller fills defaults)
+    -> Can generate wrappers for function pointer casts
+  2b. Dynamic mechanism to fill in optional argments (callee fills defaults)
+
 Function Definitions
 ====================
 Here is pseudocode for processing function definitions.

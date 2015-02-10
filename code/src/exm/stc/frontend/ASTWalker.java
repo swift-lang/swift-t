@@ -81,6 +81,7 @@ import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.LValWalker.LRVals;
 import exm.stc.frontend.LoadedModules.LocatedModule;
@@ -204,10 +205,10 @@ public class ASTWalker {
     }
 
     // Main function runs after top-level code if present
-    List<Pair<FnID, FunctionType>> mainOverloads = context.lookupFunction(
+    List<FnOverload> mainOverloads = context.lookupFunction(
                                                   Constants.MAIN_FUNCTION);
     if (mainOverloads.size() == 1) {
-      FnID mainID = mainOverloads.get(0).val1;
+      FnID mainID = mainOverloads.get(0).id;
       backend.functionCall(mainID, Arg.NONE, Var.NONE,
           ExecTarget.syncControl(), new TaskProps());
     } else if (mainOverloads.size() >= 2) {
@@ -1548,20 +1549,6 @@ public class ASTWalker {
                    VarRepr.backendVar(evaled));
   }
 
-  /**
-   * Register a new function
-   * @param context
-   * @param name
-   * @param ft
-   * @return the unique internal name of the function (may be same as original,
-   *           or different in case of overloading)
-   * @throws UserException
-   */
-  private FnID newFunctionDef(Context context, String name, FunctionType ft)
-      throws UserException {
-    return context.defineFunction(name, ft);
-  }
-
   private void defineBuiltinFunction(Context context, SwiftAST tree)
   throws UserException {
     final int REQUIRED_CHILDREN = 5;
@@ -1585,7 +1572,7 @@ public class ASTWalker {
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     // Define function, also detect duplicates here
-    FnID fid = newFunctionDef(context, function, ft);
+    FnID fid = context.defineFunction(function, ft, fdecl.defaultVals());
     tree.setIdentifier(fid);
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
@@ -1813,7 +1800,7 @@ public class ASTWalker {
       throw new TypeMismatchException(context,
           "main() is not allowed to have input or output arguments");
 
-    FnID id = newFunctionDef(context, function, ft);
+    FnID id = context.defineFunction(function, ft, fdecl.defaultVals());
 
     // Record identifier for later recovery
     tree.setIdentifier(id);
@@ -1919,7 +1906,7 @@ public class ASTWalker {
     // defineFunction should already have been called
     assert(context.isFunction(function));
 
-    // TODO: recover functionID associated with tree
+    // Recover functionID associated with tree
     FnID id = (FnID)tree.getIdentifier();
 
     assert(context.hasFunctionProp(id, FnProp.COMPOSITE));
@@ -1968,7 +1955,8 @@ public class ASTWalker {
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
 
-    FnID id = newFunctionDef(context, function, decl.getFunctionType());
+    FnID id = context.defineFunction(function, decl.getFunctionType(),
+                                     decl.defaultVals());
     tree.setIdentifier(id);
 
     context.setFunctionProperty(id, FnProp.APP);

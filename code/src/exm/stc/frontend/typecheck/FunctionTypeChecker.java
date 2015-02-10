@@ -13,6 +13,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -25,6 +26,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.tree.FunctionCall;
 
@@ -161,9 +163,9 @@ public class FunctionTypeChecker {
 
     List<FnMatch> matches = new ArrayList<FnMatch>();
 
-    for (Pair<FnID, FunctionType> fnType: fc.fnTypes) {
-      FnMatch match = concretiseInputsNonOverloaded(context, fnType.val1,
-                                  fnType.val2, fc.argTypes, !overloaded);
+    for (FnOverload fnType: fc.fnTypes) {
+      FnMatch match = concretiseInputsNonOverloaded(context, fnType.id,
+                fnType.type, fnType.defaultVals, fc.argTypes, !overloaded);
 
       if (match != null) {
         matches.add(match);
@@ -185,9 +187,12 @@ public class FunctionTypeChecker {
   }
 
   private static FnMatch concretiseInputsNonOverloaded(Context context,
-      FnID id, FunctionType fnType, List<Type> argTypes, boolean throwOnFail)
+      FnID id, FunctionType fnType, List<Arg> defaultVals,
+      List<Type> argTypes, boolean throwOnFail)
       throws TypeMismatchException {
-    // Expand varargs
+
+    // TODO: need to match default vals in here
+
     List<Type> expandedInArgs = expandVarArgs(context, id, fnType,
                                               argTypes, throwOnFail);
     if (expandedInArgs == null) {
@@ -647,16 +652,16 @@ public class FunctionTypeChecker {
     sb.append(typeList(fc.argTypes));
     sb.append("did not match any overload of function " + fc.name + ".\n");
     sb.append("Overload input types were: \n");
-    for (Pair<FnID, FunctionType> fnType: fc.fnTypes) {
-      sb.append(typeList(fnType.val2.getInputs()));
+    for (FnOverload fnType: fc.fnTypes) {
+      sb.append(typeList(fnType.type.getInputs()));
       sb.append('\n');
     }
 
     throw new TypeMismatchException(context, sb.toString());
   }
 
-  public static void checkOverloadAllowed(Context context,
-      FnID overloadID, FunctionType type) throws InvalidOverloadException {
+  public static void checkOverloadAllowed(Context context, FnID overloadID,
+       FunctionType type, boolean hasOptionalArg) throws InvalidOverloadException {
     for (Type inType: type.getInputs()) {
       if (!inType.isConcrete()) {
         throw new InvalidOverloadException(context,
@@ -665,6 +670,22 @@ public class FunctionTypeChecker {
             "Overloaded functions cannot have polymorphic input arguments");
       }
     }
+
+    if (hasOptionalArg) {
+      throw new InvalidOverloadException(context, "Cannot overload function "
+                       + overloadID.originalName() + " with default value");
+    }
+  }
+
+  protected static boolean hasOptionalArg(List<Arg> defaultVals) {
+    boolean hasOptionalArg = false;
+    for (Arg defaultVal: defaultVals) {
+      if (defaultVal != null) {
+        hasOptionalArg = true;
+        break;
+      }
+    }
+    return hasOptionalArg;
   }
 
   /**
@@ -824,15 +845,15 @@ public class FunctionTypeChecker {
 
   public static class FnCallInfo {
     public final String name;
-    public final List<Pair<FnID, FunctionType>> fnTypes;
+    public final List<FnOverload> fnTypes;
     public final List<Type> argTypes;
 
     public FnCallInfo(String name, FnID id, FunctionType fnType,
-                      List<Type> argTypes) {
-      this(name, Pair.create(id, fnType).asList(), argTypes);
+                      List<Arg> defaultVals, List<Type> argTypes) {
+      this(name, new FnOverload(id, fnType, defaultVals).asList(), argTypes);
     }
 
-    public FnCallInfo(String name,  List<Pair<FnID, FunctionType>> fnTypes,
+    public FnCallInfo(String name,  List<FnOverload> fnTypes,
                       List<Type> argTypes) {
       this.name = name;
       this.fnTypes = fnTypes;
