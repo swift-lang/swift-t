@@ -589,8 +589,10 @@ public class FunctionCallEvaluator {
     List<Arg> elems = new ArrayList<Arg>(vars.size());
 
     if (id != null) {
+      assert(id.uniqueName().equals(id.originalName())) :
+        "Cannot checkpoint overloaded function";
       // Prefix with function name
-      elems.add(Arg.newString(id.uniqueName()));
+      elems.add(Arg.newString(id.originalName()));
     }
 
     for (Var v: vars) {

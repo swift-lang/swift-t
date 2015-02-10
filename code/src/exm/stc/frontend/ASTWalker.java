@@ -34,6 +34,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidConstructException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -1908,6 +1909,13 @@ public class ASTWalker {
 
     // Recover functionID associated with tree
     FnID id = (FnID)tree.getIdentifier();
+
+    // Can't checkpoint overloaded functions due to ambiguous name
+    int numOverloads = context.lookupFunction(id.originalName()).size();
+    if (numOverloads >= 2) {
+      throw new InvalidOverloadException(context, "Checkpointing of"
+          + " overloaded functions is not supported");
+    }
 
     assert(context.hasFunctionProp(id, FnProp.COMPOSITE));
     SwiftAST outputs = tree.child(2);
