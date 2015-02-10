@@ -24,11 +24,11 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
-
-#include <stdbool.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 // This only works in GCC:
 #ifdef __GNUC__
@@ -42,6 +42,14 @@
    Determine the length of an array of pointers ending in NULL
  */
 int array_length(const void** array);
+
+/**
+   More readable memset(0)
+ */
+static inline void zero_ints(int* array, int count)
+{
+  memset(array, 0, ((size_t) count) * sizeof(int));
+}
 
 /**
    Find the index with the maximal integer in array of given size
