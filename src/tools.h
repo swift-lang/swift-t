@@ -230,7 +230,7 @@ void gdb_spin(int target);
 double time_micros(void);
 
 /**
-   Sleepfor the given number of seconds (using nanosleep)
+   Sleep for the given number of seconds (using nanosleep)
  */
 void time_delay(double delay);
 
