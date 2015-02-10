@@ -17,6 +17,7 @@
 package exm.stc.frontend;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -46,7 +48,6 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.SourceLoc;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.Pair;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -318,12 +319,13 @@ public abstract class Context {
    * Define function and return unique internal identifier
    * @param name
    * @param type
+   * @param defaultVals
    * @return
    * @throws UserException if the definition is invalid, e.g. conflicts
    *                        with existing definition
    */
-  public abstract FnID defineFunction(String name, FunctionType type)
-                                          throws UserException;
+  public abstract FnID defineFunction(String name, FunctionType type,
+                  List<Arg> defaultVals) throws UserException;
 
   /**
    * Lookup the type of a function
@@ -331,7 +333,7 @@ public abstract class Context {
    * @return unique identifiers and types of overloads or
    *        empty list if not defined
    */
-  public abstract List<Pair<FnID, FunctionType>> lookupFunction(String name);
+  public abstract List<FnOverload> lookupFunction(String name);
 
   public abstract void setFunctionProperty(FnID id, FnProp prop);
 
@@ -590,4 +592,32 @@ public abstract class Context {
     public final int col;
   }
 
+  public static class FnOverload {
+    public final FnID id;
+    public final FunctionType type;
+    public final List<Arg> defaultVals;
+
+    public FnOverload(FnID id, FunctionType type, List<Arg> defaultVals) {
+      assert(defaultVals.size() == type.getInputs().size());
+      this.id = id;
+      this.type = type;
+      this.defaultVals = new ArrayList<Arg>(defaultVals);
+    }
+
+    public FnOverload(FnID id, FunctionType type) {
+      this(id, type, noDefaults(type));
+    }
+
+    public static List<Arg> noDefaults(FunctionType type) {
+      List<Arg> args = new ArrayList<Arg>();
+      for (int i = 0; i < type.getInputs().size(); i++) {
+        args.add(null);
+      }
+      return args;
+    }
+
+    public List<FnOverload> asList() {
+      return Collections.singletonList(this);
+    }
+  }
 }

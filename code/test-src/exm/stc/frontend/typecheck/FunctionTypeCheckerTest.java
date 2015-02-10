@@ -26,6 +26,7 @@ import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.util.Pair;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.GlobalContext;
 import exm.stc.frontend.typecheck.FunctionTypeChecker.FnCallInfo;
 import exm.stc.frontend.typecheck.FunctionTypeChecker.FnMatch;
@@ -144,8 +145,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_STRING), Arrays.asList(
-        Pair.create(intFnID, intFn),
-        Pair.create(stringFnID, stringFn)));
+        new FnOverload(intFnID, intFn),
+        new FnOverload(stringFnID, stringFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
@@ -168,8 +169,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_INT, Types.F_FILE, Types.F_STRING),
-        Arrays.asList(Pair.create(blobFnID, blobFn),
-                      Pair.create(stringFnID, stringFn)));
+        Arrays.asList(new FnOverload(blobFnID, blobFn),
+                      new FnOverload(stringFnID, stringFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
@@ -190,8 +191,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_FLOAT), Arrays.asList(
-        Pair.create(intFnID, intFn),
-        Pair.create(stringFnID, stringFn)));
+            new FnOverload(intFnID, intFn),
+            new FnOverload(stringFnID, stringFn)));
 
     concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
   }
@@ -207,8 +208,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_FLOAT, Types.F_FLOAT), Arrays.asList(
-        Pair.create(intFnID, intFn),
-        Pair.create(stringFnID, stringFn)));
+            new FnOverload(intFnID, intFn),
+            new FnOverload(stringFnID, stringFn)));
 
     concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
   }
@@ -226,8 +227,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(INT_OR_STRING), Arrays.asList(
-        Pair.create(intFnID, intFn),
-        Pair.create(floatFnID, floatFn)));
+            new FnOverload(intFnID, intFn),
+            new FnOverload(floatFnID, floatFn)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
@@ -249,13 +250,11 @@ public class FunctionTypeCheckerTest {
     FnID intFnID = new FnID("int", "int");
     FnID floatFnID = new FnID("float", "float");
 
-    Pair<FnID, FunctionType> intPair = Pair.create(intFnID, intFn);
-    Pair<FnID, FunctionType> floatPair = Pair.create(floatFnID, floatFn);
-    List<Pair<FnID, FunctionType>> overloadList = Arrays.asList(
-            intPair, floatPair);
+    FnOverload intOverload = new FnOverload(intFnID, intFn);
+    FnOverload floatOverload = new FnOverload(floatFnID, floatFn);
+    List<FnOverload> overloadList = Arrays.asList(intOverload, floatOverload);
 
-    List<Pair<FnID, FunctionType>> overloadListRev = Arrays.asList(
-        floatPair, intPair);
+    List<FnOverload> overloadListRev = Arrays.asList(floatOverload, intOverload);
 
     // Expression is first an int, so should resolve to int function
     FnCallInfo fc = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
@@ -299,8 +298,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
                             Arrays.asList(Types.F_STRING, Types.F_STRING),
-                            Arrays.asList(Pair.create(fid1, ft1),
-                                          Pair.create(fid2, ft2)));
+                            Arrays.asList(new FnOverload(fid1, ft1),
+                                          new FnOverload(fid2, ft2)));
 
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assert(matches.size() == 0);
@@ -318,13 +317,13 @@ public class FunctionTypeCheckerTest {
   }
 
   private FnCallInfo makeOverloadedFnCallInfo(List<Type> argTypes,
-      List<Pair<FnID, FunctionType>> fTypes) {
+      List<FnOverload> fTypes) {
     return new FnCallInfo("overloaded_function", fTypes, argTypes);
   }
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
     return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
-                          argTypes);
+                          FnOverload.noDefaults(fnType), argTypes);
   }
 
   /**

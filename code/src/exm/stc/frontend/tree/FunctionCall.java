@@ -28,6 +28,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
@@ -35,10 +36,10 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
-import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.Context.DefInfo;
 import exm.stc.frontend.Context.DefKind;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.LogHelper;
 
 public class FunctionCall {
@@ -49,13 +50,13 @@ public class FunctionCall {
 
   private final FunctionCallKind kind;
   private final String originalName;
-  private final List<Pair<FnID, FunctionType>> overloads;
+  private final List<FnOverload> overloads;
   private final List<SwiftAST> args;
   private final Map<TaskPropKey, SwiftAST> annotationExprs;
   private final boolean softLocation;
 
   private FunctionCall(FunctionCallKind kind, String originalName,
-      List<Pair<FnID, FunctionType>> overloads, List<SwiftAST> args,
+      List<FnOverload> overloads, List<SwiftAST> args,
       Map<TaskPropKey, SwiftAST> annotationExprs, boolean softLocation) {
     this.kind = kind;
     this.originalName = originalName;
@@ -66,7 +67,7 @@ public class FunctionCall {
   }
 
   private static FunctionCall regularFunctionCall(String originalName,
-      List<Pair<FnID, FunctionType>> overloads, SwiftAST arglist,
+      List<FnOverload> overloads, SwiftAST arglist,
       Map<TaskPropKey, SwiftAST> annotations, boolean softLocation) {
     return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, originalName,
                   overloads, arglist.children(), annotations, softLocation);
@@ -77,11 +78,21 @@ public class FunctionCall {
     assert(ftype.getOutputs().size() == 1 &&
         Types.isStruct(ftype.getOutputs().get(0)));
 
-    Pair<FnID, FunctionType> fn = Pair.create(constructorID(typeName), ftype);
+    int numInputs = ftype.getInputs().size();
+    FnOverload fn = new FnOverload(constructorID(typeName), ftype,
+                                   noDefaultVals(numInputs));
 
     return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
         fn.asList(), arglist.children(),
         Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
+  }
+
+  protected static List<Arg> noDefaultVals(int numInputs) {
+    List<Arg> defaultVals = new ArrayList<Arg>();
+    for (int i = 0; i < numInputs; i++) {
+      defaultVals.add(null);
+    }
+    return defaultVals;
   }
 
   /**
@@ -101,7 +112,7 @@ public class FunctionCall {
     return originalName;
   }
 
-  public List<Pair<FnID, FunctionType>> overloads() {
+  public List<FnOverload> overloads() {
     return overloads;
   }
 
@@ -161,7 +172,7 @@ public class FunctionCall {
 
   private static FunctionCall regularFunctionFromAST(Context context,
       List<SwiftAST> annotationTs, String originalName, SwiftAST arglist,
-      List<Pair<FnID, FunctionType>> overloads)
+      List<FnOverload> overloads)
       throws UserException, InvalidAnnotationException {
     Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
     boolean softLocation = false;

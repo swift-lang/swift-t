@@ -29,6 +29,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -45,38 +46,45 @@ public class FunctionDecl {
   private final FunctionType ftype;
   private final ArrayList<String> inNames;
   private final ArrayList<String> outNames;
-
+  private final ArrayList<Arg> defaultVals;
 
   private FunctionDecl(FunctionType ftype, ArrayList<String> inNames,
-                       ArrayList<String> outNames) {
+                       ArrayList<String> outNames, ArrayList<Arg> defaultVals) {
     super();
     this.ftype = ftype;
     this.inNames = inNames;
     this.outNames = outNames;
+    this.defaultVals = defaultVals;
   }
 
   public FunctionType getFunctionType() {
     return ftype;
   }
 
-
   public List<String> getInNames() {
     return Collections.unmodifiableList(inNames);
   }
 
+  public List<Arg> defaultVals() {
+    return Collections.unmodifiableList(defaultVals);
+  }
 
   public List<String> getOutNames() {
     return Collections.unmodifiableList(outNames);
   }
 
+
   private static class ArgDecl {
     final String name;
     final Type type;
+    /** Default value if any (null otherwise) */
+    final Arg defaultVal;
     final boolean varargs;
-    private ArgDecl(String name, Type type, boolean varargs) {
-      super();
+
+    private ArgDecl(String name, Type type, Arg defaultVal, boolean varargs) {
       this.name = name;
       this.type = type;
+      this.defaultVal = defaultVal;
       this.varargs = varargs;
     }
   }
@@ -94,15 +102,23 @@ public class FunctionDecl {
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
     ArrayList<Type> inArgTypes = new ArrayList<Type>();
+    ArrayList<Arg> defaultVals = new ArrayList<Arg>();
+
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
       ArgDecl argInfo = extractArgInfo(typeVarContext, inArgTree.child(i));
       inNames.add(argInfo.name);
       inArgTypes.add(argInfo.type);
+      defaultVals.add(argInfo.defaultVal);
+
       if (argInfo.varargs) {
         if (i != inArgTree.getChildCount() - 1) {
           throw new TypeMismatchException(context, "variable argument marker "
               + "... must be in final position of input argument list");
+        }
+        if (argInfo.defaultVal != null) {
+          throw new TypeMismatchException(context, "Cannot provide default "
+              + "value for variable argument");
         }
         varArgs = true;
       }
@@ -128,9 +144,9 @@ public class FunctionDecl {
 
     checkDuplicateArgs(context, function, inNames, outNames);
 
-    FunctionType ftype =
-          new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
-    return new FunctionDecl(ftype, inNames, outNames);
+    FunctionType ftype;
+    ftype = new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
+    return new FunctionDecl(ftype, inNames, outNames, defaultVals);
   }
 
   private static ArgDecl extractArgInfo(Context context, SwiftAST arg)
@@ -160,7 +176,10 @@ public class FunctionDecl {
       thisVarArgs = true;
     }
 
-    return new ArgDecl(varname, argType, thisVarArgs);
+    // TODO: default value support
+    Arg defaultVal = null;
+
+    return new ArgDecl(varname, argType, defaultVal, thisVarArgs);
   }
 
   /**
