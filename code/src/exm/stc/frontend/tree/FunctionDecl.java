@@ -30,6 +30,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -46,10 +47,10 @@ public class FunctionDecl {
   private final FunctionType ftype;
   private final ArrayList<String> inNames;
   private final ArrayList<String> outNames;
-  private final ArrayList<Arg> defaultVals;
+  private final DefaultVals defaultVals;
 
   private FunctionDecl(FunctionType ftype, ArrayList<String> inNames,
-                       ArrayList<String> outNames, ArrayList<Arg> defaultVals) {
+                       ArrayList<String> outNames, DefaultVals defaultVals) {
     super();
     this.ftype = ftype;
     this.inNames = inNames;
@@ -65,8 +66,8 @@ public class FunctionDecl {
     return Collections.unmodifiableList(inNames);
   }
 
-  public List<Arg> defaultVals() {
-    return Collections.unmodifiableList(defaultVals);
+  public DefaultVals defaultVals() {
+    return defaultVals;
   }
 
   public List<String> getOutNames() {
@@ -102,14 +103,14 @@ public class FunctionDecl {
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
     ArrayList<Type> inArgTypes = new ArrayList<Type>();
-    ArrayList<Arg> defaultVals = new ArrayList<Arg>();
+    ArrayList<Arg> defaultVector = new ArrayList<Arg>();
 
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
       ArgDecl argInfo = extractArgInfo(typeVarContext, inArgTree.child(i));
       inNames.add(argInfo.name);
       inArgTypes.add(argInfo.type);
-      defaultVals.add(argInfo.defaultVal);
+      defaultVector.add(argInfo.defaultVal);
 
       if (argInfo.varargs) {
         if (i != inArgTree.getChildCount() - 1) {
@@ -146,6 +147,7 @@ public class FunctionDecl {
 
     FunctionType ftype;
     ftype = new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
+    DefaultVals defaultVals = DefaultVals.fromDefaultValVector(defaultVector);
     return new FunctionDecl(ftype, inNames, outNames, defaultVals);
   }
 

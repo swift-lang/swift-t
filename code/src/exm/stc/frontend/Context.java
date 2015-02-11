@@ -17,7 +17,6 @@
 package exm.stc.frontend;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +34,7 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -325,7 +324,7 @@ public abstract class Context {
    *                        with existing definition
    */
   public abstract FnID defineFunction(String name, FunctionType type,
-                  List<Arg> defaultVals) throws UserException;
+                        DefaultVals defaultVals) throws UserException;
 
   /**
    * Lookup the type of a function
@@ -595,26 +594,18 @@ public abstract class Context {
   public static class FnOverload {
     public final FnID id;
     public final FunctionType type;
-    public final List<Arg> defaultVals;
+    public final DefaultVals defaultVals;
 
-    public FnOverload(FnID id, FunctionType type, List<Arg> defaultVals) {
-      assert(defaultVals.size() == type.getInputs().size());
+    public FnOverload(FnID id, FunctionType type, DefaultVals defaultVals) {
       this.id = id;
       this.type = type;
-      this.defaultVals = new ArrayList<Arg>(defaultVals);
+      this.defaultVals = defaultVals;
     }
 
     public FnOverload(FnID id, FunctionType type) {
-      this(id, type, noDefaults(type));
+      this(id, type, DefaultVals.noDefaults(type));
     }
 
-    public static List<Arg> noDefaults(FunctionType type) {
-      List<Arg> args = new ArrayList<Arg>();
-      for (int i = 0; i < type.getInputs().size(); i++) {
-        args.add(null);
-      }
-      return args;
-    }
 
     public List<FnOverload> asList() {
       return Collections.singletonList(this);

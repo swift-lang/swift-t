@@ -24,8 +24,8 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -183,7 +183,7 @@ public class LocalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-                List<Arg> defaultVals) throws DoubleDefineException {
+              DefaultVals defaultVals) throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 

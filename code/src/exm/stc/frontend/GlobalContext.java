@@ -35,7 +35,7 @@ import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -118,7 +118,7 @@ public class GlobalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-      List<Arg> defaultVals) throws UserException {
+      DefaultVals defaultVals) throws UserException {
 
     DefInfo def = lookupDef(name);
     if (def != null && def.kind == DefKind.FUNCTION) {
@@ -134,7 +134,7 @@ public class GlobalContext extends Context {
   }
 
   private FnID overloadFunction(String name, FunctionType type,
-      List<Arg> defaultVals) throws InvalidOverloadException {
+      DefaultVals defaultVals) throws InvalidOverloadException {
 
     String uniqueName = uniqueName(Var.OVERLOAD_PREFIX, name,
                                    Var.OVERLOAD_PREFIX + name);
@@ -144,10 +144,11 @@ public class GlobalContext extends Context {
     if (overloads.size() == 1) {
       // First overload wasn't checked
       checkOverloadAllowed(this, overloads.get(0).id, overloads.get(0).type,
-                           hasOptionalArg(overloads.get(0).defaultVals));
+                           overloads.get(0).defaultVals.hasAnyDefaults());
     }
 
-    checkOverloadAllowed(this, overloadID, type, hasOptionalArg(defaultVals));
+    checkOverloadAllowed(this, overloadID, type,
+                         defaultVals.hasAnyDefaults());
 
     // Pairwise checks for ambiguity
     for (FnOverload overload: overloads) {
@@ -163,17 +164,8 @@ public class GlobalContext extends Context {
     return overloadID;
   }
 
-  private boolean hasOptionalArg(List<Arg> defaultVals) {
-    for (Arg defaultVal: defaultVals) {
-      if (defaultVal != null) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private void addFunctionOverload(String name, FnID fnID,
-                 FunctionType type, List<Arg> defaultVals) {
+                 FunctionType type, DefaultVals defaultVals) {
     functionOverloads.put(name, new FnOverload(fnID, type, defaultVals));
   }
 
