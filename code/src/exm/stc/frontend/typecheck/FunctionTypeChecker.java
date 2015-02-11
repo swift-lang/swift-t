@@ -192,10 +192,8 @@ public class FunctionTypeChecker {
       List<Type> argTypes, boolean throwOnFail)
       throws TypeMismatchException {
 
-    // TODO: need to match default vals in here
-
-    List<Type> expandedInArgs = expandVarArgs(context, id, fnType,
-                                              argTypes, throwOnFail);
+    List<Type> expandedInArgs = matchArgs(context, id, fnType,
+                                          argTypes, defaultVals, throwOnFail);
     if (expandedInArgs == null) {
       return null;
     }
@@ -533,7 +531,9 @@ public class FunctionTypeChecker {
   }
 
   /**
-   * Expand variable-length argument list if any
+   * Match abstract argument types to provided argument expressions, producing
+   * a list of argument types of the same length as the number of input arguments.
+   * Expand variable-length arguments or omit optional arguments if needed.
    * @param context
    * @param id
    * @param fnType
@@ -543,26 +543,38 @@ public class FunctionTypeChecker {
    * @return
    * @throws TypeMismatchException
    */
-  private static List<Type> expandVarArgs(Context context,
+  private static List<Type> matchArgs(Context context,
       FnID id, FunctionType fnType, List<Type> argTypes,
-      boolean throwOnFail)
+      DefaultVals defaultVals, boolean throwOnFail)
       throws TypeMismatchException {
     List<Type> abstractInputs = fnType.getInputs();
     int numArgs = argTypes.size();
 
-    if (fnType.hasVarargs()) {
-      if (numArgs < abstractInputs.size() - 1) {
-        if (throwOnFail) {
-          throw new TypeMismatchException(context,  "Too few arguments in "
-            + "call to function " + id.originalName() + ": expected >= "
-            + (abstractInputs.size() - 1) + " but got " + numArgs);
-        }
-        return null;
+    boolean fixedLength = !defaultVals.hasAnyDefaults() &&
+                          !fnType.hasVarargs();
+    int minNumArgs;
+    if (defaultVals.hasAnyDefaults()) {
+      minNumArgs = defaultVals.firstDefault();
+    } else if (fnType.hasVarargs()) {
+      minNumArgs = fnType.getInputs().size() - 1;
+    } else {
+      minNumArgs = fnType.getInputs().size();
+    }
+
+    if (numArgs < abstractInputs.size() - 1) {
+      if (throwOnFail) {
+        throw new TypeMismatchException(context,  "Too few arguments in "
+          + "call to function " + id.originalName() + ": expected "
+          + (fixedLength ? "==" : ">=") + " " + minNumArgs
+          + " but got " + numArgs);
       }
-    } else if (abstractInputs.size() != numArgs) {
+      return null;
+    }
+
+    if (!fnType.hasVarargs() && numArgs > abstractInputs.size()) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Wrong number of arguments in "
-            + "call to function " + id.originalName() + ": expected "
+            + "call to function " + id.originalName() + ": expected at most "
             + abstractInputs.size() + " but got " + numArgs);
       }
       return null;
@@ -571,7 +583,8 @@ public class FunctionTypeChecker {
     if (fnType.hasVarargs()) {
       return expandVarArgs(abstractInputs, numArgs);
     } else {
-      return abstractInputs;
+      // Return whole list or prefix (if optional)
+      return abstractInputs.subList(0, numArgs);
     }
   }
 
