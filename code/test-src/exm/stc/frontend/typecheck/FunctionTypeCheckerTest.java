@@ -191,7 +191,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assertEquals(stringFnID, match.id);
+    assertEquals(stringFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(stringFn, match.concreteAlts.get(0));
   }
@@ -215,7 +215,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assertEquals(stringFnID, match.id);
+    assertEquals(stringFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(stringFn, match.concreteAlts.get(0));
   }
@@ -273,7 +273,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assertEquals(intFnID, match.id);
+    assertEquals(intFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(intFn, match.concreteAlts.get(0));
   }
@@ -303,7 +303,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assertEquals(1, matches.size());
     FnMatch match = matches.get(0);
-    assertEquals(intFnID, match.id);
+    assertEquals(intFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(intFn, match.concreteAlts.get(0));
 
@@ -313,7 +313,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches2 = concretiseInputsOverloaded(FAKE_CONTEXT, fc2, true);
     assertEquals(1, matches2.size());
     FnMatch match2 = matches2.get(0);
-    assertEquals(intFnID, match2.id);
+    assertEquals(intFnID, match2.overload.id);
     assertEquals(1, match2.concreteAlts.size());
     assertEquals(intFn, match2.concreteAlts.get(0));
 
@@ -324,7 +324,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches3 = concretiseInputsOverloaded(FAKE_CONTEXT, fc3, true);
     assertEquals(1, matches2.size());
     FnMatch match3 = matches3.get(0);
-    assertEquals(floatFnID, match3.id);
+    assertEquals(floatFnID, match3.overload.id);
     assertEquals(1, match3.concreteAlts.size());
     assertEquals(floatFn, match3.concreteAlts.get(0));
   }
@@ -344,7 +344,7 @@ public class FunctionTypeCheckerTest {
     List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
     assert(matches.size() == 0);
     FnMatch match = matches.get(0);
-    assert(match.id.equals(fid1));
+    assert(match.overload.id.equals(fid1));
     assert(match.concreteAlts.size() == 1);
     assert(match.concreteAlts.get(0).equals(ft1));
 

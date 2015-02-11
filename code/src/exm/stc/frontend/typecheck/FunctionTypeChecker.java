@@ -46,7 +46,7 @@ public class FunctionTypeChecker {
     return exprTypeFromMatches(concretiseInputs(context, f, false));
   }
 
-  public static Pair<FnID, FunctionType> concretiseFunctionCall(
+  public static ConcreteMatch concretiseFunctionCall(
           Context context, FunctionCall fc, List<Var> outputs)
           throws UserException {
     List<FnMatch> matches = concretiseInputs(context, fc, true);
@@ -56,7 +56,8 @@ public class FunctionTypeChecker {
     List<Type> outTs = Var.extractTypes(outputs);
     FunctionType concreteOutTs = concretiseOutputs(context, match, outputs, outTs);
 
-    return Pair.create(match.id, concreteOutTs);
+    return new ConcreteMatch(match.overload.id, concreteOutTs,
+                             match.overload.defaultVals);
   }
 
   /**
@@ -135,8 +136,7 @@ public class FunctionTypeChecker {
   /**
    * Narrow possible function call types based on inputs.
    * @param context
-   * @param abstractType function type with varargs, typevars, union types
-   * @param args input argument expressions
+   * @param fc
    * @param resolveOverload if true, resolve to a single overload
    * @return list of possible concrete function types with varargs, typevars
    *          and union type args removed.  Grouped by which overload they
@@ -165,8 +165,8 @@ public class FunctionTypeChecker {
     List<FnMatch> matches = new ArrayList<FnMatch>();
 
     for (FnOverload fnType: fc.fnTypes) {
-      FnMatch match = concretiseInputsNonOverloaded(context, fnType.id,
-                fnType.type, fnType.defaultVals, fc.argTypes, !overloaded);
+      FnMatch match = concretiseInputsNonOverloaded(context, fnType,
+                                          fc.argTypes, !overloaded);
 
       if (match != null) {
         matches.add(match);
@@ -188,12 +188,9 @@ public class FunctionTypeChecker {
   }
 
   private static FnMatch concretiseInputsNonOverloaded(Context context,
-      FnID id, FunctionType fnType, DefaultVals defaultVals,
-      List<Type> argTypes, boolean throwOnFail)
+      FnOverload overload, List<Type> argTypes, boolean throwOnFail)
       throws TypeMismatchException {
-
-    List<Type> expandedInArgs = matchArgs(context, id, fnType,
-                                          argTypes, defaultVals, throwOnFail);
+    List<Type> expandedInArgs = matchArgs(context, overload, argTypes, throwOnFail);
     if (expandedInArgs == null) {
       return null;
     }
@@ -209,41 +206,43 @@ public class FunctionTypeChecker {
       Type exp = expandedInArgs.get(i);
       Type act = argTypes.get(i);
       // a more specific type than expected
-      Type exp2 = narrowArgType(context, id, i, exp, act, tvConstraints,
-                                throwOnFail);
+      Type exp2 = narrowArgType(context, overload.id, i, exp, act,
+                                tvConstraints, throwOnFail);
       if (exp2 == null) {
         assert(!throwOnFail);
         return null;
       }
       concreteArgTypes.add(exp2);
     }
-    LogHelper.trace(context, "Call " + id.uniqueName() + " specificInputs: " +
-        concreteArgTypes + " possible bindings: " + tvConstraints);
+    LogHelper.trace(context, "Call " + overload.id.uniqueName()
+        + " specificInputs: " + concreteArgTypes
+        + " possible bindings: " + tvConstraints);
 
     // Narrow down type variable bindings depending on constraints
     Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
-                  id, fnType.getTypeVars(), tvConstraints, throwOnFail);
+        overload.id, overload.type.getTypeVars(), tvConstraints, throwOnFail);
 
-    LogHelper.trace(context, "Call " + id.uniqueName() + " unified bindings: " +
-        tvConstraints);
+    LogHelper.trace(context, "Call " + overload.id.uniqueName()
+        + " unified bindings: " + tvConstraints);
 
     List<FunctionType> possibilities = findPossibleFunctionTypes(context,
-                                   id, fnType, concreteArgTypes, bindings);
+                       overload.id, overload.type, concreteArgTypes, bindings);
 
-    LogHelper.trace(context, "Call " + id.uniqueName() + " possible concrete types: " +
-        possibilities);
+    LogHelper.trace(context, "Call " + overload.id.uniqueName()
+                + " possible concrete types: " + possibilities);
 
     if (possibilities.size() == 0) {
       if (throwOnFail) {
-        throw new TypeMismatchException(context, "Arguments for call to " +
-          "function " + id.originalName() + " were incompatible with function " +
-          "type.  Function input types were: " + fnType.getInputs() +
-          ", argument types were " + argTypes);
+        throw new TypeMismatchException(context, "Arguments for call to "
+          + "function " + overload.id.originalName() + " "
+          + "were incompatible with function type. "
+          + "Function input types were: " + overload.type.getInputs() + ", "
+          + "argument types were " + argTypes);
       }
       return null;
     }
 
-    return new FnMatch(id, fnType, possibilities);
+    return new FnMatch(overload, possibilities);
   }
 
   private static FunctionType concretiseOutputs(Context context,
@@ -281,7 +280,8 @@ public class FunctionTypeChecker {
       if (!tvConstraints.isEmpty()) {
         // Need to check if we can match types
         Map<String, List<Type>> bindings = unifyTypeVarConstraints(context,
-            fn.id, fn.abstractType.getTypeVars(), tvConstraints, true);
+            fn.overload.id, fn.overload.type.getTypeVars(), tvConstraints,
+            true);
 
         Map<String, Type> chosenBindings = new HashMap<String, Type>();
         for (Entry<String, List<Type>> e: bindings.entrySet()) {
@@ -295,12 +295,12 @@ public class FunctionTypeChecker {
       // Bind any free types
       alt = (FunctionType)alt.bindAllTypeVars(Types.F_VOID);
 
-      LogHelper.trace(context, "Call " + fn.id + " alternative "
+      LogHelper.trace(context, "Call " + fn.overload.id + " alternative "
           + "function type " + alt + " match: " + outputsMatch);
 
       // Choose first viable alternative
       if (outputsMatch) {
-        checkFunctionOutputsValid(context, fn.id, outputs);
+        checkFunctionOutputsValid(context, fn.overload.id, outputs);
         return alt;
       }
     }
@@ -535,8 +535,7 @@ public class FunctionTypeChecker {
    * a list of argument types of the same length as the number of input arguments.
    * Expand variable-length arguments or omit optional arguments if needed.
    * @param context
-   * @param id
-   * @param fnType
+   * @param overload
    * @param argTypes
    * @param throwOnFail on failure, return null if false
    *                      or throw exception if true
@@ -544,9 +543,11 @@ public class FunctionTypeChecker {
    * @throws TypeMismatchException
    */
   private static List<Type> matchArgs(Context context,
-      FnID id, FunctionType fnType, List<Type> argTypes,
-      DefaultVals defaultVals, boolean throwOnFail)
-      throws TypeMismatchException {
+      FnOverload overload, List<Type> argTypes, boolean throwOnFail)
+          throws TypeMismatchException {
+    FunctionType fnType = overload.type;
+    DefaultVals defaultVals = overload.defaultVals;
+
     List<Type> abstractInputs = fnType.getInputs();
     int numArgs = argTypes.size();
 
@@ -564,7 +565,7 @@ public class FunctionTypeChecker {
     if (numArgs < abstractInputs.size() - 1) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Too few arguments in "
-          + "call to function " + id.originalName() + ": expected "
+          + "call to function " + overload.id.originalName() + ": expected "
           + (fixedLength ? "==" : ">=") + " " + minNumArgs
           + " but got " + numArgs);
       }
@@ -574,8 +575,9 @@ public class FunctionTypeChecker {
     if (!fnType.hasVarargs() && numArgs > abstractInputs.size()) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Wrong number of arguments in "
-            + "call to function " + id.originalName() + ": expected at most "
-            + abstractInputs.size() + " but got " + numArgs);
+            + "call to function " + overload.id.originalName()
+            + ": expected at most " + abstractInputs.size()
+            + " but got " + numArgs);
       }
       return null;
     }
@@ -835,25 +837,47 @@ public class FunctionTypeChecker {
    * @author tim
    */
   public static class FnMatch {
-    /** ID of function selected among overloads */
-    public final FnID id;
-
-    /** Abstract type of function selected among overloads */
-    public final FunctionType abstractType;
+    /** Overload selected */
+    FnOverload overload;
 
     /** Possible concrete types */
     public final List<FunctionType> concreteAlts;
 
-    public FnMatch(FnID id, FunctionType type,
-        List<FunctionType> concreteCandidates) {
-      this.id = id;
-      this.abstractType = type;
+
+    public FnMatch(FnOverload overload, List<FunctionType> concreteCandidates) {
+      this.overload = overload;
       this.concreteAlts = concreteCandidates;
     }
 
     @Override
     public String toString() {
-      return "FnMatch: " + id + " " + abstractType + " " + concreteAlts;
+      return "FnMatch: " + overload + " " + concreteAlts;
+    }
+  }
+
+  /**
+   * Represent a matched function
+   * @author tim
+   */
+  public static class ConcreteMatch {
+    /** ID of function selected among overloads */
+    public final FnID id;
+
+    /** Contrete type of function selected */
+    public final FunctionType type;
+
+    /** Default values */
+    public final DefaultVals defaultVals;
+
+    public ConcreteMatch(FnID id, FunctionType type, DefaultVals defaultVals) {
+      this.id = id;
+      this.type = type;
+      this.defaultVals = defaultVals;
+    }
+
+    @Override
+    public String toString() {
+      return "ConcreteMatch: " + id + " " + type + " " + defaultVals;
     }
   }
 

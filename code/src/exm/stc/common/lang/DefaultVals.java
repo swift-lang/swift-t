@@ -55,4 +55,21 @@ public class DefaultVals {
   public boolean hasAnyDefaults() {
     return firstDefault != -1;
   }
+
+  /**
+   * @return only the existing defaults, starting at firstDefault
+   */
+  public List<Arg> trailingDefaults() {
+    if (!hasAnyDefaults()) {
+      return Collections.emptyList();
+    }
+
+    return defaultVals.subList(firstDefault, defaultVals().size());
+  }
+
+
+  @Override
+  public String toString() {
+    return "DefaultVals: " + defaultVals + " " + firstDefault;
+  }
 }

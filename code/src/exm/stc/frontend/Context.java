@@ -606,9 +606,13 @@ public abstract class Context {
       this(id, type, DefaultVals.noDefaults(type));
     }
 
-
     public List<FnOverload> asList() {
       return Collections.singletonList(this);
+    }
+
+    @Override
+    public String toString() {
+      return "FnOverload: " + id + " " + type + " " + defaultVals;
     }
   }
 }
