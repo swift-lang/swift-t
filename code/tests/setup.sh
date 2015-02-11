@@ -20,17 +20,10 @@ source tests/test-helpers.sh
 
 export ADLB_EXHAUST_TIME=1
 
-if [[ ${TURBINE_WORKERS} == "" ]]
-then
-  export TURBINE_WORKERS=1
-fi
-
-if [[ ${ADLB_SERVERS} == "" ]]
-then
-  export ADLB_SERVERS=1
-fi
-
-PROCS=$(( ${TURBINE_WORKERS} + ${ADLB_SERVERS} ))
+export TURBINE_WORKERS=${TURBINE_WORKERS:-1}
+export ADLB_SERVERS=${ADLB_SERVERS:-1}
+P=$(( ${TURBINE_WORKERS} + ${ADLB_SERVERS} ))
+PROCS=${PROCS:-${P}}
 
 display()
 {
