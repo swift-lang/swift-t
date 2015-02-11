@@ -18,6 +18,7 @@ import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -39,6 +40,7 @@ import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.tree.FunctionCall;
 import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
 import exm.stc.frontend.typecheck.FunctionTypeChecker;
+import exm.stc.frontend.typecheck.FunctionTypeChecker.ConcreteMatch;
 import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 
@@ -74,11 +76,12 @@ public class FunctionCallEvaluator {
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
 
     // This will check the type of the function call
-    Pair<FnID, FunctionType> concrete =
+    ConcreteMatch concrete =
         FunctionTypeChecker.concretiseFunctionCall(context, f, outVars);
 
-    FnID concreteID = concrete.val1;
-    FunctionType concreteType = concrete.val2;
+    FnID concreteID = concrete.id;
+    FunctionType concreteType = concrete.type;
+    DefaultVals defaultVals = concrete.defaultVals;
 
     // Some functions, e.g. asserts, can be omitted after typechecking
     if (omitFunctionCall(context, concreteID)) {
@@ -97,7 +100,7 @@ public class FunctionCallEvaluator {
     openedWait = evalCallProperties(context, concreteID, f, propVals, renames);
 
     evalFunctionCallInner(context, concreteID, f.kind(), concreteType, outVars,
-                          inVars, propVals);
+                          inVars, defaultVals, propVals);
 
     if (openedWait) {
       backend.endWaitStatement();
@@ -119,10 +122,12 @@ public class FunctionCallEvaluator {
    */
   private void evalFunctionCallInner(Context context, FnID id,
       FunctionCallKind kind, FunctionType concrete,
-      List<Var> oList, List<Var> iList, TaskProps props)
+      List<Var> oList, List<Var> iList, DefaultVals defaultVals,
+      TaskProps props)
       throws UserException {
     Pair<Context, List<Var>> fixupResult;
-    fixupResult = fixupFunctionInputs(context, id, concrete, iList, props);
+    fixupResult = fixupFunctionInputs(context, id, concrete, iList,
+                                      defaultVals, props);
     Context waitContext = fixupResult.val1;
     List<Var> fixedIList = fixupResult.val2;
 
@@ -165,6 +170,7 @@ public class FunctionCallEvaluator {
   /**
    * Fixup any mismatch between function formal inputs and input expressions by,
    * e.g., dereferencing variables.
+   *
    * @param context
    * @param function
    * @param concrete
@@ -175,9 +181,9 @@ public class FunctionCallEvaluator {
    * @throws UndefinedTypeException
    */
   private Pair<Context, List<Var>> fixupFunctionInputs(Context context,
-      FnID id, FunctionType concrete, List<Var> iList, TaskProps props)
+      FnID id, FunctionType concrete, List<Var> iList, DefaultVals defaultVals,
+      TaskProps props)
       throws UserException {
-
     // The expected types might not be same as current input types, work out
     // what we need to do to make them the same
     List<Var> fixedIList = new ArrayList<Var>(iList.size());
@@ -231,6 +237,13 @@ public class FunctionCallEvaluator {
         varCreator.backendInit(derefVar);
         assert(Types.isRef(waitVars.get(i).type()));
         exprWalker.retrieveRef(derefVar, waitVars.get(i), false);
+      }
+    }
+
+    if (fixedIList.size() < defaultVals.firstDefault()) {
+      for (Arg defaultVal: defaultVals.trailingDefaults()) {
+        // TODO: global constant!!
+        throw new STCRuntimeError("Unimplemented");
       }
     }
 
@@ -362,7 +375,6 @@ public class FunctionCallEvaluator {
           false, true, ExecTarget.nonDispatchedAny());
       Var keyBlob = packCheckpointKey(context, id, checkpointKeyFutures);
 
-     // TODO: nicer names for vars?
       Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
       Var checkpointExists = varCreator.createTmpLocalVal(context,
                                                        Types.V_BOOL);
