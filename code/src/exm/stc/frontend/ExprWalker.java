@@ -522,7 +522,7 @@ public class ExprWalker {
       InvalidSyntaxException {
     Type valType = TypeChecker.findExprType(context, val);
     if (!valType.assignableTo(expectedType)) {
-      throw new TypeMismatchException(context, "trying to assign expression "
+      throw new TypeMismatchException(context, "cannot assign expression"
           + " of type " + valType.typeName() + " to "
           + targetVarName + " which has type " + expectedType);
     }
