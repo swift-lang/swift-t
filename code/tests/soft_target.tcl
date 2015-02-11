@@ -17,16 +17,17 @@
 package require turbine 0.5.0
 namespace import turbine::*
 
-proc must_run_on { msg rank sleep_ms } {
+proc task_fixed { msg tag rank sleep_ms } {
     if { $rank != [ adlb::rank ] } {
       error "Rank on wrong rank: $msg expected rank: $rank\
              actual rank [ adlb::rank ]"
     }
+    puts "[ adlb::rank ]: TASK: FIXED OK: $tag"
     after $sleep_ms
 }
 
-proc print_msg { msg sleep_ms } {
-    puts "[ adlb::rank ]: $msg"
+proc task_flexible { sleep_ms tag } {
+    puts "[ adlb::rank ]: TASK: FLEXIBLE $tag"
     after $sleep_ms
 }
 
@@ -35,7 +36,7 @@ proc rules { } {
     after 500
     # First check that rules go to target when there is limited work
     for { set rank 1 } { $rank <= 2 } { incr rank } {
-      turbine::rule {} [ list must_run_on "part1" $rank 100 ] \
+      turbine::rule {} [ list task_fixed tag:$rank "part1" $rank 100 ] \
             type $turbine::WORK target $rank strictness SOFT
     }
     
@@ -43,9 +44,10 @@ proc rules { } {
     after 100
     
     # Second check that rules go to multiple ranks when lots of work
-    for { set i 0 } { $i <= 30 } { incr i } {
-      turbine::rule {} [ list print_msg "RAN SOFT_TARGETED ON WORKER" 20 ] \
-                    target 1 strictness SOFT
+    for { set i 0 } { $i <= 3 } { incr i } {
+      turbine::rule {}                      \
+          [ list task_flexible 100 tag:$i ] \
+          target 1 strictness SOFT
     }
     # Drop into main worker loop, so some tasks should run on this rank
 }

@@ -29,7 +29,8 @@ set -x
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 
-grep -q -F "0: RAN SOFT_TARGETED ON WORKER" ${OUTPUT} || test_result 1
-grep -q -F "1: RAN SOFT_TARGETED ON WORKER" ${OUTPUT} || test_result 1
-grep -q -F "2: RAN SOFT_TARGETED ON WORKER" ${OUTPUT} || test_result 1
+for (( i=0 ; i<3 ; i++ ))
+do
+  grep -q -F "${i}: TASK: FLEXIBLE" ${OUTPUT} || test_result 1
+done
 test_result 0
