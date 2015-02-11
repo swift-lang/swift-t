@@ -18,6 +18,7 @@ import org.junit.rules.ExpectedException;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -131,6 +132,44 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                       Arrays.asList(Types.F_INT, Types.F_STRING));
     concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+  }
+
+
+  @Test
+  public void testMatchOptional() throws TypeMismatchException {
+    // Function is f(int x, bool y=true)
+    String name = "f";
+    FunctionType ft = makeSimpleFT(Types.F_INT, Types.F_BOOL);
+    DefaultVals defaults = DefaultVals.fromDefaultValVector(
+                              Arrays.asList(null, Arg.TRUE));
+    FnOverload fo = new FnOverload(new FnID(name, name),
+                                   ft, defaults);
+
+    FnCallInfo fc;
+    List<FnMatch> matches;
+    FnMatch match;
+
+    // Try calling with both args
+    List<Type> intBoolArgs = Arrays.asList(Types.F_INT, Types.F_BOOL);
+    fc = new FnCallInfo(name, fo.asList(), intBoolArgs);
+    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+
+    assertEquals("One matching overload", 1, matches.size());
+    match = matches.get(0);
+    assertEquals("One matching type", 1, match.concreteAlts.size());
+    assertEquals("Matched args", intBoolArgs,
+                  match.concreteAlts.get(0).getInputs());
+
+    List<Type> intArgs = Arrays.asList(Types.F_INT);
+    fc = new FnCallInfo(name, fo.asList(), intArgs);
+    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+
+    // Should resolve to (int)
+    assertEquals("One matching overload", 1, matches.size());
+    match = matches.get(0);
+    assertEquals("One matching type", 1, match.concreteAlts.size());
+    assertEquals("Matched args", intArgs,
+                  match.concreteAlts.get(0).getInputs());
   }
 
   /**
