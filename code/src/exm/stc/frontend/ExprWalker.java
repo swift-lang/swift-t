@@ -25,14 +25,15 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.Operators.OpInputType;
@@ -494,6 +495,67 @@ public class ExprWalker {
 
   public void localOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
     backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
+
+  /**
+   * Evaluate constant expression
+   * @param context
+   * @param var
+   * @param val
+   * @return
+   * @throws UserException
+   * @throws InvalidSyntaxException
+   */
+  public Arg evalConstExpr(Context context, Var var, SwiftAST val)
+      throws UserException {
+
+    assert(val != null);
+    assert(var.storage() == Alloc.GLOBAL_CONST);
+
+    Type valType = TypeChecker.findExprType(context, val);
+    if (!valType.assignableTo(var.type())) {
+      throw new TypeMismatchException(context, "trying to assign expression "
+          + " of type " + valType.typeName() + " to global constant "
+          + var.name() + " which has type " + var.type());
+    }
+
+    String msg = "Don't support non-literal expressions for constants";
+
+    switch (var.type().primType()) {
+    case BOOL:
+      String bval = Literals.extractBoolLit(context, val);
+      if (bval == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newBool(Boolean.parseBoolean(bval));
+    case INT:
+      Long ival = Literals.extractIntLit(context, val);
+      if (ival == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newInt(ival);
+    case FLOAT:
+      Double fval = Literals.extractFloatLit(context, val);
+      if (fval == null) {
+        Long sfval = Literals.extractIntLit(context, val);
+        if (sfval == null) {
+          throw new UserException(context, msg);
+        } else {
+          fval = Literals.interpretIntAsFloat(context, sfval);
+        }
+      }
+      assert(fval != null);
+      return Arg.newFloat(fval);
+    case STRING:
+      String sval = Literals.extractStringLit(context, val);
+      if (sval == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newString(sval);
+    default:
+      throw new STCRuntimeError("Unexpect value tree type in "
+          + " global constant: " + LogHelper.tokName(val.getType()));
+    }
   }
 
   /**

@@ -552,6 +552,19 @@ public abstract class Context {
    */
   abstract public Var createFilenameAliasVariable(Var fileVar);
 
+  /**
+   * Create a global const variable
+   * @param context
+   * @param name name for global const, or null if name should be
+   *             automatically generated
+   * @param type
+   * @param makeUnique if true, generate a unique name.  If false, use provided
+   * @return
+   * @throws DoubleDefineException
+   */
+  public abstract Var createGlobalConst(String name, Type type,
+                              boolean makeUnique) throws DoubleDefineException;
+
   public static enum FnProp {
     APP, COMPOSITE,
     BUILTIN, SYNC,

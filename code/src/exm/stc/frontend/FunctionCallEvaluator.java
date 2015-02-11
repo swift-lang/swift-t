@@ -242,8 +242,14 @@ public class FunctionCallEvaluator {
 
     if (fixedIList.size() < defaultVals.firstDefault()) {
       for (Arg defaultVal: defaultVals.trailingDefaults()) {
-        // TODO: global constant!!
-        throw new STCRuntimeError("Unimplemented");
+        // TODO: should avoid regenerating per call
+        // Generate a global constant var to store value
+        String constNamePrefix = Var.generateGlobalConstName(defaultVal);
+        Var defaultVar = context.createGlobalConst(constNamePrefix,
+            defaultVal.futureType(), true);
+
+        varCreator.assignGlobalConst(context, defaultVar, defaultVal);
+        fixedIList.add(defaultVar);
       }
     }
 

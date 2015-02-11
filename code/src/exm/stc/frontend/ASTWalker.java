@@ -2668,71 +2668,15 @@ public class ASTWalker {
     SwiftAST varTree = tree.child(0);
     assert(varTree.getType() == ExMParser.DECLARATION);
 
-    VariableDeclaration vd = VariableDeclaration.fromAST(context,
-                    varTree);
+    VariableDeclaration vd = VariableDeclaration.fromAST(context, varTree);
     assert(vd.count() == 1);
     VariableDescriptor vDesc = vd.getVar(0);
     if (vDesc.getMappingExpr() != null) {
       throw new UserException(context, "Can't have mapped global constant");
     }
-    Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
-                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                   VarProvenance.userVar(context.getSourceLoc()), false);
 
+    Var v = context.createGlobalConst(vDesc.getName(), vDesc.getType(), false);
 
-    SwiftAST val = vd.getVarExpr(0);
-    assert(val != null);
-
-    Type valType = TypeChecker.findExprType(context, val);
-    if (!valType.assignableTo(v.type())) {
-      throw new TypeMismatchException(context, "trying to assign expression "
-          + " of type " + valType.typeName() + " to global constant "
-          + v.name() + " which has type " + v.type());
-    }
-
-    String msg = "Don't support non-literal "
-        + "expressions for global constants";
-
-    Var backendVar = VarRepr.backendVar(v);
-    switch (v.type().primType()) {
-    case BOOL:
-      String bval = Literals.extractBoolLit(context, val);
-      if (bval == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newBool(
-                                        Boolean.parseBoolean(bval)));
-      break;
-    case INT:
-      Long ival = Literals.extractIntLit(context, val);
-      if (ival == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newInt(ival));
-      break;
-    case FLOAT:
-      Double fval = Literals.extractFloatLit(context, val);
-      if (fval == null) {
-        Long sfval = Literals.extractIntLit(context, val);
-        if (sfval == null) {
-          throw new UserException(context, msg);
-        } else {
-          fval = Literals.interpretIntAsFloat(context, sfval);
-        }
-      }
-      assert(fval != null);
-      backend.addGlobal(backendVar, Arg.newFloat(fval));
-      break;
-    case STRING:
-      String sval = Literals.extractStringLit(context, val);
-      if (sval == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newString(sval));
-      break;
-    default:
-      throw new STCRuntimeError("Unexpect value tree type in "
-          + " global constant: " + LogHelper.tokName(val.getType()));
-    }
+    exprWalker.evalConstExpr(context, v, vd.getVarExpr(0));
   }
 }
