@@ -62,7 +62,7 @@ ifeq ($(USE_MAC),no)
 	USE_XLC = @USE_XLC@
 	ifeq ($(USE_XLC),0)
 #       	Not XLC: GCC/Linux
-# CFLAGS += -mcmodel=medium # Now apparently required. 
+# CFLAGS += -mcmodel=medium # Now apparently required.
 		PIC = -fPIC
 		STD = -std=gnu99
 		SHARED = -shared
@@ -639,7 +639,6 @@ install: install.txt
 DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
-
 TURBINE_HEADERS := src/turbine/turbine.h      \
 		  src/tcl/turbine/tcl-turbine.h \
 		  src/tcl/static-pkg/static-pkg.h \
@@ -717,6 +716,12 @@ clean::
 	@rm -fv  $(TURBINE_OBJS) $(STATIC_PACKAGE_OBJS)
 	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_RESOURCE_O)
 	@rm -fvr tests/data
+
+clean-results:
+	@echo
+	@echo "Removing tests/*.result"
+	@echo
+	@rm -f tests/*.result
 
 # Clean *.result files that did not succeed
 clean-failed:
