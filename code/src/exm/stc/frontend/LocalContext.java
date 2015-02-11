@@ -182,6 +182,12 @@ public class LocalContext extends Context {
   }
 
   @Override
+  public Var createGlobalConst(String name, Type type, boolean makeUnique)
+      throws DoubleDefineException {
+    return globals.createGlobalConst(name, type, makeUnique);
+  }
+
+  @Override
   public FnID defineFunction(String name, FunctionType type,
               DefaultVals defaultVals) throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");

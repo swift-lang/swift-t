@@ -259,6 +259,19 @@ public class GlobalContext extends Context {
   }
 
   @Override
+  public Var createGlobalConst(String name, Type type, boolean makeUnique)
+      throws DoubleDefineException {
+    assert(name != null);
+    if (makeUnique) {
+      name = uniqueName(Var.GLOBAL_CONST_VAR_PREFIX, name, "global_const");
+    }
+
+    return declareVariable(type, name,
+                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                   VarProvenance.userVar(getSourceLoc()), false);
+  }
+
+  @Override
   public GlobalContext getGlobals() {
     return this;
   }

@@ -43,8 +43,8 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
@@ -422,37 +422,7 @@ public class ICTree {
     }
 
     private Var autoCreate(Arg val) {
-      String suffix;
-      switch(val.kind) {
-      case BOOLVAL:
-        suffix = "b_" + Boolean.toString(val.getBool());
-        break;
-      case INTVAL:
-        suffix = "i_" + Long.toString(val.getInt());
-        break;
-      case FLOATVAL:
-        String stringRep = Double.toString(val.getFloat());
-        // Truncate float val
-        suffix = "f_" +
-              stringRep.substring(0, Math.min(5, stringRep.length()));
-        break;
-      case STRINGVAL:
-        // Try to have var name something to do with string contents
-        String onlyalphanum = val.getString()
-              .replaceAll("[ \n\r\t.,]", "_")
-              .replaceAll("[^a-zA-Z0-9_]", "");
-
-        suffix = "s_" + onlyalphanum.substring(0,
-            Math.min(10, onlyalphanum.length()));
-        break;
-      case VAR:
-        throw new STCRuntimeError("Variable can't be a constant");
-      default:
-        throw new STCRuntimeError("Unknown enum value " +
-                val.kind.toString());
-      }
-
-      String origname = Var.GLOBAL_CONST_VAR_PREFIX + suffix;
+      String origname = Var.generateGlobalConstName(val);
       String name = origname;
       int seq = 0;
       while (usedNames.contains(name)) {
