@@ -15,16 +15,16 @@
  */
 package exm.stc.frontend;
 
-import java.util.HashMap;
+import exm.stc.common.util.Counters;
 
 public class FunctionContext {
 
   private final String functionName;
-  private final HashMap<String, Integer> counters;
+  private final Counters<String> counters;
 
   public FunctionContext(String functionName) {
     this.functionName = functionName;
-    this.counters = new HashMap<String, Integer>();
+    this.counters = new Counters<String>();
   }
 
   public String getFunctionName() {
@@ -33,19 +33,12 @@ public class FunctionContext {
 
   /**
    * For any given string key, return integers
-   * in a sequence starting from 0
+   * in a sequence starting from 1
    * @param counterName
    * @return
    */
-  public int getCounterVal(String counterName) {
-    Integer result = counters.get(counterName);
-    if (result != null) {
-      counters.put(counterName, result+1);
-      return result;
-    } else {
-      counters.put(counterName, 1);
-      return 0;
-    }
+  public long getCounterVal(String counterName) {
+    return counters.increment(counterName);
   }
 
   /**
@@ -56,7 +49,7 @@ public class FunctionContext {
    * @return
    */
   public String constructName(String constructType) {
-    return this.getFunctionName() + "-" + constructType + 
+    return this.getFunctionName() + "-" + constructType +
                   getCounterVal(constructType);
   }
 

@@ -41,16 +41,18 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.ExprWalker;
 import exm.stc.frontend.LocalContext;
+import exm.stc.frontend.VarCreator;
 
 public class FunctionDecl {
   private final FunctionType ftype;
   private final ArrayList<String> inNames;
   private final ArrayList<String> outNames;
-  private final DefaultVals defaultVals;
+  private final DefaultVals<Var> defaultVals;
 
   private FunctionDecl(FunctionType ftype, ArrayList<String> inNames,
-                       ArrayList<String> outNames, DefaultVals defaultVals) {
+         ArrayList<String> outNames, DefaultVals<Var> defaultVals) {
     super();
     this.ftype = ftype;
     this.inNames = inNames;
@@ -66,7 +68,7 @@ public class FunctionDecl {
     return Collections.unmodifiableList(inNames);
   }
 
-  public DefaultVals defaultVals() {
+  public DefaultVals<Var> defaultVals() {
     return defaultVals;
   }
 
@@ -79,10 +81,10 @@ public class FunctionDecl {
     final String name;
     final Type type;
     /** Default value if any (null otherwise) */
-    final Arg defaultVal;
+    final Var defaultVal;
     final boolean varargs;
 
-    private ArgDecl(String name, Type type, Arg defaultVal, boolean varargs) {
+    private ArgDecl(String name, Type type, Var defaultVal, boolean varargs) {
       this.name = name;
       this.type = type;
       this.defaultVal = defaultVal;
@@ -90,8 +92,9 @@ public class FunctionDecl {
     }
   }
 
-  public static FunctionDecl fromAST(Context context, String function,
-                 SwiftAST inArgTree, SwiftAST outArgTree, Set<String> typeParams)
+  public static FunctionDecl fromAST(Context context, VarCreator varCreator,
+      ExprWalker exprWalker, String function,
+      SwiftAST inArgTree, SwiftAST outArgTree, Set<String> typeParams)
        throws UserException {
     LocalContext typeVarContext = LocalContext.fnContext(context, function);
 
@@ -103,11 +106,12 @@ public class FunctionDecl {
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
     ArrayList<Type> inArgTypes = new ArrayList<Type>();
-    ArrayList<Arg> defaultVector = new ArrayList<Arg>();
+    ArrayList<Var> defaultVector = new ArrayList<Var>();
 
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
-      ArgDecl argInfo = extractArgInfo(typeVarContext, inArgTree.child(i));
+      ArgDecl argInfo = extractArgInfo(typeVarContext, varCreator, exprWalker,
+                                       inArgTree.child(i));
       inNames.add(argInfo.name);
       inArgTypes.add(argInfo.type);
       defaultVector.add(argInfo.defaultVal);
@@ -129,7 +133,8 @@ public class FunctionDecl {
     ArrayList<String> outNames = new ArrayList<String>();
     ArrayList<Type> outArgTypes = new ArrayList<Type>();
     for (int i = 0; i < outArgTree.getChildCount(); i++) {
-      ArgDecl argInfo = extractArgInfo(typeVarContext, outArgTree.child(i));
+      ArgDecl argInfo = extractArgInfo(typeVarContext, varCreator, exprWalker,
+                                       outArgTree.child(i));
       if (argInfo.varargs) {
         throw new TypeMismatchException(context, "cannot have variable" +
                 " argument specifier ... in output list");
@@ -147,12 +152,13 @@ public class FunctionDecl {
 
     FunctionType ftype;
     ftype = new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
-    DefaultVals defaultVals = DefaultVals.fromDefaultValVector(defaultVector);
+    DefaultVals<Var> defaultVals =
+                           DefaultVals.fromDefaultValVector(defaultVector);
     return new FunctionDecl(ftype, inNames, outNames, defaultVals);
   }
 
-  private static ArgDecl extractArgInfo(Context context, SwiftAST arg)
-      throws UserException {
+  private static ArgDecl extractArgInfo(Context context, VarCreator varCreator,
+      ExprWalker exprWalker, SwiftAST arg) throws UserException {
     assert(arg.getType() == ExMParser.DECLARATION);
     assert(arg.getChildCount() == 2 || arg.getChildCount() == 3);
     SwiftAST baseTypes = arg.child(0);
@@ -163,25 +169,37 @@ public class FunctionDecl {
     List<Type> altPrefixes = TypeTree.extractMultiType(context, baseTypes);
     assert(altPrefixes.size() > 0);
     ArrayList<Type> alts = new ArrayList<Type>(altPrefixes.size());
-    String varname = null;
+    String argName = null;
     for (Type altPrefix: altPrefixes) {
       // Construct var in order to apply array markers and get full type
       Var v = fromFormalArgTree(context, altPrefix, restDecl, DefType.INARG);
-      varname = v.name();
+      argName = v.name();
       alts.add(v.type());
     }
     Type argType = UnionType.makeUnion(alts);
 
+    int nextArg = 2;
     boolean thisVarArgs = false;
-    if (arg.getChildCount() == 3) {
-      assert(arg.child(2).getType() == ExMParser.VARARGS);
+    if (arg.getChildCount() > nextArg &&
+        arg.child(nextArg).getType() == ExMParser.VARARGS) {
+      nextArg++;
       thisVarArgs = true;
     }
 
-    // TODO: default value support
-    Arg defaultVal = null;
+    Var defaultVar = null;
+    if (arg.getChildCount() > nextArg) {
+      // TODO: the FunctionDecl is created twice, so two globals are created
+      SwiftAST defaultValT = arg.child(nextArg++);
 
-    return new ArgDecl(varname, argType, defaultVal, thisVarArgs);
+      Arg defaultVal = exprWalker.valueOfConstExpr(context, argType,
+                                    defaultValT, argName);
+
+      String constNamePrefix = Var.generateGlobalConstName(defaultVal);
+      defaultVar = context.createGlobalConst(constNamePrefix, argType, true);
+      varCreator.assignGlobalConst(context, defaultVar, defaultVal);
+    }
+
+    return new ArgDecl(argName, argType, defaultVar, thisVarArgs);
   }
 
   /**

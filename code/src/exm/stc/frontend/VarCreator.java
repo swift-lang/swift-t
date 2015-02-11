@@ -248,6 +248,6 @@ public class VarCreator {
       throws UserException {
     assert(val.isConst());
     Var backendVar = VarRepr.backendVar(var);
-    backend.addGlobal(backendVar, val);
+    backend.addGlobalConst(backendVar, val);
   }
 }

@@ -546,7 +546,7 @@ public class FunctionTypeChecker {
       FnOverload overload, List<Type> argTypes, boolean throwOnFail)
           throws TypeMismatchException {
     FunctionType fnType = overload.type;
-    DefaultVals defaultVals = overload.defaultVals;
+    DefaultVals<Var> defaultVals = overload.defaultVals;
 
     List<Type> abstractInputs = fnType.getInputs();
     int numArgs = argTypes.size();
@@ -867,9 +867,9 @@ public class FunctionTypeChecker {
     public final FunctionType type;
 
     /** Default values */
-    public final DefaultVals defaultVals;
+    public final DefaultVals<Var> defaultVals;
 
-    public ConcreteMatch(FnID id, FunctionType type, DefaultVals defaultVals) {
+    public ConcreteMatch(FnID id, FunctionType type, DefaultVals<Var> defaultVals) {
       this.id = id;
       this.type = type;
       this.defaultVals = defaultVals;
@@ -887,7 +887,7 @@ public class FunctionTypeChecker {
     public final List<Type> argTypes;
 
     public FnCallInfo(String name, FnID id, FunctionType fnType,
-                      DefaultVals defaultVals, List<Type> argTypes) {
+                      DefaultVals<Var> defaultVals, List<Type> argTypes) {
       this(name, new FnOverload(id, fnType, defaultVals).asList(), argTypes);
     }
 

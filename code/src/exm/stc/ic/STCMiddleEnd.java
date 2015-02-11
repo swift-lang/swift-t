@@ -924,7 +924,7 @@ public class STCMiddleEnd {
       TurbineOp.structCreateNested(result, struct, fields));
   }
 
-  public void addGlobal(Var var, Arg val) {
+  public void addGlobalConst(Var var, Arg val) {
     assert(val.isConst());
     program.constants().add(var, val);
   }

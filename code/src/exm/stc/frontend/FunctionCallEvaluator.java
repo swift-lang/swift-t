@@ -81,7 +81,7 @@ public class FunctionCallEvaluator {
 
     FnID concreteID = concrete.id;
     FunctionType concreteType = concrete.type;
-    DefaultVals defaultVals = concrete.defaultVals;
+    DefaultVals<Var> defaultVals = concrete.defaultVals;
 
     // Some functions, e.g. asserts, can be omitted after typechecking
     if (omitFunctionCall(context, concreteID)) {
@@ -122,7 +122,7 @@ public class FunctionCallEvaluator {
    */
   private void evalFunctionCallInner(Context context, FnID id,
       FunctionCallKind kind, FunctionType concrete,
-      List<Var> oList, List<Var> iList, DefaultVals defaultVals,
+      List<Var> oList, List<Var> iList, DefaultVals<Var> defaultVals,
       TaskProps props)
       throws UserException {
     Pair<Context, List<Var>> fixupResult;
@@ -181,8 +181,8 @@ public class FunctionCallEvaluator {
    * @throws UndefinedTypeException
    */
   private Pair<Context, List<Var>> fixupFunctionInputs(Context context,
-      FnID id, FunctionType concrete, List<Var> iList, DefaultVals defaultVals,
-      TaskProps props)
+      FnID id, FunctionType concrete, List<Var> iList,
+      DefaultVals<Var> defaultVals, TaskProps props)
       throws UserException {
     // The expected types might not be same as current input types, work out
     // what we need to do to make them the same
@@ -240,18 +240,8 @@ public class FunctionCallEvaluator {
       }
     }
 
-    if (fixedIList.size() < defaultVals.firstDefault()) {
-      for (Arg defaultVal: defaultVals.trailingDefaults()) {
-        // TODO: should avoid regenerating per call
-        // Generate a global constant var to store value
-        String constNamePrefix = Var.generateGlobalConstName(defaultVal);
-        Var defaultVar = context.createGlobalConst(constNamePrefix,
-            defaultVal.futureType(), true);
-
-        varCreator.assignGlobalConst(context, defaultVar, defaultVal);
-        fixedIList.add(defaultVar);
-      }
-    }
+    // Add any defaults
+    fixedIList.addAll(defaultVals.trailingDefaults(fixedIList.size()));
 
     return Pair.create(waitContext, fixedIList);
   }

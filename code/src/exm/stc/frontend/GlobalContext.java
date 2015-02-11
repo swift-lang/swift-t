@@ -48,6 +48,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 
@@ -85,6 +86,8 @@ public class GlobalContext extends Context {
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
 
+  private final Counters<String> globalCounters = new Counters<String>();
+
   public GlobalContext(String inputFile, Logger logger,
                         ForeignFunctions foreignFuncs) {
     super(logger, 0);
@@ -118,7 +121,7 @@ public class GlobalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-      DefaultVals defaultVals) throws UserException {
+      DefaultVals<Var> defaultVals) throws UserException {
 
     DefInfo def = lookupDef(name);
     if (def != null && def.kind == DefKind.FUNCTION) {
@@ -134,7 +137,7 @@ public class GlobalContext extends Context {
   }
 
   private FnID overloadFunction(String name, FunctionType type,
-      DefaultVals defaultVals) throws InvalidOverloadException {
+      DefaultVals<Var> defaultVals) throws InvalidOverloadException {
 
     String uniqueName = uniqueName(Var.OVERLOAD_PREFIX, name,
                                    Var.OVERLOAD_PREFIX + name);
@@ -165,7 +168,7 @@ public class GlobalContext extends Context {
   }
 
   private void addFunctionOverload(String name, FnID fnID,
-                 FunctionType type, DefaultVals defaultVals) {
+                 FunctionType type, DefaultVals<Var> defaultVals) {
     functionOverloads.put(name, new FnOverload(fnID, type, defaultVals));
   }
 
@@ -349,6 +352,11 @@ public class GlobalContext extends Context {
   @Override
   public FunctionContext getFunctionContext() {
     return null;
+  }
+
+  @Override
+  public long nextCounterVal(String counterName) {
+    return globalCounters.increment(counterName);
   }
 
 }

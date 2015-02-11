@@ -28,7 +28,6 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
-import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -37,6 +36,7 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.Context.DefInfo;
 import exm.stc.frontend.Context.DefKind;
@@ -80,19 +80,11 @@ public class FunctionCall {
         Types.isStruct(ftype.getOutputs().get(0)));
 
     FnOverload fn = new FnOverload(constructorID(typeName), ftype,
-                                   DefaultVals.noDefaults(ftype));
+                                   DefaultVals.<Var>noDefaults(ftype));
 
     return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
         fn.asList(), arglist.children(),
         Collections.<TaskPropKey,SwiftAST>emptyMap(), false);
-  }
-
-  protected static List<Arg> noDefaultVals(int numInputs) {
-    List<Arg> defaultVals = new ArrayList<Arg>();
-    for (int i = 0; i < numInputs; i++) {
-      defaultVals.add(null);
-    }
-    return defaultVals;
   }
 
   /**

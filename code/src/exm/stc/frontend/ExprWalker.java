@@ -512,16 +512,24 @@ public class ExprWalker {
     assert(val != null);
     assert(var.storage() == Alloc.GLOBAL_CONST);
 
+
+    String varName = var.name();
+    return valueOfConstExpr(context, var.type(), val, varName);
+  }
+
+  public Arg valueOfConstExpr(Context context, Type expectedType, SwiftAST val,
+      String targetVarName) throws UserException, TypeMismatchException,
+      InvalidSyntaxException {
     Type valType = TypeChecker.findExprType(context, val);
-    if (!valType.assignableTo(var.type())) {
+    if (!valType.assignableTo(expectedType)) {
       throw new TypeMismatchException(context, "trying to assign expression "
-          + " of type " + valType.typeName() + " to global constant "
-          + var.name() + " which has type " + var.type());
+          + " of type " + valType.typeName() + " to "
+          + targetVarName + " which has type " + expectedType);
     }
 
     String msg = "Don't support non-literal expressions for constants";
 
-    switch (var.type().primType()) {
+    switch (expectedType.primType()) {
     case BOOL:
       String bval = Literals.extractBoolLit(context, val);
       if (bval == null) {
