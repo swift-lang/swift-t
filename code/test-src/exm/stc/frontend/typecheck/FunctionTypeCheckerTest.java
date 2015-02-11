@@ -18,6 +18,7 @@ import org.junit.rules.ExpectedException;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Types;
@@ -323,7 +324,7 @@ public class FunctionTypeCheckerTest {
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
     return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
-                          FnOverload.noDefaults(fnType), argTypes);
+                          DefaultVals.noDefaults(fnType), argTypes);
   }
 
   /**

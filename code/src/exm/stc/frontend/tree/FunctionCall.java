@@ -29,6 +29,7 @@ import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
@@ -78,9 +79,8 @@ public class FunctionCall {
     assert(ftype.getOutputs().size() == 1 &&
         Types.isStruct(ftype.getOutputs().get(0)));
 
-    int numInputs = ftype.getInputs().size();
     FnOverload fn = new FnOverload(constructorID(typeName), ftype,
-                                   noDefaultVals(numInputs));
+                                   DefaultVals.noDefaults(ftype));
 
     return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
         fn.asList(), arglist.children(),

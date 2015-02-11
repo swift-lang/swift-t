@@ -14,6 +14,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -187,7 +188,7 @@ public class FunctionTypeChecker {
   }
 
   private static FnMatch concretiseInputsNonOverloaded(Context context,
-      FnID id, FunctionType fnType, List<Arg> defaultVals,
+      FnID id, FunctionType fnType, DefaultVals defaultVals,
       List<Type> argTypes, boolean throwOnFail)
       throws TypeMismatchException {
 
@@ -849,7 +850,7 @@ public class FunctionTypeChecker {
     public final List<Type> argTypes;
 
     public FnCallInfo(String name, FnID id, FunctionType fnType,
-                      List<Arg> defaultVals, List<Type> argTypes) {
+                      DefaultVals defaultVals, List<Type> argTypes) {
       this(name, new FnOverload(id, fnType, defaultVals).asList(), argTypes);
     }
 
