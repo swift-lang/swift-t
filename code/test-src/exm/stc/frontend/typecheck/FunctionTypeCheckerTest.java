@@ -18,7 +18,6 @@ import org.junit.rules.ExpectedException;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.TypeMismatchException;
-import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
@@ -27,6 +26,10 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.GlobalContext;
@@ -140,8 +143,10 @@ public class FunctionTypeCheckerTest {
     // Function is f(int x, bool y=true)
     String name = "f";
     FunctionType ft = makeSimpleFT(Types.F_INT, Types.F_BOOL);
-    DefaultVals defaults = DefaultVals.fromDefaultValVector(
-                              Arrays.asList(null, Arg.TRUE));
+    Var constVar = new Var(Types.F_BOOL, "true", Alloc.GLOBAL_CONST,
+                        DefType.GLOBAL_CONST, VarProvenance.unknown());
+    DefaultVals<Var> defaults = DefaultVals.fromDefaultValVector(
+                                  Arrays.asList(null, constVar));
     FnOverload fo = new FnOverload(new FnID(name, name),
                                    ft, defaults);
 
@@ -363,7 +368,7 @@ public class FunctionTypeCheckerTest {
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
     return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
-                          DefaultVals.noDefaults(fnType), argTypes);
+                          DefaultVals.<Var>noDefaults(fnType), argTypes);
   }
 
   /**

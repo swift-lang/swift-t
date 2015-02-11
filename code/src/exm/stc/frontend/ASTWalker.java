@@ -997,7 +997,7 @@ public class ASTWalker {
     }
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("foreach-range");
+    long loopNum = fc.getCounterVal("foreach-range");
 
     // Need to pass in futures along with user vars
     List<Var> rangeBounds = Arrays.asList(start, end, step);
@@ -1075,7 +1075,7 @@ public class ASTWalker {
 
     // Need to get handle to real array before running loop
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("foreach-array");
+    long loopNum = fc.getCounterVal("foreach-array");
 
     Var realArray;
     Context outsideLoopContext;
@@ -1169,7 +1169,7 @@ public class ASTWalker {
     }
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("forloop");
+    long loopNum = fc.getCounterVal("forloop");
     String loopName = fc.getFunctionName() + "-forloop-" + loopNum;
 
     HashMap<String, Var> parentLoopVarAliases =
@@ -1287,7 +1287,7 @@ public class ASTWalker {
     Var zero = exprWalker.assignToVar(context, Arg.ZERO, false);
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("iterate");
+    long loopNum = fc.getCounterVal("iterate");
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
 
     Context iterContext = loop.createIterContext(context);
@@ -1566,14 +1566,15 @@ public class ASTWalker {
 
     Set<String> typeParams = extractTypeParams(typeParamsT);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
-                                              outputs, typeParams);
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                                    function, inputs, outputs, typeParams);
 
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     // Define function, also detect duplicates here
-    FnID fid = context.defineFunction(function, ft, fdecl.defaultVals());
+    FnID fid = context.defineFunction(function, ft,
+        fdecl.defaultVals());
     tree.setIdentifier(fid);
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
@@ -1780,8 +1781,8 @@ public class ASTWalker {
     List<String> annotations = extractFunctionAnnotations(context, tree, 5,
                                                           suppressions);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
-                          outputs, Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                  function, inputs, outputs, Collections.<String>emptySet());
     FunctionType ft = fdecl.getFunctionType();
 
     if (ft.hasVarargs()) {
@@ -1801,7 +1802,8 @@ public class ASTWalker {
       throw new TypeMismatchException(context,
           "main() is not allowed to have input or output arguments");
 
-    FnID id = context.defineFunction(function, ft, fdecl.defaultVals());
+    FnID id = context.defineFunction(function, ft,
+        fdecl.defaultVals());
 
     // Record identifier for later recovery
     tree.setIdentifier(id);
@@ -1922,8 +1924,8 @@ public class ASTWalker {
     SwiftAST inputs = tree.child(3);
     SwiftAST block = tree.child(4);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function,
-                  inputs, outputs, Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                  function, inputs, outputs, Collections.<String>emptySet());
 
     List<Var> iList = fdecl.getInVars(context);
     List<Var> oList = fdecl.getOutVars(context);
@@ -1960,11 +1962,11 @@ public class ASTWalker {
     SwiftAST outArgsT = tree.child(1);
     SwiftAST inArgsT = tree.child(2);
 
-    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
-                        outArgsT,   Collections.<String>emptySet());
+    FunctionDecl decl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+              function, inArgsT, outArgsT,   Collections.<String>emptySet());
 
     FnID id = context.defineFunction(function, decl.getFunctionType(),
-                                     decl.defaultVals());
+                        decl.defaultVals());
     tree.setIdentifier(id);
 
     context.setFunctionProperty(id, FnProp.APP);
@@ -2009,8 +2011,8 @@ public class ASTWalker {
 
     FnID id = (FnID)tree.getIdentifier();
 
-    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
-                        outArgsT,   Collections.<String>emptySet());
+    FunctionDecl decl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                    function, inArgsT, outArgsT, Collections.<String>emptySet());
     List<Var> outArgs = decl.getOutVars(context);
     List<Var> inArgs = decl.getInVars(context);
 

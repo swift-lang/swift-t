@@ -189,7 +189,7 @@ public class LocalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-              DefaultVals defaultVals) throws DoubleDefineException {
+              DefaultVals<Var> defaultVals) throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 
@@ -310,5 +310,10 @@ public class LocalContext extends Context {
     } else {
       return parent.getFunctionContext();
     }
+  }
+
+  @Override
+  public long nextCounterVal(String counterName) {
+    return getFunctionContext().getCounterVal(counterName);
   }
 }
