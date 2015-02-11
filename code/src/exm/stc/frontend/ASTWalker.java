@@ -1912,7 +1912,7 @@ public class ASTWalker {
 
     // Can't checkpoint overloaded functions due to ambiguous name
     int numOverloads = context.lookupFunction(id.originalName()).size();
-    if (numOverloads >= 2) {
+    if (numOverloads >= 2 && context.hasFunctionProp(id, FnProp.CHECKPOINTED)) {
       throw new InvalidOverloadException(context, "Checkpointing of"
           + " overloaded functions is not supported");
     }
