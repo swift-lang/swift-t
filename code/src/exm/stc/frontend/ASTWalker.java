@@ -2678,7 +2678,12 @@ public class ASTWalker {
     }
 
     Var v = context.createGlobalConst(vDesc.getName(), vDesc.getType(), false);
+    SwiftAST val = vd.getVarExpr(0);
+    assert(val != null);
+    assert(v.storage() == Alloc.GLOBAL_CONST);
 
-    exprWalker.evalConstExpr(context, v, vd.getVarExpr(0));
+
+    varCreator.assignGlobalConst(context, v,
+        exprWalker.valueOfConstExpr(context, v.type(), val, v.name()));
   }
 }
