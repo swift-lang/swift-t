@@ -1,4 +1,3 @@
-// SKIP-THIS-TEST
 // COMPILE-ONLY-TEST
 
 f(int a) {
@@ -10,7 +9,7 @@ f(float a) {
 }
 
 // The argument could be interpreted as an int or float, complicating overload
-// resolution
+// resolution.  It should be interpreted as an int by default, however
 f(1);
 
 f(1.0);
