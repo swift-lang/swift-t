@@ -666,7 +666,7 @@ public class FunctionTypeChecker {
     StringBuilder sb = new StringBuilder();
     sb.append("Function input argument types: ");
     sb.append(typeList(fc.argTypes));
-    sb.append("did not match any overload of function " + fc.name + ".\n");
+    sb.append(" did not match any overload of function " + fc.name + ".\n");
     sb.append("Overload input types were: \n");
     for (FnOverload fnType: fc.fnTypes) {
       sb.append(typeList(fnType.type.getInputs()));
@@ -764,7 +764,7 @@ public class FunctionTypeChecker {
     StringBuilder sb = new StringBuilder();
     sb.append("(");
 
-    boolean first = false;
+    boolean first = true;
     for (Type t: types) {
       if (first) {
         first = false;
