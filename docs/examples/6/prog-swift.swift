@@ -8,9 +8,6 @@ import io;
 ];
 // SNIPPET END
 
-main
-{
-  string A[] = [ "arg1", "arg2", "arg3" ];
-  v = func(A);
-  printf("output: %.2f", v);
-}
+string A[] = [ "arg1", "arg2", "arg3" ];
+v = func(A);
+printf("output: %.2f", v);

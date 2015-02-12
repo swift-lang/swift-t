@@ -199,34 +199,34 @@ Additional arguments for advanced users/developers:
 
 == Program structure
 
-Swift programs are composed of _composite_ functions.  These
-share syntax with C-like languages.  The program starts in +main()+.
-The following is a complete Swift program:
-
-----
-main
-{}
-----
-
-STC input is preprocessed by +cpp+, the C preprocessor.
-
-Hello world is written as:
+Swift is a language with C-like syntax. Hello world is written as:
 
 ----
 import io;
-main
-{
-  printf("Hello world");
-}
+
+printf("Hello world");
 ----
 
 The newline is supplied by +printf()+.
 
-Swift programs eventually call _leaf_ functions, which are the primary
-way to do work.  From the perspective of the Swift script, they are
-atomic operations that wait for input variables and set output
-variables.  They may be implemented as native code functions or
+Swift programs are composed of
+_composite_ functions containing Swift code, _top-level_ Swift code
+outside of composite functions, and _leaf_ functions that wrap
+non-Swift code, for example native code functions or
 external application programs.
+
+In typical Swift programs, leaf functions do the computational
+heavy-lifting, while Swift code provides the "glue" to compose
+leaf functions into a complete application.
+From the perspective of the Swift programmer, leaf functions
+atomic operations that wait for input variables and set output
+variables.
+
+The definition of a function can come before or after the usage
+in the Swift source code.  E.g. a function defined on line 100
+of a Swift source file can be called at line 10.
+
+STC input is preprocessed by +cpp+, the C preprocessor.
 
 == Comments
 
@@ -371,10 +371,8 @@ expressions and identifiers of corresponding unassigned variables.
 
 == Composite functions
 
-Swift code is written in composite functions.  The composite function
-+main+ is required.
-
-Composite functions have the form:
+Composite functions provide a way to organise and reuse Swift code.
+They have the form:
 
 ----
 [(<output list>)] function_name [(<input list>)]
@@ -394,6 +392,9 @@ x1, x2 = f(i1, i2);
 // or equivalently:
 (x1, x2) = f(i1, i2);
 ----
+
+** *Note:* If a composite function named +main+ is provided, it is
+           automatically run at the start of the program.
 
 == Types
 
@@ -472,12 +473,9 @@ working directory for Turbine.
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
 ----
-main
-{
-  file x = input_file("/home/user/in.txt");
-  file y <"/home/user/out.txt">; // Declare a mapped file
-  y = x; // Do the copy
-}
+file x = input_file("/home/user/in.txt");
+file y <"/home/user/out.txt">; // Declare a mapped file
+y = x; // Do the copy
 ----
 
 
@@ -692,12 +690,10 @@ The new type name simply serves to improve readability or documentation.
 ----
 typedef newint int;
 
-main {
-  // We can freely convert between int and newint
-  newint x = 1;
-  int y = x;
-  newint z = y;
-}
+// We can freely convert between int and newint
+newint x = 1;
+int y = x;
+newint z = y;
 ----
 
 The second is with +type+, which creates a new type that is a
@@ -723,47 +719,43 @@ app (file o) unique (sorted_file i) {
   "/usr/bin/uniq" i @stdout=o
 }
 
-main {
-  file unsorted = input_file("input.txt");
-  sorted_file sorted <"sorted.txt"> = sort(unsorted);
-  file u <"unique.txt"> = unique(sorted);
+file unsorted = input_file("input.txt");
+sorted_file sorted <"sorted.txt"> = sort(unsorted);
+file u <"unique.txt"> = unique(sorted);
 
-  // Can convert from sorted_file to file
-  file result2 = sort(unsorted);
+// Can convert from sorted_file to file
+file result2 = sort(unsorted);
 
-  // This would cause a type error
-  // sorted_file not_sorted = unsorted;
-}
+// This would cause a type error
+// sorted_file not_sorted = unsorted;
 ----
 
-=== Global Constants
+=== Global Variables
 
-Swift supports a basic feature for defining globally visible constants.  You
-can use the +global const+ statement at the top level of the program.  The
-syntax only supports literals of scalar types: e.g. integer literals, floating
-point literals and string literals.
+Variables defined at the top level of a Swift program are in
+global scope and can be used anywhere 
+Swift supports a basic feature for defining globally visible constants.  
+
+You can use global variables to define program-wide constants: the
+single assignment semantics of Swift mean that they variables cannot
+be reassigned elsewhere in the program.
 
 ----
-global const string hello = "Hello World";
-global const float pi_approx = 3.142;
-global const int ONE = 1;
+string HELLO = "Hello World";
+float PI_APPROX = 3.142;
+int ONE = 1;
 
-main () {
-  trace(hello, pi_approx, ONE);
-}
+trace(HELLO, PI_APPROX, ONE);
 ----
 
-*Note:* global constants provide no performance benefit compared with
-variables initialized to constant values at optimization levels +O1+
-or greater.
-
-*Note:* better support is planned in future for more flexible support for
-global variables and code.
+** *Note:* You can also define global constants with the syntax
+          +global const <name> = <value>;+, e.g. +global const X = 1;+.
+          This syntax offers no advantages and is deprecated. 
 
 == Control structures
 
 Swift provides control structures that may be placed as statements
-inside a composite function.
+in Swift code.
 
 === Conditionals
 
@@ -1315,9 +1307,7 @@ string:
   "puts <<s>>"
 ];
 
-main {
-  my_output("HELLO");
-}
+my_output("HELLO");
 ----
 
 +puts+ is the Tcl builtin for screen output, like +puts()+ in C.
@@ -1493,13 +1483,11 @@ hello2 (string name) "turbine" "0.0" [
   "puts [ format {Hello %s} <<msg>> ]"
 ]
 
-main () {
-  // Hello Foo will be printed on a foo_work worker
-  hello1("Foo");
+// Hello Foo will be printed on a foo_work worker
+hello1("Foo");
 
-  // Hello Bar will be printed on a regular worker
-  hello2("Bar");
-}
+// Hello Bar will be printed on a regular worker
+hello2("Bar");
 ----
 
 In order to run the above script, we need to ensure that
@@ -1546,9 +1534,7 @@ app (file out) cat (file inputs[]) {
   "/bin/cat" inputs @stdout=out
 }
 
-main {
-  file joined <"joined.txt"> = cat(glob("*.txt"));
-}
+file joined <"joined.txt"> = cat(glob("*.txt"));
 ----
 
 Here is an example of an app function that sleeps for an arbitrary
@@ -1559,13 +1545,11 @@ app (void signal) sleep (int secs) {
   "/bin/sleep" secs
 }
 
-main {
-  foreach time in [1:5] {
-    void signal = sleep(time);
-    // Wait on output signal so that trace occurs after sleep
-    wait(signal) {
-      trace("Slept " + fromint(time));
-    }
+foreach time in [1:5] {
+  void signal = sleep(time);
+  // Wait on output signal so that trace occurs after sleep
+  wait(signal) {
+    trace("Slept " + fromint(time));
   }
 }
 ----
@@ -1647,10 +1631,8 @@ Consider the following Swift script:
 import io;
 import python;
 
-main {
-  i = python("print(\"python works\")\nrepr(2+2)");
-  printf("i: %s", i);
-}
+i = python("print(\"python works\")\nrepr(2+2)");
+printf("i: %s", i);
 ----
 
 This simply evaluates the Python code line by line. The last line must
@@ -1694,13 +1676,10 @@ typedef matrix string;
   R = replace_all(t, "\n", "", 0);
 }
 
-main
-{
-  matrix A1 = eye(3);
-  matrix A2 = eye(3);
-  matrix sum = add(A1, A2);
-  printf("2*eye(3)=%s", sum);
-}
+matrix A1 = eye(3);
+matrix A2 = eye(3);
+matrix sum = add(A1, A2);
+printf("2*eye(3)=%s", sum);
 ----
 
 An Python script template is created that imports Numpy and performs
@@ -1740,12 +1719,9 @@ global const string template =
   a
 """;
 
-main
-{
-  code = sprintf(template, 4);
-  s = R(code);
-  printf("the answer was: %i", s);
-}
+code = sprintf(template, 4);
+s = R(code);
+printf("the answer was: %i", s);
 ----
 
 An http://www.r-project.org[R language] script template is placed in a
@@ -1781,9 +1757,8 @@ import julia;
 import string;
 import sys;
 
-main {
-  start = clock();
-  f =
+start = clock();
+f =
 """
 begin
  f(x) = begin
@@ -1793,13 +1768,12 @@ begin
  f(%s)
 end
 """;
-  s1 = julia(sprintf(f, 1));
-  s2 = julia(sprintf(f, 2));
-  s3 = julia(sprintf(f, 3));
-  printf("julia results: %s %s %s", s1, s2, s3);
-  wait (s1, s2, s3) {
-    printf("duration: %0.2f", clock()-start);
-  }
+s1 = julia(sprintf(f, 1));
+s2 = julia(sprintf(f, 2));
+s3 = julia(sprintf(f, 3));
+printf("julia results: %s %s %s", s1, s2, s3);
+wait (s1, s2, s3) {
+  printf("duration: %0.2f", clock()-start);
 }
 ----
 
