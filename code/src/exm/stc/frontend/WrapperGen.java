@@ -17,6 +17,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -40,14 +41,14 @@ public class WrapperGen {
   /**
    * Saved wrappers
    */
-  private final Map<String, SavedWrapper> saved
-                  = new HashMap<String, SavedWrapper>();
+  private final Map<FnID, SavedWrapper> saved
+                  = new HashMap<FnID, SavedWrapper>();
 
   /**
    * Wrappers that have already been generated
    */
-  private final MultiMap<String, GeneratedWrapper> generated
-                  = new MultiMap<String, GeneratedWrapper>();
+  private final MultiMap<FnID, GeneratedWrapper> generated
+                  = new MultiMap<FnID, GeneratedWrapper>();
 
   /**
    * Used function names to avoid duplicates
@@ -55,16 +56,15 @@ public class WrapperGen {
   private final Set<String> usedFunNames = new HashSet<String>();
 
   public WrapperGen(STCMiddleEnd backend) {
-    super();
     this.backend = backend;
   }
 
-  public TclOpTemplate loadTclTemplate(Context context, String function,
+  public TclOpTemplate loadTclTemplate(Context context, FnID id,
           FunctionDecl fdecl, FunctionType ft, SwiftAST inlineTclTree)
           throws InvalidSyntaxException, UserException {
     assert(inlineTclTree.getType() == ExMParser.INLINE_TCL);
 
-    checkInlineTclTypes(context, function, ft, false);
+    checkInlineTclTypes(context, id, ft, false);
     TclOpTemplate inlineTcl;
     assert(inlineTclTree.getChildCount() == 1);
     String tclTemplateString =
@@ -78,7 +78,7 @@ public class WrapperGen {
     }
     inlineTcl.addOutNames(fdecl.getOutNames());
     inlineTcl.verifyNames(context);
-    context.getForeignFunctions().addLocalImpl(function, function);
+    context.getForeignFunctions().addLocalImpl(id, id);
     return inlineTcl;
   }
 
@@ -91,7 +91,7 @@ public class WrapperGen {
    *                      removed
    */
   private void checkInlineTclTypes(Context context,
-      String function, FunctionType ftype, boolean concreteType)
+      FnID id, FunctionType ftype, boolean concreteType)
     throws TypeMismatchException {
     for (Type in: ftype.getInputs()) {
 
@@ -113,7 +113,7 @@ public class WrapperGen {
           throw new TypeMismatchException(context,
               "Type " + alt.typeName() + " is"
               + " not currently supported as an input to inline TCL code"
-              + " for function " + function);
+              + " for function " + id.originalName());
         }
       }
     }
@@ -136,7 +136,7 @@ public class WrapperGen {
           throw new TypeMismatchException(context,
               "Type " + alt.typeName() + " is"
               + " not currently supported as an out to inline TCL code"
-              + " for function " + function);
+              + " for function " + id.originalName());
         }
       }
     }
@@ -151,14 +151,14 @@ public class WrapperGen {
    * @param isParallel
    * @param isTargetable
    */
-  public void saveWrapper(Context context, String function, FunctionType ft,
+  public void saveWrapper(Context context, FnID id, FunctionType ft,
       FunctionDecl decl, ExecTarget taskMode, boolean isParallel,
       boolean isTargetable) {
-    assert(context.getForeignFunctions().hasLocalImpl(function)) :
-              "Expected inline version for " + function;
-    SavedWrapper wrapper = new SavedWrapper(function, ft, decl, taskMode,
+    assert(context.getForeignFunctions().hasLocalImpl(id)) :
+              "Expected inline version for " + id;
+    SavedWrapper wrapper = new SavedWrapper(id, ft, decl, taskMode,
                                     isParallel, isTargetable);
-    saved.put(function, wrapper);
+    saved.put(id, wrapper);
   }
 
   /**
@@ -170,15 +170,15 @@ public class WrapperGen {
    * @throws UserException
    * @returns the name of the function that should be called
    */
-  public String generateWrapper(Context context, String function,
+  public FnID generateWrapper(Context context, FnID id,
                                 FunctionType concrete) throws UserException {
-    SavedWrapper wrapper = saved.get(function);
-    assert(wrapper != null) : "Unsaved wrapper " + function;
+    SavedWrapper wrapper = saved.get(id);
+    assert(wrapper != null) : "Unsaved wrapper " + id;
 
-    for (GeneratedWrapper gen: generated.get(function)) {
+    for (GeneratedWrapper gen: generated.get(id)) {
       if (concrete.equals(gen.concrete)) {
         // We already generated one with the right type
-        return gen.generatedFunctionName;
+        return gen.generatedID;
       }
     }
 
@@ -189,7 +189,7 @@ public class WrapperGen {
    * Generate a function that wraps some inline tcl
    * @returns generated function name
    */
-  private String generateWrapper(Context context, SavedWrapper wrapper,
+  private FnID generateWrapper(Context context, SavedWrapper wrapper,
         FunctionType concrete) throws UserException {
     if (wrapper.isParallel) {
       //TODO: figure out what output types are valid
@@ -228,25 +228,25 @@ public class WrapperGen {
     }
 
     // generate function name based on type
-    String chosenName = chooseWrapperName(wrapper.function, typeVarBindings,
-                                          unionBindings);
+    FnID wrapperID = chooseWrapperID(context, wrapper.original,
+                              typeVarBindings, unionBindings);
 
     // Check concrete types that were substituted are ok
-    checkInlineTclTypes(context, wrapper.function, concrete, true);
+    checkInlineTclTypes(context, wrapper.original, concrete, true);
 
-    backend.generateWrappedBuiltin(chosenName, wrapper.function,
+    backend.generateWrappedBuiltin(wrapperID, wrapper.original,
           VarRepr.backendFnType(concrete), VarRepr.backendVars(concreteOut),
           VarRepr.backendVars(concreteIn), wrapper.taskMode, wrapper.isParallel,
           wrapper.isTargetable);
 
     // Save for later use
-    GeneratedWrapper genWrapper = new GeneratedWrapper(chosenName, concrete);
-    generated.put(wrapper.function, genWrapper);
+    GeneratedWrapper genWrapper = new GeneratedWrapper(wrapperID, concrete);
+    generated.put(wrapper.original, genWrapper);
 
 
     // Copy over template
-    context.getForeignFunctions().addLocalImpl(chosenName, wrapper.function);
-    return chosenName;
+    context.getForeignFunctions().addLocalImpl(wrapperID, wrapper.original);
+    return wrapperID;
   }
 
   private void updateTypeInfo(SortedMap<String, Type> typeVarBindings,
@@ -275,9 +275,9 @@ public class WrapperGen {
     }
   }
 
-  private String chooseWrapperName(String function,
+  private FnID chooseWrapperID(Context context, FnID originalID,
       SortedMap<String, Type> typeVarBindings, List<Type> unionBindings) {
-    String prefix = function;
+    String prefix = originalID.uniqueName();
 
     // avoid clash with user functions by using invalid characters : and =
     for (Entry<String, Type> tv: typeVarBindings.entrySet()) {
@@ -298,24 +298,33 @@ public class WrapperGen {
       attempt++;
     }
     usedFunNames.add(trial);
-    return trial;
+
+    if (trial.equals(originalID.uniqueName())) {
+      return originalID;
+    }
+
+    FnID wrapperID = new FnID(trial, originalID.originalName());
+
+    // Copy over properties of original
+    context.getForeignFunctions().copyProperties(wrapperID, originalID);
+
+    return wrapperID;
   }
 
   /**
    * Information required for generation of a wrapper.
    */
   static class SavedWrapper {
-    final String function;
+    final FnID original;
     final FunctionType type;
     final FunctionDecl decl;
     final ExecTarget taskMode;
     final boolean isParallel;
     final boolean isTargetable;
 
-    public SavedWrapper(String function, FunctionType type, FunctionDecl decl,
+    public SavedWrapper(FnID original, FunctionType type, FunctionDecl decl,
         ExecTarget taskMode, boolean isParallel, boolean isTargetable) {
-      super();
-      this.function = function;
+      this.original = original;
       this.type = type;
       this.decl = decl;
       this.taskMode = taskMode;
@@ -328,12 +337,12 @@ public class WrapperGen {
    * Information about a wrapper that has already been generated
    */
   static class GeneratedWrapper {
-    final String generatedFunctionName;
+    final FnID generatedID;
     final FunctionType concrete;
 
-    public GeneratedWrapper(String generatedFunctionName,
+    public GeneratedWrapper(FnID generatedID,
                             FunctionType concrete) {
-      this.generatedFunctionName = generatedFunctionName;
+      this.generatedID = generatedID;
       this.concrete = concrete;
     }
   }

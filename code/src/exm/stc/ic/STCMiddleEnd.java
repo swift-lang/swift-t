@@ -34,6 +34,7 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.LocalForeignFunction;
@@ -154,26 +155,26 @@ public class STCMiddleEnd {
 
   /**
    *
-   * @param name
+   * @param fid
    * @param fType
    * @param localImpl can be null
    * @param wrappedImpl can be null
    * @throws UserException
    */
-  public void defineBuiltinFunction(String name, FunctionType fType,
+  public void defineBuiltinFunction(FnID fid, FunctionType fType,
       LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl)
   throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    BuiltinFunction bf = new BuiltinFunction(name, fType, localImpl, wrappedImpl);
+    BuiltinFunction bf = new BuiltinFunction(fid, fType, localImpl, wrappedImpl);
     program.addBuiltin(bf);
   }
 
-  public void startFunction(String functionName, List<Var> oList,
+  public void startFunction(FnID id, List<Var> oList,
       List<Var> iList, ExecTarget mode) throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    currFunction = new Function(functionName, iList, oList, mode);
+    currFunction = new Function(id, iList, oList, mode);
     program.addFunction(currFunction);
     blockStack.add(currFunction.mainBlock());
   }
@@ -409,35 +410,33 @@ public class STCMiddleEnd {
    * @param inputs
    * @param outputs
    */
-  public void builtinFunctionCall(String functionName, String frontendName,
-      List<Var> inputs, List<Var> outputs) {
-    builtinFunctionCall(functionName, frontendName, inputs, outputs,
+  public void builtinFunctionCall(FnID id, List<Var> inputs,
+                                   List<Var> outputs) {
+    builtinFunctionCall(id, inputs, outputs,
                         new TaskProps());
   }
 
-  public void builtinFunctionCall(String functionName, String frontendName,
-      List<Var> inputs,
+  public void builtinFunctionCall(FnID id,  List<Var> inputs,
       List<Var> outputs, TaskProps props) {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
-        FunctionCall.createBuiltinCall(functionName, frontendName,
+        FunctionCall.createBuiltinCall(id,
             outputs, Var.asArgList(inputs), props,
             program.foreignFunctions()));
   }
 
-  public void builtinLocalFunctionCall(String functionName, String frontendName,
+  public void builtinLocalFunctionCall(FnID id,
           List<Arg> inputs, List<Var> outputs) {
     currBlock().addInstruction(new LocalFunctionCall(
-        functionName, frontendName, inputs, outputs,
-        program.foreignFunctions()));
+        id, inputs, outputs, program.foreignFunctions()));
   }
 
-  public void functionCall(String functionName, String frontendName,
+  public void functionCall(FnID id,
       List<Arg> inputs, List<Var> outputs, ExecTarget mode, TaskProps props) {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
-          FunctionCall.createFunctionCall(functionName, frontendName,
-                outputs, inputs, mode, props, program.foreignFunctions()));
+          FunctionCall.createFunctionCall(id, outputs, inputs, mode, props,
+                                          program.foreignFunctions()));
   }
 
   public void runExternal(Arg cmd, List<Arg> args, List<Arg> inFiles,
@@ -711,7 +710,7 @@ public class STCMiddleEnd {
     }
 
     WaitStatement wait = new WaitStatement(
-        currFunction.name() + ":wait:" + src.name(), waitVars,
+        currFunction.id() + ":wait:" + src.name(), waitVars,
         PassedVar.NONE, Var.NONE,
         waitMode, false, taskMode, new TaskProps());
     block.addContinuation(wait);
@@ -925,7 +924,7 @@ public class STCMiddleEnd {
       TurbineOp.structCreateNested(result, struct, fields));
   }
 
-  public void addGlobal(Var var, Arg val) {
+  public void addGlobalConst(Var var, Arg val) {
     assert(val.isConst());
     program.constants().add(var, val);
   }
@@ -1000,8 +999,8 @@ public class STCMiddleEnd {
             TurbineOp.copyInFilename(var, mapping));
   }
 
-  public void generateWrappedBuiltin(
-      String wrapperName, String builtinName, FunctionType ft,
+  public void generateWrappedBuiltin(FnID wrapperID,
+      FnID builtinID, FunctionType ft,
       List<Var> outArgs, List<Var> userInArgs, ExecTarget mode,
       boolean isParallel, boolean isTargetable)
           throws UserException {
@@ -1040,7 +1039,7 @@ public class STCMiddleEnd {
       props.put(TaskPropKey.SOFT_LOCATION, softLocation.asArg());
     }
 
-    Function fn = new Function(wrapperName, realInArgs, outArgs,
+    Function fn = new Function(wrapperID, realInArgs, outArgs,
                                ExecTarget.syncControl());
     this.program.addFunction(fn);
 
@@ -1057,7 +1056,7 @@ public class STCMiddleEnd {
 
     // Check if we need to initialize mappings of output files
     boolean mustMapOutFiles =
-        !program.foreignFunctions().canInitOutputMapping(builtinName);
+        !program.foreignFunctions().canInitOutputMapping(builtinID);
 
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
@@ -1070,7 +1069,7 @@ public class STCMiddleEnd {
     Map<Var, Var> filenameVars = p.val2;
 
 
-    WaitStatement wait = new WaitStatement(wrapperName + "-argwait",
+    WaitStatement wait = new WaitStatement(wrapperID.uniqueName() + "-argwait",
                   waitVars, PassedVar.NONE, Var.NONE,
                   waitMode, true, mode, props);
 
@@ -1086,7 +1085,7 @@ public class STCMiddleEnd {
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                             filenameVars, instBuffer, false, mustMapOutFiles,
                             true);
-    instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals,
+    instBuffer.add(new LocalFunctionCall(builtinID, inVals, outVals,
                                          program.foreignFunctions()));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,

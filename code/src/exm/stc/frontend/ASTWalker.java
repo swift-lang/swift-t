@@ -34,6 +34,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidConstructException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -52,6 +53,7 @@ import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -80,6 +82,7 @@ import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.LValWalker.LRVals;
 import exm.stc.frontend.LoadedModules.LocatedModule;
@@ -194,7 +197,7 @@ public class ASTWalker {
     varAnalyzer.walkTopLevel(context, loadedMainModule.val1.ast,
                             moduleIterator(context));
 
-    backend.startFunction(Constants.ENTRY_FUNCTION, Var.NONE, Var.NONE,
+    backend.startFunction(FnID.ENTRY_FUNCTION, Var.NONE, Var.NONE,
                           ExecTarget.syncControl());
 
     for (LocatedModule loadedModule: modules.loadedModules()) {
@@ -203,10 +206,15 @@ public class ASTWalker {
     }
 
     // Main function runs after top-level code if present
-    FunctionType mainFn = context.lookupFunction(Constants.MAIN_FUNCTION);
-    if (mainFn != null) {
-      backend.functionCall(Constants.MAIN_FUNCTION, Constants.MAIN_FUNCTION,
-             Arg.NONE, Var.NONE, ExecTarget.syncControl(), new TaskProps());
+    List<FnOverload> mainOverloads = context.lookupFunction(
+                                                  Constants.MAIN_FUNCTION);
+    if (mainOverloads.size() == 1) {
+      FnID mainID = mainOverloads.get(0).id;
+      backend.functionCall(mainID, Arg.NONE, Var.NONE,
+          ExecTarget.syncControl(), new TaskProps());
+    } else if (mainOverloads.size() >= 2) {
+      throw new DoubleDefineException(context, "Multiple definitions of " +
+                                      Constants.MAIN_FUNCTION);
     }
 
     backend.endFunction();
@@ -989,7 +997,7 @@ public class ASTWalker {
     }
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("foreach-range");
+    long loopNum = fc.getCounterVal("foreach-range");
 
     // Need to pass in futures along with user vars
     List<Var> rangeBounds = Arrays.asList(start, end, step);
@@ -1067,7 +1075,7 @@ public class ASTWalker {
 
     // Need to get handle to real array before running loop
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("foreach-array");
+    long loopNum = fc.getCounterVal("foreach-array");
 
     Var realArray;
     Context outsideLoopContext;
@@ -1161,7 +1169,7 @@ public class ASTWalker {
     }
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("forloop");
+    long loopNum = fc.getCounterVal("forloop");
     String loopName = fc.getFunctionName() + "-forloop-" + loopNum;
 
     HashMap<String, Var> parentLoopVarAliases =
@@ -1279,7 +1287,7 @@ public class ASTWalker {
     Var zero = exprWalker.assignToVar(context, Arg.ZERO, false);
 
     FunctionContext fc = context.getFunctionContext();
-    int loopNum = fc.getCounterVal("iterate");
+    long loopNum = fc.getCounterVal("iterate");
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
 
     Context iterContext = loop.createIterContext(context);
@@ -1558,11 +1566,16 @@ public class ASTWalker {
 
     Set<String> typeParams = extractTypeParams(typeParamsT);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
-                                              outputs, typeParams);
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                                    function, inputs, outputs, typeParams);
 
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
+
+    // Define function, also detect duplicates here
+    FnID fid = context.defineFunction(function, ft,
+        fdecl.defaultVals());
+    tree.setIdentifier(fid);
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
     String version = Literals.extractLiteralString(context, tclPackage.child(1));
@@ -1586,46 +1599,44 @@ public class ASTWalker {
           tree.child(pos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
       SwiftAST inlineTclTree = tree.child(pos);
-      inlineTcl = wrapper.loadTclTemplate(context, function, fdecl, ft,
+      inlineTcl = wrapper.loadTclTemplate(context, fid, fdecl, ft,
                                           inlineTclTree);
       pos++;
     }
 
-    // Define function, also detect duplicates here
-    context.defineFunction(function, ft);
     FunctionType backendFT = VarRepr.backendFnType(ft);
-    backend.defineBuiltinFunction(function, backendFT, inlineTcl, impl);
+    backend.defineBuiltinFunction(fid, backendFT, inlineTcl, impl);
 
     // Register as foreign function
-    context.getForeignFunctions().addForeignFunction(function);
+    context.getForeignFunctions().addForeignFunction(fid);
 
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
-      handleBuiltinFunctionAnnotation(context, function, fdecl, tree.child(pos),
-                                inlineTcl != null);
+      handleBuiltinFunctionAnnotation(context, fid, fdecl,
+                            tree.child(pos), inlineTcl != null);
     }
 
-    ExecTarget taskMode = context.getForeignFunctions().getTaskMode(function);
+    ExecTarget taskMode = context.getForeignFunctions().getTaskMode(fid);
 
     // TODO: assume for now that all non-local builtins are targetable
     // This is still not quite right (See issue #230)
     boolean isTargetable = false;
     if (taskMode.isDispatched()) {
       isTargetable = true;
-      context.setFunctionProperty(function, FnProp.TARGETABLE);
+      context.setFunctionProperty(fid, FnProp.TARGETABLE);
     }
 
     if (impl != null) {
-      context.setFunctionProperty(function, FnProp.BUILTIN);
+      context.setFunctionProperty(fid, FnProp.BUILTIN);
     } else {
       if (inlineTcl == null) {
         throw new UserException(context, "Must provide TCL implementation or " +
-        		"inline TCL for function " + function);
+        		"inline TCL for function " + fid.originalName());
       }
       // generate composite function wrapping inline tcl
-      context.setFunctionProperty(function, FnProp.WRAPPED_BUILTIN);
-      context.setFunctionProperty(function, FnProp.SYNC);
-      boolean isParallel = context.hasFunctionProp(function, FnProp.PARALLEL);
+      context.setFunctionProperty(fid, FnProp.WRAPPED_BUILTIN);
+      context.setFunctionProperty(fid, FnProp.SYNC);
+      boolean isParallel = context.hasFunctionProp(fid, FnProp.PARALLEL);
       if (isParallel &&
           (!taskMode.isAsync() ||
            !taskMode.targetContext().isAnyWorkContext()) ) {
@@ -1634,12 +1645,10 @@ public class ASTWalker {
       }
 
       // Defer generation of wrapper until it is called
-      wrapper.saveWrapper(context, function, backendFT, fdecl,
+      wrapper.saveWrapper(context, fid, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
     }
   }
-
-
 
   private Set<String> extractTypeParams(SwiftAST typeParamsT) {
     assert(typeParamsT.getType() == ExMParser.TYPE_PARAMETERS);
@@ -1652,20 +1661,20 @@ public class ASTWalker {
   }
 
 
-  private void handleBuiltinFunctionAnnotation(Context context, String function,
-      FunctionDecl fdecl,
+  private void handleBuiltinFunctionAnnotation(Context context,
+      FnID id, FunctionDecl fdecl,
       SwiftAST annotTree, boolean hasLocalVersion) throws UserException {
     assert(annotTree.getType() == ExMParser.ANNOTATION);
 
     assert(annotTree.getChildCount() > 0);
     String key = annotTree.child(0).getText();
     if (annotTree.getChildCount() == 1) {
-      registerFunctionAnnotation(context, function, fdecl, key);
+      registerFunctionAnnotation(context, id, fdecl, key);
     } else {
       assert(annotTree.getChildCount() == 2);
       String val = annotTree.child(1).getText();
       if (key.equals(Annotations.FN_BUILTIN_OP)) {
-        addlocalEquiv(context, function, val);
+        addlocalEquiv(context, id, val);
       } else if (key.equals(Annotations.FN_STC_INTRINSIC)) {
         IntrinsicFunction intF;
         try {
@@ -1674,7 +1683,7 @@ public class ASTWalker {
           throw new InvalidAnnotationException(context, "Invalid intrinsic name: "
                 + " " + val + ".  Expected one of: " + IntrinsicFunction.values());
         }
-        context.addIntrinsic(function, intF);
+        context.addIntrinsic(id, intF);
       } else if (key.equals(Annotations.FN_IMPLEMENTS)) {
         ForeignFunctions foreignFuncs = context.getForeignFunctions();
         SpecialFunction special = foreignFuncs.findSpecialFunction(val);
@@ -1684,11 +1693,11 @@ public class ASTWalker {
               "Valid options are: " +
               StringUtil.concat(SpecialFunction.values()));
         }
-        foreignFuncs.addSpecialImpl(special, function);
+        foreignFuncs.addSpecialImpl(special, id);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
           ExecContext cx = context.lookupExecContext(val);
-          context.getForeignFunctions().addTaskMode(function, ExecTarget.dispatched(cx));
+          context.getForeignFunctions().addTaskMode(id, ExecTarget.dispatched(cx));
         } catch (IllegalArgumentException e) {
           List<String> dispatchNames = new ArrayList<String>(context.execTargetNames());
           Collections.sort(dispatchNames);
@@ -1703,7 +1712,7 @@ public class ASTWalker {
     }
   }
 
-  private void addlocalEquiv(Context context, String function, String val)
+  private void addlocalEquiv(Context context, FnID id, String val)
       throws UserException {
     BuiltinOpcode opcode;
     try {
@@ -1712,38 +1721,37 @@ public class ASTWalker {
       throw new UserException(context, "Unknown builtin op " + val);
     }
     assert(opcode != null);
-    context.getForeignFunctions().addOpEquiv(function, opcode);
+    context.getForeignFunctions().addOpEquiv(id, opcode);
   }
 
   /**
    * Check that an annotation for the named function is valid, and
    * add it to the known semantic info
-   * @param function
+   * @param uniqueName
    * @param annotation
    * @throws UserException
    */
-  private void registerFunctionAnnotation(Context context, String function,
+  private void registerFunctionAnnotation(Context context, FnID id,
         FunctionDecl fdecl, String annotation) throws UserException {
     ForeignFunctions foreignFuncs = context.getForeignFunctions();
     if (annotation.equals(Annotations.FN_ASSERTION)) {
-      foreignFuncs.addAssertVariable(function);
+      foreignFuncs.addAssertVariant(id);
     } else if (annotation.equals(Annotations.FN_PURE)) {
-      foreignFuncs.addPure(function);
+      foreignFuncs.addPure(id);
     } else if (annotation.equals(Annotations.FN_COMMUTATIVE)) {
-      foreignFuncs.addCommutative(function);
+      foreignFuncs.addCommutative(id);
     } else if (annotation.equals(Annotations.FN_COPY)) {
-      foreignFuncs.addCopy(function);
+      foreignFuncs.addCopy(id);
     } else if (annotation.equals(Annotations.FN_MINMAX)) {
-      foreignFuncs.addMinMax(function);
+      foreignFuncs.addMinMax(id);
     } else if (annotation.equals(Annotations.FN_PAR)) {
-      context.setFunctionProperty(function, FnProp.PARALLEL);
+      context.setFunctionProperty(id, FnProp.PARALLEL);
     } else if (annotation.equals(Annotations.FN_DEPRECATED)) {
-      context.setFunctionProperty(function, FnProp.DEPRECATED);
+      context.setFunctionProperty(id, FnProp.DEPRECATED);
     } else if (annotation.equals(Annotations.FN_CHECKPOINT)) {
-      Checkpointing.checkCanCheckpoint(context, function,
-                                       fdecl.getFunctionType());
+      Checkpointing.checkCanCheckpoint(context, id, fdecl.getFunctionType());
 
-      context.setFunctionProperty(function, FnProp.CHECKPOINTED);
+      context.setFunctionProperty(id, FnProp.CHECKPOINTED);
       backend.requireCheckpointing();
     } else {
       throw new InvalidAnnotationException(context, "function", annotation, false);
@@ -1773,8 +1781,8 @@ public class ASTWalker {
     List<String> annotations = extractFunctionAnnotations(context, tree, 5,
                                                           suppressions);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
-                          outputs, Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                  function, inputs, outputs, Collections.<String>emptySet());
     FunctionType ft = fdecl.getFunctionType();
 
     if (ft.hasVarargs()) {
@@ -1794,6 +1802,12 @@ public class ASTWalker {
       throw new TypeMismatchException(context,
           "main() is not allowed to have input or output arguments");
 
+    FnID id = context.defineFunction(function, ft,
+        fdecl.defaultVals());
+
+    // Record identifier for later recovery
+    tree.setIdentifier(id);
+
     boolean async = isMain ? false : true;
     for (String annotation: annotations) {
       if (isMain) {
@@ -1802,14 +1816,13 @@ public class ASTWalker {
       } else if (annotation.equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
-        registerFunctionAnnotation(context, function, fdecl, annotation);
+        registerFunctionAnnotation(context, id, fdecl, annotation);
       }
     }
 
-    context.defineFunction(function, ft);
-    context.setFunctionProperty(function, FnProp.COMPOSITE);
+    context.setFunctionProperty(id, FnProp.COMPOSITE);
     if (!async) {
-      context.setFunctionProperty(function, FnProp.SYNC);
+      context.setFunctionProperty(id, FnProp.SYNC);
     }
   }
 
@@ -1895,13 +1908,24 @@ public class ASTWalker {
     LogHelper.debug(context, "compile function: starting: " + function );
     // defineFunction should already have been called
     assert(context.isFunction(function));
-    assert(context.hasFunctionProp(function, FnProp.COMPOSITE));
+
+    // Recover functionID associated with tree
+    FnID id = (FnID)tree.getIdentifier();
+
+    // Can't checkpoint overloaded functions due to ambiguous name
+    int numOverloads = context.lookupFunction(id.originalName()).size();
+    if (numOverloads >= 2 && context.hasFunctionProp(id, FnProp.CHECKPOINTED)) {
+      throw new InvalidOverloadException(context, "Checkpointing of"
+          + " overloaded functions is not supported");
+    }
+
+    assert(context.hasFunctionProp(id, FnProp.COMPOSITE));
     SwiftAST outputs = tree.child(2);
     SwiftAST inputs = tree.child(3);
     SwiftAST block = tree.child(4);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function,
-                  inputs, outputs, Collections.<String>emptySet());
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                  function, inputs, outputs, Collections.<String>emptySet());
 
     List<Var> iList = fdecl.getInVars(context);
     List<Var> oList = fdecl.getOutVars(context);
@@ -1919,9 +1943,9 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
 
-    ExecTarget mode = context.hasFunctionProp(function, FnProp.SYNC) ?
+    ExecTarget mode = context.hasFunctionProp(id, FnProp.SYNC) ?
                   ExecTarget.syncControl() : ExecTarget.dispatchedControl();
-    backend.startFunction(function, backendOList, backendIList, mode);
+    backend.startFunction(id, backendOList, backendIList, mode);
     block(functionContext, block);
     backend.endFunction();
 
@@ -1938,12 +1962,16 @@ public class ASTWalker {
     SwiftAST outArgsT = tree.child(1);
     SwiftAST inArgsT = tree.child(2);
 
-    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
-                        outArgsT,   Collections.<String>emptySet());
-    context.defineFunction(function, decl.getFunctionType());
-    context.setFunctionProperty(function, FnProp.APP);
-    context.setFunctionProperty(function, FnProp.SYNC);
-    context.setFunctionProperty(function, FnProp.TARGETABLE);
+    FunctionDecl decl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+              function, inArgsT, outArgsT,   Collections.<String>emptySet());
+
+    FnID id = context.defineFunction(function, decl.getFunctionType(),
+                        decl.defaultVals());
+    tree.setIdentifier(id);
+
+    context.setFunctionProperty(id, FnProp.APP);
+    context.setFunctionProperty(id, FnProp.SYNC);
+    context.setFunctionProperty(id, FnProp.TARGETABLE);
   }
 
   private static class AppCmdArgs {
@@ -1981,8 +2009,10 @@ public class ASTWalker {
     SwiftAST inArgsT = tree.child(2);
     SwiftAST appBodyT = tree.child(3);
 
-    FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
-                        outArgsT,   Collections.<String>emptySet());
+    FnID id = (FnID)tree.getIdentifier();
+
+    FunctionDecl decl = FunctionDecl.fromAST(context, varCreator, exprWalker,
+                    function, inArgsT, outArgsT, Collections.<String>emptySet());
     List<Var> outArgs = decl.getOutVars(context);
     List<Var> inArgs = decl.getInVars(context);
 
@@ -2034,7 +2064,7 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
 
 
-    backend.startFunction(function, backendOutArgs, backendInArgs,
+    backend.startFunction(id, backendOutArgs, backendInArgs,
                           ExecTarget.syncControl());
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs,
                        hasSideEffects, deterministic, exec.val, props,
@@ -2640,71 +2670,20 @@ public class ASTWalker {
     SwiftAST varTree = tree.child(0);
     assert(varTree.getType() == ExMParser.DECLARATION);
 
-    VariableDeclaration vd = VariableDeclaration.fromAST(context,
-                    varTree);
+    VariableDeclaration vd = VariableDeclaration.fromAST(context, varTree);
     assert(vd.count() == 1);
     VariableDescriptor vDesc = vd.getVar(0);
     if (vDesc.getMappingExpr() != null) {
       throw new UserException(context, "Can't have mapped global constant");
     }
-    Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
-                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                   VarProvenance.userVar(context.getSourceLoc()), false);
 
-
+    Var v = context.createGlobalConst(vDesc.getName(), vDesc.getType(), false);
     SwiftAST val = vd.getVarExpr(0);
     assert(val != null);
+    assert(v.storage() == Alloc.GLOBAL_CONST);
 
-    Type valType = TypeChecker.findExprType(context, val);
-    if (!valType.assignableTo(v.type())) {
-      throw new TypeMismatchException(context, "trying to assign expression "
-          + " of type " + valType.typeName() + " to global constant "
-          + v.name() + " which has type " + v.type());
-    }
 
-    String msg = "Don't support non-literal "
-        + "expressions for global constants";
-
-    Var backendVar = VarRepr.backendVar(v);
-    switch (v.type().primType()) {
-    case BOOL:
-      String bval = Literals.extractBoolLit(context, val);
-      if (bval == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newBool(
-                                        Boolean.parseBoolean(bval)));
-      break;
-    case INT:
-      Long ival = Literals.extractIntLit(context, val);
-      if (ival == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newInt(ival));
-      break;
-    case FLOAT:
-      Double fval = Literals.extractFloatLit(context, val);
-      if (fval == null) {
-        Long sfval = Literals.extractIntLit(context, val);
-        if (sfval == null) {
-          throw new UserException(context, msg);
-        } else {
-          fval = Literals.interpretIntAsFloat(context, sfval);
-        }
-      }
-      assert(fval != null);
-      backend.addGlobal(backendVar, Arg.newFloat(fval));
-      break;
-    case STRING:
-      String sval = Literals.extractStringLit(context, val);
-      if (sval == null) {
-        throw new UserException(context, msg);
-      }
-      backend.addGlobal(backendVar, Arg.newString(sval));
-      break;
-    default:
-      throw new STCRuntimeError("Unexpect value tree type in "
-          + " global constant: " + LogHelper.tokName(val.getType()));
-    }
+    varCreator.assignGlobalConst(context, v,
+        exprWalker.valueOfConstExpr(context, v.type(), val, v.name()));
   }
 }

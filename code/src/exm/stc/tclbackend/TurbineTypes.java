@@ -187,7 +187,7 @@ public class TurbineTypes {
    * about the struct in the format described by structTypeDescriptor.
    * @param depths
    * @param i
-   * @param type
+   * @param abstractType
    * @return (nesting depth, base type name)
    */
   public static Pair<Integer, Expression> depthBaseDescriptor(Typed typed) {
@@ -300,7 +300,7 @@ public class TurbineTypes {
    * [ container int ref struct my_struct_type [ x [ integer ] y [ ref container integer string ] ] ]
    *    is a container mapping int to my_struct_type references, with each struct having x and y fields
    *
-   * @param type
+   * @param abstractType
    * @param valueType if the argument is a local value type
    * @param useStructSubtype if true, name specific struct type, if false, just "struct"
    * @param includeKeyTypes whether to include key types for containers

@@ -192,7 +192,7 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.functions()) {
-      logger.trace("Wait coalescer entering function " + f.name());
+      logger.trace("Wait coalescer entering function " + f.id());
       rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.control());
     }
   }
@@ -592,7 +592,7 @@ public class WaitCoalescer implements OptimizerPass {
         }
         // Create a new wait statement waiting on the intersection
         // of the above.
-        WaitStatement newWait = new WaitStatement(fn.name() + "-optmerged",
+        WaitStatement newWait = new WaitStatement(fn.id() + "-optmerged",
             mergedWaitVars, PassedVar.NONE, Var.NONE,
             WaitMode.WAIT_ONLY, allRecursive, ExecTarget.nonDispatchedAny(),
             new TaskProps());

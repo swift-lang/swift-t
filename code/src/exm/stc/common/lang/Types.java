@@ -1951,6 +1951,9 @@ public class Types {
         if (it.hasNext())
           sb.append(',');
       }
+      if (varargs) {
+        sb.append("...");
+      }
       sb.append(") -> (");
       for (Iterator<Type> it = outputs.iterator();
            it.hasNext(); ) {
@@ -1974,7 +1977,7 @@ public class Types {
         throw new STCRuntimeError("Comparing FunctionType " +
             "with non-type object");
       }
-      if (((Type)obj).structureType() == StructureType.FUNCTION) {
+      if (obj instanceof FunctionType) {
         FunctionType other = (FunctionType) obj;
         // All fields should match
         if (!(this.inputs.size() == other.inputs.size() &&

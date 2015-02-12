@@ -1,0 +1,148 @@
+
+We need to support type types of functions:
+
+  Non-overloaded: VarArgs|OptArgs + PolyArgs + KWArgs +(PosArgs -> OptArgs) - PosArgsBeforeKWArgs
+  Overloaded: VarArgs + Overloading
+
+Function Types
+==============
+* Handle keyword args only in frontend - THIS
+  -> No support for function pointers with keyword args
+
+Alternatives:
+1. Handle optional args only in frontend - THIS
+2. Canonicalise optional args/keyword names in type
+  2a. Default constants in type (caller fills defaults)
+    -> Can generate wrappers for function pointer casts
+  2b. Dynamic mechanism to fill in optional argments (callee fills defaults)
+
+Function Definitions
+====================
+Here is pseudocode for processing function definitions.
+
+
+define(name, type, defaults) {
+  defs = getFunctionDefs(name);
+  if (defs.size() == 0) {
+    defineNonOverload(name, type, defaults);
+  } else { 
+    defineOverload(name, type, defs);
+  }
+}
+
+/**
+ * Define an overloaded function.  We only support VarArgs in conjunction
+ * with overloading.
+ */
+defineOverload(name, type, overloads) {
+  checkNoPolyOrOptArgs(type);
+
+  if (overloads.size() == 1) {
+    // First overload - previous wasn't checked
+    checkNoPolyOrOptArgs(overloads.get(0));
+  }
+
+  // Do pairwise checks for ambiguity
+  for (overload in overloads) {
+    checkOverloadsAmbiguity(type, overload);
+  }
+
+  internalName = chooseInternalName(...);
+
+  registerOverloaded(name, functionType, internalName);
+}
+
+defineNonOverload(...) {
+  # TODO: how to represent kwargs, etc in function type
+  registerNonoverloaded(...)
+}
+
+compile() {
+  internalName = lookupInternalName(functionName);
+  ...
+}
+
+Function Call
+=============
+Here is pseudocode for resolving function calls to function definitions
+
+
+functionCallTypeCheck(tree, ...) {
+  inputArgTypes = functionInputArgTypes(tree);
+
+  defs = getFunctionDefs()
+
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    altOutputs = concretiseFunction(defs.get(0), failOnNoMatch=true);
+  } else {
+    altOutputs = [];
+    for (def in defs) {
+      altOutputs += concretiseFunction(def, failOnNoMatch=false);
+    }
+
+    if (altOutputs.size() == 0) {
+      throw exception
+    }
+  }
+
+  return altOutputs;
+}
+
+concretiseFunction() {
+  # Note: matchPositionals is roughly the same as current expandVarArgs func
+  matchPositionals();
+  matchKeywords();
+  fillDefaults();
+
+  # Existing typechecking logic
+  checkArgs()
+
+  fillTypeVars()
+  fillAmbiguous()
+
+  return viableAltOutputs();
+}
+
+functionCall(tree, ..., out) {
+  defs = getFunctionDefs()
+  inputArgTypes = functionInputArgTypes(tree, ...);
+
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    functionCall(..., defs.get(0));
+  } else {
+    selectOverload(tree, inputArgTypes, out);
+  }
+}
+
+selectOverload(..., ) {
+  # Iterate over alternatives
+  # Select 0 or 1 alt output args from each alternative
+  # Warn if multiple alternatives matched (should not happen if checkOverloadsAmbiguity() works right)
+}
+
+Function Pointers
+=================
+We need some special code for disambiguating function pointers by context.
+Function pointer typechecking is handled as any other expression.
+
+functionPointer(..., out) {
+  # Note: this must resolve both function pointers in vars and global functions
+  defs = getFunctionDefs(name);
+  if (defs.size() == 0) {
+    throw exception
+  } else if (defs.size() == 1) {
+    evalFunctionPointer(..., defs.get(0));
+  } else {
+    matchingDefs = selectFunctionPointer(defs, out.type());
+    assert(matchingDefs.size() > 0); // Should be caught by typechecker
+
+    if (matchingDefs.size() > 1) {
+      warn about ambiguitity
+    }
+    evalFunctionPointer(..., matchingDefs.get(0));
+  }
+}

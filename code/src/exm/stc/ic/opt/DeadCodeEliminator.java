@@ -131,7 +131,7 @@ public class DeadCodeEliminator implements OptimizerPass {
                  modifiedComponents, components);
 
     if (logger.isTraceEnabled()) {
-      logger.trace("Dead code elimination in function " + f.name() + "\n" +
+      logger.trace("Dead code elimination in function " + f.id() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
                    "dependencies: \n" + printDepGraph(dependencyGraph, 4) +

@@ -56,6 +56,8 @@ public class Var implements Comparable<Var>, Typed {
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
   public static final String FILENAME_OF_PREFIX = "__filename:";
   public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
+  public static final String OVERLOAD_PREFIX = "__ol:";
+
   /* Separate prefixes to avoid name clashes for optimizer
    *    inserted variables */
   public static final String OPT_VAR_PREFIX = "__o:";
@@ -509,6 +511,39 @@ public class Var implements Comparable<Var>, Typed {
     return prefix + name;
   }
 
+  public static String generateGlobalConstName(Arg val) {
+    String suffix;
+    switch(val.kind) {
+    case BOOLVAL:
+      suffix = "b_" + Boolean.toString(val.getBool());
+      break;
+    case INTVAL:
+      suffix = "i_" + Long.toString(val.getInt());
+      break;
+    case FLOATVAL:
+      String stringRep = Double.toString(val.getFloat());
+      // Truncate float val
+      suffix = "f_" +
+            stringRep.substring(0, Math.min(5, stringRep.length()));
+      break;
+    case STRINGVAL:
+      // Try to have var name something to do with string contents
+      String onlyalphanum = val.getString()
+            .replaceAll("[ \n\r\t.,]", "_")
+            .replaceAll("[^a-zA-Z0-9_]", "");
+
+      suffix = "s_" + onlyalphanum.substring(0,
+          Math.min(10, onlyalphanum.length()));
+      break;
+    case VAR:
+      throw new STCRuntimeError("Variable can't be a constant");
+    default:
+      throw new STCRuntimeError("Unknown enum value " +
+              val.kind.toString());
+    }
+
+    return Var.GLOBAL_CONST_VAR_PREFIX + suffix;
+  }
   /**
    * Track where variable was derived from in source, or from other
    * variables

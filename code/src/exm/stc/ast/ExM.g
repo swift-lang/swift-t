@@ -368,12 +368,14 @@ formal_arguments_rest:
 
 arg_decl:
     // Match standard declaration AST
-        type=multi_type_prefix VARARGS? v=var_name array_marker*
+        type=multi_type_prefix VARARGS? v=var_name array_marker* arg_decl_val?
             -> ^( DECLARATION $type
                 ^( DECLARE_VARIABLE_REST $v array_marker* )
-                VARARGS?)
+                VARARGS? arg_decl_val? )
     ;
 
+arg_decl_val:
+    ASSIGN expr -> expr;
 
 // The initial part of a type declaration, e.g. "int" in int A[]
 // or "set<int>"

@@ -28,7 +28,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -59,7 +59,7 @@ public class OptUtil {
    */
   public static boolean isEntryBlock(Function fn, Block block) {
     return block.getType() == BlockType.MAIN_BLOCK &&
-        fn.name().equals(Constants.ENTRY_FUNCTION);
+        fn.id().equals(FnID.ENTRY_FUNCTION);
   }
 
   /**
@@ -164,7 +164,7 @@ public class OptUtil {
    * @param oldOut
    * @param recursive if it's to be fetched recursively
    */
-  public static void replaceInstOutput(String function, Block srcBlock,
+  public static void replaceInstOutput(FnID function, Block srcBlock,
           Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
           boolean initialisesOutput) {
     boolean isDerefResult =
@@ -213,7 +213,7 @@ public class OptUtil {
     assert(oldVar.name().equals(newVar.name()));
     Block curr = block;
     while (true) {
-      if (curr.replaceVarDeclaration(block.getFunction().name(),
+      if (curr.replaceVarDeclaration(block.getFunction().id(),
                                      oldVar, newVar)) {
         // Success
         return;
@@ -311,7 +311,7 @@ public class OptUtil {
     return outValVars;
   }
 
-  public static void fixupImmChange(String function, Block srcBlock,
+  public static void fixupImmChange(FnID function, Block srcBlock,
           Block targetBlock, Instruction oldInst,
           MakeImmChange change,
           List<Statement> instBuffer,

@@ -16,6 +16,9 @@
 
 package exm.stc.frontend;
 
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.checkOverloadAllowed;
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.checkOverloadsAmbiguity;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,19 +31,25 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Counters;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 
 /**
@@ -48,17 +57,21 @@ import exm.stc.common.util.Pair;
  *
  */
 public class GlobalContext extends Context {
+
+  private final MultiMap<String, FnOverload> functionOverloads =
+                              new MultiMap<String, FnOverload>();
+
   /**
    * Properties of functions
    */
-  private final Set<Pair<String, FnProp>> functionProps =
-                        new HashSet<Pair<String, FnProp>>();
+  private final Set<Pair<FnID, FnProp>> functionProps =
+                        new HashSet<Pair<FnID, FnProp>>();
 
   /**
    * Track function name to intrinsic op mapping
    */
-  private final Map<String, IntrinsicFunction> intrinsics =
-                        new HashMap<String, IntrinsicFunction>();
+  private final Map<FnID, IntrinsicFunction> intrinsics =
+                        new HashMap<FnID, IntrinsicFunction>();
 
   /**
    * Track info about foreign functions
@@ -72,6 +85,8 @@ public class GlobalContext extends Context {
    */
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
+
+  private final Counters<String> globalCounters = new Counters<String>();
 
   public GlobalContext(String inputFile, Logger logger,
                         ForeignFunctions foreignFuncs) {
@@ -100,27 +115,98 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public void defineFunction(String name, FunctionType type)
-      throws UserException {
-    declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                    VarProvenance.userVar(getSourceLoc()), false);
+  public List<FnOverload> lookupFunction(String name) {
+    return functionOverloads.get(name);
   }
 
   @Override
-  public void setFunctionProperty(String name, FnProp prop) {
-    functionProps.add(new Pair<String, FnProp>(name, prop));
+  public FnID defineFunction(String name, FunctionType type,
+      DefaultVals<Var> defaultVals) throws UserException {
+
+    DefInfo def = lookupDef(name);
+    if (def != null && def.kind == DefKind.FUNCTION) {
+      // Function already exists, need to add overload
+      return overloadFunction(name, type, defaultVals);
+    } else {
+      declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                      VarProvenance.userVar(getSourceLoc()), false);
+      FnID fnID = new FnID(name, name);
+      addFunctionOverload(name, fnID, type, defaultVals);
+      return fnID;
+    }
+  }
+
+  private FnID overloadFunction(String name, FunctionType type,
+      DefaultVals<Var> defaultVals) throws InvalidOverloadException {
+
+    String uniqueName = uniqueName(Var.OVERLOAD_PREFIX, name,
+                                   Var.OVERLOAD_PREFIX + name);
+    FnID overloadID = new FnID(uniqueName, name);
+
+    List<FnOverload> overloads = functionOverloads.get(name);
+    if (overloads.size() == 1) {
+      // First overload wasn't checked
+      checkOverloadAllowed(this, overloads.get(0).id, overloads.get(0).type,
+                           overloads.get(0).defaultVals.hasAnyDefaults());
+    }
+
+    checkOverloadAllowed(this, overloadID, type,
+                         defaultVals.hasAnyDefaults());
+
+    // Pairwise checks for ambiguity
+    for (FnOverload overload: overloads) {
+      checkOverloadsAmbiguity(this, name, type, overload.type);
+    }
+
+    if (overloads.size() > 0) {
+      addOverloadToType(name, type);
+    }
+
+    addFunctionOverload(name, overloadID, type, defaultVals);
+
+    return overloadID;
+  }
+
+  private void addFunctionOverload(String name, FnID fnID,
+                 FunctionType type, DefaultVals<Var> defaultVals) {
+    functionOverloads.put(name, new FnOverload(fnID, type, defaultVals));
+  }
+
+  /**
+   * We represent overloaded functions in variable map as a function
+   * variable with a union type.  This adds a new type to the union.
+   *
+   * @param name
+   * @param type
+   */
+  private void addOverloadToType(String name, FunctionType type) {
+    Var existing = lookupVarUnsafe(name);
+    List<Type> alts = new ArrayList<Type>();
+    alts.addAll(UnionType.getAlternatives(existing.type()));
+    alts.add(type);
+    replaceVarUnsafe(name, existing.substituteType(
+                        UnionType.makeUnion(alts)));
+  }
+
+  private void replaceVarUnsafe(String name, Var newVar) {
+    this.variables.put(name, newVar);
   }
 
   @Override
-  public boolean hasFunctionProp(String name, FnProp prop) {
-    return functionProps.contains(new Pair<String, FnProp>(name, prop));
+  public void setFunctionProperty(FnID id, FnProp prop) {
+    functionProps.add(new Pair<FnID, FnProp>(id, prop));
   }
 
   @Override
-  public List<FnProp> getFunctionProps(String function) {
+  public boolean hasFunctionProp(FnID id, FnProp prop) {
+    return functionProps.contains(new Pair<FnID, FnProp>(id, prop));
+  }
+
+  @Override
+  public List<FnProp> getFunctionProps(FnID id) {
     List<FnProp> props = new ArrayList<FnProp>();
-    for (Pair<String, FnProp> pair: functionProps) {
-      if (pair.val1.equals(function)) {
+    for (Pair<FnID, FnProp> pair: functionProps) {
+      if (pair.val1.equals(id)) {
         props.add(pair.val2);
       }
     }
@@ -129,12 +215,13 @@ public class GlobalContext extends Context {
 
 
   @Override
-  public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
+  public void addIntrinsic(FnID function,
+                           IntrinsicFunction intrinsic) {
     intrinsics.put(function, intrinsic);
   }
 
   @Override
-  public IntrinsicFunction lookupIntrinsic(String function) {
+  public IntrinsicFunction lookupIntrinsic(FnID function) {
     return intrinsics.get(function);
   }
 
@@ -172,6 +259,19 @@ public class GlobalContext extends Context {
   @Override
   public Var createFilenameAliasVariable(Var fileVar) {
     throw new UnsupportedOperationException("not yet implemented");
+  }
+
+  @Override
+  public Var createGlobalConst(String name, Type type, boolean makeUnique)
+      throws DoubleDefineException {
+    assert(name != null);
+    if (makeUnique) {
+      name = uniqueName(Var.GLOBAL_CONST_VAR_PREFIX, name, "global_const");
+    }
+
+    return declareVariable(type, name,
+                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                   VarProvenance.userVar(getSourceLoc()), false);
   }
 
   @Override
@@ -252,6 +352,11 @@ public class GlobalContext extends Context {
   @Override
   public FunctionContext getFunctionContext() {
     return null;
+  }
+
+  @Override
+  public long nextCounterVal(String counterName) {
+    return globalCounters.increment(counterName);
   }
 
 }

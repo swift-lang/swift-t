@@ -12,14 +12,15 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -39,6 +40,7 @@ import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.tree.FunctionCall;
 import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
 import exm.stc.frontend.typecheck.FunctionTypeChecker;
+import exm.stc.frontend.typecheck.FunctionTypeChecker.ConcreteMatch;
 import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 
@@ -74,26 +76,31 @@ public class FunctionCallEvaluator {
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
 
     // This will check the type of the function call
-    FunctionType concrete = FunctionTypeChecker.concretiseFunctionCall(context,
-                                                                     f, outVars);
+    ConcreteMatch concrete =
+        FunctionTypeChecker.concretiseFunctionCall(context, f, outVars);
+
+    FnID concreteID = concrete.id;
+    FunctionType concreteType = concrete.type;
+    DefaultVals<Var> defaultVals = concrete.defaultVals;
 
     // Some functions, e.g. asserts, can be omitted after typechecking
-    if (omitFunctionCall(context, f)) {
+    if (omitFunctionCall(context, concreteID)) {
       return;
     }
 
     // First evaluate inputs before opening any waits
-    List<Var> inVars = evalFunctionInputs(context, renames, f, concrete);
+    List<Var> inVars = evalFunctionInputs(context, renames, concreteID,
+                                          concreteType, f.args());
 
     // Process priority after arguments have been evaluated, so that
     // the argument evaluation is outside the wait statement
     boolean openedWait = false;
 
     TaskProps propVals = new TaskProps();
-    openedWait = evalCallProperties(context, f, propVals, renames);
+    openedWait = evalCallProperties(context, concreteID, f, propVals, renames);
 
-    evalFunctionCallInner(context, f.function(), f.kind(), concrete, outVars,
-                          inVars, propVals);
+    evalFunctionCallInner(context, concreteID, f.kind(), concreteType, outVars,
+                          inVars, defaultVals, propVals);
 
     if (openedWait) {
       backend.endWaitStatement();
@@ -113,25 +120,27 @@ public class FunctionCallEvaluator {
    * @throws UndefinedTypeException
    * @throws UserException
    */
-  private void evalFunctionCallInner(Context context, String function,
+  private void evalFunctionCallInner(Context context, FnID id,
       FunctionCallKind kind, FunctionType concrete,
-      List<Var> oList, List<Var> iList, TaskProps props)
+      List<Var> oList, List<Var> iList, DefaultVals<Var> defaultVals,
+      TaskProps props)
       throws UserException {
     Pair<Context, List<Var>> fixupResult;
-    fixupResult = fixupFunctionInputs(context, function, concrete, iList, props);
+    fixupResult = fixupFunctionInputs(context, id, concrete, iList,
+                                      defaultVals, props);
     Context waitContext = fixupResult.val1;
     List<Var> fixedIList = fixupResult.val2;
 
     Context callContext = waitContext != null ? waitContext : context;
 
     boolean checkpointed =
-        context.hasFunctionProp(function, FnProp.CHECKPOINTED);
+        context.hasFunctionProp(id, FnProp.CHECKPOINTED);
 
     if (checkpointed) {
-      checkpointedFunctionCall(callContext, function, kind, concrete, oList,
+      checkpointedFunctionCall(callContext, id, kind, concrete, oList,
                                      props, fixedIList);
     } else {
-      backendFunctionCall(callContext, function, kind, concrete, oList, fixedIList,
+      backendFunctionCall(callContext, id, kind, concrete, oList, fixedIList,
                           props);
     }
 
@@ -141,19 +150,19 @@ public class FunctionCallEvaluator {
   }
 
   private List<Var> evalFunctionInputs(Context context,
-      Map<String, String> renames, FunctionCall f, FunctionType concrete)
-      throws UserException, TypeMismatchException {
+      Map<String, String> renames, FnID id, FunctionType concrete,
+      List<SwiftAST> argTrees) throws UserException {
     // evaluate argument expressions left to right, creating temporaries
-    List<Var> argVars = new ArrayList<Var>(f.args().size());
+    List<Var> argVars = new ArrayList<Var>(argTrees.size());
 
-    for (int i = 0; i < f.args().size(); i++) {
-      SwiftAST argtree = f.args().get(i);
+    for (int i = 0; i < argTrees.size(); i++) {
+      SwiftAST argTree = argTrees.get(i);
       Type expType = concrete.getInputs().get(i);
 
-      Type exprType = TypeChecker.findExprType(context, argtree);
-      Type argType = FunctionTypeChecker.concretiseFnArg(context, f.function(),
-                                      i, expType, exprType).val2;
-      argVars.add(exprWalker.eval(context, argtree, argType, false, renames));
+      Type exprType = TypeChecker.findExprType(context, argTree);
+      Type argType = FunctionTypeChecker.concretiseFnArg(context,
+                    id.originalName(), i, expType, exprType).val2;
+      argVars.add(exprWalker.eval(context, argTree, argType, false, renames));
     }
     return argVars;
   }
@@ -161,6 +170,7 @@ public class FunctionCallEvaluator {
   /**
    * Fixup any mismatch between function formal inputs and input expressions by,
    * e.g., dereferencing variables.
+   *
    * @param context
    * @param function
    * @param concrete
@@ -171,9 +181,9 @@ public class FunctionCallEvaluator {
    * @throws UndefinedTypeException
    */
   private Pair<Context, List<Var>> fixupFunctionInputs(Context context,
-      String function, FunctionType concrete, List<Var> iList, TaskProps props)
+      FnID id, FunctionType concrete, List<Var> iList,
+      DefaultVals<Var> defaultVals, TaskProps props)
       throws UserException {
-
     // The expected types might not be same as current input types, work out
     // what we need to do to make them the same
     List<Var> fixedIList = new ArrayList<Var>(iList.size());
@@ -214,7 +224,7 @@ public class FunctionCallEvaluator {
 
       // Only want to maintain priority for wait
       TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
-      backend.startWaitStatement( fc.constructName("call-" + function),
+      backend.startWaitStatement( fc.constructName("call-" + id.uniqueName()),
            VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
            false, false, ExecTarget.nonDispatchedControl(),
            VarRepr.backendProps(waitProps));
@@ -230,6 +240,9 @@ public class FunctionCallEvaluator {
       }
     }
 
+    // Add any defaults
+    fixedIList.addAll(defaultVals.trailingDefaults(fixedIList.size()));
+
     return Pair.create(waitContext, fixedIList);
   }
 
@@ -243,7 +256,7 @@ public class FunctionCallEvaluator {
    * @throws UserException
    * @returns true if a wait statement was opened
    */
-  private boolean evalCallProperties(Context context, FunctionCall fc,
+  private boolean evalCallProperties(Context context, FnID id, FunctionCall fc,
               TaskProps propVals, Map<String, String> renames) throws UserException {
     if (fc.annotations().isEmpty()) {
       return false;
@@ -253,7 +266,7 @@ public class FunctionCallEvaluator {
           new ArrayList<Pair<TaskPropKey, Var>>();
     List<Var> waitVars = new ArrayList<Var>();
     for (TaskPropKey ann: fc.annotations().keySet()) {
-      checkCallAnnotation(context, fc, ann);
+      checkCallAnnotation(context, id, fc, ann);
 
       SwiftAST expr = fc.annotations().get(ann);
       Type exprType = TypeChecker.findExprType(context, expr);
@@ -279,8 +292,8 @@ public class FunctionCallEvaluator {
     return true;
   }
 
-  private boolean omitFunctionCall(Context context, FunctionCall f) {
-    return context.getForeignFunctions().isAssertVariant(f.function()) &&
+  private boolean omitFunctionCall(Context context, FnID id) {
+    return context.getForeignFunctions().isAssertVariant(id) &&
             Settings.getBooleanUnchecked(Settings.OPT_DISABLE_ASSERTS);
   }
 
@@ -297,7 +310,7 @@ public class FunctionCallEvaluator {
    * @param realIList
    * @throws UserException
    */
-  private void checkpointedFunctionCall(Context context, String function,
+  private void checkpointedFunctionCall(Context context, FnID id,
       FunctionCallKind kind, FunctionType concrete, List<Var> oList,
       TaskProps props, List<Var> realIList) throws UserException {
     Var lookupEnabled = VarRepr.backendVar(
@@ -305,10 +318,10 @@ public class FunctionCallEvaluator {
     backend.checkpointLookupEnabled(lookupEnabled);
 
     backend.startIfStatement(lookupEnabled.asArg(), true);
-    checkpointSaveFunctionCall(context, function, kind, concrete, oList,
+    checkpointSaveFunctionCall(context, id, kind, concrete, oList,
                              realIList, props, true);
     backend.startElseBlock();
-    checkpointSaveFunctionCall(context, function, kind, concrete, oList,
+    checkpointSaveFunctionCall(context, id, kind, concrete, oList,
                               realIList, props, false);
     backend.endIfStatement();
   }
@@ -325,7 +338,7 @@ public class FunctionCallEvaluator {
    * @param lookupCheckpoint
    * @throws UserException
    */
-  private void checkpointSaveFunctionCall(Context context, String function,
+  private void checkpointSaveFunctionCall(Context context, FnID id,
       FunctionCallKind kind, FunctionType concrete, List<Var> oList, List<Var> iList,
       TaskProps props, boolean lookupCheckpoint) throws UserException {
 
@@ -353,13 +366,11 @@ public class FunctionCallEvaluator {
       // Need to wait for lookup key before checking if checkpoint exists
       // Do recursive wait to get container contents
       backend.startWaitStatement(
-          context.constructName(function + "-checkpoint-wait"),
+          context.constructName(id.uniqueName() + "-checkpoint-wait"),
           VarRepr.backendVars(checkpointKeyFutures), WaitMode.WAIT_ONLY,
           false, true, ExecTarget.nonDispatchedAny());
-      Var keyBlob = packCheckpointKey(context, function,
-                                       checkpointKeyFutures);
+      Var keyBlob = packCheckpointKey(context, id, checkpointKeyFutures);
 
-     // TODO: nicer names for vars?
       Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
       Var checkpointExists = varCreator.createTmpLocalVal(context,
                                                        Types.V_BOOL);
@@ -372,7 +383,7 @@ public class FunctionCallEvaluator {
     }
 
     // Actually call function
-    backendFunctionCall(context, function, kind, concrete, oList, iList, props);
+    backendFunctionCall(context, id, kind, concrete, oList, iList, props);
 
 
     Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
@@ -393,13 +404,13 @@ public class FunctionCallEvaluator {
       waitVals.addAll(checkpointVal);
     }
     backend.startWaitStatement(
-        context.constructName(function + "-checkpoint-wait"),
+        context.constructName(id.uniqueName() + "-checkpoint-wait"),
         VarRepr.backendVars(waitVals), WaitMode.WAIT_ONLY,
         false, true, ExecTarget.nonDispatchedAny());
 
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
-    Var keyBlob2 = packCheckpointKey(context, function, checkpointKeyFutures);
+    Var keyBlob2 = packCheckpointKey(context, id, checkpointKeyFutures);
 
     Var valBlob = packCheckpointVal(context, checkpointVal);
 
@@ -422,61 +433,55 @@ public class FunctionCallEvaluator {
    * @param priorityVal optional priority value (can be null)
    * @throws UserException
    */
-  private void backendFunctionCall(Context context, String function,
+  private void backendFunctionCall(Context context, FnID id,
       FunctionCallKind kind,
       FunctionType concrete, List<Var> oList, List<Var> iList,
       TaskProps props) throws UserException {
     props.assertInternalTypesValid();
 
     if (kind == FunctionCallKind.STRUCT_CONSTRUCTOR) {
-      backendStructConstructor(context, function, concrete, oList, iList);
+      backendStructConstructor(context, id, concrete, oList, iList);
       return;
     }
     assert(kind == FunctionCallKind.REGULAR_FUNCTION);
 
-    FunctionType def = context.lookupFunction(function);
-    if (def == null) {
-      throw new STCRuntimeError("Couldn't locate function definition for " +
-          "previously defined function " + function);
-    }
-
-    if (context.hasFunctionProp(function, FnProp.DEPRECATED)) {
-      LogHelper.warn(context, "Call to deprecated function: " + function);
+    if (context.hasFunctionProp(id, FnProp.DEPRECATED)) {
+      LogHelper.warn(context, "Call to deprecated function: " + id.originalName());
     }
 
     List<Var> backendIList = VarRepr.backendVars(iList);
     List<Var> backendOList = VarRepr.backendVars(oList);
 
     TaskProps backendProps = VarRepr.backendProps(props);
-    if (context.isIntrinsic(function)) {
-      IntrinsicFunction intF = context.lookupIntrinsic(function);
+    if (context.isIntrinsic(id)) {
+      IntrinsicFunction intF = context.lookupIntrinsic(id);
       backend.intrinsicCall(intF, backendIList, backendOList,
                             backendProps);
-    } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
+    } else if (context.hasFunctionProp(id, FnProp.BUILTIN)) {
       ForeignFunctions foreignFuncs = context.getForeignFunctions();
-      if (foreignFuncs.hasOpEquiv(function)) {
+      if (foreignFuncs.hasOpEquiv(id)) {
         assert(oList.size() <= 1);
         Var backendOut = (backendOList.size() == 0 ?
                    null : backendOList.get(0));
 
-        backend.asyncOp(foreignFuncs.getOpEquiv(function), backendOut,
+        backend.asyncOp(foreignFuncs.getOpEquiv(id), backendOut,
                         Arg.fromVarList(backendIList),
                         backendProps);
       } else {
-        backend.builtinFunctionCall(function, function, backendIList, backendOList,
+        backend.builtinFunctionCall(id, backendIList, backendOList,
                                     backendProps);
       }
-    } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
+    } else if (context.hasFunctionProp(id, FnProp.COMPOSITE)) {
       ExecTarget mode;
-      if (context.hasFunctionProp(function, FnProp.SYNC)) {
+      if (context.hasFunctionProp(id, FnProp.SYNC)) {
         mode = ExecTarget.syncControl();
       } else {
         mode = ExecTarget.dispatchedControl();
       }
-      backend.functionCall(function, function, Var.asArgList(backendIList),
+      backend.functionCall(id, Var.asArgList(backendIList),
                             backendOList, mode, backendProps);
     } else {
-      backendCallWrapped(context, function, concrete, backendOList,
+      backendCallWrapped(context, id, concrete, backendOList,
                          backendIList, backendProps);
     }
   }
@@ -491,18 +496,18 @@ public class FunctionCallEvaluator {
    * @param props
    * @throws UserException
    */
-  private void backendCallWrapped(Context context, String function,
+  private void backendCallWrapped(Context context, FnID id,
       FunctionType concrete,
       List<Var> backendOList, List<Var> backendIList, TaskProps props)
       throws UserException {
-    String wrapperFnName; // The name of the wrapper to call
-    if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
+    FnID wrapperID; // The name of the wrapper to call
+    if (context.hasFunctionProp(id, FnProp.WRAPPED_BUILTIN)) {
       // Wrapper may need to be generated
-      wrapperFnName = wrappers.generateWrapper(context, function, concrete);
+      wrapperID = wrappers.generateWrapper(context, id, concrete);
     } else {
-      assert(context.hasFunctionProp(function, FnProp.APP));
-      // Wrapper has same name for apps
-      wrapperFnName = function;
+      assert(context.hasFunctionProp(id, FnProp.APP));
+      // Wrapper has same id for apps
+      wrapperID = id;
     }
     List<Arg> realInputs = new ArrayList<Arg>();
     for (Var in: backendIList) {
@@ -512,16 +517,16 @@ public class FunctionCallEvaluator {
     /* Wrapped builtins must have these properties passed
      * into function body so can be applied after arg wait
      * Target and parallelism are passed in as extra args */
-    if (context.hasFunctionProp(function, FnProp.PARALLEL)) {
+    if (context.hasFunctionProp(id, FnProp.PARALLEL)) {
       // parallelism must be specified for parallel functions
       Arg par = props.get(TaskPropKey.PARALLELISM);
       if (par == null) {
         throw new UserException(context, "Parallelism not specified for " +
-            "call to parallel function " + function);
+            "call to parallel function " + id.originalName());
       }
       realInputs.add(VarRepr.backendArg(par));
     }
-    if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
+    if (context.hasFunctionProp(id, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
       Arg location = props.getWithDefault(TaskPropKey.LOCATION);
       realInputs.add(VarRepr.backendArg(location));
@@ -530,45 +535,45 @@ public class FunctionCallEvaluator {
     }
 
     // Other code always creates sync wrapper
-    assert(context.hasFunctionProp(function, FnProp.SYNC));
+    assert(context.hasFunctionProp(id, FnProp.SYNC));
     ExecTarget mode = ExecTarget.syncControl();
 
     // Only priority property is used directly in sync instruction,
     // but other properties are useful to have here so that the optimizer
     // can replace instruction with local version and correct props
-    backend.functionCall(wrapperFnName, function, realInputs, backendOList,
+    backend.functionCall(wrapperID, realInputs, backendOList,
                          mode, VarRepr.backendProps(props));
   }
 
-  private void checkCallAnnotation(Context context, FunctionCall f,
-      TaskPropKey ann) throws UserException {
-    if (context.isIntrinsic(f.function())) {
+  private void checkCallAnnotation(Context context, FnID id,
+      FunctionCall f, TaskPropKey ann) throws UserException {
+    if (context.isIntrinsic(id)) {
       // Handle annotation specially
-      IntrinsicFunction intF = context.lookupIntrinsic(f.function());
+      IntrinsicFunction intF = context.lookupIntrinsic(id);
       List<TaskPropKey> validProps = Intrinsics.validProps(intF);
       if (!validProps.contains(ann)) {
           throw new InvalidAnnotationException(context, "Cannot specify " +
-                "property " + ann + " for intrinsic function " + f.function());
+                "property " + ann + " for intrinsic function " + f.originalName());
       }
     } else if (ann == TaskPropKey.PARALLELISM) {
-      if (!context.hasFunctionProp(f.function(), FnProp.PARALLEL)) {
+      if (!context.hasFunctionProp(id, FnProp.PARALLEL)) {
         throw new UserException(context, "Tried to call non-parallel"
-            + " function " + f.function() + " with parallelism.  "
+            + " function " + f.originalName() + " with parallelism.  "
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
     } else if (ann == TaskPropKey.LOCATION) {
-      if (!context.hasFunctionProp(f.function(), FnProp.TARGETABLE)) {
+      if (!context.hasFunctionProp(id, FnProp.TARGETABLE)) {
         throw new UserException(context, "Tried to call non-targetable"
-            + " function " + f.function() + " with target");
+            + " function " + f.originalName() + " with target");
       }
     }
   }
 
   private Var packCheckpointKey(Context context,
-      String functionName, List<Var> vars) throws UserException,
+      FnID id, List<Var> vars) throws UserException,
       UndefinedTypeException, DoubleDefineException {
-    return packCheckpointData(context, functionName, vars);
+    return packCheckpointData(context, id, vars);
   }
 
   private Var packCheckpointVal(Context context, List<Var> vars)
@@ -587,13 +592,15 @@ public class FunctionCallEvaluator {
    * @throws DoubleDefineException
    */
   private Var packCheckpointData(Context context,
-      String functionName, List<Var> vars) throws UserException,
+      FnID id, List<Var> vars) throws UserException,
       UndefinedTypeException, DoubleDefineException {
     List<Arg> elems = new ArrayList<Arg>(vars.size());
 
-    if (functionName != null) {
+    if (id != null) {
+      assert(id.uniqueName().equals(id.originalName())) :
+        "Cannot checkpoint overloaded function";
       // Prefix with function name
-      elems.add(Arg.newString(functionName));
+      elems.add(Arg.newString(id.originalName()));
     }
 
     for (Var v: vars) {
@@ -657,7 +664,7 @@ public class FunctionCallEvaluator {
     backend.freeBlob(VarRepr.backendVar(checkpointVal));
   }
 
-  private void backendStructConstructor(Context context, String function,
+  private void backendStructConstructor(Context context, FnID id,
       FunctionType concrete, List<Var> outputs, List<Var> inputs)
           throws UserException {
     assert(outputs.size() == 1);
