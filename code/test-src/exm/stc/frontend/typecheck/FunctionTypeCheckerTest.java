@@ -48,6 +48,9 @@ public class FunctionTypeCheckerTest {
   private static final Type INT_OR_STRING =
       UnionType.createUnionType(Types.F_INT, Types.F_STRING);
 
+  private static final Type STRING_OR_INT =
+      UnionType.createUnionType(Types.F_STRING, Types.F_INT);
+
   private static final GlobalContext FAKE_CONTEXT =
       new GlobalContext("fake.swift", Logging.getSTCLogger(),
       new ForeignFunctions());
@@ -311,6 +314,53 @@ public class FunctionTypeCheckerTest {
     assertEquals(floatFnID, match3.overload.id);
     assertEquals(1, match3.concreteAlts.size());
     assertEquals(floatFn, match3.concreteAlts.get(0));
+  }
+
+  /**
+   * Test truly ambiguous scenario with union args
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverloadUnion3() throws TypeMismatchException {
+    FunctionType ft1 = makeSimpleFT(Types.F_INT, Types.F_STRING);
+    FunctionType ft2 = makeSimpleFT(Types.F_STRING, Types.F_INT);
+    FnID fnid1 = new FnID("1", "f");
+    FnID fnid2 = new FnID("2", "f");
+
+    FnOverload ol1 = new FnOverload(fnid1, ft1);
+    FnOverload ol2 = new FnOverload(fnid2, ft2);
+    List<FnOverload> overloadList = Arrays.asList(ol2, ol1);
+
+    // Arguments don't unambiguously identify either
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(INT_OR_STRING, INT_OR_STRING), overloadList);
+
+    exception.expect(TypeMismatchException.class);
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+  }
+
+  /**
+   * Test unambiguous scenario with union args
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testSelectOverloadUnion4() throws TypeMismatchException {
+    FunctionType ft1 = makeSimpleFT(Types.F_INT, Types.F_STRING);
+    FunctionType ft2 = makeSimpleFT(Types.F_STRING, Types.F_INT);
+    FnID fnid1 = new FnID("1", "f");
+    FnID fnid2 = new FnID("2", "f");
+
+    FnOverload ol1 = new FnOverload(fnid1, ft1);
+    FnOverload ol2 = new FnOverload(fnid2, ft2);
+    List<FnOverload> overloadList = Arrays.asList(ol2, ol1);
+
+    // First elements of unions are (string, int), so we should pick ft2
+    FnCallInfo fc = makeOverloadedFnCallInfo(
+        Arrays.asList(STRING_OR_INT, INT_OR_STRING), overloadList);
+
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+    assertEquals(fnid2, match.overload.id);
+    assertEquals(ft2, match.overload.type);
   }
 
   @Test

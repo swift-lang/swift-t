@@ -180,16 +180,89 @@ public class FunctionTypeChecker {
     }
 
     if (matches.size() == 0) {
-      // No matching overloads
-      throw noMatchingOverloadsException(context, fc);
+      throw overloadMatchFailException(context, fc,
+            "did not match any overload of function");
     }
 
-    // We should have resolved it to a single overload
-    // TODO: Need additional resolution step?
-    // what about if args are (int|float) and overloads are f(int) and f(float)?
-    assert(matches.size() <= 1) : "Unexpected ambiguous overload " + matches;
+    if (matches.size() >= 2) {
+      // In some cases we may be able to resolve ambiguity
+      return tieBreakMatchingOverloads(context, fc, matches);
+    }
 
     return matches.get(0);
+  }
+
+  /**
+   * Apply tie-breaking rules to choose overload, throw exception
+   * if still ambiguous
+   * @param context
+   * @param matches
+   * @param argTypes
+   * @return
+   * @throws TypeMismatchException if no way to consistenly resolve
+   */
+  private static FnMatch tieBreakMatchingOverloads(Context context,
+      FnCallInfo fc, List<FnMatch> matches)
+          throws TypeMismatchException {
+
+    /*
+     * One entry per candidate match.
+     * Track whether one is preferred over another
+     */
+    boolean preferred[] = new boolean[matches.size()];
+    boolean nonPreferred[] = new boolean[matches.size()];
+
+    for (int i = 0; i < fc.argTypes.size(); i++) {
+      updateTieBreakPreferredForArg(matches, fc.argTypes, i, preferred,
+                                    nonPreferred);
+    }
+
+    for (int m = 0; m < matches.size(); m++) {
+      if (preferred[m] && !nonPreferred[m]) {
+        return matches.get(m);
+      }
+    }
+
+    throw overloadMatchFailException(context, fc,
+        "could not unambiguously resolve overload");
+  }
+
+  private static void updateTieBreakPreferredForArg(List<FnMatch> matches,
+      List<Type> argTypes, int argPos, boolean[] preferred,
+      boolean[] nonPreferred) {
+    Type argType = argTypes.get(argPos);
+    List<Type> argTypeAlts = UnionType.getAlternatives(argType);
+    if (argTypeAlts.size() >= 2) {
+      /*
+       * See if using first element of union helps choose a type.
+       * E.g. if an argument is an int literal 5 that can be interpreted as
+       * an int or a float, see if forcing it to be an int resolves things.
+       */
+      Type firstArgType = argTypeAlts.get(0);
+      boolean firstMatches[] = new boolean[matches.size()];
+      int firstMatchCount = 0;
+
+      for (int m = 0; m < matches.size(); m++) {
+        FnMatch match = matches.get(m);
+        Type matchArgType = match.overload.type.getInputs().get(argPos);
+
+        if (firstArgType.assignableTo(matchArgType)) {
+          firstMatches[m] = true;
+          firstMatchCount++;
+        }
+      }
+
+      if (firstMatchCount > 0 && firstMatchCount < matches.size()) {
+        // This can discriminate between matches
+        for (int m = 0; m < matches.size(); m++) {
+          if (firstMatches[m]) {
+            preferred[m] = true;
+          } else {
+            nonPreferred[m] = true;
+          }
+        }
+      }
+    }
   }
 
   private static FnMatch concretiseInputsNonOverloaded(Context context,
@@ -666,12 +739,12 @@ public class FunctionTypeChecker {
         + errContext);
   }
 
-  private static TypeMismatchException noMatchingOverloadsException(
-      Context context, FnCallInfo fc) {
+  private static TypeMismatchException overloadMatchFailException(
+      Context context, FnCallInfo fc, String cause) {
     StringBuilder sb = new StringBuilder();
     sb.append("Function input argument types: ");
     sb.append(typeList(fc.argTypes));
-    sb.append(" did not match any overload of function " + fc.name + ".\n");
+    sb.append(" " + cause + " " + fc.name + ".\n");
     sb.append("Overload input types were: \n");
     for (FnOverload fnType: fc.fnTypes) {
       sb.append(typeList(fnType.type.getInputs()));
