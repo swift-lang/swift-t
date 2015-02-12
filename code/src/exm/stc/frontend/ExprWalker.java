@@ -497,26 +497,6 @@ public class ExprWalker {
     backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
   }
 
-  /**
-   * Evaluate constant expression
-   * @param context
-   * @param var
-   * @param val
-   * @return
-   * @throws UserException
-   * @throws InvalidSyntaxException
-   */
-  public Arg evalConstExpr(Context context, Var var, SwiftAST val)
-      throws UserException {
-
-    assert(val != null);
-    assert(var.storage() == Alloc.GLOBAL_CONST);
-
-
-    String varName = var.name();
-    return valueOfConstExpr(context, var.type(), val, varName);
-  }
-
   public Arg valueOfConstExpr(Context context, Type expectedType, SwiftAST val,
       String targetVarName) throws UserException, TypeMismatchException,
       InvalidSyntaxException {
