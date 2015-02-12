@@ -16,8 +16,5 @@ import sys;
   }
 }
 
-main
-{
-  int n = toint(argv("n"));
-  trace(fib(n));
-}
+int n = toint(argv("n"));
+trace(fib(n));
