@@ -104,11 +104,8 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
         Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT));
 
-    List<FnMatch> matches;
-    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
-    assertEquals("One matching overload", 1, matches.size());
-    FnMatch match = matches.get(0);
     assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Varargs expanded",
         Arrays.asList(Types.F_INT, Types.F_FLOAT, Types.F_INT, Types.F_FLOAT),
@@ -119,11 +116,9 @@ public class FunctionTypeCheckerTest {
   public void testMatchMultiVarArgs() throws TypeMismatchException {
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                                     Arrays.asList(Types.F_INT));
-    List<FnMatch> matches;
-    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
 
-    assertEquals("One matching overload", 1, matches.size());
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+
     assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Varargs expanded", Arrays.asList(Types.F_INT),
                   match.concreteAlts.get(0).getInputs());
@@ -134,7 +129,7 @@ public class FunctionTypeCheckerTest {
     exception.expect(TypeMismatchException.class);
     FnCallInfo fc = makeFnCallInfo(VARARGS_TYPE,
                       Arrays.asList(Types.F_INT, Types.F_STRING));
-    concretiseInputsOverloaded(FAKE_CONTEXT, fc, false);
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc);
   }
 
 
@@ -147,31 +142,22 @@ public class FunctionTypeCheckerTest {
                         DefType.GLOBAL_CONST, VarProvenance.unknown());
     DefaultVals<Var> defaults = DefaultVals.fromDefaultValVector(
                                   Arrays.asList(null, constVar));
-    FnOverload fo = new FnOverload(new FnID(name, name),
-                                   ft, defaults);
-
-    FnCallInfo fc;
-    List<FnMatch> matches;
-    FnMatch match;
+    FnOverload fo = new FnOverload(new FnID(name, name), ft, defaults);
 
     // Try calling with both args
     List<Type> intBoolArgs = Arrays.asList(Types.F_INT, Types.F_BOOL);
-    fc = new FnCallInfo(name, fo.asList(), intBoolArgs);
-    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    FnCallInfo fc = new FnCallInfo(name, fo.asList(), intBoolArgs);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
-    assertEquals("One matching overload", 1, matches.size());
-    match = matches.get(0);
     assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Matched args", intBoolArgs,
                   match.concreteAlts.get(0).getInputs());
 
     List<Type> intArgs = Arrays.asList(Types.F_INT);
     fc = new FnCallInfo(name, fo.asList(), intArgs);
-    matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
     // Should resolve to (int)
-    assertEquals("One matching overload", 1, matches.size());
-    match = matches.get(0);
     assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Matched args", intArgs,
                   match.concreteAlts.get(0).getInputs());
@@ -193,9 +179,8 @@ public class FunctionTypeCheckerTest {
         new FnOverload(intFnID, intFn),
         new FnOverload(stringFnID, stringFn)));
 
-    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assertEquals(1, matches.size());
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+
     assertEquals(stringFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(stringFn, match.concreteAlts.get(0));
@@ -217,9 +202,8 @@ public class FunctionTypeCheckerTest {
         Arrays.asList(new FnOverload(blobFnID, blobFn),
                       new FnOverload(stringFnID, stringFn)));
 
-    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assertEquals(1, matches.size());
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+
     assertEquals(stringFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(stringFn, match.concreteAlts.get(0));
@@ -239,7 +223,7 @@ public class FunctionTypeCheckerTest {
             new FnOverload(intFnID, intFn),
             new FnOverload(stringFnID, stringFn)));
 
-    concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc);
   }
 
   @Test
@@ -256,7 +240,7 @@ public class FunctionTypeCheckerTest {
             new FnOverload(intFnID, intFn),
             new FnOverload(stringFnID, stringFn)));
 
-    concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
+    concretiseInputsOverloaded(FAKE_CONTEXT, fc);
   }
 
   /**
@@ -275,9 +259,7 @@ public class FunctionTypeCheckerTest {
             new FnOverload(intFnID, intFn),
             new FnOverload(floatFnID, floatFn)));
 
-    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assertEquals(1, matches.size());
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
     assertEquals(intFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(intFn, match.concreteAlts.get(0));
@@ -305,9 +287,8 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
                                              overloadList);
 
-    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assertEquals(1, matches.size());
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+
     assertEquals(intFnID, match.overload.id);
     assertEquals(1, match.concreteAlts.size());
     assertEquals(intFn, match.concreteAlts.get(0));
@@ -315,9 +296,8 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc2 = makeOverloadedFnCallInfo(Arrays.asList(INT_OR_FLOAT),
                                               overloadListRev);
 
-    List<FnMatch> matches2 = concretiseInputsOverloaded(FAKE_CONTEXT, fc2, true);
-    assertEquals(1, matches2.size());
-    FnMatch match2 = matches2.get(0);
+    FnMatch match2 = concretiseInputsOverloaded(FAKE_CONTEXT, fc2);
+
     assertEquals(intFnID, match2.overload.id);
     assertEquals(1, match2.concreteAlts.size());
     assertEquals(intFn, match2.concreteAlts.get(0));
@@ -326,9 +306,8 @@ public class FunctionTypeCheckerTest {
     FnCallInfo fc3 = makeOverloadedFnCallInfo(Arrays.asList(FLOAT_OR_INT),
                                               overloadListRev);
 
-    List<FnMatch> matches3 = concretiseInputsOverloaded(FAKE_CONTEXT, fc3, true);
-    assertEquals(1, matches2.size());
-    FnMatch match3 = matches3.get(0);
+    FnMatch match3 = concretiseInputsOverloaded(FAKE_CONTEXT, fc3);
+
     assertEquals(floatFnID, match3.overload.id);
     assertEquals(1, match3.concreteAlts.size());
     assertEquals(floatFn, match3.concreteAlts.get(0));
@@ -336,22 +315,23 @@ public class FunctionTypeCheckerTest {
 
   @Test
   public void testSelectOverloadVarArgs1() throws TypeMismatchException {
-    FunctionType ft1 = makeFT(Arrays.asList(Types.F_STRING, Types.F_STRING), true);
+    List<Type> twoStrings = Arrays.asList(Types.F_STRING, Types.F_STRING);
+    FunctionType ft1 = makeFT(twoStrings, true);
+    FunctionType ft1NoVarArgs = makeFT(twoStrings, false);
     FunctionType ft2 = makeFT(Arrays.asList(FLOAT_OR_INT), true);
     FnID fid1 = new FnID("1", "");
     FnID fid2 = new FnID("2", "");
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
-                            Arrays.asList(Types.F_STRING, Types.F_STRING),
+                            twoStrings,
                             Arrays.asList(new FnOverload(fid1, ft1),
                                           new FnOverload(fid2, ft2)));
 
-    List<FnMatch> matches = concretiseInputsOverloaded(FAKE_CONTEXT, fc, true);
-    assert(matches.size() == 0);
-    FnMatch match = matches.get(0);
-    assert(match.overload.id.equals(fid1));
-    assert(match.concreteAlts.size() == 1);
-    assert(match.concreteAlts.get(0).equals(ft1));
+    FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
+
+    assertEquals(fid1, match.overload.id);
+    assertEquals(1, match.concreteAlts.size());
+    assertEquals(ft1NoVarArgs, match.concreteAlts.get(0));
 
   }
 
