@@ -43,15 +43,13 @@ public class FunctionTypeChecker {
       throws UndefinedFunctionException, UserException {
     FunctionCall f = FunctionCall.fromAST(context, tree, false);
 
-    return exprTypeFromMatches(concretiseInputs(context, f, false));
+    return exprTypeFromMatch(concretiseInputs(context, f));
   }
 
   public static ConcreteMatch concretiseFunctionCall(
           Context context, FunctionCall fc, List<Var> outputs)
           throws UserException {
-    List<FnMatch> matches = concretiseInputs(context, fc, true);
-    assert(matches.size() == 1) : "Should have resolved overload";
-    FnMatch match = matches.get(0);
+    FnMatch match = concretiseInputs(context, fc);
 
     List<Type> outTs = Var.extractTypes(outputs);
     FunctionType concreteOutTs = concretiseOutputs(context, match, outputs, outTs);
@@ -144,8 +142,8 @@ public class FunctionTypeChecker {
    *          type associated with it.
    * @throws UserException
    */
-  private static List<FnMatch> concretiseInputs(Context context,
-      FunctionCall fc, boolean resolveOverload) throws UserException {
+  private static FnMatch concretiseInputs(Context context, FunctionCall fc)
+      throws UserException {
     List<Type> argTypes = new ArrayList<Type>(fc.args().size());
     for (SwiftAST arg: fc.args()) {
       argTypes.add(TypeChecker.findExprType(context, arg));
@@ -154,11 +152,19 @@ public class FunctionTypeChecker {
     FnCallInfo info = new FnCallInfo(fc.originalName(), fc.overloads(),
                                      argTypes);
 
-    return concretiseInputsOverloaded(context, info, resolveOverload);
+    return concretiseInputsOverloaded(context, info);
   }
 
-  static List<FnMatch> concretiseInputsOverloaded(Context context,
-      FnCallInfo fc, boolean resolveOverload) throws TypeMismatchException {
+  /**
+   * Resolve overloaded function call to a single overload based on input
+   * arguments (output arguments are *not* used to resolve overloads).
+   * @param context
+   * @param fc
+   * @return
+   * @throws TypeMismatchException
+   */
+  static FnMatch concretiseInputsOverloaded(Context context,
+      FnCallInfo fc) throws TypeMismatchException {
     assert(fc.fnTypes.size() >= 1);
     boolean overloaded = fc.fnTypes.size() >= 2;
 
@@ -175,16 +181,15 @@ public class FunctionTypeChecker {
 
     if (matches.size() == 0) {
       // No matching overloads
-      noMatchingOverloadsException(context, fc);
+      throw noMatchingOverloadsException(context, fc);
     }
 
-    // We should have resolved it to a single overload if requested.
-    // TODO: additional resolution step?
+    // We should have resolved it to a single overload
+    // TODO: Need additional resolution step?
     // what about if args are (int|float) and overloads are f(int) and f(float)?
-    assert(matches.size() <= 1 || !resolveOverload) :
-          "Unexpected ambiguous overload " + matches;
+    assert(matches.size() <= 1) : "Unexpected ambiguous overload " + matches;
 
-    return matches;
+    return matches.get(0);
   }
 
   private static FnMatch concretiseInputsNonOverloaded(Context context,
@@ -661,8 +666,8 @@ public class FunctionTypeChecker {
         + errContext);
   }
 
-  private static void noMatchingOverloadsException(Context context,
-      FnCallInfo fc) throws TypeMismatchException {
+  private static TypeMismatchException noMatchingOverloadsException(
+      Context context, FnCallInfo fc) {
     StringBuilder sb = new StringBuilder();
     sb.append("Function input argument types: ");
     sb.append(typeList(fc.argTypes));
@@ -673,7 +678,7 @@ public class FunctionTypeChecker {
       sb.append('\n');
     }
 
-    throw new TypeMismatchException(context, sb.toString());
+    return new TypeMismatchException(context, sb.toString());
   }
 
   public static void checkOverloadAllowed(Context context, FnID overloadID,
@@ -786,22 +791,15 @@ public class FunctionTypeChecker {
    * @param matches
    * @return
    */
-  private static Type exprTypeFromMatches(List<FnMatch> matches) {
-    assert(matches.size() >= 1);
+  private static Type exprTypeFromMatch(FnMatch match) {
 
-    List<FunctionType> alts = new ArrayList<FunctionType>();
-    for (FnMatch match: matches) {
-      assert(match.concreteAlts.size() >= 1);
-      alts.addAll(match.concreteAlts);
-    }
-
-    if (alts.size() == 1) {
+    if (match.concreteAlts.size() == 1) {
       // Function type determined entirely by input type
-      return TupleType.makeTuple(alts.get(0).getOutputs());
+      return TupleType.makeTuple(match.concreteAlts.get(0).getOutputs());
     } else {
       // Ambiguous type variable binding (based on inputs)
-      assert(alts.size() >= 2);
-      int numOutputs = numOutputs(alts);
+      assert(match.concreteAlts.size() >= 2);
+      int numOutputs = numOutputs(match.concreteAlts);
 
       if (numOutputs == 0) {
         return TupleType.makeTuple();
@@ -810,7 +808,7 @@ public class FunctionTypeChecker {
         List<Type> altOutputs = new ArrayList<Type>();
         for (int out = 0; out < numOutputs; out++) {
           List<Type> altOutput = new ArrayList<Type>();
-          for (FunctionType ft: alts) {
+          for (FunctionType ft: match.concreteAlts) {
             altOutput.add(ft.getOutputs().get(out));
           }
           altOutputs.add(UnionType.makeUnion(altOutput));
