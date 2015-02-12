@@ -18,6 +18,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -408,7 +409,7 @@ public class ForeachLoops {
           && this.splitDegree == o.splitDegree;
     }
 
-    public void fuseInto(String function, ForeachLoop o, boolean insertAtTop) {
+    public void fuseInto(FnID function, ForeachLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       renames.put(o.loopVar, Arg.newVar(this.loopVar));
       // Handle optional loop counter var
@@ -756,7 +757,7 @@ public class ForeachLoops {
                                   Pair.create(false, Collections.<Continuation>emptyList());
     @Override
     public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
-        String function, Block outerBlock) {
+        FnID function, Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       boolean expandLoops = isExpandLoopsEnabled();
       boolean fullUnroll = isFullUnrollEnabled();
@@ -850,7 +851,7 @@ public class ForeachLoops {
      *  range_loop [remainder_start  : end : step]
      *
      */
-    private List<Continuation> doUnroll(Logger logger, String function,
+    private List<Continuation> doUnroll(Logger logger, FnID function,
                                         Block outerBlock, int unrollFactor) {
       logger.debug("Unrolling range loop " + this.loopName
                         + " " + desiredUnroll + " times ");
@@ -961,7 +962,7 @@ public class ForeachLoops {
     /**
      * Fuse the other loop into this loop
      */
-    public void fuseInto(String function, RangeLoop o, boolean insertAtTop) {
+    public void fuseInto(FnID function, RangeLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       // Update loop var in other loop
       renames.put(o.loopVar, Arg.newVar(this.loopVar));

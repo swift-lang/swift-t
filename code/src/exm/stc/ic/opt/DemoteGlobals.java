@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -51,7 +51,7 @@ public class DemoteGlobals implements OptimizerPass {
     Set<Var> candidates = new HashSet<Var>(program.globalVars().variables());
 
     for (Function f: program.functions()) {
-      if (!f.name().equals(Constants.ENTRY_FUNCTION)) {
+      if (!f.id().equals(FnID.ENTRY_FUNCTION)) {
         TreeWalk.walk(logger, f, new DemoteGlobalsWalker(candidates));
       }
     }
@@ -98,7 +98,7 @@ public class DemoteGlobals implements OptimizerPass {
   }
 
   private void demoteGlobals(Logger logger, Program program, Set<Var> globals) {
-    Function entry = program.lookupFunction(Constants.ENTRY_FUNCTION);
+    Function entry = program.lookupFunction(FnID.ENTRY_FUNCTION);
     Map<Var, Arg> replacements = new HashMap<Var, Arg>();
 
     // Do one-for-one replacement of global with local

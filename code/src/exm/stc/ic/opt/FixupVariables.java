@@ -150,17 +150,17 @@ public class FixupVariables implements OptimizerPass {
 
     if (res.read.size() > 0) {
       throw new STCRuntimeError("Reference in IC function "
-          + fn.name() + " to undefined variables " + res.read.toString());
+          + fn.id() + " to undefined variables " + res.read.toString());
     }
 
     if (res.written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
-          + fn.name() + " to variables " + res.written.toString());
+          + fn.id() + " to variables " + res.written.toString());
     }
 
     if (res.aliasWritten.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
-          + fn.name() + " to variables " + res.aliasWritten.toString());
+          + fn.id() + " to variables " + res.aliasWritten.toString());
     }
   }
 
@@ -502,7 +502,7 @@ public class FixupVariables implements OptimizerPass {
       if (!visibleVars.contains(needed)) {
         throw new STCRuntimeError("Variable " + needed
             + " should have been " + "visible but wasn't in "
-            + function.name());
+            + function.id());
       }
 
       boolean writeOnly = !inner.read.contains(needed);
@@ -570,7 +570,7 @@ public class FixupVariables implements OptimizerPass {
       if (!visible.contains(v)) {
         throw new STCRuntimeError("Variable " + v
             + " should have been " + "visible but wasn't in "
-            + function.name());
+            + function.id());
       }
       if (RefCounting.trackWriteRefCount(v)) {
         keepOpen.add(v);

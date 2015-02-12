@@ -43,6 +43,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.PassedVar;
@@ -99,8 +100,8 @@ public class ICTree {
     private final ForeignFunctions foreignFunctions;
 
     private final ArrayList<Function> functions = new ArrayList<Function>();
-    private final Map<String, Function> functionsByName =
-                                            new HashMap<String, Function>();
+    private final Map<FnID, Function> functionsByID =
+                                        new HashMap<FnID, Function>();
 
     private final ArrayList<BuiltinFunction> builtinFuns =
                                             new ArrayList<BuiltinFunction>();
@@ -122,10 +123,10 @@ public class ICTree {
 
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
-      Map<String, List<Boolean>> blockVectors = new
-              HashMap<String, List<Boolean>> (functions.size());
+      Map<FnID, List<Boolean>> blockVectors = new
+              HashMap<FnID, List<Boolean>> (functions.size());
       for (Function f: functions) {
-        blockVectors.put(f.name(), f.getBlockingInputVector());
+        blockVectors.put(f.id(), f.getBlockingInputVector());
       }
       if (logger.isTraceEnabled())
         logger.trace("blocking inputs: " + blockVectors);
@@ -200,7 +201,7 @@ public class ICTree {
 
     public void addFunction(Function fn) {
       this.functions.add(fn);
-      this.functionsByName.put(fn.name(), fn);
+      this.functionsByID.put(fn.id(), fn);
     }
 
     public void addFunctions(Collection<Function> c) {
@@ -213,20 +214,16 @@ public class ICTree {
       return Collections.unmodifiableList(this.functions);
     }
 
-    public Set<String> getFunctionNames() {
-      Set<String> res = new HashSet<String>();
-      for (Function f: functions) {
-        res.add(f.name());
-      }
-      return res;
+    public Set<FnID> getFunctionIDs() {
+      return Collections.unmodifiableSet(functionsByID.keySet());
     }
 
-    public Map<String, Function> getFunctionMap() {
-      return Collections.unmodifiableMap(functionsByName);
+    public Map<FnID, Function> getFunctionMap() {
+      return Collections.unmodifiableMap(functionsByID);
     }
 
-    public Function lookupFunction(String functionName) {
-      return functionsByName.get(functionName);
+    public Function lookupFunction(FnID id) {
+      return functionsByID.get(id);
     }
 
     public ListIterator<Function> functionIterator() {
@@ -240,14 +237,14 @@ public class ICTree {
         @Override
         public void set(Function e) {
           internal.set(e);
-          functionsByName.remove(lastReturned.name());
-          functionsByName.put(e.name(), e);
+          functionsByID.remove(lastReturned.id());
+          functionsByID.put(e.id(), e);
         }
 
         @Override
         public void remove() {
           internal.remove();
-          functionsByName.remove(lastReturned);
+          functionsByID.remove(lastReturned);
         }
 
         @Override
@@ -287,7 +284,7 @@ public class ICTree {
         @Override
         public void add(Function e) {
           internal.add(e);
-          functionsByName.put(e.name(), e);
+          functionsByID.put(e.id(), e);
         }
       };
     }
@@ -430,37 +427,7 @@ public class ICTree {
     }
 
     private Var autoCreate(Arg val) {
-      String suffix;
-      switch(val.kind) {
-      case BOOLVAL:
-        suffix = "b_" + Boolean.toString(val.getBool());
-        break;
-      case INTVAL:
-        suffix = "i_" + Long.toString(val.getInt());
-        break;
-      case FLOATVAL:
-        String stringRep = Double.toString(val.getFloat());
-        // Truncate float val
-        suffix = "f_" +
-              stringRep.substring(0, Math.min(5, stringRep.length()));
-        break;
-      case STRINGVAL:
-        // Try to have var name something to do with string contents
-        String onlyalphanum = val.getString()
-              .replaceAll("[ \n\r\t.,]", "_")
-              .replaceAll("[^a-zA-Z0-9_]", "");
-
-        suffix = "s_" + onlyalphanum.substring(0,
-            Math.min(10, onlyalphanum.length()));
-        break;
-      case VAR:
-        throw new STCRuntimeError("Variable can't be a constant");
-      default:
-        throw new STCRuntimeError("Unknown enum value " +
-                val.kind.toString());
-      }
-
-      String origname = Var.GLOBAL_CONST_VAR_PREFIX + suffix;
+      String origname = Var.generateGlobalConstName(val);
       String name = origname;
       int seq = 0;
       while (usedNames.contains(name)) {
@@ -698,22 +665,22 @@ public class ICTree {
   }
 
   public static class BuiltinFunction {
-    private final String name;
+    private final FnID id;
     private final LocalForeignFunction localImpl;
     private final WrappedForeignFunction wrappedImpl;
     private final FunctionType fType;
 
 
-    public BuiltinFunction(String name, FunctionType fType,
+    public BuiltinFunction(FnID name, FunctionType fType,
         LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl) {
-      this.name = name;
+      this.id = name;
       this.fType = fType;
       this.localImpl = localImpl;
       this.wrappedImpl = wrappedImpl;
     }
 
-    public String getName() {
-      return name;
+    public FnID id() {
+      return id;
     }
 
     public void prettyPrint(StringBuilder out) {
@@ -729,7 +696,7 @@ public class ICTree {
         }
         out.append(t.typeName());
       }
-      out.append(") @" + this.name + "(");
+      out.append(") @" + this.id + "(");
       first = true;
       for(Type t: fType.getInputs()) {
         if (first) {
@@ -757,30 +724,14 @@ public class ICTree {
 
   public void generate(Logger logger, CompilerBackend gen, GenInfo info)
     throws UserException {
-      logger.debug("generating: " + name);
-      gen.defineForeignFunction(name, fType, localImpl, wrappedImpl);
+      logger.debug("generating: " + id);
+      gen.defineForeignFunction(id, fType, localImpl, wrappedImpl);
     }
   }
 
   public static class Function {
     private Block mainBlock;
-    private final String name;
-    public String name() {
-      return name;
-    }
-
-
-    public List<Boolean> getBlockingInputVector() {
-      ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
-      for (Var input: this.iList) {
-
-        boolean isBlocking = WaitVar.find(blockingInputs, input) != null;
-        res.add(isBlocking);
-      }
-      return res;
-    }
-
-
+    private final FnID id;
     private final List<Var> iList;
     private final List<Var> oList;
     /** List of which outputs are write-only */
@@ -793,19 +744,19 @@ public class ICTree {
 
     private final HashSet<String> usedVarNames;
 
-    public Function(String name, List<Var> iList,
+    public Function(FnID id, List<Var> iList,
         List<Var> oList, ExecTarget mode) {
-      this(name, iList, Collections.<WaitVar>emptyList(), oList,
+      this(id, iList, Collections.<WaitVar>emptyList(), oList,
            mode, new Block(BlockType.MAIN_BLOCK, null), true);
     }
 
-    public Function(String name, List<Var> iList,
+    public Function(FnID id, List<Var> iList,
             List<WaitVar> blockingInputs,
             List<Var> oList, ExecTarget mode, Block mainBlock) {
-      this(name, iList, blockingInputs, oList, mode, mainBlock, false);
+      this(id, iList, blockingInputs, oList, mode, mainBlock, false);
     }
 
-    private Function(String name, List<Var> iList,
+    private Function(FnID id, List<Var> iList,
         List<WaitVar> blockingInputs,
         List<Var> oList, ExecTarget mode, Block mainBlock,
         boolean emptyBlock) {
@@ -813,7 +764,7 @@ public class ICTree {
         throw new STCRuntimeError("Expected main block " +
         "for function to be tagged as such");
       }
-      this.name = name;
+      this.id = id;
       this.iList = new ArrayList<Var>(iList);
       this.oList = new ArrayList<Var>(oList);
       this.oListWriteOnly = new ArrayList<Var>();
@@ -827,8 +778,23 @@ public class ICTree {
     }
 
 
+    public FnID id() {
+      return id;
+    }
+
+
     public List<Var> getInputList() {
       return Collections.unmodifiableList(this.iList);
+    }
+
+    public List<Boolean> getBlockingInputVector() {
+      ArrayList<Boolean> res = new ArrayList<Boolean>(iList.size());
+      for (Var input: this.iList) {
+
+        boolean isBlocking = WaitVar.find(blockingInputs, input) != null;
+        res.add(isBlocking);
+      }
+      return res;
     }
 
     public List<Var> getOutputList() {
@@ -881,16 +847,16 @@ public class ICTree {
 
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
         throws UserException {
-      logger.debug("Generating function " + name);
-      gen.startFunction(name, oList, iList, mode);
+      logger.debug("Generating function " + id);
+      gen.startFunction(id, oList, iList, mode);
       this.mainBlock.generate(logger, gen, info);
       gen.endFunction();
-      logger.debug("Done generating function " + name);
+      logger.debug("Done generating function " + id);
     }
 
     public void prettyPrint(StringBuilder sb) {
       ICUtil.prettyPrintFormalArgs(sb, this.oList);
-      sb.append(" @" + name + " ");
+      sb.append(" @" + id + " ");
       ICUtil.prettyPrintFormalArgs(sb, this.iList);
 
       if (!this.blockingInputs.isEmpty()) {
@@ -923,7 +889,7 @@ public class ICTree {
     public void addBlockingInput(WaitVar newWaitVar) {
       if (!iList.contains(newWaitVar.var)) {
         throw new STCRuntimeError(newWaitVar.var + " is not the name of " +
-        " an input argument to function " + name + ":\n" + this);
+        " an input argument to function " + id + ":\n" + this);
       }
       // Check to see if already present
       ListIterator<WaitVar> it = blockingInputs.listIterator();
@@ -1022,7 +988,7 @@ public class ICTree {
       }
 
       if (recursive) {
-        mainBlock.renameVars(name, renames, mode, recursive);
+        mainBlock.renameVars(id, renames, mode, recursive);
       }
     }
   }
@@ -1069,7 +1035,7 @@ public class ICTree {
       return false;
     }
 
-    public void renameVars(String function, Map<Var, Arg> renames,
+    public void renameVars(FnID function, Map<Var, Arg> renames,
                            RenameMode mode) {
       action.renameVars(function, renames, mode);
 
@@ -1580,12 +1546,12 @@ public class ICTree {
      * @param mode
      * @param recursive if it should be done on child blocks
      */
-    public void renameVars(String function, Map<Var, Arg> renames,
+    public void renameVars(FnID id, Map<Var, Arg> renames,
                             RenameMode mode, boolean recursive) {
       if (renames.isEmpty())
         return;
       renameInDefs(renames, mode);
-      renameInCode(function, renames, mode, recursive);
+      renameInCode(id, renames, mode, recursive);
     }
 
     private void renameInDefs(Map<Var, Arg> renames, RenameMode mode) {
@@ -1609,7 +1575,7 @@ public class ICTree {
       }
     }
 
-    private void renameInCode(String function, Map<Var, Arg> renames,
+    private void renameInCode(FnID function, Map<Var, Arg> renames,
           RenameMode mode, boolean recursive) {
       for (Statement stmt: statements) {
         if (stmt.type() == StatementType.INSTRUCTION) {
@@ -1627,10 +1593,10 @@ public class ICTree {
       renameCleanupActions(function, renames, mode);
     }
 
-    public void renameCleanupActions(String function, Map<Var, Arg> renames,
+    public void renameCleanupActions(FnID id, Map<Var, Arg> renames,
                                      RenameMode mode) {
       for (CleanupAction a: cleanupActions) {
-        a.renameVars(function, renames, mode);
+        a.renameVars(id, renames, mode);
       }
     }
 
@@ -1803,7 +1769,7 @@ public class ICTree {
       }
     }
 
-    public boolean replaceVarDeclaration(String function,
+    public boolean replaceVarDeclaration(FnID function,
                                          Var oldV, Var newV) {
       if (!this.variables.contains(oldV)) {
         return false;
@@ -1949,26 +1915,25 @@ public class ICTree {
     public Statement cloneStatement();
     /**
      * Rename vars throughout statement
-     * @param function TODO
+     * @param function
      * @param replaceInputs
      * @param value
      */
-    public void renameVars(String function,
+    public void renameVars(FnID function,
                            Map<Var, Arg> replaceInputs, RenameMode value);
   }
 
   /** State to pass around when doing code generation from SwiftIC */
   public static class GenInfo {
     /** Function name -> vector of which inputs are blocking */
-    private final Map<String, List<Boolean>> compBlockingInputs;
+    private final Map<FnID, List<Boolean>> compBlockingInputs;
 
-    public GenInfo(Map<String, List<Boolean>> compBlockingInputs) {
-      super();
+    public GenInfo(Map<FnID, List<Boolean>> compBlockingInputs) {
       this.compBlockingInputs = compBlockingInputs;
     }
 
-    public List<Boolean> getBlockingInputVector(String fnName) {
-      return compBlockingInputs.get(fnName);
+    public List<Boolean> getBlockingInputVector(FnID id) {
+      return compBlockingInputs.get(id);
     }
   }
 

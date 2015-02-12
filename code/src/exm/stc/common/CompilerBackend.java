@@ -27,6 +27,7 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -145,20 +146,20 @@ public interface CompilerBackend {
    * @param wrappedImpl wrapped version of function, may be null
    * @throws UserException
    */
-  public void defineForeignFunction(String name, FunctionType type,
+  public void defineForeignFunction(FnID name, FunctionType type,
         LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl)
         throws UserException;
 
   /**
    * Start a function and enter main block
-   * @param functionName
+   * @param id
    * @param outArgs function output arguments
    * @param inArgs function input arguments
    * @param mode the context the function will run in (e.g. SYNC if
    *        called synchronously).  This is needed for optimizer correctness.
    * @throws UserException
    */
-  public void startFunction(String functionName,
+  public void startFunction(FnID id,
       List<Var> outArgs, List<Var> inArgs, ExecTarget mode)
             throws UserException;
 
@@ -461,26 +462,26 @@ public interface CompilerBackend {
    * defined by the {@link LocalForeignFunction} implementation.
    * @param outputs
    * @param inputs
-   * @param function name of the function
+   * @param id id of the function
    * @param props
    */
-  public void callForeignFunctionLocal(String functionName,
+  public void callForeignFunctionLocal(FnID id,
           List<Var> outputs, List<Arg> inputs);
 
   /**
    * Call a previously defined foreign function.  This will use the version
    * defined by the {@link WrappedForeignFunction} implementation.
-   * @param function name of the function
+   * @param id id of the function
    * @param outputs
    * @param inputs
    * @param props
    */
-  public void callForeignFunctionWrapped(String function,
+  public void callForeignFunctionWrapped(FnID id,
       List<Var> outputs, List<Arg> inputs, TaskProps props);
 
   /**
    * Call an IR function (i.e. one created with startFunction() and endFunction())
-   * @param function name of function
+   * @param id id of function
    * @param outputs outputs
    * @param inputs inputs
    * @param blockOn which inputs to defer executions of function (only application
@@ -488,7 +489,7 @@ public interface CompilerBackend {
    * @param mode calling mode for function
    * @param props task properties (if function is asynchronous)
    */
-  public void functionCall(String function,
+  public void functionCall(FnID id,
       List<Var> outputs, List<Arg> inputs, List<Boolean> blockOn,
       ExecTarget mode, TaskProps props);
 

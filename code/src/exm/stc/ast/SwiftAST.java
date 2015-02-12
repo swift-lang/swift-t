@@ -35,6 +35,9 @@ import exm.stc.frontend.VariableUsageInfo;
  */
 public class SwiftAST extends CommonTree {
 
+  /** Unique slot for use by frontend */
+  private Object identifier = null;
+
   private Type exprType = null;
   private VariableUsageInfo variableUsage = null;
 
@@ -61,6 +64,14 @@ public class SwiftAST extends CommonTree {
 
   public void setType(Type exprType) {
     this.exprType = exprType;
+  }
+
+  public Object getIdentifier() {
+    return identifier;
+  }
+
+  public void setIdentifier(Object identifier) {
+    this.identifier = identifier;
   }
 
   /**
@@ -129,6 +140,7 @@ public class SwiftAST extends CommonTree {
 
     while (!stack.isEmpty()) {
       SwiftAST tree = stack.remove(stack.size() - 1);
+      tree.identifier = null;
       tree.exprType = null;
       tree.variableUsage = null;
       stack.addAll(tree.children());

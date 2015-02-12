@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -252,4 +253,10 @@ public class VarCreator {
     return filename;
   }
 
+  public void assignGlobalConst(Context context, Var var, Arg val)
+      throws UserException {
+    assert(val.isConst());
+    Var backendVar = VarRepr.backendVar(var);
+    backend.addGlobalConst(backendVar, val);
+  }
 }

@@ -25,12 +25,14 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
@@ -224,7 +226,7 @@ public class ExprWalker {
    * In 2+ cases, assumed to be tuple.
    * @param context
    * @param tree
-   * @param type expression type, may be tuple type
+   * @param abstractType expression type, may be tuple type
    * @param storeInStack
    * @param renames
    * @return
@@ -255,7 +257,7 @@ public class ExprWalker {
    * @param context
    * @param dst
    * @param src
-   * @param type
+   * @param abstractType
    * @throws UserException
    */
   public void copyByValue(Context context, Var dst, Var src)
@@ -504,6 +506,55 @@ public class ExprWalker {
 
   public void localOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
     backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
+
+  public Arg valueOfConstExpr(Context context, Type expectedType, SwiftAST val,
+      String targetVarName) throws UserException, TypeMismatchException,
+      InvalidSyntaxException {
+    Type valType = TypeChecker.findExprType(context, val);
+    if (!valType.assignableTo(expectedType)) {
+      throw new TypeMismatchException(context, "cannot assign expression"
+          + " of type " + valType.typeName() + " to "
+          + targetVarName + " which has type " + expectedType);
+    }
+
+    String msg = "Don't support non-literal expressions for constants";
+
+    switch (expectedType.primType()) {
+    case BOOL:
+      String bval = Literals.extractBoolLit(context, val);
+      if (bval == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newBool(Boolean.parseBoolean(bval));
+    case INT:
+      Long ival = Literals.extractIntLit(context, val);
+      if (ival == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newInt(ival);
+    case FLOAT:
+      Double fval = Literals.extractFloatLit(context, val);
+      if (fval == null) {
+        Long sfval = Literals.extractIntLit(context, val);
+        if (sfval == null) {
+          throw new UserException(context, msg);
+        } else {
+          fval = Literals.interpretIntAsFloat(context, sfval);
+        }
+      }
+      assert(fval != null);
+      return Arg.newFloat(fval);
+    case STRING:
+      String sval = Literals.extractStringLit(context, val);
+      if (sval == null) {
+        throw new UserException(context, msg);
+      }
+      return Arg.newString(sval);
+    default:
+      throw new STCRuntimeError("Unexpect value tree type in "
+          + " global constant: " + LogHelper.tokName(val.getType()));
+    }
   }
 
   /**
@@ -788,11 +839,11 @@ public class ExprWalker {
         fn = SpecialFunction.RANGE_FLOAT;
       }
     }
-    String impl = context.getForeignFunctions().findSpecialImpl(fn);
-    if (impl == null) {
+    FnID fnID = context.getForeignFunctions().findSpecialImpl(fn);
+    if (fnID == null) {
       throw new STCRuntimeError("could not find implementation for " + fn);
     }
-    backend.builtinFunctionCall(impl, impl, VarRepr.backendVars(inArgs),
+    backend.builtinFunctionCall(fnID, VarRepr.backendVars(inArgs),
                                 VarRepr.backendVars(oVar));
   }
 

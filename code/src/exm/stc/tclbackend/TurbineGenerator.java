@@ -47,10 +47,10 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
-import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -220,9 +220,9 @@ public class TurbineGenerator implements CompilerBackend {
   private final StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
 
   /**
-   * Stack for function names
+   * Stack for function ids
    */
-  private final StackLite<String> functionStack = new StackLite<String>();
+  private final StackLite<FnID> functionStack = new StackLite<FnID>();
 
   /**
    * Stack for what context we're in.
@@ -250,8 +250,8 @@ public class TurbineGenerator implements CompilerBackend {
    * Tcl symbol names for builtins
    * Swift function name -> (Tcl proc name, Tcl op template)
    */
-  private final HashMap<String, Pair<TclOpTemplate, TclFunRef>> tclFuncSymbols
-          = new HashMap<String, Pair<TclOpTemplate, TclFunRef>>();
+  private final HashMap<FnID, Pair<TclOpTemplate, TclFunRef>> tclFuncSymbols
+          = new HashMap<FnID, Pair<TclOpTemplate, TclFunRef>>();
 
 
   /**
@@ -267,8 +267,8 @@ public class TurbineGenerator implements CompilerBackend {
    * Map (function, variable) to debug symbol.
    * Function is "" if not inside scope of function.
    */
-  private final HashMap<Pair<String, Var>, Integer> debugSymbolIndex =
-                 new HashMap<Pair<String, Var>, Integer>();
+  private final HashMap<Pair<FnID, Var>, Integer> debugSymbolIndex =
+                 new HashMap<Pair<FnID, Var>, Integer>();
 
   private static class DebugSymbolData {
     public DebugSymbolData(String name, String context) {
@@ -530,9 +530,9 @@ public class TurbineGenerator implements CompilerBackend {
     DebugSymbolData data = debugSymbolData(var);
     debugSymbols.add(Pair.create(symbol, data));
 
-    String function;
+    FnID function;
     if (functionStack.isEmpty()) {
-      function = "";
+      function = null;
     } else {
       function = functionStack.peek();
     }
@@ -1201,7 +1201,7 @@ public class TurbineGenerator implements CompilerBackend {
     // Generate in same way as built-in function
     TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
-      List<String> impls = foreignFuncs.findOpImpl(op);
+      List<FnID> impls = foreignFuncs.findOpImpl(op);
 
       // It should be impossible for there to be no implementation for a function
       // like this
@@ -1292,7 +1292,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void callForeignFunctionWrapped(String function,
+  public void callForeignFunctionWrapped(FnID function,
           List<Var> outputs, List<Arg> inputs, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
@@ -1301,10 +1301,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert tclf != null : "Builtin " + function + "not found";
     foreignFuncs.getTaskMode(function).checkCanRunIn(execContextStack.peek());
 
-    callTclFunction(function, tclf, inputs, outputs, props);
+    callTclFunction(function.uniqueName(), tclf, inputs, outputs, props);
   }
 
-  private void callTclFunction(String function, TclFunRef tclf,
+  private void callTclFunction(String functionName, TclFunRef tclf,
       List<Arg> inputs, List<Var> outputs, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
@@ -1315,7 +1315,7 @@ public class TurbineGenerator implements CompilerBackend {
     if (tclf == null) {
       //should have all builtins in symbols
       throw new STCRuntimeError("call to undefined builtin function "
-          + function);
+                                + functionName);
     }
 
     // Properties can be null
@@ -1337,7 +1337,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void callForeignFunctionLocal(String function,
+  public void callForeignFunctionLocal(FnID function,
           List<Var> outputs, List<Arg> inputs) {
     Pair<TclOpTemplate, TclFunRef> impls = tclFuncSymbols.get(function);
     assert(impls != null) : "No foreign function impls for " + function;
@@ -1352,7 +1352,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void functionCall(String function,
+  public void functionCall(FnID function,
               List<Var> outputs, List<Arg> inputs,
               List<Boolean> blocking, ExecTarget mode, TaskProps props)  {
     props.assertInternalTypesValid();
@@ -1373,7 +1373,7 @@ public class TurbineGenerator implements CompilerBackend {
       args.addAll(TclUtil.argsToExpr(inputs));
       List<Expression> action = buildAction(swiftFuncName, args);
 
-      Sequence rule = Turbine.rule(function, blockOn, action, mode,
+      Sequence rule = Turbine.rule(function.uniqueName(), blockOn, action, mode,
                        execContextStack.peek(), buildRuleProps(props));
       point().append(rule);
 
@@ -2152,7 +2152,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void defineForeignFunction(String name, FunctionType type,
+  public void defineForeignFunction(FnID id, FunctionType type,
         LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl) {
     if (wrappedImpl != null && !(wrappedImpl instanceof TclFunRef)) {
       throw new STCRuntimeError("Bad foreign function type: " +
@@ -2165,26 +2165,22 @@ public class TurbineGenerator implements CompilerBackend {
 
     TclFunRef tclWrappedImpl = (TclFunRef)wrappedImpl;
     TclOpTemplate tclLocalImpl = (TclOpTemplate)localImpl;
-    tclFuncSymbols.put(name, Pair.create(tclLocalImpl, tclWrappedImpl));
-    logger.debug("TurbineGenerator: Defined built-in " + name);
+    tclFuncSymbols.put(id, Pair.create(tclLocalImpl, tclWrappedImpl));
+    logger.debug("TurbineGenerator: Defined built-in " + id);
   }
 
   @Override
-  public void startFunction(String functionName,
-                                     List<Var> oList,
-                                     List<Var> iList,
-                                     ExecTarget mode)
-  throws UserException
-  {
+  public void startFunction(FnID id, List<Var> oList, List<Var> iList,
+                           ExecTarget mode) throws UserException {
     List<String> outputs = prefixVars(oList);
     List<String> inputs  = prefixVars(iList);
     // System.out.println("function" + functionName);
-    boolean isEntryPoint = functionName.equals(Constants.ENTRY_FUNCTION);
+    boolean isEntryPoint = id.equals(FnID.ENTRY_FUNCTION);
     String prefixedFunctionName = null;
     if (isEntryPoint)
       prefixedFunctionName = ENTRY_FUNCTION_NAME;
     else
-      prefixedFunctionName = TclNamer.swiftFuncName(functionName);
+      prefixedFunctionName = TclNamer.swiftFuncName(id);
 
     List<String> args =
       new ArrayList<String>(inputs.size()+outputs.size());
@@ -2199,11 +2195,10 @@ public class TurbineGenerator implements CompilerBackend {
                          usedTclFunctionNames, args, s);
 
     point.add(proc);
-    s.add(Turbine.turbineLog("enter function: " +
-                             functionName));
+    s.add(Turbine.turbineLog("enter function: " + id));
 
     pointPush(s);
-    functionStack.push(functionName);
+    functionStack.push(id);
   }
 
   @Override

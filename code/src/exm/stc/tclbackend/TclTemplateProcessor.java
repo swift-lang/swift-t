@@ -21,6 +21,7 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -32,7 +33,7 @@ import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;
 
 public class TclTemplateProcessor {
-  
+
   private static class ArgSub {
     private ArgSub(boolean isOutput, Arg ...args) {
       super();
@@ -42,16 +43,16 @@ public class TclTemplateProcessor {
     public final Arg args[];
     public final boolean isOutput;
   }
-  
+
   public static List<TclTree> processTemplate(
-      String funcName, TclOpTemplate template,
+      FnID fnID, TclOpTemplate template,
       List<Arg> inputs, List<Var> outputs) {
-    // First work out what variable names map to what args 
+    // First work out what variable names map to what args
     HashMap<String, ArgSub> argMap = buildArgMap(template, inputs, outputs);
-    
+
     ArrayList<TclTree> result = new ArrayList<TclTree>();
-    
-    // Now fill in template 
+
+    // Now fill in template
     for (TemplateElem elem: template.getElems()) {
       if (elem.getKind() == ElemKind.TEXT) {
         String tok = StringUtil.tclTrim(elem.getText());
@@ -61,7 +62,7 @@ public class TclTemplateProcessor {
       } else {
         ArgSub sub = argMap.get(elem.getVarName());
         for (Arg arg: sub.args) {
-          result.add(getExpr(funcName, elem.getVarName(), 
+          result.add(getExpr(fnID, elem.getVarName(),
                             sub.isOutput, elem.getKind(), arg));
         }
       }
@@ -72,14 +73,14 @@ public class TclTemplateProcessor {
   private static HashMap<String, ArgSub> buildArgMap(TclOpTemplate template,
       List<Arg> inputs, List<Var> outputs) {
     HashMap<String, ArgSub> toks = new HashMap<String, ArgSub>();
-    
+
     List<String> outNames = template.getOutNames();
     for (int i = 0; i < outputs.size(); i++) {
       Var out = outputs.get(i);
       String argName = outNames.get(i);
       toks.put(argName, new ArgSub(true, out.asArg()));
     }
-   
+
     List<String> inNames = template.getInNames();
     if (template.hasVarArgs()) {
       assert(inputs.size() >= inNames.size() - 1) : inputs + " " + inNames;
@@ -102,20 +103,20 @@ public class TclTemplateProcessor {
     return toks;
   }
 
-  private static Expression getExpr(String funcName, String varName,
+  private static Expression getExpr(FnID fnID, String varName,
               boolean isOutput, ElemKind kind, Arg arg) {
     if (kind == ElemKind.DEREF_VARIABLE ||
         (kind == ElemKind.VARIABLE && !isOutput) ||
         (kind == ElemKind.VARIABLE && isOutput &&
                   !passOutByName(arg.type()))) {
       return TclUtil.argToExpr(arg);
-    } else if (kind == ElemKind.REF_VARIABLE || 
+    } else if (kind == ElemKind.REF_VARIABLE ||
             (kind == ElemKind.VARIABLE && isOutput &&
              passOutByName(arg.type()))) {
       if (!arg.isVar()) {
-        throw new STCRuntimeError("Cannot pass constant argument " + arg 
+        throw new STCRuntimeError("Cannot pass constant argument " + arg
                 + " as variable name to template parameter for function "
-                + funcName + " argument " + varName);
+                + fnID.originalName() + " argument " + varName);
       }
       String tclVarName = TclNamer.prefixVar(arg.getVar().name());
       return new Token(tclVarName);

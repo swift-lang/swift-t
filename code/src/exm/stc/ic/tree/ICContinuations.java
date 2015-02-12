@@ -36,6 +36,7 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Location;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
@@ -125,7 +126,7 @@ public class ICContinuations {
      * @param mode what sort of renaming
      * @param recursive recursively do replacement in inner blocks
      */
-    public void renameVars(String function, Map<Var, Arg> renames,
+    public void renameVars(FnID function, Map<Var, Arg> renames,
                            RenameMode mode, boolean recursive) {
       if (renames.isEmpty())
         return;
@@ -140,7 +141,8 @@ public class ICContinuations {
      * @param renames
      * @param mode
      */
-    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(FnID function, Map<Var, Arg> renames,
+                           RenameMode mode) {
       renameVars(function, renames, mode, true);
     }
 
@@ -157,7 +159,7 @@ public class ICContinuations {
        // Do nothing by default
     }
 
-    protected void replaceVarsInBlocks(String function, Map<Var, Arg> renames,
+    protected void replaceVarsInBlocks(FnID function, Map<Var, Arg> renames,
                                        RenameMode mode) {
       for (Block b: this.getBlocks()) {
         b.renameVars(function, renames, mode, true);
@@ -314,7 +316,7 @@ public class ICContinuations {
      *        added by caller to outerBlock
      */
     public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
-                                   String function, Block outerBlock) {
+                                FnID function, Block outerBlock) {
       // default: do nothing
       return Pair.create(false, Collections.<Continuation>emptyList());
     }

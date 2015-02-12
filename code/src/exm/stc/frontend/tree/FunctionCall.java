@@ -28,15 +28,19 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
+import exm.stc.common.lang.DefaultVals;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.Context.DefInfo;
 import exm.stc.frontend.Context.DefKind;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.LogHelper;
 
 public class FunctionCall {
@@ -47,66 +51,84 @@ public class FunctionCall {
   }
 
   private final FunctionCallKind kind;
-  private final String function;
+  private final String originalName;
+  private final List<FnOverload> overloads;
   private final List<SwiftAST> args;
-  private final FunctionType type;
   private final Map<TaskPropKey, SwiftAST> annotationExprs;
   // Location (as location struct type) - null if unspecified
   private final SwiftAST location;
   // Override strictness of location (to support @soft_location annotation)
   private final boolean softLocationOverride;
 
-  private FunctionCall(FunctionCallKind kind, String function,
-      List<SwiftAST> args, FunctionType type,
+  private FunctionCall(FunctionCallKind kind, String originalName,
+      List<FnOverload> overloads, List<SwiftAST> args,
       Map<TaskPropKey, SwiftAST> annotationExprs,
       SwiftAST location, boolean softLocationOverride) {
     this.kind = kind;
-    this.function = function;
+    this.originalName = originalName;
+    this.overloads = overloads;
     this.args = args;
-    this.type = type;
     this.annotationExprs = annotationExprs;
     this.location = location;
     this.softLocationOverride = softLocationOverride;
   }
 
-  private static FunctionCall regularFunctionCall(String f, SwiftAST arglist,
-      FunctionType ftype, Map<TaskPropKey, SwiftAST> annotations,
+  private static FunctionCall regularFunctionCall(String originalName,
+      List<FnOverload> overloads, SwiftAST arglist,
+      Map<TaskPropKey, SwiftAST> annotations,
       SwiftAST location, boolean softLocationOverride) {
-    return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, f,
-            arglist.children(), ftype, annotations, location, softLocationOverride);
+    return new FunctionCall(FunctionCallKind.REGULAR_FUNCTION, originalName,
+        overloads, arglist.children(),
+        annotations, location, softLocationOverride);
   }
 
-  private static FunctionCall structConstructor(String f, SwiftAST arglist,
-                                                FunctionType ftype) {
+  private static FunctionCall structConstructor(String typeName,
+      SwiftAST arglist, FunctionType ftype) {
     assert(ftype.getOutputs().size() == 1 &&
         Types.isStruct(ftype.getOutputs().get(0)));
-    return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, f, arglist.children(),
-                ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(), null, false);
+
+    FnOverload fn = new FnOverload(constructorID(typeName), ftype,
+                                   DefaultVals.<Var>noDefaults(ftype));
+
+    return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
+        fn.asList(), arglist.children(),
+        Collections.<TaskPropKey,SwiftAST>emptyMap(), null, false);
   }
 
-  private static FunctionCall subtypeConstructor(String f, SwiftAST arglist,
-	      FunctionType ftype) {
-	    assert(ftype.getOutputs().size() == 1 &&
-	        Types.isSubType(ftype.getOutputs().get(0)));
-	    return new FunctionCall(FunctionCallKind.SUBTYPE_CONSTRUCTOR, f,
-	        arglist.children(), ftype, Collections.<TaskPropKey,SwiftAST>emptyMap(),
-	        null, false);
-	  }
+  private static FunctionCall subtypeConstructor(String typeName, SwiftAST arglist,
+          FunctionType ftype) {
+        assert(ftype.getOutputs().size() == 1 &&
+            Types.isSubType(ftype.getOutputs().get(0)));
+    FnOverload fn = new FnOverload(constructorID(typeName), ftype,
+                                   DefaultVals.<Var>noDefaults(ftype));
+    return new FunctionCall(FunctionCallKind.SUBTYPE_CONSTRUCTOR, typeName,
+        fn.asList(), arglist.children(),
+        Collections.<TaskPropKey,SwiftAST>emptyMap(), null, false);
+  }
+
+  /**
+   * Make function ID for type.  There should be no overloading of these.
+   * @param typeName
+   * @return
+   */
+  private static FnID constructorID(String typeName) {
+    return new FnID(typeName, typeName);
+  }
 
   public FunctionCallKind kind() {
     return kind;
   }
 
-  public String function() {
-    return function;
+  public String originalName() {
+    return originalName;
+  }
+
+  public List<FnOverload> overloads() {
+    return overloads;
   }
 
   public List<SwiftAST> args() {
     return args;
-  }
-
-  public FunctionType fnType() {
-    return type;
   }
 
   public Map<TaskPropKey, SwiftAST> annotations() {
@@ -153,9 +175,8 @@ public class FunctionCall {
     if (def == null) {
       throw UndefinedFunctionException.unknownFunction(context, f);
     } else if (def.kind == DefKind.FUNCTION) {
-      FunctionType ftype = context.lookupFunction(f);
-      assert(ftype != null);
-      return regularFunctionFromAST(context, annotations, f, arglist, ftype);
+      return regularFunctionFromAST(context, annotations, f, arglist,
+                                    context.lookupFunction(f));
     } else if (def.kind == DefKind.TYPE) {
       Type type = context.lookupTypeUnsafe(f);
       assert(type != null);
@@ -170,7 +191,8 @@ public class FunctionCall {
   }
 
   private static FunctionCall regularFunctionFromAST(Context context,
-      List<SwiftAST> annotationTs, String f, SwiftAST arglist, FunctionType ftype)
+      List<SwiftAST> annotationTs, String originalName, SwiftAST arglist,
+      List<FnOverload> overloads)
       throws UserException, InvalidAnnotationException {
     Map<TaskPropKey, SwiftAST> annotations = new TreeMap<TaskPropKey, SwiftAST>();
 
@@ -204,8 +226,8 @@ public class FunctionCall {
       }
     }
 
-    return regularFunctionCall(f, arglist, ftype, annotations, location,
-                               softLocationOverride);
+    return regularFunctionCall(originalName, overloads, arglist, annotations,
+                               location, softLocationOverride);
   }
 
   private static void putAnnotationNoDupes(Context context,
@@ -257,7 +279,7 @@ public class FunctionCall {
 
     Type baseType = type.stripSubTypes();
     FunctionType constructorType = new FunctionType(baseType.asList(),
-    											type.asList(), false);
+                                                type.asList(), false);
 
     return subtypeConstructor(func, arglist, constructorType);
   }

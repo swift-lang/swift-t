@@ -17,6 +17,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -55,7 +56,7 @@ public class ArrayBuild implements OptimizerPass {
 
   @Override
   public void optimize(Logger logger, Program prog) throws UserException {
-    Map<String, Function> funcMap = prog.getFunctionMap();
+    Map<FnID, Function> funcMap = prog.getFunctionMap();
     for (Function f: prog.functions()) {
       ArrayInfo info = buildInfo(logger, funcMap, f);
       optimize(logger, f, info);
@@ -161,7 +162,7 @@ public class ArrayBuild implements OptimizerPass {
    * @param funcMap
    * @return
    */
-  private ArrayInfo buildInfo(Logger logger, Map<String, Function> funcMap,
+  private ArrayInfo buildInfo(Logger logger, Map<FnID, Function> funcMap,
                               Function f) {
     // Set to track candidates in scope
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
@@ -241,7 +242,7 @@ public class ArrayBuild implements OptimizerPass {
     }
   }
 
-  private void buildInfoRec(Logger logger, Map<String, Function> funcMap,
+  private void buildInfoRec(Logger logger, Map<FnID, Function> funcMap,
       Function f, Block block, ArrayInfo info,
       HierarchicalSet<Var> candidates) {
     addBlockCandidates(f, block, info, candidates);
@@ -290,7 +291,7 @@ public class ArrayBuild implements OptimizerPass {
     addBlockCandidates(block, info, candidates, block.variables());
   }
 
-  private void updateInfo(Logger logger, Map<String, Function> funcMap,
+  private void updateInfo(Logger logger, Map<FnID, Function> funcMap,
       Block block, ArrayInfo info, Instruction inst, Set<Var> candidates) {
 
     if (inst.op == Opcode.ARR_STORE) {

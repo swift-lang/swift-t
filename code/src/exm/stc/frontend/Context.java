@@ -34,7 +34,9 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
@@ -135,7 +137,7 @@ public abstract class Context {
   /**
    * Add definition for current location in file
    * @param name
-   * @param type
+   * @param abstractType
    * @throws DoubleDefineException
    */
   protected void addDef(String name, DefKind kind)
@@ -312,34 +314,38 @@ public abstract class Context {
     return lookupFunction(name) != null;
   }
 
-  public abstract void defineFunction(String name, FunctionType type)
-                                          throws UserException;
-
-  public abstract void setFunctionProperty(String name, FnProp prop);
-
-  public abstract List<FnProp> getFunctionProps(String function);
-
-  public abstract boolean hasFunctionProp(String name, FnProp prop);
-
-  public abstract void addIntrinsic(String function, IntrinsicFunction intrinsic);
-
-  public abstract IntrinsicFunction lookupIntrinsic(String function);
-
-  public boolean isIntrinsic(String function) {
-    return lookupIntrinsic(function) != null;
-  }
+  /**
+   * Define function and return unique internal identifier
+   * @param name
+   * @param type
+   * @param defaultVals
+   * @return
+   * @throws UserException if the definition is invalid, e.g. conflicts
+   *                        with existing definition
+   */
+  public abstract FnID defineFunction(String name, FunctionType type,
+                        DefaultVals<Var> defaultVals) throws UserException;
 
   /**
    * Lookup the type of a function
    * @param name
-   * @return
+   * @return unique identifiers and types of overloads or
+   *        empty list if not defined
    */
-  public FunctionType lookupFunction(String name) {
-    Var var = lookupVarUnsafe(name);
-    if (var == null || !Types.isFunction(var)) {
-      return null;
-    }
-    return (FunctionType)var.type();
+  public abstract List<FnOverload> lookupFunction(String name);
+
+  public abstract void setFunctionProperty(FnID id, FnProp prop);
+
+  public abstract List<FnProp> getFunctionProps(FnID id);
+
+  public abstract boolean hasFunctionProp(FnID id, FnProp prop);
+
+  public abstract void addIntrinsic(FnID id, IntrinsicFunction intrinsic);
+
+  public abstract IntrinsicFunction lookupIntrinsic(FnID id);
+
+  public boolean isIntrinsic(FnID id) {
+    return lookupIntrinsic(id) != null;
   }
 
   public String getInputFile() {
@@ -493,6 +499,9 @@ public abstract class Context {
   /** Get info about the enclosing function */
   abstract public FunctionContext getFunctionContext();
 
+  /** Get counters at function or global level */
+  abstract public long nextCounterVal(String counterName);
+
   /**
    * Shortcut method for getFunctionContext().constructName()
    * @param constructType
@@ -502,6 +511,30 @@ public abstract class Context {
     return getFunctionContext().constructName(constructType);
   }
 
+  /**
+   * Helper to choose variable name.
+   * @param prefix Prefix that must be at start
+   * @param preferredSuffix Preferred suffix
+   * @param counterName name of counter to use to make unique if needed
+   * @return
+   */
+  protected String uniqueName(String prefix, String preferredSuffix,
+      String counterName) {
+    if (preferredSuffix != null) {
+      prefix += preferredSuffix;
+      // see if we can give it a nice name
+      if (lookupDef(prefix) == null) {
+        return prefix;
+      }
+    }
+
+    String name = null;
+    do {
+      long counter = nextCounterVal(counterName);
+      name = prefix + counter;
+    } while (lookupDef(name) != null);
+    return name;
+  }
   /**
    *
    * @param type
@@ -524,6 +557,19 @@ public abstract class Context {
    * @return
    */
   abstract public Var createFilenameAliasVariable(Var fileVar);
+
+  /**
+   * Create a global const variable
+   * @param context
+   * @param name name for global const, or null if name should be
+   *             automatically generated
+   * @param type
+   * @param makeUnique if true, generate a unique name.  If false, use provided
+   * @return
+   * @throws DoubleDefineException
+   */
+  public abstract Var createGlobalConst(String name, Type type,
+                              boolean makeUnique) throws DoubleDefineException;
 
   public static enum FnProp {
     APP, COMPOSITE,
@@ -564,4 +610,28 @@ public abstract class Context {
     public final int col;
   }
 
+  public static class FnOverload {
+    public final FnID id;
+    public final FunctionType type;
+    public final DefaultVals<Var> defaultVals;
+
+    public FnOverload(FnID id, FunctionType type, DefaultVals<Var> defaultVals) {
+      this.id = id;
+      this.type = type;
+      this.defaultVals = defaultVals;
+    }
+
+    public FnOverload(FnID id, FunctionType type) {
+      this(id, type, DefaultVals.<Var>noDefaults(type));
+    }
+
+    public List<FnOverload> asList() {
+      return Collections.singletonList(this);
+    }
+
+    @Override
+    public String toString() {
+      return "FnOverload: " + id + " " + type + " " + defaultVals;
+    }
+  }
 }
