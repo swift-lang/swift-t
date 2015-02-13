@@ -22,9 +22,13 @@
  *  while setting macros:
  *  HEAP_KEY_T: a numeric key type
  *  HEAP_VAL_T: a value type
- *  HEAP_PFX: the prefix to apply to function names, e.g. my_heap
+ *  HEAP_PFX: the prefix to apply to function names, e.g. my_heap_
  *
- *  Tim Armstrong, 2012
+ *  This will define types ${HEAP_PFX}key_t ${HEAP_PFX}val_t, and
+ *   ${HEAP_PFX}entry_t and a range of heap functions, e.g.
+ *   ${HEAP_PFX}init, ${HEAP_PFX}add, etc.
+ *
+ *  Tim Armstrong, 2012-2014
  */
 
 #include <stdbool.h>
@@ -48,7 +52,7 @@
 
 /*
   Construct specific names for this special heap.
-  Preprocessor voodoo with three layers of macros was needed required to
+  Preprocessor voodoo with three layers of macros was needed to
   paste tokens together correctly.
  */
 #define HEAP_NAME__(prefix, name) prefix ## name
