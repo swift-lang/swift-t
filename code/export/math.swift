@@ -33,9 +33,15 @@
 (float o) sqrt          (float i) "turbine"  "0.0.2" "sqrt";
 @pure @builtin_op=IS_NAN
 (boolean o) is_nan      (float i) "turbine"  "0.0.2" "is_nan";
+@pure @builtin_op=IS_NAN
+(boolean o) isNaN     (float i) "turbine"  "0.0.2" "is_nan";
 @pure @builtin_op=ABS_INT
 (int o)   abs_integer (int i)   "turbine"  "0.0.2" "abs_integer";
+@pure @builtin_op=ABS_INT
+(int o)   abs         (int i)   "turbine"  "0.0.2" "abs_integer";
 @pure @builtin_op=ABS_FLOAT
 (float o) abs_float   (float i) "turbine"  "0.0.2" "abs_float";
+@pure @builtin_op=ABS_FLOAT
+(float o) abs         (float i) "turbine"  "0.0.2" "abs_float";
 
 #endif

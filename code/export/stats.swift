@@ -23,11 +23,17 @@
 
 (int result) sum_integer(int A[])
 "turbine" "0.0.2" "sum_integer";
+(int result) sum(int A[])
+"turbine" "0.0.2" "sum_integer";
 
 (float result) sum_float(float A[])
 "turbine" "0.0.4" "sum_float";
+(float result) sum(float A[])
+"turbine" "0.0.4" "sum_float";
 
-(float result) avg(int|float A[])
+(float result) avg(int A[])
+"turbine" "0.0.2" "avg";
+(float result) avg(float A[])
 "turbine" "0.0.2" "avg";
 
 // Population standard deviation

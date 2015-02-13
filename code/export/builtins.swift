@@ -30,13 +30,13 @@ type external void;
 
 // Arithmetic
 @pure @minmax @builtin_op=POW_INT
-(float o) pow_integer(int i1, int i2) "turbine" "0.0.2" "pow_integer";
+(float o) pow_integer(int base, int exponent) "turbine" "0.0.2" "pow_integer";
 @pure @minmax @builtin_op=POW_INT
-(float o) pow(int i1, int i2) "turbine" "0.0.2" "pow_integer";
+(float o) pow(int base, int exponent) "turbine" "0.0.2" "pow_integer";
 @pure @builtin_op=POW_FLOAT
-(float o) pow_float(float i1, float i2) "turbine" "0.0.2" "pow_float";
+(float o) pow_float(float base, float exponent) "turbine" "0.0.2" "pow_float";
 @pure @builtin_op=POW_FLOAT
-(float o) pow(float i1, float i2) "turbine" "0.0.2" "pow_float";
+(float o) pow(float base, float exponent) "turbine" "0.0.2" "pow_float";
 
 // This is used by the string+ concatenation operator
 // Take strings, and automatically convert numeric to string
