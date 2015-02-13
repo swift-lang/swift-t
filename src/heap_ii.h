@@ -15,20 +15,19 @@
  */
 
 /*
- *  Simple binary heap with integer keys and pointer values.
- *  a .
+ *  Simple binary heap with integer keys and integer values.
  *
  *  Implements a min-heap
  *
  *  Tim Armstrong, 2012-2014
  */
 
-#ifndef __HEAP_H
-#define __HEAP_H
+#ifndef __HEAP_II_H
+#define __HEAP_II_H
 
 #define HEAP_KEY_T int
-#define HEAP_VAL_T void*
-#define HEAP_PFX heap_
+#define HEAP_VAL_T int
+#define HEAP_PFX heap_ii_
 
 #include "heap-template.h"
 
@@ -36,4 +35,4 @@
 #undef HEAP_VAL_T
 #undef HEAP_PFX
 
-#endif // __HEAP_H
+#endif // __HEAP_II_H

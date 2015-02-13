@@ -14,4 +14,5 @@
  * limitations under the License
  */
 #include <heap.h>
-// Empty module to make sure that heap header compiles
+#include <heap_ii.h>
+// Empty module to make sure that heap headers compile
