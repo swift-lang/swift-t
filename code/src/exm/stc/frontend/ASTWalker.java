@@ -1573,9 +1573,12 @@ public class ASTWalker {
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     // Define function, also detect duplicates here
-    FnID fid = context.defineFunction(function, ft,
-        fdecl.defaultVals());
+    FnID fid = context.defineFunction(function, ft, fdecl.defaultVals());
     tree.setIdentifier(fid);
+
+    if (function.equals("assertEqual")) {
+      System.err.println("addFF " + fid);
+    }
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
     String version = Literals.extractLiteralString(context, tclPackage.child(1));
