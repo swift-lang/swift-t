@@ -56,6 +56,8 @@
 #define HEAP_NAME(name) HEAP_NAME_(HEAP_PFX, name)
 
 typedef uint32_t heap_ix_t;
+typedef HEAP_KEY_T HEAP_NAME(key_t);
+typedef HEAP_VAL_T HEAP_NAME(val_t);
 
 #define HEAP_ENTRY_T HEAP_NAME(entry_t)
 typedef struct {
