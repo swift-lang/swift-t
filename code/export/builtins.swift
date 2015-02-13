@@ -26,15 +26,17 @@
 type external void;
 
 @pure
-(void o) make_void () "turbine" "0.0.2" "make_void";
+(void o) make_void() "turbine" "0.0.2" "make_void";
 
 // Arithmetic
-@pure @minmax @builtin_op=MAX_INT
-(int o) max_integer     (int i1, int i2) "turbine" "0.0.2" "max_integer";
-@pure @minmax @builtin_op=MIN_INT
-(int o) min_integer     (int i1, int i2) "turbine" "0.0.2" "min_integer";
 @pure @minmax @builtin_op=POW_INT
-(float o) pow_integer     (int i1, int i2) "turbine" "0.0.2" "pow_integer";
+(float o) pow_integer(int i1, int i2) "turbine" "0.0.2" "pow_integer";
+@pure @minmax @builtin_op=POW_INT
+(float o) pow(int i1, int i2) "turbine" "0.0.2" "pow_integer";
+@pure @builtin_op=POW_FLOAT
+(float o) pow_float(float i1, float i2) "turbine" "0.0.2" "pow_float";
+@pure @builtin_op=POW_FLOAT
+(float o) pow(float i1, float i2) "turbine" "0.0.2" "pow_float";
 
 // This is used by the string+ concatenation operator
 // Take strings, and automatically convert numeric to string
@@ -54,28 +56,51 @@ type external void;
 @pure @commutative @builtin_op=XOR
 (boolean o) xor (boolean i1, boolean i2) "turbine" "0.0.2" "neq_integer";
 
+// Min/max variants
+@pure @minmax @builtin_op=MAX_INT
+(int o) max_integer(int i1, int i2) "turbine" "0.0.2" "max_integer";
+@pure @minmax @builtin_op=MAX_INT
+(int o) max(int i1, int i2) "turbine" "0.0.2" "max_integer";
+@pure @minmax @builtin_op=MIN_INT
+(int o) min_integer(int i1, int i2) "turbine" "0.0.2" "min_integer";
+@pure @minmax @builtin_op=MIN_INT
+(int o) min(int i1, int i2) "turbine" "0.0.2" "min_integer";
 @pure @minmax @builtin_op=MAX_FLOAT
-(float o) max_float     (float i1, float i2) "turbine" "0.0.2" "max_float";
+(float o) max_float(float i1, float i2) "turbine" "0.0.2" "max_float";
+@pure @minmax @builtin_op=MAX_FLOAT
+(float o) max(float i1, float i2) "turbine" "0.0.2" "max_float";
 @pure @minmax @builtin_op=MIN_FLOAT
-(float o) min_float     (float i1, float i2) "turbine" "0.0.2" "min_float";
-@pure @builtin_op=POW_FLOAT
-(float o) pow_float     (float i1, float i2) "turbine" "0.0.2" "pow_float";
+(float o) min_float(float i1, float i2) "turbine" "0.0.2" "min_float";
+@pure @minmax @builtin_op=MIN_FLOAT
+(float o) min(float i1, float i2) "turbine" "0.0.2" "min_float";
 
-// Type conversion
-@pure @builtin_op=FLOATTOINT
-(int o) toInt(float i) "turbine" "0.0.2" "floattoint";
+// Conversions to strings
 @pure @builtin_op=INTTOSTR
 (string o) fromint(int i)  "turbine" "0.0.2" "fromint";
-@pure @builtin_op=STRTOINT
-(int o)    toint(string i) "turbine" "0.0.2" "toint";
+@pure @builtin_op=INTTOSTR
+(string o) toString(int i)  "turbine" "0.0.2" "fromint";
 @pure @builtin_op=FLOATTOSTR
 (string o) fromfloat(float i)  "turbine" "0.0.2" "fromfloat";
+@pure @builtin_op=FLOATTOSTR
+(string o) toString(float i)  "turbine" "0.0.2" "fromfloat";
+
+// Parsing of strings
+@pure @builtin_op=STRTOINT
+(int o) toint(string i) "turbine" "0.0.2" "toint";
+@pure @builtin_op=STRTOINT
+(int o) parseInt(string i) "turbine" "0.0.2" "toint";
 @pure @builtin_op=STRTOFLOAT
 (float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
+@pure @builtin_op=STRTOFLOAT
+(float o) parseFloat(string i)  "turbine" "0.0.2" "tofloat";
+
+// Numeric conversions
 @pure @builtin_op=INTTOFLOAT
-(float o) itof    (int i) "turbine"  "0.0.2" "itof";
-// Do not optimize this- it is for synchronization tests
-(int o) zero(void v) "turbine" "0.0.4" "zero";
+(float o) itof(int i) "turbine"  "0.0.2" "itof";
+@pure @builtin_op=INTTOFLOAT
+(float o) toFloat(int i) "turbine"  "0.0.2" "itof";
+@pure @builtin_op=FLOATTOINT
+(int o) toInt(float i) "turbine" "0.0.2" "floattoint";
 
 // I/O
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
@@ -115,6 +140,9 @@ type external void;
 @pure
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future"
     [ "set <<n>> [ turbine::adlb_servers ]" ];
+
+// Do not optimize this- it is for synchronization tests
+(int o) zero(void v) "turbine" "0.0.4" "zero";
 
 /*
  deprecated: engines no longer exist
