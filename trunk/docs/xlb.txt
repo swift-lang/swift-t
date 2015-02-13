@@ -1,0 +1,193 @@
+
+:toc:
+:numbered:
+
+ADLB/X Internals
+================
+Justin M. Wozniak <wozniak@mcs.anl.gov>
+v0.4.0, June 2014
+
+////
+This file is on the web at:
+http://www.mcs.anl.gov/exm/local/guides/xlb.html
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+== Overview
+
+ADLB/X is an ADLB implementation that additionally offers:
+
+* work stealing;
+* data operations; and
+* parallel tasks.
+
+Tcl bindings for ADLB/X are supported, see the ExM Swift/Turbine
+project.
+
+ADLB/X is internally called XLB.  External C symbols are prefixed with
++xlb_+.
+
+== Support
+
+The user support list is exm-user@mcs.anl.gov
+
+== User interface
+
+The ADLB user interface is entirely contained in +adlb.h+.  This is
+only file that is installed by +make install+.  See the ADLB papers
+and the example apps for use scenarios.
+
+== Build system
+
+ADLB/X is built with an +autoconf+-based system.
+
+Typical build:
+
+----
+./setup.sh
+./configure --prefix=$HOME/lb CC=mpicc ...
+make -j install
+----
+
++setup.sh+:: Simply runs +autoconf+ tools.  Run this to rebuild
++./configure+
+
+We use a single +Makefile+ with included +module.mk+ files
+Cf. http://miller.emu.id.au/pmiller/books/rmch
+
+If the +Makefile+ or +module.mk+ files changes, re-run +./configure+
+or use +./config.status+.
+
+=== Features
+
++--enable-fast+:: Turn on +NDEBUG+ and +-O3+.  Disables some error
+checks, see section <<Checks>>
+
+Debugging:: Cf. <<Debugging>>
+
+== Workers and servers
+
+The number of servers is specified by the call to +ADLB_Init()+.  Each
+worker is associated with one server (cf. +xlb_map_to_server(int
+rank)+).  Task operations always go to that server, unless the task is
+targeted to a worker associated with another server.  Data operations
+go to the server on which the data resides (cf. +ADLB_Locate(long id)+).
+
+== Code conventions
+
+[[Checks]]
+=== Error checks
+
+There are 3 main error code types:
+
+* MPI error codes (+int+);
+* ADLB error codes (+adlb_code+); and
+* ADLB data error codes (+adlb_data_code+).
+
+These are all converted to +adlb_code+.  We have a system for checking
+these and propagating errors up the call stack, see +checks.h+.
+
+=== MPI macros
+
+To simplify calls to MPI, we have wrapper macros that use XLB code
+conventions, error handling techniques, and debug logging.  In many
+cases, these turn 5-line expressions into 1-line expressions.  Macros
++SEND()+, +RECV()+, +IRECV()+ correspond to +MPI_Send()+, +MPI_Recv()+,
++MPI_Irecv()+, etc.  Cf.  +messaging.h+.
+
+[[Debugging]]
+=== Debugging modes
+
+Multiple levels of logging verbosity may be enabled at configure
+time.  These are primarily controlled through the macros +DEBUG()+ and
++TRACE()+.
+
+Configure options:
+
++--enable-log-debug+:: Enable +DEBUG()+ logging (moderately verbose)
++--enable-log-trace+:: Enable +TRACE()+ logging (very verbose)
++--enable-log-trace-mpi+:: Trace every MPI macro call (extremely verbose)
+
+=== Code comments
+
++extern+ functions are primarily documented in their +\*.h+ file.
+Implementation notes may be given in the +*.c+ file.  For +static+
+functions, the primary documentation is at the function definition;
+prototypes may be anywhere in the file.
+
+We use Doxygen (JavaDoc) comments (+/** */+) for things that ought to
+appear in generated documentation (although we currently do not use
+such systems).
+
+== RPC system
+
+ADLB is primarily a worker-server system.  The workers execute ADLB in
++adlb.c+.  These issue calls in a typical +IRECV()+, +SEND()+,
++WAIT()+ pattern.  This allows the server to send the initial response
+with +RSEND+.
+
+The server uses +PROBE+ and dispatches to the appropriate handler.
+The handler functions are registered with the RPC system
+(cf. +handlers.c+).  Each is a mapping from an MPI tag to a function.
+
+== Work queue
+
+When work submitted by +ADLB_Put()+ is stored by the server, it is
+stored in the work queue (workqueue.h).  The work queue data
+structures store work units.  They allow fast lookups for work units
+based on the task type, priority, and target.  Parallel tasks are
+treated separately.
+
+Note that if a process that matches the work unit is in the request
+queue, the work unit is not stored, it is redirected to the worker
+process.  This allows for worker-worker communication.
+
+== Request queue
+
+When a worker issues an +ADLB_Get()+, if work is not immediately
+available, the worker rank is stored in the request queue
+(+requestqueue.h+).  Requests are stored in data structures that allow
+for fast lookup by rank and work unit type.
+
+== Data operations
+
+Data operations all return immediately and do not face the same
+complexity as the queued task operations.  The implementation of all
+data operations is in +data.c+.
+
+== Work stealing
+
+Work stealing is triggered when:
+
+1. a worker does an +ADLB_Get()+ and the work queue cannot find a
+match; or
+2. the server is out of work and has not attempted a steal recently
+(daemon steal).
+
+The stealing server syncs and issues the STEAL RPC on a random
+server.  Half of the tasks, round up, are stolen.
+
+[[Sync]]
+== Server-server sync
+
+Server-server syncs are required to avoid a deadlock when two servers
+attempt to perform RPCs on each other simultaneously.  See +sync.h+
+for information about this protocol.
+
+== Parallel tasks
+
+
+
+== MPE
+
+==
+
+////
+Local Variables:
+mode: doc
+End:
+////

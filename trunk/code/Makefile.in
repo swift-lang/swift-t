@@ -1,0 +1,270 @@
+
+# ADLB/X Makefile
+
+# Usage notes:
+# make V=1 turns on verbose output
+
+ifeq (@ENABLE_DEV@,1)
+	WARN_EXTRA = -Wconversion -Wshadow -Wenum-compare \
+                          -Winline -Wunreachable-code
+endif
+
+# Shared object suffix is .so on Linux, .dylib on Mac
+# GCC shared library creation argument:
+#            Linux: -shared; Mac: -dynamiclib
+USE_MAC=@USE_MAC@
+ifeq ($(USE_MAC),no)
+USE_XLC = @USE_XLC@
+ifeq ($(USE_XLC),0)
+#       Not XLC: GCC
+        PIC = -fPIC
+        STD = -std=gnu99
+        SHARED = -shared
+	WARNS = -Wall $(WARN_EXTRA)
+else
+#       Using XLC
+        PIC = -qpic
+        STD =
+        SHARED = -qmkshrobj
+	WARNS =
+endif
+
+  MAC_NAME =
+  SO_SUFFIX = so
+else
+  MAC_NAME = -install_name $(INSTALL_LIB)/libadlb.dylib
+  SO_SUFFIX = dylib
+  SHARED = -dynamiclib -flat_namespace
+endif
+
+# Products:
+ADLB_A  = lib/libadlb.a
+ADLB_SO = lib/libadlb.$(SO_SUFFIX)
+ADLB_LIBS = 
+
+ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
+
+ifeq ($(ENABLE_SHARED),1)
+	ADLB_LIBS += $(ADLB_SO)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+	ADLB_LIBS += $(ADLB_A)
+endif
+
+all: $(ADLB_LIBS)
+
+# Support GNU DESTDIR for Debian, etc.
+# Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
+ifeq ($(DESTDIR),)
+  INSTALL_PREFIX  = @prefix@
+  INSTALL_ETC     = $(INSTALL_PREFIX)/etc
+  INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
+  INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+else
+  INSTALL_PREFIX  = $(DESTDIR)
+  INSTALL_ETC     = $(DESTDIR)/etc$(SUBDIR)
+  INSTALL_INCLUDE = $(DESTDIR)/include$(SUBDIR)
+  INSTALL_LIB     = $(DESTDIR)/lib$(SUBDIR)
+endif
+INSTALL_TOKEN   = $(INSTALL_ETC)/install.txt
+
+# Verbosity control:
+ifeq ($(V),1)
+  QUIET_COMPILE = 0
+else
+  QUIET_COMPILE = 1
+endif
+
+ifeq ($(QUIET_COMPILE),1)
+  # Prints a short description of the action, does not show command
+  Q = @echo
+  E = @
+else
+  # Just echo the entire command
+  Q = @ :
+  E =
+endif
+
+### FLAGS
+
+CC  = @CC@
+# Always link with gcc, even when using XLC
+LINKER = @CC@
+
+AR      = @AR@
+# Some autoconf versions do not set AR
+ifeq ($(AR),)
+	AR = ar
+endif
+ARFLAGS = cr
+RANLIB  = @RANLIB@
+
+C_UTILS = @USE_C_UTILS@
+
+INCLUDES = -I . -I src -I $(C_UTILS)/include
+
+LDFLAGS  = @LDFLAGS@
+LIBS = @LIBS@
+CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
+ifeq ($(USE_XLC),1)
+	CFLAGS += -qpack_semantic=gnu
+endif
+
+LIBS += -L $(C_UTILS)/lib -lexmcutils
+
+RPATH :=
+RPATH += -Wl,-rpath -Wl,$(C_UTILS)/lib
+
+ENABLE_MPE = @ADLB_ENABLE_MPE@
+MPE = @USE_MPE@
+MPE_FLAGS  = @MPE_FLAGS@
+ifeq ($(ENABLE_MPE),1)
+	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS) -I $(MPE)/include
+	LDFLAGS += # -mpilog
+	LIBS += -L $(MPE)/lib -lmpe
+        RPATH += -Wl,-rpath -Wl,$(MPE)/lib
+endif
+
+
+ENABLE_ZLIB = @ENABLE_ZLIB@
+ZLIB = @ZLIB_HOME@
+
+ifeq ($(ENABLE_ZLIB),1)
+  CFLAGS += -I$(ZLIB)/include
+  ifneq ($(ZLIB),/usr)
+    # Do not refer to /usr/lib - this can clobber the MPICH location
+    LIBS += -L $(ZLIB)/lib
+    RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+  endif
+  LIBS += -lz
+endif
+
+ENABLE_XPT = @XLB_ENABLE_XPT@
+ifeq ($(ENABLE_XPT),yes)
+	CFLAGS += -D XLB_ENABLE_XPT
+        # Need zlib for checkpoint CRC
+        LIBS += -lz
+endif
+
+### INCLUDES
+
+DIR  :=
+SRCS :=
+OBJS :=
+DEPS :=
+TEST_SRCS :=
+TEST_OBJS :=
+TEST_DEPS :=
+
+include src/module.mk
+include tests/module.mk
+
+### DEPS
+
+deps: $(DEPS) $(TEST_DEPS)
+
+ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
+  -include $(DEPS) $(TEST_DEPS)
+endif
+
+%.d: %.c
+	$(Q) "  DEP		$(@)"
+	$(E) CC=$(CC) maint/depend.sh \
+             $(dir $(<)) $(CFLAGS) $(<) > $(@)
+
+deps.txt: $(DEPS) $(TEST_DEPS)
+	$(Q) "  DEPS.TXT $(TEST_DEPS)"
+	$(E) maint/collect.sh $(@) $(DEPS) $(TEST_DEPS)
+
+### COMPILE
+
+%.o: %.c
+#       This gives a false autoscan warning for C++ (token 'CC'):
+	$(Q) "  CC		$(@)"
+	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
+
+### LINK
+
+# Rule to make lib directory.  It should be used as an order-only target
+# after a |, because added anything to the directory will modify the
+# directory's timestamp
+lib:
+	$(E) mkdir -pv lib
+
+$(ADLB_A): $(OBJS) | lib
+	$(Q) "  AR		$(@)"
+	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
+	$(E) $(RANLIB) $(@)
+
+$(ADLB_SO): $(OBJS) $(NLOBJS) | lib
+	$(Q) "  LINK		$(@)"
+	$(E) $(LINKER) $(SHARED) -g -o $(@) \
+                $(LDFLAGS)                      \
+	        $(OBJS) 		        \
+                $(LIBS)                         \
+	        $(RPATH)                        \
+                $(MAC_NAME)
+#       Touch this so re-installation has the correct source directory
+	$(E) touch source.txt
+
+### APPS AND TESTS
+
+%.x: %.o $(INSTALL_TOKEN)
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
+             -L lib -ladlb $(LIBS) \
+	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
+
+### INSTALL
+
+INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb_types.h
+
+ifeq ($(ENABLE_XPT),yes)
+        INSTALLED_HEADERS += src/adlb-xpt.h
+endif
+
+HAVE_CP_U = @CP_U@
+ifeq ($(HAVE_CP_U),yes)
+	CP_ARGS = -uvf
+else
+	CP_ARGS = -vf
+endif
+
+PROVENANCE = version.txt source.txt config.log
+
+install: $(INSTALL_TOKEN)
+
+$(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
+	$(Q)
+	$(Q) "  INSTALL	$(INSTALL_PREFIX)"
+	$(E) mkdir -pv $(INSTALL_ETC)
+	$(E) mkdir -pv $(INSTALL_INCLUDE)
+	$(E) mkdir -pv $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) $(INSTALLED_HEADERS) $(INSTALL_INCLUDE)
+	$(E) cp $(CP_ARGS) $(ADLB_LIBS) $(INSTALL_LIB)
+	$(E) touch $(INSTALL_ETC)/install.txt
+	$(Q)
+
+# This gives a false autoscan warning for token 'install'
+.PHONY: install
+
+### TAGS
+
+tags: TAGS
+
+TAGS: deps.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps.txt`
+
+### CLEAN
+
+clean::
+	$(Q) "  CLEAN"
+	$(E) rm -fv $(OBJS) $(ADLB_A) $(ADLB_SO) $(DEPS)
+
+distclean: clean
+	@rm -fv Makefile **/*.mk
+	@rm -fv src/adlb-version.h

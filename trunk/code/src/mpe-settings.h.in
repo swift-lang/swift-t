@@ -1,0 +1,7 @@
+
+#ifndef MPE_SETTINGS_H
+#define MPE_SETTINGS_H
+
+#define ADLB_ENABLE_MPE @ADLB_ENABLE_MPE@
+
+#endif

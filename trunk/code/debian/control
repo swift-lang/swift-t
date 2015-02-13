@@ -1,0 +1,13 @@
+Source: adlb
+Section: unknown
+Priority: extra
+Maintainer: Yadu Nand <yadunand@uchicago.edu>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, c-utils (>= 0.6.0), mpich2 (>= 1.4.1)
+Standards-Version: 3.9.4
+Homepage: http://sites.google.com/site/exmcomputing
+
+Package: adlb
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich2 (>= 1.4.1), c-utils (>= 0.6.0)
+Description: Asynchronous Dynamic Load Balancer
+ Load balancer based on MPI
