@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -146,6 +147,10 @@ public class FunctionTypeChecker {
       throws UserException {
     List<Type> argTypes = new ArrayList<Type>(fc.args().size());
     for (SwiftAST arg: fc.args()) {
+      if (arg.getType() == ExMParser.KW_ARGUMENT) {
+        // TODO
+        throw new STCRuntimeError("Support for keyword arguments not implemented");
+      }
       argTypes.add(TypeChecker.findExprType(context, arg));
     }
 
