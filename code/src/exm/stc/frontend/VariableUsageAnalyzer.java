@@ -665,7 +665,11 @@ class VariableUsageAnalyzer {
           SwiftAST argsTree = node.child(1);
           for (int i=0; i < argsTree.getChildCount(); i++) {
             SwiftAST argTree = argsTree.child(i);
-            exprNodes.push(argTree);
+            if (argTree.getType() == ExMParser.KW_ARGUMENT) {
+              exprNodes.push(argTree.child(1));
+            } else {
+              exprNodes.push(argTree);
+            }
           }
           for (SwiftAST annNode: node.children(2)) {
             assert(annNode.getType() == ExMParser.CALL_ANNOTATION);
