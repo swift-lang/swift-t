@@ -23,7 +23,7 @@
  */
 
 /*
-   Each work unit is indexed by typed_work
+   Each work unit is indexed by untargeted_work
    If the target is ANY, it is indexed by prioritized_work
    If the target is not ANY, it is indexed by targeted_work
       If soft_target is set, it is also indexed in prioritized work
@@ -33,7 +33,7 @@
 #include <assert.h>
 #include <limits.h>
 
-#include <heap.h>
+#include <heap_ii.h>
 #include <list.h>
 #include <table_ip.h>
 #include <tools.h>
@@ -53,21 +53,63 @@
 
 #define XLB_SOFT_TARGET_PRIORITY_PENALTY 65536
 
+static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu);
+static adlb_code xlb_workq_add_serial(xlb_work_unit* wu);
+static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id);
+static adlb_code add_targeted(xlb_work_unit* wu, int wu_id);
+static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id);
+static void wu_array_remove(int wu_id);
 
-static void
-xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu);
+static xlb_work_unit* pop_untargeted(int type);
+static xlb_work_unit* pop_targeted(int type, int target);
+
+static adlb_code
+heap_steal_type(heap_ii_t *q, int num, xlb_workq_steal_callback cb);
+static adlb_code
+rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb);
+
+static int soft_target_priority(int base_priority);
 
 /** Uniquify work units on this server */
 static xlb_work_unit_id unique = 1;
 
 /**
-   Heaps for target rank/type combinations, heap sorted by negative priority.
-   This only includes worker ranks that belong to this server.
-   You can obtain the heap for a rank with targeted_work_ix(rank, type)
-   Only contains targeted work
-*/
-static heap_t *targeted_work;
-static int targeted_work_size;
+  Storage for non-parallel work units.  Integer index in array identifies
+  work unit within this module - work unit isn't relocated within array.
+
+  Other structures provide indexes for quick lookup of work units.
+
+  TODO: this may be unfriendly for large arrays - need large contiguous
+        allocation and need to copy on resize.
+ */
+static struct {
+  xlb_work_unit **arr;
+  int *free; // Gaps in work array, same size as arr
+
+  int size;
+  int free_count;
+} wu_array;
+
+/**
+  untargeted_work and targeted_work provide indexes to lookup wu_array
+  by on (type) and (target, type) and return the maximum priority entry.
+
+  Work units can be in one or both indices, depending on what lookups
+  need to be supported for them.
+
+  untargeted work goes in untargeted_work only
+  hard targeted work goes in targeted_work only
+  soft targeted work goes in both untargeted_work and targeted_work
+
+  These indices are allowed to get out of sync with wu_array - stale
+  entries are allowed in the indices.  This is ok so long as we check
+  that the type and priority of the work unit match before returning.
+ */
+
+static heap_ii_t* untargeted_work;
+
+static heap_ii_t *targeted_work;
+static int targeted_work_size;  // Number of individual heaps
 
 static int targeted_work_entries(int work_types, int my_workers)
 {
@@ -85,15 +127,6 @@ static inline int targeted_work_ix(int rank, int type)
   assert(ix >= 0 && ix < targeted_work_size);
   return ix;
 }
-
-/**
-   typed_work
-   Array of trees: one for each work type
-   Does not contain targeted work
-   The tree contains work_unit*
-   Ordered by work unit priority
- */
-static struct rbtree* typed_work;
 
 /**
    parallel_work
@@ -118,24 +151,31 @@ xlb_workq_init(int work_types, int my_workers)
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
 
+  // TODO: allocate wu_array
+
   int targeted_entries = targeted_work_entries(work_types, my_workers);
-  targeted_work = malloc(sizeof(heap_t) * (size_t)targeted_entries);
+  targeted_work = malloc(sizeof(targeted_work[0]) * (size_t)targeted_entries);
   targeted_work_size = targeted_entries;
   valgrind_assert(targeted_work != NULL);
   for (int i = 0; i < targeted_entries; i++)
   {
-    bool ok = heap_init_empty(&targeted_work[i]);
+    bool ok = heap_ii_init_empty(&targeted_work[i]);
     CHECK_MSG(ok, "Could not allocate memory for heap");
   }
 
-  typed_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
-  valgrind_assert(typed_work != NULL);
-  parallel_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
+  untargeted_work = malloc(sizeof(untargeted_work[0]) * (size_t)work_types);
+  valgrind_assert(untargeted_work != NULL);
+  for (int i = 0; i < work_types; i++)
+  {
+    bool ok = heap_ii_init_empty(&untargeted_work[i]);
+    CHECK_MSG(ok, "Could not allocate memory for heap");
+  }
+
+  parallel_work = malloc(sizeof(parallel_work[0]) * (size_t)work_types);
   xlb_workq_parallel_task_count = 0;
   valgrind_assert(parallel_work != NULL);
   for (int i = 0; i < work_types; i++)
   {
-    rbtree_init(&typed_work[i]);
     rbtree_init(&parallel_work[i]);
   }
 
@@ -184,107 +224,160 @@ xlb_workq_add(xlb_work_unit* wu)
   DEBUG("xlb_workq_add(): %"PRId64": x%i %s",
         wu->id, wu->opts.parallelism, (char*) wu->payload);
 
-  if (wu->target < 0 && wu->opts.parallelism == 1)
+  if (wu->opts.parallelism > 1)
   {
-    // Untargeted single-process task
-    TRACE("xlb_workq_add(): single-process");
-    struct rbtree* T = &typed_work[wu->type];
-    rbtree_add(T, -wu->opts.priority, wu);
-    if (xlb_perf_counters_enabled)
-    {
-      xlb_task_counters[wu->type].single_enqueued++;
-    }
+    return xlb_workq_add_parallel(wu);
+  } else {
+    return xlb_workq_add_serial(wu);
   }
-  else if (wu->opts.parallelism > 1)
+}
+
+static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu)
+{
+  // Untargeted parallel task
+  TRACE("xlb_workq_add_parallel(): %p", wu);
+  struct rbtree* T = &parallel_work[wu->type];
+  TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->opts.priority);
+  rbtree_add(T, -wu->opts.priority, wu);
+  xlb_workq_parallel_task_count++;
+  if (xlb_perf_counters_enabled)
   {
-    // Untargeted parallel task
-    TRACE("xlb_workq_add(): parallel task: %p", wu);
-    struct rbtree* T = &parallel_work[wu->type];
-    TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->opts.priority);
-    rbtree_add(T, -wu->opts.priority, wu);
-    xlb_workq_parallel_task_count++;
-    if (xlb_perf_counters_enabled)
-    {
-      xlb_task_counters[wu->type].parallel_enqueued++;
-    }
+    xlb_task_counters[wu->type].parallel_enqueued++;
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code xlb_workq_add_serial(xlb_work_unit* wu)
+{
+  adlb_code ac;
+  TRACE("xlb_workq_add_serial()");
+  int wu_id;
+
+  ac = wu_array_add(wu, &wu_id);
+  ADLB_CHECK(ac);
+
+  if (wu->target < 0)
+  {
+    return add_targeted(wu, wu_id);
   }
   else
   {
-    // Targeted task
-    if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
-    {
-      heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
-      bool b = heap_add(H, -wu->opts.priority, wu);
-      CHECK_MSG(b, "out of memory expanding heap");
-    }
-    else
-    {
-      // All hard-targeted tasks should only be on matching server
-      assert(wu->opts.soft_target);
-    }
+    return add_untargeted(wu, wu_id);
+  }
+}
 
-    if (wu->opts.soft_target)
-    {
-      // Soft-targeted work has reduced priority compared with non-targeted work
-      int base_priority = wu->opts.priority;
-      int modified_priority;
-      if (base_priority < INT_MIN + XLB_SOFT_TARGET_PRIORITY_PENALTY)
-      {
-        // Avoid underflow
-        modified_priority = INT_MIN;
-      }
-      else
-      {
-        modified_priority = base_priority - XLB_SOFT_TARGET_PRIORITY_PENALTY;
-      }
+static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id)
+{
+  // Untargeted single-process task
+  heap_ii_t* H = &untargeted_work[wu->type];
+  bool b = heap_ii_add(H, -wu->opts.priority, wu_id);
+  CHECK_MSG(b, "out of memory expanding heap");
 
-      // Add duplicate entry
-      TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
+  if (xlb_perf_counters_enabled)
+  {
+    xlb_task_counters[wu->type].single_enqueued++;
+  }
 
-      struct rbtree* T = &typed_work[wu->type];
-      struct rbtree_node *N = rbtree_node_create(-modified_priority, wu);
-      ADLB_MALLOC_CHECK(N);
-      wu->__internal = N; // Store entry to node to allow deletion later
-      
-      rbtree_add_node(T, N);
-    }
+  return ADLB_SUCCESS;
+}
 
-    if (xlb_perf_counters_enabled)
-    {
-      xlb_task_counters[wu->type].targeted_enqueued++;
-    }
+static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
+{
+  // Targeted task
+  if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
+  {
+    heap_ii_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+    bool b = heap_ii_add(H, -wu->opts.priority, wu_id);
+    CHECK_MSG(b, "out of memory expanding heap");
+  }
+  else
+  {
+    // All hard-targeted tasks should only be on matching server
+    assert(wu->opts.soft_target);
+  }
+
+  if (wu->opts.soft_target)
+  {
+    int modified_priority = soft_target_priority(wu->opts.priority);
+
+    // Also add entry to untargeted work
+    TRACE("add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
+
+    heap_ii_t* H = &untargeted_work[wu->type];
+    bool b = heap_ii_add(H, -modified_priority, wu_id);
+    CHECK_MSG(b, "out of memory expanding heap");
+  }
+
+  if (xlb_perf_counters_enabled)
+  {
+    xlb_task_counters[wu->type].targeted_enqueued++;
   }
   return ADLB_SUCCESS;
 }
 
-/**
-   If we have no more targeted work for this rank, clean up data
-   structures
- */
-static inline xlb_work_unit*
-pop_targeted(heap_t* H, int target)
+static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
 {
-  xlb_work_unit* result = heap_root_val(H);
-  DEBUG("xlb_workq_get(): targeted: %"PRId64"", result->id);
-  heap_del_root(H);
-  if (heap_size(H) == 0)
+  if (wu_array.free_count > 0)
   {
-    // Free storage for empty heaps
-    heap_clear(H);
+    *wu_id = wu_array.free[wu_array.free_count - 1];
+    wu_array.free_count--;
+  }
+  else
+  {
+    *wu_id = wu_array.size; // One past current end
+    // No free case - resize work array and free list
+    int new_size = wu_array.size * 2;
+
+    xlb_work_unit **new_arr = realloc(wu_array.arr,
+                (size_t)new_size * sizeof(wu_array.arr[0]));
+    ADLB_MALLOC_CHECK(new_arr);
+
+    int *new_free = realloc(wu_array.free,
+                (size_t)new_size * sizeof(wu_array.free[0]));
+    ADLB_MALLOC_CHECK(new_free);
+
+    wu_array.arr = new_arr;
+    wu_array.free = new_free;
+    wu_array.size = new_size;
+
+    // Add new unused to free list
+    int unused_start = wu_array.size + 1;
+    wu_array.free_count = new_size - unused_start;
+    for (int i = 0; i < wu_array.free_count; i++)
+    {
+      int unused_wu_id = unused_start + i;
+      wu_array.arr[unused_wu_id] = NULL;
+      wu_array.free[i] = unused_wu_id;
+    }
+
+    wu_array.size = new_size;
   }
 
-  if (result->opts.soft_target)
+  wu_array.arr[*wu_id] = wu;
+  return ADLB_SUCCESS;
+}
+
+static void wu_array_remove(int wu_id)
+{
+  assert(wu_id >= 0 && wu_id < wu_array.size);
+
+  wu_array.arr[wu_id] = NULL;
+  wu_array.free[wu_array.free_count++] = wu_id;
+}
+
+// Soft-targeted work has reduced priority compared with non-targeted work
+static int soft_target_priority(int base_priority)
+{
+  if (base_priority < INT_MIN + XLB_SOFT_TARGET_PRIORITY_PENALTY)
   {
-    // Matching entry was added in typed for soft targeted
-    struct rbtree_node *typed_node = result->__internal;
-    assert(typed_node != NULL);
-
-    rbtree_remove_node(&typed_work[result->type], typed_node);
-    free(typed_node);
-    result->__internal = NULL;
+    // Avoid underflow
+    return INT_MIN;
   }
-
-  return result;
+  else
+  {
+    return base_priority - XLB_SOFT_TARGET_PRIORITY_PENALTY;
+  }
 }
 
 xlb_work_unit*
@@ -292,69 +385,106 @@ xlb_workq_get(int target, int type)
 {
   DEBUG("xlb_workq_get(target=%i, type=%i)", target, type);
 
-  xlb_work_unit* wu = NULL;
+  xlb_work_unit* wu;
 
   // Targeted work was found
-  heap_t* H = &targeted_work[targeted_work_ix(target, type)];
-  if (heap_size(H) != 0)
+  wu = pop_targeted(type, target);
+  if (wu != NULL)
   {
-    wu = pop_targeted(H, target);
     return wu;
   }
 
   // Select untargeted work
-  struct rbtree* T = &typed_work[type];
-  struct rbtree_node* node = rbtree_leftmost(T);
-  if (node == NULL)
-    // We found nothing
-    return NULL;
-  rbtree_remove_node(T, node);
-  wu = node->data;
-  DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
-  free(node);
-
-  if (wu->target >= 0)
+  wu = pop_untargeted(type);
+  if (wu != NULL)
   {
-    xlb_workq_remove_soft_targeted(type, wu->target, wu);
+    return wu;
   }
 
-  return wu;
+  return NULL;
 }
 
-/*
- * Remove entry from targeted queue for soft targeted task.
- * type: type of work
- * target: target of work
- * wu: the work unit pointer
- */
-static void
-xlb_workq_remove_soft_targeted(int type, int target, xlb_work_unit *wu)
-{
-  assert(target >= 0);
-  assert(wu != NULL);
-  assert(wu->opts.soft_target);
-  if (!xlb_worker_maps_to_server(target, xlb_comm_rank))
-  {
-    return;
-  }
+/**
+  Pop an entry from a targeted queue, return NULL if none left.
 
-  /*
-   * Remove entry from targeted heap.
-   * We do a linear search, which is potentially expensive, but will
-   * will only require checking many entries if the rank has many
-   * hard-targeted tasks enqueued */
-  heap_t* H = &targeted_work[targeted_work_ix(target, type)];
-  for (uint32_t i = 0; i < H->size; i++)
+  Implementation notes:
+   Does not remove entry in untargeted_work if soft targeted
+   Frees per target/type queue if empty
+ */
+static xlb_work_unit* pop_targeted(int type, int target)
+{
+  heap_ii_t* H = &targeted_work[targeted_work_ix(target, type)];
+  while (H->size > 0)
   {
-    heap_entry_t *entry = &H->array[i];
-    if (entry->val == wu)
-    {
-      heap_del_entry(H, i);
-      return;
+    heap_ii_entry_t root = heap_ii_root(H);
+
+    int priority = root.key;
+    int wu_id = root.val;
+
+    heap_ii_del_root(H);
+
+    xlb_work_unit* wu = wu_id < wu_array.size ? wu_array.arr[wu_id]
+                                              : NULL;
+    /*
+      Check not stale.  There is a corner case here where all of these
+      match but it was a different work unit to the one the targeted
+      entry was created for.  In that case it doesn't matter which
+      was returned.
+     */
+    if (wu != NULL && wu->type == type && wu->target == target &&
+        wu->opts.priority == -priority) {
+
+      DEBUG("xlb_workq_get(): targeted: %"PRId64"", wu->id);
+      wu_array_remove(wu_id);
+
+      return wu;
     }
   }
-  // Should have been found
-  assert(false);
+
+  heap_ii_clear(H);
+  return NULL;
+}
+
+static xlb_work_unit* pop_untargeted(int type)
+{
+  heap_ii_t *H = &untargeted_work[type];
+  while (H->size > 0)
+  {
+    heap_ii_entry_t root = heap_ii_root(H);
+
+    int priority = root.key;
+    int wu_id = root.val;
+
+    heap_ii_del_root(H);
+
+    xlb_work_unit* wu = wu_id < wu_array.size ? wu_array.arr[wu_id]
+                                              : NULL;
+    /*
+      Check not stale.  There is a corner case here where all of these
+      match but it was a different work unit to the one the targeted
+      entry was created for.  In that case it doesn't matter which
+      was returned.
+
+      We need to modify priority check for adjusted priority for soft
+      targeted tasks.
+     */
+
+    if (wu != NULL && wu->type == type &&
+        (wu->target < 0 || wu->opts.soft_target)) {
+      int exp_priority = priority;
+      if (wu->opts.soft_target)
+      {
+        exp_priority = soft_target_priority(priority);
+      }
+
+      if (wu->opts.priority == exp_priority) {
+        DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
+        wu_array_remove(wu_id);
+        return wu;
+      }
+    }
+  }
+  return NULL;
 }
 
 /** Struct for user data during rbtree iterator search */
@@ -431,35 +561,6 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
-/*
- * Steal work of a given type.
- * Note: we allow soft-targeted tasks to be stolen.
- */
-static adlb_code
-xlb_workq_steal_type(struct rbtree *q, int num,
-                      xlb_workq_steal_callback cb)
-{
-  assert(q->size >= num);
-  for (int i = 0; i < num; i++)
-  {
-    struct rbtree_node* node = rbtree_random(q);
-    assert(node != NULL);
-    rbtree_remove_node(q, node);
-    xlb_work_unit *wu = (xlb_work_unit*) node->data;
-    free(node);
-
-    if (wu->target >= 0) {
-      xlb_workq_remove_soft_targeted(wu->type, wu->target, wu);
-    }
-
-    adlb_code code = cb.f(cb.data, wu);
-
-    ADLB_CHECK(code);
-  }
-  return ADLB_SUCCESS;
-}
-
-
 adlb_code
 xlb_workq_steal(int max_memory, const int *steal_type_counts,
                           xlb_workq_steal_callback cb)
@@ -470,7 +571,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
   for (int t = 0; t < xlb_types_size; t++)
   {
     int stealer_count = steal_type_counts[t];
-    int single_count = typed_work[t].size;
+    int single_count = (int)untargeted_work[t].size;
     int par_count = parallel_work[t].size;
     int tot_count = single_count + par_count;
     // TODO: handle ser and par separately?
@@ -500,9 +601,9 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
                         t, single_to_send, single_count, par_to_send, par_count,
                         tot_count, stealer_count);
         adlb_code code;
-        code = xlb_workq_steal_type(&(typed_work[t]), single_to_send, cb);
+        code = heap_steal_type(&(untargeted_work[t]), single_to_send, cb);
         ADLB_CHECK(code);
-        code = xlb_workq_steal_type(&(parallel_work[t]), par_to_send, cb);
+        code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
         xlb_workq_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
 
@@ -517,14 +618,49 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
   return ADLB_SUCCESS;
 }
 
+/*
+ * Steal work of a given type.
+ * Note: we allow soft-targeted tasks to be stolen.
+ */
+static adlb_code
+heap_steal_type(heap_ii_t *q, int num, xlb_workq_steal_callback cb)
+{
+  assert(heap_ii_size(q) >= num);
+  for (int i = 0; i < num; i++)
+  {
+    // TODO: need to  randomly select from heap
+    return ADLB_ERROR;
+  }
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
+{
+  assert(q->size >= num);
+  for (int i = 0; i < num; i++)
+  {
+    struct rbtree_node* node = rbtree_random(q);
+    assert(node != NULL);
+    rbtree_remove_node(q, node);
+    xlb_work_unit *wu = (xlb_work_unit*) node->data;
+    free(node);
+
+    adlb_code code = cb.f(cb.data, wu);
+
+    ADLB_CHECK(code);
+  }
+  return ADLB_SUCCESS;
+}
+
 void xlb_workq_type_counts(int *types, int size)
 {
   assert(size >= xlb_types_size);
   for (int t = 0; t < xlb_types_size; t++)
   {
-    assert(typed_work[t].size >= 0);
+    assert(untargeted_work[t].size >= 0);
     assert(parallel_work[t].size >= 0);
-    types[t] = typed_work[t].size + parallel_work[t].size;
+    types[t] = (int)untargeted_work[t].size + parallel_work[t].size;
   }
 }
 
@@ -543,9 +679,10 @@ wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
 }
 
 static void
-wu_heap_clear_callback(heap_key_t k, heap_val_t v)
+wu_heap_ii_clear_callback(int priority, int wu_id)
 {
-  xlb_work_unit *wu = (xlb_work_unit*)v;
+  // TODO: lookup wu_id
+  xlb_work_unit *wu = NULL;
   // Free soft targeted via typed work
   if (!wu->opts.soft_target)
   {
@@ -554,22 +691,47 @@ wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 }
 
 static void
-targeted_heap_clear(heap_t *H)
+targeted_clear(heap_ii_t *H)
 {
+  // TODO: pass waiting tasks to higher-level handling code
   if (H->size > 0)
   {
     printf("WARNING: server contains targeted work that was never "
            "received by target!\n");
     for (int j = 0; j < H->size; j++)
     {
-      xlb_work_unit *wu = H->array[j].val;
+      int wu_id = H->array[j].val;
+      // TODO: lookup in array
+      xlb_work_unit *wu = NULL;
+
       printf("  Targeted work: type: %i target rank: %i\n",
                   wu->type, wu->target);
     }
   }
 
   // free the work unit
-  heap_clear_callback(H, wu_heap_clear_callback);
+  heap_ii_clear_callback(H, wu_heap_ii_clear_callback);
+}
+
+static void
+untargeted_clear(heap_ii_t *H)
+{
+  // TODO: pass waiting tasks to higher-level handling code
+  if (H->size > 0)
+  {
+    printf("WARNING: server contains untargeted work that was never "
+           "received!\n");
+    for (int j = 0; j < H->size; j++)
+    {
+      int wu_id = H->array[j].val;
+      // TODO: lookup in array
+      xlb_work_unit *wu = NULL;
+      printf("  Untargeted work: type: %i\n", wu->type);
+    }
+  }
+
+  // free the work unit
+  heap_ii_clear_callback(H, wu_heap_ii_clear_callback);
 }
 
 void xlb_print_workq_perf_counters(void)
@@ -634,29 +796,24 @@ void
 xlb_workq_finalize()
 {
   TRACE_START;
+  // TODO: free wu_array
 
   // Clear up targeted_work
   int targeted_entries = targeted_work_entries(xlb_types_size, xlb_my_workers);
   for (int i = 0; i < targeted_entries; i++)
   {
-    // TODO: report unmatched targeted work
-    targeted_heap_clear(&targeted_work[i]);
+    targeted_clear(&targeted_work[i]);
   }
   free(targeted_work);
   targeted_work = NULL;
 
-  // Clear up typed_work
+  // Clear up untargeted_work
   for (int i = 0; i < xlb_types_size; i++)
   {
-    // TODO: pass waiting tasks to higher-level handling code
-    int count = (&typed_work[i])->size;
-    if (count > 0)
-      printf("WARNING: server contains %i work units of type: %i\n",
-             count, i);
-    rbtree_clear_callback(&typed_work[i], wu_rbtree_clear_callback);
+    untargeted_clear(&untargeted_work[i]);
   }
-  free(typed_work);
-  typed_work = NULL;
+  free(untargeted_work);
+  untargeted_work = NULL;
 
   // Clear up parallel_work
   for (int i = 0; i < xlb_types_size; i++)
