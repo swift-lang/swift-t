@@ -22,17 +22,13 @@
 @assertion @builtin_op=ASSERT
 (void o) assert(boolean condition, string msg) "turbine" "0.0.2" "assert";
 @assertion @builtin_op=ASSERT_EQ
-(void o) assertEqual(int v1, int v2, string msg) "turbine" "0.0.2" "assertEqual";
-(void o) assertEqual(float v1, float v2, string msg) "turbine" "0.0.2" "assertEqual";
-(void o) assertEqual(boolean v1, boolean v2, string msg) "turbine" "0.0.2" "assertEqual";
-(void o) assertEqual(string v1, string v2, string msg) "turbine" "0.0.2" "assertEqual";
+(void o) assertEqual(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertEqual";
 @assertion
-(void o) assertLT(int v1, int v2, string msg) "turbine" "0.0.2" "assertLT";
+(void o) assertLT(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertLT";
 @assertion
-(void o) assertLT(float v1, float v2, string msg) "turbine" "0.0.2" "assertLT";
-@assertion
-(void o) assertLTE(int v1, int v2, string msg) "turbine" "0.0.2" "assertLTE";
-@assertion
-(void o) assertLTE(float v1, float v2, string msg) "turbine" "0.0.2" "assertLTE";
+(void o) assertLTE(string|int|float|boolean v1, string|int|float|boolean v2,
+               string msg) "turbine" "0.0.2" "assertLTE";
 
 #endif
