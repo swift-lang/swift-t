@@ -132,18 +132,23 @@ public class GlobalContext extends Context {
   @Override
   public FnID defineFunction(String name, FunctionType type,
       DefaultVals<Var> defaultVals) throws UserException {
-
+    FnID fnID;
     DefInfo def = lookupDef(name);
     if (def != null && def.kind == DefKind.FUNCTION) {
       // Function already exists, need to add overload
-      return overloadFunction(name, type, defaultVals);
+      fnID = overloadFunction(name, type, defaultVals);
+
+      // Need to ensure name isn't reused
+      declareVariable(type, fnID.uniqueName(), Alloc.GLOBAL_CONST,
+          DefType.GLOBAL_CONST,  VarProvenance.userVar(getSourceLoc()), false);
+
     } else {
       declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
                       VarProvenance.userVar(getSourceLoc()), false);
-      FnID fnID = new FnID(name, name);
+      fnID = new FnID(name, name);
       addFunctionOverload(name, fnID, type, defaultVals);
-      return fnID;
     }
+    return fnID;
   }
 
   private FnID overloadFunction(String name, FunctionType type,

@@ -1573,8 +1573,7 @@ public class ASTWalker {
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     // Define function, also detect duplicates here
-    FnID fid = context.defineFunction(function, ft,
-        fdecl.defaultVals());
+    FnID fid = context.defineFunction(function, ft, fdecl.defaultVals());
     tree.setIdentifier(fid);
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));

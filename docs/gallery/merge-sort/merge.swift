@@ -22,7 +22,4 @@ app (file o) sort(file i, file j)
   }
 }
 
-main
-{
-  file result <"sorted.txt"> = merge(0,7);
-}
+file result <"sorted.txt"> = merge(0,7);
