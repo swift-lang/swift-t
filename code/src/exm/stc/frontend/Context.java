@@ -520,10 +520,9 @@ public abstract class Context {
     if (preferredSuffix != null) {
       prefix += preferredSuffix;
       // see if we can give it a nice name
-    }
-
-    if (lookupDef(prefix) == null) {
-      return prefix;
+      if (lookupDef(prefix) == null) {
+        return prefix;
+      }
     }
 
     String name = null;
