@@ -75,12 +75,14 @@ public class FunctionCall {
   }
 
   private static FunctionCall structConstructor(String typeName,
-      SwiftAST arglist, FunctionType ftype) {
+      SwiftAST arglist, List<String> fieldNames, FunctionType ftype) {
     assert(ftype.getOutputs().size() == 1 &&
         Types.isStruct(ftype.getOutputs().get(0)));
 
+
+
     FnOverload fn = new FnOverload(constructorID(typeName), ftype,
-                                   DefaultVals.<Var>noDefaults(ftype));
+                   fieldNames, DefaultVals.<Var>noDefaults(ftype));
 
     return new FunctionCall(FunctionCallKind.STRUCT_CONSTRUCTOR, typeName,
         fn.asList(), arglist.children(),
@@ -216,14 +218,17 @@ public class FunctionCall {
     }
 
     StructType structType = (StructType)type.getImplType();
+    List<String> fieldNames = new ArrayList<String>();
     List<Type> constructorInputs = new ArrayList<Type>();
     for (StructField field: structType.fields()) {
+      fieldNames.add(field.name());
       constructorInputs.add(field.type());
     }
 
-    FunctionType constructorType = new FunctionType(constructorInputs, type.asList(), false);
+    FunctionType constructorType =
+        new FunctionType(constructorInputs, type.asList(), false);
 
-    return structConstructor(func, arglist, constructorType);
+    return structConstructor(func, arglist, fieldNames, constructorType);
   }
 
 }

@@ -963,8 +963,10 @@ public class FunctionTypeChecker {
     public final List<Type> argTypes;
 
     public FnCallInfo(String name, FnID id, FunctionType fnType,
-                      DefaultVals<Var> defaultVals, List<Type> argTypes) {
-      this(name, new FnOverload(id, fnType, defaultVals).asList(), argTypes);
+        List<String> inArgNames, DefaultVals<Var> defaultVals,
+        List<Type> argTypes) {
+      this(name, new FnOverload(id, fnType, inArgNames, defaultVals).asList(),
+          argTypes);
     }
 
     public FnCallInfo(String name,  List<FnOverload> fnTypes,

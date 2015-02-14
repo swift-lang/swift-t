@@ -189,7 +189,8 @@ public class LocalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-              DefaultVals<Var> defaultVals) throws DoubleDefineException {
+      List<String> inArgNames, DefaultVals<Var> defaultVals)
+          throws DoubleDefineException {
     throw new STCRuntimeError("Cannot define function in local context");
   }
 
