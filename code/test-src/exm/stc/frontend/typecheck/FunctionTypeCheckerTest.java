@@ -1,6 +1,7 @@
 package exm.stc.frontend.typecheck;
 
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.checkOverloadsAmbiguity;
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.concretiseInputsNonOverloaded;
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.concretiseInputsOverloaded;
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.selectArgType;
 import static org.junit.Assert.assertEquals;
@@ -164,6 +165,25 @@ public class FunctionTypeCheckerTest {
     assertEquals("One matching type", 1, match.concreteAlts.size());
     assertEquals("Matched args", intArgs,
                   match.concreteAlts.get(0).getInputs());
+  }
+
+  /**
+   * Regression test - not enough arguments provided
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testMissingArgs() throws TypeMismatchException {
+    exception.expect(TypeMismatchException.class);
+
+    FunctionType intFn = makeSimpleFT(Types.F_INT, Types.F_INT);
+    FnID intFnID = new FnID("int", "int");
+    FnOverload intOverload = new FnOverload(intFnID, intFn);
+
+    // Shouldn't match - not enough args
+    FnMatch match = concretiseInputsNonOverloaded(FAKE_CONTEXT,
+        intOverload, Arrays.asList(Types.F_INT), true);
+
+    System.err.println(match);
   }
 
   /**
