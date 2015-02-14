@@ -265,7 +265,7 @@ public class FunctionTypeChecker {
     }
   }
 
-  private static FnMatch concretiseInputsNonOverloaded(Context context,
+  static FnMatch concretiseInputsNonOverloaded(Context context,
       FnOverload overload, List<Type> argTypes, boolean throwOnFail)
       throws TypeMismatchException {
     List<Type> expandedInArgs = matchArgs(context, overload, argTypes, throwOnFail);
@@ -640,7 +640,7 @@ public class FunctionTypeChecker {
       minNumArgs = fnType.getInputs().size();
     }
 
-    if (numArgs < abstractInputs.size() - 1) {
+    if (numArgs < minNumArgs) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Too few arguments in "
           + "call to function " + overload.id.originalName() + ": expected "
