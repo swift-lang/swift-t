@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.common.exceptions.InvalidConstructException;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -642,6 +643,7 @@ public class FunctionTypeChecker {
    *                      or throw exception if true
    * @return
    * @throws TypeMismatchException
+   * @throws InvalidConstructException
    */
   private static List<MatchedArg> matchArgs(Context context,
       FnOverload overload, List<Type> argTypes, Map<String, Type> kwArgTypes,
@@ -710,6 +712,13 @@ public class FunctionTypeChecker {
       } else {
         assert(!fnType.hasVarargs());
         name = overload.inArgNames.get(i);
+        boolean hasDefault = overload.defaultVals.defaultVals().get(i) != null;
+
+        if (!hasDefault) {
+          throw new TypeMismatchException(context,
+                  "Keyword arguments cannot be used for required argument "
+                 + name + " in call to " + overload.id.originalName());
+        }
         formalArgType = abstractInputs.get(i);
         argExprType = kwArgTypes.get(name);
         if (argExprType != null) {
