@@ -1,6 +1,7 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.util.Pair;
+import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.tree.FunctionCall;
 import exm.stc.frontend.tree.FunctionCall.FunctionCallKind;
@@ -79,9 +81,8 @@ public class FunctionCallEvaluator {
     ConcreteMatch concrete =
         FunctionTypeChecker.concretiseFunctionCall(context, f, outVars);
 
-    FnID concreteID = concrete.id;
+    FnID concreteID = concrete.overload.id;
     FunctionType concreteType = concrete.type;
-    DefaultVals<Var> defaultVals = concrete.defaultVals;
 
     // Some functions, e.g. asserts, can be omitted after typechecking
     if (omitFunctionCall(context, concreteID)) {
@@ -89,8 +90,8 @@ public class FunctionCallEvaluator {
     }
 
     // First evaluate inputs before opening any waits
-    List<Var> inVars = evalFunctionInputs(context, renames, concreteID,
-                                          concreteType, f.args());
+    List<Var> inVars = evalFunctionInputs(context, renames, concrete.overload,
+                concreteType, f.posArgs(), f.kwArgs());
 
     // Process priority after arguments have been evaluated, so that
     // the argument evaluation is outside the wait statement
@@ -100,7 +101,7 @@ public class FunctionCallEvaluator {
     openedWait = evalCallProperties(context, concreteID, f, propVals, renames);
 
     evalFunctionCallInner(context, concreteID, f.kind(), concreteType, outVars,
-                          inVars, defaultVals, propVals);
+                          inVars, concrete.overload.defaultVals, propVals);
 
     if (openedWait) {
       backend.endWaitStatement();
@@ -149,22 +150,45 @@ public class FunctionCallEvaluator {
     }
   }
 
+  /**
+   * Evaluate function inputs
+   * @param context
+   * @param renames
+   * @param overload
+   * @param concrete
+   * @param posArgs
+   * @param kwArgs
+   * @return list of inputs, with nulls where defaults need to be filled in
+   * @throws UserException
+   */
   private List<Var> evalFunctionInputs(Context context,
-      Map<String, String> renames, FnID id, FunctionType concrete,
-      List<SwiftAST> argTrees) throws UserException {
+      Map<String, String> renames, FnOverload overload, FunctionType concrete,
+      List<SwiftAST> posArgs, Map<String, SwiftAST> kwArgs)
+          throws UserException {
     // evaluate argument expressions left to right, creating temporaries
-    List<Var> argVars = new ArrayList<Var>(argTrees.size());
+    Var argVars[] = new Var[concrete.getInputs().size()];
 
-    for (int i = 0; i < argTrees.size(); i++) {
-      SwiftAST argTree = argTrees.get(i);
+    for (int i = 0; i < concrete.getInputs().size(); i++) {
+      int formalArgIx = Math.min(i, overload.inArgNames.size() - 1);
+      String inArgName = overload.inArgNames.get(formalArgIx);
+      SwiftAST expr;
+      if (i < posArgs.size()) {
+        expr = posArgs.get(i);
+      } else {
+        expr = kwArgs.get(inArgName);
+        if (expr == null) {
+          continue;
+        }
+      }
+
       Type expType = concrete.getInputs().get(i);
-
-      Type exprType = TypeChecker.findExprType(context, argTree);
+      Type exprType = TypeChecker.findExprType(context, expr);
       Type argType = FunctionTypeChecker.concretiseFnArg(context,
-                    id.originalName(), i, expType, exprType).val2;
-      argVars.add(exprWalker.eval(context, argTree, argType, false, renames));
+            overload.id.originalName(), inArgName, expType, exprType).val2;
+      argVars[i] = exprWalker.eval(context, expr, argType, false, renames);
     }
-    return argVars;
+
+    return Arrays.asList(argVars);
   }
 
   /**
@@ -191,10 +215,14 @@ public class FunctionCallEvaluator {
     List<Var> waitVars = new ArrayList<Var>();
     Context waitContext = null;
 
-
     assert(concrete.getInputs().size() == iList.size());
     for (int i = 0; i < iList.size(); i++) {
       Var input = iList.get(i);
+      if (input == null) {
+        input = defaultVals.defaultVals().get(i);
+        assert(input != null);
+      }
+
       Type inputType = input.type();
       Type expType = concrete.getInputs().get(i);
       if (inputType.getImplType().assignableTo(expType.getImplType())) {
@@ -239,9 +267,6 @@ public class FunctionCallEvaluator {
         exprWalker.retrieveRef(derefVar, waitVars.get(i), false);
       }
     }
-
-    // Add any defaults
-    fixedIList.addAll(defaultVals.trailingDefaults(fixedIList.size()));
 
     return Pair.create(waitContext, fixedIList);
   }

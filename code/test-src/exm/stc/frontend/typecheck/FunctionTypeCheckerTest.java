@@ -151,7 +151,7 @@ public class FunctionTypeCheckerTest {
 
     // Try calling with both args
     List<Type> intBoolArgs = Arrays.asList(Types.F_INT, Types.F_BOOL);
-    FnCallInfo fc = new FnCallInfo(name, fo.asList(), intBoolArgs);
+    FnCallInfo fc = makeFnCallInfo(name, fo.asList(), intBoolArgs);
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
     assertEquals("One matching type", 1, match.concreteAlts.size());
@@ -159,7 +159,7 @@ public class FunctionTypeCheckerTest {
                   match.concreteAlts.get(0).getInputs());
 
     List<Type> intArgs = Arrays.asList(Types.F_INT);
-    fc = new FnCallInfo(name, fo.asList(), intArgs);
+    fc = makeFnCallInfo(name, fo.asList(), intArgs);
     match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
     // Should resolve to (int)
@@ -182,7 +182,8 @@ public class FunctionTypeCheckerTest {
 
     // Shouldn't match - not enough args
     FnMatch match = concretiseInputsNonOverloaded(FAKE_CONTEXT,
-        intOverload, Arrays.asList(Types.F_INT), true);
+        intOverload, Arrays.asList(Types.F_INT),
+        Collections.<String, Type>emptyMap(), true);
 
     System.err.println(match);
   }
@@ -412,16 +413,23 @@ public class FunctionTypeCheckerTest {
     makeFT(Arrays.asList(Types.F_STRING, FLOAT_OR_INT), true);
   }
 
+  private FnCallInfo makeFnCallInfo(String name, List<FnOverload> fnTypes,
+      List<Type> argTypes) {
+    return new FnCallInfo(name, fnTypes, argTypes,
+              Collections.<String, Type>emptyMap());
+  }
+
   private FnCallInfo makeOverloadedFnCallInfo(List<Type> argTypes,
       List<FnOverload> fTypes) {
-    return new FnCallInfo("overloaded_function", fTypes, argTypes);
+    return makeFnCallInfo("overloaded_function", fTypes, argTypes);
   }
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
     List<String> inArgNames = generateArgNames(argTypes.size());
 
-    return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
-              inArgNames, DefaultVals.<Var>noDefaults(fnType), argTypes);
+    FnOverload overload = new FnOverload(FAKE_FN_ID, fnType, inArgNames,
+          DefaultVals.<Var>noDefaults(fnType));
+    return makeFnCallInfo(FAKE_FN_ID.originalName(), overload.asList(), argTypes);
   }
 
 
