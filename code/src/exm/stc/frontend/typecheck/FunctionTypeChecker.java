@@ -282,6 +282,11 @@ public class FunctionTypeChecker {
       return null;
     }
 
+    assert(matchedArgs.size() == overload.inArgNames.size() ||
+          (overload.type.hasVarargs() &&
+              matchedArgs.size() >= overload.inArgNames.size() - 1)) :
+                overload.inArgNames + " " + matchedArgs;
+
     /*
      *  Narrow down possible bindings - choose union types and find possible
      *  typevar bindings.
@@ -684,9 +689,10 @@ public class FunctionTypeChecker {
       return null;
     }
 
+    int numMatchedArgs = Math.max(numTotalArgs, fnType.getInputs().size());
     Set<String> unmatchedKwArgs = new HashSet<String>(kwArgTypes.keySet());
-    MatchedArg matched[] = new MatchedArg[numTotalArgs];
-    for (int i = 0; i < numTotalArgs; i++) {
+    MatchedArg matched[] = new MatchedArg[numMatchedArgs];
+    for (int i = 0; i < numMatchedArgs; i++) {
       String name;
       Type formalArgType;
       Type argExprType;
@@ -1028,6 +1034,11 @@ public class FunctionTypeChecker {
       this.name = name;
       this.formalArgType = formalArgType;
       this.argExprType = argExprType;
+    }
+
+    @Override
+    public String toString() {
+      return name + ": " + formalArgType + " " + argExprType;
     }
   }
 }

@@ -93,6 +93,10 @@ public class FunctionCallEvaluator {
     List<Var> inVars = evalFunctionInputs(context, renames, concrete.overload,
                 concreteType, f.posArgs(), f.kwArgs());
 
+    assert(inVars.size() == concrete.overload.inArgNames.size() ||
+          (concrete.overload.type.hasVarargs() &&
+              inVars.size() >= concrete.overload.inArgNames.size() - 1));
+
     // Process priority after arguments have been evaluated, so that
     // the argument evaluation is outside the wait statement
     boolean openedWait = false;
