@@ -107,6 +107,7 @@ public class FunctionDecl {
     ArrayList<String> inNames = new ArrayList<String>();
     ArrayList<Type> inArgTypes = new ArrayList<Type>();
     ArrayList<Var> defaultVector = new ArrayList<Var>();
+    boolean hasDefault = false;
 
     boolean varArgs = false;
     for (int i = 0; i < inArgTree.getChildCount(); i++) {
@@ -115,15 +116,24 @@ public class FunctionDecl {
       inNames.add(argInfo.name);
       inArgTypes.add(argInfo.type);
       defaultVector.add(argInfo.defaultVal);
+      hasDefault = hasDefault || argInfo.defaultVal != null;
+
+      if (argInfo.defaultVal == null && hasDefault) {
+        throw new TypeMismatchException(context, "argument " + argInfo.name
+            + " in definition of function " + function + " comes after"
+            + " a previous argument with a default value, but does not"
+            + " specify a default");
+      }
 
       if (argInfo.varargs) {
         if (i != inArgTree.getChildCount() - 1) {
           throw new TypeMismatchException(context, "variable argument marker "
               + "... must be in final position of input argument list");
         }
-        if (argInfo.defaultVal != null) {
+        if (hasDefault) {
           throw new TypeMismatchException(context, "Cannot provide default "
-              + "value for variable argument");
+              + "values for argument in definition of function " + function
+              + " with variable-length argument list");
         }
         varArgs = true;
       }
