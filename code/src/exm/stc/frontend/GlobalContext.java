@@ -121,12 +121,12 @@ public class GlobalContext extends Context {
 
   @Override
   public FnID defineFunction(String name, FunctionType type,
-      DefaultVals<Var> defaultVals) throws UserException {
+      List<String> inArgNames, DefaultVals<Var> defaultVals) throws UserException {
     FnID fnID;
     DefInfo def = lookupDef(name);
     if (def != null && def.kind == DefKind.FUNCTION) {
       // Function already exists, need to add overload
-      fnID = overloadFunction(name, type, defaultVals);
+      fnID = overloadFunction(name, type, inArgNames, defaultVals);
 
       // Need to ensure name isn't reused
       declareVariable(type, fnID.uniqueName(), Alloc.GLOBAL_CONST,
@@ -136,13 +136,14 @@ public class GlobalContext extends Context {
       declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
                       VarProvenance.userVar(getSourceLoc()), false);
       fnID = new FnID(name, name);
-      addFunctionOverload(name, fnID, type, defaultVals);
+      addFunctionOverload(name, fnID, type, inArgNames, defaultVals);
     }
     return fnID;
   }
 
   private FnID overloadFunction(String name, FunctionType type,
-      DefaultVals<Var> defaultVals) throws InvalidOverloadException {
+      List<String> inArgNames, DefaultVals<Var> defaultVals)
+          throws InvalidOverloadException {
 
     String uniqueName = uniqueName(Var.OVERLOAD_PREFIX, name,
                                    Var.OVERLOAD_PREFIX + name);
@@ -167,14 +168,16 @@ public class GlobalContext extends Context {
       addOverloadToType(name, type);
     }
 
-    addFunctionOverload(name, overloadID, type, defaultVals);
+    addFunctionOverload(name, overloadID, type, inArgNames, defaultVals);
 
     return overloadID;
   }
 
   private void addFunctionOverload(String name, FnID fnID,
-                 FunctionType type, DefaultVals<Var> defaultVals) {
-    functionOverloads.put(name, new FnOverload(fnID, type, defaultVals));
+                 FunctionType type, List<String> inArgNames,
+                 DefaultVals<Var> defaultVals) {
+    functionOverloads.put(name,
+        new FnOverload(fnID, type, inArgNames, defaultVals));
   }
 
   /**
