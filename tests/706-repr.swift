@@ -8,7 +8,6 @@ import string;
 
 main () {
   // Check repr() works for various types
-
   assertEqual(repr(1), "1", "int");
   assertEqual(repr(" this is a string \n"), " this is a string \n", "string");
   assertEqual(repr(3.14), fromfloat(3.14), "float");
@@ -36,4 +35,20 @@ main () {
 
   int A[string][string] = { "testing" : { "testing": 123 } };
   assertEqual(repr(A), "testing {testing 123}", "nested_assoc");
+
+  // Check that we don't get tripped up by referencetypes
+  string Z[][] = f();
+
+  assertEqual(repr(Z[g(0)][g(1)]), "b", "repr");
+
+
+
+}
+
+(string o[][]) f() {
+  o = [["a", "b", "c"]];
+}
+
+(int o) g(int i) {
+  o = i;
 }
