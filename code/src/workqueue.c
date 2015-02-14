@@ -32,6 +32,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include <heap_ii.h>
 #include <list.h>
@@ -53,10 +54,15 @@
 
 #define XLB_SOFT_TARGET_PRIORITY_PENALTY 65536
 
+static adlb_code init_work_heaps(heap_ii_t** heap_array, int count);
 static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu);
 static adlb_code xlb_workq_add_serial(xlb_work_unit* wu);
 static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id);
 static adlb_code add_targeted(xlb_work_unit* wu, int wu_id);
+
+static adlb_code wu_array_init(void);
+static void wu_array_clear(void);
+static adlb_code wu_array_expand(int new_size);
 static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id);
 static void wu_array_remove(int wu_id);
 
@@ -64,7 +70,8 @@ static xlb_work_unit* pop_untargeted(int type);
 static xlb_work_unit* pop_targeted(int type, int target);
 
 static adlb_code
-heap_steal_type(heap_ii_t *q, int num, xlb_workq_steal_callback cb);
+heap_steal_type(heap_ii_t *q, double p, int *stolen,
+                xlb_workq_steal_callback cb);
 static adlb_code
 rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb);
 
@@ -79,7 +86,7 @@ static xlb_work_unit_id unique = 1;
 
   Other structures provide indexes for quick lookup of work units.
 
-  TODO: this may be unfriendly for large arrays - need large contiguous
+  Note: this may be unfriendly for large arrays - need large contiguous
         allocation and need to copy on resize.
  */
 static struct {
@@ -88,7 +95,9 @@ static struct {
 
   int size;
   int free_count;
-} wu_array;
+} wu_array = { NULL, NULL, 0, 0 };
+
+#define WU_ARRAY_INIT_SIZE (1024 * 64)
 
 /**
   untargeted_work and targeted_work provide indexes to lookup wu_array
@@ -151,25 +160,15 @@ xlb_workq_init(int work_types, int my_workers)
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
 
-  // TODO: allocate wu_array
+  adlb_code ac = wu_array_init();
+  ADLB_CHECK(ac);
 
-  int targeted_entries = targeted_work_entries(work_types, my_workers);
-  targeted_work = malloc(sizeof(targeted_work[0]) * (size_t)targeted_entries);
-  targeted_work_size = targeted_entries;
-  valgrind_assert(targeted_work != NULL);
-  for (int i = 0; i < targeted_entries; i++)
-  {
-    bool ok = heap_ii_init_empty(&targeted_work[i]);
-    CHECK_MSG(ok, "Could not allocate memory for heap");
-  }
+  targeted_work_size = targeted_work_entries(work_types, my_workers);
+  ac = init_work_heaps(&targeted_work, targeted_work_size);
+  ADLB_CHECK(ac);
 
-  untargeted_work = malloc(sizeof(untargeted_work[0]) * (size_t)work_types);
-  valgrind_assert(untargeted_work != NULL);
-  for (int i = 0; i < work_types; i++)
-  {
-    bool ok = heap_ii_init_empty(&untargeted_work[i]);
-    CHECK_MSG(ok, "Could not allocate memory for heap");
-  }
+  ac = init_work_heaps(&untargeted_work, work_types);
+  ADLB_CHECK(ac);
 
   parallel_work = malloc(sizeof(parallel_work[0]) * (size_t)work_types);
   xlb_workq_parallel_task_count = 0;
@@ -207,6 +206,20 @@ xlb_workq_init(int work_types, int my_workers)
   else
   {
     xlb_task_counters = NULL;
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code init_work_heaps(heap_ii_t** heap_array, int count)
+{
+  *heap_array = malloc(sizeof((*heap_array)[0]) * (size_t)count);
+  ADLB_MALLOC_CHECK(*heap_array);
+
+  for (int i = 0; i < count; i++)
+  {
+    bool ok = heap_ii_init_empty(&(*heap_array)[i]);
+    CHECK_MSG(ok, "Could not allocate memory for heap");
   }
 
   return ADLB_SUCCESS;
@@ -316,6 +329,50 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
   return ADLB_SUCCESS;
 }
 
+static adlb_code wu_array_init(void)
+{
+  wu_array_clear();
+  return wu_array_expand(WU_ARRAY_INIT_SIZE);
+}
+
+static void wu_array_clear(void)
+{
+  free(wu_array.arr);
+  free(wu_array.free);
+
+  wu_array.arr = NULL;
+  wu_array.free = NULL;
+  wu_array.size = wu_array.free_count = 0;
+}
+
+static adlb_code wu_array_expand(int new_size)
+{
+  xlb_work_unit **new_arr = realloc(wu_array.arr,
+              (size_t)new_size * sizeof(wu_array.arr[0]));
+  ADLB_MALLOC_CHECK(new_arr);
+
+  int *new_free = realloc(wu_array.free,
+              (size_t)new_size * sizeof(wu_array.free[0]));
+  ADLB_MALLOC_CHECK(new_free);
+
+  wu_array.arr = new_arr;
+  wu_array.free = new_free;
+  wu_array.size = new_size;
+
+  // Add new unused to free list
+  int unused_start = wu_array.size + 1;
+  wu_array.free_count = new_size - unused_start;
+  for (int i = 0; i < wu_array.free_count; i++)
+  {
+    int unused_wu_id = unused_start + i;
+    wu_array.arr[unused_wu_id] = NULL;
+    wu_array.free[i] = unused_wu_id;
+  }
+
+  wu_array.size = new_size;
+  return ADLB_SUCCESS;
+}
+
 static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
 {
   if (wu_array.free_count > 0)
@@ -329,29 +386,8 @@ static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
     // No free case - resize work array and free list
     int new_size = wu_array.size * 2;
 
-    xlb_work_unit **new_arr = realloc(wu_array.arr,
-                (size_t)new_size * sizeof(wu_array.arr[0]));
-    ADLB_MALLOC_CHECK(new_arr);
-
-    int *new_free = realloc(wu_array.free,
-                (size_t)new_size * sizeof(wu_array.free[0]));
-    ADLB_MALLOC_CHECK(new_free);
-
-    wu_array.arr = new_arr;
-    wu_array.free = new_free;
-    wu_array.size = new_size;
-
-    // Add new unused to free list
-    int unused_start = wu_array.size + 1;
-    wu_array.free_count = new_size - unused_start;
-    for (int i = 0; i < wu_array.free_count; i++)
-    {
-      int unused_wu_id = unused_start + i;
-      wu_array.arr[unused_wu_id] = NULL;
-      wu_array.free[i] = unused_wu_id;
-    }
-
-    wu_array.size = new_size;
+    adlb_code ac = wu_array_expand(new_size);
+    ADLB_CHECK(ac);
   }
 
   wu_array.arr[*wu_id] = wu;
@@ -441,6 +477,7 @@ static xlb_work_unit* pop_targeted(int type, int target)
     }
   }
 
+  // Clear empty heaps
   heap_ii_clear(H);
   return NULL;
 }
@@ -594,14 +631,16 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         if (to_send == 0)
           to_send = 1;
         double single_pc = single_count / (double) tot_count;
-        int single_to_send = (int)(single_pc * to_send);
-        int par_to_send = to_send - single_to_send;
+        double par_pc = par_count / (double) tot_count;
+        int par_to_send = (int)(par_pc * to_send);
         TRACE("xlb_workq_steal(): stealing type=%i single=%i/%i par=%i/%i"
               " This server count: %i versus %i",
                         t, single_to_send, single_count, par_to_send, par_count,
                         tot_count, stealer_count);
         adlb_code code;
-        code = heap_steal_type(&(untargeted_work[t]), single_to_send, cb);
+        int single_sent;
+        code = heap_steal_type(&(untargeted_work[t]), single_pc,
+                               &single_sent, cb);
         ADLB_CHECK(code);
         code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
         xlb_workq_parallel_task_count -= par_to_send;
@@ -609,7 +648,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
 
         if (xlb_perf_counters_enabled)
         {
-          xlb_task_counters[t].single_stolen += single_to_send;
+          xlb_task_counters[t].single_stolen += single_sent;
           xlb_task_counters[t].parallel_stolen += par_to_send;
         }
       }
@@ -620,16 +659,30 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
 
 /*
  * Steal work of a given type.
+ * p: probability of stealing a given task
  * Note: we allow soft-targeted tasks to be stolen.
  */
 static adlb_code
-heap_steal_type(heap_ii_t *q, int num, xlb_workq_steal_callback cb)
+heap_steal_type(heap_ii_t *q, double p, int *stolen,
+                xlb_workq_steal_callback cb)
 {
-  assert(heap_ii_size(q) >= num);
-  for (int i = 0; i < num; i++)
+  int p_threshold = (int)(p * RAND_MAX);
+  *stolen = 0;
+
+  /*
+    Iterate backwards because removing entries sifts them down -
+    best to remove from bottom first
+   */
+  for (int i = (int)heap_ii_size(q) - 1; i >= 0; i--)
   {
-    // TODO: need to  randomly select from heap
-    return ADLB_ERROR;
+    if (rand() > p_threshold)
+    {
+      int wu_id = q->array[i].val;
+      heap_ii_del_entry(q, (heap_ix_t)i)
+      // TODO: check if valid and get work unit
+      // TODO: callback
+      (*stolen)++;
+    }
   }
   return ADLB_SUCCESS;
 }
@@ -796,7 +849,6 @@ void
 xlb_workq_finalize()
 {
   TRACE_START;
-  // TODO: free wu_array
 
   // Clear up targeted_work
   int targeted_entries = targeted_work_entries(xlb_types_size, xlb_my_workers);
@@ -827,6 +879,9 @@ xlb_workq_finalize()
   }
   free(parallel_work);
   parallel_work = NULL;
+
+  // Clear array at end - will need it for reporting leftover work 
+  wu_array_clear();
 
   if (xlb_perf_counters_enabled)
   {
