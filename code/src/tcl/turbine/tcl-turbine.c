@@ -1349,14 +1349,14 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   crc = coaster_job_create(executable, (size_t)executable_len, argc,
                 argv, arg_lens, job_manager, job_manager_len, &job);
   TCL_CONDITION(crc == COASTER_SUCCESS, "Error constructing coaster job: "
-                "%s", coaster_last_err_info())
+                "%s", coaster_last_err_info());
 
   if (stageinc > 0 || stageoutc > 0)
   {
     crc = coaster_job_add_stages(job, stageinc, stageins,
                                 stageoutc, stageouts);
     TCL_CONDITION(crc == COASTER_SUCCESS, "Error adding coaster stages: "
-                "%s", coaster_last_err_info())
+                "%s", coaster_last_err_info());
   }
 
   if (stdin_s != NULL || stdout_s != NULL || stderr_s != NULL)

@@ -2749,7 +2749,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
                                      result);
     default:
       *result = NULL;
-      TCL_CONDITION(false, "unsupported type: %s(%i)",
+      TCL_RETURN_ERROR("unsupported type: %s(%i)",
                            ADLB_Data_type_tostring(type), type);
   }
   return TCL_OK;

@@ -209,13 +209,13 @@ int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[]);
 
 #else
 
-#define TCL_CHECK(rc) ((void)(rc))
-#define TCL_CHECK_GOTO(rc, label) ((void)(rc))
-#define TCL_CHECK_MSG(rc, format, args...) ((void)(rc))
-#define TCL_CHECK_MSG_GOTO(rc, label, format, args...) ((void)(rc))
-#define TCL_CONDITION(condition, format, args...) ((void)(condition))
+#define TCL_CHECK(rc) ((void)(rc));
+#define TCL_CHECK_GOTO(rc, label) ((void)(rc));
+#define TCL_CHECK_MSG(rc, format, args...) ((void)(rc));
+#define TCL_CHECK_MSG_GOTO(rc, label, format, args...) ((void)(rc));
+#define TCL_CONDITION(condition, format, args...) ((void)(condition));
 #define TCL_CONDITION_GOTO(condition, label, format, args...) \
-                      ((void)(condition))
+                      ((void)(condition));
 
 #endif
 
