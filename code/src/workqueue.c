@@ -22,14 +22,6 @@
  *      Author: wozniak
  */
 
-/*
-   Each work unit is indexed by untargeted_work
-   If the target is ANY, it is indexed by prioritized_work
-   If the target is not ANY, it is indexed by targeted_work
-      If soft_target is set, it is also indexed in prioritized work
-      with a reduced priority
- */
-
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -145,6 +137,8 @@ static inline int targeted_work_ix(int rank, int type)
 
 /**
    parallel_work
+
+   Storage for parallel work.
    Array of trees: one for each work type
    Does not contain targeted work
    The tree contains work_unit*
