@@ -17,6 +17,7 @@
 package exm.stc.frontend;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -324,7 +325,7 @@ public abstract class Context {
    *                        with existing definition
    */
   public abstract FnID defineFunction(String name, FunctionType type,
-                        DefaultVals<Var> defaultVals) throws UserException;
+      List<String> inArgNames, DefaultVals<Var> defaultVals) throws UserException;
 
   /**
    * Lookup the type of a function
@@ -610,16 +611,16 @@ public abstract class Context {
   public static class FnOverload {
     public final FnID id;
     public final FunctionType type;
+    public final List<String> inArgNames;
     public final DefaultVals<Var> defaultVals;
 
-    public FnOverload(FnID id, FunctionType type, DefaultVals<Var> defaultVals) {
+    public FnOverload(FnID id, FunctionType type, List<String> inArgNames,
+                      DefaultVals<Var> defaultVals) {
       this.id = id;
       this.type = type;
+      this.inArgNames = Collections.unmodifiableList(
+                                    new ArrayList<String>(inArgNames));
       this.defaultVals = defaultVals;
-    }
-
-    public FnOverload(FnID id, FunctionType type) {
-      this(id, type, DefaultVals.<Var>noDefaults(type));
     }
 
     public List<FnOverload> asList() {

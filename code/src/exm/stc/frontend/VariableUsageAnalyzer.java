@@ -434,10 +434,12 @@ class VariableUsageAnalyzer {
 
       for (int i = 0; i < lVals.size(); i++) {
         LValue lVal = lVals.get(i);
+        Type rValFieldType = rValFields.get(i);
+
         syncFilePos(context, lVal.tree);
         if (lVal.var == null) {
           // Auto-declare variable
-          lVal = lVal.varDeclarationNeeded(context, rValFields.get(i));
+          lVal = lVal.varDeclarationNeeded(context, rValFieldType);
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(),
@@ -447,7 +449,7 @@ class VariableUsageAnalyzer {
            * Check assignment here to avoid weird consequential errors with
            * shadowing.
            */
-          TypeChecker.checkAssignment(context, assignments.op, rValT,
+          TypeChecker.checkAssignment(context, assignments.op, rValFieldType,
                        lVal.getType(context), lVal.toString(), rValTVBindings);
         }
 
@@ -677,7 +679,11 @@ class VariableUsageAnalyzer {
           SwiftAST argsTree = node.child(1);
           for (int i=0; i < argsTree.getChildCount(); i++) {
             SwiftAST argTree = argsTree.child(i);
-            exprNodes.push(argTree);
+            if (argTree.getType() == ExMParser.KW_ARGUMENT) {
+              exprNodes.push(argTree.child(1));
+            } else {
+              exprNodes.push(argTree);
+            }
           }
           for (SwiftAST annNode: node.children(2)) {
             assert(annNode.getType() == ExMParser.CALL_ANNOTATION);

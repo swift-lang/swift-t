@@ -68,6 +68,7 @@ tokens {
     CALL_FUNCTION;
     FORMAL_ARGUMENT_LIST;
     ARGUMENT_LIST;
+    KW_ARGUMENT;
     IDENTIFIER_LIST;
     OPERATOR;
     COMMAND;
@@ -242,7 +243,7 @@ import_statement:
 
 // Identifier path: separated by full stops
 import_path:
-        m=module_name module_subscript* 
+        m=module_name module_subscript*
         	-> ^( IMPORT_PATH $m module_subscript* )
     ;
 
@@ -261,7 +262,7 @@ type_field:
         type=type_prefix name=var_name array_marker* SEMICOLON ->
             ^( STRUCT_FIELD_DEF $type $name array_marker* )
     ;
-    
+
 
 function_definition:
 	annotation* (
@@ -397,7 +398,7 @@ another_type:
 // Type that stands alone outside of variable declaration
 standalone_type:
 	type=type_prefix array_marker*
-		-> ^( STANDALONE_TYPE $type array_marker* )  
+		-> ^( STANDALONE_TYPE $type array_marker* )
 	;
 
 block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )
@@ -511,7 +512,7 @@ declare_rest:
     ;
 
 array_marker:
-        LSQUARE standalone_type? RSQUARE -> ^( ARRAY standalone_type? ) 
+        LSQUARE standalone_type? RSQUARE -> ^( ARRAY standalone_type? )
     ;
 
 mapping:
@@ -644,7 +645,8 @@ bool_lit: TRUE | FALSE
     ;
 
 function_call:
-         call_annotation* f=function_call_name a=expr_argument_list -> ^( CALL_FUNCTION $f $a call_annotation*)
+         call_annotation* f=function_call_name a=expr_kw_pos_argument_list ->
+            ^( CALL_FUNCTION $f $a call_annotation*)
     ;
 
 function_call_name:
@@ -657,6 +659,24 @@ call_annotation:
 			-> ^( CALL_ANNOTATION $ann $e )
 	;
 
+expr_kw_pos_argument_list:
+        LPAREN expr_kw_pos_arguments? RPAREN -> ^( ARGUMENT_LIST expr_kw_pos_arguments? )
+    ;
+
+expr_kw_pos_arguments:
+        (expr|kw_argument) expr_kw_pos_arguments_rest*
+    ;
+
+expr_kw_pos_arguments_rest:
+         COMMA (
+            expr -> expr
+         |  kw_argument -> kw_argument)
+    ;
+
+kw_argument:
+        ID ASSIGN expr -> ^( KW_ARGUMENT ID expr )
+    ;
+
 expr_argument_list:
         LPAREN expr_arguments? RPAREN -> ^( ARGUMENT_LIST expr_arguments? )
     ;
@@ -667,7 +687,6 @@ expr_arguments:
 
 expr_arguments_rest: COMMA expr -> expr
     ;
-
 
 // Handle the [1:2] range operator, and the explicit array construction
 //  e.g. [1,2,3,4]
@@ -718,7 +737,7 @@ assign_op:
 more_expr:
         COMMA expr -> expr
     ;
-    
+
 // Parenthesized expression or tuple
 paren_expr:
     LPAREN e=expr (
@@ -752,8 +771,8 @@ assign_path_element:
     ;
 
 // only allow function calls as non-assignment statements
-expr_stmt: 
-      e=function_call -> ^( EXPR_STMT $e )      
+expr_stmt:
+      e=function_call -> ^( EXPR_STMT $e )
     | e=variable -> ^( EXPR_STMT $e )
     ;
 

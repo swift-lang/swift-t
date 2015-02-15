@@ -1573,7 +1573,8 @@ public class ASTWalker {
     LogHelper.debug(context, "builtin: " + function + " " + ft);
 
     // Define function, also detect duplicates here
-    FnID fid = context.defineFunction(function, ft, fdecl.defaultVals());
+    FnID fid = context.defineFunction(function, ft, fdecl.getInNames(),
+                                      fdecl.defaultVals());
     tree.setIdentifier(fid);
 
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
@@ -1802,7 +1803,7 @@ public class ASTWalker {
           "main() is not allowed to have input or output arguments");
 
     FnID id = context.defineFunction(function, ft,
-        fdecl.defaultVals());
+          fdecl.getInNames(), fdecl.defaultVals());
 
     // Record identifier for later recovery
     tree.setIdentifier(id);
@@ -1965,7 +1966,7 @@ public class ASTWalker {
               function, inArgsT, outArgsT,   Collections.<String>emptySet());
 
     FnID id = context.defineFunction(function, decl.getFunctionType(),
-                        decl.defaultVals());
+                               decl.getInNames(), decl.defaultVals());
     tree.setIdentifier(id);
 
     context.setFunctionProperty(id, FnProp.APP);
