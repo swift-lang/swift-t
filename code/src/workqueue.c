@@ -62,15 +62,21 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id);
 
 static adlb_code wu_array_init(void);
 static void wu_array_clear(void);
+static void wu_array_finalize(void);
 static adlb_code wu_array_expand(int new_size);
 static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id);
+static inline xlb_work_unit *wu_array_get(int wu_id);
+static inline xlb_work_unit *
+wu_array_try_remove_untargeted(int wu_id, int type, int priority);
+static inline xlb_work_unit *
+wu_array_try_remove_targeted(int wu_id, int type, int target, int priority);
 static void wu_array_remove(int wu_id);
 
 static xlb_work_unit* pop_untargeted(int type);
 static xlb_work_unit* pop_targeted(int type, int target);
 
 static adlb_code
-heap_steal_type(heap_ii_t *q, double p, int *stolen,
+heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
                 xlb_workq_steal_callback cb);
 static adlb_code
 rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb);
@@ -270,7 +276,7 @@ static adlb_code xlb_workq_add_serial(xlb_work_unit* wu)
   ac = wu_array_add(wu, &wu_id);
   ADLB_CHECK(ac);
 
-  if (wu->target < 0)
+  if (wu->target >= 0)
   {
     return add_targeted(wu, wu_id);
   }
@@ -345,8 +351,39 @@ static void wu_array_clear(void)
   wu_array.size = wu_array.free_count = 0;
 }
 
+static void wu_array_finalize(void)
+{
+  bool unmatched_serial = false;
+  for (int i = 0; i < wu_array.size; i++)
+  {
+    xlb_work_unit *wu = wu_array.arr[i];
+    if (wu != NULL)
+    {
+      // TODO: pass waiting tasks to higher-level handling code
+      if (!unmatched_serial)
+      {
+        printf("WARNING: server contains work that was never received!\n");
+        unmatched_serial = true;
+      }
+      if (wu->target < 0)
+      {
+        printf("  Untargeted work: type: %i\n", wu->type);
+      }
+      else
+      {
+        printf("  Targeted work: type: %i target rank: %i\n",
+                    wu->type, wu->target);
+      }
+    }
+  }
+
+  wu_array_clear();
+}
+
 static adlb_code wu_array_expand(int new_size)
 {
+  assert(wu_array.free_count == 0);
+
   xlb_work_unit **new_arr = realloc(wu_array.arr,
               (size_t)new_size * sizeof(wu_array.arr[0]));
   ADLB_MALLOC_CHECK(new_arr);
@@ -355,34 +392,30 @@ static adlb_code wu_array_expand(int new_size)
               (size_t)new_size * sizeof(wu_array.free[0]));
   ADLB_MALLOC_CHECK(new_free);
 
+  int old_size = wu_array.size;
+
   wu_array.arr = new_arr;
-  wu_array.free = new_free;
   wu_array.size = new_size;
+  memset(&wu_array.arr[old_size], 0, (size_t)(new_size - old_size)
+                                     * sizeof(wu_array.arr[0]));
 
   // Add new unused to free list
-  int unused_start = wu_array.size + 1;
-  wu_array.free_count = new_size - unused_start;
+  wu_array.free_count = new_size - old_size;
+  wu_array.free = new_free;
   for (int i = 0; i < wu_array.free_count; i++)
   {
-    int unused_wu_id = unused_start + i;
-    wu_array.arr[unused_wu_id] = NULL;
+    int unused_wu_id = old_size + i;
     wu_array.free[i] = unused_wu_id;
+    assert(wu_array.arr[unused_wu_id] == NULL);
   }
 
-  wu_array.size = new_size;
   return ADLB_SUCCESS;
 }
 
 static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
 {
-  if (wu_array.free_count > 0)
+  if (wu_array.free_count == 0)
   {
-    *wu_id = wu_array.free[wu_array.free_count - 1];
-    wu_array.free_count--;
-  }
-  else
-  {
-    *wu_id = wu_array.size; // One past current end
     // No free case - resize work array and free list
     int new_size = wu_array.size * 2;
 
@@ -390,14 +423,81 @@ static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
     ADLB_CHECK(ac);
   }
 
+  *wu_id = wu_array.free[wu_array.free_count - 1];
+  wu_array.free_count--;
+
   wu_array.arr[*wu_id] = wu;
   return ADLB_SUCCESS;
 }
 
+__attribute__((always_inline))
+static inline xlb_work_unit *wu_array_get(int wu_id)
+{
+  assert(wu_id >= 0); // Negative numbers shouldn't be generated internally
+  return wu_id < wu_array.size ? wu_array.arr[wu_id] : NULL;
+}
+
+/*
+  Try to remove and return untargeted entry.
+   type: expected type
+   priority: expected priority (from index)
+   Return NULL if no longer present.
+ */
+__attribute__((always_inline))
+static inline xlb_work_unit *
+wu_array_try_remove_untargeted(int wu_id, int type, int priority)
+{
+  xlb_work_unit* wu = wu_array_get(wu_id);
+  /*
+    Check not stale.  There is a corner case here where all of these
+    match but it was a different work unit to the one the targeted
+    entry was created for.  In that case it doesn't matter which
+    was returned.
+
+    We need to modify priority check for adjusted priority for soft
+    targeted tasks.
+   */
+  if (wu != NULL && wu->type == type &&
+      (wu->target < 0 || wu->opts.soft_target)) {
+    int exp_priority = priority;
+    if (wu->opts.soft_target)
+    {
+      exp_priority = soft_target_priority(priority);
+    }
+
+    if (wu->opts.priority == exp_priority) {
+      wu_array_remove(wu_id);
+      return wu;
+    }
+  }
+
+  return NULL;
+}
+
+/* Try to remove and return untargeted entry.
+   Return NULL if no longer present. */
+__attribute__((always_inline))
+static inline xlb_work_unit *
+wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
+{
+  xlb_work_unit* wu = wu_array_get(wu_id);
+  /*
+    Check not stale.  There is a corner case here where all of these
+    match but it was a different work unit to the one the targeted
+    entry was created for.  In that case it doesn't matter which
+    was returned.
+   */
+  if (wu != NULL && wu->type == type && wu->target == target &&
+      wu->opts.priority == -priority) {
+    wu_array_remove(wu_id);
+    return wu;
+  }
+
+  return NULL;
+}
+
 static void wu_array_remove(int wu_id)
 {
-  assert(wu_id >= 0 && wu_id < wu_array.size);
-
   wu_array.arr[wu_id] = NULL;
   wu_array.free[wu_array.free_count++] = wu_id;
 }
@@ -459,20 +559,12 @@ static xlb_work_unit* pop_targeted(int type, int target)
 
     heap_ii_del_root(H);
 
-    xlb_work_unit* wu = wu_id < wu_array.size ? wu_array.arr[wu_id]
-                                              : NULL;
-    /*
-      Check not stale.  There is a corner case here where all of these
-      match but it was a different work unit to the one the targeted
-      entry was created for.  In that case it doesn't matter which
-      was returned.
-     */
-    if (wu != NULL && wu->type == type && wu->target == target &&
-        wu->opts.priority == -priority) {
+    xlb_work_unit* wu = wu_array_try_remove_targeted(wu_id, type,
+                                                target, priority);
+    if (wu != NULL)
+    {
 
       DEBUG("xlb_workq_get(): targeted: %"PRId64"", wu->id);
-      wu_array_remove(wu_id);
-
       return wu;
     }
   }
@@ -494,31 +586,11 @@ static xlb_work_unit* pop_untargeted(int type)
 
     heap_ii_del_root(H);
 
-    xlb_work_unit* wu = wu_id < wu_array.size ? wu_array.arr[wu_id]
-                                              : NULL;
-    /*
-      Check not stale.  There is a corner case here where all of these
-      match but it was a different work unit to the one the targeted
-      entry was created for.  In that case it doesn't matter which
-      was returned.
-
-      We need to modify priority check for adjusted priority for soft
-      targeted tasks.
-     */
-
-    if (wu != NULL && wu->type == type &&
-        (wu->target < 0 || wu->opts.soft_target)) {
-      int exp_priority = priority;
-      if (wu->opts.soft_target)
-      {
-        exp_priority = soft_target_priority(priority);
-      }
-
-      if (wu->opts.priority == exp_priority) {
-        DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
-        wu_array_remove(wu_id);
-        return wu;
-      }
+    xlb_work_unit* wu = wu_array_try_remove_untargeted(wu_id, type,
+                                                       priority);
+    if (wu != NULL) {
+      DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
+      return wu;
     }
   }
   return NULL;
@@ -639,7 +711,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
                         tot_count, stealer_count);
         adlb_code code;
         int single_sent;
-        code = heap_steal_type(&(untargeted_work[t]), single_pc,
+        code = heap_steal_type(&(untargeted_work[t]), t, single_pc,
                                &single_sent, cb);
         ADLB_CHECK(code);
         code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
@@ -663,7 +735,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
  * Note: we allow soft-targeted tasks to be stolen.
  */
 static adlb_code
-heap_steal_type(heap_ii_t *q, double p, int *stolen,
+heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
                 xlb_workq_steal_callback cb)
 {
   int p_threshold = (int)(p * RAND_MAX);
@@ -677,11 +749,18 @@ heap_steal_type(heap_ii_t *q, double p, int *stolen,
   {
     if (rand() > p_threshold)
     {
+      int priority = q->array[i].key;
       int wu_id = q->array[i].val;
-      heap_ii_del_entry(q, (heap_ix_t)i)
-      // TODO: check if valid and get work unit
-      // TODO: callback
-      (*stolen)++;
+      heap_ii_del_entry(q, (heap_ix_t)i);
+
+      xlb_work_unit* wu;
+      wu = wu_array_try_remove_untargeted(wu_id, type, priority);
+      if (wu != NULL)
+      {
+        adlb_code code = cb.f(cb.data, wu);
+        ADLB_CHECK(code);
+        (*stolen)++;
+      }
     }
   }
   return ADLB_SUCCESS;
@@ -729,62 +808,6 @@ wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
   // Just free the work unit
   xlb_work_unit_free((xlb_work_unit*)data);
   return true;
-}
-
-static void
-wu_heap_ii_clear_callback(int priority, int wu_id)
-{
-  // TODO: lookup wu_id
-  xlb_work_unit *wu = NULL;
-  // Free soft targeted via typed work
-  if (!wu->opts.soft_target)
-  {
-    xlb_work_unit_free(wu);
-  }
-}
-
-static void
-targeted_clear(heap_ii_t *H)
-{
-  // TODO: pass waiting tasks to higher-level handling code
-  if (H->size > 0)
-  {
-    printf("WARNING: server contains targeted work that was never "
-           "received by target!\n");
-    for (int j = 0; j < H->size; j++)
-    {
-      int wu_id = H->array[j].val;
-      // TODO: lookup in array
-      xlb_work_unit *wu = NULL;
-
-      printf("  Targeted work: type: %i target rank: %i\n",
-                  wu->type, wu->target);
-    }
-  }
-
-  // free the work unit
-  heap_ii_clear_callback(H, wu_heap_ii_clear_callback);
-}
-
-static void
-untargeted_clear(heap_ii_t *H)
-{
-  // TODO: pass waiting tasks to higher-level handling code
-  if (H->size > 0)
-  {
-    printf("WARNING: server contains untargeted work that was never "
-           "received!\n");
-    for (int j = 0; j < H->size; j++)
-    {
-      int wu_id = H->array[j].val;
-      // TODO: lookup in array
-      xlb_work_unit *wu = NULL;
-      printf("  Untargeted work: type: %i\n", wu->type);
-    }
-  }
-
-  // free the work unit
-  heap_ii_clear_callback(H, wu_heap_ii_clear_callback);
 }
 
 void xlb_print_workq_perf_counters(void)
@@ -850,19 +873,22 @@ xlb_workq_finalize()
 {
   TRACE_START;
 
-  // Clear up targeted_work
-  int targeted_entries = targeted_work_entries(xlb_types_size, xlb_my_workers);
-  for (int i = 0; i < targeted_entries; i++)
+  // Remove unmatched serial work
+  // Clear array and report unmatched serial work
+  wu_array_finalize();
+
+  // Clear up targeted_work heaps
+  for (int i = 0; i < targeted_work_size; i++)
   {
-    targeted_clear(&targeted_work[i]);
+    heap_ii_clear_callback(&targeted_work[i], NULL);
   }
   free(targeted_work);
   targeted_work = NULL;
 
-  // Clear up untargeted_work
+  // Clear up untargeted_work heaps
   for (int i = 0; i < xlb_types_size; i++)
   {
-    untargeted_clear(&untargeted_work[i]);
+    heap_ii_clear_callback(&untargeted_work[i], NULL);
   }
   free(untargeted_work);
   untargeted_work = NULL;
@@ -879,9 +905,6 @@ xlb_workq_finalize()
   }
   free(parallel_work);
   parallel_work = NULL;
-
-  // Clear array at end - will need it for reporting leftover work 
-  wu_array_clear();
 
   if (xlb_perf_counters_enabled)
   {
