@@ -76,7 +76,7 @@ rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb);
 static int soft_target_priority(int base_priority);
 
 /** Uniquify work units on this server */
-static xlb_work_unit_id unique = 1;
+xlb_work_unit_id xlb_workq_next_id = 1;
 
 /**
   Storage for non-parallel work units.  Integer index in array identifies
@@ -223,12 +223,6 @@ static adlb_code init_work_heaps(heap_ii_t** heap_array, int count)
   }
 
   return ADLB_SUCCESS;
-}
-
-xlb_work_unit_id
-xlb_workq_unique()
-{
-  return unique++;
 }
 
 adlb_code

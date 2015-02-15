@@ -63,7 +63,14 @@ typedef struct
 
 adlb_code xlb_workq_init(int work_types, int my_workers);
 
-xlb_work_unit_id xlb_workq_unique(void);
+/** Expose next ID to avoid function call overhead */
+extern xlb_work_unit_id xlb_workq_next_id;
+
+__attribute__((always_inline))
+static inline xlb_work_unit_id xlb_workq_unique(void)
+{
+  return xlb_workq_next_id++;
+}
 
 /** Allocate work unit with space for payload */
 static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
