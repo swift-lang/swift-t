@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.log4j.Level;
 
@@ -427,6 +429,9 @@ class VariableUsageAnalyzer {
       // Walk the rval expression to add in reads
       walkExpr(context, vu, rVal);
 
+      // Needed for typecheck
+      Map<String, Type> rValTVBindings = new TreeMap<String, Type>();
+
       for (int i = 0; i < lVals.size(); i++) {
         LValue lVal = lVals.get(i);
         syncFilePos(context, lVal.tree);
@@ -437,6 +442,13 @@ class VariableUsageAnalyzer {
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(),
             Alloc.STACK, DefType.LOCAL_USER, VarProvenance.unknown(), false);
+        } else {
+          /*
+           * Check assignment here to avoid weird consequential errors with
+           * shadowing.
+           */
+          TypeChecker.checkAssignment(context, assignments.op, rValT,
+                       lVal.getType(context), lVal.toString(), rValTVBindings);
         }
 
         singleAssignment(context, vu, lVal, assignments.op);
