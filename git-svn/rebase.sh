@@ -30,8 +30,10 @@ do
   #git_svn_head_hash=$(git rev-parse $git_svn_remote)
   last_merged_hash=$(git svn find-rev $last_svn_rev $git_svn_remote)
   echo "need to merge $last_merged_hash..$git_svn_remote from git-svn"
-  
-  if ! git rebase ${last_merged_hash} --onto ${github_remote}
+
+  if [ -z "$last_merged_hash" ]; then
+    echo "ERROR: Could not find $last_svn_rev on remote $git_svn_remote"
+  elif ! git rebase ${last_merged_hash} --onto ${github_remote}
   then
     echo "ERROR: rebase unsuccessful"
     ERRORS=1
