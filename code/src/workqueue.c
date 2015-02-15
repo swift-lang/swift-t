@@ -118,6 +118,11 @@ static heap_ii_t* untargeted_work;
 static heap_ii_t *targeted_work;
 static int targeted_work_size;  // Number of individual heaps
 
+/** We should free heaps that are empty but more than this number of
+ * unused entries. */
+#define HEAP_FREE_THRESHOLD_TARGETED 64
+#define HEAP_FREE_THRESHOLD_UNTARGETED 8192
+
 static int targeted_work_entries(int work_types, int my_workers)
 {
   TRACE("work_types: %i my_workers: %i", work_types, my_workers);
@@ -558,7 +563,10 @@ static xlb_work_unit* pop_targeted(int type, int target)
   }
 
   // Clear empty heaps
-  heap_ii_clear(H);
+  if (H->malloced_size > HEAP_FREE_THRESHOLD_TARGETED)
+  {
+    heap_ii_clear(H);
+  }
   return NULL;
 }
 
@@ -580,6 +588,12 @@ static xlb_work_unit* pop_untargeted(int type)
       DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
       return wu;
     }
+  }
+  
+  // Clear empty heaps
+  if (H->malloced_size > HEAP_FREE_THRESHOLD_UNTARGETED)
+  {
+    heap_ii_clear(H);
   }
   return NULL;
 }
