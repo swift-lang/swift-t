@@ -691,7 +691,9 @@ public class FunctionTypeChecker {
       return null;
     }
 
-    int numMatchedArgs = Math.max(numTotalArgs, fnType.getInputs().size());
+    int numMatchedArgs = fnType.hasVarargs() ? numTotalArgs
+                                : fnType.getInputs().size();
+
     Set<String> unmatchedKwArgs = new HashSet<String>(kwArgTypes.keySet());
     MatchedArg matched[] = new MatchedArg[numMatchedArgs];
     for (int i = 0; i < numMatchedArgs; i++) {
