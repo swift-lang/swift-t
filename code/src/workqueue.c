@@ -458,7 +458,7 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
       exp_priority = soft_target_priority(priority);
     }
 
-    if (wu->opts.priority == -exp_priority) {
+    if (wu->opts.priority == exp_priority) {
       wu_array_remove(wu_id);
       return wu;
     }
@@ -481,7 +481,7 @@ wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
     was returned.
    */
   if (wu != NULL && wu->type == type && wu->target == target &&
-      wu->opts.priority == -priority) {
+      wu->opts.priority == priority) {
     wu_array_remove(wu_id);
     return wu;
   }
@@ -547,7 +547,7 @@ static xlb_work_unit* pop_targeted(int type, int target)
   {
     heap_ii_entry_t root = heap_ii_root(H);
 
-    int priority = root.key;
+    int priority = -root.key;
     int wu_id = root.val;
 
     heap_ii_del_root(H);
@@ -577,7 +577,7 @@ static xlb_work_unit* pop_untargeted(int type)
   {
     heap_ii_entry_t root = heap_ii_root(H);
 
-    int priority = root.key;
+    int priority = -root.key;
     int wu_id = root.val;
 
     heap_ii_del_root(H);
