@@ -36,6 +36,7 @@
 #include "adlb-defs.h"
 #include "common.h"
 #include "debug.h"
+#include "hostmap.h"
 #include "messaging.h"
 #include "requestqueue.h"
 #include "server.h"
@@ -402,7 +403,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
     int modified_priority = soft_target_priority(wu->opts.priority);
 
     // Also add entry to untargeted work
-    TRACE("add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
+    DEBUG("add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
 
     heap_ii_t* H = &untargeted_work[wu->type];
     bool b = heap_ii_add(H, -modified_priority, wu_id);
@@ -540,13 +541,13 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
    */
   if (wu != NULL && wu->type == type &&
       (wu->target < 0 || wu->opts.strictness != ADLB_TGT_STRICT_HARD)) {
-    int exp_priority = priority;
+    int modified_priority = wu->opts.priority;
     if (wu->opts.strictness != ADLB_TGT_STRICT_HARD)
     {
-      exp_priority = soft_target_priority(priority);
+      modified_priority = soft_target_priority(modified_priority);
     }
 
-    if (wu->opts.priority == exp_priority) {
+    if (modified_priority == priority) {
       wu_array_remove(wu_id);
       return wu;
     }
