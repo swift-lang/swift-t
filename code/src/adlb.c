@@ -23,7 +23,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/utsname.h>
 #include <unistd.h>
 
 #include <mpi.h>
@@ -129,9 +128,6 @@ check_versions()
   version_require("ADLB", &av, "c-utils", &cuv, &rcuv);
 }
 
-#define HOSTNAME_MAX 128
-static void report_debug_ranks(void);
-
 static inline int get_next_server();
 
 adlb_code
@@ -200,8 +196,6 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     ADLB_CHECK(code);
   }
 
-  report_debug_ranks();
-
   bool ok = xlb_hostmap_init();
   CHECK_MSG(ok, "Hostmap init failed");
 
@@ -220,20 +214,6 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   TRACE_END;
   return ADLB_SUCCESS;
-}
-
-static void
-report_debug_ranks()
-{
-  int debug_ranks;
-  getenv_integer("ADLB_DEBUG_RANKS", 0, &debug_ranks);
-  if (!debug_ranks) return;
-
-  struct utsname u;
-  uname(&u);
-
-  printf("ADLB_DEBUG_RANKS: rank: %i nodename: %s\n",
-         xlb_comm_rank, u.nodename);
 }
 
 adlb_code
