@@ -14,4 +14,6 @@
 bool xlb_hostmap_init(void);
 void xlb_hostmap_finalize(void);
 
+const char *xlb_rankmap_lookup(int rank);
+
 #endif

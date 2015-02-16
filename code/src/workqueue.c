@@ -28,6 +28,7 @@
 
 #include <heap_ii.h>
 #include <list.h>
+#include <table.h>
 #include <table_ip.h>
 #include <tools.h>
 #include <rbtree.h>
@@ -52,6 +53,12 @@ static adlb_code xlb_workq_add_serial(xlb_work_unit* wu);
 static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id);
 static adlb_code add_targeted(xlb_work_unit* wu, int wu_id);
 
+static int targeted_work_entries(int work_types, int my_workers);
+static inline int targeted_work_ix(int rank, int type);
+static inline int host_ix_from_rank(int rank);
+
+static adlb_code worker_host_map_init(int my_workers, int *host_count);
+
 static adlb_code wu_array_init(void);
 static void wu_array_clear(void);
 static void wu_array_finalize(void);
@@ -62,10 +69,14 @@ static inline xlb_work_unit *
 wu_array_try_remove_untargeted(int wu_id, int type, int priority);
 static inline xlb_work_unit *
 wu_array_try_remove_targeted(int wu_id, int type, int target, int priority);
+static inline xlb_work_unit *
+wu_array_try_remove_host_targeted(int wu_id, int type, int host_ix,
+                                  int priority);
 static void wu_array_remove(int wu_id);
 
 static xlb_work_unit* pop_untargeted(int type);
 static xlb_work_unit* pop_targeted(int type, int target);
+static xlb_work_unit* pop_host_targeted(int type, int host_ix);
 
 static adlb_code
 heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
@@ -100,6 +111,8 @@ static struct {
 /**
   untargeted_work and targeted_work provide indexes to lookup wu_array
   by on (type) and (target, type) and return the maximum priority entry.
+  host_targeted_work is similar to targeted_work, but is index by a
+  host identifier rather than rank.
 
   Work units can be in one or both indices, depending on what lookups
   need to be supported for them.
@@ -107,6 +120,8 @@ static struct {
   untargeted work goes in untargeted_work only
   hard targeted work goes in targeted_work only
   soft targeted work goes in both untargeted_work and targeted_work
+  hard host targeted work goes in host_targeted_work only
+  soft host targeted work goes in both untargeted_work and host_targeted_work
 
   These indices are allowed to get out of sync with wu_array - stale
   entries are allowed in the indices.  This is ok so long as we check
@@ -118,27 +133,23 @@ static heap_ii_t* untargeted_work;
 static heap_ii_t *targeted_work;
 static int targeted_work_size;  // Number of individual heaps
 
+static heap_ii_t *host_targeted_work;
+static int host_targeted_work_size; // Number of heaps (hosts * types)
+
 /** We should free heaps that are empty but more than this number of
  * unused entries. */
 #define HEAP_FREE_THRESHOLD_TARGETED 64
 #define HEAP_FREE_THRESHOLD_UNTARGETED 8192
 
-static int targeted_work_entries(int work_types, int my_workers)
-{
-  TRACE("work_types: %i my_workers: %i", work_types, my_workers);
-  return work_types * my_workers;
-}
+/**
+   Server-local mapping of my_worker_ix to host_ix.
 
-/*
- * Return targeted work index, or -1 if not targeted to current server.
+   Maps value of xlb_my_worker_ix(rank) to a unique numeric index for
+   host for all workers for this server.
+
+   Indices are only applicable on this server.
  */
-__attribute__((always_inline))
-static inline int targeted_work_ix(int rank, int type)
-{
-  int ix = xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
-  assert(ix >= 0 && ix < targeted_work_size);
-  return ix;
-}
+static int *my_worker_host_map;
 
 /**
    parallel_work
@@ -165,11 +176,21 @@ xlb_workq_init(int work_types, int my_workers)
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
 
-  adlb_code ac = wu_array_init();
+  adlb_code ac;
+
+  int host_count;
+  ac = worker_host_map_init(my_workers, &host_count);
+  ADLB_CHECK(ac);
+
+  ac = wu_array_init();
   ADLB_CHECK(ac);
 
   targeted_work_size = targeted_work_entries(work_types, my_workers);
   ac = init_work_heaps(&targeted_work, targeted_work_size);
+  ADLB_CHECK(ac);
+
+  host_targeted_work_size = targeted_work_entries(work_types, host_count);
+  ac = init_work_heaps(&host_targeted_work, host_targeted_work_size);
   ADLB_CHECK(ac);
 
   ac = init_work_heaps(&untargeted_work, work_types);
@@ -216,6 +237,38 @@ xlb_workq_init(int work_types, int my_workers)
   return ADLB_SUCCESS;
 }
 
+static adlb_code worker_host_map_init(int my_workers, int *host_count)
+{
+  my_worker_host_map = malloc(sizeof(my_worker_host_map[0] *
+                              (size_t)my_workers));
+  ADLB_MALLOC_CHECK(my_worker_host_map);
+
+  struct table host_name_ix_map;
+  bool ok = table_init(&host_name_ix_map, 128);
+  CHECK_MSG(ok, "Table init failed");
+
+  *host_count = 0;
+  for (int i = 0; i < my_workers; i++)
+  {
+    int rank = xlb_rank_from_my_worker_ix(i);
+    const char *host_name = xlb_rankmap_lookup(rank);
+    CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
+              "rank %i", rank);
+
+    unsigned long host_ix;
+    if (!table_search(&host_name_ix_map, host_name, (void**)&host_ix))
+    {
+      host_ix = (unsigned long)(*host_count)++;
+      ok = table_add(&host_name_ix_map, host_name, (void*)host_ix);
+      CHECK_MSG(ok, "Table add failed");
+    }
+    my_worker_host_map[i] = (int)host_ix;
+  }
+
+  table_free_callback(&host_name_ix_map, false, NULL);
+  return ADLB_SUCCESS;
+}
+
 static adlb_code init_work_heaps(heap_ii_t** heap_array, int count)
 {
   *heap_array = malloc(sizeof((*heap_array)[0]) * (size_t)count);
@@ -228,6 +281,31 @@ static adlb_code init_work_heaps(heap_ii_t** heap_array, int count)
   }
 
   return ADLB_SUCCESS;
+}
+
+static int targeted_work_entries(int work_types, int my_workers)
+{
+  TRACE("work_types: %i my_workers: %i", work_types, my_workers);
+  return work_types * my_workers;
+}
+
+/*
+ * Return targeted work index, or -1 if not targeted to current server.
+ */
+__attribute__((always_inline))
+static inline int targeted_work_ix(int rank, int type)
+{
+  int ix = xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+  assert(ix >= 0 && ix < targeted_work_size);
+  return ix;
+}
+
+__attribute__((always_inline))
+static inline int host_ix_from_rank(int rank)
+{
+  assert(xlb_worker_maps_to_server(rank, xlb_comm_rank));
+
+  return my_worker_host_map[xlb_my_worker_ix(rank)];
 }
 
 adlb_code
@@ -299,7 +377,17 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
   // Targeted task
   if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
   {
-    heap_ii_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+    heap_ii_t* H;
+    if (wu->opts.accuracy == ADLB_TGT_ACCRY_RANK)
+    {
+      H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+    }
+    else
+    {
+      assert(wu->opts.accuracy == ADLB_TGT_ACCRY_NODE);
+      int host_ix = host_ix_from_rank(wu->target);
+      H = &host_targeted_work[targeted_work_ix(host_ix, wu->type)];
+    }
     bool b = heap_ii_add(H, -wu->opts.priority, wu_id);
     CHECK_MSG(b, "out of memory expanding heap");
   }
@@ -467,7 +555,7 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
   return NULL;
 }
 
-/* Try to remove and return untargeted entry.
+/* Try to remove and return targeted entry.
    Return NULL if no longer present. */
 __attribute__((always_inline))
 static inline xlb_work_unit *
@@ -481,6 +569,30 @@ wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
     was returned.
    */
   if (wu != NULL && wu->type == type && wu->target == target &&
+      wu->opts.priority == priority) {
+    wu_array_remove(wu_id);
+    return wu;
+  }
+
+  return NULL;
+}
+
+/* Try to remove and return host targeted entry.
+   Return NULL if no longer present. */
+__attribute__((always_inline))
+static inline xlb_work_unit *
+wu_array_try_remove_host_targeted(int wu_id, int type, int host_ix,
+                                  int priority)
+{
+  xlb_work_unit* wu = wu_array_get(wu_id);
+  /*
+    Check not stale.  There is a corner case here where all of these
+    match but it was a different work unit to the one the targeted
+    entry was created for.  In that case it doesn't matter which
+    was returned.
+   */
+  if (wu != NULL && wu->type == type &&
+      host_ix_from_rank(wu->target) == host_ix &&
       wu->opts.priority == priority) {
     wu_array_remove(wu_id);
     return wu;
@@ -518,6 +630,13 @@ xlb_workq_get(int target, int type)
 
   // Targeted work was found
   wu = pop_targeted(type, target);
+  if (wu != NULL)
+  {
+    return wu;
+  }
+
+  // Targeted work was found
+  wu = pop_host_targeted(type, host_ix_from_rank(target));
   if (wu != NULL)
   {
     return wu;
@@ -570,6 +689,43 @@ static xlb_work_unit* pop_targeted(int type, int target)
   return NULL;
 }
 
+/**
+  Pop an entry from a host_targeted queue, return NULL if none left.
+
+  Implementation notes:
+   Does not remove entry in untargeted_work if soft targeted
+   Frees per target/type queue if empty
+ */
+static xlb_work_unit* pop_host_targeted(int type, int host_ix)
+{
+  heap_ii_t* H = &host_targeted_work[targeted_work_ix(host_ix, type)];
+  while (H->size > 0)
+  {
+    heap_ii_entry_t root = heap_ii_root(H);
+
+    int priority = -root.key;
+    int wu_id = root.val;
+
+    heap_ii_del_root(H);
+
+    xlb_work_unit* wu = wu_array_try_remove_host_targeted(wu_id, type,
+                                                    host_ix, priority);
+    if (wu != NULL)
+    {
+
+      DEBUG("xlb_workq_get(): host targeted: %"PRId64"", wu->id);
+      return wu;
+    }
+  }
+
+  // Clear empty heaps
+  if (H->malloced_size > HEAP_FREE_THRESHOLD_TARGETED)
+  {
+    heap_ii_clear(H);
+  }
+  return NULL;
+}
+
 static xlb_work_unit* pop_untargeted(int type)
 {
   heap_ii_t *H = &untargeted_work[type];
@@ -589,7 +745,7 @@ static xlb_work_unit* pop_untargeted(int type)
       return wu;
     }
   }
-  
+
   // Clear empty heaps
   if (H->malloced_size > HEAP_FREE_THRESHOLD_UNTARGETED)
   {
@@ -880,6 +1036,16 @@ xlb_workq_finalize()
   }
   free(targeted_work);
   targeted_work = NULL;
+
+  for (int i = 0; i < host_targeted_work_size; i++)
+  {
+    heap_ii_clear_callback(&host_targeted_work[i], NULL);
+  }
+  free(host_targeted_work);
+  host_targeted_work = NULL;
+
+  free(my_worker_host_map);
+  my_worker_host_map = NULL;
 
   // Clear up untargeted_work heaps
   for (int i = 0; i < xlb_types_size; i++)

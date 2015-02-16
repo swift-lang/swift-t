@@ -94,4 +94,14 @@ xlb_my_worker_ix(int rank)
   return rank / xlb_servers;
 }
 
+/**
+ * Inverse of xlb_my_worker_ix
+ */
+static inline int
+xlb_rank_from_my_worker_ix(int my_worker_ix)
+{
+  int server_num = xlb_comm_rank - xlb_workers;
+  return my_worker_ix * xlb_servers + server_num;
+}
+
 #endif

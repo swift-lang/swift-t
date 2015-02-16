@@ -285,6 +285,16 @@ ADLB_Hostmap_list(char* output, unsigned int max,
   return ADLB_SUCCESS;
 }
 
+const char *xlb_rankmap_lookup(int rank)
+{
+  void *host;
+  if (table_ip_search(&rankmap, rank, &host))
+  {
+    return host;
+  }
+  return NULL;
+}
+
 static void
 xlb_hostmap_free()
 {

@@ -113,7 +113,6 @@ xlb_worker_maps_to_server(int worker_rank, int server_rank) {
   return (worker_rank % xlb_servers) + xlb_workers == server_rank;
 }
 
-
 /**
    Time since XLB was initialized
    Note: this is used by debugging output
