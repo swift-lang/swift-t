@@ -240,8 +240,8 @@ xlb_workq_init(int work_types, int my_workers)
 
 static adlb_code worker_host_map_init(int my_workers, int *host_count)
 {
-  my_worker_host_map = malloc(sizeof(my_worker_host_map[0] *
-                              (size_t)my_workers));
+  my_worker_host_map = malloc(sizeof(my_worker_host_map[0]) *
+                              (size_t)my_workers);
   ADLB_MALLOC_CHECK(my_worker_host_map);
 
   struct table host_name_ix_map;
