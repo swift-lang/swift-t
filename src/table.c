@@ -202,6 +202,32 @@ table_destroy(struct table* target)
 }
 
 void
+table_clear(struct table* target)
+{
+  for (int i = 0; i < target->capacity; i++)
+  {
+    table_entry *head = &target->array[i];
+    if (table_entry_valid(head))
+    {
+      // Store next pointer to allow freeing entry
+      bool is_head;
+      table_entry*e, *next;
+      for (e = head, next = head->next, is_head = true;
+           e != NULL;
+           e = next, is_head = false)
+      {
+        next = e->next; // Store next right away
+
+        if (!is_head)
+        {
+         free(e);
+        }
+      }
+    }
+  }
+}
+
+void
 table_release(struct table* target)
 {
   free(target->array);
@@ -211,7 +237,7 @@ table_release(struct table* target)
   Return the head of the appropriate bucket for the key
   key_strlen: return key string length
  */
-static table_entry*
+static inline table_entry*
 find_bucket(const struct table* T, const char* key, size_t *key_strlen)
 {
   int index = strkey_hash2(key, T->capacity, key_strlen);
@@ -222,7 +248,7 @@ find_bucket(const struct table* T, const char* key, size_t *key_strlen)
  Add at head
  key: appropriate representation with inlining
  */
-static bool 
+static inline bool
 bucket_add_head(table_entry *head, char* key, void* data)
 {
   if (table_entry_valid(head))

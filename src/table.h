@@ -34,7 +34,7 @@ struct table
 
 struct table_entry
 {
-  char *key; 
+  char* key;
   void* data; // NULL is valid data
   table_entry *next;
 };
@@ -55,6 +55,8 @@ bool table_init(struct table* target, int capacity);
 
 bool table_init_custom(struct table* target, int capacity,
                        float load_factor);
+
+#define table_size(T) ((T)->size);
 
 struct table* table_create(int capacity);
 
@@ -89,6 +91,8 @@ void table_free(struct table* target);
 void table_destroy(struct table* target);
 
 void table_release(struct table* target);
+
+void table_clear(struct table* target);
 
 void table_dump(const char* format, const struct table* target);
 
