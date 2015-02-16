@@ -127,14 +127,14 @@ static adlb_code put(int type, int putter, int answer, int target,
       int length, adlb_put_opts opts, const void *data);
 
 static inline adlb_code attempt_match_work(int type, int putter,
-      int priority, int answer, int target, bool soft_target,
-      int length, int parallelism, const void *inline_data);
+      int answer, int target, adlb_put_opts opts,
+      int length, const void *inline_data);
 
 static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism);
 
 static inline adlb_code send_matched_work(int type, int putter,
-      int priority, int answer, bool targeted,
+      int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
 static adlb_code
@@ -146,8 +146,7 @@ static adlb_code xlb_recheck_parallel_queues(void);
 
 static inline adlb_code xlb_check_parallel_tasks(int work_type);
 
-static inline adlb_code redirect_work(int type, int putter,
-                                      int priority, int answer,
+static inline adlb_code redirect_work(int type, int putter, int answer,
                                       int worker, int length);
 
 
@@ -420,8 +419,7 @@ put(int type, int putter, int answer, int target, int length,
   {
     // Try to match to a worker immediately for single-worker task
     adlb_code matched = attempt_match_work(type, putter,
-        opts.priority, answer, target, opts.soft_target, length,
-        opts.parallelism, inline_data);
+        answer, target, opts, length, inline_data);
     if (matched == ADLB_SUCCESS)
       // Redirected ok
       return ADLB_SUCCESS;
@@ -591,10 +589,10 @@ adlb_code xlb_put_targeted_local(int type, int putter,
   inline_data: non-null if we already have task body
  */
 static adlb_code attempt_match_work(int type, int putter,
-      int priority, int answer, int target, bool soft_target,
-      int length, int parallelism, const void *inline_data)
+      int answer, int target, adlb_put_opts opts,
+      int length, const void *inline_data)
 {
-  if (parallelism > 1)
+  if (opts.parallelism > 1)
   {
     // Don't try to redirect parallel work
     return ADLB_NOTHING;
@@ -607,7 +605,8 @@ static adlb_code attempt_match_work(int type, int putter,
   {
     CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
     worker = xlb_requestqueue_matches_target(target, type);
-    if (worker == ADLB_RANK_NULL && soft_target)
+    if (worker == ADLB_RANK_NULL &&
+        opts.strictness != ADLB_TGT_STRICT_HARD)
     {
       // Try to send to alternate target
       worker = xlb_requestqueue_matches_type(type);
@@ -616,7 +615,8 @@ static adlb_code attempt_match_work(int type, int putter,
     {
       return ADLB_NOTHING;
     }
-    assert(soft_target || worker == target);
+    assert(opts.strictness != ADLB_TGT_STRICT_HARD ||
+           worker == target);
   }
   else
   {
@@ -627,7 +627,7 @@ static adlb_code attempt_match_work(int type, int putter,
     }
   }
 
-  return send_matched_work(type, putter, priority, answer, targeted,
+  return send_matched_work(type, putter, answer, targeted,
           worker, length, inline_data);
 }
 
@@ -665,7 +665,7 @@ static adlb_code attempt_match_par_work(int type,
 
 
 static inline adlb_code send_matched_work(int type, int putter,
-      int priority, int answer, bool targeted,
+      int answer, bool targeted,
       int worker, int length, const void *inline_data)
 {
   adlb_code code;
@@ -677,7 +677,7 @@ static inline adlb_code send_matched_work(int type, int putter,
 
   if (inline_data == NULL)
   {
-    code = redirect_work(type, putter, priority, answer, worker, length);
+    code = redirect_work(type, putter, answer, worker, length);
     ADLB_CHECK(code);
   }
   else
@@ -703,7 +703,7 @@ static inline adlb_code send_matched_work(int type, int putter,
    Set up direct transfer from putter to worker
  */
 static inline adlb_code
-redirect_work(int type, int putter, int priority, int answer,
+redirect_work(int type, int putter, int answer,
               int worker, int length)
 {
   DEBUG("redirect: %i->%i", putter, worker);

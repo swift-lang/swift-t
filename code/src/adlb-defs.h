@@ -66,19 +66,45 @@ typedef struct {
   int size; // Size of buffer
 } adlb_payload_buf;
 
+/**
+  Strictness level applied if task is targeted.
+  If untargeted, ignored.
+ */
+typedef enum
+{
+  /** Strict: task must run with given accuracy */
+  ADLB_TGT_STRICT_HARD=0,
+  /** Soft strictness: task prefers given accuracy */
+  ADLB_TGT_STRICT_SOFT=1
+} adlb_target_strictness;
+
+/**
+  Accuracy level applied if task is targeted.
+  If untargeted, ignored.
+ */
+typedef enum
+{
+  /** Task is targeted to a rank */
+  ADLB_TGT_ACCRY_RANK=0,
+  /** Task must run on rank sharing node with target rank */
+  ADLB_TGT_ACCRY_NODE=1
+} adlb_target_accuracy;
+
 /*
  * Flags for Put functions
  */
 typedef struct {
   int priority; // Task priority
   int parallelism; // Task parallelism
-  bool soft_target; // Enable soft targeting mode
+  adlb_target_strictness strictness;
+  adlb_target_accuracy accuracy;
 } adlb_put_opts;
 
 static const adlb_put_opts ADLB_DEFAULT_PUT_OPTS = {
     .priority = 0,
     .parallelism = 1,
-    .soft_target = false,
+    .strictness = ADLB_TGT_STRICT_HARD,
+    .accuracy = ADLB_TGT_ACCRY_RANK,
 };
 
 /**

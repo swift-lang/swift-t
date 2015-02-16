@@ -306,10 +306,10 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
   else
   {
     // All hard-targeted tasks should only be on matching server
-    assert(wu->opts.soft_target);
+    assert(wu->opts.strictness != ADLB_TGT_STRICT_HARD);
   }
 
-  if (wu->opts.soft_target)
+  if (wu->opts.strictness != ADLB_TGT_STRICT_HARD)
   {
     int modified_priority = soft_target_priority(wu->opts.priority);
 
@@ -451,9 +451,9 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
     targeted tasks.
    */
   if (wu != NULL && wu->type == type &&
-      (wu->target < 0 || wu->opts.soft_target)) {
+      (wu->target < 0 || wu->opts.strictness != ADLB_TGT_STRICT_HARD)) {
     int exp_priority = priority;
-    if (wu->opts.soft_target)
+    if (wu->opts.strictness != ADLB_TGT_STRICT_HARD)
     {
       exp_priority = soft_target_priority(priority);
     }
