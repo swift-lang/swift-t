@@ -51,12 +51,13 @@
 static adlb_code init_work_heaps(heap_ii_t** heap_array, int count);
 static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu);
 static adlb_code xlb_workq_add_serial(xlb_work_unit* wu);
-static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id);
-static adlb_code add_targeted(xlb_work_unit* wu, int wu_id);
+static adlb_code add_untargeted(xlb_work_unit* wu, int wu_idx);
+static adlb_code add_targeted(xlb_work_unit* wu, int wu_idx);
 
 static int targeted_work_entries(int work_types, int my_workers);
-static inline int targeted_work_ix(int rank, int type);
-static inline int host_ix_from_rank(int rank);
+static inline heap_ii_t *targeted_work_heap(int rank, int type);
+static inline heap_ii_t *host_targeted_work_heap(int host_idx, int type);
+static inline int host_idx_from_rank(int rank);
 
 static adlb_code worker_host_map_init(int my_workers, int *host_count);
 
@@ -64,20 +65,20 @@ static adlb_code wu_array_init(void);
 static void wu_array_clear(void);
 static void wu_array_finalize(void);
 static adlb_code wu_array_expand(int new_size);
-static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id);
-static inline xlb_work_unit *wu_array_get(int wu_id);
+static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_idx);
+static inline xlb_work_unit *wu_array_get(int wu_idx);
 static inline xlb_work_unit *
-wu_array_try_remove_untargeted(int wu_id, int type, int priority);
+wu_array_try_remove_untargeted(int wu_idx, int type, int priority);
 static inline xlb_work_unit *
-wu_array_try_remove_targeted(int wu_id, int type, int target, int priority);
+wu_array_try_remove_targeted(int wu_idx, int type, int target, int priority);
 static inline xlb_work_unit *
-wu_array_try_remove_host_targeted(int wu_id, int type, int host_ix,
+wu_array_try_remove_host_targeted(int wu_idx, int type, int host_idx,
                                   int priority);
-static void wu_array_remove(int wu_id);
+static void wu_array_remove(int wu_idx);
 
 static xlb_work_unit* pop_untargeted(int type);
 static xlb_work_unit* pop_targeted(int type, int target);
-static xlb_work_unit* pop_host_targeted(int type, int host_ix);
+static xlb_work_unit* pop_host_targeted(int type, int host_idx);
 
 static adlb_code
 heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
@@ -143,9 +144,9 @@ static int host_targeted_work_size; // Number of heaps (hosts * types)
 #define HEAP_FREE_THRESHOLD_UNTARGETED 8192
 
 /**
-   Server-local mapping of my_worker_ix to host_ix.
+   Server-local mapping of my_worker_idx to host_idx.
 
-   Maps value of xlb_my_worker_ix(rank) to a unique numeric index for
+   Maps value of xlb_my_worker_idx(rank) to a unique numeric index for
    host for all workers for this server.
 
    Indices are only applicable on this server.
@@ -244,29 +245,29 @@ static adlb_code worker_host_map_init(int my_workers, int *host_count)
                               (size_t)my_workers);
   ADLB_MALLOC_CHECK(my_worker_host_map);
 
-  struct table host_name_ix_map;
-  bool ok = table_init(&host_name_ix_map, 128);
+  struct table host_name_idx_map;
+  bool ok = table_init(&host_name_idx_map, 128);
   CHECK_MSG(ok, "Table init failed");
 
   *host_count = 0;
   for (int i = 0; i < my_workers; i++)
   {
-    int rank = xlb_rank_from_my_worker_ix(i);
+    int rank = xlb_rank_from_my_worker_idx(i);
     const char *host_name = xlb_rankmap_lookup(rank);
     CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
               "rank %i", rank);
 
-    unsigned long host_ix;
-    if (!table_search(&host_name_ix_map, host_name, (void**)&host_ix))
+    unsigned long host_idx;
+    if (!table_search(&host_name_idx_map, host_name, (void**)&host_idx))
     {
-      host_ix = (unsigned long)(*host_count)++;
-      ok = table_add(&host_name_ix_map, host_name, (void*)host_ix);
+      host_idx = (unsigned long)(*host_count)++;
+      ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
       CHECK_MSG(ok, "Table add failed");
     }
-    my_worker_host_map[i] = (int)host_ix;
+    my_worker_host_map[i] = (int)host_idx;
   }
 
-  table_free_callback(&host_name_ix_map, false, NULL);
+  table_free_callback(&host_name_idx_map, false, NULL);
   return ADLB_SUCCESS;
 }
 
@@ -294,19 +295,27 @@ static int targeted_work_entries(int work_types, int my_workers)
  * Return targeted work index, or -1 if not targeted to current server.
  */
 __attribute__((always_inline))
-static inline int targeted_work_ix(int rank, int type)
+static inline heap_ii_t *targeted_work_heap(int rank, int type)
 {
-  int ix = xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
-  assert(ix >= 0 && ix < targeted_work_size);
-  return ix;
+  int idx = xlb_my_worker_idx(rank) * xlb_types_size + (int)type;
+  assert(idx >= 0 && idx < targeted_work_size);
+  return &targeted_work[idx];
 }
 
 __attribute__((always_inline))
-static inline int host_ix_from_rank(int rank)
+static inline heap_ii_t *host_targeted_work_heap(int host_idx, int type)
+{
+  int idx = host_idx * xlb_types_size + (int)type;
+  assert(idx >= 0 && idx < targeted_work_size);
+  return &host_targeted_work[idx];
+}
+
+__attribute__((always_inline))
+static inline int host_idx_from_rank(int rank)
 {
   assert(xlb_worker_maps_to_server(rank, xlb_comm_rank));
 
-  return my_worker_host_map[xlb_my_worker_ix(rank)];
+  return my_worker_host_map[xlb_my_worker_idx(rank)];
 }
 
 adlb_code
@@ -343,26 +352,26 @@ static adlb_code xlb_workq_add_serial(xlb_work_unit* wu)
 {
   adlb_code ac;
   TRACE("xlb_workq_add_serial()");
-  int wu_id;
+  int wu_idx;
 
-  ac = wu_array_add(wu, &wu_id);
+  ac = wu_array_add(wu, &wu_idx);
   ADLB_CHECK(ac);
 
   if (wu->target >= 0)
   {
-    return add_targeted(wu, wu_id);
+    return add_targeted(wu, wu_idx);
   }
   else
   {
-    return add_untargeted(wu, wu_id);
+    return add_untargeted(wu, wu_idx);
   }
 }
 
-static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id)
+static adlb_code add_untargeted(xlb_work_unit* wu, int wu_idx)
 {
   // Untargeted single-process task
   heap_ii_t* H = &untargeted_work[wu->type];
-  bool b = heap_ii_add(H, -wu->opts.priority, wu_id);
+  bool b = heap_ii_add(H, -wu->opts.priority, wu_idx);
   CHECK_MSG(b, "out of memory expanding heap");
 
   if (xlb_perf_counters_enabled)
@@ -373,7 +382,7 @@ static adlb_code add_untargeted(xlb_work_unit* wu, int wu_id)
   return ADLB_SUCCESS;
 }
 
-static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
+static adlb_code add_targeted(xlb_work_unit* wu, int wu_idx)
 {
   // Targeted task
   if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
@@ -381,15 +390,15 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
     heap_ii_t* H;
     if (wu->opts.accuracy == ADLB_TGT_ACCRY_RANK)
     {
-      H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+      H = targeted_work_heap(wu->target, wu->type);
     }
     else
     {
       assert(wu->opts.accuracy == ADLB_TGT_ACCRY_NODE);
-      int host_ix = host_ix_from_rank(wu->target);
-      H = &host_targeted_work[targeted_work_ix(host_ix, wu->type)];
+      int host_idx = host_idx_from_rank(wu->target);
+      H = host_targeted_work_heap(host_idx, wu->type);
     }
-    bool b = heap_ii_add(H, -wu->opts.priority, wu_id);
+    bool b = heap_ii_add(H, -wu->opts.priority, wu_idx);
     CHECK_MSG(b, "out of memory expanding heap");
   }
   else
@@ -406,7 +415,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, int wu_id)
     DEBUG("add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
 
     heap_ii_t* H = &untargeted_work[wu->type];
-    bool b = heap_ii_add(H, -modified_priority, wu_id);
+    bool b = heap_ii_add(H, -modified_priority, wu_idx);
     CHECK_MSG(b, "out of memory expanding heap");
   }
 
@@ -486,15 +495,15 @@ static adlb_code wu_array_expand(int new_size)
   wu_array.free = new_free;
   for (int i = 0; i < wu_array.free_count; i++)
   {
-    int unused_wu_id = old_size + i;
-    wu_array.free[i] = unused_wu_id;
-    assert(wu_array.arr[unused_wu_id] == NULL);
+    int unused_wu_idx = old_size + i;
+    wu_array.free[i] = unused_wu_idx;
+    assert(wu_array.arr[unused_wu_idx] == NULL);
   }
 
   return ADLB_SUCCESS;
 }
 
-static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
+static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_idx)
 {
   if (wu_array.free_count == 0)
   {
@@ -505,18 +514,18 @@ static adlb_code wu_array_add(xlb_work_unit* wu, int *wu_id)
     ADLB_CHECK(ac);
   }
 
-  *wu_id = wu_array.free[wu_array.free_count - 1];
+  *wu_idx = wu_array.free[wu_array.free_count - 1];
   wu_array.free_count--;
 
-  wu_array.arr[*wu_id] = wu;
+  wu_array.arr[*wu_idx] = wu;
   return ADLB_SUCCESS;
 }
 
 __attribute__((always_inline))
-static inline xlb_work_unit *wu_array_get(int wu_id)
+static inline xlb_work_unit *wu_array_get(int wu_idx)
 {
-  assert(wu_id >= 0); // Negative numbers shouldn't be generated internally
-  return wu_id < wu_array.size ? wu_array.arr[wu_id] : NULL;
+  assert(wu_idx >= 0); // Negative numbers shouldn't be generated internally
+  return wu_idx < wu_array.size ? wu_array.arr[wu_idx] : NULL;
 }
 
 /*
@@ -527,9 +536,9 @@ static inline xlb_work_unit *wu_array_get(int wu_id)
  */
 __attribute__((always_inline))
 static inline xlb_work_unit *
-wu_array_try_remove_untargeted(int wu_id, int type, int priority)
+wu_array_try_remove_untargeted(int wu_idx, int type, int priority)
 {
-  xlb_work_unit* wu = wu_array_get(wu_id);
+  xlb_work_unit* wu = wu_array_get(wu_idx);
   /*
     Check not stale.  There is a corner case here where all of these
     match but it was a different work unit to the one the targeted
@@ -548,7 +557,7 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
     }
 
     if (modified_priority == priority) {
-      wu_array_remove(wu_id);
+      wu_array_remove(wu_idx);
       return wu;
     }
   }
@@ -560,9 +569,9 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
    Return NULL if no longer present. */
 __attribute__((always_inline))
 static inline xlb_work_unit *
-wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
+wu_array_try_remove_targeted(int wu_idx, int type, int target, int priority)
 {
-  xlb_work_unit* wu = wu_array_get(wu_id);
+  xlb_work_unit* wu = wu_array_get(wu_idx);
   /*
     Check not stale.  There is a corner case here where all of these
     match but it was a different work unit to the one the targeted
@@ -571,7 +580,7 @@ wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
    */
   if (wu != NULL && wu->type == type && wu->target == target &&
       wu->opts.priority == priority) {
-    wu_array_remove(wu_id);
+    wu_array_remove(wu_idx);
     return wu;
   }
 
@@ -582,10 +591,10 @@ wu_array_try_remove_targeted(int wu_id, int type, int target, int priority)
    Return NULL if no longer present. */
 __attribute__((always_inline))
 static inline xlb_work_unit *
-wu_array_try_remove_host_targeted(int wu_id, int type, int host_ix,
+wu_array_try_remove_host_targeted(int wu_idx, int type, int host_idx,
                                   int priority)
 {
-  xlb_work_unit* wu = wu_array_get(wu_id);
+  xlb_work_unit* wu = wu_array_get(wu_idx);
   /*
     Check not stale.  There is a corner case here where all of these
     match but it was a different work unit to the one the targeted
@@ -593,19 +602,19 @@ wu_array_try_remove_host_targeted(int wu_id, int type, int host_ix,
     was returned.
    */
   if (wu != NULL && wu->type == type &&
-      host_ix_from_rank(wu->target) == host_ix &&
+      host_idx_from_rank(wu->target) == host_idx &&
       wu->opts.priority == priority) {
-    wu_array_remove(wu_id);
+    wu_array_remove(wu_idx);
     return wu;
   }
 
   return NULL;
 }
 
-static void wu_array_remove(int wu_id)
+static void wu_array_remove(int wu_idx)
 {
-  wu_array.arr[wu_id] = NULL;
-  wu_array.free[wu_array.free_count++] = wu_id;
+  wu_array.arr[wu_idx] = NULL;
+  wu_array.free[wu_array.free_count++] = wu_idx;
 }
 
 // Soft-targeted work has reduced priority compared with non-targeted work
@@ -637,7 +646,7 @@ xlb_workq_get(int target, int type)
   }
 
   // Targeted work was found
-  wu = pop_host_targeted(type, host_ix_from_rank(target));
+  wu = pop_host_targeted(type, host_idx_from_rank(target));
   if (wu != NULL)
   {
     return wu;
@@ -662,17 +671,17 @@ xlb_workq_get(int target, int type)
  */
 static xlb_work_unit* pop_targeted(int type, int target)
 {
-  heap_ii_t* H = &targeted_work[targeted_work_ix(target, type)];
+  heap_ii_t* H = targeted_work_heap(target, type);
   while (H->size > 0)
   {
     heap_ii_entry_t root = heap_ii_root(H);
 
     int priority = -root.key;
-    int wu_id = root.val;
+    int wu_idx = root.val;
 
     heap_ii_del_root(H);
 
-    xlb_work_unit* wu = wu_array_try_remove_targeted(wu_id, type,
+    xlb_work_unit* wu = wu_array_try_remove_targeted(wu_idx, type,
                                                 target, priority);
     if (wu != NULL)
     {
@@ -697,20 +706,20 @@ static xlb_work_unit* pop_targeted(int type, int target)
    Does not remove entry in untargeted_work if soft targeted
    Frees per target/type queue if empty
  */
-static xlb_work_unit* pop_host_targeted(int type, int host_ix)
+static xlb_work_unit* pop_host_targeted(int type, int host_idx)
 {
-  heap_ii_t* H = &host_targeted_work[targeted_work_ix(host_ix, type)];
+  heap_ii_t* H = host_targeted_work_heap(host_idx, type);
   while (H->size > 0)
   {
     heap_ii_entry_t root = heap_ii_root(H);
 
     int priority = -root.key;
-    int wu_id = root.val;
+    int wu_idx = root.val;
 
     heap_ii_del_root(H);
 
-    xlb_work_unit* wu = wu_array_try_remove_host_targeted(wu_id, type,
-                                                    host_ix, priority);
+    xlb_work_unit* wu = wu_array_try_remove_host_targeted(wu_idx, type,
+                                                    host_idx, priority);
     if (wu != NULL)
     {
 
@@ -735,11 +744,11 @@ static xlb_work_unit* pop_untargeted(int type)
     heap_ii_entry_t root = heap_ii_root(H);
 
     int priority = -root.key;
-    int wu_id = root.val;
+    int wu_idx = root.val;
 
     heap_ii_del_root(H);
 
-    xlb_work_unit* wu = wu_array_try_remove_untargeted(wu_id, type,
+    xlb_work_unit* wu = wu_array_try_remove_untargeted(wu_idx, type,
                                                        priority);
     if (wu != NULL) {
       DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
@@ -909,11 +918,11 @@ heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
     if (rand() < p_threshold)
     {
       int priority = q->array[i].key;
-      int wu_id = q->array[i].val;
-      heap_ii_del_entry(q, (heap_ix_t)i);
+      int wu_idx = q->array[i].val;
+      heap_ii_del_entry(q, (heap_idx_t)i);
 
       xlb_work_unit* wu;
-      wu = wu_array_try_remove_untargeted(wu_id, type, priority);
+      wu = wu_array_try_remove_untargeted(wu_idx, type, priority);
       if (wu != NULL)
       {
         adlb_code code = cb.f(cb.data, wu);

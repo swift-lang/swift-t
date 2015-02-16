@@ -132,7 +132,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   // Store in targets if it is one of our workers
   if (xlb_map_to_server(rank) == xlb_comm_rank)
   {
-    int targets_ix = xlb_my_worker_ix(rank);
+    int targets_ix = xlb_my_worker_idx(rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
@@ -251,7 +251,7 @@ static bool in_targets_array(request *R)
   if (xlb_map_to_server(R->rank) != xlb_comm_rank) {
     return false;
   }
-  int targets_ix = xlb_my_worker_ix(R->rank);
+  int targets_ix = xlb_my_worker_idx(R->rank);
   return R == &targets[targets_ix];
 }
 
@@ -284,7 +284,7 @@ xlb_requestqueue_matches_target(int target_rank, int type)
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         target_rank, type);
 
-  int targets_ix = xlb_my_worker_ix(target_rank);
+  int targets_ix = xlb_my_worker_idx(target_rank);
   request* R = &targets[targets_ix];
   if (R->item != NULL && R->type == type)
   {
