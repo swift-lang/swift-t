@@ -458,7 +458,7 @@ wu_array_try_remove_untargeted(int wu_id, int type, int priority)
       exp_priority = soft_target_priority(priority);
     }
 
-    if (wu->opts.priority == exp_priority) {
+    if (wu->opts.priority == -exp_priority) {
       wu_array_remove(wu_id);
       return wu;
     }
