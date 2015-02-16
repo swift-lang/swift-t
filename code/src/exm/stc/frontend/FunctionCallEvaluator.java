@@ -259,10 +259,6 @@ public class FunctionCallEvaluator {
    */
   private boolean evalCallProperties(Context context, FnID id, FunctionCall fc,
               TaskProps propVals, Map<String, String> renames) throws UserException {
-    if (fc.annotations().isEmpty()) {
-      return false;
-    }
-
     List<Pair<TaskPropKey, Var>> propFutures =
           new ArrayList<Pair<TaskPropKey, Var>>();
     List<Var> waitVars = new ArrayList<Var>();
@@ -285,6 +281,10 @@ public class FunctionCallEvaluator {
       locationVar = exprWalker.eval(context, fc.location(), Types.F_LOCATION, false,
                                     renames);
       waitVars.add(locationVar);
+    }
+
+    if (waitVars.isEmpty()) {
+      return false;
     }
 
     backend.startWaitStatement(context.constructName("ann-wait"),
@@ -548,6 +548,7 @@ public class FunctionCallEvaluator {
       }
       realInputs.add(VarRepr.backendArg(par));
     }
+
     if (context.hasFunctionProp(id, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
       Arg location = props.getWithDefault(TaskPropKey.LOC_RANK);
