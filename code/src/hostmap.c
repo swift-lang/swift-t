@@ -62,10 +62,10 @@ report_ranks()
 
 static bool get_hostmap_mode(void);
 static void setup_leaders(int* leader_ranks, int leader_rank_count);
-static void rankmap_add(int rank, const char* name);
+static void rankmap_add(bool am_server, int rank, const char* name);
 
 bool
-xlb_hostmap_init()
+xlb_hostmap_init(bool am_server)
 {
   report_ranks();
 
@@ -106,7 +106,7 @@ xlb_hostmap_init()
   // Note: If hostmap mode is LEADERS, we free this table early
   table_init(&hostmap, 1024);
 
-  if (xlb_am_server)
+  if (am_server)
     table_ip_init(&rankmap, 128);
 
   char* p = allnames;
@@ -142,7 +142,7 @@ xlb_hostmap_init()
       list_i_add(L, rank);
     }
 
-    rankmap_add(rank, name);
+    rankmap_add(am_server, rank, name);
 
     p += length;
   }
@@ -159,10 +159,9 @@ xlb_hostmap_init()
 }
 
 static void
-rankmap_add(int rank, const char* name)
+rankmap_add(bool am_server, int rank, const char* name)
 {
-  if (xlb_am_server &&
-      xlb_map_to_server(rank) == xlb_comm_rank)
+  if (xlb_map_to_server(rank) == xlb_comm_rank)
   {
     char* n = table_locate_key(&hostmap, name);
     table_ip_add(&rankmap, rank, n);

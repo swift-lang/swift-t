@@ -175,11 +175,13 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   getenv_boolean("ADLB_PERF_COUNTERS", xlb_perf_counters_enabled,
                  &xlb_perf_counters_enabled);
 
-  // Need hostmap for server init
-  bool ok = xlb_hostmap_init();
-  CHECK_MSG(ok, "Hostmap init failed");
 
   xlb_am_server = (xlb_comm_rank >= xlb_workers);
+
+  // Need hostmap for server init
+  bool ok = xlb_hostmap_init(xlb_am_server);
+  CHECK_MSG(ok, "Hostmap init failed");
+
   if (!xlb_am_server)
   {
     *am_server = 0;
