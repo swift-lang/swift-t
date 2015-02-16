@@ -93,6 +93,28 @@ static const adlb_buffer xlb_xfer_buf =
 int xlb_random_server(void);
 
 /**
+   @param rank of worker
+   @return rank of server for this worker rank
+ */
+__attribute__((always_inline))
+static inline int
+xlb_map_to_server(int rank)
+{
+  if (xlb_is_server(rank))
+    return rank;
+  assert(rank >= 0 && rank < xlb_workers);
+  int w = rank % xlb_servers;
+  return w + xlb_workers;
+}
+
+__attribute__((always_inline))
+static inline int
+xlb_worker_maps_to_server(int worker_rank, int server_rank) {
+  return (worker_rank % xlb_servers) + xlb_workers == server_rank;
+}
+
+
+/**
    Time since XLB was initialized
    Note: this is used by debugging output
  */
