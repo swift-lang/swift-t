@@ -59,7 +59,7 @@
 #define HEAP_NAME_(prefix, name) HEAP_NAME__(prefix, name)
 #define HEAP_NAME(name) HEAP_NAME_(HEAP_PFX, name)
 
-typedef uint32_t heap_ix_t;
+typedef uint32_t heap_idx_t;
 typedef HEAP_KEY_T HEAP_NAME(key_t);
 typedef HEAP_VAL_T HEAP_NAME(val_t);
 
@@ -94,7 +94,7 @@ HEAP_INIT(HEAP_T *heap, uint32_t init_capacity)
   }
   else
   {
-    heap->array = 
+    heap->array =
             malloc(sizeof(HEAP_ENTRY_T) * init_capacity);
     if (heap->array == NULL) {
       return false;
@@ -147,7 +147,7 @@ HEAP_CREATE(uint32_t init_capacity) {
 #define HEAP_CHECK HEAP_NAME(check)
 static inline void
 HEAP_CHECK(HEAP_T *heap) {
-  heap_ix_t i;
+  heap_idx_t i;
   for (i = 0; i < heap->size; i++) {
     HEAP_KEY_T k = heap->array[i].key;
     if (HEAP_LEFT(i) < heap->size) {
@@ -168,7 +168,7 @@ HEAP_CHECK(HEAP_T *heap) {
 }
 
 #define HEAP_SIZE HEAP_NAME(size)
-static inline heap_ix_t HEAP_SIZE(HEAP_T *heap) {
+static inline heap_idx_t HEAP_SIZE(HEAP_T *heap) {
   return heap->size;
 }
 
@@ -196,25 +196,25 @@ static inline HEAP_VAL_T HEAP_ROOT_VAL(HEAP_T *heap) {
  * sift down the entry at i.
  */
 #define HEAP_SIFT_DOWN HEAP_NAME(sift_down)
-static inline void HEAP_SIFT_DOWN(HEAP_T *heap, heap_ix_t i) {
+static inline void HEAP_SIFT_DOWN(HEAP_T *heap, heap_idx_t i) {
   assert(heap->size > i);
   HEAP_ENTRY_T entry = heap->array[i];
   HEAP_KEY_T key = entry.key;
   while (1) {
     if ( HEAP_LEFT(i) < heap->size ) {
       /* Find the smaller child */
-      heap_ix_t min_ix = HEAP_LEFT(i); 
+      heap_idx_t min_idx = HEAP_LEFT(i);
       HEAP_KEY_T min = heap->array[HEAP_LEFT(i)].key;
       if ( HEAP_RIGHT(i) < heap->size &&
          heap->array[HEAP_RIGHT(i)].key < min) {
         min = heap->array[HEAP_RIGHT(i)].key;
-        min_ix = HEAP_RIGHT(i);
+        min_idx = HEAP_RIGHT(i);
       }
 
       /* Check if minheap property is violated */
       if (min < key) {
-        heap->array[i] = heap->array[min_ix];
-        i = min_ix;
+        heap->array[i] = heap->array[min_idx];
+        i = min_idx;
       } else {
         /* entry is less than children, we now have a min-heap again */
         heap->array[i] = entry;
@@ -248,7 +248,7 @@ static inline void HEAP_DEL_ROOT(HEAP_T *heap)
  * Remove any entry of the heap
  */
 #define HEAP_DEL_ENTRY HEAP_NAME(del_entry)
-static inline void HEAP_DEL_ENTRY(HEAP_T *heap, heap_ix_t i)
+static inline void HEAP_DEL_ENTRY(HEAP_T *heap, heap_idx_t i)
 {
   /* Shrink by one */
   heap->size--;
@@ -279,7 +279,7 @@ static bool HEAP_POP_VAL(HEAP_T *heap, HEAP_VAL_T *result)
  * need to be moved down the heap.  Keep on swapping it down until
  * it is resolved */
 #define HEAP_INCREASE_KEY HEAP_NAME(increase_key)
-static inline void HEAP_INCREASE_KEY(HEAP_T *heap, heap_ix_t i, HEAP_KEY_T newkey) {
+static inline void HEAP_INCREASE_KEY(HEAP_T *heap, heap_idx_t i, HEAP_KEY_T newkey) {
   assert(heap->size > i);
   HEAP_ENTRY_T *entry = &(heap->array[i]);
 
@@ -294,7 +294,7 @@ static inline void HEAP_INCREASE_KEY(HEAP_T *heap, heap_ix_t i, HEAP_KEY_T newke
  * Sift up A[i] until it is a heap again
  */
 #define HEAP_SIFT_UP HEAP_NAME(sift_up)
-static inline void HEAP_SIFT_UP(HEAP_T *heap, heap_ix_t i) {
+static inline void HEAP_SIFT_UP(HEAP_T *heap, heap_idx_t i) {
   assert(heap->size > i);
   HEAP_ENTRY_T entry, parent;
   entry = heap->array[i];
@@ -331,7 +331,7 @@ HEAP_EXPAND(HEAP_T *heap, uint32_t needed_size)
     {
       new_size = HEAP_MIN_SIZE;
     }
-    
+
     heap->array = realloc(heap->array, sizeof(HEAP_ENTRY_T) * new_size);
     if (heap->array == NULL) {
       return false;
@@ -375,7 +375,7 @@ HEAP_ADD(HEAP_T *heap, HEAP_KEY_T k, HEAP_VAL_T v)
  * need to be moved up the heap. */
 #define HEAP_DECREASE_KEY HEAP_NAME(decrease_key)
 static inline void
-HEAP_DECREASE_KEY(HEAP_T *heap, heap_ix_t i, HEAP_KEY_T newkey)
+HEAP_DECREASE_KEY(HEAP_T *heap, heap_idx_t i, HEAP_KEY_T newkey)
 {
   HEAP_ENTRY_T *entry = &(heap->array[i]);
   HEAP_ASSERT(newkey <= entry->key);
