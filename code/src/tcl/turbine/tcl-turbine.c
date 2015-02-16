@@ -79,6 +79,9 @@
 // rank with type WORK
 #define TURBINE_ADLB_WORK_TYPE_LOCAL -1
 
+// TODO: remove
+//#define USE_FAST_MATCH_BRANCH
+
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             Tcl_Obj* list, int max,
@@ -520,9 +523,11 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
+#ifndef USE_FAST_MATCH_BRANCH
         // May have already processed key "strictness"
         if (opts->opts.strictness == ADLB_TGT_STRICT_NONE)
           opts->opts.strictness = ADLB_TGT_STRICT_HARD;
+#endif
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
