@@ -144,7 +144,10 @@ adlb_code xlb_workq_steal(int max_memory, const int *steal_type_counts,
  */
 void xlb_workq_type_counts(int *types, int size);
 
-void xlb_work_unit_free(xlb_work_unit* wu);
+static inline void xlb_work_unit_free(xlb_work_unit* wu)
+{
+  free(wu);
+}
 
 void xlb_print_workq_perf_counters(void);
 

@@ -798,12 +798,6 @@ void xlb_workq_type_counts(int *types, int size)
   }
 }
 
-void
-xlb_work_unit_free(xlb_work_unit* wu)
-{
-  free(wu);
-}
-
 static bool
 wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
 {
