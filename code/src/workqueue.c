@@ -707,9 +707,9 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         double single_pc = single_count / (double) tot_count;
         double par_pc = par_count / (double) tot_count;
         int par_to_send = (int)(par_pc * to_send);
-        TRACE("xlb_workq_steal(): stealing type=%i single=%i/%i par=%i/%i"
+        TRACE("xlb_workq_steal(): stealing type=%i single=%lf of %i par=%i/%i"
               " This server count: %i versus %i",
-                        t, single_to_send, single_count, par_to_send, par_count,
+                        t, single_pc, single_count, par_to_send, par_count,
                         tot_count, stealer_count);
         adlb_code code;
         int single_sent;
@@ -749,7 +749,7 @@ heap_steal_type(heap_ii_t *q, int type, double p, int *stolen,
    */
   for (int i = (int)heap_ii_size(q) - 1; i >= 0; i--)
   {
-    if (rand() > p_threshold)
+    if (rand() < p_threshold)
     {
       int priority = q->array[i].key;
       int wu_id = q->array[i].val;
