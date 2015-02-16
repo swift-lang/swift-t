@@ -162,9 +162,9 @@ public class FunctionTypeCheckerTest {
     fc = makeFnCallInfo(name, fo.asList(), intArgs);
     match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
-    // Should resolve to (int)
+    // Should resolve to (int, bool) - last value filled in by default
     assertEquals("One matching type", 1, match.concreteAlts.size());
-    assertEquals("Matched args", intArgs,
+    assertEquals("Matched args", intBoolArgs,
                   match.concreteAlts.get(0).getInputs());
   }
 
