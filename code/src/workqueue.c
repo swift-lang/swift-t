@@ -92,8 +92,11 @@ static int soft_target_priority(int base_priority);
 xlb_work_unit_id xlb_workq_next_id = 1;
 
 /**
-  Storage for non-parallel work units.  Integer index in array identifies
-  work unit within this module - work unit isn't relocated within array.
+  Array of pointers to all non-parallel work units in workqueue.
+  Integer index in array is used to identify the work unit within this
+  module - the work unit is never relocated within array.  An index into
+  this array can be validated by checking that the type/target/priority
+  match as expected.
 
   Other structures provide indexes for quick lookup of work units.
 
