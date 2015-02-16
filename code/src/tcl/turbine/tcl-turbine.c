@@ -80,7 +80,7 @@
 #define TURBINE_ADLB_WORK_TYPE_LOCAL -1
 
 // TODO: remove
-//#define USE_FAST_MATCH_BRANCH
+#define USE_FAST_MATCH_BRANCH
 
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
