@@ -110,7 +110,8 @@ reader_next(long id)
   reader_line result = {0};
 
   struct entry* e;
-  void** v = &e;
+  struct entry** ee = &e;
+  void** v = (void**) ee;
   table_lp_search(&table, id, v);
   result.number = e->number;
   if (!e)
@@ -167,7 +168,8 @@ bool
 reader_free(long id)
 {
   struct entry* e;
-  void** v = &e;
+  struct entry** ee = &e;
+  void** v = (void**) ee;
   if (!table_lp_remove(&table, id, v))
     return false;
 
