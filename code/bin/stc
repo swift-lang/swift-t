@@ -20,8 +20,6 @@ STC_ENV="$STC_HOME/conf/stc-env.sh"
 
 source "$STC_HOME/scripts/stc-config.sh"
 
-# Default opt level
-set_opt_level 2
 
 COMPILER_OPTS=()
 O0_OPTS=()
@@ -287,6 +285,9 @@ report_version()
   print "Using Java VM:    ${JVM}"
   exit 0
 }
+
+# Set default opt level before processing options
+set_opt_level 2
 
 while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uvVx" OPTION
 do
