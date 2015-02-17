@@ -89,7 +89,7 @@ function get_compiler_opt_name() {
         function-inline) echo "stc.opt.function-inline"
                     return 0;
                     ;;
-        full-function-inline) echo "stc.opt.function-inline"
+        full-function-inline) echo "stc.opt.full-function-inline"
                     return 0;
                     ;;
         function-signature) echo "stc.opt.function-signature"
@@ -285,6 +285,9 @@ report_version()
   exit 0
 }
 
+# Set default options before processing args
+set_opt_level 2
+
 while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uvVx" OPTION
 do
   case ${OPTION}
@@ -362,11 +365,6 @@ then
   # This is optional (STC Java implementation defaults to *.tic)
   # OUTPUT may have been set by stc -o
   OUTPUT=$2
-fi
-
-if [[ -z ${OPTLEVEL} ]]
-then
-  set_opt_level 2
 fi
 
 # Clear this in case the user has set it
