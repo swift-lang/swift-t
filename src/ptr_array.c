@@ -20,9 +20,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline void
+ptr_array_reset(struct ptr_array *pa)
+{
+  pa->arr = NULL;
+  pa->free = NULL;
+  pa->capacity = pa->free_count = 0;
+}
+
 bool ptr_array_init(struct ptr_array *pa, uint32_t init_capacity)
 {
-  ptr_array_clear(pa);
+  ptr_array_reset(pa);
   return ptr_array_expand(pa, init_capacity);
 }
 
@@ -31,9 +39,7 @@ void ptr_array_clear(struct ptr_array *pa)
   free(pa->arr);
   free(pa->free);
 
-  pa->arr = NULL;
-  pa->free = NULL;
-  pa->capacity = pa->free_count = 0;
+  ptr_array_reset(pa);
 }
 
 bool ptr_array_expand(struct ptr_array *pa, uint32_t new_capacity)
