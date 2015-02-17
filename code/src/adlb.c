@@ -279,8 +279,10 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   adlb_code rc;
   int response;
 
-  DEBUG("ADLB_Put: target=%i x%i %.*s",
-        target, opts.parallelism, length, (char*) payload);
+  DEBUG("ADLB_Put: type=%i target=%i priority=%i strictness=%i "
+        "accuracy=%i x%i %.*s", type, target, opts.priority,
+        opts.strictness, opts.accuracy, opts.parallelism, length,
+        (char*) payload);
 
   rc = adlb_put_check_params(target, type, opts);
   ADLB_CHECK(rc);

@@ -403,7 +403,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
     int modified_priority = soft_target_priority(wu->opts.priority);
 
     // Also add entry to untargeted work
-    DEBUG("add for soft targeted: wu: %p key: %i\n", wu, -modified_priority);
+    DEBUG("Add to soft targeted: wu: %p key: %i\n", wu, -modified_priority);
 
     heap_iu32_t* H = &untargeted_work[wu->type];
     bool b = heap_iu32_add(H, -modified_priority, wu_idx);
@@ -473,7 +473,7 @@ wu_array_try_remove_untargeted(uint32_t wu_idx, int type, int priority)
     {
       modified_priority = soft_target_priority(modified_priority);
     }
-
+    
     if (modified_priority == priority) {
       ptr_array_remove(&wu_array, wu_idx);
       return wu;
@@ -829,7 +829,7 @@ heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
   {
     if (rand() < p_threshold)
     {
-      int priority = q->array[i].key;
+      int priority = -q->array[i].key;
       uint32_t wu_idx = q->array[i].val;
       heap_iu32_del_entry(q, (heap_idx_t)i);
 
