@@ -18,7 +18,7 @@ main()
 {
   struct ptr_array pa;
   ptr_array_init(&pa, 8);
-
+  ptr_array_clear(&pa);
   printf("DONE\n");
   return 0;
 }
