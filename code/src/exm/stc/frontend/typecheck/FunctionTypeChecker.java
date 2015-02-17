@@ -1,13 +1,19 @@
 package exm.stc.frontend.typecheck;
 
+import static exm.stc.frontend.typecheck.TypeChecker.findExprType;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.common.exceptions.InvalidConstructException;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -54,8 +60,7 @@ public class FunctionTypeChecker {
     List<Type> outTs = Var.extractTypes(outputs);
     FunctionType concreteOutTs = concretiseOutputs(context, match, outputs, outTs);
 
-    return new ConcreteMatch(match.overload.id, concreteOutTs,
-                             match.overload.defaultVals);
+    return new ConcreteMatch(match.overload, concreteOutTs);
   }
 
   /**
@@ -63,11 +68,11 @@ public class FunctionTypeChecker {
    * @throws TypeMismatchException
    */
   public static Pair<Type, Type>
-  concretiseFnArg(Context context, String function, int argNum,
+  concretiseFnArg(Context context, String function, String argName,
       Type formalArgT, Type argExprT) throws TypeMismatchException {
     Pair<Type, Type> res = selectArgType(formalArgT, argExprT, true);
     if (res == null) {
-      throw argumentTypeException(context, argNum, formalArgT, argExprT,
+      throw argumentTypeException(context, argName, formalArgT, argExprT,
           " in call to function " + function);
     }
 
@@ -144,13 +149,17 @@ public class FunctionTypeChecker {
    */
   private static FnMatch concretiseInputs(Context context, FunctionCall fc)
       throws UserException {
-    List<Type> argTypes = new ArrayList<Type>(fc.args().size());
-    for (SwiftAST arg: fc.args()) {
-      argTypes.add(TypeChecker.findExprType(context, arg));
+    List<Type> posArgTypes = new ArrayList<Type>(fc.posArgs().size());
+    Map<String, Type> kwArgTypes = new HashMap<String, Type>();
+    for (SwiftAST arg: fc.posArgs()) {
+      posArgTypes.add(findExprType(context, arg));
+    }
+    for (Entry<String, SwiftAST> kwArg: fc.kwArgs().entrySet()) {
+      kwArgTypes.put(kwArg.getKey(), findExprType(context, kwArg.getValue()));
     }
 
     FnCallInfo info = new FnCallInfo(fc.originalName(), fc.overloads(),
-                                     argTypes);
+                                     posArgTypes, kwArgTypes);
 
     return concretiseInputsOverloaded(context, info);
   }
@@ -172,7 +181,7 @@ public class FunctionTypeChecker {
 
     for (FnOverload fnType: fc.fnTypes) {
       FnMatch match = concretiseInputsNonOverloaded(context, fnType,
-                                          fc.argTypes, !overloaded);
+                            fc.argTypes, fc.kwArgTypes, !overloaded);
 
       if (match != null) {
         matches.add(match);
@@ -265,14 +274,19 @@ public class FunctionTypeChecker {
     }
   }
 
-  private static FnMatch concretiseInputsNonOverloaded(Context context,
-      FnOverload overload, List<Type> argTypes, boolean throwOnFail)
-      throws TypeMismatchException {
-    List<Type> expandedInArgs = matchArgs(context, overload, argTypes, throwOnFail);
-    if (expandedInArgs == null) {
+  static FnMatch concretiseInputsNonOverloaded(Context context,
+      FnOverload overload, List<Type> argTypes, Map<String, Type> kwArgTypes,
+      boolean throwOnFail) throws TypeMismatchException {
+    List<MatchedArg> matchedArgs = matchArgs(context, overload, argTypes,
+                                              kwArgTypes, throwOnFail);
+    if (matchedArgs == null) {
       return null;
     }
-    assert(expandedInArgs.size() == argTypes.size());
+
+    assert(matchedArgs.size() == overload.inArgNames.size() ||
+          (overload.type.hasVarargs() &&
+              matchedArgs.size() >= overload.inArgNames.size() - 1)) :
+                overload.inArgNames + " " + matchedArgs;
 
     /*
      *  Narrow down possible bindings - choose union types and find possible
@@ -280,15 +294,24 @@ public class FunctionTypeChecker {
      */
     List<Type> concreteArgTypes = new ArrayList<Type>(argTypes.size());
     MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
-    for (int i = 0; i < argTypes.size(); i++) {
-      Type exp = expandedInArgs.get(i);
-      Type act = argTypes.get(i);
+    for (int i = 0; i < matchedArgs.size(); i++) {
+      MatchedArg matchedArg = matchedArgs.get(i);
+      Type exp = matchedArg.formalArgType;
+      Type act = matchedArg.argExprType;
+
       // a more specific type than expected
-      Type exp2 = narrowArgType(context, overload.id, i, exp, act,
-                                tvConstraints, throwOnFail);
-      if (exp2 == null) {
-        assert(!throwOnFail);
-        return null;
+      Type exp2;
+      if (act != null) {
+        exp2 = narrowArgType(context, overload.id, matchedArg.name, exp, act,
+                                  tvConstraints, throwOnFail);
+        if (exp2 == null) {
+          assert(!throwOnFail);
+          return null;
+        }
+      } else {
+        // Will be filled with default val
+        exp2 = overload.defaultVals.defaultVals().get(i).type();
+        assert(exp2.assignableTo(exp));
       }
       concreteArgTypes.add(exp2);
     }
@@ -433,7 +456,7 @@ public class FunctionTypeChecker {
    * Narrow down the possible argument types for a function call
    * @param context
    * @param id
-   * @param arg number of argument
+   * @param argName name of argument
    * @param formalArgT Formal argument type from abstract function type
    * @param argExprT Type of argument expression for function
    * @param tvConstrains Filled in with constraints for each type variable
@@ -442,15 +465,15 @@ public class FunctionTypeChecker {
    * @return
    * @throws TypeMismatchException
    */
-  private static Type narrowArgType(Context context, FnID id, int arg,
+  private static Type narrowArgType(Context context, FnID id, String argName,
       Type formalArgT, Type argExprT,
       MultiMap<String, Type> tvConstrains, boolean throwOnFail)
           throws TypeMismatchException {
     if (formalArgT.hasTypeVar()) {
-      return checkFunArgTV(context, id, arg, formalArgT, argExprT,
+      return checkFunArgTV(context, id, argName, formalArgT, argExprT,
                            tvConstrains, throwOnFail);
     } else {
-      return checkFunArg(context, id, arg, formalArgT, argExprT, throwOnFail);
+      return checkFunArg(context, id, argName, formalArgT, argExprT, throwOnFail);
     }
   }
 
@@ -462,7 +485,7 @@ public class FunctionTypeChecker {
    * Does not handle type variables
    * @param context
    * @param id
-   * @param argNum
+   * @param argName
    * @param formalArgT
    * @param argExprT
    * @param throwOnFail if true, throw exception on fail, otherwise return null
@@ -470,7 +493,7 @@ public class FunctionTypeChecker {
    * @throws TypeMismatchException
    */
   private static Type checkFunArg(Context context,
-      FnID id, int argNum, Type formalArgT, Type argExprT,
+      FnID id, String argName, Type formalArgT, Type argExprT,
       boolean throwOnFail) throws TypeMismatchException {
     assert(!formalArgT.hasTypeVar()) : formalArgT;
 
@@ -478,7 +501,7 @@ public class FunctionTypeChecker {
 
     if (alt == null) {
       if (throwOnFail) {
-        throw argumentTypeException(context, argNum, formalArgT, argExprT,
+        throw argumentTypeException(context, argName, formalArgT, argExprT,
           " in call to function " + id.originalName());
       }
       return null;
@@ -495,7 +518,7 @@ public class FunctionTypeChecker {
    * Only handles case where formalArgT has a type variable
    * @param context
    * @param id
-   * @param arg
+   * @param argName
    * @param formalArgT
    * @param argExprT
    * @param tvConstraints fill in constraints for type variables
@@ -503,7 +526,7 @@ public class FunctionTypeChecker {
    * @return
    * @throws TypeMismatchException
    */
-  private static Type checkFunArgTV(Context context, FnID id, int arg,
+  private static Type checkFunArgTV(Context context, FnID id, String argName,
       Type formalArgT, Type argExprT,
       MultiMap<String, Type> tvConstraints, boolean throwOnFail)
           throws TypeMismatchException {
@@ -609,25 +632,33 @@ public class FunctionTypeChecker {
   }
 
   /**
-   * Match abstract argument types to provided argument expressions, producing
-   * a list of argument types of the same length as the number of input arguments.
-   * Expand variable-length arguments or omit optional arguments if needed.
+   * Match abstract argument types to provided argument expressions,
+   * Expand variable-length arguments if needed.  Leaves nulls if optional
+   * argument was omitted.
    * @param context
    * @param overload
    * @param argTypes
+   * @param kwArgTypes
    * @param throwOnFail on failure, return null if false
    *                      or throw exception if true
    * @return
    * @throws TypeMismatchException
+   * @throws InvalidConstructException
    */
-  private static List<Type> matchArgs(Context context,
-      FnOverload overload, List<Type> argTypes, boolean throwOnFail)
-          throws TypeMismatchException {
+  private static List<MatchedArg> matchArgs(Context context,
+      FnOverload overload, List<Type> argTypes, Map<String, Type> kwArgTypes,
+      boolean throwOnFail) throws TypeMismatchException {
     FunctionType fnType = overload.type;
     DefaultVals<Var> defaultVals = overload.defaultVals;
 
+    // Don't have to deal with both varArgs and defaults
+    assert(!fnType.hasVarargs() ||
+           !defaultVals.hasAnyDefaults());
+
     List<Type> abstractInputs = fnType.getInputs();
-    int numArgs = argTypes.size();
+    int numPosArgs = argTypes.size();
+    int numKwArgs = kwArgTypes.size();
+    int numTotalArgs = numPosArgs + numKwArgs;
 
     boolean fixedLength = !defaultVals.hasAnyDefaults() &&
                           !fnType.hasVarargs();
@@ -640,32 +671,73 @@ public class FunctionTypeChecker {
       minNumArgs = fnType.getInputs().size();
     }
 
-    if (numArgs < abstractInputs.size() - 1) {
+    if (numTotalArgs < minNumArgs) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Too few arguments in "
           + "call to function " + overload.id.originalName() + ": expected "
           + (fixedLength ? "==" : ">=") + " " + minNumArgs
-          + " but got " + numArgs);
+          + " but got " + numTotalArgs);
       }
       return null;
     }
 
-    if (!fnType.hasVarargs() && numArgs > abstractInputs.size()) {
+    if (!fnType.hasVarargs() && numPosArgs > abstractInputs.size()) {
       if (throwOnFail) {
         throw new TypeMismatchException(context,  "Wrong number of arguments in "
             + "call to function " + overload.id.originalName()
             + ": expected at most " + abstractInputs.size()
-            + " but got " + numArgs);
+            + " but got " + numPosArgs + " positional arguments");
       }
       return null;
     }
 
-    if (fnType.hasVarargs()) {
-      return expandVarArgs(abstractInputs, numArgs);
-    } else {
-      // Return whole list or prefix (if optional)
-      return abstractInputs.subList(0, numArgs);
+    int numMatchedArgs = fnType.hasVarargs() ? numTotalArgs
+                                : fnType.getInputs().size();
+
+    Set<String> unmatchedKwArgs = new HashSet<String>(kwArgTypes.keySet());
+    MatchedArg matched[] = new MatchedArg[numMatchedArgs];
+    for (int i = 0; i < numMatchedArgs; i++) {
+      String name;
+      Type formalArgType;
+      Type argExprType;
+      if (i < numPosArgs) {
+        argExprType = argTypes.get(i);
+        int formalArgIx;
+        if (i < abstractInputs.size()) {
+          formalArgIx = i;
+        } else {
+          assert(fnType.hasVarargs());
+          formalArgIx = abstractInputs.size() - 1;
+        }
+        name = overload.inArgNames.get(formalArgIx);
+        formalArgType = abstractInputs.get(formalArgIx);
+      } else {
+        assert(!fnType.hasVarargs());
+        name = overload.inArgNames.get(i);
+        boolean hasDefault = overload.defaultVals.defaultVals().get(i) != null;
+
+        if (!hasDefault) {
+          throw new TypeMismatchException(context,
+                  "Keyword arguments cannot be used for required argument "
+                 + name + " in call to " + overload.id.originalName());
+        }
+        formalArgType = abstractInputs.get(i);
+        argExprType = kwArgTypes.get(name);
+        if (argExprType != null) {
+          unmatchedKwArgs.remove(name);
+        }
+      }
+
+      matched[i] = new MatchedArg(name, formalArgType, argExprType);
     }
+
+    if (unmatchedKwArgs.size() > 0) {
+      throw new TypeMismatchException(context, "Keyword arguments "
+          + "not matched in call to " + overload.id.originalName()
+          + ": " + unmatchedKwArgs);
+    }
+
+    return Arrays.asList(matched);
   }
 
   /**
@@ -732,9 +804,9 @@ public class FunctionTypeChecker {
   }
 
   private static TypeMismatchException argumentTypeException(Context context,
-      int argPos, Type expType, Type actType, String errContext) {
+      String argName, Type expType, Type actType, String errContext) {
     return new TypeMismatchException(context, "Expected argument " +
-        (argPos + 1) + " to have one of the following types: "
+        argName + " to have one of the following types: "
         + expType.typeName() + ", but had type: " + actType.typeName()
         + errContext);
   }
@@ -931,24 +1003,20 @@ public class FunctionTypeChecker {
    * @author tim
    */
   public static class ConcreteMatch {
-    /** ID of function selected among overloads */
-    public final FnID id;
+    /** Overload of function selected */
+    public final FnOverload overload;
 
-    /** Contrete type of function selected */
+    /** Concrete type of function selected */
     public final FunctionType type;
 
-    /** Default values */
-    public final DefaultVals<Var> defaultVals;
-
-    public ConcreteMatch(FnID id, FunctionType type, DefaultVals<Var> defaultVals) {
-      this.id = id;
+    public ConcreteMatch(FnOverload overload, FunctionType type) {
+      this.overload = overload;
       this.type = type;
-      this.defaultVals = defaultVals;
     }
 
     @Override
     public String toString() {
-      return "ConcreteMatch: " + id + " " + type + " " + defaultVals;
+      return "ConcreteMatch: " + overload.id + " " + type;
     }
   }
 
@@ -956,17 +1024,32 @@ public class FunctionTypeChecker {
     public final String name;
     public final List<FnOverload> fnTypes;
     public final List<Type> argTypes;
+    public final Map<String, Type> kwArgTypes;
 
-    public FnCallInfo(String name, FnID id, FunctionType fnType,
-                      DefaultVals<Var> defaultVals, List<Type> argTypes) {
-      this(name, new FnOverload(id, fnType, defaultVals).asList(), argTypes);
-    }
-
-    public FnCallInfo(String name,  List<FnOverload> fnTypes,
-                      List<Type> argTypes) {
+    public FnCallInfo(String name, List<FnOverload> fnTypes,
+          List<Type> argTypes,  Map<String, Type> kwArgTypes) {
       this.name = name;
       this.fnTypes = fnTypes;
       this.argTypes = argTypes;
+      this.kwArgTypes = kwArgTypes;
+    }
+  }
+
+  public static class MatchedArg {
+    public final String name;
+    public final Type formalArgType;
+    /** Arg expr type, can be null for optional args */
+    public final Type argExprType;
+
+    public MatchedArg(String name, Type formalArgType, Type argExprType) {
+      this.name = name;
+      this.formalArgType = formalArgType;
+      this.argExprType = argExprType;
+    }
+
+    @Override
+    public String toString() {
+      return name + ": " + formalArgType + " " + argExprType;
     }
   }
 }

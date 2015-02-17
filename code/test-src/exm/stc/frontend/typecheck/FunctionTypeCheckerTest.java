@@ -1,11 +1,13 @@
 package exm.stc.frontend.typecheck;
 
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.checkOverloadsAmbiguity;
+import static exm.stc.frontend.typecheck.FunctionTypeChecker.concretiseInputsNonOverloaded;
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.concretiseInputsOverloaded;
 import static exm.stc.frontend.typecheck.FunctionTypeChecker.selectArgType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -145,11 +147,11 @@ public class FunctionTypeCheckerTest {
                         DefType.GLOBAL_CONST, VarProvenance.unknown());
     DefaultVals<Var> defaults = DefaultVals.fromDefaultValVector(
                                   Arrays.asList(null, constVar));
-    FnOverload fo = new FnOverload(new FnID(name, name), ft, defaults);
+    FnOverload fo = makeFnOverload(new FnID(name, name), ft, defaults);
 
     // Try calling with both args
     List<Type> intBoolArgs = Arrays.asList(Types.F_INT, Types.F_BOOL);
-    FnCallInfo fc = new FnCallInfo(name, fo.asList(), intBoolArgs);
+    FnCallInfo fc = makeFnCallInfo(name, fo.asList(), intBoolArgs);
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
     assertEquals("One matching type", 1, match.concreteAlts.size());
@@ -157,13 +159,33 @@ public class FunctionTypeCheckerTest {
                   match.concreteAlts.get(0).getInputs());
 
     List<Type> intArgs = Arrays.asList(Types.F_INT);
-    fc = new FnCallInfo(name, fo.asList(), intArgs);
+    fc = makeFnCallInfo(name, fo.asList(), intArgs);
     match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
-    // Should resolve to (int)
+    // Should resolve to (int, bool) - last value filled in by default
     assertEquals("One matching type", 1, match.concreteAlts.size());
-    assertEquals("Matched args", intArgs,
+    assertEquals("Matched args", intBoolArgs,
                   match.concreteAlts.get(0).getInputs());
+  }
+
+  /**
+   * Regression test - not enough arguments provided
+   * @throws TypeMismatchException
+   */
+  @Test
+  public void testMissingArgs() throws TypeMismatchException {
+    exception.expect(TypeMismatchException.class);
+
+    FunctionType intFn = makeSimpleFT(Types.F_INT, Types.F_INT);
+    FnID intFnID = new FnID("int", "int");
+    FnOverload intOverload = makeFnOverload(intFnID, intFn);
+
+    // Shouldn't match - not enough args
+    FnMatch match = concretiseInputsNonOverloaded(FAKE_CONTEXT,
+        intOverload, Arrays.asList(Types.F_INT),
+        Collections.<String, Type>emptyMap(), true);
+
+    System.err.println(match);
   }
 
   /**
@@ -179,8 +201,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_STRING), Arrays.asList(
-        new FnOverload(intFnID, intFn),
-        new FnOverload(stringFnID, stringFn)));
+        makeFnOverload(intFnID, intFn),
+        makeFnOverload(stringFnID, stringFn)));
 
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
@@ -202,8 +224,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_INT, Types.F_FILE, Types.F_STRING),
-        Arrays.asList(new FnOverload(blobFnID, blobFn),
-                      new FnOverload(stringFnID, stringFn)));
+        Arrays.asList(makeFnOverload(blobFnID, blobFn),
+                      makeFnOverload(stringFnID, stringFn)));
 
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
@@ -223,8 +245,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_FLOAT), Arrays.asList(
-            new FnOverload(intFnID, intFn),
-            new FnOverload(stringFnID, stringFn)));
+            makeFnOverload(intFnID, intFn),
+            makeFnOverload(stringFnID, stringFn)));
 
     concretiseInputsOverloaded(FAKE_CONTEXT, fc);
   }
@@ -240,8 +262,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(Types.F_FLOAT, Types.F_FLOAT), Arrays.asList(
-            new FnOverload(intFnID, intFn),
-            new FnOverload(stringFnID, stringFn)));
+            makeFnOverload(intFnID, intFn),
+            makeFnOverload(stringFnID, stringFn)));
 
     concretiseInputsOverloaded(FAKE_CONTEXT, fc);
   }
@@ -259,8 +281,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
         Arrays.asList(INT_OR_STRING), Arrays.asList(
-            new FnOverload(intFnID, intFn),
-            new FnOverload(floatFnID, floatFn)));
+            makeFnOverload(intFnID, intFn),
+            makeFnOverload(floatFnID, floatFn)));
 
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
     assertEquals(intFnID, match.overload.id);
@@ -280,8 +302,8 @@ public class FunctionTypeCheckerTest {
     FnID intFnID = new FnID("int", "int");
     FnID floatFnID = new FnID("float", "float");
 
-    FnOverload intOverload = new FnOverload(intFnID, intFn);
-    FnOverload floatOverload = new FnOverload(floatFnID, floatFn);
+    FnOverload intOverload = makeFnOverload(intFnID, intFn);
+    FnOverload floatOverload = makeFnOverload(floatFnID, floatFn);
     List<FnOverload> overloadList = Arrays.asList(intOverload, floatOverload);
 
     List<FnOverload> overloadListRev = Arrays.asList(floatOverload, intOverload);
@@ -327,8 +349,8 @@ public class FunctionTypeCheckerTest {
     FnID fnid1 = new FnID("1", "f");
     FnID fnid2 = new FnID("2", "f");
 
-    FnOverload ol1 = new FnOverload(fnid1, ft1);
-    FnOverload ol2 = new FnOverload(fnid2, ft2);
+    FnOverload ol1 = makeFnOverload(fnid1, ft1);
+    FnOverload ol2 = makeFnOverload(fnid2, ft2);
     List<FnOverload> overloadList = Arrays.asList(ol2, ol1);
 
     // Arguments don't unambiguously identify either
@@ -350,8 +372,8 @@ public class FunctionTypeCheckerTest {
     FnID fnid1 = new FnID("1", "f");
     FnID fnid2 = new FnID("2", "f");
 
-    FnOverload ol1 = new FnOverload(fnid1, ft1);
-    FnOverload ol2 = new FnOverload(fnid2, ft2);
+    FnOverload ol1 = makeFnOverload(fnid1, ft1);
+    FnOverload ol2 = makeFnOverload(fnid2, ft2);
     List<FnOverload> overloadList = Arrays.asList(ol2, ol1);
 
     // First elements of unions are (string, int), so we should pick ft2
@@ -374,8 +396,8 @@ public class FunctionTypeCheckerTest {
 
     FnCallInfo fc = makeOverloadedFnCallInfo(
                             twoStrings,
-                            Arrays.asList(new FnOverload(fid1, ft1),
-                                          new FnOverload(fid2, ft2)));
+                            Arrays.asList(makeFnOverload(fid1, ft1),
+                                          makeFnOverload(fid2, ft2)));
 
     FnMatch match = concretiseInputsOverloaded(FAKE_CONTEXT, fc);
 
@@ -391,14 +413,43 @@ public class FunctionTypeCheckerTest {
     makeFT(Arrays.asList(Types.F_STRING, FLOAT_OR_INT), true);
   }
 
+  private FnCallInfo makeFnCallInfo(String name, List<FnOverload> fnTypes,
+      List<Type> argTypes) {
+    return new FnCallInfo(name, fnTypes, argTypes,
+              Collections.<String, Type>emptyMap());
+  }
+
   private FnCallInfo makeOverloadedFnCallInfo(List<Type> argTypes,
       List<FnOverload> fTypes) {
-    return new FnCallInfo("overloaded_function", fTypes, argTypes);
+    return makeFnCallInfo("overloaded_function", fTypes, argTypes);
   }
 
   private FnCallInfo makeFnCallInfo(FunctionType fnType, List<Type> argTypes) {
-    return new FnCallInfo(FAKE_FN_ID.originalName(), FAKE_FN_ID, fnType,
-                          DefaultVals.<Var>noDefaults(fnType), argTypes);
+    List<String> inArgNames = generateArgNames(argTypes.size());
+
+    FnOverload overload = new FnOverload(FAKE_FN_ID, fnType, inArgNames,
+          DefaultVals.<Var>noDefaults(fnType));
+    return makeFnCallInfo(FAKE_FN_ID.originalName(), overload.asList(), argTypes);
+  }
+
+
+  private FnOverload makeFnOverload(FnID id, FunctionType type,
+                                DefaultVals<Var> defaultVals) {
+    List<String> argNames = generateArgNames(type.getInputs().size());
+    return new FnOverload(id, type, argNames, defaultVals);
+  }
+
+  private FnOverload makeFnOverload(FnID id, FunctionType type) {
+    return makeFnOverload(id, type, DefaultVals.<Var>noDefaults(type));
+  }
+
+  private List<String> generateArgNames(int numArgs) {
+    List<String> inArgNames = new ArrayList<String>();
+
+    for (int i = 0; i < numArgs; i++) {
+      inArgNames.add("inarg" + i);
+    }
+    return inArgNames;
   }
 
   /**
