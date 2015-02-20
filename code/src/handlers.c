@@ -619,6 +619,7 @@ static adlb_code attempt_match_work(int type, int putter,
       return ADLB_NOTHING;
     }
     assert(opts.strictness != ADLB_TGT_STRICT_HARD ||
+           opts.accuracy   == ADLB_TGT_ACCRY_NODE  ||
            worker == target);
   }
   else
