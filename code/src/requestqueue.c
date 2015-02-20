@@ -305,12 +305,15 @@ xlb_requestqueue_matches_target(int task_target_rank, int task_type,
 static inline int
 requestq_matches_tgt_node(int task_tgt_idx, int task_type)
 {
+  TRACE_START;
+  DEBUG("requestq_matches_tgt_node(task_tgt_idx=%i, task_type=%i)",
+        task_tgt_idx, task_type);
   int result = ADLB_RANK_NULL;
   int task_host_idx = xlb_worker_host_map[task_tgt_idx];
   for (int i = 0; i < xlb_my_workers; i++)
   {
     request* R = &targets[i];
-    if (R != NULL && R->type == task_type)
+    if (R->item != NULL && R->type == task_type)
       if (xlb_worker_host_map[i] == task_host_idx)
       {
         request_match_update(R, true, 1);
@@ -318,6 +321,7 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
         break;
       }
   }
+  TRACE_END;
   return result;
 }
 
