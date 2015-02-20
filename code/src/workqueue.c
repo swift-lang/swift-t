@@ -257,6 +257,8 @@ static adlb_code worker_host_map_init(int my_workers, int *host_count)
       CHECK_MSG(ok, "Table add failed");
     }
     my_worker_host_map[i] = (int)host_idx;
+    DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
+          i, xlb_rank_from_my_worker_idx(i), (int)host_idx, host_name);
   }
 
   table_free_callback(&host_name_idx_map, false, NULL);
