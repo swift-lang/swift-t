@@ -827,7 +827,7 @@ static inline int
 check_workqueue(int caller, int type, int count)
 {
   TRACE_START;
-  printf("check_workqueue: %i\n", count);
+  printf("check_workqueue: caller=%i count=%i\n", caller, count);
   int matched = 0;
   while (matched < count)
   {
