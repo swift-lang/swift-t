@@ -93,26 +93,26 @@ static inline struct list2_item *alloc_list2_node(void);
 static inline void free_list2_node(struct list2_item *node);
 
 adlb_code
-xlb_requestqueue_init(int work_types, int my_workers)
+xlb_requestqueue_init()
 {
-  assert(my_workers >= 0);
-  assert(work_types >= 1);
+  assert(xlb_my_workers >= 0);
+  assert(xlb_types_size >= 1);
 
-  targets = malloc(sizeof(targets[0]) * (size_t)my_workers);
+  targets = malloc(sizeof(targets[0]) * (size_t)xlb_my_workers);
   ADLB_MALLOC_CHECK(targets);
 
-  for (int i = 0; i < my_workers; i++)
+  for (int i = 0; i < xlb_my_workers; i++)
   {
     targets[i].item = NULL;
   }
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)work_types);
+  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_types_size);
   ADLB_MALLOC_CHECK(type_requests);
-  for (int i = 0; i < work_types; i++)
+  for (int i = 0; i < xlb_types_size; i++)
     list2_init(&type_requests[i]);
 
   // Allocate one list node per worker - otherwise will fallback to malloc/free
-  adlb_code ac = list2_node_pool_init(my_workers);
+  adlb_code ac = list2_node_pool_init(xlb_my_workers);
   ADLB_CHECK(ac);
 
   request_queue_size = 0;
@@ -272,6 +272,8 @@ static int pop_rank_from_types(struct list2 *type_list)
   return rank;
 }
 
+static inline int requestq_matches_tgt_node();
+
 /**
    If target_rank is in the request_queue and requests work of
    given type, pop and return that rank.  Else return ADLB_RANK_NULL.
@@ -279,20 +281,44 @@ static int pop_rank_from_types(struct list2 *type_list)
    Assumes that the rank is one of our workers.
  */
 int
-xlb_requestqueue_matches_target(int target_rank, int type)
+xlb_requestqueue_matches_target(int task_target_rank, int task_type,
+                                adlb_target_accuracy accuracy)
 {
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
-        target_rank, type);
+        task_target_rank, task_type);
 
-  int targets_ix = xlb_my_worker_idx(target_rank);
-  request* R = &targets[targets_ix];
-  if (R->item != NULL && R->type == type)
+  int task_tgt_idx = xlb_my_worker_idx(task_target_rank);
+  request* R = &targets[task_tgt_idx];
+  if (R->item != NULL && R->type == task_type)
   {
-    assert(R->rank == target_rank);
+    assert(R->rank == task_target_rank);
     request_match_update(R, true, 1);
-    return target_rank;
+    return task_target_rank;
   }
+
+  if (accuracy == ADLB_TGT_ACCRY_NODE)
+    return requestq_matches_tgt_node(task_tgt_idx, task_type);
+
   return ADLB_RANK_NULL;
+}
+
+static inline int
+requestq_matches_tgt_node(int task_tgt_idx, int task_type)
+{
+  int result = ADLB_RANK_NULL;
+  int task_host_idx = xlb_worker_host_map[task_tgt_idx];
+  for (int i = 0; i < xlb_my_workers; i++)
+  {
+    request* R = &targets[i];
+    if (R != NULL && R->type == task_type)
+      if (xlb_worker_host_map[i] == task_host_idx)
+      {
+        request_match_update(R, true, 1);
+        result = xlb_rank_from_my_worker_idx(i);
+        break;
+      }
+  }
+  return result;
 }
 
 int

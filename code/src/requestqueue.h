@@ -37,7 +37,7 @@ typedef struct
   void *_internal; /* Internal pointer, caller should not touch */
 } xlb_request_entry; 
 
-adlb_code xlb_requestqueue_init(int work_types, int my_workers);
+adlb_code xlb_requestqueue_init(void);
 
 /*
   Add a request to the queue
@@ -45,7 +45,8 @@ adlb_code xlb_requestqueue_init(int work_types, int my_workers);
  */
 adlb_code xlb_requestqueue_add(int rank, int type, int count, bool blocking);
 
-int xlb_requestqueue_matches_target(int target_rank, int type);
+int xlb_requestqueue_matches_target(int target_rank, int type,
+                                    adlb_target_accuracy accuracy);
 
 int xlb_requestqueue_matches_type(int type);
 

@@ -115,6 +115,8 @@ static bool fail_code = -1;
 /** Ready task queue for server */
 xlb_engine_work_array xlb_server_ready_work;
 
+int* xlb_worker_host_map;
+
 static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
@@ -166,9 +168,9 @@ xlb_server_init()
   // printf("\n");
 
   list_i_init(&workers_shutdown);
-  code = xlb_requestqueue_init(xlb_types_size, xlb_my_workers);
-  ADLB_CHECK(code);
   code = xlb_workq_init(xlb_types_size, xlb_my_workers);
+  ADLB_CHECK(code);
+  code = xlb_requestqueue_init();
   ADLB_CHECK(code);
   xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
   code = setup_idle_time();

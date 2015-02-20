@@ -45,6 +45,20 @@ extern int xlb_my_workers;
 /** Ready task queue for server */
 extern xlb_engine_work_array xlb_server_ready_work;
 
+/**
+   Server-local mapping of my_worker_idx to host_idx.
+
+   Maps value of xlb_my_worker_idx(rank) to a unique numeric index for
+   host for all workers for this server.
+
+   Indices are only applicable on this server.
+
+   Useful for accuracy=NODE tasks
+
+   Owned by workqueue.c, accessed by requestqueue.c
+ */
+int* xlb_worker_host_map;
+
 adlb_code xlb_server_init(void);
 
 // ADLB_Server prototype is in adlb.h

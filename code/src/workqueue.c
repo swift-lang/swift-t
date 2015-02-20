@@ -43,7 +43,6 @@
 #include "server.h"
 #include "workqueue.h"
 
-
 // minimum percentage imbalance to trigger steal if stealers queue not empty
 #define XLB_STEAL_IMBALANCE 0.1
 
@@ -136,16 +135,6 @@ static int host_targeted_work_size; // Number of heaps (hosts * types)
 #define HEAP_FREE_THRESHOLD_UNTARGETED 8192
 
 /**
-   Server-local mapping of my_worker_idx to host_idx.
-
-   Maps value of xlb_my_worker_idx(rank) to a unique numeric index for
-   host for all workers for this server.
-
-   Indices are only applicable on this server.
- */
-static int *my_worker_host_map;
-
-/**
    parallel_work
 
    Storage for parallel work.
@@ -233,9 +222,9 @@ xlb_workq_init(int work_types, int my_workers)
 
 static adlb_code worker_host_map_init(int my_workers, int *host_count)
 {
-  my_worker_host_map = malloc(sizeof(my_worker_host_map[0]) *
+  xlb_worker_host_map = malloc(sizeof(xlb_worker_host_map[0]) *
                               (size_t)my_workers);
-  ADLB_MALLOC_CHECK(my_worker_host_map);
+  ADLB_MALLOC_CHECK(xlb_worker_host_map);
 
   struct table host_name_idx_map;
   bool ok = table_init(&host_name_idx_map, 128);
@@ -256,7 +245,7 @@ static adlb_code worker_host_map_init(int my_workers, int *host_count)
       ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
       CHECK_MSG(ok, "Table add failed");
     }
-    my_worker_host_map[i] = (int)host_idx;
+    xlb_worker_host_map[i] = (int)host_idx;
     DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
           i, xlb_rank_from_my_worker_idx(i), (int)host_idx, host_name);
   }
@@ -309,7 +298,7 @@ static inline int host_idx_from_rank(int rank)
 {
   assert(xlb_worker_maps_to_server(rank, xlb_comm_rank));
 
-  return my_worker_host_map[xlb_my_worker_idx(rank)];
+  return xlb_worker_host_map[xlb_my_worker_idx(rank)];
 }
 
 adlb_code
@@ -968,8 +957,8 @@ xlb_workq_finalize()
   free(host_targeted_work);
   host_targeted_work = NULL;
 
-  free(my_worker_host_map);
-  my_worker_host_map = NULL;
+  free(xlb_worker_host_map);
+  xlb_worker_host_map = NULL;
 
   // Clear up untargeted_work heaps
   for (int i = 0; i < xlb_types_size; i++)

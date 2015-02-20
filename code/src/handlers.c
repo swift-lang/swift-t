@@ -494,7 +494,8 @@ xlb_put_work_unit(xlb_work_unit *work)
     if (targeted)
     {
       CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
-      worker = xlb_requestqueue_matches_target(target, type);
+      worker = xlb_requestqueue_matches_target(target, type,
+                                               work->opts.accuracy);
     }
     else
     {
@@ -559,7 +560,8 @@ adlb_code xlb_put_targeted_local(int type, int putter,
 
   // Work unit is for this server
   // Is the target already waiting?
-  worker = xlb_requestqueue_matches_target(target, type);
+  worker = xlb_requestqueue_matches_target(target, type,
+                                           opts.accuracy);
   if (worker != ADLB_RANK_NULL)
   {
     xlb_work_unit_id wuid = xlb_workq_unique();
@@ -604,7 +606,8 @@ static adlb_code attempt_match_work(int type, int putter,
   if (targeted)
   {
     CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
-    worker = xlb_requestqueue_matches_target(target, type);
+    worker = xlb_requestqueue_matches_target(target, type,
+                                             opts.accuracy);
     if (worker == ADLB_RANK_NULL &&
         opts.strictness != ADLB_TGT_STRICT_HARD)
     {
@@ -824,6 +827,7 @@ static inline int
 check_workqueue(int caller, int type, int count)
 {
   TRACE_START;
+  printf("check_workqueue: %i\n", count);
   int matched = 0;
   while (matched < count)
   {
