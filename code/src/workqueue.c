@@ -29,7 +29,6 @@
 #include <heap_iu32.h>
 #include <list.h>
 #include <ptr_array.h>
-#include <table.h>
 #include <table_ip.h>
 #include <tools.h>
 #include <rbtree.h>
@@ -37,7 +36,6 @@
 #include "adlb-defs.h"
 #include "common.h"
 #include "debug.h"
-#include "hostmap.h"
 #include "messaging.h"
 #include "requestqueue.h"
 #include "server.h"
@@ -58,8 +56,6 @@ static int targeted_work_entries(int work_types, int my_workers);
 static inline heap_iu32_t *targeted_work_heap(int rank, int type);
 static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type);
 static inline int host_idx_from_rank(int rank);
-
-static adlb_code worker_host_map_init(int my_workers, int *host_count);
 
 static void wu_array_finalize(void);
 static inline xlb_work_unit *
@@ -154,25 +150,22 @@ int64_t xlb_workq_parallel_task_count;
 work_type_counters *xlb_task_counters;
 
 adlb_code
-xlb_workq_init(int work_types, int my_workers)
+xlb_workq_init(int work_types, int my_workers, int worker_host_count)
 {
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
 
   adlb_code ac;
 
-  int host_count;
-  ac = worker_host_map_init(my_workers, &host_count);
-  ADLB_CHECK(ac);
-
   bool ok = ptr_array_init(&wu_array, WU_ARRAY_INIT_SIZE);
-  CHECK_MSG(ok, "wu_array initialisation failed"); ADLB_CHECK(ac);
+  CHECK_MSG(ok, "wu_array initialisation failed");
 
   targeted_work_size = targeted_work_entries(work_types, my_workers);
   ac = init_work_heaps(&targeted_work, targeted_work_size);
   ADLB_CHECK(ac);
 
-  host_targeted_work_size = targeted_work_entries(work_types, host_count);
+  host_targeted_work_size = targeted_work_entries(work_types,
+                                          worker_host_count);
   ac = init_work_heaps(&host_targeted_work, host_targeted_work_size);
   ADLB_CHECK(ac);
 
@@ -217,40 +210,6 @@ xlb_workq_init(int work_types, int my_workers)
     xlb_task_counters = NULL;
   }
 
-  return ADLB_SUCCESS;
-}
-
-static adlb_code worker_host_map_init(int my_workers, int *host_count)
-{
-  xlb_worker_host_map = malloc(sizeof(xlb_worker_host_map[0]) *
-                              (size_t)my_workers);
-  ADLB_MALLOC_CHECK(xlb_worker_host_map);
-
-  struct table host_name_idx_map;
-  bool ok = table_init(&host_name_idx_map, 128);
-  CHECK_MSG(ok, "Table init failed");
-
-  *host_count = 0;
-  for (int i = 0; i < my_workers; i++)
-  {
-    int rank = xlb_rank_from_my_worker_idx(i);
-    const char *host_name = xlb_rankmap_lookup(rank);
-    CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
-              "rank %i", rank);
-
-    unsigned long host_idx;
-    if (!table_search(&host_name_idx_map, host_name, (void**)&host_idx))
-    {
-      host_idx = (unsigned long)(*host_count)++;
-      ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
-      CHECK_MSG(ok, "Table add failed");
-    }
-    xlb_worker_host_map[i] = (int)host_idx;
-    DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
-          i, xlb_rank_from_my_worker_idx(i), (int)host_idx, host_name);
-  }
-
-  table_free_callback(&host_name_idx_map, false, NULL);
   return ADLB_SUCCESS;
 }
 

@@ -28,6 +28,7 @@
 
 #include <list_i.h>
 #include <exm-memory.h>
+#include <table.h>
 #include <tools.h>
 
 #include "adlb.h"
@@ -38,6 +39,7 @@
 #include "data.h"
 #include "debug.h"
 #include "handlers.h"
+#include "hostmap.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "refcount.h"
@@ -117,6 +119,8 @@ xlb_engine_work_array xlb_server_ready_work;
 
 int* xlb_worker_host_map;
 
+static adlb_code worker_host_map_init(int my_workers, int *host_count);
+
 static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
@@ -155,20 +159,14 @@ xlb_server_init()
   xlb_server_shutting_down = false;
 
   // Add up xlb_my_workers:
-  // printf("SERVER for ranks: ");
-  xlb_my_workers = 0;
-  for (int i = 0; i < xlb_workers; i++)
-  {
-    if (xlb_map_to_server(i) == xlb_comm_rank)
-    {
-      xlb_my_workers++;
-      DEBUG("my_worker_rank: %i", i);
-    }
-  }
-  // printf("\n");
+  xlb_my_workers = xlb_my_workers_compute();
+
+  int worker_host_count;
+  code = worker_host_map_init(xlb_my_workers, &worker_host_count);
+  ADLB_CHECK(code);
 
   list_i_init(&workers_shutdown);
-  code = xlb_workq_init(xlb_types_size, xlb_my_workers);
+  code = xlb_workq_init(xlb_types_size, xlb_my_workers, worker_host_count);
   ADLB_CHECK(code);
   code = xlb_requestqueue_init();
   ADLB_CHECK(code);
@@ -182,7 +180,7 @@ xlb_server_init()
 
   code = xlb_sync_init();
   ADLB_CHECK(code);
-  
+
   code = xlb_steal_init();
   ADLB_CHECK(code);
 
@@ -196,6 +194,41 @@ xlb_server_init()
   TRACE_END
   return ADLB_SUCCESS;
 }
+
+static adlb_code worker_host_map_init(int my_workers, int *host_count)
+{
+  xlb_worker_host_map = malloc(sizeof(xlb_worker_host_map[0]) *
+                              (size_t)my_workers);
+  ADLB_MALLOC_CHECK(xlb_worker_host_map);
+
+  struct table host_name_idx_map;
+  bool ok = table_init(&host_name_idx_map, 128);
+  CHECK_MSG(ok, "Table init failed");
+
+  *host_count = 0;
+  for (int i = 0; i < my_workers; i++)
+  {
+    int rank = xlb_rank_from_my_worker_idx(i);
+    const char *host_name = xlb_rankmap_lookup(rank);
+    CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
+              "rank %i", rank);
+
+    unsigned long host_idx;
+    if (!table_search(&host_name_idx_map, host_name, (void**)&host_idx))
+    {
+      host_idx = (unsigned long)(*host_count)++;
+      ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
+      CHECK_MSG(ok, "Table add failed");
+    }
+    xlb_worker_host_map[i] = (int)host_idx;
+    DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
+          i, xlb_rank_from_my_worker_idx(i), (int)host_idx, host_name);
+  }
+
+  table_free_callback(&host_name_idx_map, false, NULL);
+  return ADLB_SUCCESS;
+}
+
 
 // return the number of the server (0 is first server)
 static inline int
@@ -311,7 +344,7 @@ serve_several()
         ADLB_CHECK(code);
       }
     }
-   
+
     if (handled)
     {
       // Previous request may have resulted in pending sync requests
@@ -350,7 +383,7 @@ serve_several()
       curr_server_backoff++;
     }
   }
-  
+
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 
@@ -412,7 +445,7 @@ xlb_handle_ready_work(void)
   {
     return ADLB_SUCCESS;
   }
-  
+
   return xlb_process_ready_work();
 }
 
@@ -490,7 +523,7 @@ check_steal(void)
   if (xlb_requestqueue_size() == 0)
     // Our workers are busy
     return ADLB_SUCCESS;
- 
+
   // Should not get here if we have ready work
   assert(xlb_server_ready_work.count == 0);
   assert(!xlb_have_pending_notifs());
@@ -598,7 +631,7 @@ check_idle()
   if (! servers_idle())
     // Some server is still not idle...
     return false;
- 
+
   // Ensure no notifications in system
   assert(xlb_server_ready_work.count == 0);
   assert(!xlb_have_pending_notifs());
@@ -665,7 +698,7 @@ static bool
 servers_idle()
 {
   DEBUG("[%i] checking idle %.4f\n", xlb_comm_rank, MPI_Wtime());
-  // New serial number for round of checks 
+  // New serial number for round of checks
   xlb_idle_check_attempt++;
   DEBUG("Master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
@@ -694,7 +727,7 @@ servers_idle()
     rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle,
                           req_subarray, work_subarray);
     ASSERT(rc == ADLB_SUCCESS);
-    
+
     if (xlb_have_pending_notifs() ||
         xlb_server_ready_work.count > 0)
     {

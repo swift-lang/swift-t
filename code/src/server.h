@@ -39,7 +39,7 @@ extern bool xlb_server_sync_in_progress;
 /** Did we just get rejected when attempting to server sync? */
 extern bool server_sync_retry;
 
-// Number of workers associated with this server
+/** Number of workers associated with this server */
 extern int xlb_my_workers;
 
 /** Ready task queue for server */
@@ -54,8 +54,6 @@ extern xlb_engine_work_array xlb_server_ready_work;
    Indices are only applicable on this server.
 
    Useful for accuracy=NODE tasks
-
-   Owned by workqueue.c, accessed by requestqueue.c
  */
 int* xlb_worker_host_map;
 
@@ -116,6 +114,19 @@ xlb_rank_from_my_worker_idx(int my_worker_idx)
 {
   int server_num = xlb_comm_rank - xlb_workers;
   return my_worker_idx * xlb_servers + server_num;
+}
+
+static inline int
+xlb_my_workers_compute(void)
+{
+  int count = xlb_workers / xlb_servers;
+  int server_num = xlb_comm_rank - xlb_workers;
+  // Lower numbered servers may get remainder
+  if (server_num < xlb_workers % xlb_servers)
+  {
+    count++;
+  }
+  return count;
 }
 
 #endif

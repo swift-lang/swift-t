@@ -61,7 +61,8 @@ typedef struct
 } xlb_work_unit;
 
 
-adlb_code xlb_workq_init(int work_types, int my_workers);
+adlb_code xlb_workq_init(int work_types, int my_workers,
+                         int worker_host_count);
 
 /** Expose next ID to avoid function call overhead */
 extern xlb_work_unit_id xlb_workq_next_id;
