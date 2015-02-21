@@ -25,6 +25,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <dyn_array_i.h>
+
 #include "engine.h"
 
 /** Time of last activity: used to determine shutdown */
@@ -56,6 +58,17 @@ extern xlb_engine_work_array xlb_server_ready_work;
    Useful for accuracy=NODE tasks
  */
 int* xlb_worker_host_map;
+
+
+/** Number of unique hosts for workers */
+extern int xlb_my_worker_host_count;
+
+/**
+   Server-local mapping of host_idx to list of my_worker_idx.
+   Entries are [0..xlb_my_worker_hosts - 1]
+   Workers are in ascending order.
+ */
+extern struct dyn_array_i *xlb_my_host_workers;
 
 adlb_code xlb_server_init(void);
 

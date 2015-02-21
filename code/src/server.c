@@ -56,6 +56,8 @@
 /** Number of workers associated with this server */
 int xlb_my_workers;
 
+int xlb_my_worker_host_count;
+
 /** Track time of last action */
 double xlb_time_last_action;
 
@@ -118,6 +120,10 @@ static bool fail_code = -1;
 xlb_engine_work_array xlb_server_ready_work;
 
 int* xlb_worker_host_map;
+
+int xlb_my_workers_host_count;
+
+struct dyn_array_i *xlb_my_host_workers;
 
 static adlb_code worker_host_map_init(int my_workers, int *host_count);
 
@@ -226,6 +232,26 @@ static adlb_code worker_host_map_init(int my_workers, int *host_count)
   }
 
   table_free_callback(&host_name_idx_map, false, NULL);
+
+  /* Build inverse map */
+  xlb_my_worker_host_count = *host_count;
+  xlb_my_host_workers = malloc(sizeof(xlb_my_host_workers[0]) *
+                               (size_t)xlb_my_worker_host_count);
+  ADLB_MALLOC_CHECK(xlb_my_host_workers);
+
+  for (int i = 0; i < xlb_my_worker_host_count; i++)
+  {
+    ok = dyn_array_i_init(&xlb_my_host_workers[i], 4);
+    CHECK_MSG(ok, "dyn_array init failed");
+  }
+
+  for (int i = 0; i < my_workers; i++)
+  {
+    int host_idx = xlb_worker_host_map[i];
+    ok = dyn_array_i_add(&xlb_my_host_workers[host_idx], i);
+    CHECK_MSG(ok, "dyn_array add failed");
+  }
+
   return ADLB_SUCCESS;
 }
 

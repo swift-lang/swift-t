@@ -310,16 +310,18 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
         task_tgt_idx, task_type);
   int result = ADLB_RANK_NULL;
   int task_host_idx = xlb_worker_host_map[task_tgt_idx];
-  for (int i = 0; i < xlb_my_workers; i++)
+  struct dyn_array_i *host_workers = &xlb_my_host_workers[task_host_idx];
+
+  for (int i = 0; i < host_workers->size; i++)
   {
-    request* R = &targets[i];
+    int worker_idx = host_workers->arr[i];
+    request* R = &targets[worker_idx];
     if (R->item != NULL && R->type == task_type)
-      if (xlb_worker_host_map[i] == task_host_idx)
-      {
-        request_match_update(R, true, 1);
-        result = xlb_rank_from_my_worker_idx(i);
-        break;
-      }
+    {
+      request_match_update(R, true, 1);
+      result = xlb_rank_from_my_worker_idx(worker_idx);
+      break;
+    }
   }
   TRACE_END;
   return result;
