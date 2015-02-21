@@ -13,3 +13,4 @@ TEST_SRC += tests/table_bp.c
 TEST_SRC += tests/table_lp.c
 TEST_SRC += tests/table_ip.c
 TEST_SRC += tests/ptr-array.c
+TEST_SRC += tests/dyn_array_i.c
