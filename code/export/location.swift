@@ -72,7 +72,7 @@
   Pure because it will be same throughout the run
  */
 (string results[]) hostmapList() "turbine" "0.7.0" [
-  "set <<results>> [ ::turbine::hostmap_dict ]"
+  "set <<results>> [ ::turbine::hostmap_list ]"
 ];
 
 /*

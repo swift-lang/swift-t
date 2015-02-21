@@ -26,7 +26,9 @@
 type external void;
 
 @pure
-(void o) make_void() "turbine" "0.0.2" "make_void";
+(void o) makeVoid () "turbine" "0.0.2" "make_void";
+@pure
+(void o) make_void () "turbine" "0.0.2" "make_void";
 
 // Location values
 // TODO: naming? convert to enum?
@@ -138,6 +140,10 @@ LocationAccuracy NODE = LocationAccuracy("NODE");
 
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
+  [ "set <<n>> [ turbine::container_size_local <<B>> 1 ]" ];
+
+@pure @implements=size
+<T> (int n) bagSize(bag<T> B) "turbine" "0.0.5" "container_size"
   [ "set <<n>> [ turbine::container_size_local <<B>> 1 ]" ];
 
 // Updateable variables
