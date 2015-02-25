@@ -42,6 +42,16 @@
 extern double xlb_max_idle;
 
 /**
+   Time interval between server checking other workers for idleness,
+   once xlb_max_idle has expired for that server.  Expressed as
+   a multiplier for xlb_max_idle.  Should be set to a value that
+   gives a reasonable probability for the other server that didn't
+   have their idle timer expire previously to expire between checks.
+ */
+static const double xlb_servers_idle_frac = 0.25;
+
+
+/**
    How long should we wait between rounds of steal attempts? In seconds
  */
 extern double xlb_steal_backoff;

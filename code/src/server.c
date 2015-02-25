@@ -81,6 +81,9 @@ double xlb_time_last_action;
  */
 int64_t xlb_idle_check_attempt;
 
+/** Last time we ran servers_idle() */
+double xlb_last_servers_idle_check;
+
 /** Cached recent timestamp */
 static double xlb_time_approx_now;
 
@@ -183,6 +186,7 @@ xlb_server_init()
   mm_set_max(mm_default, 10*MB);
   xlb_handlers_init();
   xlb_time_last_action = MPI_Wtime();
+  xlb_last_servers_idle_check = MPI_Wtime();
 
   code = xlb_sync_init();
   ADLB_CHECK(code);
@@ -651,6 +655,7 @@ check_idle()
     // This server is not idle long enough...
     return false;
 
+
   DEBUG("check_idle(): checking other servers...");
 
   // Issue idle check RPCs...
@@ -723,12 +728,23 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
 static bool
 servers_idle()
 {
-  DEBUG("[%i] checking idle %.4f\n", xlb_comm_rank, MPI_Wtime());
+  double now = MPI_Wtime();
+  double servers_idle_rate_limit = xlb_max_idle * xlb_servers_idle_frac;
+  if (now - xlb_last_servers_idle_check < servers_idle_rate_limit)
+  {
+    // Assume not idle - rate limit
+    return false;
+  }
+
+  DEBUG("[%i] checking idle %.4f\n", xlb_comm_rank, now);
+
+  xlb_last_servers_idle_check = now;
+
   // New serial number for round of checks
   xlb_idle_check_attempt++;
   DEBUG("Master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
-
+  
   // Arrays containing request and work counts from all servers
   // The counts from each server are stored contiguously
   int *request_counts = malloc(sizeof(int) *
