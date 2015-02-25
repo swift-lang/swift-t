@@ -729,19 +729,21 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         send = imbalance > XLB_STEAL_IMBALANCE;
       }
       if (send) {
-        int to_send = (tot_count - stealer_count) / 2;
-        if (to_send == 0)
-          to_send = 1;
-        double single_pc = single_count / (double) tot_count;
-        double par_pc = par_count / (double) tot_count;
-        int par_to_send = (int)(par_pc * to_send);
+        // Fraction of our tasks to send
+        double send_pc = (tot_count - stealer_count) / (2.0 * tot_count);
+        int par_to_send = (int)(send_pc * par_count);
+        if (par_count > 0 && par_to_send == 0)
+        {
+          par_to_send = 1;
+        }
+
         TRACE("xlb_workq_steal(): stealing type=%i single=%lf of %i par=%i/%i"
               " This server count: %i versus %i",
-                        t, single_pc, single_count, par_to_send, par_count,
+                        t, send_pc, single_count, par_to_send, par_count,
                         tot_count, stealer_count);
         adlb_code code;
         int single_sent;
-        code = heap_steal_type(&(untargeted_work[t]), t, single_pc,
+        code = heap_steal_type(&(untargeted_work[t]), t, send_pc,
                                &single_sent, cb);
         ADLB_CHECK(code);
         code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
