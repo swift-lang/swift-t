@@ -242,7 +242,7 @@ xlb_steal(int target, bool *stole_single, bool *stole_par)
         ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
   }
   
-  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank,
+  DEBUG("[%i] steal result: stole %i tasks from %i", xlb_comm_rank,
         total_single + total_par, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr->count, target);
   *stole_single = (total_single > 0);
@@ -390,6 +390,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   }
  
   // Store requests for wait
+  
   MPI_Request reqs[count + 1];
 
   DEBUG("[%i] sending batch size %zu", xlb_comm_rank, batch->size);
@@ -412,7 +413,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   {
     xlb_work_unit_free(batch->work_units[i]);
   }
-
+  
   batch->size = 0;
   return ADLB_SUCCESS;
 }
@@ -481,6 +482,8 @@ xlb_handle_steal(int caller, const struct packed_steal *req,
       xlb_idle_check_attempt = thief_idle_check_attempt;
     }
   }
+  DEBUG("[%i] steal result: sent %i tasks to %i", xlb_comm_rank,
+        state.stole_count, caller);
   STATS("LOST: %i", state.stole_count);
   // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", state.stole_count, caller);
 
