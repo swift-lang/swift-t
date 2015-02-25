@@ -242,8 +242,8 @@ xlb_steal(int target, bool *stole_single, bool *stole_par)
         ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
   }
   
-  // TODO: reports wrong count with multiple batches
-  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, hdr.count, target);
+  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank,
+        total_single + total_par, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr->count, target);
   *stole_single = (total_single > 0);
   *stole_par = (total_par > 0);
