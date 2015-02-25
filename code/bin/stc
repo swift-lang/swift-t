@@ -286,7 +286,7 @@ report_version()
   exit 0
 }
 
-# Set default opt level before processing options
+# Set default options before processing args
 set_opt_level 2
 
 while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uvVx" OPTION

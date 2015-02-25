@@ -15,8 +15,8 @@ import sys;
 main {
   int data[];
   nsamples = 1000;
-  max = 200;
-  min = 100;
+  int max = 200;
+  int min = 100;
 
   // Large computation
   foreach i in [1:nsamples] {
