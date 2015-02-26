@@ -25,11 +25,13 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -122,7 +124,7 @@ public class DeadCodeEliminator implements OptimizerPass {
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required
      */
-    MultiMap<Var, Var> dependencyGraph = new MultiMap<Var, Var>();
+    ListMultimap<Var, Var> dependencyGraph = ArrayListMultimap.create();
 
     /* Track components so that we know if a write from A may flow to B*/
     ComponentGraph components = new ComponentGraph();
@@ -173,7 +175,7 @@ public class DeadCodeEliminator implements OptimizerPass {
     while (!workStack.isEmpty()) {
       Var neededVar = workStack.pop();
       // This loop converges as dependencyGraph is taken apart
-      List<Var> deps = dependencyGraph.remove(neededVar);
+      List<Var> deps = dependencyGraph.removeAll(neededVar);
       if (deps != null) {
         needed.addAll(deps);
         workStack.addAll(deps);
@@ -207,7 +209,7 @@ public class DeadCodeEliminator implements OptimizerPass {
    */
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph, List<Component> modifiedComponents,
+      ListMultimap<Var, Var> dependencyGraph, List<Component> modifiedComponents,
       ComponentGraph components) {
     StackLite<Block> workStack = new StackLite<Block>();
     workStack.push(f.mainBlock());
@@ -240,7 +242,7 @@ public class DeadCodeEliminator implements OptimizerPass {
   }
 
   private static void walkInstructions(Logger logger,
-      Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
+      Block block, HashSet<Var> needed, ListMultimap<Var, Var> dependencyGraph,
       List<Component> modifiedComponents, ComponentGraph components) {
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
@@ -257,7 +259,7 @@ public class DeadCodeEliminator implements OptimizerPass {
   }
 
   private static void walkInstruction(Logger logger, Instruction inst,
-      HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
+      HashSet<Var> needed, ListMultimap<Var, Var> dependencyGraph,
       List<Component> modifiedComponents, ComponentGraph components) {
     // If it has side-effects, need all inputs and outputs
     if (inst.hasSideEffects()) {
@@ -346,7 +348,7 @@ public class DeadCodeEliminator implements OptimizerPass {
   }
 
   private static void addOutputDep(Logger logger,
-      Instruction inst, MultiMap<Var, Var> dependencyGraph,
+      Instruction inst, ListMultimap<Var, Var> dependencyGraph,
       ComponentGraph components, Var out, Var in) {
     if (logger.isTraceEnabled())
       logger.trace("Add dep " + out + " => " + in + " for inst " + inst);
@@ -354,7 +356,7 @@ public class DeadCodeEliminator implements OptimizerPass {
   }
 
   private static void walkBlockVars(Block block,
-      HashSet<Var> removeCandidates, MultiMap<Var, Var> dependencyGraph) {
+      HashSet<Var> removeCandidates, ListMultimap<Var, Var> dependencyGraph) {
     for (Var v: block.variables()) {
       if (!v.storage().isGlobal()) {
         removeCandidates.add(v);
@@ -362,7 +364,7 @@ public class DeadCodeEliminator implements OptimizerPass {
     }
   }
 
-  private static String printDepGraph(MultiMap<Var, Var> dependencyGraph,
+  private static String printDepGraph(ListMultimap<Var, Var> dependencyGraph,
                                       int indent) {
     List<Var> keys = new ArrayList<Var>(dependencyGraph.keySet());
     Collections.sort(keys);

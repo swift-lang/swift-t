@@ -23,8 +23,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import com.google.common.collect.Multimap;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Types.Type;
 
 /**
  * Miscellaneous utility functions
@@ -65,5 +69,11 @@ public class Misc {
     }
 
     return result;
+  }
+
+  public static void putAllMultimap(Multimap<String, Type> dst, Map<String, Type> src) {
+    for (Entry<String, Type> e: src.entrySet()) {
+      dst.put(e.getKey(), e.getValue());
+    }
   }
 }

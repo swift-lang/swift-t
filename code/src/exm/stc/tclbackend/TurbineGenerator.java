@@ -37,6 +37,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
@@ -77,7 +79,6 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.WrappedForeignFunction;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -2579,7 +2580,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void startForeachLoop(String loopName, Var container, Var memberVar,
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
         List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-        MultiMap<Var, RefCount> constIncrs) {
+        ListMultimap<Var, RefCount> constIncrs) {
     boolean haveKeys = loopCountVar != null;
 
     boolean isKVContainer;
@@ -2646,7 +2647,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs, Expression containerSize) {
+      ListMultimap<Var, RefCount> constIncrs, Expression containerSize) {
     if (!perIterIncrs.isEmpty()) {
       pointAdd(new SetVariable(TCLTMP_ITERS,
                                       containerSize));
@@ -2658,7 +2659,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startForeachSplit(String procName, Var arrayVar,
       String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
       List<PassedVar> usedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs) {
     // load array size
     pointAdd(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
@@ -2724,7 +2725,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs) {
     if (countVar != null) {
       // TODO
       throw new STCRuntimeError("Backend doesn't support counter var in range " +
@@ -2747,7 +2748,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startFloatRangeLoop(String loopName, Var loopVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs) {
     assert(start.isImmFloat());
     assert(end.isImmFloat());
     assert(increment.isImmFloat());
@@ -2790,7 +2791,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startIntRangeLoop(String loopName, String loopVarName,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs) {
     assert(start.isImmInt());
     assert(end.isImmInt());
     assert(increment.isImmInt());
@@ -2803,7 +2804,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startIntRangeLoop2(String loopName, String loopVarName,
       Expression start, Expression end, Expression incr,
       int splitDegree, int leafDegree, List<PassedVar> passedVars,
-      List<RefCount> perIterIncrs, MultiMap<Var, RefCount> constIncrs) {
+      List<RefCount> perIterIncrs, ListMultimap<Var, RefCount> constIncrs) {
     if (!perIterIncrs.isEmpty()) {
       // Increment references by # of iterations
       pointAdd(new SetVariable(TCLTMP_ITERSTOTAL,
@@ -3019,8 +3020,8 @@ public class TurbineGenerator implements CompilerBackend {
    * @param multiplier amount to multiply all refcounts by
    * @param decrement if true, generate decrements instead
    */
-  private void handleRefcounts(MultiMap<Var, RefCount> constIncrs, List<RefCount> multipliedIncrs,
-                               Value multiplier, boolean decrement) {
+  private void handleRefcounts(ListMultimap<Var, RefCount> constIncrs,
+      List<RefCount> multipliedIncrs, Value multiplier, boolean decrement) {
     // Track which were added for validation
     Set<Pair<Var, RefCountType>> processed = new HashSet<Pair<Var, RefCountType>>();
 
@@ -3071,11 +3072,9 @@ public class TurbineGenerator implements CompilerBackend {
 
     // Check that all constant increments has a corresponding multiplier
     if (constIncrs != null) {
-      for (List<RefCount> rcList: constIncrs.values()) {
-        for (RefCount rc: rcList) {
-          assert(processed.contains(Pair.create(rc.var, rc.type))) :
-            rc + "\n" + constIncrs + "\n" + multipliedIncrs;
-        }
+      for (RefCount rc: constIncrs.values()) {
+        assert(processed.contains(Pair.create(rc.var, rc.type))) :
+          rc + "\n" + constIncrs + "\n" + multipliedIncrs;
       }
     }
   }

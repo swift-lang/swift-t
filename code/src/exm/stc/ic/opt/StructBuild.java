@@ -9,6 +9,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -19,7 +22,6 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -55,7 +57,7 @@ public class StructBuild extends FunctionOptimizerPass {
 
   private void structBuildRec(Logger logger, Block block) {
     // Track all assigned struct paths
-    MultiMap<Var, List<String>> assignedPaths = new MultiMap<Var, List<String>>();
+    ListMultimap<Var, List<String>> assignedPaths = ArrayListMultimap.create();
 
     // Find all struct assign statements in block
     for (Statement stmt: block.getStatements()) {

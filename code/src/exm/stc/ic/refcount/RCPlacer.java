@@ -13,6 +13,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -25,7 +28,6 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.aliases.AliasKey;
@@ -254,7 +256,7 @@ public class RCPlacer {
 
     // TODO: inelegant
     // Need to track which vars are associated with each refcount var
-    MultiMap<Var, AliasKey> rcVarToKey = new MultiMap<Var, AliasKey>();
+    ListMultimap<Var, AliasKey> rcVarToKey = ArrayListMultimap.create();
 
     for (Entry<AliasKey, Long> e: tracker.rcIter(rcType, RCDir.DECR)) {
       long decr = e.getValue();

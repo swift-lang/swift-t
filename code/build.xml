@@ -28,6 +28,8 @@
             value="lib/commons-io-2.4.jar"/>
   <property name="commons-lang.jar"
             value="lib/commons-lang3-3.1.jar"/>
+  <property name="guava.jar"
+            value="lib/guava-18.0.jar"/>
   <property name="junit4.jar"
             value="lib/junit-4.12.jar"/>
   <!-- Needed for JUnit -->
@@ -45,7 +47,7 @@
   <property name="grammar"
             value="${src.dir}/exm/stc/ast/ExM.g"/>
   <property name="classpath"
-            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${junit4.jar}:${hamcrest.jar}"/>
+            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${guava.jar}:${junit4.jar}:${hamcrest.jar}"/>
   <property name="build.dir" value="classes"/>
   <target name="build.all" depends="jar" />
 

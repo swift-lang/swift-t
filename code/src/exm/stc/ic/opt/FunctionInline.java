@@ -27,6 +27,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -39,7 +42,6 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Counters;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
@@ -123,9 +125,9 @@ public class FunctionInline implements OptimizerPass {
 
       pruneBuiltins(logger, program, finder);
 
-      Pair<MultiMap<FnID, FnID>, Set<FnID>> actions =
-                               selectInlineFunctions( program, finder);
-      MultiMap<FnID, FnID> inlineLocations = actions.val1;
+      Pair<ListMultimap<FnID, FnID>, Set<FnID>> actions =
+                               selectInlineFunctions(program, finder);
+      ListMultimap<FnID, FnID> inlineLocations = actions.val1;
       Set<FnID> toRemove = actions.val2;
 
       logger.debug("Inline locs: " + inlineLocations.toString());
@@ -161,7 +163,7 @@ public class FunctionInline implements OptimizerPass {
    * @return Map of function -> caller functions determining which calls
    *        to inline
    */
-  private Pair<MultiMap<FnID, FnID>, Set<FnID>> selectInlineFunctions(
+  private Pair<ListMultimap<FnID, FnID>, Set<FnID>> selectInlineFunctions(
       Program program, FuncCallFinder finder) {
 
     // Map from caller to callee for IC functions only
@@ -172,8 +174,7 @@ public class FunctionInline implements OptimizerPass {
       }
     }
 
-    MultiMap<FnID, FnID> inlineCandidates =
-                  new MultiMap<FnID, FnID>();
+    ListMultimap<FnID, FnID> inlineCandidates = ArrayListMultimap.create();
     Set<FnID> toRemove = new HashSet<FnID>();
     // Narrow inline candidates by number of calls, remove unused functions
     for (Function f: program.functions()) {
@@ -203,11 +204,10 @@ public class FunctionInline implements OptimizerPass {
     return Pair.create(inlineCandidates, toRemove);
   }
 
-  private MultiMap<FnID, FnID> findCycleFree(
-          MultiMap<FnID, FnID> inlineCandidates,
+  private ListMultimap<FnID, FnID> findCycleFree(
+      ListMultimap<FnID, FnID> inlineCandidates,
           Set<FnID> toRemove) {
-    MultiMap<FnID, FnID> inlineCandidates2 =
-                    new MultiMap<FnID, FnID>();
+    ListMultimap<FnID, FnID> inlineCandidates2 = ArrayListMultimap.create();
     // remove any loops in inlining
     Set<FnID> visited = new HashSet<FnID>();
     // Start from alwaysInline functions so that they aren't the bit we have
@@ -226,9 +226,9 @@ public class FunctionInline implements OptimizerPass {
 
   /**
    */
-  private void findCycleFreeRec(MultiMap<FnID, FnID> candidates,
+  private void findCycleFreeRec(ListMultimap<FnID, FnID> candidates,
       Set<FnID> visited, Set<FnID> toRemove,
-      MultiMap<FnID, FnID> newCandidates,
+      ListMultimap<FnID, FnID> newCandidates,
       StackLite<FnID> callStack, FnID curr) {
     List<FnID> callers = candidates.get(curr);
     if (callers == null || callers.size() == 0) {
@@ -262,7 +262,7 @@ public class FunctionInline implements OptimizerPass {
   }
 
   private boolean doInlining(Logger logger, Program program,
-      MultiMap<FnID, FnID> inlineLocations, Set<FnID> toRemove) {
+      ListMultimap<FnID, FnID> inlineLocations, Set<FnID> toRemove) {
     boolean changed = false;
     // Functions that will be inlined
     Map<FnID, Function> toInline = new HashMap<FnID, Function>();
@@ -301,7 +301,7 @@ public class FunctionInline implements OptimizerPass {
    */
   private void doInlining(Logger logger, Program program,
       Set<FnID> callSiteFunctions,
-      MultiMap<FnID, FnID> inlineLocations,
+      ListMultimap<FnID, FnID> inlineLocations,
       Map<FnID, Function> toInline) {
     for (Function f: program.functions()) {
       if (callSiteFunctions.contains(f.id())) {
@@ -336,7 +336,7 @@ public class FunctionInline implements OptimizerPass {
    * @param toInline
    */
   private static void doInlining(Logger logger, Program prog, Function contextFunction,
-      Block block, MultiMap<FnID, FnID> inlineLocations,
+      Block block, ListMultimap<FnID, FnID> inlineLocations,
       Map<FnID, Function> toInline,
       Set<FnID> alwaysInline, Set<Pair<FnID, FnID>> blacklist) {
     // Recurse first to avoid visiting newly inlined continuations and doing
@@ -378,7 +378,7 @@ public class FunctionInline implements OptimizerPass {
 
   private static void tryInline(Logger logger, Program prog,
       Function contextFunction, Block block,
-      MultiMap<FnID, FnID> inlineLocations,
+      ListMultimap<FnID, FnID> inlineLocations,
       Map<FnID, Function> toInline,
       Set<FnID> alwaysInline, Set<Pair<FnID, FnID>> blacklist,
       ListIterator<Statement> it, FunctionCall fcall) {
@@ -566,9 +566,7 @@ public class FunctionInline implements OptimizerPass {
      * Map of called function -> name of function in which call occurred.
      * Context function may occur multiple times in the list
      */
-    MultiMap<FnID, FnID> functionUsages =
-                 new MultiMap<FnID, FnID>();
-
+    ListMultimap<FnID, FnID> functionUsages = ArrayListMultimap.create();
 
     /**
      * Function sizes in instructions

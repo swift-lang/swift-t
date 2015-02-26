@@ -12,6 +12,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.Settings;
@@ -28,7 +31,6 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.refcount.RefCountsToPlace;
@@ -69,7 +71,7 @@ public class ForeachLoops {
      * Each increment is a constant amount independent of iterations.
      * This is useful because we can piggyback ops on the normal start increments
      */
-    protected final MultiMap<Var, RefCount> constStartIncrements;
+    protected final ListMultimap<Var, RefCount> constStartIncrements;
 
 
     /** Decrements that should happen at end of loop body (once per iteration) */
@@ -80,7 +82,7 @@ public class ForeachLoops {
         boolean unrolled,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<RefCount> startIncrements,
-        MultiMap<Var, RefCount> constStartIncrements,
+        ListMultimap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements, boolean emptyLoop) {
       super(loopBody, passedVars, keepOpenVars, emptyLoop);
       this.loopName = loopName;
@@ -91,7 +93,7 @@ public class ForeachLoops {
       this.desiredUnroll = desiredUnroll;
       this.unrolled = unrolled;
       this.startIncrements = new ArrayList<RefCount>(startIncrements);
-      this.constStartIncrements = constStartIncrements.clone();
+      this.constStartIncrements = ArrayListMultimap.create(constStartIncrements);
       this.endDecrements = new ArrayList<RefCount>(endDecrements);
     }
 
@@ -142,7 +144,7 @@ public class ForeachLoops {
 
       if (!constStartIncrements.isEmpty()) {
         sb.append(" #beforeconst[");
-        ICUtil.prettyPrintLists(sb, constStartIncrements.values());
+        ICUtil.prettyPrintLists(sb, constStartIncrements.asMap().values());
         sb.append("]");
       }
       if (!endDecrements.isEmpty()) {
@@ -196,7 +198,7 @@ public class ForeachLoops {
       if (!forDeadCodeElim) {
         // Need reference count vars
         addRefCountVars(res, startIncrements);
-        addRefCountVars2(res, constStartIncrements.values());
+        addRefCountVars(res, constStartIncrements.values());
         addRefCountVars(res, endDecrements);
       }
       return res;
@@ -210,13 +212,6 @@ public class ForeachLoops {
       }
     }
 
-
-    private void addRefCountVars2(Collection<Var> res,
-        Collection<? extends Collection<RefCount>> refcounts) {
-      for (Collection<RefCount> rcs: refcounts) {
-        addRefCountVars(res, rcs);
-      }
-    }
   }
 
   public static class ForeachLoop extends AbstractForeachLoop {
@@ -232,7 +227,7 @@ public class ForeachLoops {
         boolean arrayClosed,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<RefCount> startIncrements,
-        MultiMap<Var, RefCount> constStartIncrements,
+        ListMultimap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements, boolean emptyBody) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           -1, false, passedVars, keepOpenVars, startIncrements, constStartIncrements,
@@ -245,7 +240,7 @@ public class ForeachLoops {
         Var loopVar, Var loopCounterVar, int splitDegree, int leafDegree,
         boolean containerClosed, List<PassedVar> passedVars,
         List<Var> keepOpenVars, List<RefCount> startIncrements,
-        MultiMap<Var, RefCount> constStartIncrements,
+        ListMultimap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements) {
       this(new Block(BlockType.FOREACH_BODY, null), loopName,
           container, loopVar, loopCounterVar,
@@ -458,7 +453,7 @@ public class ForeachLoops {
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
         List<RefCount> startIncrements,
-        MultiMap<Var, RefCount> constStartIncrements,
+        ListMultimap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements) {
       this(new Block(BlockType.RANGELOOP_BODY, null), loopName,
           loopVar, countVar,
@@ -473,7 +468,7 @@ public class ForeachLoops {
         Arg start, Arg end, Arg increment,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
-        List<RefCount> startIncrements, MultiMap<Var, RefCount> constStartIncrements,
+        List<RefCount> startIncrements, ListMultimap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements, boolean emptyBody) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           desiredUnroll, unrolled,

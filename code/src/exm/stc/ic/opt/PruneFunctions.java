@@ -7,10 +7,12 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICInstructions.Builtin;
@@ -63,7 +65,7 @@ public class PruneFunctions implements OptimizerPass {
     }
 
     final ForeignFunctions foreignFuncs;
-    final MultiMap<FnID, FnID> depGraph = new MultiMap<FnID, FnID>();
+    final ListMultimap<FnID, FnID> depGraph = ArrayListMultimap.create();
 
     @Override
     public void visit(Logger logger, Function currFn, Instruction inst) {
@@ -96,7 +98,7 @@ public class PruneFunctions implements OptimizerPass {
 
     while (!workQueue.isEmpty()) {
       FnID curr = workQueue.pop();
-      List<FnID> fnIDs = deps.depGraph.remove(curr);
+      List<FnID> fnIDs = deps.depGraph.removeAll(curr);
       addFunctions(needed, workQueue, fnIDs);
     }
     return needed;

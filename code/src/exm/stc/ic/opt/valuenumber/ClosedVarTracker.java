@@ -10,9 +10,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 
 /**
@@ -34,7 +36,7 @@ public class ClosedVarTracker {
   /**
    * variables which are closed in this scope
    * */
-  private final MultiMap<Var, ClosedEntry> closed;
+  private final ListMultimap<Var, ClosedEntry> closed;
 
 
   /**
@@ -47,7 +49,7 @@ public class ClosedVarTracker {
    * will be closed if we block on a given variable
    * TODO: recursive dependencies?
    */
-  private final MultiMap<Var, Var> dependsOn;
+  private final ListMultimap<Var, Var> dependsOn;
 
   private ClosedVarTracker(Logger logger, boolean useTransitiveDeps,
       ClosedVarTracker parent, int parentStmtIndex) {
@@ -56,8 +58,8 @@ public class ClosedVarTracker {
     this.useTransitiveDeps = useTransitiveDeps;
     this.parent = parent;
     this.parentStmtIndex = parentStmtIndex;
-    this.closed = new MultiMap<Var, ClosedEntry>();
-    this.dependsOn = new MultiMap<Var, Var>();
+    this.closed = ArrayListMultimap.create();
+    this.dependsOn = ArrayListMultimap.create();
   }
 
   public static ClosedVarTracker makeRoot(Logger logger, boolean reorderingAllowed) {
@@ -92,11 +94,9 @@ public class ClosedVarTracker {
     if (recursiveOnly) {
       // Extract only recursive
       Set<Var> recClosed = new HashSet<Var>();
-      for (Entry<Var, List<ClosedEntry>> e: closed.entrySet()) {
-        for (ClosedEntry ce: e.getValue()) {
-          if (ce.recursive) {
-            recClosed.add(e.getKey());
-          }
+      for (Entry<Var, ClosedEntry> e: closed.entries()) {
+        if (e.getValue().recursive) {
+          recClosed.add(e.getKey());
         }
       }
       return recClosed;

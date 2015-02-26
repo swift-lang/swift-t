@@ -11,13 +11,15 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
@@ -91,7 +93,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
     // Keep track of which instructions should go after (x -> goes before)
     // Instructions are identified by index of instruction before modifications
-    MultiMap<Integer, Integer> before = new MultiMap<Integer, Integer>();
+    ListMultimap<Integer, Integer> before = ArrayListMultimap.create();
 
     // Do two passes for forward and backward edges.  Treat as hard and soft
     // dependencies respectively to avoid creating cycles
@@ -122,7 +124,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
    *      oldStatements in different order, subject to ordering constraints
    */
   private List<Statement> rebuildInstructions(Logger logger, Block block,
-      MultiMap<Integer, Integer> before) {
+      ListMultimap<Integer, Integer> before) {
     List<Statement> oldStatements = block.getStatements();
 
     // Accumulate instructions into this array
@@ -188,7 +190,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
             // First time processing this node
             visited.put(currIx, VisitState.IN_STACK);
             stack.push(Pair.create(currIx, true));
-            List<Integer> beforeIxs = before.remove(currIx);
+            List<Integer> beforeIxs = before.removeAll(currIx);
             if (!beforeIxs.isEmpty()) {
               // sort into canonical order to elim non-determinism
               beforeIxs = new ArrayList<Integer>(beforeIxs);
@@ -219,7 +221,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   private void addDependencies(Logger logger, Function fn,
           ArrayList<StatementInfo> stmtInfos, int i, boolean forwardEdges,
-          MultiMap<Integer, Integer> before) {
+          ListMultimap<Integer, Integer> before) {
     StatementInfo info1 = stmtInfos.get(i);
 
     if (logger.isTraceEnabled())
@@ -249,7 +251,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     }
   }
 
-  private boolean pathExists(MultiMap<Integer, Integer> after,
+  private boolean pathExists(ListMultimap<Integer, Integer> after,
       int from, int to) {
     Set<Integer> visited = new HashSet<Integer>();
     visited.add(from);
@@ -380,7 +382,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
   private static class StatementInfo {
 
     public StatementInfo(Statement stmt,
-        MultiMap<Opcode, Instruction> opcodeMap,
+        ListMultimap<Opcode, Instruction> opcodeMap,
         Collection<Var> inputVars,
         Collection<Var> outputs,
         Collection<Var> modifiedOutputs,
@@ -412,7 +414,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
         case CONDITIONAL: {
           // need to walk recursively and collect info
           StatementInfo info = new StatementInfo(stmt,
-              new MultiMap<Opcode, Instruction>(),
+              ArrayListMultimap.<Opcode, Instruction>create(),
               new HashSet<Var>(),
               new HashSet<Var>(),
               new HashSet<Var>(),
@@ -435,7 +437,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     // Variables maybe piecewise assigned anywhere in statement
     final Collection<Var> piecewiseAssigned;
 
-    final MultiMap<Opcode, Instruction> opcodeMap;
+    final ListMultimap<Opcode, Instruction> opcodeMap;
 
     /**
      * Find instructions matching opcode

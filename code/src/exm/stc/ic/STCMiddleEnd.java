@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -57,7 +59,6 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.WrappedForeignFunction;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -319,7 +320,8 @@ public class STCMiddleEnd {
     ForeachLoop loop = new ForeachLoop(loopName,
             container, memberVar, loopCountVar, splitDegree, leafDegree,
             arrayClosed, PassedVar.NONE, Var.NONE,
-            RefCount.NONE, new MultiMap<Var, RefCount>(), RefCount.NONE);
+            RefCount.NONE, ArrayListMultimap.<Var, RefCount>create(),
+            RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }
@@ -333,10 +335,10 @@ public class STCMiddleEnd {
       Arg start, Arg end, Arg increment, int desiredUnroll, int splitDegree,
       int leafDegree) {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
-                    start, end, increment,
-                    PassedVar.NONE, Var.NONE, desiredUnroll, false,
-                    splitDegree, leafDegree, RefCount.NONE,
-                    new MultiMap<Var, RefCount>(), RefCount.NONE);
+          start, end, increment,
+          PassedVar.NONE, Var.NONE, desiredUnroll, false,
+          splitDegree, leafDegree, RefCount.NONE,
+          ArrayListMultimap.<Var, RefCount>create(), RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
   }

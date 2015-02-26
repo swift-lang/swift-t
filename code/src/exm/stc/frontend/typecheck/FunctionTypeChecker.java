@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.InvalidConstructException;
 import exm.stc.common.exceptions.InvalidOverloadException;
@@ -29,7 +32,7 @@ import exm.stc.common.lang.Types.TupleType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Misc;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context;
@@ -293,7 +296,7 @@ public class FunctionTypeChecker {
      *  typevar bindings.
      */
     List<Type> concreteArgTypes = new ArrayList<Type>(argTypes.size());
-    MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
+    ListMultimap<String, Type> tvConstraints = ArrayListMultimap.create();
     for (int i = 0; i < matchedArgs.size(); i++) {
       MatchedArg matchedArg = matchedArgs.get(i);
       Type exp = matchedArg.formalArgType;
@@ -353,7 +356,7 @@ public class FunctionTypeChecker {
     for (FunctionType alt: fn.concreteAlts) {
       assert(alt.getOutputs().size() == outputs.size());
 
-      MultiMap<String, Type> tvConstraints = new MultiMap<String, Type>();
+      ListMultimap<String, Type> tvConstraints = ArrayListMultimap.create();
 
       boolean outputsMatch = true;
       for (int i = 0; i < outTs.size(); i++) {
@@ -372,7 +375,8 @@ public class FunctionTypeChecker {
             break;
           }
 
-          tvConstraints.putAll(bindings);
+          Misc.putAllMultimap(tvConstraints, bindings);
+
           LogHelper.trace(context, "Bind " + bindings + " for " +
               outT + " <- " + alt.getOutputs());
         }
@@ -467,7 +471,7 @@ public class FunctionTypeChecker {
    */
   private static Type narrowArgType(Context context, FnID id, String argName,
       Type formalArgT, Type argExprT,
-      MultiMap<String, Type> tvConstrains, boolean throwOnFail)
+      ListMultimap<String, Type> tvConstrains, boolean throwOnFail)
           throws TypeMismatchException {
     if (formalArgT.hasTypeVar()) {
       return checkFunArgTV(context, id, argName, formalArgT, argExprT,
@@ -528,7 +532,7 @@ public class FunctionTypeChecker {
    */
   private static Type checkFunArgTV(Context context, FnID id, String argName,
       Type formalArgT, Type argExprT,
-      MultiMap<String, Type> tvConstraints, boolean throwOnFail)
+      ListMultimap<String, Type> tvConstraints, boolean throwOnFail)
           throws TypeMismatchException {
     if (Types.isUnion(formalArgT)) {
       throw new TypeMismatchException(context, "Union type " + formalArgT +
@@ -565,7 +569,8 @@ public class FunctionTypeChecker {
             "variables for formal arg type " + formalArgT + " and argument " +
             " expression type: " + argExprT);
       }
-      tvConstraints.putAll(matchedTypeVars);
+
+      Misc.putAllMultimap(tvConstraints, matchedTypeVars);
     }
     // Leave type var
     return formalArgT;
@@ -776,7 +781,7 @@ public class FunctionTypeChecker {
    */
   private static Map<String, List<Type>> unifyTypeVarConstraints(
       Context context, FnID id, List<String> typeVars,
-      MultiMap<String, Type> candidates, boolean throwOnFail)
+      ListMultimap<String, Type> candidates, boolean throwOnFail)
           throws TypeMismatchException {
     Map<String, List<Type>> possible = new HashMap<String, List<Type>>();
     /* Check whether type variables were left unbound */

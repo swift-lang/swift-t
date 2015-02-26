@@ -10,6 +10,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
@@ -23,7 +26,6 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.tree.FunctionDecl;
 import exm.stc.frontend.tree.InlineCode;
 import exm.stc.frontend.tree.Literals;
@@ -47,8 +49,8 @@ public class WrapperGen {
   /**
    * Wrappers that have already been generated
    */
-  private final MultiMap<FnID, GeneratedWrapper> generated
-                  = new MultiMap<FnID, GeneratedWrapper>();
+  private final ListMultimap<FnID, GeneratedWrapper> generated
+                  = ArrayListMultimap.create();
 
   /**
    * Used function names to avoid duplicates

@@ -14,6 +14,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
+
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -21,9 +26,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
-import exm.stc.common.util.SetMultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
@@ -68,31 +71,31 @@ class CongruentSets {
    * parents.  Note that links aren't deleted, so the presence of a link
    * from X -> Y in here doesn't imply that X is still canonical.
    */
-  private final MultiMap<Arg, ArgOrCV> canonicalInv;
+  private final ListMultimap<Arg, ArgOrCV> canonicalInv;
 
   /**
    * Record congruence between values without canonical location
    */
-  private final MultiMap<ArgCV, ArgCV> equivalences;
+  private final ListMultimap<ArgCV, ArgCV> equivalences;
 
   /**
    * Track sets that were merged into this one.  Allows
    * finding an alternate value if current is out of scope.
    */
-  private final MultiMap<Arg, Arg> mergedInto;
+  private final ListMultimap<Arg, Arg> mergedInto;
 
   /**
    * Track places where CV1 appears inside CV2, so that we can
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
    */
-  private final SetMultiMap<Arg, ArgCV> componentIndex;
+  private final SetMultimap<Arg, ArgCV> componentIndex;
 
   /**
    * Track children where Arg may be a canonical value, so that we
    * can update it if needed.
    */
-  private final SetMultiMap<Arg, CongruentSets> subscribedChildren;
+  private final SetMultimap<Arg, CongruentSets> subscribedChildren;
 
   /**
    * Whether unpassable variables are inherited from parent.
@@ -131,11 +134,11 @@ class CongruentSets {
     this.congType = congType;
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
-    this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
-    this.equivalences = new MultiMap<ArgCV, ArgCV>();
-    this.mergedInto = new MultiMap<Arg, Arg>();
-    this.componentIndex = new SetMultiMap<Arg, ArgCV>();
-    this.subscribedChildren = new SetMultiMap<Arg, CongruentSets>();
+    this.canonicalInv = ArrayListMultimap.create();
+    this.equivalences = ArrayListMultimap.create();
+    this.mergedInto = ArrayListMultimap.create();
+    this.componentIndex = HashMultimap.create();
+    this.subscribedChildren = HashMultimap.create();
     this.varsFromParent = varsFromParent;
     this.unpassableDeclarations = new HashSet<Var>();
     this.mergeQueue = new LinkedList<ToMerge>();
@@ -158,24 +161,25 @@ class CongruentSets {
   public void printTraceInfo(Logger logger, GlobalConstants consts) {
     if (logger.isTraceEnabled()) {
       // Print congruence sets nicely
-      MultiMap<Arg, ArgOrCV> sets = activeSets(consts);
-      for (Entry<Arg, List<ArgOrCV>> e: sets.entrySet()) {
-        assert(e.getValue().size() > 0);
+      ListMultimap<Arg, ArgOrCV> sets = activeSets(consts);
+      for (Entry<Arg, Collection<ArgOrCV>> e: sets.asMap().entrySet()) {
+        List<ArgOrCV> setMembers = (List<ArgOrCV>)e.getValue();
+        assert(setMembers.size() > 0);
         boolean printSet = true;
-        if (e.getValue().size() == 1) {
+        if (setMembers.size() == 1) {
           // Should be self-reference, don't print
-          if (e.getValue().get(0).arg().equals(e.getKey())) {
+          if (setMembers.get(0).arg().equals(e.getKey())) {
             printSet = false;
           } else {
             // TODO: this happens occasionally, e..g test 385
             logger.debug("INTERNAL ERROR: Bad set: " +
-                         e.getKey() + " " + e.getValue());
+                         e.getKey() + " " + setMembers);
           }
         }
 
         if (printSet) {
           logger.trace(congType + " cong. class " + e.getKey() +
-                       " => " + e.getValue());
+                       " => " + setMembers);
         }
       }
       // print componentIndex and inaccessible directly
@@ -210,9 +214,9 @@ class CongruentSets {
    * canonical and canonicalInv
    * @return
    */
-  private MultiMap<Arg, ArgOrCV> activeSets(GlobalConstants consts) {
+  private ListMultimap<Arg, ArgOrCV> activeSets(GlobalConstants consts) {
     HashMap<ArgOrCV, Arg> effective = new HashMap<ArgOrCV, Arg>();
-    MultiMap<Arg, ArgOrCV> res = new MultiMap<Arg, ArgOrCV>();
+    ListMultimap<Arg, ArgOrCV> res = ArrayListMultimap.create();
     CongruentSets curr = this;
     do {
       for (Entry<ArgOrCV, Arg> e: curr.canonical.entrySet()) {
@@ -603,7 +607,7 @@ class CongruentSets {
 
     // Clear out-of-date entries in current scope
     // (leave outer scopes untouched since they're not harmful)
-    this.canonicalInv.remove(oldCanon);
+    this.canonicalInv.removeAll(oldCanon);
 
     this.mergedInto.put(newCanon, oldCanon);
 
@@ -644,11 +648,7 @@ class CongruentSets {
 
   public Iterable<ArgOrCV> availableThisScope() {
     // TODO: will want to translate args back to canonical for parent scope
-    List<ArgOrCV> avail = new ArrayList<ArgOrCV>();
-    for (List<ArgOrCV> vals: canonicalInv.values()) {
-      avail.addAll(vals);
-    }
-    return avail;
+    return canonicalInv.values();
   }
 
   public static class ToMerge {
@@ -798,12 +798,12 @@ class CongruentSets {
   }
 
   private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,
-      MultiMap<Arg, ArgOrCV> inEffectInv) {
+      ListMultimap<Arg, ArgOrCV> inEffectInv) {
     CongruentSets curr;
     // Verify all entries in CanonicalInv for active keys are correct
     curr = this;
     do {
-      for (Entry<Arg, List<ArgOrCV>> e: curr.canonicalInv.entrySet()) {
+      for (Entry<Arg, Collection<ArgOrCV>> e: curr.canonicalInv.asMap().entrySet()) {
         Arg key1 = e.getKey();
         if (inEffectInv.containsKey(key1)) {
           // Canonical is currently in effect

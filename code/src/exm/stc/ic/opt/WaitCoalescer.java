@@ -16,14 +16,20 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
@@ -39,8 +45,6 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
-import exm.stc.common.util.MultiMap;
-import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.StackLite;
@@ -532,12 +536,13 @@ public class WaitCoalescer implements OptimizerPass {
         logger.trace("Attempting to merge waits");
       }
       fin = true;
-      MultiMap<Var, WaitStatement> waitMap = buildWaitMap(block);
+      ListMultimap<Var, WaitStatement> waitMap = buildWaitMap(block);
       // Greedy approach: find most shared variable and
       //    merge wait based on that
       if (logger.isTraceEnabled()) {
         logger.trace("Wait keys: " + waitMap.keySet());
-        for (Entry<Var, List<WaitStatement>> e: waitMap.entrySet()) {
+        for (Entry<Var, Collection<WaitStatement>> e:
+                            waitMap.asMap().entrySet()) {
           logger.trace("Waiting on : " + e.getKey() + ": "
                        + e.getValue().size());
         }
@@ -627,8 +632,8 @@ public class WaitCoalescer implements OptimizerPass {
    * @param block
    * @return
    */
-  public static  MultiMap<Var, WaitStatement> buildWaitMap(Block block) {
-    MultiMap<Var, WaitStatement> waitMap = new MultiMap<Var, WaitStatement>();
+  public static ListMultimap<Var, WaitStatement> buildWaitMap(Block block) {
+    ListMultimap<Var, WaitStatement> waitMap = ArrayListMultimap.create();
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
@@ -650,12 +655,11 @@ public class WaitCoalescer implements OptimizerPass {
    * @param waitMap
    * @return
    */
-  public static Var mostSharedVar(
-          MultiMap<Var, WaitStatement> waitMap) {
+  public static Var mostSharedVar(ListMultimap<Var, WaitStatement> waitMap) {
     Var winner = null;
     int winCount = 0;
-    for (Entry<Var, List<WaitStatement>> e: waitMap.entrySet()) {
-      List<WaitStatement> waits = e.getValue();
+    for (Entry<Var, Collection<WaitStatement>> e: waitMap.asMap().entrySet()) {
+      Collection<WaitStatement> waits = e.getValue();
       if (waits.size() > 1) {
         if (winner == null || waits.size() > winCount) {
           winner = e.getKey();
@@ -687,15 +691,14 @@ public class WaitCoalescer implements OptimizerPass {
    */
   private boolean pushDownWaits(Logger logger, Program prog, Function fn,
                                 Block block, ExecContext currContext) {
-    MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
+    ListMultimap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
 
     if (logger.isTraceEnabled()) {
       logger.trace("waitMap keys: " + waitMap.keySet());
     }
 
-    if (waitMap.isDefinitelyEmpty()) {
-      // If waitMap is empty, can't push anything down, so just
-      // shortcircuit
+    if (waitMap.isEmpty()) {
+      // If waitMap is empty, can't push anything down, so just shortcircuit
       return false;
     }
     boolean changed = false;
@@ -732,7 +735,7 @@ public class WaitCoalescer implements OptimizerPass {
                 Block top, ExecContext topContext,
                 StackLite<Continuation> ancestors, Block curr,
                 ExecContext currContext,
-                MultiMap<Var, InstOrCont> waitMap) {
+                ListMultimap<Var, InstOrCont> waitMap) {
     boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
     /* Iterate over all instructions in this descendant block */
@@ -851,7 +854,7 @@ public class WaitCoalescer implements OptimizerPass {
 
   public boolean tryPushdownClosedVar(Logger logger, Block top,
       ExecContext topContext, StackLite<Continuation> ancestors, Block curr,
-      ExecContext currContext, MultiMap<Var, InstOrCont> waitMap,
+      ExecContext currContext, ListMultimap<Var, InstOrCont> waitMap,
       ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
       Var v) {
     boolean changed = false;
@@ -917,7 +920,7 @@ public class WaitCoalescer implements OptimizerPass {
       Block ancestorBlock, ExecContext ancestorContext,
       StackLite<Continuation> ancestors,
       Block currBlock, ExecContext currContext, ListIterator<Statement> currBlockIt,
-      MultiMap<Var, InstOrCont> waitMap, Var writtenV) {
+      ListMultimap<Var, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
     // Remove from outer block
     List<InstOrCont> waits = waitMap.get(writtenV);
@@ -1061,61 +1064,40 @@ public class WaitCoalescer implements OptimizerPass {
    * @param removedI
    */
   private static void updateWaiterMap(
-          MultiMap<Var, InstOrCont> waitMap, Set<Continuation> removedC,
+      ListMultimap<Var, InstOrCont> waitMap, Set<Continuation> removedC,
       Set<Instruction> removedI) {
-    List<Var> keysToRemove = new ArrayList<Var>();
-    for (Entry<Var, List<InstOrCont>> e: waitMap.entrySet()) {
-      ListIterator<InstOrCont> it = e.getValue().listIterator();
-      int count = 0;
-      while (it.hasNext()) {
-        InstOrCont ic = it.next();
-        switch(ic.type()) {
-        case CONTINUATION:
-          if (removedC.contains(ic.continuation())) {
-            it.remove();
-          } else {
-            count++;
-          }
-          break;
-        case INSTRUCTION:
-          if (removedI.contains(ic.instruction())) {
-            it.remove();
-          } else {
-            count++;
-          }
-          break;
-        default:
-          throw new STCRuntimeError("shouldn't get here, unexpected enum " +
-                              ic.type());
+    Iterator<InstOrCont> it = waitMap.values().iterator();
+    while (it.hasNext()) {
+      InstOrCont ic = it.next();
+      switch(ic.type()) {
+      case CONTINUATION:
+        if (removedC.contains(ic.continuation())) {
+          it.remove();
         }
+        break;
+      case INSTRUCTION:
+        if (removedI.contains(ic.instruction())) {
+          it.remove();
+        }
+        break;
+      default:
+        throw new STCRuntimeError("shouldn't get here, unexpected enum " +
+                            ic.type());
       }
-      /* Remove variables no longer waited on */
-      if (count == 0) {
-        keysToRemove.add(e.getKey());
-      }
-    }
-    // Explicitly remove key so that we cna tell if map is empty
-    // Do this outside loop to avoid concurrently modifying it while
-    // we are iterating over it
-    for (Var k: keysToRemove) {
-      waitMap.remove(k);
     }
   }
 
-  private static LinkedListFactory<InstOrCont> LL_FACT =
-                    new LinkedListFactory<InstOrCont>();
-  private static MultiMap<Var, InstOrCont> buildWaiterMap(Program prog,
+  private static ListMultimap<Var, InstOrCont> buildWaiterMap(Program prog,
                                                           Block block) {
     // Use linked list to support more efficient removal in middle of list
-    MultiMap<Var, InstOrCont> waitMap =
-                        new MultiMap<Var, InstOrCont>(LL_FACT);
+    ListMultimap<Var, InstOrCont> waitMap = LinkedListMultimap.create();
     findRelocatableBlockingInstructions(prog, block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
   }
 
   private static void findBlockingContinuations(Block block,
-          MultiMap<Var, InstOrCont> waitMap) {
+      ListMultimap<Var, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
       List<BlockingVar> blockingVars = c.blockingVars(false);
       if (blockingVars != null) {
@@ -1127,7 +1109,7 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static void findRelocatableBlockingInstructions(Program prog,
-          Block block, MultiMap<Var, InstOrCont> waitMap) {
+          Block block, ListMultimap<Var, InstOrCont> waitMap) {
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() != StatementType.INSTRUCTION) {
         continue; // Only interested in instructions

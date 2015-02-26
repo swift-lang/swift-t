@@ -21,13 +21,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.FnID;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -49,7 +51,6 @@ import exm.stc.common.lang.Types.ScalarValueType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WrappedForeignFunction;
-import exm.stc.common.util.MultiMap;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
@@ -254,7 +255,7 @@ public interface CompilerBackend {
       Var container, Var memberVar, Var loopCountVar, int splitDegree,
       int leafDegree, boolean arrayClosed,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs);
+      ListMultimap<Var, RefCount> constIncrs);
 
   /**
    * Finish the parallel foreach loop over array.
@@ -286,7 +287,7 @@ public interface CompilerBackend {
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      MultiMap<Var, RefCount> constIncrs);
+      ListMultimap<Var, RefCount> constIncrs);
 
   /**
    * Finish the range loop

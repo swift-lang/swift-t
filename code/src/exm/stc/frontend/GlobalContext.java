@@ -31,6 +31,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -50,7 +53,6 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
-import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 
 /**
@@ -59,8 +61,8 @@ import exm.stc.common.util.Pair;
  */
 public class GlobalContext extends Context {
 
-  private final MultiMap<String, FnOverload> functionOverloads =
-                              new MultiMap<String, FnOverload>();
+  private final ListMultimap<String, FnOverload> functionOverloads =
+                              ArrayListMultimap.create();
 
   /**
    * Properties of functions

@@ -21,10 +21,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
+
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.util.MultiMap;
-import exm.stc.common.util.SetMultiMap;
 
 /**
  * Static class to track info about semantics of foreign functions.
@@ -61,26 +64,25 @@ public class ForeignFunctions {
   /**
    * Track all foreign functions used in the program
    */
-  private final SetMultiMap<FnID, Prop> props =
-                  new SetMultiMap<FnID, Prop>();
+  private final SetMultimap<FnID, Prop> props = HashMultimap.create();
 
   /**
-   * Map from implementation function name to special function anme
+   * Map from implementation function name to special function name
    */
   private final HashMap<FnID, SpecialFunction> specialImpls =
                                 new HashMap<FnID, SpecialFunction>();
 
   // Inverse map
-  private final MultiMap<SpecialFunction, FnID> specialImplsInv =
-                               new MultiMap<SpecialFunction, FnID>();
+  private final ListMultimap<SpecialFunction, FnID> specialImplsInv =
+                                         ArrayListMultimap.create();
 
   /** Names of built-ins which have a local equivalent operation */
   private HashMap<FnID, BuiltinOpcode>
             equivalentOps = new HashMap<FnID, BuiltinOpcode>();
 
   /** inverse of localEquivalents */
-  private MultiMap<BuiltinOpcode, FnID> equivalentOpsInv
-                          = new MultiMap<BuiltinOpcode, FnID>();
+  private ListMultimap<BuiltinOpcode, FnID> equivalentOpsInv =
+                                        ArrayListMultimap.create();
 
   /**
    * Functions that have a local implementation
@@ -88,8 +90,7 @@ public class ForeignFunctions {
    */
   private Map<FnID, FnID> localImpls =
                     new HashMap<FnID, FnID>();
-  private MultiMap<FnID, FnID> localImplsInv =
-                    new MultiMap<FnID, FnID>();
+  private ListMultimap<FnID, FnID> localImplsInv = ArrayListMultimap.create();
 
   private HashMap<FnID, ExecTarget> taskModes =
                     new HashMap<FnID, ExecTarget>();

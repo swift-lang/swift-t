@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -31,7 +34,6 @@ import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
-import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context;
 
 /**
@@ -60,8 +62,8 @@ public class Operators {
   }
 
   /** Map of <token type> -> [(<operator type>, <internal opcode> )] */
-  private static final MultiMap<Integer, Op> arithOps =
-                                          new MultiMap<Integer, Op>();
+  private static final ListMultimap<Integer, Op> arithOps =
+                                  ArrayListMultimap.create();
 
   /** Types of operations */
   private static final Map<BuiltinOpcode, OpType> optypes =
