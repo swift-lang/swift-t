@@ -733,8 +733,8 @@ file result2 = sort(unsorted);
 === Global Variables
 
 Variables defined at the top level of a Swift program are in
-global scope and can be used anywhere 
-Swift supports a basic feature for defining globally visible constants.  
+global scope and can be used anywhere
+Swift supports a basic feature for defining globally visible constants.
 
 You can use global variables to define program-wide constants: the
 single assignment semantics of Swift mean that they variables cannot
@@ -750,7 +750,7 @@ trace(HELLO, PI_APPROX, ONE);
 
 ** *Note:* You can also define global constants with the syntax
           +global const <name> = <value>;+, e.g. +global const X = 1;+.
-          This syntax offers no advantages and is deprecated. 
+          This syntax offers no advantages and is deprecated.
 
 == Control structures
 
@@ -1270,6 +1270,7 @@ hostmap and return one rank running on that host.
 +hostmap_one_worker(string) -> location+:: Lookup the string as a host
 in the hostmap and return one worker rank running on that host.
 
+[[leaf_functions]]
 == Defining leaf functions
 
 In typical Swift applications, the computationally intensive parts of
@@ -1789,14 +1790,17 @@ NOTE: To use this, Turbine must be configured with Julia enabled
  +julia+ program (which may be done by using a normal Swift
  <<app_functions,app function>>).
 
+== More about functions
+In this section we discuss more advanced features for defining and
+calling functions.
 
 [[annotations]]
-== Function call annotations
+=== Function call annotations
 
 Swift/T supports many annotations to influence the behavior of function
 calls.
 
-=== Priority
+==== Priority
 
 Leaf tasks resulting from Swift dataflow may be prioritized by using
 the +@prio+ annotation:
@@ -1815,7 +1819,7 @@ of +i+ may be any Swift integer.
 This annotation is applied to the leaf task call.
 
 [[location]]
-=== Location
+==== Location
 
 Leaf tasks resulting from Swift dataflow may be assigned to a given
 processor by using the +@location+ annotation:
@@ -1831,7 +1835,7 @@ In this case, each +f(i)+ will execute on a different worker.
 
 This annotation is applied to the leaf task call.
 
-==== Hostmap
+===== Hostmap
 
 At startup, by default, Turbine obtains all hostnames used in the run
 and builds up a data structure called the hostmap to map hostnames to
@@ -1839,6 +1843,82 @@ ranks.  You may combine the location features with the hostmap
 features to send work to assigned hostnames.  See the
 <<library_location,Location library>> for usage.  The hostmap may be
 <<env_hostmap_debug,debugged>> or <<env_hostmap_disable,disabled>>.
+
+=== Advanced function topics
+Swift/T provides various facilities to define functions with flexible
+input and output types that can enable writing cleaner and more
+generic code.
+
+==== Optional and keyword arguments to functions
+Swift/T functions can have optional arguments to functions, where a
+default value is used if the caller does not provide that function argument.
+The default values are specified in the function definition and must be
+literal constant expressions.  For example, the following function has two
+optional arguments:
+
+----
+(string o) msg(string a, int b=0, float c=0.0) {
+  o = "%s %i %f" % (a, b, c);
+}
+----
+
+Optional arguments can be provided *positionally* in the same way
+as non-optional arguments, e.g.:
+----
+trace(msg("test"));
+trace(msg("test", 1));
+trace(msg("test", 1, 2.0));
+----
+
+Optional arguments, unlike non-optional arguments, can also be provided
+by argument name, or *keyword*.  For example:
+----
+trace(msg("test", y=2.0));
+----
+
+==== Variable-length argument lists
+TODO
+
+==== Function overloading
+Swift/T supports _overloading_ of functions, where multiple function
+definitions with the same name coexist in the program.  If a function
+name is overloaded, Swift/T will decide which definition to use
+based on the argument types.  In order to overload a function, the
+input types of the two definitions must be different enough to
+allow Swift/T to reliably determine which definition is meant.  This
+means that you can only overload functions if:
+
+* All input arguments have a single concrete type, e.g. +file+ or +int[][]+.
+  Union argument types and type variables are not supported in overloaded
+  functions.
+* No optional arguments are used (variable-length argument lists are supported)
+* No list of input types could match multiple possible definitions, for example
+  +f(1)+ could match both +f(int x)+ and +f(int x, float y...)+.
+
+Swift/T will exit with a compile error if you break one of these rules.
+
+For example, the following program will print +int: 1+ and +float: 3.14+.
+
+----
+import io;
+
+() print_num(int x) {
+  printf("int: %i", x);
+}
+
+() print_num(float x) {
+  printf("float: %0.2f", x);
+}
+
+print_num(1);
+print_num(3.14);
+----
+
+==== Union argument types
+TODO
+
+==== Type variables
+TODO
 
 [[Optimizations]]
 == Optimizations
