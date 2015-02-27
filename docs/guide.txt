@@ -1283,6 +1283,7 @@ to makes it easy to call C/C\+\+/Fortran functions.  The builtin
 functions mentioned above are implemented as extension functions in
 Tcl, which may wrap C/C++/Fortran functions.
 
+[[swift_extension_functions]]
 === Swift extension functions
 
 Currently we support Tcl extension functions, where a function is
@@ -1862,7 +1863,7 @@ optional arguments:
 }
 ----
 
-Optional arguments can be provided *positionally* in the same way
+Optional arguments can be provided as *positional arguments* in the same way
 as non-optional arguments, e.g.:
 ----
 trace(msg("test"));
@@ -1871,13 +1872,24 @@ trace(msg("test", 1, 2.0));
 ----
 
 Optional arguments, unlike non-optional arguments, can also be provided
-by argument name, or *keyword*.  For example:
+as *keyword arguments*.  For example:
 ----
 trace(msg("test", y=2.0));
 ----
-
 ==== Variable-length argument lists
-TODO
+<<swift_extension_functions,Swift extension functions>> support variable
+length argument lists, where the final argument can be repeated 0 or
+more times.  The full list of arguments is passed into the extension
+function definition.  For example, it is possible to define a function
+that takes any number of integers as arguments and returns the sum.  Let us
+assume that a Tcl function +my_sum+ is defined that computes the sum of
+its inputs.  Then the following Tcl extension function definition is possible:
+
+----
+(int o) my_sum(int... vals) "my_pkg" "1.0" [
+  "set <<o>> [ my_pkg::my_sum <<vals>> ]"
+];
+----
 
 ==== Function overloading
 Swift/T supports _overloading_ of functions, where multiple function
@@ -1914,10 +1926,10 @@ print_num(1);
 print_num(3.14);
 ----
 
-==== Union argument types
-TODO
+==== Union argument types and type variables
+<<swift_extension_functions,Swift extension functions>> support
+additional argument types that can match multiple possible input types.
 
-==== Type variables
 TODO
 
 [[Optimizations]]
