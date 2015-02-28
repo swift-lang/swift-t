@@ -27,7 +27,7 @@
   <property name="commons-io.jar"
             value="lib/commons-io-2.4.jar"/>
   <property name="commons-lang.jar"
-            value="lib/commons-lang3-3.1.jar"/>
+            value="lib/commons-lang3-3.3.2.jar"/>
   <property name="guava.jar"
             value="lib/guava-18.0.jar"/>
   <property name="junit4.jar"
