@@ -25,6 +25,8 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang3.StringUtils;
+
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
@@ -48,15 +50,13 @@ public class ICUtil {
   /** Print a formal argument list, e.g. "(int a, int b, int c)" */
   public static void prettyPrintFormalArgs(StringBuilder sb,
                                                   List<Var> args) {
-    boolean first = true;
-    sb.append("(");
+    List<String> argStrings = new ArrayList<String>();
     for (Var a: args) {
-      if (!first) {
-        sb.append(", ");
-      }
-      sb.append(a.type().typeName() + " " + a.name());
-      first = false;
+      argStrings.add(a.type().typeName() + " " + a.name());
     }
+
+    sb.append("(");
+    sb.append(StringUtils.join(args, ", "));
     sb.append(")");
   }
 
@@ -86,15 +86,7 @@ public class ICUtil {
    */
   public static void prettyPrintVarList(StringBuilder sb,
                 Collection<Var> vars) {
-    boolean first = true;
-    for (Var v: vars) {
-      if (first) {
-        first = false;
-      } else {
-        sb.append(", ");
-      }
-      sb.append(v.name());
-    }
+    sb.append(StringUtils.join(Var.nameList(vars), ", "));
   }
 
   /**
@@ -104,15 +96,7 @@ public class ICUtil {
    */
   public static void prettyPrintList(StringBuilder sb,
                 Collection<? extends Object> list) {
-    boolean first = true;
-    for (Object o: list) {
-      if (first) {
-        first = false;
-      } else {
-        sb.append(", ");
-      }
-      sb.append(o.toString());
-    }
+    sb.append(StringUtils.join(list, ", "));
   }
 
   /**
@@ -123,17 +107,7 @@ public class ICUtil {
   @SuppressWarnings("rawtypes")
   public static void prettyPrintLists(StringBuilder sb,
       Collection<? extends Collection> values) {
-    boolean first = true;
-    for (Collection list: values) {
-      for (Object o: list) {
-        if (first) {
-          first = false;
-        } else {
-          sb.append(", ");
-        }
-        sb.append(o.toString());
-      }
-    }
+    sb.append(StringUtils.join(values, ", "));
   }
 
   /**
@@ -143,15 +117,7 @@ public class ICUtil {
    */
   public static void prettyPrintArgList(StringBuilder sb,
                 Collection<Arg> args) {
-    boolean first = true;
-    for (Arg a: args) {
-      if (first) {
-        first = false;
-      } else {
-        sb.append(", ");
-      }
-      sb.append(a);
-    }
+    sb.append(StringUtils.join(args, ", "));
   }
 
   public static <K extends Comparable<K>, V> String
@@ -401,31 +367,6 @@ public class ICUtil {
   public static void addIfVar(Collection<Var> res, Arg a) {
     if (a.isVar()) {
       res.add(a.getVar());
-    }
-  }
-
-  public static <T> List<T> filterNulls(Collection<T> list) {
-    List<T> res = new ArrayList<T>();
-    for (T item: list) {
-      if (item != null) {
-        res.add(item);
-      }
-    }
-    return res;
-  }
-
-  /**
-   * Remove all occurences of e in l
-   * (Note: standard java List.remove() only removes first occurrence)
-   * @param l
-   * @param e
-   */
-  public static <T> void remove(List<T> l, T e) {
-    ListIterator<T> it = l.listIterator();
-    while (it.hasNext()) {
-      if (it.next().equals(e)) {
-        it.remove();
-      }
     }
   }
 }

@@ -19,8 +19,9 @@ package exm.stc.tclbackend.tree;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
+
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.util.StringUtil;
 
 public class Proc extends TclTree
 {
@@ -84,7 +85,7 @@ public class Proc extends TclTree
     sb.append("\nproc ");
     sb.append(name);
     sb.append(" { ");
-    sb.append(StringUtil.concat(args));
+    sb.append(StringUtils.join(args, " "));
     sb.append(" } {\n");
     body.setIndentation(indentation+indentWidth);
     body.appendTo(sb);

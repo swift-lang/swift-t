@@ -16,7 +16,7 @@
 
 package exm.stc.tclbackend.tree;
 
-import exm.stc.common.util.StringUtil;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * The TclTree class hierarchy represents all Tcl constructs
@@ -49,7 +49,7 @@ public abstract class TclTree
 
   public void indent(StringBuilder sb)
   {
-    StringUtil.spaces(sb, indentation);
+    sb.append(StringUtils.repeat(' ', indentation));
   }
 
   public void setIndentation(int i)

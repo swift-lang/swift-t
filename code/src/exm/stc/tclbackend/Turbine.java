@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
+
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.AsyncExecutor;
@@ -29,7 +31,6 @@ import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Location;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.util.Pair;
-import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.Expression;
@@ -1012,7 +1013,7 @@ class Turbine {
       for (int index: fieldIndices) {
         indexList.add(index);
       }
-      String subscript = StringUtil.concat('.', indexList);
+      String subscript = StringUtils.join(indexList, '.');
       return new TclString(subscript, true);
     }
   }

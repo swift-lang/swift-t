@@ -13,7 +13,6 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Sets;
-import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -139,8 +138,9 @@ public class InitVariables {
                  Types.inputRequiresInitialization(initVar)) :
                    inst + " " + initVar;
           // some functions initialise and assign the future at once
-          if (!initAndAssignLocalFile(inst))
-            ICUtil.remove(regularOutputs, initVar);
+          if (!initAndAssignLocalFile(inst)) {
+            regularOutputs.removeAll(initVar.asList());
+          }
 
           if (validate && initVars.contains(initVar)) {
             throw new STCRuntimeError("double initialized variable " + initVar);

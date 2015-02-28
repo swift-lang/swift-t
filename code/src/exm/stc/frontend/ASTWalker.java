@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
@@ -80,7 +81,6 @@ import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
-import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.Context.FnProp;
@@ -1691,7 +1691,7 @@ public class ASTWalker {
           throw new InvalidAnnotationException(context, "\"" + val +
               "\" is not the name of a specially handled function in STC. " +
               "Valid options are: " +
-              StringUtil.concat(SpecialFunction.values()));
+              StringUtils.join(SpecialFunction.values(), ' '));
         }
         foreignFuncs.addSpecialImpl(special, id);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
@@ -1703,7 +1703,7 @@ public class ASTWalker {
           Collections.sort(dispatchNames);
 
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
-              + " Valid options are: " + StringUtil.concat(dispatchNames));
+              + " Valid options are: " + StringUtils.join(dispatchNames, ' '));
         }
       } else {
         throw new InvalidAnnotationException(context, "Tcl function",
