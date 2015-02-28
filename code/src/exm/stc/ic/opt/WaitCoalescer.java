@@ -280,7 +280,7 @@ public class WaitCoalescer implements OptimizerPass {
         return true;
       } else {
         // Still have to wait but maybe can reduce overhead
-        ExecTarget waitTarget = wait.getTarget();
+        ExecTarget waitTarget = wait.target();
         ExecContext waitTargetContext = waitTarget.targetContext();
         if (waitTarget.isDispatched() && waitTargetContext.isControlContext()) {
           if (currContext.isControlContext()) {
@@ -443,9 +443,9 @@ public class WaitCoalescer implements OptimizerPass {
 
     if (logger.isTraceEnabled()) {
       logger.trace("Attempting squash of  wait(" + wait.getWaitVars() + ") " +
-                   wait.getTarget() + " " + wait.getMode() +
+                   wait.target() + " " + wait.getMode() +
                     " with wait(" + innerWait.getWaitVars() + ") " +
-                   innerWait.getTarget() + " " + innerWait.getMode());
+                   innerWait.target() + " " + innerWait.getMode());
     }
     ExecContext innerContext = innerWait.childContext(waitContext);
 
@@ -521,7 +521,7 @@ public class WaitCoalescer implements OptimizerPass {
 
     if (logger.isTraceEnabled()) {
       logger.trace("Squash succeeded: wait(" + wait.getWaitVars() + ") "
-                  + wait.getTarget() + " " + wait.getMode());
+                  + wait.target() + " " + wait.getMode());
     }
     innerWait.inlineInto(waitBlock);
     return true;
@@ -884,7 +884,7 @@ public class WaitCoalescer implements OptimizerPass {
         return null;
       }
       if (w.getMode() == WaitMode.TASK_DISPATCH) {
-        ExecTarget target = w.getTarget();
+        ExecTarget target = w.target();
         if (target.isDispatched()) {
           return target.targetContext();
         } else {
@@ -989,10 +989,10 @@ public class WaitCoalescer implements OptimizerPass {
       } else {
         WaitStatement w = (WaitStatement)cont;
         // Make sure gets dispatched to right place
-        if (w.getTarget().isAsync()) {
+        if (w.target().isAsync()) {
           canRelocate = true;
 
-          if (!w.getTarget().isDispatched()) {
+          if (!w.target().isDispatched()) {
             fixupNonDispatched(w, currContext);
           }
         } else {
@@ -1016,14 +1016,14 @@ public class WaitCoalescer implements OptimizerPass {
    * @param w
    */
   private void fixupNonDispatched(WaitStatement w, ExecContext currContext) {
-    if (!w.getTarget().canRunIn(currContext)) {
+    if (!w.target().canRunIn(currContext)) {
       w.setMode(WaitMode.TASK_DISPATCH);
-      ExecContext targetCx = w.getTarget().targetContext();
+      ExecContext targetCx = w.target().targetContext();
       w.setTarget(ExecTarget.dispatched(targetCx));
     }
 
     // Check if we need to recurse
-    if (!w.getTarget().isDispatched()) {
+    if (!w.target().isDispatched()) {
       replaceLocalControl(w.getBlock(), currContext);
     }
   }

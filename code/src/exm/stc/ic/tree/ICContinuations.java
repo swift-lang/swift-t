@@ -195,7 +195,11 @@ public class ICContinuations {
     /** @return true if the continuation does nothing */
     public abstract boolean isNoop();
 
-    public abstract boolean isAsync();
+    public abstract ExecTarget target();
+
+    public final boolean isAsync() {
+      return target().isAsync();
+    }
 
     /** @return true if continuation is async and a single task is spawned from
      *    current context */
@@ -750,8 +754,8 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean isAsync() {
-      return true;
+    public ExecTarget target() {
+      return ExecTarget.nonDispatchedAny();
     }
 
     @Override
@@ -1220,8 +1224,8 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean isAsync() {
-      return false;
+    public ExecTarget target() {
+      return ExecTarget.syncAny();
     }
 
     @Override
@@ -1340,7 +1344,7 @@ public class ICContinuations {
       WaitVar.removeDuplicates(this.waitVars);
       this.mode = mode;
       this.recursive = recursive;
-      this.target = target;
+      setTarget(target);
       this.props = props.clone();
       updateRecursive();
     }
@@ -1403,25 +1407,23 @@ public class ICContinuations {
       return recursive;
     }
 
-    public ExecTarget getTarget() {
-      return target;
-    }
     @Override
     public ContinuationType getType() {
       return ContinuationType.WAIT_STATEMENT;
     }
 
+    @Override
+    public ExecTarget target() {
+      return target;
+    }
+
     public void setTarget(ExecTarget target) {
+      assert(target.isAsync());
       this.target = target;
     }
 
     public void setMode(WaitMode mode) {
       this.mode = mode;
-    }
-
-    @Override
-    public boolean isAsync() {
-      return true;
     }
 
     @Override
@@ -1779,8 +1781,8 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean isAsync() {
-      return true;
+    public ExecTarget target() {
+      return ExecTarget.nonDispatchedAny();
     }
 
     @Override

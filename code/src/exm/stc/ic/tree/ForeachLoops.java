@@ -21,6 +21,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
@@ -263,8 +264,13 @@ public class ForeachLoops {
     }
 
     @Override
-    public boolean isAsync() {
-      return !containerClosed || splitDegree > 0;
+    public ExecTarget target() {
+      boolean async = !containerClosed || splitDegree > 0;
+      if (async) {
+        return ExecTarget.dispatchedControl();
+      } else {
+        return ExecTarget.syncAny();
+      }
     }
 
     @Override
@@ -515,8 +521,12 @@ public class ForeachLoops {
     }
 
     @Override
-    public boolean isAsync() {
-      return splitDegree > 0;
+    public ExecTarget target() {
+      if (splitDegree > 0) {
+        return ExecTarget.dispatchedControl();
+      } else {
+        return ExecTarget.syncAny();
+      }
     }
 
     @Override

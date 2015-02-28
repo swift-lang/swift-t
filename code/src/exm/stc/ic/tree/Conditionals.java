@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -44,8 +45,8 @@ public class Conditionals {
     }
 
     @Override
-    public boolean isAsync() {
-      return false;
+    public ExecTarget target() {
+      return ExecTarget.syncAny();
     }
     @Override
     public boolean isLoop() {
