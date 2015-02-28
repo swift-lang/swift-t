@@ -1,13 +1,14 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.ExecContext.WorkContext;
-import exm.stc.common.util.Misc;
 import exm.stc.common.util.Pair;
 
 /**
@@ -20,14 +21,11 @@ public enum AsyncExecutor {
   /**
    * Map from executor to (unique) exec context
    */
-  public static final Map<AsyncExecutor, ExecContext> contexts =
+  public static final BiMap<AsyncExecutor, ExecContext> contexts =
                                               initExecContexts();
-  public static final Map<ExecContext, AsyncExecutor> contextsInv =
-                                          Misc.invertSurjective(contexts);
 
-  private static HashMap<AsyncExecutor, ExecContext> initExecContexts() {
-    HashMap<AsyncExecutor, ExecContext> map =
-        new HashMap<AsyncExecutor, ExecContext>();
+  private static BiMap<AsyncExecutor, ExecContext> initExecContexts() {
+    BiMap<AsyncExecutor, ExecContext> map = HashBiMap.create();
 
     for (AsyncExecutor exec: values()) {
       WorkContext workContext = new WorkContext(exec.name());
@@ -59,7 +57,7 @@ public enum AsyncExecutor {
   }
 
   public static AsyncExecutor fromWorkContext(WorkContext workContext) {
-    return contextsInv.get(ExecContext.worker(workContext));
+    return contexts.inverse().get(ExecContext.worker(workContext));
   }
 
   /**

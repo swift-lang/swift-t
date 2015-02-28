@@ -15,19 +15,19 @@
  */
 package exm.stc.common.lang;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.util.TwoWayMap;
 
 /**
  * Static class to track info about semantics of foreign functions.
@@ -69,28 +69,18 @@ public class ForeignFunctions {
   /**
    * Map from implementation function name to special function name
    */
-  private final HashMap<FnID, SpecialFunction> specialImpls =
-                                new HashMap<FnID, SpecialFunction>();
-
-  // Inverse map
-  private final ListMultimap<SpecialFunction, FnID> specialImplsInv =
-                                         ArrayListMultimap.create();
+  private final TwoWayMap<FnID, SpecialFunction> specialImpls =
+                                new TwoWayMap<FnID, SpecialFunction>();
 
   /** Names of built-ins which have a local equivalent operation */
-  private HashMap<FnID, BuiltinOpcode>
-            equivalentOps = new HashMap<FnID, BuiltinOpcode>();
-
-  /** inverse of localEquivalents */
-  private ListMultimap<BuiltinOpcode, FnID> equivalentOpsInv =
-                                        ArrayListMultimap.create();
+  private TwoWayMap<FnID, BuiltinOpcode> equivalentOps =
+                                  new TwoWayMap<FnID, BuiltinOpcode>();
 
   /**
    * Functions that have a local implementation
    * Map from Swift function name to function name of local
    */
-  private Map<FnID, FnID> localImpls =
-                    new HashMap<FnID, FnID>();
-  private ListMultimap<FnID, FnID> localImplsInv = ArrayListMultimap.create();
+  private TwoWayMap<FnID, FnID> localImpls = new TwoWayMap<FnID, FnID>();
 
   private HashMap<FnID, ExecTarget> taskModes =
                     new HashMap<FnID, ExecTarget>();
@@ -166,7 +156,6 @@ public class ForeignFunctions {
 
   public void addSpecialImpl(SpecialFunction special, FnID implID) {
     specialImpls.put(implID, special);
-    specialImplsInv.put(special, implID);
   }
 
   /**
@@ -206,12 +195,8 @@ public class ForeignFunctions {
    * @return
    */
   public FnID findSpecialImpl(SpecialFunction special) {
-    List<FnID> impls = specialImplsInv.get(special);
-    if (impls.isEmpty()) {
-      return null;
-    } else {
-      return impls.get(0);
-    }
+    Collection<FnID> impls = specialImpls.getByValue(special);
+    return Iterables.getFirst(impls, null);
   }
 
   public void addPure(FnID id) {
@@ -225,7 +210,6 @@ public class ForeignFunctions {
 
   public void addOpEquiv(FnID id, BuiltinOpcode op) {
     equivalentOps.put(id, op);
-    equivalentOpsInv.put(op, id);
   }
 
   public boolean hasOpEquiv(FnID builtinFunction) {
@@ -240,7 +224,7 @@ public class ForeignFunctions {
    * Find an implementation of a built-in op
    */
   public List<FnID> findOpImpl(BuiltinOpcode op) {
-    return equivalentOpsInv.get(op);
+    return (List<FnID>)equivalentOps.getByValue(op);
   }
 
   public void addCommutative(FnID id) {
@@ -286,7 +270,6 @@ public class ForeignFunctions {
    */
   public void addLocalImpl(FnID swiftFunction, FnID localFunction) {
     localImpls.put(swiftFunction, localFunction);
-    localImplsInv.put(localFunction, swiftFunction);
   }
 
   public boolean hasLocalImpl(FnID swiftFunction) {
@@ -298,7 +281,7 @@ public class ForeignFunctions {
   }
 
   public boolean isLocalImpl(FnID localFunction) {
-    return localImplsInv.containsKey(localFunction);
+    return localImpls.containsValue(localFunction);
   }
 
   public Set<FnID> getLocalImplKeys() {

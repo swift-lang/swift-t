@@ -29,10 +29,12 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.CodeGenOptions;
@@ -62,6 +64,7 @@ import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.util.MultiCollection;
 import exm.stc.common.util.StackLite;
+import exm.stc.common.util.TwoWayMap;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -391,8 +394,8 @@ public class ICTree {
     /**
      * Use treemap to keep them in alpha order
      */
-    private final TreeMap<Var, Arg> globalConsts = new TreeMap<Var, Arg>();
-    private final HashMap<Arg, Var> globalConstsInv =  new HashMap<Arg, Var>();
+    private final TwoWayMap<Var, Arg> globalConsts = new TwoWayMap<Var, Arg>(
+                    new TreeMap<Var, Arg>(), ArrayListMultimap.<Arg, Var>create());
     private final HashSet<String> usedNames = new HashSet<String>();
 
     public void add(Var var, Arg val) {
@@ -404,11 +407,6 @@ public class ICTree {
       assert(prevVal == null) :
           new STCRuntimeError("Overwriting global constant " + var.name());
 
-      Var prev = globalConstsInv.put(val, var);
-      // It's ok to have duplicate constants
-      Logging.getSTCLogger().debug("Duplicate global const for value " + val
-                                   + " " + prev);
-
       usedNames.add(var.name());
     }
 
@@ -418,9 +416,9 @@ public class ICTree {
      * @return global constant for given value
      */
     public Var getOrCreateByVal(Arg val) {
-      Var existing = lookupByValue(val);
-      if (existing != null) {
-        return existing;
+      Collection<Var> existing = lookupByValue(val);
+      if (!existing.isEmpty()) {
+        return Iterables.get(existing, 0);
       } else {
         return autoCreate(val);
       }
@@ -441,13 +439,11 @@ public class ICTree {
     }
 
     public void remove(Var unused) {
-      Arg val = globalConsts.remove(unused);
-      globalConstsInv.remove(val);
+      globalConsts.remove(unused);
     }
 
-    public Var lookupByValue(Arg val) {
-      return this.globalConstsInv.get(val);
-
+    public Collection<Var> lookupByValue(Arg val) {
+      return this.globalConsts.getByValue(val);
     }
 
     public Arg lookupByVar(Var var) {
@@ -455,8 +451,8 @@ public class ICTree {
 
     }
 
-    public SortedMap<Var, Arg> map() {
-      return Collections.unmodifiableSortedMap(globalConsts);
+    public Map<Var, Arg> map() {
+      return Collections.unmodifiableMap(globalConsts);
     }
 
     public Collection<Var> vars() {

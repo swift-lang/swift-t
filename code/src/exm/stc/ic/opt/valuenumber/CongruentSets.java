@@ -29,6 +29,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.common.util.TwoWayMap;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
@@ -64,14 +65,7 @@ class CongruentSets {
    *  if appropriate)
    *  A variable starts off as part of one-element set (itself)
    */
-  private final Map<ArgOrCV, Arg> canonical;
-
-  /**
-   * Store reverse direction links from canonical. Must manually traverse
-   * parents.  Note that links aren't deleted, so the presence of a link
-   * from X -> Y in here doesn't imply that X is still canonical.
-   */
-  private final ListMultimap<Arg, ArgOrCV> canonicalInv;
+  private final TwoWayMap<ArgOrCV, Arg> canonical;
 
   /**
    * Record congruence between values without canonical location
@@ -133,8 +127,7 @@ class CongruentSets {
     this.foreignFuncs = foreignFuncs;
     this.congType = congType;
     this.parent = parent;
-    this.canonical = new HashMap<ArgOrCV, Arg>();
-    this.canonicalInv = ArrayListMultimap.create();
+    this.canonical = new TwoWayMap<ArgOrCV, Arg>();
     this.equivalences = ArrayListMultimap.create();
     this.mergedInto = ArrayListMultimap.create();
     this.componentIndex = HashMultimap.create();
@@ -256,24 +249,13 @@ class CongruentSets {
       curr = curr.parent;
     } while (curr != null);
 
-    try {
-      checkCanonicalInv(effective, res);
-    } catch (RuntimeException e) {
-      // Dump data structures
-      dumpDataStructures();
-      logger.trace("effective:");
-      logger.trace(effective);
-      logger.trace("effectiveInv:");
-      logger.trace(res);
-      throw e;
-    }
-
     return res;
   }
 
   /**
    * Do raw dump of internal data structures for debugging
    */
+  @SuppressWarnings("unused")
   private void dumpDataStructures() {
     logger.trace("Dumping CongruentSets data structures");
     CongruentSets curr = this;
@@ -287,8 +269,6 @@ class CongruentSets {
       logger.trace(curr.congType);
       logger.trace("canonical:");
       logger.trace(curr.canonical);
-      logger.trace("canonicalInv:");
-      logger.trace(curr.canonicalInv);
       logger.trace("mergedInto:");
       logger.trace(curr.mergedInto);
       logger.trace("componentIndex:");
@@ -416,7 +396,7 @@ class CongruentSets {
     CongruentSets curr = this;
     boolean allPassed = true;
     while (curr != null) {
-      if (curr.canonicalInv.containsKey(varArg)) {
+      if (curr.canonical.containsValue(varArg)) {
         return allPassed;
       }
       allPassed = allPassed && curr.varsFromParent;
@@ -459,7 +439,7 @@ class CongruentSets {
     }
 
     do {
-      for (ArgOrCV cv: curr.canonicalInv.get(canonical)) {
+      for (ArgOrCV cv: curr.canonical.getByValue(canonical)) {
         if (res == null) {
           res = new ArrayList<ArgOrCV>();
         }
@@ -591,7 +571,9 @@ class CongruentSets {
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
     do {
-      for (ArgOrCV val: curr.canonicalInv.get(oldCanon)) {
+      // Copy to avoid comodification issues
+      List<ArgOrCV> vals = new ArrayList<ArgOrCV>(curr.canonical.getByValue(oldCanon));
+      for (ArgOrCV val: vals) {
         Arg canonicalCheck = findCanonicalInternal(val);
         // Confirm that oldCanonical was actually the canonical one
         // This should only be necessary on recursive calls when
@@ -604,10 +586,6 @@ class CongruentSets {
       }
       curr = curr.parent;
     } while (curr != null);
-
-    // Clear out-of-date entries in current scope
-    // (leave outer scopes untouched since they're not harmful)
-    this.canonicalInv.removeAll(oldCanon);
 
     this.mergedInto.put(newCanon, oldCanon);
 
@@ -648,7 +626,7 @@ class CongruentSets {
 
   public Iterable<ArgOrCV> availableThisScope() {
     // TODO: will want to translate args back to canonical for parent scope
-    return canonicalInv.values();
+    return canonical.keySet();
   }
 
   public static class ToMerge {
@@ -775,7 +753,6 @@ class CongruentSets {
     }*/
 
     Arg prev = canonical.put(val, canonicalVal);
-    canonicalInv.put(canonicalVal, val);
 
     // Need to update structure if it changes in parent
     subscribeToParent(canonicalVal);
@@ -796,44 +773,6 @@ class CongruentSets {
     }
     componentIndex.put(input, cv);
   }
-
-  private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,
-      ListMultimap<Arg, ArgOrCV> inEffectInv) {
-    CongruentSets curr;
-    // Verify all entries in CanonicalInv for active keys are correct
-    curr = this;
-    do {
-      for (Entry<Arg, Collection<ArgOrCV>> e: curr.canonicalInv.asMap().entrySet()) {
-        Arg key1 = e.getKey();
-        if (inEffectInv.containsKey(key1)) {
-          // Canonical is currently in effect
-          // for (ArgOrCV val: e.getValue()) {
-
-            /*TODO: disabled checks since in various corner cases we can
-             * have things in different sets without producing incorrect
-             * optimization results
-             * Arg key2 = inEffect.get(val);
-             * assert(key2 != null) : "No canonical entry for " + val +
-                                   " in set " + key1;
-             * assert(key2.equals(key1)): val + " not in consistent set:"
-             *                                + key1 + " vs. " + key2;
-             */
-
-          // }
-        } else {
-          // Check it was swallowed up into another set
-          /* TODO: disabled this check too
-          Arg newKey = inEffect.get(new ArgOrCV(key1));
-          assert(newKey != null && !newKey.equals(key1)) :
-            " Expected " + key1 + " to be part of another set, but " +
-            " was part of " + newKey;
-           */
-        }
-      }
-      curr = curr.parent;
-    } while (curr != null);
-  }
-
 
   /**
    * Do any canonicalization of result value here, e.g. to implement
