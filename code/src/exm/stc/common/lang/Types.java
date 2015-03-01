@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -1125,10 +1127,11 @@ public class Types {
      * @return UnionType if multiple types, or plain type if singular
      */
     public static Type makeUnion(List<Type> alts) {
-      if (alts.size() == 1) {
-        return alts.get(0);
+      List<Type> deduplicated = ImmutableSet.copyOf(alts).asList();
+      if (deduplicated.size() == 1) {
+        return deduplicated.get(0);
       } else {
-        return new UnionType(new ArrayList<Type>(alts));
+        return new UnionType(new ArrayList<Type>(deduplicated));
       }
     }
 
