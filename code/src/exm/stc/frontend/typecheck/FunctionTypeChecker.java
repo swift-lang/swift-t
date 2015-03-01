@@ -335,16 +335,7 @@ public class FunctionTypeChecker {
     LogHelper.trace(context, "Call " + overload.id.uniqueName()
                 + " possible concrete types: " + possibilities);
 
-    if (possibilities.size() == 0) {
-      if (throwOnFail) {
-        throw new TypeMismatchException(context, "Arguments for call to "
-          + "function " + overload.id.originalName() + " "
-          + "were incompatible with function type. "
-          + "Function input types were: " + overload.type.getInputs() + ", "
-          + "argument types were " + argTypes);
-      }
-      return null;
-    }
+    assert (possibilities.size() > 0) : "Enumerating function types gave no result";
 
     return new FnMatch(overload, possibilities);
   }
