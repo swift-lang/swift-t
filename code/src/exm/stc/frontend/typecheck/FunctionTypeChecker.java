@@ -22,7 +22,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.Types;
@@ -837,17 +836,6 @@ public class FunctionTypeChecker {
       throw new InvalidOverloadException(context, "Cannot overload function "
                        + overloadID.originalName() + " with default value");
     }
-  }
-
-  protected static boolean hasOptionalArg(List<Arg> defaultVals) {
-    boolean hasOptionalArg = false;
-    for (Arg defaultVal: defaultVals) {
-      if (defaultVal != null) {
-        hasOptionalArg = true;
-        break;
-      }
-    }
-    return hasOptionalArg;
   }
 
   /**
