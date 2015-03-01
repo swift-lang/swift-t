@@ -203,7 +203,7 @@ public class TypeChecker {
   private static Type var(Context context, SwiftAST tree)
       throws UndefinedVarError {
     Var var = context.lookupVarUser(tree.child(0).getText());
-  
+
     Type exprType = var.type();
     if (Types.isScalarUpdateable(exprType)) {
       // Can coerce to future
@@ -289,7 +289,7 @@ public class TypeChecker {
    * @param context
    * @param op
    * @param rValType
-   * @param lValType
+   * @param lValType lVal type, should not be ref
    * @param lValName
    * @param rValTVBindings type var bindings
    * @return returns rValType, or if rValType is non-concrete, return chosen
@@ -299,6 +299,8 @@ public class TypeChecker {
   public static Type checkAssignment(Context context, AssignOp op,
       Type rValType, Type lValType, String lValName,
       Map<String, Type> rValTVBindings) throws TypeMismatchException {
+    assert(!Types.isRef(lValType)) : lValType;
+
     for (Type t: UnionType.getAlternatives(rValType)) {
       if (!t.isConcrete()) {
         LogHelper.trace(context, "Non-concrete type alt for RVal: " + t);
@@ -334,9 +336,6 @@ public class TypeChecker {
       if (Types.isRef(rMatchT)) {
         rMatchT = rMatchT.memberType();
         rDerefed = true;
-      }
-      if (Types.isRef(lMatchT)) {
-        lMatchT = lMatchT.memberType();
       }
 
       Map<String, Type> newTVBindings = rMatchT.matchTypeVars(lMatchT);
