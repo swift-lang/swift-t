@@ -19,6 +19,10 @@
 #ifndef MATH_SWIFT
 #define MATH_SWIFT
 
+// TODO: remove global const once compiler bug fixed
+global const float PI = 3.14159265358979323846;
+global const float E = 2.7182818284590452354;
+
 @pure @builtin_op=FLOOR
 (float o) floor           (float i) "turbine"  "0.0.2" "floor";
 @pure @builtin_op=CEIL
@@ -43,5 +47,40 @@
 (float o) abs_float   (float i) "turbine"  "0.0.2" "abs_float";
 @pure @builtin_op=ABS_FLOAT
 (float o) abs         (float i) "turbine"  "0.0.2" "abs_float";
+
+@pure
+(float o) sin (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::sin <<x>> ]"
+];
+
+@pure
+(float o) cos (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::cos <<x>> ]"
+];
+
+@pure
+(float o) tan (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::tan <<x>> ]"
+];
+
+@pure
+(float o) asin (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::asin <<x>> ]"
+];
+
+@pure
+(float o) acos (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::acos <<x>> ]"
+];
+
+@pure
+(float o) atan (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::atan <<x>> ]"
+];
+
+@pure
+(float o) atan2 (float y, float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::atan2 <<y>> <<x>> ]"
+];
 
 #endif
