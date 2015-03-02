@@ -31,22 +31,38 @@ namespace eval turbine {
     set app_backoff 0.1
   }
 
+  proc stdio_log { stdin_src stdout_dst stderr_dst } {
+    set result [ list ]
+    if { ! [ string equal $stdin_src /dev/stdin ] } {
+      lappend result "stdin=$stdin_src"
+    }
+    if { ! [ string equal $stdout_dst /dev/stdout ] } {
+      lappend result "stdout=$stdout_dst"
+    }
+    if { ! [ string equal $stderr_dst /dev/stderr ] } {
+      lappend result "stderr=$stderr_dst"
+    }
+    return $result
+  }
+
   # Run external application
   # cmd: executable to run
   # kwopts: keyword options.  Valid are:
   #         stdout=file stderr=file
   # args: command line args as strings
-  # Note: We use sync_exec instead of the Tcl exec command due to 
+  # Note: We use sync_exec instead of the Tcl exec command due to
   # an issue on the Cray.  Implemented in sync_exec.c
   proc exec_external { cmd kwopts args } {
 
     app_init
 
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
+    set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
 
     set tries 0
     while { true } {
-      log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
+
+      log "shell: $cmd $args $stdios"
       set start [ clock milliseconds ]
       if { ! [ catch { c::sync_exec $cmd {*}$args \
                            < $stdin_src > $stdout_dst 2> $stderr_dst } \
