@@ -462,7 +462,12 @@ namespace eval turbine {
             } else {
                 set tmpdir "/tmp"
             }
-            file tempfile result $tmpdir/.turbine
+            try {
+                # This can fail with "too many open files"
+                file tempfile result $tmpdir/.turbine
+            } on error e {
+                turbine_error "Error creating temporary file!\n $e"
+            }
         } else {
             # Tcl 8.5 or older: fall back on system mktemp command
             # TODO: re-add this argument (#364): --suffix=.turbine
