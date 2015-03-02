@@ -48,6 +48,19 @@ global const float E = 2.7182818284590452354;
 @pure @builtin_op=ABS_FLOAT
 (float o) abs         (float i) "turbine"  "0.0.2" "abs_float";
 
+@pure @builtin_op=LOG
+(float o) ln (float x) "turbine" "0.7.0" "log_e";
+
+@pure
+(float o) log10 (float x) "turbine" "0.7.0" [
+  "set <<o>> [ ::tcl::mathfunc::log10 <<x>> ]"
+];
+
+@pure
+(float o) log (float x, float base) "turbine" "0.7.0" [
+  "set <<o>> [ expr {log(<<x>>)/log(<<base>>)} ]"
+];
+
 @pure
 (float o) sin (float x) "turbine" "0.7.0" [
   "set <<o>> [ ::tcl::mathfunc::sin <<x>> ]"
