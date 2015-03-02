@@ -302,7 +302,7 @@ namespace eval turbine {
     proc input_file_local { outf_varname fname } {
       upvar 1 $outf_varname outf
       if { ! [ file exists $fname ] } {
-          turbine_error "input_file: file $fname does not exist"
+          turbine_error "input_file: file '$fname' does not exist"
       }
 
       set outf_path [ local_file_path $outf ]
