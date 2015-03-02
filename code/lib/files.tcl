@@ -411,7 +411,7 @@ namespace eval turbine {
 
     proc copy_file_td_body { dst src } {
       set tmp [ retrieve_decr_file $src ]
-      store_file $dst $tmp
+      store_file $dst tmp
     }
 
     proc copy_file_body { dst src } {
