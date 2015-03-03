@@ -87,6 +87,10 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             adlb_datum_id* ids, int* id_count,
             adlb_datum_id_sub* id_subs, int* id_sub_count);
 
+static int
+Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
+                  Tcl_Obj *const objv[], Tcl_Obj *obj, int base);
+
 /**
    @see TURBINE_CHECK
 */
@@ -869,15 +873,43 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /*
-  Convert decimal string to int
+  turbine::toint_impl <string>
+  Convert decimal string to wide integer
  */
 static int
 Turbine_ToIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
+
+  return Turbine_ParseInt_Impl(cdata, interp, objv, objv[1], 10);
+}
+
+/*
+  turbine::parse_int_impl <string> <base>
+  Convert string in any base to wide integer
+ */
+static int
+Turbine_ParseIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+  
+  int base;
+  int rc = Tcl_GetIntFromObj(interp, objv[2], &base);
+  TCL_CHECK(rc);
+
+  TCL_CONDITION(base >= 1, "Base must be positive: %i", base);
+  return Turbine_ParseInt_Impl(cdata, interp, objv, objv[1], base);
+}
+
+
+static int
+Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
+                  Tcl_Obj *const objv[], Tcl_Obj *obj, int base)
+{
   int len;
-  const char *str = Tcl_GetStringFromObj(objv[1], &len);
+  const char *str = Tcl_GetStringFromObj(obj, &len);
 
   errno = 0; // Reset so we can detect errors
   char *end_str;
@@ -885,9 +917,9 @@ Turbine_ToIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_WideInt val;
 
 #ifdef TCL_WIDE_INT_IS_LONG
-  val = strtol(str, &end_str, 10);
+  val = strtol(str, &end_str, base);
 #else
-  val = strtoll(str, &end_str, 10);
+  val = strtoll(str, &end_str, base);
 #endif
 
   // Check for errors
@@ -898,19 +930,20 @@ Turbine_ToIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_Obj *msg = NULL;
     if (my_errno == ERANGE)
     {
-      msg = Tcl_ObjPrintf("toint: Integer representation of '%s' is "
-              "out of range of %zi bit integers", str,
-              sizeof(Tcl_WideInt) * 8);
+      msg = Tcl_ObjPrintf("toint: Integer representation of '%s' "
+              "base %i is out of range of %zi bit integers", str,
+              base, sizeof(Tcl_WideInt) * 8);
     }
     else if (my_errno == EINVAL)
     {
       msg = Tcl_ObjPrintf("toint: '%s' cannot be interpreted as an "
-                            "integer ", str);
+                            "base %i integer ", str, base);
     }
     else
     {
       msg = Tcl_ObjPrintf("toint: Internal error: unexpected errno "
-                  "%d when converting '%s' to integer", my_errno, str);
+                  "%d when converting '%s' to base %i integer",
+                  my_errno, str, base);
     }
     Tcl_Obj *msgs[1] = { msg };
     return turbine_user_error(interp, 1, msgs);
@@ -920,7 +953,7 @@ Turbine_ToIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     // Handle case where no input consumed
     Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("toint: '%s' cannot be "
-                         "interpreted as an integer ", str) };
+             "interpreted as a base %i integer ", str, base) };
     return turbine_user_error(interp, 1, msgs);
   }
 
@@ -1649,6 +1682,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
   COMMAND("toint_impl", Turbine_ToIntImpl_Cmd);
+  COMMAND("parse_int_impl", Turbine_ParseIntImpl_Cmd);
 
   COMMAND("sync_exec", Sync_Exec_Cmd);
 

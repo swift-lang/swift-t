@@ -35,6 +35,7 @@ namespace eval turbine {
 
     # Use C version of toint_impl
     namespace import c::toint_impl
+    namespace import c::parse_int_impl
 
     # This name conflicts with a Tcl built-in - it cannot be exported
     proc trace { signal inputs } {
@@ -329,7 +330,20 @@ namespace eval turbine {
     proc toint_body { input result } {
         set t [ retrieve_decr $input ]
         set i [ toint_impl $t ]
-        
+
+        store_integer $result $i
+    }
+
+    proc parse_int { result inputs } {
+        rule $inputs [ list parse_int_body {*}$inputs $result ] \
+            name "parse_int-$inputs"
+    }
+
+    proc parse_int_body { str base result } {
+        set str_val [ retrieve_decr_string $str ]
+        set base_val [ retrieve_decr_integer $base ]
+        set i [ parse_int_impl $str_val $base_val ]
+
         store_integer $result $i
     }
 

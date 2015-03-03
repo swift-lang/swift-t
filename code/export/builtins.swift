@@ -95,13 +95,15 @@ LocationAccuracy NODE = LocationAccuracy("NODE");
 (string o) toString(float i)  "turbine" "0.0.2" "fromfloat";
 
 // Parsing of strings
-@pure @builtin_op=STRTOINT
-(int o) toint(string i) "turbine" "0.0.2" "toint";
-@pure @builtin_op=STRTOINT
-(int o) parseInt(string i) "turbine" "0.0.2" "toint";
-@pure @builtin_op=STRTOFLOAT
+@pure
+(int o) toint(string i) {
+  o = parseInt(i, 10);
+}
+@pure @builtin_op=PARSE_INT
+(int o) parseInt(string i, int base=10) "turbine" "0.0.2" "parse_int";
+@pure @builtin_op=PARSE_FLOAT
 (float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
-@pure @builtin_op=STRTOFLOAT
+@pure @builtin_op=PARSE_FLOAT
 (float o) parseFloat(string i)  "turbine" "0.0.2" "tofloat";
 
 // Numeric conversions
