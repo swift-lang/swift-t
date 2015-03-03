@@ -93,7 +93,7 @@ public class GlobalContext extends Context {
 
   public GlobalContext(String inputFile, Logger logger,
                         ForeignFunctions foreignFuncs) {
-    super(logger, 0);
+    super(null, logger, 0);
     this.inputFile = inputFile;
     this.foreignFuncs = foreignFuncs;
 

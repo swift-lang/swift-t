@@ -48,6 +48,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.SourceLoc;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.StackLite;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -56,6 +57,8 @@ import exm.stc.common.lang.Var.VarProvenance;
 public abstract class Context {
 
   public static final int ROOT_LEVEL = 0;
+
+  protected final Context parent;
 
   /**
    * How many levels from root: 0 if this is the root
@@ -105,8 +108,9 @@ public abstract class Context {
    */
   protected int col = 0;
 
-  public Context(Logger logger, int level) {
+  public Context(Context parent, Logger logger, int level) {
     super();
+    this.parent = parent;
     this.level = level;
     this.logger = logger;
   }
@@ -571,6 +575,30 @@ public abstract class Context {
    */
   public abstract Var createGlobalConst(String name, Type type,
                               boolean makeUnique) throws DoubleDefineException;
+
+  @Override
+  public String toString() {
+    StackLite<Context> cxs = new StackLite<Context>();
+    Context curr = this;
+    while (curr != null) {
+      cxs.push(curr);
+      curr = curr.parent;
+    }
+
+    StringBuilder sb = new StringBuilder();
+
+    Context root = cxs.pop();
+    sb.append(String.format("(%d: %s:%d:%d, %s)", System.identityHashCode(root),
+                             root.inputFile, root.line,
+                             root.col, root.moduleName));
+    while (!cxs.isEmpty()) {
+      Context cx = cxs.pop();
+      sb.append(String.format(" => (%d: %s:%d:%d, %s)", System.identityHashCode(cx),
+                        cx.inputFile, cx.line, cx.col, cx.moduleName));
+    }
+
+    return sb.toString();
+  }
 
   public static enum FnProp {
     APP, COMPOSITE,

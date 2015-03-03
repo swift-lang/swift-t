@@ -17,15 +17,15 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.log4j.Level;
 
-import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidConstructException;
@@ -43,6 +43,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
+import exm.stc.frontend.LoadedModules.LocatedModule;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 import exm.stc.frontend.tree.ArrayElems;
@@ -70,11 +71,17 @@ import exm.stc.frontend.typecheck.TypeChecker;
  */
 class VariableUsageAnalyzer {
 
-  /** Store line mapping as attribute to avoid passing everywhere */
-  private LineMapping lineMapping;
+  /** Store module as attribute to avoid passing everywhere */
+  private StackLite<ParsedModule> currModule = new StackLite<ParsedModule>();
 
-  /** Store current module as attribute to avoid passing everywhere */
-  private String currModuleName;
+
+  /** Track which modules are loaded and compiled */
+  private final LoadedModules modules;
+
+  public VariableUsageAnalyzer(LoadedModules modules) {
+    this.modules = modules;
+  }
+
 
   /**
    * Analyse the variables that are present in the block and add
@@ -85,13 +92,11 @@ class VariableUsageAnalyzer {
    * @param block
    * @throws UserException
    */
-  public void walkFunction(Context context,
-          LineMapping lineMapping, String currModuleName,
+  public void walkFunction(Context context, ParsedModule module,
           String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: " + function);
-    this.lineMapping = lineMapping;
-    this.currModuleName = currModuleName;
+    this.currModule.push(module);
 
     VariableUsageInfo globVui = setupGlobalUsage(context, false);
 
@@ -121,11 +126,13 @@ class VariableUsageAnalyzer {
 
     reportErrors("in function " + function, argVui);
     LogHelper.debug(context, "analyzer: done: " + function);
+    this.currModule.pop();
   }
 
 
   /**
-   * Analyse variable usage in program top level
+   * Analyse variable usage in program top level, starting at mainModule and
+   * walking in statement order
    * @param context
    * @param lineMapping
    * @param currModuleName
@@ -133,38 +140,29 @@ class VariableUsageAnalyzer {
    * @param stmts
    * @throws UserException
    */
-  public void walkTopLevel(GlobalContext context, SwiftAST program,
-                          Iterator<ParsedModule> moduleIt)
+  public void walkTopLevel(GlobalContext context, ParsedModule mainModule)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: top level");
+    currModule.push(mainModule);
 
     VariableUsageInfo globVui = setupGlobalUsage(context, true);
 
     Context fnContext = LocalContext.topLevelContext(context);
     VariableUsageInfo topLevelVui = globVui.createNested();
 
-    while (moduleIt.hasNext()) {
-      ParsedModule module = moduleIt.next();
-      this.lineMapping = module.lineMapping;
-      this.currModuleName = module.moduleName;
-
-      syncFilePos(fnContext, module.ast);
-
-      for (SwiftAST stmt: module.ast.children()) {
-        if (TopLevel.isStatement(stmt.getType())) {
-          syncFilePos(fnContext, stmt);
-          walk(fnContext, stmt, topLevelVui);
-        }
-      }
-    }
+    walkTopLevelModule(fnContext, mainModule, topLevelVui,
+                       new HashSet<ParsedModule>());
 
     // After having collected data for block, check for unread/unwritten vars
-    syncFilePos(fnContext, program);
+    syncFilePos(fnContext, mainModule.ast);
     topLevelVui.detectVariableMisuse(fnContext, false);
 
     reportErrors("at program top level", topLevelVui);
     LogHelper.debug(context, "analyzer: done: top level");
+
+    currModule.pop();
   }
+
 
   private VariableUsageInfo setupGlobalUsage(Context context, boolean topLevel) {
     VariableUsageInfo globVui = new VariableUsageInfo();
@@ -200,7 +198,8 @@ class VariableUsageAnalyzer {
   }
 
   private void syncFilePos(Context context, SwiftAST tree) {
-    context.syncFilePos(tree, currModuleName, lineMapping);
+    context.syncFilePos(tree, currModule.peek().moduleName,
+                        currModule.peek().lineMapping);
   }
 
   private void walk(Context context, SwiftAST tree, VariableUsageInfo vu)
@@ -775,5 +774,50 @@ class VariableUsageAnalyzer {
               + node.getCharPositionInLine());
       }
     }
+  }
+
+
+  private void walkTopLevelModule(Context fnContext, ParsedModule module,
+      VariableUsageInfo topLevelVui, Set<ParsedModule> visited)
+      throws UserException {
+
+    if (visited.contains(module)) {
+      // Don't walk multiple times
+      return;
+    }
+    visited.add(module);
+
+    syncFilePos(fnContext, module.ast);
+
+    for (SwiftAST stmt: module.ast.children()) {
+      if (TopLevel.isStatement(stmt.getType())) {
+        syncFilePos(fnContext, stmt);
+        walk(fnContext, stmt, topLevelVui);
+      } else if (stmt.getType() == ExMParser.IMPORT) {
+        walkImport(fnContext, stmt, topLevelVui, visited);
+      }
+    }
+  }
+
+
+  private void walkImport(Context context, SwiftAST tree,
+      VariableUsageInfo topLevelVui, Set<ParsedModule> visited)
+      throws UserException {
+    assert(tree.getType() == ExMParser.IMPORT);
+    assert(tree.getChildCount() == 1);
+    SwiftAST moduleID = tree.child(0);
+
+    // Need to recurse right away to get statement order right
+    LocatedModule module = LocatedModule.fromModuleNameAST(context,
+                                                    moduleID, false);
+
+    Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(context, module);
+    ParsedModule newModule = loaded.val1;
+    boolean newlyLoaded = loaded.val2;
+    assert(!newlyLoaded);
+
+    currModule.push(newModule);
+    walkTopLevelModule(context, newModule, topLevelVui, visited);
+    currModule.pop();
   }
 }

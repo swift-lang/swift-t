@@ -44,16 +44,14 @@ import exm.stc.common.lang.Var.VarProvenance;
  *
  */
 public class LocalContext extends Context {
-  private final Context parent;
   private final GlobalContext globals;
   private final FunctionContext functionContext;
   private final boolean isTopLevel;
 
   public LocalContext(Context parent, String functionName, boolean isTopLevel) {
-    super(parent.getLogger(), parent.getLevel() + 1);
+    super(parent, parent.getLogger(), parent.getLevel() + 1);
     this.functionContext = functionName != null ?
           new FunctionContext(functionName) : null;
-    this.parent = parent;
     this.globals = parent.getGlobals();
     this.isTopLevel = isTopLevel;
     inputFile = parent.inputFile;
@@ -249,11 +247,6 @@ public class LocalContext extends Context {
         throws DoubleDefineException {
     for (Var v : variables)
       declareVariable(v);
-  }
-
-  @Override
-  public String toString() {
-    return getVisibleVariables().toString();
   }
 
   @Override

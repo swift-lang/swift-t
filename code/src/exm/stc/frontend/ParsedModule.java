@@ -24,7 +24,7 @@ import exm.stc.ui.ExitCode;
  * Represents an input Swift source file
  */
 public class ParsedModule {
-  
+
   public ParsedModule(String moduleName, String filePath, SwiftAST ast,
                       LineMapping lineMapping) {
     this.moduleName = moduleName;
@@ -32,12 +32,13 @@ public class ParsedModule {
     this.ast = ast;
     this.lineMapping = lineMapping;
   }
-  
+
+  /** Canonical name for module */
   public final String moduleName;
   public final String inputFilePath;
   public final SwiftAST ast;
   public final LineMapping lineMapping;
-    
+
   /**
    * Parse the specified file and create a ParsedModule object
    * @param path
@@ -60,23 +61,23 @@ public class ParsedModule {
       lineMapping = LineMapping.makeSimple(path);
     }
     SwiftAST tree = runANTLR(antlrInput, lineMapping);
-    
+
     return new ParsedModule(moduleName, path, tree, lineMapping);
   }
   /**
    * @param filePath
    * @return
-   * @throws IOException 
+   * @throws IOException
    */
   public static String getCanonicalFilePath(String filePath) throws IOException {
     return new File(filePath).getCanonicalPath();
   }
-  
+
 
   public String moduleName() {
     return this.moduleName;
   }
-  
+
   private static FileInputStream setupInput(String inputFilename) {
     FileInputStream input = null;
     try {
@@ -88,10 +89,10 @@ public class ParsedModule {
     }
     return input;
   }
-  
+
   /**
      Use ANTLR to parse the input and get the Tree
-   * @throws IOException 
+   * @throws IOException
    */
   private static SwiftAST runANTLR(ANTLRInputStream input, LineMapping lineMap) {
 
@@ -115,9 +116,9 @@ public class ParsedModule {
       System.out.println("Parsing failed: internal error");
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
-    
+
     /* NOTE: in some cases the antlr parser will actually recover from
-     *    errors, print an error message and continue, generating the 
+     *    errors, print an error message and continue, generating the
      *    parse tree that it thinks is most plausible.  This is where
      *    we detect this case.
      */
@@ -130,15 +131,15 @@ public class ParsedModule {
     // Do we actually need this check? -Justin (10/26/2011)
     if (program == null)
       throw new STCRuntimeError("PARSER FAILED!");
-   
-    
+
+
     SwiftAST tree = (SwiftAST) program.getTree();
-    
+
     return tree;
   }
 
   /**
-   * Use the file and line info from c preprocessor to 
+   * Use the file and line info from c preprocessor to
    * update SwiftAST
    * @param lexer
    * @param tree
@@ -148,16 +149,16 @@ public class ParsedModule {
     /*
      * This function is a dirty hack, but works ok
      * because the C preprocessor output has a very simple output format
-     * of 
+     * of
      * # linenum filename flags
-     * 
+     *
      * We basically just need the linenum and filename
      * (see http://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html)
      */
     LineMapping posTrack = new LineMapping();
     try {
       ExMLexer lexer = new ExMLexer(input);
-      /* 
+      /*
        * don't emit error messages with bad line numbers:
        * we will emit lexer error messages on the second pass
        */
@@ -176,15 +177,15 @@ public class ParsedModule {
                 " preprocessor line " + t.getText());
           }
           int lineNum = (int)tok.nval;
-          
+
           if (tok.nextToken() == '"') {
             // Quoted file name with octal escape sequences
-            
+
             // Ignore lines from preprocessor holding information we
             // don't need (these start with "<"
             String fileName = tok.sval;
             if (!fileName.startsWith("<")) {
-              posTrack.addPreprocInfo(t.getLine() + 1, 
+              posTrack.addPreprocInfo(t.getLine() + 1,
                                     fileName, lineNum);
             }
           }

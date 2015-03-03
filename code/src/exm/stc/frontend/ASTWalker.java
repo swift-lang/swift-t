@@ -126,7 +126,7 @@ public class ASTWalker {
   private final WrapperGen wrapper;
 
   /** Track which modules are loaded and compiled */
-  private LoadedModules modules = null;
+  private final LoadedModules modules;
 
   private static enum FrontendPass {
     DEFINITIONS, // Process top level defs
@@ -142,7 +142,7 @@ public class ASTWalker {
     this.wrapper = new WrapperGen(backend);
     this.exprWalker = new ExprWalker(wrapper, varCreator, backend, modules);
     this.lValWalker = new LValWalker(backend, varCreator, exprWalker, modules);
-    this.varAnalyzer = new VariableUsageAnalyzer();
+    this.varAnalyzer = new VariableUsageAnalyzer(modules);
   }
 
   /**
@@ -194,16 +194,14 @@ public class ASTWalker {
     Pair<ParsedModule, Boolean> loadedMainModule = modules.loadIfNeeded(context, mainModule);
     assert(!loadedMainModule.val2);
 
-    varAnalyzer.walkTopLevel(context, loadedMainModule.val1.ast,
-                            moduleIterator(context));
+    varAnalyzer.walkTopLevel(context, loadedMainModule.val1);
 
     backend.startFunction(FnID.ENTRY_FUNCTION, Var.NONE, Var.NONE,
                           ExecTarget.syncControl());
 
-    for (LocatedModule loadedModule: modules.loadedModules()) {
-      loadModule(context, topLevelContext, FrontendPass.COMPILE_TOPLEVEL,
-                 loadedModule);
-    }
+    // Walk modules in statement order
+    loadModule(context, topLevelContext, FrontendPass.COMPILE_TOPLEVEL,
+               mainModule);
 
     // Main function runs after top-level code if present
     List<FnOverload> mainOverloads = context.lookupFunction(
@@ -294,7 +292,7 @@ public class ASTWalker {
       syncFilePos(context, stmt);
       switch (type) {
       case ExMParser.IMPORT:
-        importModule(context, stmt, FrontendPass.DEFINITIONS);
+        importModule(context, null, stmt, FrontendPass.DEFINITIONS);
         break;
 
       case ExMParser.DEFINE_BUILTIN_FUNCTION:
@@ -359,6 +357,9 @@ public class ASTWalker {
       int type = stmt.getType();
       if (TopLevel.isStatement(type)) {
         stmts.add(stmt);
+      } else if (type == ExMParser.IMPORT) {
+        importModule(context.getGlobals(), context, stmt,
+                     FrontendPass.COMPILE_TOPLEVEL);
       } else if (!TopLevel.isDefinition(type)) {
         throw new STCRuntimeError("Unexpected token: " +
               LogHelper.tokName(type) + " at program top level");
@@ -369,7 +370,6 @@ public class ASTWalker {
       walkStatement(context, stmt, WalkMode.NORMAL);
     }
   }
-
 
   /**
    * Third pass:
@@ -456,20 +456,22 @@ public class ASTWalker {
    * module as needed.
    * @param context
    * @param tree
+   * @param topLevelCx required if we're compiling top level statements
    * @param pass
    * @throws UserException
    */
-  private void importModule(GlobalContext context,
+  private void importModule(GlobalContext context, LocalContext topLevelCx,
       SwiftAST tree, FrontendPass pass) throws UserException {
     assert(tree.getType() == ExMParser.IMPORT);
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
 
     // Only need to load on initial pass
-    if (pass == FrontendPass.DEFINITIONS) {
+    if (pass == FrontendPass.DEFINITIONS ||
+        pass == FrontendPass.COMPILE_TOPLEVEL) {
       LocatedModule module = LocatedModule.fromModuleNameAST(context,
                                                     moduleID, false);
-      loadModule(context, null, pass, module);
+      loadModule(context, topLevelCx, pass, module);
     }
   }
 
@@ -1935,9 +1937,8 @@ public class ASTWalker {
 
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
-    String moduleName = modules.currentModule().moduleName;
-    varAnalyzer.walkFunction(context, lineMap(), moduleName, function,
-                                     iList, oList, block);
+    varAnalyzer.walkFunction(context, modules.currentModule(), function,
+                             iList, oList, block);
 
     LocalContext functionContext = LocalContext.fnContext(context, function);
     functionContext.addDeclaredVariables(iList);
