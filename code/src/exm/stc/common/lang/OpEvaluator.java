@@ -143,15 +143,7 @@ public class OpEvaluator {
       switch (op) {
         case COPY_STRING:
           return Arg.newString(arg1);
-        case STRTOINT:
-          try {
-            long val = Long.parseLong(arg1);
-            return Arg.newInt(val);
-          } catch (NumberFormatException ex) {
-            // Handle at runtime
-          }
-          break;
-        case STRTOFLOAT:
+        case PARSE_FLOAT:
           try {
             // TODO: does this match Tcl implementation?
             double val = Double.valueOf(arg1);
@@ -328,12 +320,28 @@ public class OpEvaluator {
    */
   private static Arg evalOtherOp(BuiltinOpcode op, List<Arg> inputs) {
     switch (op) {
-      case SUBSTRING:
+      case SUBSTRING: {
         String str = inputs.get(0).getString();
         long start = inputs.get(1).getInt();
         long len = inputs.get(2).getInt();
         long end = Math.min(start + len, str.length());
         return Arg.newString(str.substring((int) start, (int) (end)));
+      }
+      case PARSE_INT: {
+        String str = inputs.get(0).getString();
+        long baseL = inputs.get(1).getInt();
+        if (baseL < 2 || baseL > Integer.MAX_VALUE) {
+          // Cannot evaluate
+          return null;
+        }
+        int base = (int)baseL;
+        try {
+          long val = Long.parseLong(str, base);
+          return Arg.newInt(val);
+        } catch (NumberFormatException ex) {
+          return null;
+        }
+      }
       default:
         return null;
     }

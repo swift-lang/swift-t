@@ -248,7 +248,7 @@ class Turbine {
 
   // Library function implementations
   public static final Token TOFLOAT_IMPL = turbFn("tofloat_impl");
-  public static final Token TOINT_IMPL = turbFn("toint_impl");
+  public static final Token PARSE_INT = turbFn("parse_int_impl");
   public static final Token SUBSTRING_IMPL = turbFn("substring_impl");
   public static final Token POW_INTEGER_IMPL = turbFn("pow_integer_impl");
   public static final Token TURBINE_ASSERT_EQUAL_IMPL

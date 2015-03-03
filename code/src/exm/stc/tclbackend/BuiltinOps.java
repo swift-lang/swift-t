@@ -111,14 +111,12 @@ public class BuiltinOps {
           assert(argExpr.size() == 1);
           // TCL will convert automatically
           rhs = argExpr.get(0);
-        } else if (op == BuiltinOpcode.STRTOINT ||
-            op == BuiltinOpcode.STRTOFLOAT ) {
+        } else if (op == BuiltinOpcode.PARSE_INT) {
+          assert(argExpr.size() == 2);
+          rhs = Square.fnCall(Turbine.PARSE_INT, argExpr.get(0), argExpr.get(1));
+        } else if (op == BuiltinOpcode.PARSE_FLOAT) {
           assert(argExpr.size() == 1);
-          Token tclCheck = (op == BuiltinOpcode.STRTOINT) ?
-              Turbine.TOINT_IMPL : Turbine.TOFLOAT_IMPL;
-          rhs = Square.fnCall(tclCheck, argExpr.get(0));
-
-
+          rhs = Square.fnCall(Turbine.TOFLOAT_IMPL, argExpr.get(0), argExpr.get(1));
         } else {
           // Case for operations that are implemented directly with
           // TCL's expr
