@@ -1257,18 +1257,22 @@ blob.
 
 See the section about <<location,location>>.
 
-+location_from_rank(int) -> location+:: Convert the rank integer to a
-+location+ variable compatible with +@location+.
++locationFromRank(int) -> location+:: Convert the rank integer to a
++location+ variable compatible with +@location+ with +HARD+, +RANK+.
 
-+random_worker() -> location+:: Obtain a worker at random.
++randomWorker() -> location+:: Obtain a worker at random with +HARD+,
++RANK+.
 
-+hostmap_list() -> string[]+:: Obtain the whole hostmap.
++randomWorkerRank() -> int+:: Obtain a random worker rank.
 
-+hostmap_one(string) -> location+:: Lookup the string as a host in the
-hostmap and return one rank running on that host.
++hostmapList() -> string[]+:: Obtain the whole hostmap as an array
+with integer keys and string hostname values.
 
-+hostmap_one_worker(string) -> location+:: Lookup the string as a host
-in the hostmap and return one worker rank running on that host.
++hostmapOne(string) -> location+:: Lookup the string as a host in the
+hostmap and return one rank running on that host with +HARD+, +RANK+.
+
++hostmapOneWorkerRank(string) -> int+:: Lookup the string as a host
+in the hostmap and return one of the worker ranks running on that host.
 
 [[leaf_functions]]
 == Defining leaf functions
@@ -1823,18 +1827,36 @@ This annotation is applied to the leaf task call.
 ==== Location
 
 Leaf tasks resulting from Swift dataflow may be assigned to a given
-processor by using the +@location+ annotation:
+processing location by using the +@location+ annotation:
 
 ----
 foreach i in [0:n-1] {
-  location L = location_from_rank(i);
+  location L = locationFromRank(i);
   @location=L f(i);
 }
 ----
 
 In this case, each +f(i)+ will execute on a different worker.
-
 This annotation is applied to the leaf task call.
+
+The +location+ type may constructed by the +location()+ builtin, which
+has the signature:
+----
+location L = location(rank, HARD|SOFT, RANK|NODE);
+----
+
+* +rank+ is the MPI rank.
+* +HARD+ indicates that the location specification must be met strictly.
+* +SOFT+ indicates that the location specification may be ignored if
+  there is otherwise no work available for a worker.  This is
+  noticeable during startup and shutdown, when there is typically
+  limited available work for workers.
+* +RANK+ indicates that the task must be run on the given +rank+.
+* +NODE+ indicates that the task may be run on any rank running on the
+  same node as the given +rank+.
+
+See the <<library_location,Location library>> for usage for helper
+functions to work with locations.
 
 ===== Hostmap
 
