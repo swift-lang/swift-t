@@ -48,6 +48,11 @@ global const float E = 2.7182818284590452354;
 @pure @builtin_op=ABS_FLOAT
 (float o) abs         (float i) "turbine"  "0.0.2" "abs_float";
 
+@pure
+(float o) cbrt (float i) {
+  o = pow(i, 1.0/3.0);
+}
+
 @pure @builtin_op=LOG
 (float o) ln (float x) "turbine" "0.7.0" "log_e";
 
