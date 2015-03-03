@@ -412,9 +412,10 @@ namespace eval turbine {
     }
 
     # Signal error that is caused by problem in user code
-    # I.e. that shouldn't include a stacktrace
+    # I.e. that shouldn't include a Tcl stack trace
     proc turbine_error { args } {
         global tcl_version
+        # puts "turbine_error: $args"
         set msg [ join $args ]
         if { $tcl_version >= 8.6 } {
             throw {TURBINE ERROR} $msg

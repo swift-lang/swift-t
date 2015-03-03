@@ -82,6 +82,8 @@
 // TODO: remove
 #define USE_FAST_MATCH_BRANCH
 
+static double tcl_version;
+
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             Tcl_Obj* list, int max,
@@ -163,6 +165,7 @@ static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
       coaster_staging_mode *staging_mode);
 #endif
 
+static void get_tcl_version(void);
 
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -170,6 +173,8 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(4);
   int amserver, rank, size;
+
+  get_tcl_version();
 
   int rc;
   rc = Tcl_GetIntFromObj(interp, objv[1], &amserver);
@@ -189,6 +194,16 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   log_setup(rank);
 
   return TCL_OK;
+}
+
+static void
+get_tcl_version()
+{
+  int major;
+  int minor;
+  Tcl_GetVersion(&major, &minor, NULL, NULL);
+
+  tcl_version = major + 0.1 * minor;
 }
 
 /*
@@ -952,7 +967,24 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
   int exitcode;
   exec_system(cmd, &exitcode);
   if (exitcode != 0)
-    return TCL_ERROR;
+  {
+    if (tcl_version > 8.5)
+    {
+      Tcl_Obj *msgs[1] = {
+        Tcl_ObjPrintf("shell: Command failed with exit code: %i",
+                      exitcode)
+      };
+      return turbine_user_error(interp, 1, msgs);
+    }
+    else
+    {
+      // Tcl 8.5
+      char t[128];
+      sprintf(t, "shell: Command failed with exit code: %i", exitcode);
+      Tcl_AddErrorInfo(interp, t);
+      return TCL_ERROR;
+    }
+  }
 
   return TCL_OK;
 }

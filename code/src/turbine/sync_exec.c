@@ -16,11 +16,15 @@ exec_system(const char* cmd, int* exitcode)
 {
   // printf("exec_system: %s\n", cmd);
 
-  int rc = system(cmd);
-  *exitcode = rc;
+  int status = system(cmd);
+  *exitcode = WEXITSTATUS(status);
 
-  if (rc != 0)
+  if (status != 0)
+  {
+    // printf("Command exited with code: %i\n", *exitcode);
+    // printf("Command was: %s\n", cmd);
     return false;
+  }
 
   return true;
 }

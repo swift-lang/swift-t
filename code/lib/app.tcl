@@ -54,24 +54,41 @@ namespace eval turbine {
   # an issue on the Cray.  Implemented in sync_exec.c
   proc exec_external { cmd kwopts args } {
 
+    global tcl_version
+
     app_init
 
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
 
+    set success true
     set tries 0
     while { true } {
-
+      incr tries
       log "shell: $cmd $args $stdios"
       set start [ clock milliseconds ]
-      if { ! [ catch { c::sync_exec $cmd {*}$args \
-                           < $stdin_src > $stdout_dst 2> $stderr_dst } \
-                 results options ] } {
-        # No error: success
+      if { $tcl_version >= 8.6 } {
+        try {
+          c::sync_exec $cmd {*}$args \
+              < $stdin_src > $stdout_dst 2> $stderr_dst
+        } trap {TURBINE ERROR} { msg } {
+          # Error: try again
+          app_error $tries $msg $cmd $args
+          continue
+        }
+        # Success
         break
+      } else {
+        # Tcl 8.5
+        if { ! [ catch { c::sync_exec $cmd {*}$args \
+                         < $stdin_src > $stdout_dst 2> $stderr_dst } \
+                     results options ] } {
+          # No error: success
+          break
+        }
+        # Error: try again
+        app_error $tries $options $cmd {*}$args
       }
-      app_error $tries $options $cmd {*}$args
-      incr tries
     }
     set stop [ clock milliseconds ]
     set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
@@ -79,28 +96,19 @@ namespace eval turbine {
   }
 
   proc app_error { tries options cmd args } {
-    set details [ dict get $options -errorcode ]
-    set einfo [ dict get $options -errorinfo ]
-    set ecmd [ list $cmd {*}$args ]
-    if { [ lindex $details 0 ] == "CHILDSTATUS" } {
-      # Child process failed
-      set epid [ lindex $details 1 ]
-      set ecode [ lindex $details 2 ]
-      set msg "external process $epid failed with exit code $ecode\
-            while executing '$ecmd'"
-    } elseif { [ lindex $details 0 ] == "POSIX" } {
-      set posixcode [ lindex $details 1 ]
-      set posixinfo [ lindex $details 2 ]
-      set msg "could not launch external command: '$ecmd'\
-          error code: $posixcode error info: '$posixinfo'"
+    global tcl_version
+    if { $tcl_version >= 8.6 } {
+      set msg $options
     } else {
-      set msg "external command failed in unexpected way: '$cmd $args'\
-          details: $details error info: '$einfo'"
+      # Tcl 8.5
+      set errorinfo [ dict get $options -errorinfo ]
+      set msg "$errorinfo"
     }
     variable app_retries
-    set retry [ expr $tries < $app_retries ]
+    set retry [ expr $tries <= $app_retries ]
     if { ! $retry } {
-      turbine_error $msg on: [ c_utils::hostname ]
+      turbine_error "app execution failed" on: [ c_utils::hostname ] \
+          "\n $msg" "\n command: $cmd"
     }
     app_retry $msg $tries
   }
