@@ -19,9 +19,8 @@
 #ifndef MATH_SWIFT
 #define MATH_SWIFT
 
-// TODO: remove global const once compiler bug fixed
-global const float PI = 3.14159265358979323846;
-global const float E = 2.7182818284590452354;
+float PI = 3.14159265358979323846;
+float E = 2.7182818284590452354;
 
 @pure @builtin_op=FLOOR
 (float o) floor           (float i) "turbine"  "0.0.2" "floor";
