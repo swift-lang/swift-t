@@ -5,6 +5,8 @@ import assert;
 assert(abs(PI - 3.1416) < 0.0001, "PI");
 assert(abs(E - 2.7183) < 0.0001, "E");
 
+assert(abs(cbrt(100) - 4.641588833612789) < 1e15, "cbrt");
+
 /* logarithms */
 assert(abs(log10(1000) - 3.0) < 1e-15, "log10");
 assert(abs(ln(E ** 2) - 2.0) < 1e-15, "ln");
