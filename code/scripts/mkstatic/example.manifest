@@ -30,7 +30,7 @@ lib_include = user_stuff.h
 # If provided, always runs this main script.  
 # Otherwise, the script file is specified at run time as the 
 # first command line argument (like tclsh)
-main_script = user_script.tcl
+main_script = user_script.tic
 
 # Additional bundled files that are extracted automatically when script
 # is run to a temporary directory.  The directory is controlled by the
