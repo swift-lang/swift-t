@@ -53,5 +53,10 @@ ARGS=getenv(ARGS)
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
+START=$( date +%s.%N )
 ${TURBINE_LAUNCHER} ${TCLSH} ${PROGRAM} ${ARGS}
-
+STOP=$( date +%s.%N )
+# Bash cannot do floating point arithmetic:
+DURATION=$( awk -v START=${START} -v STOP=${STOP} \
+            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+echo "MPIEXEC TIME: ${DURATION}"
