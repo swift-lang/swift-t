@@ -478,8 +478,11 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
                   "Internal error: should not get here with read reference "
                   "counting disabled");
 
-    // Should not go negative
-    check_verbose(d->read_refcount > 0 &&
+    /*
+      Should not go negative.  Can go to zero and back up if write
+      refcount still present.
+     */
+    check_verbose(d->read_refcount >= 0 &&
                    d->read_refcount + read_incr >= 0,
                 ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
                 ADLB_PRID" read_refcount: %i incr: %i",
