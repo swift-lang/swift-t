@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
@@ -29,6 +31,10 @@ public class LoadedModules {
 
   /** List of modules in order of inclusion */
   private List<LocatedModule> loadedModules = new ArrayList<LocatedModule>();
+
+  /** List of modules we've started compiling top level of */
+  private Set<ParsedModule> startedTopLevelCompile =
+              new HashSet<ParsedModule>();
 
   public List<LocatedModule> loadedModules() {
     return Collections.unmodifiableList(loadedModules);
@@ -192,5 +198,9 @@ public class LoadedModules {
       return fromPath(context, modulePath, preprocessed);
     }
 
+  }
+
+  public boolean needToCompileTopLevel(ParsedModule module) {
+    return startedTopLevelCompile.add(module);
   }
 }

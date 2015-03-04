@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,7 +39,6 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
-import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedPragmaException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
@@ -175,7 +173,7 @@ public class ASTWalker {
      */
     loadDefinitions(context, mainModule, builtins);
 
-    compileTopLevel(context, mainModule);
+    compileTopLevel(context, mainModule, builtins);
 
     compileFunctions(context);
   }
@@ -186,22 +184,34 @@ public class ASTWalker {
     loadModule(context, null, FrontendPass.DEFINITIONS, mainModule);
   }
 
-  private void compileTopLevel(GlobalContext context, LocatedModule mainModule)
-      throws UserException, UndefinedFunctionException, ModuleLoadException {
+  private void compileTopLevel(GlobalContext context, LocatedModule mainModule,
+      LocatedModule builtins)
+      throws UserException{
 
     LocalContext topLevelContext = LocalContext.topLevelContext(context);
 
-    Pair<ParsedModule, Boolean> loadedMainModule = modules.loadIfNeeded(context, mainModule);
-    assert(!loadedMainModule.val2);
 
-    varAnalyzer.walkTopLevel(context, loadedMainModule.val1);
+    List<LocatedModule> locatedModules = Arrays.asList(builtins, mainModule);
+    List<ParsedModule> parsedModules = new ArrayList<ParsedModule>();
+    for (LocatedModule module: locatedModules) {
+      Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(context,
+                                                              module);
+      assert(!loaded.val2);
+      parsedModules.add(loaded.val1);
+    }
+
+    for (ParsedModule module: parsedModules) {
+      varAnalyzer.walkTopLevel(context, module);
+    }
 
     backend.startFunction(FnID.ENTRY_FUNCTION, Var.NONE, Var.NONE,
                           ExecTarget.syncControl());
 
-    // Walk modules in statement order
-    loadModule(context, topLevelContext, FrontendPass.COMPILE_TOPLEVEL,
-               mainModule);
+    for (int i = 0; i < parsedModules.size(); i++) {
+      // Walk modules in statement order
+      walkFile(context, topLevelContext, locatedModules.get(i),
+              parsedModules.get(i), FrontendPass.COMPILE_TOPLEVEL);
+    }
 
     // Main function runs after top-level code if present
     List<FnOverload> mainOverloads = context.lookupFunction(
@@ -239,7 +249,7 @@ public class ASTWalker {
     LogHelper.debug(context, "Entered module " + module.canonicalName
                + " on pass " + pass);
     modules.enterModule(module, parsed);
-    walkTopLevel(context, topLevelContext, parsed.ast, pass);
+    walkTopLevel(context, topLevelContext, parsed, pass);
     modules.exitModule();
     LogHelper.debug(context, "Finishing module" + module.canonicalName
                + " for pass " + pass);
@@ -261,15 +271,15 @@ public class ASTWalker {
     context.syncFilePos(tree, modules.currentModule().moduleName(), lineMap());
   }
 
-  private void walkTopLevel(GlobalContext context, LocalContext topLevelContext, SwiftAST fileTree,
-      FrontendPass pass) throws UserException {
+  private void walkTopLevel(GlobalContext context, LocalContext topLevelContext,
+      ParsedModule module, FrontendPass pass) throws UserException {
     if (pass == FrontendPass.DEFINITIONS) {
-      walkTopLevelDefs(context, fileTree);
-    } else if (pass == FrontendPass.COMPILE_TOPLEVEL){
-      walkTopLevelCompileStatements(topLevelContext, fileTree);
+      walkTopLevelDefs(context, module);
+    } else if (pass == FrontendPass.COMPILE_TOPLEVEL) {
+      walkTopLevelCompileStatements(topLevelContext, module);
     } else {
       assert(pass == FrontendPass.COMPILE_FUNCTIONS);
-      walkTopLevelCompileFunctions(context, fileTree);
+      walkTopLevelCompileFunctions(context, module);
     }
   }
 
@@ -277,17 +287,17 @@ public class ASTWalker {
    * First pass:
    *  - Register (but don't compile) all functions and other definitions
    * @param context
-   * @param fileTree
+   * @param module
    * @throws UserException
    * @throws DoubleDefineException
    * @throws UndefinedTypeException
    */
-  private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
+  private void walkTopLevelDefs(GlobalContext context, ParsedModule module)
       throws UserException {
-    assert(fileTree.getType() == ExMParser.PROGRAM);
-    syncFilePos(context, fileTree);
+    assert(module.ast.getType() == ExMParser.PROGRAM);
+    syncFilePos(context, module.ast);
 
-    for (SwiftAST stmt: fileTree.children()) {
+    for (SwiftAST stmt: module.ast.children()) {
       int type = stmt.getType();
       syncFilePos(context, stmt);
       switch (type) {
@@ -340,19 +350,24 @@ public class ASTWalker {
   /**
    * Second pass:
    *  - Compile top-level statements
-   * @param globalContext
-   * @param fileTree
+   * @param context
+   * @param module
    * @throws UserException
    */
   private void walkTopLevelCompileStatements(LocalContext context,
-               SwiftAST fileTree) throws UserException {
-    assert(fileTree.getType() == ExMParser.PROGRAM);
+               ParsedModule module) throws UserException {
+    assert(module.ast.getType() == ExMParser.PROGRAM);
 
-    syncFilePos(context, fileTree);
+    if (!modules.needToCompileTopLevel(module)) {
+      // Don't visit more than once
+      return;
+    }
+
+    syncFilePos(context, module.ast);
 
     List<SwiftAST> stmts = new ArrayList<SwiftAST>();
 
-    for (SwiftAST stmt: fileTree.children()) {
+    for (SwiftAST stmt: module.ast.children()) {
       syncFilePos(context, stmt);
       int type = stmt.getType();
       if (TopLevel.isStatement(type)) {
@@ -379,12 +394,12 @@ public class ASTWalker {
    * @param fileTree
    * @throws UserException
    */
-  private void walkTopLevelCompileFunctions(GlobalContext context, SwiftAST fileTree)
-      throws UserException {
-    assert(fileTree.getType() == ExMParser.PROGRAM);
-    syncFilePos(context, fileTree);
+  private void walkTopLevelCompileFunctions(GlobalContext context,
+      ParsedModule module) throws UserException {
+    assert(module.ast.getType() == ExMParser.PROGRAM);
+    syncFilePos(context, module.ast);
 
-    for (SwiftAST stmt: fileTree.children()) {
+    for (SwiftAST stmt: module.ast.children()) {
       syncFilePos(context, stmt);
       int type = stmt.getType();
       if (type == ExMParser.DEFINE_FUNCTION) {
@@ -399,56 +414,6 @@ public class ASTWalker {
               LogHelper.tokName(type) + " at program top level");
       }
     }
-  }
-
-  /**
-   * Iterate over modules that were loaded during initial pass
-   * @param context
-   * @return
-   */
-  private Iterator<ParsedModule> moduleIterator(final Context context) {
-
-    return new Iterator<ParsedModule>() {
-      Iterator<LocatedModule> moduleIt = modules.loadedModules().iterator();
-      ParsedModule curr = null;
-
-      @Override
-      public void remove() {
-        throw new STCRuntimeError("Cannot remove");
-      }
-
-      @Override
-      public ParsedModule next() {
-        if (hasNext()) {
-          ParsedModule result = curr;
-          curr = null;
-          return result;
-        } else {
-          throw new STCRuntimeError("invalid iterator usage");
-        }
-      }
-
-      @Override
-      public boolean hasNext() {
-        if (curr != null) {
-          return true;
-        }
-        if (moduleIt.hasNext()) {
-          LocatedModule located = moduleIt.next();
-          Pair<ParsedModule, Boolean> loaded;
-          try {
-            loaded = modules.loadIfNeeded(context, located);
-          } catch (ModuleLoadException e) {
-            throw new STCRuntimeError("Unexpected: " + e.getMessage());
-          }
-          curr = loaded.val1;
-          boolean newlyLoaded = loaded.val2;
-          assert(!newlyLoaded);
-          return true;
-        }
-        return false;
-      }
-    };
   }
 
   /**
