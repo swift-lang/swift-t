@@ -2,10 +2,6 @@ import location;
 import assert;
 import io;
 
-// SKIP-O2-TEST
-// SKIP-O3-TEST
-// See issue #781
-
 @dispatch=WORKER
 (int rank, string host) f(int i) "turbine" "0.0.1" [
   "set <<rank>> [ adlb::rank ]; set <<host>> [ c_utils::hostname ] ; set after 5"
