@@ -13,12 +13,14 @@ all: guide.html internals.html gallery.html
 	@ $(ASCIIDOC) $(<)
 
 # Gallery has extra dependencies and uses M4 to assemble
-GALLERY = $(shell find gallery -name *.swift)
+GALLERY_SWIFT = $(shell find gallery -name "*.swift")
+GALLERY_SH    = $(shell find gallery -name "*.sh")
+GALLERY_CODE = $(GALLERY_SWIFT) $(GALLERY_SH)
 
-gallery.txt: code.m4 gallery.txt.m4 
+gallery.txt: code.m4 gallery.txt.m4
 	@ echo M4 $(<)
 	@ m4 $(^) > $(@)
 
-gallery.html: gallery.txt $(GALLERY)
+gallery.html: gallery.txt $(GALLERY_CODE)
 	@ echo ASCIIDOC $(<)
 	@ $(ASCIIDOC) $(<)
