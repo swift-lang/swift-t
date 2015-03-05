@@ -1,6 +1,13 @@
-#!/bin/sh
+#!/bin/zsh
 
-# BUILD.SH 
+# BUILD.SH
 # Build all STC docs
 
-make -f build.mk
+# Usage: ./build.sh <OPTIONS> <TARGETS>
+# Options: -B is forwarded to make
+# Targets: Passed to make
+
+B=""
+zparseopts -D -E B=B
+
+make ${B} -f build.mk ${*}
