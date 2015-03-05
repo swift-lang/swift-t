@@ -1,6 +1,7 @@
-#!/bin/bash 
+#!/bin/bash
 set -eu
 
+# Obtain the Turbine build configuration variables
 TURBINE=/homes/wozniak/sfw/fusion/compute/turbine-static
 source ${TURBINE}/scripts/turbine-build-config.sh
 
