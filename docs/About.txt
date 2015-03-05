@@ -18,6 +18,10 @@ To just build the examples tarball, run
 
 ./make-examples-tgz.zsh
 
+To just build the gallery tarball, run
+
+./make-gallery-tgz.zsh
+
 You can clean up the asciidoc-generated HTML and images with ./clean-html.sh
 
 The examples directories contain clean.sh scripts for cleanup.  These
