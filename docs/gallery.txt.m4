@@ -30,7 +30,7 @@ user list] with questions about these examples.
 
 EXAMPLE(hello-world/hello-world.swift)
 
-== Running shell commands
+== Swift/T for shell users
 
 This script converts itself to octal in +mtc.octal+.
 
@@ -45,7 +45,39 @@ Note that each +/bin/echo+ is eligible to run concurrently.  See
 link:guide.html#_invocation[Invocation] for how to run with many
 processes.
 
-== Reductions
+== Swift/T for cluster users
+
+It's easy to launch these kinds of workloads on a cluster.
+
+If using a plain host list:
+
+EXAMPLE(mtc/hosts.txt)
+
+Just run with:
+
+----
+stc mtc1.swift
+turbine -f hosts.txt -n 4 mtc1.tic
+----
+
+As shown, +turbine+ accepts an MPI hosts file and number of
+processes, just like +mpiexec+.
+
+A shorter, equivalent form of that command sequence is:
+
+----
+swift-t -t:f hosts.txt -n 4 mtc1.swift
+----
+
+On a PBS system, run with:
+
+----
+swift-t -m pbs -n 4 mtc1.swift
+----
+
+Many link:turbine-sites.html[other systems] are supported!
+
+== Swift/T for MapReduce users
 
 A simplified version of the MapReduce model is to just compute many
 things and assemble them together at the end.
@@ -58,7 +90,7 @@ EXAMPLE(mtc/mtc3.swift)
 Note that leading whitespace is trimmed by +file_lines()+, and +cat()+
 is part of the Swift/T standard library in module +unix+.
 
-== Recursion
+== Swift/T for recursive algorithms
 
 This script computes the given
 link:https://en.wikipedia.org/wiki/Fibonacci_number[Fibonacci number]:
@@ -88,10 +120,40 @@ EXAMPLE(merge-sort/merge.swift)
 This code runs the +sort+ invocations concurrently, limited only by
 available processors and data dependencies.
 
-== Python and Numpy
+== Swift/T for Python and Numpy users
+
+Swift/T can run Python as an ordinary external program or via a
+bundled interpreter!  You can load Python packages, including
+Python-wrapped native code- just set +PYTHONPATH+ and +import+ what
+you need.
 
 See this section for information about calling Python or Numpy:
 link:guide.html#_external_scripting_support[Swift/T Guide: Python]
+
+[[swift_tcl]]
+== Swift/T for Tcl users
+
+Swift/T is a great way to parallelize Tcl applications.  You can run
++tclsh+ as an ordinary external program, or use the bundled Tcl
+interpreter!  (Swift/T always has a Tcl interpreter for basic
+operation.)  You can load Tcl packages, including Tcl-wrapped native
+code- just set +SWIFT_PATH+ and +package require+ what you need.
+
+EXAMPLE(swift-tcl/tcl.swift)
+
+Run this with:
+----
+swift-t -p gallery/swift-tcl/tcl.swift
+----
+(+swift-t -p+ turns off the C preprocessor and allows the triple-quote
+syntax.)
+
+It outputs:
+----
+o should be: 7
+tcl: o=7
+o is: 7
+----
 
 == Static executables
 
