@@ -1,5 +1,6 @@
 import io;
 
+@dispatch=WORKER
 (int o) add(int i, int j) "turbine" "0.0"
 [
 """

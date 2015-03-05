@@ -26,7 +26,8 @@ Links:
 * Post to http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM
   user list] with questions about these examples.
 
-* These example scripts may be link:gallery.tar.gz[downloaded here].
+* These example scripts may be link:downloads/gallery.tar.gz[downloaded
+  here] (2KB).
 
 == Hello world
 
@@ -157,9 +158,14 @@ tcl: o=7
 o is: 7
 ----
 
+The +@dispatch=WORKER+ annotation allows +add()+ to run on any worker
+process in the run.  Multiple +add()+ s, or other functions, can run
+concurrently.  Swift automatically maintains ordering by managing data
+dependencies from function outputs to inputs.
+
 == Static executables
 
-This section demonstrates a complete, concrete example of the
+This section demonstrates a complete, concrete example of the optional
 link:guide.html#mkstatic[static executable] feature.  First, compose a
 Swift script.
 
