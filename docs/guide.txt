@@ -194,8 +194,8 @@ Additional arguments for advanced users/developers:
 +-C+:: Specify an output file for STC internal representation
 +-l+:: Specify log file for STC debug log
 +-L+:: Specify log file for more verbose STC debug log
-+-T+:: Enable a specific optimization.  See <<Optimizations>>
-+-t+:: Disable a specific compiler optimization.  See <<Optimizations>>
++-f+:: Enable a specific optimization.  See <<Optimizations>>
++-F+:: Disable a specific compiler optimization.  See <<Optimizations>>
 
 == Program structure
 
@@ -1979,8 +1979,8 @@ stc -O2 example.swift example.tcl
 stc -O3 example.swift example.tcl
 ----
 
-Individual optimizations can be toggled on using +-T <opt name>+
-or off with +-t <opt name>+, but this typically is only useful for
+Individual optimizations can be toggled on using +-f <opt name>+
+or off with +-F <opt name>+, but this typically is only useful for
 debugging.  You can find an up-to-date list of optimizations in
 the stc command-line help:
 
@@ -2358,6 +2358,8 @@ static library or object files in the manifest file.
 *** If building a fully static executable, you can
   provide the +-static+ flag, plus all object files, plus +-L+
   and +-l+ flags for all required library directories and libraries.
+  This requires that all libraries have static archives (+*.a+), 
+  including Tcl (simply build Tcl with +--disable-shared+).
 +
 ----
 gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...
