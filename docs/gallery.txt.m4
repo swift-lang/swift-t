@@ -28,18 +28,18 @@ user list] with questions about these examples.
 
 == Hello world
 
-example(hello-world/hello-world.swift)
+EXAMPLE(hello-world/hello-world.swift)
 
 == Running shell commands
 
 This script converts itself to octal in +mtc.octal+.
 
-example(mtc/mtc1.swift)
+EXAMPLE(mtc/mtc1.swift)
 
 This script splits itself into lines, where line _i_ is in file +out-+
 _i_ +.txt+
 
-example(mtc/mtc2.swift)
+EXAMPLE(mtc/mtc2.swift)
 
 Note that each +/bin/echo+ is eligible to run concurrently.  See
 link:guide.html#_invocation[Invocation] for how to run with many
@@ -53,7 +53,7 @@ things and assemble them together at the end.
 This script splits itself into lines, then reassembles the original
 script.
 
-example(mtc/mtc3.swift)
+EXAMPLE(mtc/mtc3.swift)
 
 Note that leading whitespace is trimmed by +file_lines()+, and +cat()+
 is part of the Swift/T standard library in module +unix+.
@@ -63,11 +63,11 @@ is part of the Swift/T standard library in module +unix+.
 This script computes the given
 link:https://en.wikipedia.org/wiki/Fibonacci_number[Fibonacci number]:
 
-example(fib/fib.swift)
+EXAMPLE(fib/fib.swift)
 
 Run it as:
 
-example(fib/run.sh)
+EXAMPLE(fib/run.sh)
 
 The +sys+ module provides the +argv()+ function, which provides a
 handy key/value interface for input values.
@@ -83,7 +83,7 @@ tclsh make-data.tcl
 Each of the 8 files is already sorted, and a merged result will be
 placed in +sorted.txt+.
 
-example(merge-sort/merge.swift)
+EXAMPLE(merge-sort/merge.swift)
 
 This code runs the +sort+ invocations concurrently, limited only by
 available processors and data dependencies.
@@ -92,6 +92,23 @@ available processors and data dependencies.
 
 See this section for information about calling Python or Numpy:
 link:guide.html#_external_scripting_support[Swift/T Guide: Python]
+
+== Static executables
+
+This section demonstrates a complete, concrete example of the
+link:guide.html#mkstatic[static executable] feature.  First, compose a
+Swift script.
+
+EXAMPLE(static-exec/hello.swift)
+
+Then, copy Turbine's example manifest file and edit.
+This manifest has all comments removed for simplicity.
+
+EXAMPLE(static-exec/hello.manifest)
+
+Then, build:
+
+EXAMPLE(static-exec/build.sh)
 
 ////
 Local Variables:

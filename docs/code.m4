@@ -1,5 +1,5 @@
 dnl Helper functions to generate Asciidoc
-define(`example',`
+define(`EXAMPLE',`
 *File:* +$1+
 ----
 include::gallery/$1[]
