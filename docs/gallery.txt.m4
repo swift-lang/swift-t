@@ -23,8 +23,10 @@ Links:
 
 * link:swift.html[General documentation for Swift/T]
 
-Post to http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM
-user list] with questions about these examples.
+* Post to http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM
+  user list] with questions about these examples.
+
+* These example scripts may be link:gallery.tar.gz[downloaded here].
 
 == Hello world
 
