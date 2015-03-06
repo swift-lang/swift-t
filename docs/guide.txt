@@ -2075,7 +2075,7 @@ your Swift program.
 
 +TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
 logging, assuming logging was not disabled at configure time.  Logging
-goes to tandard output by default.
+goes to standard output by default.
 
 +SWIFT_PATH+::
 +TURBINE_PATH+::
