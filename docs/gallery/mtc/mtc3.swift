@@ -7,7 +7,7 @@ app (file o) g(string s)
   "/bin/echo" s @stdout=o;
 }
 
-string lines[] = file_lines(input("mtc2.swift"));
+string lines[] = file_lines(input("mtc3.swift"));
 file fragments[];
 foreach line,i in lines
 {
