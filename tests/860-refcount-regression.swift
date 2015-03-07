@@ -2,6 +2,8 @@ import assert;
 import io;
 import random;
 
+/* Regression test for issue 781 */
+
 main() {
   actual_ranks = [1];
 

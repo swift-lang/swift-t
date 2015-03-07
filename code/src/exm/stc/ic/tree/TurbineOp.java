@@ -3683,6 +3683,17 @@ public class TurbineOp extends Instruction {
       case LOAD_STRUCT_RECURSIVE:
       case LOAD_BAG_RECURSIVE: {
         Var inVar = getInput(0).getVar();
+        if (Types.isContainer(inVar) &&
+            Types.isRef(Types.containerElemType(inVar))) {
+          /*
+           * TODO: see issue 781
+           * Reference counting of elements inside local containers does not
+           * work properly.  As a workaround, avoid piggybacking so that
+           * decrement gets moved to end of block.
+           */
+          return null;
+        }
+
         if (type == RefCountType.READERS) {
           long amt = increments.getCount(inVar);
           if (amt < 0) {
