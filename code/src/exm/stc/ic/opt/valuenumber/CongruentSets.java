@@ -745,13 +745,6 @@ class CongruentSets {
    * @return true if new entry in this scope
    */
   private boolean setCanonicalEntry(ArgOrCV val, Arg canonicalVal) {
-    /*if (canonicalVal.isVar() &&
-        canonicalVal.getVar().name().equals("__v:1") &&
-        val.isArg() && val.arg().isVar() &&
-        val.arg().getVar().name().equals("__v:7")) {
-      logger.warn("HERE: " + val + " = " + canonicalVal, new Exception());
-    }*/
-
     Arg prev = canonical.put(val, canonicalVal);
 
     // Need to update structure if it changes in parent
