@@ -661,12 +661,23 @@ public class ComputedValue<T> {
       return arg != null;
     }
 
+    public boolean isConstArg() {
+      return isArg() && arg().isConst();
+    }
+
     public List<ArgOrCV> asList() {
       return Collections.singletonList(this);
     }
 
     public Arg arg() {
       assert(arg != null) : "Not an arg " + this;
+      return arg;
+    }
+
+    /**
+     * @return arg if this is an arg, null otherwise
+     */
+    public Arg maybeArg() {
       return arg;
     }
 

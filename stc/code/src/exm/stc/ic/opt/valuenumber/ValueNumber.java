@@ -542,6 +542,11 @@ public class ValueNumber implements OptimizerPass {
       Congruences blockState = state.enterContBlock(
                     cont.variablePassing().isLocal(), stmtIndex);
 
+      // Add declarations for this block.
+      /* NOTE: if we later add declarations as part of transformations,
+       *   they will not automatically be included. We currently only make
+       *   an effort to add those in some cases
+       */
       blockState.varDeclarations(cont.constructDefinedVars());
       blockState.varDeclarations(contBlock.variables());
 
@@ -903,6 +908,7 @@ public class ValueNumber implements OptimizerPass {
 
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
                 insertPoint, req.out, filenameVals);
+    state.varDeclarations(outFetched);
 
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
@@ -972,6 +978,7 @@ public class ValueNumber implements OptimizerPass {
         // Generate instruction to fetch val, append to alt
         Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch,
                                   input.recursive, input.acquireWriteRefs);
+        state.varDeclarations(fetchedV.asList());
         Arg fetched = Arg.newVar(fetchedV);
         inVals.add(new Fetched<Arg>(toFetch, fetched));
         alreadyFetched.put(toFetch, fetched);
@@ -991,6 +998,7 @@ public class ValueNumber implements OptimizerPass {
             OptUtil.optFilenamePrefix(insertContext, outVar),
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
             VarProvenance.filenameOf(outVar));
+        state.varDeclarations(filenameVal.asList());
 
         if (outVar.isMapped() == Ternary.FALSE && output.preinitOutputMapping) {
           // Initialize unmapped var

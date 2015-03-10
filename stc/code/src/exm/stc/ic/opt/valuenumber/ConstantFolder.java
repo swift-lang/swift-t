@@ -24,7 +24,7 @@ public class ConstantFolder {
 
   /**
    * Do constant folding
-   * @param val
+   * @param val Value with canonicalized args
    * @return the folded value if successful.  Note that this may be
    *         a constant, a variable, or a computed value representing
    *         one of these stored in a future.  Returns null if not
@@ -155,9 +155,10 @@ public class ConstantFolder {
         // For some calling conventions, constants are used
         inputs.add(arg);
       } else {
-        Arg storedConst = sets.findRetrieveResult(arg, false);
-        if (storedConst != null && storedConst.isConst()) {
-          inputs.add(storedConst);
+        ArgOrCV storedConst = sets.findRetrieveResult(arg, false);
+        if (storedConst != null && storedConst.isArg() &&
+            storedConst.arg().isConst()) {
+          inputs.add(storedConst.arg());
         } else {
           inputs.add(arg);
         }
@@ -177,11 +178,11 @@ public class ConstantFolder {
       ComputedValue<Arg> val) {
     Var file = val.getInput(0).getVar();
     ArgCV filenameValCV = ComputedValue.filenameValCV(file);
-    Arg filenameValCanon = sets.findCanonicalInternal(filenameValCV);
-    if (filenameValCanon != null) {
+    ArgOrCV filenameValCanon = sets.findCanonicalInternal(filenameValCV);
+    if (filenameValCanon != null && filenameValCanon.isArg()) {
       // If we know filename of file, then just use that
       ArgOrCV folded = new ArgOrCV(Opcode.assignOpcode(Types.F_STRING),
-                               filenameValCanon);
+                               filenameValCanon.arg());
 
       return folded;
     }
