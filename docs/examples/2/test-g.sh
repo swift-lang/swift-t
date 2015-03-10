@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh -ex
 
 gcc -c g.c 
 gcc -c test-g.c 
