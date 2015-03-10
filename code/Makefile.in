@@ -161,6 +161,22 @@ TEST_DEPS :=
 include src/module.mk
 include tests/module.mk
 
+### Autoconf sanity:
+
+configure: bootstrap
+	@echo
+	@echo "Configuration is not up to date (bootstrap)!"
+	@echo "Run ./bootstrap and ./configure again."
+	@echo
+	@false
+
+Makefile: configure configure.ac Makefile.in
+	@echo
+	@echo "Configuration is not up to date (Makefile)!"
+	@echo "Run ./bootstrap and ./configure again."
+	@echo
+	@false
+
 ### DEPS
 
 deps: $(DEPS) $(TEST_DEPS)
@@ -169,7 +185,7 @@ ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS) $(TEST_DEPS)
 endif
 
-%.d: %.c
+%.d: %.c Makefile
 	$(Q) "  DEP		$(@)"
 	$(E) CC=$(CC) maint/depend.sh \
              $(dir $(<)) $(CFLAGS) $(<) > $(@)
