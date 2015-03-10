@@ -56,7 +56,7 @@ exmcutils: $(EXM_CUTILS_LIBS)
 
 ### Autoconf sanity:
 
-configure: autogen.sh
+configure: bootstrap
 	@echo
 	@echo "Configuration is not up to date (bootstrap)!"
 	@echo "Run ./bootstrap and ./configure again."
