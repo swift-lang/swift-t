@@ -1,16 +1,25 @@
 package exm.stc.common.util;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 
 
 /**
- * Union-find data structure that supports scoping
+ * Union-find data structure that supports scoping.
+ *
+ * The data-structure is structured as a tree.  Every merge of two sets
+ * affects the current node and any descendants, but has no effect in the
+ * parent or other ancestors.
+ *
+ * Merging in a leaf node of the tree is straightforward: only local data
+ * structures need to be updated.
+ *
+ * Merging in a non-leaf node is more
+ *
  * @param <T>
  */
 public class ScopedUnionFind<T> {
@@ -21,7 +30,10 @@ public class ScopedUnionFind<T> {
   private final ScopedUnionFind<T> parent;
 
   /**
-   * Internal mapping from member to canonical
+   * Internal mapping from member to canonical.
+   *
+   * We keep this up-to-date so every entry directly links an entry to its
+   * canonical.
    */
   private final TwoWayMap<T, T> canonical;
 
@@ -68,18 +80,21 @@ public class ScopedUnionFind<T> {
    * @param loser
    * @return unmodifiable collection of values that changed their canonical member
    */
-  public Collection<T> merge(T winner, T loser) {
+  public Set<T> merge(T winner, T loser) {
     T winnerCanon = lookup(winner);
     T loserCanon = lookup(loser);
 
-    List<T> affectedMembers = findAllMembers(loserCanon);
+    Set<T> affectedMembers = members(loserCanon);
 
     // TODO: add self link?
 
     // Already same set, do nothing
     if (affectedMembers.contains(winnerCanon)) {
-      return Collections.emptyList();
+      return Collections.emptySet();
     }
+
+    // Allow children to update before modifying here
+    notifyChanged(winnerCanon, loserCanon);
 
     for (T affectedMember: affectedMembers) {
       canonical.put(affectedMember, winnerCanon);
@@ -87,29 +102,28 @@ public class ScopedUnionFind<T> {
 
     subscribeToUpdates(winnerCanon);
 
-    notifyChanged(winnerCanon, loserCanon);
-
-    return Collections.unmodifiableList(affectedMembers);
+    return Collections.unmodifiableSet(affectedMembers);
   }
 
   /**
-   * Find all member of set associated with canonical value
+   * Find all member of set associated with canonical value, including
+   * the value itself
    * @param val
    * @return
    */
-  private List<T> findAllMembers(T canon) {
+  public Set<T> members(T canon) {
     // Search up to find all members
-    List<T> affected = new ArrayList<T>();
-    affected.add(canon);
+    Set<T> members = new HashSet<T>();
+    members.add(canon);
 
     ScopedUnionFind<T> curr = this;
     while (curr != null) {
-      // TODO: does this lead to duplicates?
-      affected.addAll(curr.canonical.getByValue(canon));
+      // TODO: can we avoid duplicates here?
+      members.addAll(curr.canonical.getByValue(canon));
       curr = curr.parent;
     }
 
-    return affected;
+    return members;
   }
 
   /**
@@ -119,7 +133,6 @@ public class ScopedUnionFind<T> {
   private void subscribeToUpdates(T x) {
     ScopedUnionFind<T> curr = this.parent;
     while (curr != null) {
-      System.err.println("Subscribe to " + x);
       curr.subscribed.put(x, this);
       curr = curr.parent;
     }
