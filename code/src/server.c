@@ -814,6 +814,7 @@ servers_idle()
       }
       if (has_requests != -1 && has_work != -1)
       {
+        #if DEBUG_ENABLED
         int request_count = request_counts[t + has_requests * xlb_types_size];
         int work_count = work_counts[t + has_work * xlb_types_size];
         // We have requests and work that could be matched up -
@@ -821,6 +822,7 @@ servers_idle()
         DEBUG("Unmatched work of type %i. %i work units are on server %i. "
               "%i requests are on server %i", t, work_count, has_work,
               request_count, has_requests);
+        #endif
         all_idle = false;
         break;
       }
