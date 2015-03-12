@@ -1,6 +1,6 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
-set -efu
+set -eu
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
