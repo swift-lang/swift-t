@@ -66,6 +66,7 @@ Included in comments in TEST.swift to modify test behavior
 NOTE: Tests that do not run should be linked to issues in exm-issues
 
 * SKIP-THIS-TEST: Skips test entirely.
+* COMPILE-ONLY-TEST: Skip running the test.
 * THIS-TEST-SHOULD-NOT-COMPILE: If TEST.swift compiles, test fails.  
   Used to test for Swift code that STC should reject.
 * THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails.
