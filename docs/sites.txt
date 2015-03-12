@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-Swift/T v0.7.0, December 2014
+Swift/T v0.8.0, March 2015
 
 ////
 
