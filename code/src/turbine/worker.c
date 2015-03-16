@@ -55,7 +55,6 @@ turbine_worker_loop(Tcl_Interp* interp, void* buffer, int buffer_size,
                               &answer_rank, &type_recved, &task_comm);
     if (code == ADLB_SHUTDOWN)
       break;
-    turbine_task_comm = task_comm;
     if (code != ADLB_SUCCESS)
     {
       printf("Get failed with code %i\n", code);
@@ -71,6 +70,9 @@ turbine_worker_loop(Tcl_Interp* interp, void* buffer, int buffer_size,
     //char* command = rule_id_end + 1;
 
     // DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
+
+    // Set task communicator for parallel tasks
+    turbine_task_comm = task_comm;
 
     // Don't set rule_id
     char *command = buffer;
