@@ -35,6 +35,31 @@ EXAMPLE(hello-world/hello-world.swift)
 
 == Swift/T for shell users
 
+Swift/T has a powerful shell interface in its
+link:guide.html#app_functions[app function] syntax.  Here are some
+advanced examples:
+
+To pass a whole command line into a generic app function, use: 
+
+EXAMPLE(sh-c/sh-1.swift)
+
+producing:
+----
+this is my message
+----
+
+Programs that are found in different locations on different machines
+can be accessed like this: 
+
+EXAMPLE(sh-c/sh-2.swift)
+
+You can put the "program configuration" section in a separate file and
+link:guide.html#modules[+import+] it. 
+
+If you prefer, you could also put separate definitions of +program+ in
+separate files and link:guide.html#cpp_macro[conditionally +#include+]
+them with STC support for the link:guide.html#cpp[C preprocessor].
+
 This script converts itself to octal in +mtc.octal+.
 
 EXAMPLE(mtc/mtc1.swift)
@@ -69,7 +94,7 @@ processes, just like +mpiexec+.
 A shorter, equivalent form of that command sequence is:
 
 ----
-swift-t -t:f hosts.txt -n 4 mtc1.swift
+swift-t -t f:hosts.txt -n 4 mtc1.swift
 ----
 
 On a PBS system, run with:

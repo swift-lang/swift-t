@@ -170,6 +170,7 @@ STC accepts the following arguments:
 compile-time. This may be found at runtime using the Swift
 <<argv,argument processing>> library. This option enables these
 arguments to be treated as compile-time constants for optimization.
+[[cpp_macro]] &nbsp;
 +-D _macro_=_value_+:: Define a C preprocessor macro.
 +-E+:: Just run the C preprocessor: do not compile the program.  The
 output goes into the STC output file (the second file name argument).
@@ -185,6 +186,7 @@ STC runs as a Java program.  You may use +-j+ to set the Java VM
 executable.  This Java VM must be compatible with the +javac+ used to
 compile STC.
 
+[[cpp]]
 By default, STC runs the user script through the C preprocessor
 (+cpp+), enabling arbitrary macro processing, etc.  The +-D+, +-E+,
 +-I+, and +-p+ options are relevant to this feature.
@@ -246,6 +248,7 @@ starting with # are supported:
 # This will work if source file is not preprocessed
 ----
 
+[[modules]]
 == Modules
 
 Swift has a module system that allows you to import function and variable
