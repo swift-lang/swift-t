@@ -12,6 +12,10 @@ To just generate HTML, simply run:
 
 ./make-stc-docs.zsh
 
+For the gallery, use: 
+
+./build.sh gallery.html
+
 You can preview the HTML locally in your browser before committing.
 
 To just build the examples tarball, run
