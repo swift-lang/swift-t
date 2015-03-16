@@ -522,14 +522,16 @@ See the script header for usage.
 export MODE=BGQ
 export PROJECT=<project_name>
 export QUEUE=<queue_name>
-swift-t -m cobalt -n 3 program.tic
+swift-t -m cobalt -n 3 program.swift
 ----
 +
 or:
 +
 ----
 export MODE=BGQ
+export PROJECT=<project_name>
 export QUEUE=<queue_name>
+stc program.swift
 turbine-cobalt-run.zsh -n 2 program.tic
 ----
 
