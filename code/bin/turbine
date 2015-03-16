@@ -38,7 +38,7 @@ EXEC_SCRIPT=0
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "f:hlm:n:vVxXC:d:e:i:o:s:t:" OPTION
+while getopts "f:hlm:n:vVxXC:d:e:i:o:s:St:" OPTION
 do
   case ${OPTION} in
     f)
@@ -55,6 +55,9 @@ do
       ;;
     n)
       PROCS=${OPTARG}
+      ;;
+    S)
+      PRINT_SETTINGS=1
       ;;
     v)
       REPORT_VERSION=1
@@ -88,6 +91,12 @@ TURBINE_BIN=$( dirname $0 )
 if [[ -z ${TURBINE_HOME} ]]
 then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
+fi
+
+if (( PRINT_SETTINGS ))
+then
+  cat ${TURBINE_HOME}/scripts/turbine-build-config.sh
+  exit 0
 fi
 
 # Load Turbine configuration settings
