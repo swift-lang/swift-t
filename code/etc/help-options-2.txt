@@ -2,6 +2,10 @@
           Provide an MPI machine file
    -h
           help
+   -S
+          Print build settings
+          Use 'source $(turbine -S)' to obtain Turbine build settings
+          when compiling leaf functions, etc.
    -v
           Report version number
    -V
