@@ -2,5 +2,5 @@
 
 ./build.sh
 
-turbine -n 4 test-f.tcl
+turbine -n 4 test-f.tic
 
