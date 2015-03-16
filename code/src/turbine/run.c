@@ -42,16 +42,16 @@
         context, in which case we will initialize MPI
  */
 turbine_code
-turbine_run(MPI_Comm comm, char* script_file,
-            int argc, char** argv, char* output)
+turbine_run(MPI_Comm comm, const char* script_file,
+            int argc, const char** argv, char* output)
 {
   return turbine_run_interp(comm, script_file, argc, argv, output,
                             NULL);
 }
 
 turbine_code
-turbine_run_interp(MPI_Comm comm, char* script_file,
-                   int argc, char** argv, char* output,
+turbine_run_interp(MPI_Comm comm, const char* script_file,
+                   int argc, const char** argv, char* output,
                    Tcl_Interp* interp)
 {
   // Read the user script
@@ -69,7 +69,7 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
 }
 
 turbine_code turbine_run_string(MPI_Comm comm, const char* script,
-                                int argc, char** argv, char* output,
+                                int argc, const char** argv, char* output,
                                 Tcl_Interp* interp)
 {
   bool created_interp = false;

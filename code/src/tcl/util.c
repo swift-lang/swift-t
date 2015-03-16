@@ -92,7 +92,8 @@ void turbine_tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
 }
 
 void
-turbine_tcl_set_string(Tcl_Interp* interp, char* name, char* value)
+turbine_tcl_set_string(Tcl_Interp* interp,
+                       const char* name, const char* value)
 {
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
                               NULL, Tcl_NewStringObj(value, -1), 0);
@@ -100,7 +101,8 @@ turbine_tcl_set_string(Tcl_Interp* interp, char* name, char* value)
 }
 
 void
-turbine_tcl_set_integer(Tcl_Interp* interp, char* name, int value)
+turbine_tcl_set_integer(Tcl_Interp* interp,
+                        const char* name, int value)
 {
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
                               NULL, Tcl_NewIntObj(value), 0);
@@ -108,7 +110,8 @@ turbine_tcl_set_integer(Tcl_Interp* interp, char* name, int value)
 }
 
 void
-turbine_tcl_set_long(Tcl_Interp* interp, char* name, long value)
+turbine_tcl_set_long(Tcl_Interp* interp,
+                     const char* name, long value)
 {
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
                               NULL, Tcl_NewLongObj(value), 0);
@@ -116,7 +119,8 @@ turbine_tcl_set_long(Tcl_Interp* interp, char* name, long value)
 }
 
 void
-turbine_tcl_set_wideint(Tcl_Interp* interp, char* name, int64_t value)
+turbine_tcl_set_wideint(Tcl_Interp* interp,
+                        const char* name, int64_t value)
 {
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
                               NULL, Tcl_NewWideIntObj(value), 0);
@@ -126,7 +130,7 @@ turbine_tcl_set_wideint(Tcl_Interp* interp, char* name, int64_t value)
 
 void
 turbine_tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
-             char* key, Tcl_Obj* value)
+                     const char* key, Tcl_Obj* value)
 {
   Tcl_Obj* k = Tcl_NewStringObj(key, -1);
   int rc = Tcl_DictObjPut(interp, dict, k, value);
@@ -135,7 +139,7 @@ turbine_tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
 
 void
 turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
-             char* key, Tcl_Obj** value)
+                     const char* key, Tcl_Obj** value)
 {
   Tcl_Obj* k = Tcl_NewStringObj(key, -1);
   int rc = Tcl_DictObjGet(interp, dict, k, value);
@@ -143,7 +147,7 @@ turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
 }
 
 Tcl_Obj*
-turbine_tcl_list_new(int count, char** strings)
+turbine_tcl_list_new(int count, const char** strings)
 {
   Tcl_Obj* objs[count];
   for (int i = 0; i < count; i++)
@@ -154,7 +158,7 @@ turbine_tcl_list_new(int count, char** strings)
 }
 
 Tcl_Obj*
-turbine_tcl_list_from_array_ints(Tcl_Interp *interp, int* vals, int count)
+turbine_tcl_list_from_array_ints(Tcl_Interp *interp, const int* vals, int count)
 {
   Tcl_Obj* result = Tcl_NewListObj(0, NULL);
   for (int i = 0; i < count; i++)
