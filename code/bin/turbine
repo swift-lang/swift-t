@@ -95,7 +95,7 @@ fi
 
 if (( PRINT_SETTINGS ))
 then
-  cat ${TURBINE_HOME}/scripts/turbine-build-config.sh
+  echo ${TURBINE_HOME}/scripts/turbine-build-config.sh
   exit 0
 fi
 

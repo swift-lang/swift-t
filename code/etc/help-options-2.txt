@@ -3,7 +3,7 @@
    -h
           help
    -S
-          Print build settings
+          Print build settings filename
           Use 'source $(turbine -S)' to obtain Turbine build settings
           when compiling leaf functions, etc.
    -v
