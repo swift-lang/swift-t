@@ -71,7 +71,13 @@ Complete code samples for each example are found in this tar file:
 
 * link:downloads/examples.tar.gz[] (12 KB)
 
-NOTE: In many scripts, we use shell options +set -ex+.
+When you unpack this file, you will have a directory +examples/+.  
+Change to this directory and +source setup.sh+ to obtain build
+settings. 
+
+You can use the +clean.sh+ scripts to clean up. 
+
+NOTE: We often use shell options +set -eux+.
 
 NOTE: You may need to modify some scripts to set the location of Tcl
 or other system tools.
