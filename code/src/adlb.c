@@ -42,7 +42,7 @@
 #include "data.h"
 #include "debug.h"
 #include "debug_symbols.h"
-#include "hostmap.h"
+#include "location.h"
 #include "mpe-tools.h"
 #include "mpi-tools.h"
 #include "notifications.h"
@@ -525,7 +525,8 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   assert(rc == MPI_SUCCESS);
   // This is an MPI 3 function:
   rc = MPI_Comm_create_group(adlb_comm, group, 0, comm);
-  assert(rc == MPI_SUCCESS);
+  valgrind_assert(rc == MPI_SUCCESS);
+  MPI_Group_free(&group);
   TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
   #endif
 
