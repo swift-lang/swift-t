@@ -65,7 +65,7 @@ static void setup_leaders(int* leader_ranks, int leader_rank_count);
 static void rankmap_add(bool am_server, int rank, const char* name);
 
 bool
-xlb_hostmap_init(bool am_server)
+xlb_location_init(bool am_server)
 {
   report_ranks();
 
@@ -297,8 +297,8 @@ const char *xlb_rankmap_lookup(int rank)
 static void
 xlb_hostmap_free()
 {
-  if (hostmap_mode_current != HOSTMAP_DISABLED &&
-      hostmap_mode_current != HOSTMAP_LEADERS) return;
+  if (hostmap_mode_current == HOSTMAP_DISABLED ||
+      hostmap_mode_current == HOSTMAP_LEADERS) return;
   for (int i = 0; i < hostmap.capacity; i++)
   {
     table_entry *head = &hostmap.array[i];
@@ -315,6 +315,7 @@ xlb_hostmap_free()
         char* name = e->key;
         struct list_i* L = e->data;
         free(name);
+
         list_i_free(L);
 
         if (!is_head)
@@ -329,8 +330,12 @@ xlb_hostmap_free()
 }
 
 void
-xlb_hostmap_finalize()
+xlb_location_finalize()
 {
+  if (xlb_am_server)
+    // The host names in this table are also in the hostmap table
+    // and thus are already freed.
+    table_ip_clear(&rankmap);
   xlb_hostmap_free();
   table_ip_clear(&rankmap);
 }

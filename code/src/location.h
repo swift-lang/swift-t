@@ -11,8 +11,8 @@
 #ifndef LOCATION_H
 #define LOCATION_H
 
-bool xlb_hostmap_init(bool am_server);
-void xlb_hostmap_finalize(void);
+bool xlb_location_init(bool am_server);
+void xlb_location_finalize(void);
 
 const char *xlb_rankmap_lookup(int rank);
 

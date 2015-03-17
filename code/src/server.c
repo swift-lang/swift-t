@@ -883,6 +883,8 @@ xlb_server_shutdown()
   return ADLB_SUCCESS;
 }
 
+static void worker_host_finalize(void);
+
 /**
    Actually shut down
  */
@@ -894,9 +896,18 @@ server_shutdown()
   xlb_workq_finalize();
   xlb_steal_finalize();
   xlb_sync_finalize();
+  worker_host_finalize();
 
   xlb_engine_finalize();
   return ADLB_SUCCESS;
+}
+
+static void
+worker_host_finalize(void)
+{
+  for (int i = 0; i < xlb_my_worker_host_count; i++)
+    dyn_array_i_release(&xlb_my_host_workers[i]);
+  free(xlb_my_host_workers);
 }
 
 /* Print out any final statistics, if enabled */

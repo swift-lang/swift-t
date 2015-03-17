@@ -179,7 +179,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   xlb_am_server = (xlb_comm_rank >= xlb_workers);
 
   // Need hostmap for server init
-  bool ok = xlb_hostmap_init(xlb_am_server);
+  bool ok = xlb_location_init(xlb_am_server);
   CHECK_MSG(ok, "Hostmap init failed");
 
   if (!xlb_am_server)
@@ -1975,7 +1975,6 @@ adlb_code
 ADLBP_Finalize()
 {
   TRACE_START;
-
   adlb_code rc;
   int flag;
   MPI_Finalized(&flag);
@@ -2006,8 +2005,7 @@ ADLBP_Finalize()
     }
   }
 
-  xlb_hostmap_finalize();
-
+  xlb_location_finalize();
   xlb_dsyms_finalize();
 
   bool failed;
