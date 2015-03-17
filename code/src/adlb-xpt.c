@@ -104,6 +104,9 @@ adlb_code ADLB_Xpt_finalize(void)
     rc = xlb_xpt_write_close(&xpt_state);
     ADLB_CHECK(rc);
   }
+  
+  // Cleanup any files open for reading
+  table_free_callback(&xlb_xpt_open_read, false, free_open_read);
 
   return ADLB_SUCCESS;
 }
@@ -466,8 +469,6 @@ static adlb_code xpt_check_flush(void)
     last_flush_time = now;
   }
 
-  // Cleanup any files open for reading
-  table_free_callback(&xlb_xpt_open_read, false, free_open_read);
   return ADLB_SUCCESS;
 }
 
