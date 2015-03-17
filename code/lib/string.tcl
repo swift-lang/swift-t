@@ -77,7 +77,8 @@ namespace eval turbine {
 
     proc substring_impl { s i n } {
         set last [ expr {$i + $n - 1} ]
-        return [ string range $s $i $n ]
+        set result [ string range $s $i $last ]
+        return $result
     }
 
     # This accepts an optional delimiter
