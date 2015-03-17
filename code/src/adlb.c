@@ -58,7 +58,7 @@ void adlb_exit_handler(void);
 /** True after a Get() receives a shutdown code */
 static bool got_shutdown = false;
 
-/** Cached copy of MPI world group */
+/** Cached copy of ADLB world group */
 static MPI_Group adlb_group;
 
 static int mpi_version;
