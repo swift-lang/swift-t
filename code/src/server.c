@@ -39,7 +39,7 @@
 #include "data.h"
 #include "debug.h"
 #include "handlers.h"
-#include "hostmap.h"
+#include "location.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "refcount.h"

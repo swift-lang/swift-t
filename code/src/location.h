@@ -1,6 +1,6 @@
 
 /*
- * hostmap.h
+ * location.h
  *
  *  Implements hostmap and rankmap features.
  *
@@ -8,8 +8,8 @@
  *      Author: wozniak
  */
 
-#ifndef HOSTMAP_H
-#define HOSTMAP_H
+#ifndef LOCATION_H
+#define LOCATION_H
 
 bool xlb_hostmap_init(bool am_server);
 void xlb_hostmap_finalize(void);

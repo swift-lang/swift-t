@@ -19,7 +19,7 @@
 #include "checks.h"
 #include "common.h"
 #include "debug.h"
-#include "hostmap.h"
+#include "location.h"
 
 typedef enum
 {
