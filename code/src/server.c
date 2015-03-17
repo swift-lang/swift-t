@@ -899,6 +899,12 @@ server_shutdown()
   worker_host_finalize();
 
   xlb_engine_finalize();
+
+  if (xlb_server_ready_work.count > 0)
+    printf("REMAINING READY WORK: %i\n",
+           xlb_server_ready_work.count);
+  free(xlb_server_ready_work.work);
+
   return ADLB_SUCCESS;
 }
 

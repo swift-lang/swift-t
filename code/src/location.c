@@ -335,7 +335,7 @@ xlb_location_finalize()
   if (xlb_am_server)
     // The host names in this table are also in the hostmap table
     // and thus are already freed.
-    table_ip_clear(&rankmap);
+    table_ip_free_callback(&rankmap, false, NULL);
   xlb_hostmap_free();
   table_ip_clear(&rankmap);
 }
