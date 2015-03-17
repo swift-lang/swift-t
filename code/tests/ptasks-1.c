@@ -40,7 +40,7 @@ main()
 
   // Build up arguments
   int argc = 3;
-  char* argv[argc];
+  const char* argv[argc];
   argv[0] = "howdy";
   argv[1] = "ok";
   argv[2] = "bye";
@@ -57,6 +57,7 @@ main()
                        interp);
   assert(rc == TURBINE_SUCCESS);
 
+  MPI_Comm_free(&comm);
   MPI_Finalize();
   return 0;
 }
@@ -91,5 +92,6 @@ ptasks_1_impl(MPI_Comm comm, char* arg1)
   printf("size: %i\n", size);
   MPI_Barrier(comm);
   printf("arg1: %s\n", arg1);
+  MPI_Comm_free(&comm);
   return TCL_OK;
 }
