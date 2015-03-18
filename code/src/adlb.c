@@ -257,14 +257,14 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
     }
   }
 
-  if (!xlb_s.layout.am_server)
-  {
-    MPI_Comm_split(comm, 0, xlb_s.layout.rank, &xlb_s.worker_comm);
-  }
-  else
+  if (xlb_s.layout.am_server)
   {
     MPI_Comm_split(comm, 1, xlb_s.layout.rank-xlb_s.layout.workers,
                    &xlb_s.server_comm);
+  }
+  else
+  {
+    MPI_Comm_split(comm, 0, xlb_s.layout.rank, &xlb_s.worker_comm);
   }
 
   // We only need hostname to rank mapping for setup

@@ -50,6 +50,7 @@ xlb_layout_init(int comm_size, int comm_rank, int nservers,
   layout->master_server_rank = layout->size - layout->servers;
 
   layout->am_server = (layout->rank >= layout->workers);
+  layout->am_leader = false; // Filled in later
 
   if (layout->am_server)
   {
