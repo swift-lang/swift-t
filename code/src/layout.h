@@ -163,4 +163,13 @@ xlb_workers_count_compute(const struct xlb_layout* layout)
   return count;
 }
 
+__attribute__((always_inline))
+static inline int host_idx_from_rank(const struct xlb_layout *layout,
+                  const struct xlb_workers_layout *workers, int rank)
+{
+  assert(xlb_worker_maps_to_server(layout, rank, layout->rank));
+
+  return workers->worker2host[xlb_my_worker_idx(layout, rank)];
+}
+
 #endif // __LAYOUT_H

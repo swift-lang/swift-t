@@ -54,7 +54,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx);
 static int targeted_work_entries(int work_types, int my_workers);
 static inline heap_iu32_t *targeted_work_heap(int rank, int type);
 static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type);
-static inline int host_idx_from_rank(int rank);
+static inline int host_idx_from_rank2(int rank);
 
 static void wu_array_finalize(void);
 static inline xlb_work_unit *
@@ -252,14 +252,6 @@ static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type)
   return &host_targeted_work[idx];
 }
 
-__attribute__((always_inline))
-static inline int host_idx_from_rank(int rank)
-{
-  assert(xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank));
-
-  return xlb_s.workers.worker2host[xlb_my_worker_idx(&xlb_s.layout, rank)];
-}
-
 adlb_code
 xlb_workq_add(xlb_work_unit* wu)
 {
@@ -337,7 +329,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
     else
     {
       assert(wu->opts.accuracy == ADLB_TGT_ACCRY_NODE);
-      int host_idx = host_idx_from_rank(wu->target);
+      int host_idx = host_idx_from_rank2(wu->target);
       H = host_targeted_work_heap(host_idx, wu->type);
     }
     bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
@@ -471,7 +463,7 @@ wu_array_try_remove_host_targeted(uint32_t wu_idx, int type, int host_idx,
     was returned.
    */
   if (wu != NULL && wu->type == type &&
-      host_idx_from_rank(wu->target) == host_idx &&
+      host_idx_from_rank2(wu->target) == host_idx &&
       wu->opts.priority == priority) {
     ptr_array_remove(&wu_array, wu_idx);
     return wu;
@@ -509,7 +501,7 @@ xlb_workq_get(int target, int type)
   }
 
   // Targeted work was found
-  wu = pop_host_targeted(type, host_idx_from_rank(target));
+  wu = pop_host_targeted(type, host_idx_from_rank2(target));
   if (wu != NULL)
   {
     return wu;
@@ -798,6 +790,16 @@ heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
   }
   return ADLB_SUCCESS;
 }
+
+/*
+  Convenience function
+ */
+static inline int host_idx_from_rank2(int rank)
+{
+  return host_idx_from_rank(&xlb_s.layout, &xlb_s.workers,
+                            rank);
+}
+
 
 static adlb_code
 rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
