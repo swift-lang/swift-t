@@ -33,16 +33,13 @@ build_host2workers(const struct xlb_layout *layout, int worker_count,
 
 
 adlb_code
-xlb_layout_init(MPI_Comm comm, int nservers, struct xlb_layout *layout)
+xlb_layout_init(int comm_size, int comm_rank, int nservers,
+                struct xlb_layout *layout)
 {
-  int rc;
+  layout->size = comm_size;
+  layout->rank = comm_rank;
 
-  rc = MPI_Comm_size(comm, &layout->size);
-  MPI_CHECK(rc);
-  rc = MPI_Comm_rank(comm, &layout->rank);
-  MPI_CHECK(rc);
-
-  gdb_spin(xlb_s.layout.rank);
+  gdb_spin(layout->rank);
 
   layout->servers = nservers;
   layout->workers = layout->size - layout->servers;

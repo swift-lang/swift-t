@@ -80,7 +80,8 @@ struct xlb_workers_layout {
 };
 
 adlb_code
-xlb_layout_init(MPI_Comm comm, int nservers, struct xlb_layout *layout);
+xlb_layout_init(int comm_size, int comm_rank, int nservers,
+                struct xlb_layout *layout);
 
 void
 xlb_layout_finalize(struct xlb_layout *layout);
