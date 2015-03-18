@@ -10,8 +10,10 @@ path+=( $MPICH/bin $TURBINE/bin )
 set -eu
 # set -x
 
+rm -fv ./*.lastrun(.N)
+
 # This is allowed to fail- we scan for output below
-make test_results || true
+make -k test_results || true
 
 cd tests
 SUITE_RESULT="result_aggregate.xml"
@@ -26,26 +28,40 @@ message()
 inspect_results()
 {
   print "<testsuites>"
-  for result in *.result
+  for test_lastrun in ./*.lastrun(.N)
   do
-    if grep "ERROR" ${result} > /dev/null
+    local test_path=${test_lastrun%.lastrun}
+    local test_name=$(basename ${test_path})
+    local test_result="${test_path}.result"
+    local test_tmp="${test_path}.tmp"
+    local test_out="${test_path}.out"
+
+    if [[ -f "${test_result}" ]]
     then
-      message "Found ERROR in ${result}"
-      print "    <testcase name=\"${result}\" >"
+      # Success:
+      print "    <testcase name=\"${test_name}\" />"
+    else
+      message "Failure - ${test_result} not present"
+      print "    <testcase name=\"${test_name}\" >"
       print "        <failure type=\"generic\">"
-      print "Result file contents:"
-      cat ${result}
-      print ""
-      print ""
-      print "Out file contents:"
-      print "<![CDATA["
-      cat ${result%.result}.out
-      print "]]>"
+
+      if [[ -f "${test_tmp}" ]]
+      then
+        print "Result tmp file contents:"
+        cat "${test_tmp}
+        print ""
+        print ""
+      fi
+
+      if [[ -f "${test_out}" ]]
+      then
+        print "Out file contents:"
+        print "<![CDATA["
+        cat "${test_out}"
+        print "]]>"
+      fi
       print "        </failure> "
       print "    </testcase>"
-    else
-      # Success:
-      print "    <testcase name=\"${result}\" />"
     fi
   done
   print "</testsuites>"
