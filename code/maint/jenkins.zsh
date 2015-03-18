@@ -38,4 +38,7 @@ make V=1 install
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
 
+make V=1 tests
+make V=1 test_results
+
 exit 0
