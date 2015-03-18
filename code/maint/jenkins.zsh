@@ -65,7 +65,7 @@ inspect_results() {
     if [[ ! -f "${test_result}" ]]
     then
       # Failure info
-      message "Found ERROR in ${result}"
+      message "Found ERROR in ${test_name}"
       print "        <failure type=\"generic\">"
       print "Script output file contents:"
       cat ${test_tmp}
