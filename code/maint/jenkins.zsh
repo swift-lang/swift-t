@@ -38,7 +38,53 @@ make V=1 install
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
 
-make V=1 tests
-make V=1 test_results
+SUITE_RESULT="result_aggregate.xml"
+rm -fv ${SUITE_RESULT}
+
+rm -fv tests/*.result(.N)
+
+make V=1 -k test_results || true
+
+# Print a message on stderr to avoid putting it in the Jenkins XML
+message()
+{
+  print -u 2 ${*}
+}
+
+inspect_results() {
+  for test_script in tests/*.sh(.N)
+  do
+    local test_path=${test_script%.sh}
+    local test_name=$(basename ${test_path})
+    local test_result="${test_path}.result"
+    local test_tmp="${test_path}.tmp"
+    local test_out="${test_path}.out"
+
+    print "    <testcase name=\"${test_name}\" >"
+
+    if [[ ! -f "${test_result}" ]]
+    then
+      # Failure info
+      message "Found ERROR in ${result}"
+      print "        <failure type=\"generic\">"
+      print "Script output file contents:"
+      cat ${test_tmp}
+      print ""
+      print ""
+      if [[ -f "${test_out}" ]]
+      then
+        print "Out file contents:"
+        print "<![CDATA["
+        cat ${test_out}
+        print "]]>"
+      fi
+      print "        </failure> "
+    fi
+
+    print "    </testcase>"
+  done
+}
+
+inspect_results > ${SUITE_RESULT}
 
 exit 0
