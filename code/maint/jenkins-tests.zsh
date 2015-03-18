@@ -48,7 +48,9 @@ inspect_results()
       if [[ -f "${test_tmp}" ]]
       then
         print "Result tmp file contents:"
+        print "<![CDATA["
         cat "${test_tmp}
+        print "]]>"
         print ""
         print ""
       fi
