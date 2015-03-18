@@ -92,26 +92,26 @@ static inline struct list2_item *alloc_list2_node(void);
 static inline void free_list2_node(struct list2_item *node);
 
 adlb_code
-xlb_requestqueue_init()
+xlb_requestqueue_init(int ntypes, const xlb_wkrs_layout *workers)
 {
-  assert(xlb_s.workers.count >= 0);
-  assert(xlb_s.types_size >= 1);
+  assert(workers->count >= 0);
+  assert(ntypes >= 1);
 
-  targets = malloc(sizeof(targets[0]) * (size_t)xlb_s.workers.count);
+  targets = malloc(sizeof(targets[0]) * (size_t)workers->count);
   ADLB_MALLOC_CHECK(targets);
 
-  for (int i = 0; i < xlb_s.workers.count; i++)
+  for (int i = 0; i < workers->count; i++)
   {
     targets[i].item = NULL;
   }
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_s.types_size);
+  type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
   ADLB_MALLOC_CHECK(type_requests);
-  for (int i = 0; i < xlb_s.types_size; i++)
+  for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
 
   // Allocate one list node per worker - otherwise will fallback to malloc/free
-  adlb_code ac = list2_node_pool_init(xlb_s.workers.count);
+  adlb_code ac = list2_node_pool_init(workers->count);
   ADLB_CHECK(ac);
 
   request_queue_size = 0;

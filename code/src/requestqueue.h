@@ -37,7 +37,8 @@ typedef struct
   void *_internal; /* Internal pointer, caller should not touch */
 } xlb_request_entry; 
 
-adlb_code xlb_requestqueue_init(void);
+adlb_code
+xlb_requestqueue_init(int ntypes, const xlb_wkrs_layout *workers);
 
 /*
   Add a request to the queue

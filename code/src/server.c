@@ -155,7 +155,7 @@ xlb_server_init(const struct xlb_state *state)
   list_i_init(&workers_shutdown);
   code = xlb_workq_init(state->types_size, &state->workers);
   ADLB_CHECK(code);
-  code = xlb_requestqueue_init();
+  code = xlb_requestqueue_init(state->types_size, &state->workers);
   ADLB_CHECK(code);
   xlb_data_init(state->layout.servers, xlb_server_number(state->layout.rank));
   code = setup_idle_time();
