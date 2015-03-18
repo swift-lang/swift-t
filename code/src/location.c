@@ -30,6 +30,10 @@ struct xlb_hostmap {
   struct table map;
 };
 
+static adlb_code
+hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
+                size_t name_length);
+
 static void
 report_ranks(MPI_Comm comm)
 {
@@ -61,25 +65,67 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
   struct utsname u;
   uname(&u);
 
-  // Length of nodenames
-  hostnames->name_length = sizeof(u.nodename);
+  adlb_code ac = hostnames_alloc(hostnames, comm_size,
+                                  sizeof(u.nodename));
+  ADLB_CHECK(ac);
 
-  hostnames->my_name = malloc(hostnames->name_length);
-  ADLB_MALLOC_CHECK(hostnames->my_name);
-
-  // This prevents valgrind errors:
-  memset(hostnames->my_name, 0, hostnames->name_length);
   strcpy(hostnames->my_name, u.nodename);
-
-  hostnames->all_names = malloc((size_t)comm_size *
-                hostnames->name_length * sizeof(char));
-  ADLB_MALLOC_CHECK(hostnames->all_names);
 
   rc = MPI_Allgather(
       hostnames->my_name,   (int)hostnames->name_length, MPI_CHAR,
       hostnames->all_names, (int)hostnames->name_length, MPI_CHAR, comm);
   MPI_CHECK(rc);
 
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Helper to allocate right size of buffers for name lenght
+ */
+static adlb_code
+hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
+                size_t name_length)
+{
+
+  // Length of nodenames
+  hostnames->name_length = name_length;
+
+  hostnames->my_name = malloc(name_length);
+  ADLB_MALLOC_CHECK(hostnames->my_name);
+
+  // This prevents valgrind errors:
+  memset(hostnames->my_name, 0, name_length);
+
+  hostnames->all_names = malloc((size_t)comm_size *
+                      name_length * sizeof(char));
+  ADLB_MALLOC_CHECK(hostnames->all_names);
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_hostnames_fill(struct xlb_hostnames *hostnames,
+                 const char **names, int nranks, int my_rank)
+{
+  size_t max_name_length = 0;
+
+  for (int i = 0; i < nranks; i++)
+  {
+    size_t name_length = strlen(names[i]);
+    max_name_length = name_length > max_name_length ? name_length
+                                               : max_name_length;
+  }
+
+  adlb_code ac = hostnames_alloc(hostnames, nranks,
+                                max_name_length + 1);
+  ADLB_CHECK(ac);
+
+  for (size_t i = 0; i < nranks; i++)
+  {
+    strcpy(&hostnames->all_names[i * max_name_length], names[i]);
+  }
+
+  strcpy(hostnames->my_name, names[my_rank]);
   return ADLB_SUCCESS;
 }
 

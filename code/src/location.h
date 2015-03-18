@@ -55,6 +55,13 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames);
 
 /**
+  Fill hostnames structure with hostname per rank
+ */
+adlb_code
+xlb_hostnames_fill(struct xlb_hostnames *hostnames,
+              const char **names, int nranks, int my_rank);
+
+/**
   Note: no error checking, must make sure rank is valid
  */
 const char *
