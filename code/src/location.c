@@ -369,4 +369,6 @@ xlb_hostmap_free(struct xlb_hostmap *hostmap)
     }
   }
   table_release(&hostmap->map);
+
+  free(hostmap);
 }

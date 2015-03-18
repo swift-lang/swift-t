@@ -12,6 +12,7 @@
 static adlb_code run(void);
 static adlb_code init(void);
 static adlb_code warmup(void);
+static adlb_code finalize(void);
 
 static void make_fake_hosts(const char **fake_hosts, int comm_size);
 static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
@@ -43,6 +44,9 @@ static adlb_code run(void)
   ADLB_CHECK(ac);
 
   ac = warmup();
+  ADLB_CHECK(ac);
+
+  ac = finalize();
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
@@ -146,6 +150,19 @@ static adlb_code init(void)
   ADLB_CHECK(ac);
 
   xlb_hostnames_free(&hostnames);
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Cleanup modules to free memory, etc
+ */
+static adlb_code finalize(void)
+{
+  xlb_workq_finalize();
+  xlb_requestqueue_shutdown();
+  xlb_layout_finalize(&xlb_s.layout);
+  xlb_hostmap_free(xlb_s.hostmap);
 
   return ADLB_SUCCESS;
 }
