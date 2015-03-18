@@ -133,7 +133,7 @@ xlb_add_tag_name(int tag, char* name)
     exit(1);
   }
   tag_names[tag] = t;
-  if (xlb_comm_rank == 0)
+  if (xlb_s.layout.rank == 0)
     DEBUG("TAG: %i => %s", tag, name);
 }
 

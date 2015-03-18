@@ -37,43 +37,27 @@
 
 char xlb_xfer[ADLB_XFER_SIZE];
 
-int xlb_comm_size;
-int xlb_comm_rank = -1;
-int xlb_servers;
-int xlb_workers;
-int xlb_my_server;
-bool xlb_am_server;
-bool xlb_am_leader;
-int xlb_master_server_rank;
-int xlb_types_size;
-int* xlb_types;
-bool xlb_read_refcount_enabled;
-double xlb_start_time;
-bool xlb_perf_counters_enabled;
-
-MPI_Comm adlb_comm;
-MPI_Comm adlb_server_comm;
-MPI_Comm adlb_worker_comm;
-MPI_Comm adlb_leader_comm;
+struct xlb_state xlb_s;
 
 int
 xlb_random_server()
 {
-  int result = random_between(xlb_master_server_rank, xlb_comm_size);
+  int result = random_between(xlb_s.layout.master_server_rank,
+                              xlb_s.layout.size);
   return result;
 }
 
 double
 xlb_wtime(void)
 {
-  return MPI_Wtime() - xlb_start_time;
+  return MPI_Wtime() - xlb_s.start_time;
 }
 
 int
 xlb_type_index(int work_type)
 {
-  for (int i = 0; i < xlb_types_size; i++)
-    if (xlb_types[i] == work_type)
+  for (int i = 0; i < xlb_s.types_size; i++)
+    if (xlb_s.types[i] == work_type)
       return i;
   printf("get_type_idx: INVALID type %d\n", work_type);
   return -1;

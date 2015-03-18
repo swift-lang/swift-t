@@ -68,7 +68,7 @@ static adlb_code notify_local(int target, const char *payload, int length,
   int answer_rank = -1;
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.priority = 1;
-  adlb_code rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
+  adlb_code rc = xlb_put_targeted_local(work_type, xlb_s.layout.rank,
                answer_rank, target, opts, payload, length);
   ADLB_CHECK(rc);
   return ADLB_SUCCESS;
@@ -82,7 +82,7 @@ static adlb_code notify_nonlocal(int target, int server,
   adlb_put_opts opts;
   opts.priority = 1;
   adlb_code rc;
-  if (xlb_am_server)
+  if (xlb_s.layout.am_server)
   {
     rc = xlb_sync(server);
     ADLB_CHECK(rc);
@@ -147,7 +147,7 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
     const adlb_ref_datum *ref = &refs->data[i];
     
     bool set = false;
-    if (!local_only || ADLB_Locate(ref->id) == xlb_comm_rank)
+    if (!local_only || ADLB_Locate(ref->id) == xlb_s.layout.rank)
     {
       TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
             ADLB_Data_type_tostring(ref->type));
@@ -196,7 +196,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
-  if (server == xlb_comm_rank)
+  if (server == xlb_s.layout.rank)
   {
     adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
     // Ok to cast away const, since we're forcing it to copy
@@ -232,8 +232,8 @@ xlb_close_notify(adlb_notif_ranks *ranks)
     adlb_notif_rank *notif = &ranks->notifs[i];
    
     int target = notif->rank;
-    int server = xlb_map_to_server(target);
-    if (xlb_am_server && target == xlb_comm_rank)
+    int server = xlb_map_to_server(&xlb_s.layout, target);
+    if (xlb_s.layout.am_server && target == xlb_s.layout.rank)
     {
       rc = xlb_notify_server_self(notif);
       ADLB_CHECK(rc);
@@ -253,7 +253,7 @@ xlb_close_notify(adlb_notif_ranks *ranks)
         payload_len = fill_notif_payload(payload, notif->id,
                                           notif->subscript);
       }
-      if (server == xlb_comm_rank)
+      if (server == xlb_s.layout.rank)
       {
         rc = notify_local(target, payload, payload_len, notif->work_type);
         ADLB_CHECK(rc);
@@ -278,7 +278,7 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
   MPI_Status status;
   MPI_Request request;
 
-  if (xlb_am_server)
+  if (xlb_s.layout.am_server)
   {
     // Must use sync for server->server
     adlb_code ac = xlb_sync_notify(server, id, subscript);
@@ -319,7 +319,7 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
 static adlb_code
 xlb_notify_server_self(adlb_notif_rank *notif)
 {
-  assert(xlb_am_server && notif->rank == xlb_comm_rank);
+  assert(xlb_s.layout.am_server && notif->rank == xlb_s.layout.rank);
   /*
     Handle notification for self, which must have been initiated
     by a Turbine engine subscribe.  This may result in work being
@@ -345,7 +345,7 @@ xlb_notify_server_self(adlb_notif_rank *notif)
 adlb_code
 xlb_process_local_notif(adlb_notif_t *notifs)
 {
-  assert(xlb_am_server);
+  assert(xlb_s.layout.am_server);
   
   adlb_code ac;
 
@@ -387,7 +387,7 @@ xlb_process_local_notif(adlb_notif_t *notifs)
 static adlb_code
 xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
 {
-  assert(xlb_am_server);
+  assert(xlb_s.layout.am_server);
   if (ranks->count > 0)
   {
     char payload[MAX_NOTIF_PAYLOAD];
@@ -401,14 +401,14 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
       int target = notif->rank;
       bool processed_locally = false;
 
-      if (xlb_am_server && target == xlb_comm_rank)
+      if (xlb_s.layout.am_server && target == xlb_s.layout.rank)
       {
         adlb_code rc = xlb_notify_server_self(notif);
         ADLB_CHECK(rc);
         processed_locally = true;
       } else {
-        int server = xlb_map_to_server(target);
-        if (server == xlb_comm_rank)
+        int server = xlb_map_to_server(&xlb_s.layout, target);
+        if (server == xlb_s.layout.rank)
         {
           // Check to see if target is worker belonging to server
           if (i == 0 || notif->subscript.key != last_subscript.key ||
@@ -524,7 +524,7 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
     else if (apply_all || (apply_preacquire && change->must_preacquire))
     {
       // Apply reference count operation
-      if (xlb_am_server)
+      if (xlb_s.layout.am_server)
       {
         // update reference count (can be local or remote)
         dc = xlb_incr_refc_svr(change->id, change->rc, notifs);
@@ -538,7 +538,7 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       }
       applied = true;
     }
-    else if (apply_local && ADLB_Locate(change->id) == xlb_comm_rank)
+    else if (apply_local && ADLB_Locate(change->id) == xlb_s.layout.rank)
     {
       // Process locally and added consequential notifications to list
       dc = xlb_data_reference_count(change->id, change->rc, XLB_NO_ACQUIRE,

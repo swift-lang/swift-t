@@ -25,8 +25,6 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <dyn_array_i.h>
-
 #include "engine.h"
 
 /** Time of last activity: used to determine shutdown */
@@ -41,36 +39,13 @@ extern bool xlb_server_sync_in_progress;
 /** Did we just get rejected when attempting to server sync? */
 extern bool server_sync_retry;
 
-/** Number of workers associated with this server */
-extern int xlb_my_workers;
-
 /** Ready task queue for server */
 extern xlb_engine_work_array xlb_server_ready_work;
 
-/**
-   Server-local mapping of my_worker_idx to host_idx.
-
-   Maps value of xlb_my_worker_idx(rank) to a unique numeric index for
-   host for all workers for this server.
-
-   Indices are only applicable on this server.
-
-   Useful for accuracy=NODE tasks
+/*
+  Setup server internal state.
  */
-int* xlb_worker_host_map;
-
-
-/** Number of unique hosts for workers */
-extern int xlb_my_worker_host_count;
-
-/**
-   Server-local mapping of host_idx to list of my_worker_idx.
-   Entries are [0..xlb_my_worker_hosts - 1]
-   Workers are in ascending order.
- */
-extern struct dyn_array_i *xlb_my_host_workers;
-
-adlb_code xlb_server_init(void);
+adlb_code xlb_server_init(const struct xlb_state *state);
 
 // ADLB_Server prototype is in adlb.h
 
@@ -107,39 +82,5 @@ double xlb_approx_time(void);
   Try to initiate a steal
  */
 adlb_code xlb_try_steal(void);
-
-/**
-   @param rank rank of worker belonging to this server
-   @return unique number for each of my workers, e.g. to use in array.
-           Does not validate that rank is valid
- */
-static inline int
-xlb_my_worker_idx(int rank)
-{
-  return rank / xlb_servers;
-}
-
-/**
- * Inverse of xlb_my_worker_idx
- */
-static inline int
-xlb_rank_from_my_worker_idx(int my_worker_idx)
-{
-  int server_num = xlb_comm_rank - xlb_workers;
-  return my_worker_idx * xlb_servers + server_num;
-}
-
-static inline int
-xlb_my_workers_compute(void)
-{
-  int count = xlb_workers / xlb_servers;
-  int server_num = xlb_comm_rank - xlb_workers;
-  // Lower numbered servers may get remainder
-  if (server_num < xlb_workers % xlb_servers)
-  {
-    count++;
-  }
-  return count;
-}
 
 #endif

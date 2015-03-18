@@ -213,7 +213,7 @@ extern work_type_counters *xlb_task_counters;
 static inline void xlb_task_bypass_count(int type, bool targeted,
                                     bool parallel)
 {
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     work_type_counters *tc = &xlb_task_counters[type];
     if (targeted)
@@ -238,7 +238,7 @@ static inline void xlb_task_bypass_count(int type, bool targeted,
 static inline void xlb_task_data_count(int type, bool targeted,
                                       bool parallel, bool wait)
 {
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     work_type_counters *tc = &xlb_task_counters[type];
     if (targeted)

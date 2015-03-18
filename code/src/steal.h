@@ -84,7 +84,7 @@ adlb_code xlb_handle_steal_probe_resp(int caller,
 
 /**
    Handle an accepted steal request
-   work_type_counts: array of size xlb_types_size
+   work_type_counts: array of size xlb_s.types_size
   */
 adlb_code xlb_handle_steal(int caller, const struct packed_steal *req,
                            const int *work_type_counts);
@@ -92,7 +92,7 @@ adlb_code xlb_handle_steal(int caller, const struct packed_steal *req,
 // Inline functions:
 static inline bool xlb_steal_allowed(void)
 {
-  if (xlb_servers == 1)
+  if (xlb_s.layout.servers == 1)
     // No other servers
     return false;
   double t = xlb_approx_time();
@@ -100,7 +100,7 @@ static inline bool xlb_steal_allowed(void)
   // Somewhat adaptive backoff approach where we do bursts of polling
   double interval;
 
-  bool backoff = (xlb_failed_steals_since_backoff == xlb_servers);
+  bool backoff = (xlb_failed_steals_since_backoff == xlb_s.layout.servers);
   if (backoff)
   {
     interval = xlb_steal_backoff;

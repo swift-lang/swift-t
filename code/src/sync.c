@@ -127,7 +127,7 @@ xlb_sync_init(void)
   /*
     Setup sync recv buffers
    */
-  rc = xlb_sync_recv_init_size(xlb_servers, &xlb_sync_recv_size);
+  rc = xlb_sync_recv_init_size(xlb_s.layout.servers, &xlb_sync_recv_size);
   ADLB_CHECK(rc);
   xlb_sync_recv_head = 0;
   if (xlb_sync_recv_size > 0)
@@ -178,7 +178,7 @@ xlb_sync_init(void)
   /*
     Setup perf counters
    */
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     for (int i = 0; i < ADLB_SYNC_ENUM_COUNT; i++)
     {
@@ -213,7 +213,7 @@ void xlb_sync_finalize(void)
   xlb_sync_recvs = NULL;
   xlb_sync_recv_size = 0;
 
-  DEBUG("[%i] Pending syncs at finalize: %i", xlb_comm_rank,
+  DEBUG("[%i] Pending syncs at finalize: %i", xlb_s.layout.rank,
        xlb_pending_sync_count);
 
   /*
@@ -232,7 +232,7 @@ void xlb_sync_finalize(void)
 
 void xlb_print_sync_counters(void)
 {
-  if (!xlb_perf_counters_enabled)
+  if (!xlb_s.perfc_enabled)
   {
     return;
   }
@@ -304,7 +304,7 @@ static adlb_code
 xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 {
   TRACE_START;
-  DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_comm_rank,
+  DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_s.layout.rank,
         target, xlb_sync_mode_name[hdr->mode]);
   adlb_code rc = ADLB_SUCCESS;
 
@@ -331,7 +331,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
       hdr->mode == ADLB_SYNC_SHUTDOWN)
   {
 
-    if (xlb_perf_counters_enabled)
+    if (xlb_s.perfc_enabled)
     {
       assert(hdr->mode >= 0 && hdr->mode < ADLB_SYNC_ENUM_COUNT);
       xlb_sync_perf_counters[hdr->mode].sent++;
@@ -359,7 +359,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     requests_pending = true;
     
     DEBUG("server_sync: [%d] waiting for sync response from %d",
-                          xlb_comm_rank, target);
+                          xlb_s.layout.rank, target);
   }
   else
   {
@@ -368,7 +368,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     done = true;
     rc = ADLB_SHUTDOWN;
     DEBUG("server_sync: [%d] shutting down before sync to %d",
-                          xlb_comm_rank, target);
+                          xlb_s.layout.rank, target);
   }
 
   struct sync_delay delay;
@@ -440,7 +440,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
         // This server needs to exit sync loop even if it hasn't
         // completed to avoid getting blocked on another server that
         // has already shut down
-        DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
+        DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_s.layout.rank);
 
         rc = cancel_sync(hdr->mode, target);
         ADLB_CHECK(rc);
@@ -470,7 +470,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     }
   }
 
-  DEBUG("server_sync: [%d] sync with %d successful", xlb_comm_rank, target);
+  DEBUG("server_sync: [%d] sync with %d successful", xlb_s.layout.rank, target);
   xlb_server_sync_in_progress = false;
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_sync_end);
@@ -602,7 +602,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
 
   // Include work types in sync data field
   memcpy(req->sync_data, work_counts,
-         sizeof(work_counts[0] * (size_t)xlb_types_size));
+         sizeof(work_counts[0] * (size_t)xlb_s.types_size));
 
   return xlb_sync2(target, req, response);
 }
@@ -631,7 +631,7 @@ msg_from_target(int target, int response)
   TRACE_START;
   // Accepted
   DEBUG("server_sync: [%d] sync response from %d: %d",
-         xlb_comm_rank, target, response);
+         xlb_s.layout.rank, target, response);
   TRACE_END
   return ADLB_SUCCESS;
 }
@@ -669,11 +669,11 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
    * so don't serve higher ranked servers until we've finished our
    * sync request. We choose this ordering because the master server is
    * somewhat more likely to be busy and should be unblocked. */
-  if (other_server < xlb_comm_rank)
+  if (other_server < xlb_s.layout.rank)
   {
     // accept incoming sync
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
-                        xlb_comm_rank, other_server);
+                        xlb_s.layout.rank, other_server);
     
     code = xlb_accept_sync(other_server, other_hdr, true);
     ADLB_CHECK(code);
@@ -750,10 +750,10 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
 
-  DEBUG("[%i] xlb_accept_sync() from: %i sync_mode: %s", xlb_comm_rank,
+  DEBUG("[%i] xlb_accept_sync() from: %i sync_mode: %s", xlb_s.layout.rank,
         rank, xlb_sync_mode_name[mode]);
   
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     assert(mode >= 0 && mode < ADLB_SYNC_ENUM_COUNT);
     xlb_sync_perf_counters[mode].accepted++;
@@ -858,7 +858,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       break;
 
     case ADLB_SYNC_SHUTDOWN:
-      DEBUG("[%d] received shutdown!", xlb_comm_rank);
+      DEBUG("[%d] received shutdown!", xlb_s.layout.rank);
 
       xlb_server_shutting_down = true;
       
@@ -879,7 +879,7 @@ adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
   adlb_code rc;
   adlb_data_code dc;
   DEBUG("server_sync: [%d] handling deferred sync from %d",
-        xlb_comm_rank, rank);
+        xlb_s.layout.rank, rank);
   switch (kind)
   {
     case DEFERRED_SYNC:
@@ -1238,7 +1238,7 @@ static inline adlb_code
 cancel_sync(adlb_sync_mode mode, int sync_target)
 {
   TRACE_START;
-  DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
+  DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_s.layout.rank);
 
   if (mode == ADLB_SYNC_REQUEST)
   {
@@ -1285,7 +1285,7 @@ static inline void delay_check(struct sync_delay *state,
     {
       fprintf(stderr, "[%d] has been waiting %.2lf for %i\
                 sync mode %s\n",
-              xlb_comm_rank, now - state->start_time, target,
+              xlb_s.layout.rank, now - state->start_time, target,
               xlb_sync_mode_name[hdr->mode]);
       state->last_check_time = now;
     }

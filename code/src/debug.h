@@ -121,8 +121,8 @@ adlb_code xlb_debug_check_environment(void);
 #define TRACE_END   TRACE("%s() done.", __func__)
 
 #define PRINT_COUNTER(format, args...)                    \
-  { if (xlb_perf_counters_enabled) {                      \
-      printf("[%d] COUNTER: " format "\n", xlb_comm_rank, \
+  { if (xlb_s.perfc_enabled) {                      \
+      printf("[%d] COUNTER: " format "\n", xlb_s.layout.rank, \
             ## args);                                     \
   } }
 

@@ -87,7 +87,7 @@ xlb_handle(adlb_tag tag, int caller)
 
   MPE_LOG(xlb_mpe_svr_busy_start);
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     xlb_handler_counters[tag]++;
   }

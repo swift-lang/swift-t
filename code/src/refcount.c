@@ -19,21 +19,21 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
 adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
                                adlb_notif_t *notifs)
 {
-  assert(xlb_am_server); // Only makes sense to run on server
+  assert(xlb_s.layout.am_server); // Only makes sense to run on server
 
   adlb_data_code dc;
 
-  if (!xlb_read_refcount_enabled)
+  if (!xlb_s.read_refc_enabled)
     change.read_refcount = 0;
 
   if (ADLB_REFC_IS_NULL(change))
     return ADLB_DATA_SUCCESS;
 
   int server = ADLB_Locate(id);
-  if (server == xlb_comm_rank)
+  if (server == xlb_s.layout.rank)
   {
     DEBUG("server %i local refcount <%"PRId64"> r += %i w += %i",
-        xlb_comm_rank, id, change.read_refcount, change.write_refcount);
+        xlb_s.layout.rank, id, change.read_refcount, change.write_refcount);
 
     dc = xlb_data_reference_count(id, change, XLB_NO_ACQUIRE, NULL,
                                   notifs);
@@ -47,7 +47,7 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
      * other server do the work as this one
      */
     DEBUG("server->server %i->%i local refcount <%"PRId64"> "
-        "r += %i w += %i", xlb_comm_rank, server,
+        "r += %i w += %i", xlb_s.layout.rank, server,
         id, change.read_refcount, change.write_refcount);
     adlb_code code = xlb_sync_refcount(server, id, change);
     DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
@@ -194,7 +194,7 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
   // Remainder change that needs to be applied
   int read_remainder, write_remainder;
 
-  if (xlb_read_refcount_enabled)
+  if (xlb_s.read_refc_enabled)
   {
     dc = apply_refc(release_read, read_refc,
             to_acquire.read_refcount, &read_acquired, &read_remainder);

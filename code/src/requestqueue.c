@@ -34,7 +34,6 @@
 #include "debug.h"
 #include "messaging.h"
 #include "requestqueue.h"
-#include "server.h"
 
 typedef struct
 {
@@ -95,24 +94,24 @@ static inline void free_list2_node(struct list2_item *node);
 adlb_code
 xlb_requestqueue_init()
 {
-  assert(xlb_my_workers >= 0);
-  assert(xlb_types_size >= 1);
+  assert(xlb_s.workers.count >= 0);
+  assert(xlb_s.types_size >= 1);
 
-  targets = malloc(sizeof(targets[0]) * (size_t)xlb_my_workers);
+  targets = malloc(sizeof(targets[0]) * (size_t)xlb_s.workers.count);
   ADLB_MALLOC_CHECK(targets);
 
-  for (int i = 0; i < xlb_my_workers; i++)
+  for (int i = 0; i < xlb_s.workers.count; i++)
   {
     targets[i].item = NULL;
   }
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_types_size);
+  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_s.types_size);
   ADLB_MALLOC_CHECK(type_requests);
-  for (int i = 0; i < xlb_types_size; i++)
+  for (int i = 0; i < xlb_s.types_size; i++)
     list2_init(&type_requests[i]);
 
   // Allocate one list node per worker - otherwise will fallback to malloc/free
-  adlb_code ac = list2_node_pool_init(xlb_my_workers);
+  adlb_code ac = list2_node_pool_init(xlb_s.workers.count);
   ADLB_CHECK(ac);
 
   request_queue_size = 0;
@@ -130,9 +129,9 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 
   // Whether we need to merge requests
   // Store in targets if it is one of our workers
-  if (xlb_map_to_server(rank) == xlb_comm_rank)
+  if (xlb_map_to_server(&xlb_s.layout, rank) == xlb_s.layout.rank)
   {
-    int targets_ix = xlb_my_worker_idx(rank);
+    int targets_ix = xlb_my_worker_idx(&xlb_s.layout, rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
@@ -248,10 +247,11 @@ static inline void invalidate_request(request *R)
  */
 static bool in_targets_array(request *R)
 {
-  if (xlb_map_to_server(R->rank) != xlb_comm_rank) {
+  int target_server = xlb_map_to_server(&xlb_s.layout, R->rank);
+  if (target_server != xlb_s.layout.rank) {
     return false;
   }
-  int targets_ix = xlb_my_worker_idx(R->rank);
+  int targets_ix = xlb_my_worker_idx(&xlb_s.layout, R->rank);
   return R == &targets[targets_ix];
 }
 
@@ -287,7 +287,7 @@ xlb_requestqueue_matches_target(int task_target_rank, int task_type,
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         task_target_rank, task_type);
 
-  int task_tgt_idx = xlb_my_worker_idx(task_target_rank);
+  int task_tgt_idx = xlb_my_worker_idx(&xlb_s.layout, task_target_rank);
   request* R = &targets[task_tgt_idx];
   if (R->item != NULL && R->type == task_type)
   {
@@ -309,8 +309,9 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
   DEBUG("requestq_matches_tgt_node(task_tgt_idx=%i, task_type=%i)",
         task_tgt_idx, task_type);
   int result = ADLB_RANK_NULL;
-  int task_host_idx = xlb_worker_host_map[task_tgt_idx];
-  struct dyn_array_i *host_workers = &xlb_my_host_workers[task_host_idx];
+  int task_host_idx = xlb_s.workers.worker2host[task_tgt_idx];
+  struct dyn_array_i *host_workers = 
+                   &xlb_s.workers.host2workers[task_host_idx];
 
   for (int i = 0; i < host_workers->size; i++)
   {
@@ -319,7 +320,7 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
     if (R->item != NULL && R->type == task_type)
     {
       request_match_update(R, true, 1);
-      result = xlb_rank_from_my_worker_idx(worker_idx);
+      result = xlb_rank_from_my_worker_idx(&xlb_s.layout, worker_idx);
       break;
     }
   }
@@ -390,7 +391,7 @@ xlb_requestqueue_nblocked(void)
 adlb_code xlb_requestqueue_incr_blocked(void)
 {
   nblocked++;
-  assert(nblocked <= xlb_my_workers);
+  assert(nblocked <= xlb_s.workers.count);
   return ADLB_SUCCESS;
 }
 
@@ -402,9 +403,9 @@ adlb_code xlb_requestqueue_decr_blocked(void)
 }
 
 void xlb_requestqueue_type_counts(int* types, int size) {
-  assert(size >= xlb_types_size);
+  assert(size >= xlb_s.types_size);
   int total = 0;
-  for (int t = 0; t < xlb_types_size; t++) {
+  for (int t = 0; t < xlb_s.types_size; t++) {
     struct list2* L = &type_requests[t];
     types[t] = L->size;
     total += L->size;
@@ -418,7 +419,7 @@ int
 xlb_requestqueue_get(xlb_request_entry* r, int max)
 {
   int ix = 0;
-  for (int t = 0; t < xlb_types_size; t++)
+  for (int t = 0; t < xlb_s.types_size; t++)
   {
     struct list2* L = &type_requests[t];
     assert(L != NULL);
@@ -449,7 +450,7 @@ void
 xlb_requestqueue_shutdown()
 {
   TRACE_START;
-  for (int i = 0; i < xlb_types_size; i++)
+  for (int i = 0; i < xlb_s.types_size; i++)
   {
     while (true)
     {

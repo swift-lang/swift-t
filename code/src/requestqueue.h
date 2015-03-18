@@ -70,7 +70,7 @@ int xlb_requestqueue_size(void);
 /**
    @return Count of each types
    @param types array to be filled in with result
-   @param size size of the array (greater than xlb_types_size)
+   @param size size of the array (greater than xlb_s.types_size)
  */
 void xlb_requestqueue_type_counts(int *types, int size);
 

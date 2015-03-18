@@ -39,20 +39,20 @@ adlb_code xlb_xpt_index_init(void)
 {
   adlb_data_code dc;
 
-  dc = xlb_data_system_reserve(xlb_servers, &xpt_index_start);
+  dc = xlb_data_system_reserve(xlb_s.layout.servers, &xpt_index_start);
   ADLB_DATA_CHECK(dc);
 
-  if (xlb_am_server)
+  if (xlb_s.layout.am_server)
   {
     // setup checkpoint index using sharded container on servers
-    adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
+    adlb_datum_id container_id = id_for_rank(xlb_s.layout.rank);
 
     // Check that the calculation is valid
-    assert(ADLB_Locate(container_id) == xlb_comm_rank);
+    assert(ADLB_Locate(container_id) == xlb_s.layout.rank);
     assert(container_id >= xpt_index_start);
-    assert(container_id < xpt_index_start + xlb_servers);
+    assert(container_id < xpt_index_start + xlb_s.layout.servers);
 
-    DEBUG("server %i xpt container "ADLB_PRID, xlb_comm_rank,
+    DEBUG("server %i xpt container "ADLB_PRID, xlb_s.layout.rank,
           ADLB_PRID_ARGS(container_id, ADLB_DSYM_NULL));
 
     adlb_type_extra extra;
@@ -215,23 +215,23 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
 static inline adlb_datum_id id_for_rank(int comm_rank)
 {
   // Servers come after other ranks
-  int server_num = comm_rank - (xlb_comm_size - xlb_servers);
+  int server_num = comm_rank - (xlb_s.layout.size - xlb_s.layout.servers);
   return id_for_server(server_num);
 }
 
 static inline adlb_datum_id id_for_server(int server_num)
 {
-  assert(server_num >= 0 && server_num < xlb_servers);
-  assert(xpt_index_start <= -xlb_servers);
-  // Will be in range [xpt_index_start, xpt_index_start + xlb_servers)
+  assert(server_num >= 0 && server_num < xlb_s.layout.servers);
+  assert(xpt_index_start <= -xlb_s.layout.servers);
+  // Will be in range [xpt_index_start, xpt_index_start + xlb_s.layout.servers)
   // ADLB_Locate must map this id to the right server
 
   // Compensate for fact that xpt_index_start may not be multiple of
-  // xlb_servers
-  // -xlb_servers < offset <= 0
-  adlb_datum_id offset = xpt_index_start % xlb_servers;
+  // xlb_s.layout.servers
+  // -xlb_s.layout.servers < offset <= 0
+  adlb_datum_id offset = xpt_index_start % xlb_s.layout.servers;
 
-  adlb_datum_id shift = (xlb_servers - (server_num + offset)) % xlb_servers;
+  adlb_datum_id shift = (xlb_s.layout.servers - (server_num + offset)) % xlb_s.layout.servers;
 
   return xpt_index_start + shift;
 }
@@ -243,8 +243,8 @@ __attribute__((always_inline))
 static inline adlb_datum_id id_for_hash(uint32_t key_hash)
 {
   // Must be negative number in range
-  // [xpt_index_start, xpt_index_start + xlb_serversservers)
-  return (int32_t)(key_hash % (uint32_t)xlb_servers) + xpt_index_start;
+  // [xpt_index_start, xpt_index_start + xlb_s.layout.serversservers)
+  return (int32_t)(key_hash % (uint32_t)xlb_s.layout.servers) + xpt_index_start;
 }
 
 __attribute__((always_inline))

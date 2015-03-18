@@ -471,10 +471,10 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
   int read_incr = change.read_refcount;
   int write_incr = change.write_refcount;
 
-  if (xlb_read_refcount_enabled && read_incr != 0 &&
+  if (xlb_s.read_refc_enabled && read_incr != 0 &&
                                    !d->status.permanent) {
     // Shouldn't get here if disabled
-    check_verbose(xlb_read_refcount_enabled, ADLB_DATA_ERROR_INVALID,
+    check_verbose(xlb_s.read_refc_enabled, ADLB_DATA_ERROR_INVALID,
                   "Internal error: should not get here with read reference "
                   "counting disabled");
 
@@ -846,7 +846,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     // There should be at least 2 read refcounts: one for
     //  this call to container_reference, and one for the
     //  subscriber list
-    if (xlb_read_refcount_enabled) {
+    if (xlb_s.read_refc_enabled) {
       assert(d->read_refcount >= 2);
       d->read_refcount--;
 
@@ -933,7 +933,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
         "Taking write reference count below zero on datum "
         ADLB_PRID, ADLB_PRID_ARGS(id, d->symbol));
 
-    adlb_refc incr = { .read_refcount = xlb_read_refcount_enabled ?
+    adlb_refc incr = { .read_refcount = xlb_s.read_refc_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_refc_incr(d, id, incr, XLB_NO_ACQUIRE, NULL, notifs);
@@ -1767,7 +1767,7 @@ insert_notifications2(adlb_datum *d,
     // Need to free refcount we were holding for reference notifs
     adlb_refc read_decr = { .read_refcount = -1,
                                  .write_refcount = 0 };
-    if (!xlb_read_refcount_enabled)
+    if (!xlb_s.read_refc_enabled)
     {
       read_decr.read_refcount = 0;
       referand_acquire.refcounts.read_refcount = 0;

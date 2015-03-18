@@ -27,61 +27,67 @@
 
 #include <mpi.h>
 
+#include <dyn_array_i.h>
+
 #include "adlb-defs.h"
 #include "adlb_types.h"
-
-/** Number of processes in total */
-extern int xlb_comm_size;
-
-/** My rank in MPI_COMM_WORLD */
-extern int xlb_comm_rank;
-
-/** Number of servers in total */
-extern int xlb_servers;
-
-/** Number of workers in total */
-extern int xlb_workers;
-
-/** Server with which this worker is associated */
-extern int xlb_my_server;
-
-/** True if this rank is a server */
-extern bool xlb_am_server;
-
-/** True if this rank is a worker leader */
-extern bool xlb_am_leader;
-
-/** Lowest-ranked server */
-extern int xlb_master_server_rank;
-
-/** Number of work unit types */
-extern int xlb_types_size;
-
-/** Array of allowed work unit types */
-extern int* xlb_types;
-
-/** Whether read refcounting and memory freeing is enabled */
-extern bool xlb_read_refcount_enabled;
-
-/** Whether to maintain performance counters */
-extern bool xlb_perf_counters_enabled;
-
-extern double max_malloc;
-
-extern MPI_Comm adlb_comm, adlb_server_comm, adlb_worker_comm, adlb_leader_comm;
-
-__attribute__((always_inline))
-static inline bool
-xlb_is_server(int rank)
-{
-  return (rank >= xlb_workers);
-}
+#include "layout.h"
 
 /**
-   Start time from MPI_Wtime()
-   Note: this is used by debugging output
+   Struct that encapsulates xlb system state.
  */
-extern double xlb_start_time;
+struct xlb_state {
+  /**
+    MPI communicators for everything and subgroups
+   */
+  MPI_Comm comm;
+  MPI_Comm server_comm;
+  MPI_Comm worker_comm;
+  MPI_Comm leader_comm;
+
+  /**
+     Start time from MPI_Wtime()
+     Note: this is used by debugging output
+   */
+  double start_time;
+
+  /**
+    General layout info
+   */
+  struct xlb_layout layout;
+
+  /**
+    Host to rank map
+   */
+  struct xlb_hostmap *hostmap;
+
+  /**
+    Mode for host map
+   */
+  xlb_hostmap_mode hostmap_mode;
+
+  /**
+    Layout info about workers if this is server
+   */
+  struct xlb_workers_layout workers;
+
+  /** Number of work unit types */
+  int types_size;
+
+  /** Array of allowed work unit types */
+  int* types;
+
+  /** Whether read refcounting and memory freeing is enabled */
+  bool read_refc_enabled;
+
+  /** Whether to maintain performance counters */
+  bool perfc_enabled;
+
+  double max_malloc;
+};
+
+/** Global system state */
+extern struct xlb_state xlb_s;
 
 #define  MAX_PUSH_ATTEMPTS                1000
 
@@ -91,28 +97,6 @@ static const adlb_buffer xlb_xfer_buf =
             { .data = xlb_xfer, .length = ADLB_XFER_SIZE };
 
 int xlb_random_server(void);
-
-/**
-   @param rank of worker
-   @return rank of server for this worker rank
- */
-__attribute__((always_inline))
-static inline int
-xlb_map_to_server(int rank)
-{
-  if (xlb_is_server(rank))
-    return rank;
-  assert(rank >= 0 && rank < xlb_workers);
-  int w = rank % xlb_servers;
-  return w + xlb_workers;
-}
-
-__attribute__((always_inline))
-static inline int
-xlb_worker_maps_to_server(int worker_rank, int server_rank) {
-  return (worker_rank % xlb_servers) + xlb_workers == server_rank;
-}
-
 /**
    Time since XLB was initialized
    Note: this is used by debugging output

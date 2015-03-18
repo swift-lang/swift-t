@@ -28,7 +28,6 @@
 
 #include <list_i.h>
 #include <exm-memory.h>
-#include <table.h>
 #include <tools.h>
 
 #include "adlb.h"
@@ -39,7 +38,6 @@
 #include "data.h"
 #include "debug.h"
 #include "handlers.h"
-#include "location.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "refcount.h"
@@ -52,11 +50,6 @@
 
 // Check for sync requests this often so that can be handled in preference
 #define XLB_SERVER_SYNC_CHECK_FREQ 16
-
-/** Number of workers associated with this server */
-int xlb_my_workers;
-
-int xlb_my_worker_host_count;
 
 /** Track time of last action */
 double xlb_time_last_action;
@@ -122,14 +115,6 @@ static bool fail_code = -1;
 /** Ready task queue for server */
 xlb_engine_work_array xlb_server_ready_work;
 
-int* xlb_worker_host_map;
-
-int xlb_my_workers_host_count;
-
-struct dyn_array_i *xlb_my_host_workers;
-
-static adlb_code worker_host_map_init(int my_workers, int *host_count);
-
 static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
@@ -160,26 +145,20 @@ xlb_process_ready_work(void);
 static inline adlb_code xlb_serve_one(int source);
 
 adlb_code
-xlb_server_init()
+xlb_server_init(const struct xlb_state *state)
 {
   TRACE_START;
   adlb_code code;
 
   xlb_server_shutting_down = false;
 
-  // Add up xlb_my_workers:
-  xlb_my_workers = xlb_my_workers_compute();
-
-  int worker_host_count;
-  code = worker_host_map_init(xlb_my_workers, &worker_host_count);
-  ADLB_CHECK(code);
-
   list_i_init(&workers_shutdown);
-  code = xlb_workq_init(xlb_types_size, xlb_my_workers, worker_host_count);
+  code = xlb_workq_init(state->types_size, state->workers.count,
+                        state->workers.host_count);
   ADLB_CHECK(code);
   code = xlb_requestqueue_init();
   ADLB_CHECK(code);
-  xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
+  xlb_data_init(state->layout.servers, xlb_server_number(state->layout.rank));
   code = setup_idle_time();
   ADLB_CHECK(code);
   // Set a default value for now:
@@ -194,7 +173,7 @@ xlb_server_init()
   code = xlb_steal_init();
   ADLB_CHECK(code);
 
-  xlb_engine_code tc = xlb_engine_init(xlb_comm_rank);
+  xlb_engine_code tc = xlb_engine_init(state->layout.rank);
   CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
 
   xlb_server_ready_work.work = NULL;
@@ -205,66 +184,11 @@ xlb_server_init()
   return ADLB_SUCCESS;
 }
 
-static adlb_code worker_host_map_init(int my_workers, int *host_count)
-{
-  xlb_worker_host_map = malloc(sizeof(xlb_worker_host_map[0]) *
-                              (size_t)my_workers);
-  ADLB_MALLOC_CHECK(xlb_worker_host_map);
-
-  struct table host_name_idx_map;
-  bool ok = table_init(&host_name_idx_map, 128);
-  CHECK_MSG(ok, "Table init failed");
-
-  *host_count = 0;
-  for (int i = 0; i < my_workers; i++)
-  {
-    int rank = xlb_rank_from_my_worker_idx(i);
-    const char *host_name = xlb_rankmap_lookup(rank);
-    CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
-              "rank %i", rank);
-
-    unsigned long host_idx;
-    if (!table_search(&host_name_idx_map, host_name, (void**)&host_idx))
-    {
-      host_idx = (unsigned long)(*host_count)++;
-      ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
-      CHECK_MSG(ok, "Table add failed");
-    }
-    xlb_worker_host_map[i] = (int)host_idx;
-    DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
-          i, xlb_rank_from_my_worker_idx(i), (int)host_idx, host_name);
-  }
-
-  table_free_callback(&host_name_idx_map, false, NULL);
-
-  /* Build inverse map */
-  xlb_my_worker_host_count = *host_count;
-  xlb_my_host_workers = malloc(sizeof(xlb_my_host_workers[0]) *
-                               (size_t)xlb_my_worker_host_count);
-  ADLB_MALLOC_CHECK(xlb_my_host_workers);
-
-  for (int i = 0; i < xlb_my_worker_host_count; i++)
-  {
-    ok = dyn_array_i_init(&xlb_my_host_workers[i], 4);
-    CHECK_MSG(ok, "dyn_array init failed");
-  }
-
-  for (int i = 0; i < my_workers; i++)
-  {
-    int host_idx = xlb_worker_host_map[i];
-    ok = dyn_array_i_add(&xlb_my_host_workers[host_idx], i);
-    CHECK_MSG(ok, "dyn_array add failed");
-  }
-
-  return ADLB_SUCCESS;
-}
-
-
 // return the number of the server (0 is first server)
 static inline int
 xlb_server_number(int rank)
 {
-  return rank - (xlb_comm_size - xlb_servers);
+  return rank - (xlb_s.layout.size - xlb_s.layout.servers);
 }
 
 __attribute__((always_inline))
@@ -280,7 +204,7 @@ ADLB_Server(long max_memory)
 {
   TRACE_START;
 
-  if (!xlb_am_server)
+  if (!xlb_s.layout.am_server)
   {
     printf("ADLB_Server invoked for non-server\n");
     return ADLB_ERROR;
@@ -288,7 +212,7 @@ ADLB_Server(long max_memory)
 
   mm_set_max(mm_default, max_memory);
 
-  DEBUG("ADLB_Server(): %i entering server loop", xlb_comm_rank);
+  DEBUG("ADLB_Server(): %i entering server loop", xlb_s.layout.rank);
 
   update_cached_time(); // Initial timestamp
 
@@ -334,7 +258,7 @@ serve_several()
 {
   int exit_points = 0;
   int reqs = 0;
-  bool other_servers = (xlb_servers > 1);
+  bool other_servers = (xlb_s.layout.servers > 1);
   while (exit_points < xlb_loop_threshold)
   {
     MPI_Status req_status;
@@ -526,7 +450,7 @@ adlb_code
 xlb_serve_server(int source)
 {
   TRACE_START;
-  DEBUG("\t serve_server: [%i] serving %i", xlb_comm_rank, source);
+  DEBUG("\t serve_server: [%i] serving %i", xlb_s.layout.rank, source);
   adlb_code rc = ADLB_NOTHING;
   while (true)
   {
@@ -535,7 +459,7 @@ xlb_serve_server(int source)
     if (rc != ADLB_NOTHING) break;
     // Don't backoff - want to unblock other server ASAP
   }
-  DEBUG("\t serve_server: [%i] served %i", xlb_comm_rank, source);
+  DEBUG("\t serve_server: [%i] served %i", xlb_s.layout.rank, source);
   TRACE_END;
   return rc;
 }
@@ -617,7 +541,7 @@ xlb_shutdown_worker(int worker)
 static inline bool
 master_server()
 {
-  return (xlb_comm_rank == xlb_workers);
+  return (xlb_s.layout.rank == xlb_s.layout.workers);
 }
 
 static inline bool
@@ -629,11 +553,11 @@ workers_idle(void)
   //TRACE("workers_idle(): workers blocked:   %i\n", blocked);
   //TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
 
-  assert(blocked <= xlb_my_workers);
-  assert(shutdown <= xlb_my_workers);
-  assert(blocked + shutdown <= xlb_my_workers);
+  assert(blocked <= xlb_s.workers.count);
+  assert(shutdown <= xlb_s.workers.count);
+  assert(blocked + shutdown <= xlb_s.workers.count);
 
-  if (blocked+shutdown == xlb_my_workers)
+  if (blocked+shutdown == xlb_s.workers.count)
     return true;
 
   return false;
@@ -736,7 +660,7 @@ servers_idle()
     return false;
   }
 
-  DEBUG("[%i] checking idle %.4f\n", xlb_comm_rank, now);
+  DEBUG("[%i] checking idle %.4f\n", xlb_s.layout.rank, now);
 
   xlb_last_servers_idle_check = now;
 
@@ -748,24 +672,24 @@ servers_idle()
   // Arrays containing request and work counts from all servers
   // The counts from each server are stored contiguously
   int *request_counts = malloc(sizeof(int) *
-                              (size_t)(xlb_types_size * xlb_servers));
+                              (size_t)(xlb_s.types_size * xlb_s.layout.servers));
   int *work_counts = malloc(sizeof(int) *
-                              (size_t)(xlb_types_size * xlb_servers));
+                              (size_t)(xlb_s.types_size * xlb_s.layout.servers));
   // First fill in counts from this server
-  xlb_requestqueue_type_counts(request_counts, xlb_types_size);
-  xlb_workq_type_counts(work_counts, xlb_types_size);
+  xlb_requestqueue_type_counts(request_counts, xlb_s.types_size);
+  xlb_workq_type_counts(work_counts, xlb_s.types_size);
 
   adlb_code rc;
   bool all_idle = true;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
+  for (int rank = xlb_s.layout.master_server_rank+1; rank < xlb_s.layout.size;
        rank++)
   {
-    int server_num = rank - xlb_master_server_rank;
+    int server_num = rank - xlb_s.layout.master_server_rank;
     bool idle;
     rc = xlb_sync(rank);
     ASSERT(rc == ADLB_SUCCESS);
-    int *req_subarray = &request_counts[xlb_types_size * server_num];
-    int *work_subarray = &work_counts[xlb_types_size * server_num];
+    int *req_subarray = &request_counts[xlb_s.types_size * server_num];
+    int *work_subarray = &work_counts[xlb_s.types_size * server_num];
     rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle,
                           req_subarray, work_subarray);
     ASSERT(rc == ADLB_SUCCESS);
@@ -797,17 +721,17 @@ servers_idle()
   // Check to see if work stealing could match work to requests
   if (all_idle)
   {
-    for (int t = 0; t < xlb_types_size; t++)
+    for (int t = 0; t < xlb_s.types_size; t++)
     {
       int has_requests = -1;
       int has_work = -1;
-      for (int server = 0; server < xlb_servers; server++)
+      for (int server = 0; server < xlb_s.layout.servers; server++)
       {
-        if (request_counts[t + server * xlb_types_size] > 0)
+        if (request_counts[t + server * xlb_s.types_size] > 0)
         {
           has_requests = server;
         }
-        if (work_counts[t + server * xlb_types_size] > 0)
+        if (work_counts[t + server * xlb_s.types_size] > 0)
         {
           has_work = server;
         }
@@ -815,8 +739,8 @@ servers_idle()
       if (has_requests != -1 && has_work != -1)
       {
         #if DEBUG_ENABLED
-        int request_count = request_counts[t + has_requests * xlb_types_size];
-        int work_count = work_counts[t + has_work * xlb_types_size];
+        int request_count = request_counts[t + has_requests * xlb_s.types_size];
+        int work_count = work_counts[t + has_work * xlb_s.types_size];
         // We have requests and work that could be matched up -
         // not actually idle
         DEBUG("Unmatched work of type %i. %i work units are on server %i. "
@@ -829,7 +753,7 @@ servers_idle()
     }
   }
 
-  DEBUG("[%i] done checking idle %.4f\n", xlb_comm_rank, MPI_Wtime());
+  DEBUG("[%i] done checking idle %.4f\n", xlb_s.layout.rank, MPI_Wtime());
   free(request_counts);
   free(work_counts);
   return all_idle;
@@ -842,7 +766,7 @@ shutdown_all_servers()
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
   DEBUG("Initiating server shutdown");
   xlb_server_shutting_down = true;
-  for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
+  for (int rank = xlb_s.layout.master_server_rank+1; rank < xlb_s.layout.size;
        rank++)
   {
     adlb_code rc = xlb_sync_shutdown(rank);
@@ -856,7 +780,7 @@ shutdown_all_servers()
 adlb_code
 xlb_server_fail(int code)
 {
-  valgrind_assert(xlb_comm_rank == xlb_master_server_rank);
+  valgrind_assert(xlb_s.layout.rank == xlb_s.layout.master_server_rank);
   xlb_server_shutdown();
   failed = true;
   fail_code = code;
@@ -883,8 +807,6 @@ xlb_server_shutdown()
   return ADLB_SUCCESS;
 }
 
-static void worker_host_finalize(void);
-
 /**
    Actually shut down
  */
@@ -896,7 +818,6 @@ server_shutdown()
   xlb_workq_finalize();
   xlb_steal_finalize();
   xlb_sync_finalize();
-  worker_host_finalize();
 
   xlb_engine_finalize();
 
@@ -908,14 +829,6 @@ server_shutdown()
   return ADLB_SUCCESS;
 }
 
-static void
-worker_host_finalize(void)
-{
-  for (int i = 0; i < xlb_my_worker_host_count; i++)
-    dyn_array_i_release(&xlb_my_host_workers[i]);
-  free(xlb_my_host_workers);
-}
-
 /* Print out any final statistics, if enabled */
 static inline void print_final_stats()
 {
@@ -924,7 +837,7 @@ static inline void print_final_stats()
   if (print_time)
   {
     double xlb_end_time = MPI_Wtime();
-    double xlb_elapsed_time = xlb_end_time - xlb_start_time;
+    double xlb_elapsed_time = xlb_end_time - xlb_s.start_time;
     printf("ADLB Total Elapsed Time: %.3lf\n", xlb_elapsed_time);
   }
 

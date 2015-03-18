@@ -127,8 +127,8 @@ adlb_code xlb_xpt_write_init(const char *filename, xlb_xpt_state *state)
   CHECK_MSG(state->buffer != NULL, "Error allocating buffer");
   state->buffer_used = 0;
 
-  xpt_block_num_t block = first_block((xpt_rank_t)xlb_comm_rank,
-                                      (xpt_rank_t)xlb_comm_size);
+  xpt_block_num_t block = first_block((xpt_rank_t)xlb_s.layout.rank,
+                                      (xpt_rank_t)xlb_s.layout.size);
   adlb_code rc = block_move(block, filename, state);
   ADLB_CHECK(rc);
 
@@ -248,7 +248,7 @@ static adlb_code flush_buffers(xlb_xpt_state *state)
 static adlb_code block_move_next(xlb_xpt_state *state)
 {
   // Round-robin block allocation for now
-  xpt_block_num_t block = next_block((xpt_rank_t)xlb_comm_size,
+  xpt_block_num_t block = next_block((xpt_rank_t)xlb_s.layout.size,
                                      state->curr_block);
   return block_move(block, NULL, state);
 }
@@ -263,7 +263,7 @@ static adlb_code block_move(xpt_block_num_t block,
   assert(is_init(state));
 
   DEBUG("Rank %"PRIu32" moving to start of block %"PRIu32,
-        xlb_comm_rank, block);
+        xlb_s.layout.rank, block);
   state->curr_block = block;
   state->curr_block_start = ((xpt_file_pos_t)block) * XLB_XPT_BLOCK_SIZE;
   state->curr_block_pos = 0;
@@ -274,7 +274,7 @@ static bool is_xpt_leader(void)
 {
   // For now, assume rank 0 is the leader
   // TODO: more flexibility e.g. if rank 0 doesn't want to checkpoint
-  return (xlb_comm_rank == 0);
+  return (xlb_s.layout.rank == 0);
 }
 
 static adlb_code xpt_header_write(xlb_xpt_state *state)
@@ -289,7 +289,7 @@ static adlb_code xpt_header_write(xlb_xpt_state *state)
   // Write info about structure of checkpoint file
   rc = bufwrite_uint32(state, XLB_XPT_BLOCK_SIZE);
   ADLB_CHECK(rc);
-  rc = bufwrite_uint32(state, (xpt_rank_t)xlb_comm_size);
+  rc = bufwrite_uint32(state, (xpt_rank_t)xlb_s.layout.size);
   ADLB_CHECK(rc);
   // TODO: more fields
   // TODO: checksum header
@@ -456,7 +456,7 @@ xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
     if (block_left == to_read)
     {
       // advance to next block
-      block = next_block((xpt_rank_t)xlb_comm_size, block);
+      block = next_block((xpt_rank_t)xlb_s.layout.size, block);
       DEBUG("Reading val: move to next block %"PRIu32, block);
       block_pos = 1; // Skip magic number
     }
@@ -1111,7 +1111,7 @@ static xpt_file_pos file_pos_add(xpt_file_pos pos, xpt_file_pos_t add)
   while (pos.block_pos + add >= XLB_XPT_BLOCK_SIZE)
   {
     // Move to next block
-    pos.block = next_block((xpt_rank_t)xlb_comm_size, pos.block);
+    pos.block = next_block((xpt_rank_t)xlb_s.layout.size, pos.block);
     pos.block_pos = 0;
     xpt_block_pos_t block_left = XLB_XPT_BLOCK_SIZE - pos.block_pos;
     add -= block_left;

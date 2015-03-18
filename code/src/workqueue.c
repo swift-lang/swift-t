@@ -38,7 +38,6 @@
 #include "debug.h"
 #include "messaging.h"
 #include "requestqueue.h"
-#include "server.h"
 #include "workqueue.h"
 
 // minimum percentage imbalance to trigger steal if stealers queue not empty
@@ -180,7 +179,7 @@ xlb_workq_init(int work_types, int my_workers, int worker_host_count)
     rbtree_init(&parallel_work[i]);
   }
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     DEBUG("PERF COUNTERS ENABLED");
     xlb_task_counters = malloc(sizeof(*xlb_task_counters) *
@@ -239,7 +238,8 @@ static int targeted_work_entries(int work_types, int my_workers)
 __attribute__((always_inline))
 static inline heap_iu32_t *targeted_work_heap(int rank, int type)
 {
-  int idx = xlb_my_worker_idx(rank) * xlb_types_size + (int)type;
+  int idx = xlb_my_worker_idx(&xlb_s.layout, rank) * xlb_s.types_size
+            + (int)type;
   assert(idx >= 0 && idx < targeted_work_size);
   return &targeted_work[idx];
 }
@@ -247,7 +247,7 @@ static inline heap_iu32_t *targeted_work_heap(int rank, int type)
 __attribute__((always_inline))
 static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type)
 {
-  int idx = host_idx * xlb_types_size + (int)type;
+  int idx = host_idx * xlb_s.types_size + (int)type;
   assert(idx >= 0 && idx < targeted_work_size);
   return &host_targeted_work[idx];
 }
@@ -255,9 +255,9 @@ static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type)
 __attribute__((always_inline))
 static inline int host_idx_from_rank(int rank)
 {
-  assert(xlb_worker_maps_to_server(rank, xlb_comm_rank));
+  assert(xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank));
 
-  return xlb_worker_host_map[xlb_my_worker_idx(rank)];
+  return xlb_s.workers.worker2host[xlb_my_worker_idx(&xlb_s.layout, rank)];
 }
 
 adlb_code
@@ -282,7 +282,7 @@ static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu)
   TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->opts.priority);
   rbtree_add(T, -wu->opts.priority, wu);
   xlb_workq_parallel_task_count++;
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     xlb_task_counters[wu->type].parallel_enqueued++;
   }
@@ -315,7 +315,7 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
   bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
   CHECK_MSG(b, "out of memory expanding heap");
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     xlb_task_counters[wu->type].single_enqueued++;
   }
@@ -326,7 +326,8 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
 static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Targeted task
-  if (xlb_worker_maps_to_server(wu->target, xlb_comm_rank))
+  if (xlb_worker_maps_to_server(&xlb_s.layout, wu->target,
+                                xlb_s.layout.rank))
   {
     heap_iu32_t* H;
     if (wu->opts.accuracy == ADLB_TGT_ACCRY_RANK)
@@ -360,7 +361,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
     CHECK_MSG(b, "out of memory expanding heap");
   }
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     xlb_task_counters[wu->type].targeted_enqueued++;
   }
@@ -707,7 +708,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
   // for each type:
   //    select # to send to stealer
   //    randomly choose until meet quota
-  for (int t = 0; t < xlb_types_size; t++)
+  for (int t = 0; t < xlb_s.types_size; t++)
   {
     int stealer_count = steal_type_counts[t];
     int single_count = (int)untargeted_work[t].size;
@@ -750,7 +751,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         xlb_workq_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
 
-        if (xlb_perf_counters_enabled)
+        if (xlb_s.perfc_enabled)
         {
           xlb_task_counters[t].single_stolen += single_sent;
           xlb_task_counters[t].parallel_stolen += par_to_send;
@@ -819,8 +820,8 @@ rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
 
 void xlb_workq_type_counts(int *types, int size)
 {
-  assert(size >= xlb_types_size);
-  for (int t = 0; t < xlb_types_size; t++)
+  assert(size >= xlb_s.types_size);
+  for (int t = 0; t < xlb_s.types_size; t++)
   {
     assert(untargeted_work[t].size >= 0);
     assert(parallel_work[t].size >= 0);
@@ -839,12 +840,12 @@ wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
 
 void xlb_print_workq_perf_counters(void)
 {
-  if (!xlb_perf_counters_enabled)
+  if (!xlb_s.perfc_enabled)
   {
     return;
   }
 
-  for (int t = 0; t < xlb_types_size; t++)
+  for (int t = 0; t < xlb_s.types_size; t++)
   {
     work_type_counters *c = &xlb_task_counters[t];
     /*
@@ -919,11 +920,8 @@ xlb_workq_finalize()
   free(host_targeted_work);
   host_targeted_work = NULL;
 
-  free(xlb_worker_host_map);
-  xlb_worker_host_map = NULL;
-
   // Clear up untargeted_work heaps
-  for (int i = 0; i < xlb_types_size; i++)
+  for (int i = 0; i < xlb_s.types_size; i++)
   {
     heap_iu32_clear_callback(&untargeted_work[i], NULL);
   }
@@ -931,7 +929,7 @@ xlb_workq_finalize()
   untargeted_work = NULL;
 
   // Clear up parallel_work
-  for (int i = 0; i < xlb_types_size; i++)
+  for (int i = 0; i < xlb_s.types_size; i++)
   {
     // TODO: pass waiting tasks to higher-level handling code
     if (parallel_work[i].size > 0)
@@ -943,7 +941,7 @@ xlb_workq_finalize()
   free(parallel_work);
   parallel_work = NULL;
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     free(xlb_task_counters);
     xlb_task_counters = NULL;

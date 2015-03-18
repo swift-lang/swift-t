@@ -71,7 +71,7 @@ static struct {
 } xlb_engine_counters;
 
 #define INCR_COUNTER(name) \
-  if (xlb_perf_counters_enabled) { \
+  if (xlb_s.perfc_enabled) { \
     xlb_engine_counters.name++;    \
   }
 
@@ -364,7 +364,7 @@ xlb_engine_init(int rank)
   if (!result)
     return XLB_ENGINE_ERROR_OOM;
 
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     xlb_engine_counters.id_subscribed = 0;
     xlb_engine_counters.id_subscribe_local = 0;
@@ -390,7 +390,7 @@ xlb_engine_init(int rank)
 void
 xlb_engine_print_counters(void)
 {
-  if (!xlb_perf_counters_enabled)
+  if (!xlb_s.perfc_enabled)
     return;
   PRINT_COUNTER("engine_subscribed=%"PRId64,
         xlb_engine_counters.id_subscribed +
@@ -570,10 +570,10 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
   }
   else
   {
-    if (server == xlb_comm_rank)
+    if (server == xlb_s.layout.rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                               xlb_comm_rank, 0, subscribed);
+                               xlb_s.layout.rank, 0, subscribed);
       TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
@@ -648,10 +648,10 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
   }
   else
   {
-    if (server == xlb_comm_rank)
+    if (server == xlb_s.layout.rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                            xlb_comm_rank, 0, subscribed);
+                                            xlb_s.layout.rank, 0, subscribed);
       TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {

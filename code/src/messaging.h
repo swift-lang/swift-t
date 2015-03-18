@@ -75,7 +75,7 @@ const char* xlb_get_tag_name(int tag);
 /*
    All of these client/handler functions (adlb.c,handlers.c,etc.)
    use messaging the same way:
-   - They use communicator adlb_comm
+   - They use communicator xlb_s.comm
    - They use the stack-allocated status or request object
    - They check the return code rc with MPI_CHECK() to return errors.
    Thus, we use these macros to ease reading the message protocols
@@ -86,28 +86,28 @@ const char* xlb_get_tag_name(int tag);
 
 #define SEND(data,length,type,rank,tag) { \
   TRACE_MPI("SEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Send(VOID data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Send(VOID data,length,type,rank,tag,xlb_s.comm); \
   MPI_CHECK(_rc); }
 
 #define RSEND(data,length,type,rank,tag) { \
   TRACE_MPI("RSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Rsend(VOID data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Rsend(VOID data,length,type,rank,tag,xlb_s.comm); \
   MPI_CHECK(_rc); }
 
 #define SSEND(data,length,type,rank,tag) { \
   TRACE_MPI("SSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Ssend(VOID data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Ssend(VOID data,length,type,rank,tag,xlb_s.comm); \
   TRACE_MPI("SSENT"); \
   MPI_CHECK(_rc); }
 
 #define ISEND(data,length,type,rank,tag,req) { \
   TRACE_MPI("ISEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Isend(VOID data,length,type,rank,tag,adlb_comm,req);      \
+  int _rc = MPI_Isend(VOID data,length,type,rank,tag,xlb_s.comm,req);      \
   MPI_CHECK(_rc); }
 
 #define IRSEND(data,length,type,rank,tag,req) { \
   TRACE_MPI("IRSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Irsend(data,length,type,rank,tag,adlb_comm,req); \
+  int _rc = MPI_Irsend(data,length,type,rank,tag,xlb_s.comm,req); \
   MPI_CHECK(_rc); }
 
 #define RECV(data,length,type,rank,tag) \
@@ -116,7 +116,7 @@ const char* xlb_get_tag_name(int tag);
 #define RECV_STATUS(data,length,type,rank,tag,status_ptr) { \
   TRACE_MPI("RECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int _rc = MPI_Recv(data,length,type,rank,tag, \
-                    adlb_comm,status_ptr); \
+                    xlb_s.comm,status_ptr); \
   TRACE_MPI("RECVD"); \
   MPI_CHECK(_rc); }
 
@@ -126,12 +126,12 @@ const char* xlb_get_tag_name(int tag);
 #define IRECV2(data,length,type,rank,tag,req) { \
   TRACE_MPI("IRECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int _rc = MPI_Irecv(data,length,type,rank,tag, \
-                     adlb_comm,req); \
+                     xlb_s.comm,req); \
   MPI_CHECK(_rc); }
 
 // We don't TRACE this
 #define IPROBE(target,tag,flag,status) { \
-    int _rc = MPI_Iprobe(target,tag,adlb_comm,flag,status); \
+    int _rc = MPI_Iprobe(target,tag,xlb_s.comm,flag,status); \
     MPI_CHECK(_rc); }
 
 #define WAIT(r,s) { \
@@ -163,7 +163,7 @@ const char* xlb_get_tag_name(int tag);
   MPI_CHECK(_rc); }
 
 #define BARRIER() { \
-    int _rc = MPI_Barrier(adlb_comm); \
+    int _rc = MPI_Barrier(xlb_s.comm); \
     MPI_CHECK(_rc); }
 /** MPI data type tags */
 // 64-bit int
@@ -464,7 +464,7 @@ struct packed_steal
   // Sender's work type counts packed into sync_data field as int[]
 };
 
-#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size)
+#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_s.types_size)
 
 struct packed_steal_resp
 {

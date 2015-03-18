@@ -164,7 +164,7 @@ static bool stealing = false;
 void
 xlb_handlers_init(void)
 {
-  MPI_Comm_rank(adlb_comm, &mpi_rank);
+  MPI_Comm_rank(xlb_s.comm, &mpi_rank);
 
   xlb_handler_count = 0;
   memset(xlb_handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
@@ -213,7 +213,7 @@ register_handler(adlb_tag tag, xlb_handler h)
 
 void xlb_print_handler_counters(void)
 {
-  if (!xlb_perf_counters_enabled)
+  if (!xlb_s.perfc_enabled)
   {
     return;
   }
@@ -493,7 +493,7 @@ xlb_put_work_unit(xlb_work_unit *work)
     // Attempt to redirect work unit to another worker
     if (targeted)
     {
-      CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
+      CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
       worker = xlb_requestqueue_matches_target(target, type,
                                                work->opts.accuracy);
     }
@@ -509,7 +509,7 @@ xlb_put_work_unit(xlb_work_unit *work)
       ADLB_CHECK(code);
       xlb_work_unit_free(work);
 
-      if (xlb_perf_counters_enabled)
+      if (xlb_s.perfc_enabled)
       {
         xlb_task_bypass_count(type, targeted, false);
       }
@@ -525,7 +525,7 @@ xlb_put_work_unit(xlb_work_unit *work)
       // Successfully sent out task
       xlb_work_unit_free(work);
 
-      if (xlb_perf_counters_enabled)
+      if (xlb_s.perfc_enabled)
       {
         xlb_task_bypass_count(type, false, true);
       }
@@ -548,9 +548,9 @@ adlb_code xlb_put_targeted_local(int type, int putter,
       int answer, int target, adlb_put_opts opts,
       const void* payload, int length)
 {
-  assert(xlb_map_to_server(target) == xlb_comm_rank);
-  valgrind_assert(target >= 0 && target < xlb_workers);
-  assert(target >= 0 && target < xlb_workers);
+  assert(xlb_map_to_server(&xlb_s.layout, target) == xlb_s.layout.rank);
+  valgrind_assert(target >= 0 && target < xlb_s.layout.workers);
+  assert(target >= 0 && target < xlb_s.layout.workers);
   int worker;
   adlb_code rc;
 
@@ -605,7 +605,7 @@ static adlb_code attempt_match_work(int type, int putter,
   // Attempt to redirect work unit to another worker
   if (targeted)
   {
-    CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
+    CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
     worker = xlb_requestqueue_matches_target(target, type,
                                              opts.accuracy);
     if (worker == ADLB_RANK_NULL &&
@@ -644,9 +644,9 @@ static adlb_code attempt_match_work(int type, int putter,
 static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism)
 {
-  CHECK_MSG(parallelism <= xlb_my_workers + 1,
+  CHECK_MSG(parallelism <= xlb_s.workers.count + 1,
       "Parallelism %i > max # workers per server %i",
-      parallelism, xlb_my_workers + 1);
+      parallelism, xlb_s.workers.count + 1);
   adlb_code code;
 
   // Try to match parallel task to multiple workers after receiving
@@ -657,7 +657,7 @@ static adlb_code attempt_match_par_work(int type,
     code = send_parallel_work(parallel_workers, XLB_WORK_UNIT_ID_NULL,
       type, answer, payload, length, parallelism);
     ADLB_CHECK(code);
-    if (xlb_perf_counters_enabled)
+    if (xlb_s.perfc_enabled)
     {
       xlb_task_bypass_count(type, false, true);
     }
@@ -673,7 +673,7 @@ static inline adlb_code send_matched_work(int type, int putter,
       int worker, int length, const void *inline_data)
 {
   adlb_code code;
-  if (xlb_perf_counters_enabled)
+  if (xlb_s.perfc_enabled)
   {
     // TODO: track soft targeted separately?
     xlb_task_bypass_count(type, targeted, false);
@@ -935,7 +935,7 @@ xlb_recheck_parallel_queues(void)
     return ADLB_SUCCESS;
   }
 
-  for (int t = 0; t < xlb_types_size; t++)
+  for (int t = 0; t < xlb_s.types_size; t++)
   {
     adlb_code rc = xlb_check_parallel_tasks(t);
     if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING)
@@ -1745,7 +1745,7 @@ handle_container_size(int caller)
   if (dc != ADLB_DATA_SUCCESS)
     size = -1;
   rc = MPI_Rsend(&size, 1, MPI_INT, caller,
-                 ADLB_TAG_RESPONSE, adlb_comm);
+                 ADLB_TAG_RESPONSE, xlb_s.comm);
   MPI_CHECK(rc);
   return ADLB_SUCCESS;
 }
@@ -1806,14 +1806,14 @@ handle_check_idle(int caller)
 
   if (idle)
   {
-    int request_counts[xlb_types_size];
-    xlb_requestqueue_type_counts(request_counts, xlb_types_size);
-    SEND(request_counts, xlb_types_size, MPI_INT, caller,
+    int request_counts[xlb_s.types_size];
+    xlb_requestqueue_type_counts(request_counts, xlb_s.types_size);
+    SEND(request_counts, xlb_s.types_size, MPI_INT, caller,
          ADLB_TAG_RESPONSE);
 
-    int untargeted_work_counts[xlb_types_size];
-    xlb_workq_type_counts(untargeted_work_counts, xlb_types_size);
-    SEND(untargeted_work_counts, xlb_types_size, MPI_INT, caller,
+    int untargeted_work_counts[xlb_s.types_size];
+    xlb_workq_type_counts(untargeted_work_counts, xlb_s.types_size);
+    SEND(untargeted_work_counts, xlb_s.types_size, MPI_INT, caller,
          ADLB_TAG_RESPONSE);
   }
   return ADLB_SUCCESS;
@@ -1877,7 +1877,7 @@ handle_fail(int caller)
 static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   MPI_Status req_status;
   int new_msg;
-  int mpi_rc = MPI_Iprobe(caller, tag, adlb_comm, &new_msg,
+  int mpi_rc = MPI_Iprobe(caller, tag, xlb_s.comm, &new_msg,
                           &req_status);
   MPI_CHECK(mpi_rc);
   assert(new_msg); // should be message

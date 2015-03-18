@@ -56,7 +56,7 @@ get_target_server(int* result)
   do
   {
     *result = xlb_random_server();
-  } while (*result == xlb_comm_rank);
+  } while (*result == xlb_s.layout.rank);
 }
 
 static bool xlb_can_steal(const int *work_type_counts);
@@ -113,13 +113,13 @@ xlb_random_steal_probe(void)
 
 adlb_code xlb_handle_steal_probe(int caller)
 {
-  int work_counts[xlb_types_size];
+  int work_counts[xlb_s.types_size];
 
   // Fill counts
-  xlb_workq_type_counts(work_counts, xlb_types_size);
+  xlb_workq_type_counts(work_counts, xlb_s.types_size);
 
   adlb_code rc = xlb_sync_steal_probe_resp(caller, work_counts, 
-                                           xlb_types_size);
+                                           xlb_s.types_size);
   ADLB_CHECK(rc);
 
   return ADLB_SUCCESS;
@@ -149,7 +149,7 @@ xlb_handle_steal_probe_resp(int caller,
     ADLB_CHECK(rc);
   
     DEBUG("[%i] Completed steal from %i stole_single: %i stole_par: %i",
-          xlb_comm_rank, caller, (int)stole_single, (int)stole_par);
+          xlb_s.layout.rank, caller, (int)stole_single, (int)stole_par);
     // Try to match stolen tasks
     rc = xlb_recheck_queues(stole_single, stole_par);
     ADLB_CHECK(rc);
@@ -157,7 +157,7 @@ xlb_handle_steal_probe_resp(int caller,
   else
   {
     DEBUG("[%i] No matching work to steal from %i",
-          xlb_comm_rank, caller);
+          xlb_s.layout.rank, caller);
   }
 
   return ADLB_SUCCESS;
@@ -170,9 +170,9 @@ xlb_handle_steal_probe_resp(int caller,
  */
 static bool xlb_can_steal(const int *work_type_counts)
 {
-  int request_q_sizes[xlb_types_size];
-  xlb_requestqueue_type_counts(request_q_sizes, xlb_types_size);
-  for (int i = 0; i < xlb_types_size; i++)
+  int request_q_sizes[xlb_s.types_size];
+  xlb_requestqueue_type_counts(request_q_sizes, xlb_s.types_size);
+  for (int i = 0; i < xlb_s.types_size; i++)
   {
     if (request_q_sizes[i] > 0 &&
         work_type_counts[i] > 0)
@@ -204,7 +204,7 @@ xlb_steal(int target, bool *stole_single, bool *stole_par)
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_steal_start);
 
-  DEBUG("[%i] stealing from %i", xlb_comm_rank, target);
+  DEBUG("[%i] stealing from %i", xlb_s.layout.rank, target);
 
   struct packed_steal_resp hdr;
   
@@ -242,7 +242,7 @@ xlb_steal(int target, bool *stole_single, bool *stole_par)
         ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
   }
   
-  DEBUG("[%i] steal result: stole %i tasks from %i", xlb_comm_rank,
+  DEBUG("[%i] steal result: stole %i tasks from %i", xlb_s.layout.rank,
         total_single + total_par, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr->count, target);
   *stole_single = (total_single > 0);
@@ -279,35 +279,35 @@ steal_sync(int target, int max_memory, int *response)
   // Need to give server information about which work types we have:
   // we only want to steal work types where the other server has more
   // of them than us.
-  int work_counts[xlb_types_size];
+  int work_counts[xlb_s.types_size];
 
   // Fill counts
-  xlb_workq_type_counts(work_counts, xlb_types_size);
+  xlb_workq_type_counts(work_counts, xlb_s.types_size);
 
-  adlb_code code = xlb_sync_steal(target, work_counts, xlb_types_size,
+  adlb_code code = xlb_sync_steal(target, work_counts, xlb_s.types_size,
                         max_memory, response);
   if (code == ADLB_SUCCESS)
   {
     if (*response)
     {
       DEBUG("[%i] synced with %i, receiving steal response",
-           xlb_comm_rank, target);
+           xlb_s.layout.rank, target);
     }
     else
     {
       DEBUG("[%i] synced with %i, no steal response",
-           xlb_comm_rank, target);
+           xlb_s.layout.rank, target);
     }
   }
   else if (code == ADLB_SHUTDOWN)
   {
     DEBUG("[%i] tried to sync with %i, received shutdown",
-         xlb_comm_rank, target);
+         xlb_s.layout.rank, target);
   }
   else
   {
     DEBUG("[%i] tried to sync with %i, error!",
-         xlb_comm_rank, target);
+         xlb_s.layout.rank, target);
   }
   return code; 
 }
@@ -351,7 +351,7 @@ steal_payloads(int target, int count,
     }
   }
   free(wus);
-  DEBUG("[%i] received batch size %i", xlb_comm_rank, count);
+  DEBUG("[%i] received batch size %i", xlb_s.layout.rank, count);
 
   *single_count = single;
   *par_count = par;
@@ -393,7 +393,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   
   MPI_Request reqs[count + 1];
 
-  DEBUG("[%i] sending batch size %zu", xlb_comm_rank, batch->size);
+  DEBUG("[%i] sending batch size %zu", xlb_s.layout.rank, batch->size);
   ISEND(packed, (int)sizeof(packed[0]) * count, MPI_BYTE,
        batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL, &reqs[0]);
 
@@ -482,7 +482,7 @@ xlb_handle_steal(int caller, const struct packed_steal *req,
       xlb_idle_check_attempt = thief_idle_check_attempt;
     }
   }
-  DEBUG("[%i] steal result: sent %i tasks to %i", xlb_comm_rank,
+  DEBUG("[%i] steal result: sent %i tasks to %i", xlb_s.layout.rank,
         state.stole_count, caller);
   STATS("LOST: %i", state.stole_count);
   // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", state.stole_count, caller);
