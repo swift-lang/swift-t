@@ -52,7 +52,7 @@ message()
 }
 
 inspect_results() {
-  print "<testsuites>"
+  print "<testsuite name=\"adlb\">"
 
   for test_script in tests/*.sh(.N)
   do
@@ -62,7 +62,7 @@ inspect_results() {
     local test_tmp="${test_path}.tmp"
     local test_out="${test_path}.out"
 
-    print "    <testcase name=\"${test_name}\" >"
+    print "    <testcase name=\"${test_name}\">"
 
     if [[ ! -f "${test_result}" ]]
     then
@@ -92,7 +92,7 @@ inspect_results() {
     print "    </testcase>"
   done
 
-  print "</testsuites>"
+  print "</testsuite>"
 }
 
 set +x
