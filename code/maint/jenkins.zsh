@@ -85,6 +85,7 @@ inspect_results() {
   done
 }
 
+unset -x
 inspect_results > ${SUITE_RESULT}
 
 exit 0
