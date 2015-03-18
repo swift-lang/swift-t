@@ -53,16 +53,6 @@ xlb_wtime(void)
   return MPI_Wtime() - xlb_s.start_time;
 }
 
-int
-xlb_type_index(int work_type)
-{
-  for (int i = 0; i < xlb_s.types_size; i++)
-    if (xlb_s.types[i] == work_type)
-      return i;
-  printf("get_type_idx: INVALID type %d\n", work_type);
-  return -1;
-}
-
 adlb_code xlb_env_long(const char *env_var, long *val)
 {
   char *s = getenv(env_var);

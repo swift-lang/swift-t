@@ -149,16 +149,14 @@ mpe_log_user_state(int type)
     if (user_type_current != -1)
     {
       // We have a valid previous state to end (not first get())
-      int i = xlb_type_index(user_type_current);
-      MPE_Log_bare_event(user_state_end[i]);
+      MPE_Log_bare_event(user_state_end[user_type_current]);
     }
   }
   else
   {
     // Just completed a Get() - starting user state
     user_type_current = type;
-    int i = xlb_type_index(user_type_current);
-    MPE_Log_bare_event(user_state_start[i]);
+    MPE_Log_bare_event(user_state_start[user_type_current]);
   }
 
   user_type_current = type;

@@ -156,9 +156,13 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   xlb_msg_init();
 
   xlb_s.types_size = ntypes;
-  xlb_s.types = malloc((size_t)xlb_s.types_size * sizeof(int));
-  for (int i = 0; i < xlb_s.types_size; i++)
-    xlb_s.types[i] = type_vect[i];
+
+  for (int i = 0; i < ntypes; i++)
+  {
+    CHECK_MSG(type_vect[i] == i,
+        "Only support type_vect with types 0..ntypes-1: "
+        "type_vect[%i] was %i", i, type_vect[i]);
+  }
 
   // Set this correctly before initializing other modules
   xlb_s.perfc_enabled = false;
@@ -311,7 +315,7 @@ adlb_put_check_params(int target, int type, adlb_put_opts opts)
             (target >= 0 && target < xlb_s.layout.workers),
             "ADLB_Put(): invalid target: %i", target);
 
-  CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
+  CHECK_MSG(type >= 0 && type < xlb_s.types_size,
             "ADLB_Put(): invalid work type: %d\n", type);
 
   CHECK_MSG(mpi_version >= 3 || opts.parallelism == 1,
@@ -518,7 +522,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   TRACE_START;
 
-  CHECK_MSG(xlb_type_index(type_requested) != -1,
+  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
@@ -592,7 +596,7 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   MPI_Status status;
   MPI_Request request;
 
-  CHECK_MSG(xlb_type_index(type_requested) != -1,
+  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
             "ADLB_Iget(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
@@ -780,7 +784,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
     return ADLB_SUCCESS;
   }
 
-  CHECK_MSG(xlb_type_index(type_requested) != -1,
+  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Amget(): Bad work type: %i\n", type_requested);
 
   ac = xlb_get_reqs_alloc(reqs, nreqs);
@@ -2086,9 +2090,6 @@ ADLBP_Finalize()
   if (xlb_s.worker_comm != MPI_COMM_NULL)
     MPI_Comm_free(&xlb_s.worker_comm);
   MPI_Group_free(&adlb_group);
-
-  free(xlb_s.types);
-  xlb_s.types = NULL;
 
   xlb_data_types_finalize();
 

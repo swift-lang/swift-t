@@ -83,19 +83,6 @@ xlb_rank_from_my_worker_idx(const xlb_layout* layout,
   return my_worker_idx * layout->servers + server_num;
 }
 
-static inline int
-xlb_workers_count_compute(const xlb_layout* layout)
-{
-  int count = layout->workers / layout->servers;
-  int server_num = layout->rank - layout->workers;
-  // Lower numbered servers may get remainder
-  if (server_num < layout->workers % layout->servers)
-  {
-    count++;
-  }
-  return count;
-}
-
 __attribute__((always_inline))
 static inline int host_idx_from_rank(const xlb_layout *layout, int rank)
 {

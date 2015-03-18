@@ -69,9 +69,6 @@ struct xlb_state {
   /** Number of work unit types */
   int types_size;
 
-  /** Array of allowed work unit types */
-  int* types;
-
   /** Whether read refcounting and memory freeing is enabled */
   bool read_refc_enabled;
 
@@ -97,11 +94,6 @@ int xlb_random_server(void);
    Note: this is used by debugging output
  */
 double xlb_wtime(void);
-
-/**
-   Given a work_type, obtain its index in xlb_types
- */
-int xlb_type_index(int work_type);
 
 /**
     Get long int from env var.  If not present, val is unmodified
