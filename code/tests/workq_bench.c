@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "adlb.h"
 #include "checks.h"
@@ -25,6 +26,10 @@ typedef enum {
 
 #define PAYLOAD_SIZE 256
 
+typedef struct {
+  struct timespec begin, end;
+} expt_timers;
+
 static adlb_code run(void);
 static adlb_code init(void);
 static adlb_code finalize(void);
@@ -38,12 +43,18 @@ static adlb_code expt_rwq(priority_mix prios, targeted_mix targets);
 static adlb_code make_wu(priority_mix prios, targeted_mix targets,
                     size_t payload_len, xlb_work_unit **wu_result);
 static int select_target(targeted_mix targets);
+static adlb_code make_wus(priority_mix prios, targeted_mix targets,
+            size_t payload_len, int nwus, xlb_work_unit ***wu_result);
+static void free_wus(int nwus, xlb_work_unit **wus);
 
 static void make_fake_hosts(const char **fake_hosts, int comm_size);
 static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
                               const char **hosts, int comm_size);
 static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
                               const char **hosts, int comm_size);
+
+static void time_begin(expt_timers *timers);
+static void time_end(expt_timers *timers);
 
 int main(int argc, char **argv)
 {
@@ -306,7 +317,27 @@ static adlb_code expt_wq(priority_mix prios, targeted_mix targets)
   // Reseed before experiment
   srand(RANDOM_SEED);
 
-  // TODO:
+  adlb_code ac;
+
+  int nwus = 1000; // TODO
+
+  xlb_work_unit **wus;
+  ac = make_wus(prios, targets, PAYLOAD_SIZE, nwus, &wus);
+  ADLB_CHECK(ac);
+
+  expt_timers timers;
+  time_begin(&timers);
+
+  // TODO: experiment
+
+  time_end(&timers);
+
+  // TODO: report
+  printf("%llis %lins\n",
+      (long long)(timers.end.tv_sec - timers.begin.tv_sec),
+      timers.end.tv_nsec - timers.begin.tv_nsec);
+
+  free_wus(nwus, wus);
   return ADLB_SUCCESS;
 }
 
@@ -368,6 +399,36 @@ static int select_target(targeted_mix targets)
     // Random worker
     return rand() % xlb_s.layout.workers;
   }
+}
+
+/*
+  Create an array of work units
+ */
+static adlb_code make_wus(priority_mix prios, targeted_mix targets,
+            size_t payload_len, int nwus, xlb_work_unit ***wu_result)
+{
+  adlb_code ac;
+
+  xlb_work_unit **wus = malloc(sizeof(wus[0]) * (size_t)nwus);
+  ADLB_MALLOC_CHECK(wus);
+
+  for (int i = 0; i < nwus; i++)
+  {
+    ac = make_wu(prios, targets, payload_len, &wus[i]);
+    ADLB_CHECK(ac);
+  }
+
+  *wu_result = wus;
+  return ADLB_SUCCESS;
+}
+
+static void free_wus(int nwus, xlb_work_unit **wus)
+{
+  for (int i = 0; i < nwus; i++)
+  {
+    xlb_work_unit_free(wus[i]);
+  }
+  free(wus);
 }
 
 static void make_fake_hosts(const char **fake_hosts, int comm_size)
@@ -455,4 +516,16 @@ static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
   }
 
   return ADLB_SUCCESS;
+}
+
+static void time_begin(expt_timers *timers)
+{
+  int rc = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &timers->begin);
+  assert(rc == 0);
+}
+
+static void time_end(expt_timers *timers)
+{
+  int rc = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &timers->end);
+  assert(rc == 0);
 }
