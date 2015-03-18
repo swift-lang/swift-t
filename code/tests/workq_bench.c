@@ -16,13 +16,17 @@
 typedef enum {
   EQUAL,
   UNIFORM_RANDOM,
-} priority_mix;
+} prio_mix;
+
+static const char *prio_mix_str(prio_mix prio);
 
 typedef enum {
   UNTARGETED,
   TARGETED,
   EQUAL_MIX,
-} targeted_mix;
+} tgt_mix;
+
+static const char *tgt_mix_str(tgt_mix tgt);
 
 #define PAYLOAD_SIZE 256
 
@@ -36,14 +40,18 @@ static adlb_code finalize(void);
 static adlb_code warmup(void);
 static adlb_code warmup_wq_iter(void);
 static adlb_code warmup_rq_iter(void);
-static adlb_code expt_rq(targeted_mix targets);
-static adlb_code expt_wq(priority_mix prios, targeted_mix targets);
-static adlb_code expt_rwq(priority_mix prios, targeted_mix targets);
+static adlb_code expt_rq(tgt_mix tgts);
+static adlb_code expt_wq(prio_mix prios, tgt_mix tgts);
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts);
 
-static adlb_code make_wu(priority_mix prios, targeted_mix targets,
+static void report_hdr(void);
+static void report(const char *expt, prio_mix prios, tgt_mix tgts,
+                   int queue_length, int nops, expt_timers timers);
+
+static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result);
-static int select_target(targeted_mix targets);
-static adlb_code make_wus(priority_mix prios, targeted_mix targets,
+static int select_target(tgt_mix tgts);
+static adlb_code make_wus(prio_mix prios, tgt_mix tgts,
             size_t payload_len, int nwus, xlb_work_unit ***wu_result);
 static void free_wus(int nwus, xlb_work_unit **wus);
 
@@ -82,22 +90,24 @@ static adlb_code run(void)
   ac = warmup();
   ADLB_CHECK(ac);
 
-  targeted_mix targets[] = {UNTARGETED, TARGETED, EQUAL_MIX};
-  int ntargets = sizeof(targets)/sizeof(targets[0]);
-  priority_mix prios[] = {EQUAL, UNIFORM_RANDOM};
+  report_hdr();
+
+  tgt_mix tgts[] = {UNTARGETED, TARGETED, EQUAL_MIX};
+  int ntgts = sizeof(tgts)/sizeof(tgts[0]);
+  prio_mix prios[] = {EQUAL, UNIFORM_RANDOM};
   int nprios = sizeof(prios)/sizeof(prios[0]);
 
-  for (int tgt_idx = 0; tgt_idx < ntargets; tgt_idx++)
+  for (int tgt_idx = 0; tgt_idx < ntgts; tgt_idx++)
   {
-    ac = expt_rq(targets[tgt_idx]);
+    ac = expt_rq(tgts[tgt_idx]);
     ADLB_CHECK(ac);
 
     for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
     {
-      ac = expt_wq(prios[prio_idx], targets[tgt_idx]);
+      ac = expt_wq(prios[prio_idx], tgts[tgt_idx]);
       ADLB_CHECK(ac);
 
-      ac = expt_rwq(prios[prio_idx], targets[tgt_idx]);
+      ac = expt_rwq(prios[prio_idx], tgts[tgt_idx]);
       ADLB_CHECK(ac);
     }
   }
@@ -300,7 +310,7 @@ static adlb_code warmup_rq_iter(void)
 /*
   Run experiment on request queue in isolation
  */
-static adlb_code expt_rq(targeted_mix targets)
+static adlb_code expt_rq(tgt_mix tgts)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
@@ -312,7 +322,7 @@ static adlb_code expt_rq(targeted_mix targets)
 /*
   Run experiment on work queue in isolation
  */
-static adlb_code expt_wq(priority_mix prios, targeted_mix targets)
+static adlb_code expt_wq(prio_mix prios, tgt_mix tgts)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
@@ -322,20 +332,19 @@ static adlb_code expt_wq(priority_mix prios, targeted_mix targets)
   int nwus = 1000; // TODO
 
   xlb_work_unit **wus;
-  ac = make_wus(prios, targets, PAYLOAD_SIZE, nwus, &wus);
+  ac = make_wus(prios, tgts, PAYLOAD_SIZE, nwus, &wus);
   ADLB_CHECK(ac);
 
   expt_timers timers;
   time_begin(&timers);
-
+  
+  int nops = 0;
+  int queue_length = 0;
   // TODO: experiment
 
   time_end(&timers);
 
-  // TODO: report
-  printf("%llis %lins\n",
-      (long long)(timers.end.tv_sec - timers.begin.tv_sec),
-      timers.end.tv_nsec - timers.begin.tv_nsec);
+  report("wq", prios, tgts, queue_length, nops, timers);
 
   free_wus(nwus, wus);
   return ADLB_SUCCESS;
@@ -344,7 +353,7 @@ static adlb_code expt_wq(priority_mix prios, targeted_mix targets)
 /*
   Run experiment on request queue + work queue flow
  */
-static adlb_code expt_rwq(priority_mix prios, targeted_mix targets)
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
@@ -353,8 +362,24 @@ static adlb_code expt_rwq(priority_mix prios, targeted_mix targets)
   return ADLB_SUCCESS;
 }
 
+static void report_hdr(void)
+{
+  printf("experiment,priorities,targets,queue_length,nops,sec,nsec\n");
+}
 
-static adlb_code make_wu(priority_mix prios, targeted_mix targets,
+static void report(const char *expt, prio_mix prios, tgt_mix tgts,
+                   int queue_length, int nops, expt_timers timers)
+{
+  printf("%s,%s,%s,%i,%i,%lli,%li\n",
+    expt,
+    prio_mix_str(prios), tgt_mix_str(tgts),
+    queue_length, nops,
+    (long long)(timers.end.tv_sec - timers.begin.tv_sec),
+    timers.end.tv_nsec - timers.begin.tv_nsec);
+}
+
+
+static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result)
 {
   xlb_work_unit *wu = work_unit_alloc(payload_len);
@@ -369,14 +394,14 @@ static adlb_code make_wu(priority_mix prios, targeted_mix targets,
   }
 
   int target;
-  if (targets == EQUAL_MIX)
+  if (tgts == EQUAL_MIX)
   {
     target = (rand() % 2 == 0) ? select_target(TARGETED)
                                : select_target(UNTARGETED);
   }
   else
   {
-    target = select_target(targets);
+    target = select_target(tgts);
   }
 
   xlb_work_unit_init(wu, 0, 0, 0, target, (int)payload_len, opts);
@@ -388,14 +413,14 @@ static adlb_code make_wu(priority_mix prios, targeted_mix targets,
   return ADLB_SUCCESS;
 }
 
-static int select_target(targeted_mix targets)
+static int select_target(tgt_mix tgts)
 {
-  if (targets == UNTARGETED)
+  if (tgts == UNTARGETED)
   {
     return ADLB_RANK_ANY;
   }
   else {
-    assert(targets == TARGETED);
+    assert(tgts == TARGETED);
     // Random worker
     return rand() % xlb_s.layout.workers;
   }
@@ -404,7 +429,7 @@ static int select_target(targeted_mix targets)
 /*
   Create an array of work units
  */
-static adlb_code make_wus(priority_mix prios, targeted_mix targets,
+static adlb_code make_wus(prio_mix prios, tgt_mix tgts,
             size_t payload_len, int nwus, xlb_work_unit ***wu_result)
 {
   adlb_code ac;
@@ -414,7 +439,7 @@ static adlb_code make_wus(priority_mix prios, targeted_mix targets,
 
   for (int i = 0; i < nwus; i++)
   {
-    ac = make_wu(prios, targets, payload_len, &wus[i]);
+    ac = make_wu(prios, tgts, payload_len, &wus[i]);
     ADLB_CHECK(ac);
   }
 
@@ -528,4 +553,34 @@ static void time_end(expt_timers *timers)
 {
   int rc = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &timers->end);
   assert(rc == 0);
+}
+
+static const char *prio_mix_str(prio_mix prio)
+{
+  if (prio == EQUAL)
+  {
+    return "EQUAL";
+  }
+  else
+  {
+    assert(prio == UNIFORM_RANDOM);
+    return "UNIFORM_RANDOM";
+  }
+}
+
+static const char *tgt_mix_str(tgt_mix tgt)
+{
+  if (tgt == UNTARGETED)
+  {
+    return "UNTARGETED";
+  }
+  else if (tgt == TARGETED)
+  {
+    return "TARGETED";
+  }
+  else
+  {
+    assert(tgt == EQUAL_MIX);
+    return "EQUAL_MIX";
+  }
 }
