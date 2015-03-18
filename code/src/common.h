@@ -54,7 +54,7 @@ struct xlb_state {
   /**
     General layout info
    */
-  struct xlb_layout layout;
+  xlb_layout layout;
 
   /**
     Host to rank map
@@ -69,7 +69,7 @@ struct xlb_state {
   /**
     Layout info about workers if this is server
    */
-  struct xlb_workers_layout workers;
+  xlb_wkrs_layout workers;
 
   /** Number of work unit types */
   int types_size;

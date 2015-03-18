@@ -24,17 +24,17 @@
 
 static adlb_code
 build_worker2host(const struct xlb_hostnames *hostnames,
-      const struct xlb_layout *layout, int my_workers,
+      const xlb_layout *layout, int my_workers,
       int **worker2host, int *host_count);
 static adlb_code
-build_host2workers(const struct xlb_layout *layout, int worker_count,
+build_host2workers(const xlb_layout *layout, int worker_count,
       int host_count, const int *worker2host,
       struct dyn_array_i **host2workers);
 
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-                struct xlb_layout *layout)
+                xlb_layout *layout)
 {
   layout->size = comm_size;
   layout->rank = comm_rank;
@@ -62,15 +62,15 @@ xlb_layout_init(int comm_size, int comm_rank, int nservers,
 }
 
 void
-xlb_layout_finalize(struct xlb_layout *layout)
+xlb_layout_finalize(xlb_layout *layout)
 {
   // Nothing to free at the moment
 }
 
 adlb_code
-xlb_workers_layout_init(const struct xlb_hostnames *hostnames,
-                        const struct xlb_layout *layout,
-                        struct xlb_workers_layout *workers)
+xlb_wkrs_layout_init(const struct xlb_hostnames *hostnames,
+                        const xlb_layout *layout,
+                        xlb_wkrs_layout *workers)
 {
   adlb_code ac;
 
@@ -97,7 +97,7 @@ xlb_workers_layout_init(const struct xlb_hostnames *hostnames,
 }
 
 void
-xlb_workers_layout_finalize(struct xlb_workers_layout *workers)
+xlb_wkrs_layout_finalize(xlb_wkrs_layout *workers)
 {
   if (workers->worker2host != NULL)
   {
@@ -116,7 +116,7 @@ xlb_workers_layout_finalize(struct xlb_workers_layout *workers)
 
 static adlb_code
 build_worker2host(const struct xlb_hostnames *hostnames,
-      const struct xlb_layout *layout, int my_workers,
+      const xlb_layout *layout, int my_workers,
       int **worker2host, int *host_count)
 {
   *worker2host = malloc(sizeof((*worker2host)[0]) *
@@ -154,7 +154,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
 }
 
 static adlb_code
-build_host2workers(const struct xlb_layout *layout, int worker_count,
+build_host2workers(const xlb_layout *layout, int worker_count,
       int host_count, const int *worker2host,
       struct dyn_array_i **host2workers)
 {

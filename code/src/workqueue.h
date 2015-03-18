@@ -62,7 +62,7 @@ typedef struct
 
 
 adlb_code
-xlb_workq_init(int work_types, const struct xlb_workers_layout *workers);
+xlb_workq_init(int work_types, const xlb_wkrs_layout *workers);
 
 /** Expose next ID to avoid function call overhead */
 extern xlb_work_unit_id xlb_workq_next_id;

@@ -224,7 +224,7 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
   code = xlb_hostnames_gather(comm, &hostnames);
   ADLB_CHECK(code);
 
-  code = xlb_workers_layout_init(&hostnames, &xlb_s.layout,
+  code = xlb_wkrs_layout_init(&hostnames, &xlb_s.layout,
                                  &xlb_s.workers);
   ADLB_CHECK(code);
 
@@ -2097,7 +2097,7 @@ ADLBP_Finalize()
 
   xlb_layout_finalize(&xlb_s.layout);
 
-  xlb_workers_layout_finalize(&xlb_s.workers);
+  xlb_wkrs_layout_finalize(&xlb_s.workers);
 
   return ADLB_SUCCESS;
 }

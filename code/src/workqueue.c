@@ -150,7 +150,7 @@ int64_t xlb_workq_parallel_task_count;
 work_type_counters *xlb_task_counters;
 
 adlb_code
-xlb_workq_init(int work_types, const struct xlb_workers_layout *workers)
+xlb_workq_init(int work_types, const xlb_wkrs_layout *workers)
 {
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);

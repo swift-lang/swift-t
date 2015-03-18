@@ -98,7 +98,7 @@ xlb_hostnames_free(struct xlb_hostnames *hostnames) {
 }
 
 adlb_code
-xlb_hostmap_init(const struct xlb_layout *layout,
+xlb_hostmap_init(const xlb_layout *layout,
                  const struct xlb_hostnames *hostnames,
                  struct xlb_hostmap **hostmap)
 {
@@ -171,7 +171,7 @@ xlb_get_hostmap_mode(xlb_hostmap_mode *mode)
 }
 
 adlb_code
-xlb_setup_leaders(struct xlb_layout *layout, struct xlb_hostmap *hosts,
+xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
                   MPI_Comm comm, MPI_Comm *leader_comm)
 {
   // Cannot be more leaders than hosts
