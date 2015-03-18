@@ -69,10 +69,16 @@ inspect_results() {
       # Failure info
       message "Found ERROR in ${test_name}"
       print "        <failure type=\"generic\">"
-      print "Script output file contents:"
-      cat ${test_tmp}
-      print ""
-      print ""
+      if [[ -f "${test_tmp}" ]]
+      then
+        print "Script output file contents:"
+        print "<![CDATA["
+        cat ${test_tmp}
+        print "]]>"
+        print ""
+        print ""
+      fi
+
       if [[ -f "${test_out}" ]]
       then
         print "Out file contents:"
