@@ -45,7 +45,7 @@ bool dyn_array_i_expand(struct dyn_array_i *da)
     new_capacity = 2;
   }
 
-  int *new_arr = malloc(new_capacity * sizeof(da->arr[0]));
+  int *new_arr = realloc(da->arr, new_capacity * sizeof(da->arr[0]));
   if (new_arr == NULL)
   {
     return false;
