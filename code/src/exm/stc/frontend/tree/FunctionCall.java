@@ -44,6 +44,7 @@ import exm.stc.frontend.Context.DefInfo;
 import exm.stc.frontend.Context.DefKind;
 import exm.stc.frontend.Context.FnOverload;
 import exm.stc.frontend.LogHelper;
+import exm.stc.frontend.typecheck.TypeChecker;
 
 public class FunctionCall {
   public static enum FunctionCallKind {
@@ -249,6 +250,13 @@ public class FunctionCall {
           throw duplicateAnnotationException(context, "location");
         }
         location = expr;
+
+        Type locType = TypeChecker.findExprType(context, location);
+        if (!locType.assignableTo(Types.F_LOCATION)) {
+          throw new TypeMismatchException(context, "Invalid location type."
+              + " Expected type " + Types.F_LOCATION.typeName()
+              + " actual type " + locType.typeName());
+        }
 
         if (annotName.equals(Annotations.FNCALL_SOFT_LOCATION)) {
           softLocationOverride = true;
