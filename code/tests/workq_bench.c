@@ -208,9 +208,11 @@ static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
 {
   adlb_code ac;
 
+  xlb_s.hostmap_mode = HOSTMAP_ENABLED;
+
   ac = xlb_hostmap_init(&xlb_s.layout, hostnames, &xlb_s.hostmap);
   ADLB_CHECK(ac);
-  
+
   for (int rank = 0; rank < comm_size; rank++)
   {
     const char *hostname = hosts[rank];
@@ -219,7 +221,7 @@ static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
     int ranks[xlb_s.layout.size];
     ac = ADLB_Hostmap_lookup(hostname, xlb_s.layout.size, ranks, &nranks);
     ADLB_CHECK(ac);
-    
+
     int matches = 0;
     for (int i = 0; i < nranks; i++)
     {

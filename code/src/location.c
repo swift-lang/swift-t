@@ -116,13 +116,15 @@ xlb_hostnames_fill(struct xlb_hostnames *hostnames,
                                                : max_name_length;
   }
 
+  size_t length_with_term = max_name_length + 1;
   adlb_code ac = hostnames_alloc(hostnames, nranks,
-                                max_name_length + 1);
+                                 length_with_term);
   ADLB_CHECK(ac);
 
   for (size_t i = 0; i < nranks; i++)
   {
-    strcpy(&hostnames->all_names[i * max_name_length], names[i]);
+    char *name_pos = &hostnames->all_names[i * length_with_term];
+    strcpy(name_pos, names[i]);
   }
 
   strcpy(hostnames->my_name, names[my_rank]);
