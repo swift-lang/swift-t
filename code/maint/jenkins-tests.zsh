@@ -27,7 +27,7 @@ message()
 
 inspect_results()
 {
-  print "<testsuites>"
+  print "<testsuite name=\"turbine\">"
   for test_lastrun in ./*.lastrun(.N)
   do
     local test_path=${test_lastrun%.lastrun}
@@ -39,17 +39,17 @@ inspect_results()
     if [[ -f "${test_result}" ]]
     then
       # Success:
-      print "    <testcase name=\"${test_name}\" />"
+      print "    <testcase name=\"${test_name}\"/>"
     else
       message "Failure - ${test_result} not present"
-      print "    <testcase name=\"${test_name}\" >"
+      print "    <testcase name=\"${test_name}\">"
       print "        <failure type=\"generic\">"
 
       if [[ -f "${test_tmp}" ]]
       then
         print "Result tmp file contents:"
         print "<![CDATA["
-        cat "${test_tmp}
+        cat "${test_tmp}"
         print "]]>"
         print ""
         print ""
@@ -66,7 +66,7 @@ inspect_results()
       print "    </testcase>"
     fi
   done
-  print "</testsuites>"
+  print "</testsuite>"
 }
 
 inspect_results > ${SUITE_RESULT}
