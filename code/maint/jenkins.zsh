@@ -52,6 +52,8 @@ message()
 }
 
 inspect_results() {
+  print "<testsuites>"
+
   for test_script in tests/*.sh(.N)
   do
     local test_path=${test_script%.sh}
@@ -83,6 +85,8 @@ inspect_results() {
 
     print "    </testcase>"
   done
+
+  print "</testsuites>"
 }
 
 set +x
