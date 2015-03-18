@@ -2,9 +2,5 @@
 DIR := tests
 
 TEST_SRCS += $(shell find $(DIR) -name "*.c" )
-TEST_OBJS += $(patsubst %.c, %.o, $(TEST_SRCS))
-TEST_DEPS += $(patsubst %.c, %.d, $(TEST_SRCS))
 
-
-clean::
-	$(E) rm -fv $(TEST_DEPS) $(TEST_OBJS)
+TEST_SCRIPTS += $(shell find $(DIR) -name "*.sh" )

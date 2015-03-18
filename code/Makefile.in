@@ -155,7 +155,7 @@ SRCS :=
 OBJS :=
 DEPS :=
 TEST_SRCS :=
-TEST_OBJS :=
+TNEST_OBJS :=
 TEST_DEPS :=
 
 include src/module.mk
@@ -227,11 +227,30 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) | lib
 
 ### APPS AND TESTS
 
+TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRCS))
+TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRCS))
+TEST_EXECS = $(patsubst %.c, %.x, $(TEST_SRCS))
+
+TEST_RESULTS = $(patsubst %.sh, %.result, $(TEST_SCRIPTS))
+TEST_TMP = $(patsubst %.sh, %.tmp, $(TEST_SCRIPTS))
+
 %.x: %.o $(INSTALL_TOKEN)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
              -L lib -ladlb $(LIBS) \
 	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
+
+tests: $(TEST_EXECS)
+
+test_results: $(TEST_RESULTS)
+
+# Require all tests to be built before running - don't track
+# exact dependencies between scripts and executables right now
+$(TEST_RESULTS): %.result : %.sh $(TEST_EXECS)
+	$(Q) "  TEST           $(@)"
+	$(E) rm -f $(@)
+	$(E) $(<) > $(*).tmp 2>&1
+	$(E) mv $(*).tmp $(@) 2>&1
 
 ### INSTALL
 
@@ -280,6 +299,8 @@ TAGS: deps.txt
 clean::
 	$(Q) "  CLEAN"
 	$(E) rm -fv $(OBJS) $(ADLB_A) $(ADLB_SO) $(DEPS)
+	$(E) rm -fv $(TEST_DEPS) $(TEST_OBJS) $(TEST_RESULTS)
+	$(E) rm -fv $(TEST_TMP) $(TEST_EXECS)
 
 distclean: clean
 	@rm -fv Makefile **/*.mk

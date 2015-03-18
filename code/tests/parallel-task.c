@@ -61,7 +61,9 @@ main()
     for (int i = 0; i < tasks_per_worker; i++)
     {
       sprintf(buffer, "PARALLEL_STRING from: %i #%i", rank, i);
-      ADLB_Put(buffer, strlen(buffer)+1, ADLB_RANK_ANY, rank, 0, 0, 2);
+      adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
+      opts.parallelism = 2;
+      ADLB_Put(buffer, (int)strlen(buffer)+1, ADLB_RANK_ANY, rank, 0, opts);
     }
     while (true)
     {
@@ -100,7 +102,7 @@ task(void* data, MPI_Comm comm)
   printf("TASK: rank: %i\n", rank);
   printf("TASK: size: %i\n", size);
   printf("DATA: %s\n", (char*) data);
-  int delay = random_between(1,10);
+  unsigned int delay = (unsigned int)random_between(1,10);
   sleep(delay);
   MPI_Barrier(comm);
   MPI_Comm_free(&comm);
