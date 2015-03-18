@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,14 +40,15 @@ static adlb_code init(void);
 static adlb_code finalize(void);
 static adlb_code warmup(void);
 static adlb_code warmup_wq_iter(void);
+static adlb_code drain_wq(int nexpected, bool free_wus);
 static adlb_code warmup_rq_iter(void);
-static adlb_code expt_rq(tgt_mix tgts);
-static adlb_code expt_wq(prio_mix prios, tgt_mix tgts);
-static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts);
+static adlb_code expt_rq(tgt_mix tgts, bool report);
+static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, bool report);
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report);
 
 static void report_hdr(void);
-static void report(const char *expt, prio_mix prios, tgt_mix tgts,
-                   int queue_length, int nops, expt_timers timers);
+static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
+                   int init_qlen, int nops, expt_timers timers);
 
 static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result);
@@ -97,18 +99,23 @@ static adlb_code run(void)
   prio_mix prios[] = {EQUAL, UNIFORM_RANDOM};
   int nprios = sizeof(prios)/sizeof(prios[0]);
 
-  for (int tgt_idx = 0; tgt_idx < ntgts; tgt_idx++)
+  for (int exp_iter = 0; exp_iter < 5; exp_iter++)
   {
-    ac = expt_rq(tgts[tgt_idx]);
-    ADLB_CHECK(ac);
+    bool report = exp_iter > 0;
 
-    for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
+    for (int tgt_idx = 0; tgt_idx < ntgts; tgt_idx++)
     {
-      ac = expt_wq(prios[prio_idx], tgts[tgt_idx]);
+      ac = expt_rq(tgts[tgt_idx], report);
       ADLB_CHECK(ac);
 
-      ac = expt_rwq(prios[prio_idx], tgts[tgt_idx]);
-      ADLB_CHECK(ac);
+      for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
+      {
+        ac = expt_wq(prios[prio_idx], tgts[tgt_idx], report);
+        ADLB_CHECK(ac);
+
+        ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], report);
+        ADLB_CHECK(ac);
+      }
     }
   }
 
@@ -226,10 +233,22 @@ static adlb_code warmup_wq_iter(void)
   xlb_workq_type_counts(workq_type_counts, 1);
   CHECK_MSG(workq_type_counts[0] == ntasks, "full queue");
 
+  ac = drain_wq(ntasks * 2, true);
+  ADLB_CHECK(ac);
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Drain work queue.  If nexpected is non-negative, check that
+  expected number of tasks were present.
+ */
+static adlb_code drain_wq(int nexpected, bool free_wus)
+{
   int nremoved = 0;
 
   // Remove all in round-robin way
-  while (nremoved < ntasks * 2)
+  while (nexpected < 0 || nremoved < nexpected)
   {
     int removed_this_iter = 0;
     for (int w = 0; w < xlb_s.layout.workers; w++)
@@ -243,16 +262,27 @@ static adlb_code warmup_wq_iter(void)
         CHECK_MSG(wu->target == ADLB_RANK_ANY ||
                   wu->target == w, "target");
         removed_this_iter++;
-        xlb_work_unit_free(wu);
+
+        if (free_wus)
+        {
+          xlb_work_unit_free(wu);
+        }
       }
     }
 
+    if (nexpected < 0 && removed_this_iter == 0)
+    {
+      // Queue is empty
+      break;
+    }
+
     CHECK_MSG(removed_this_iter > 0, "Removed %i/%i before running out",
-              nremoved, ntasks * 2);
+              nremoved, nexpected);
 
     nremoved += removed_this_iter;
   }
 
+  int workq_type_counts[1];
   xlb_workq_type_counts(workq_type_counts, 1);
   CHECK_MSG(workq_type_counts[0] == 0, "empty queue");
 
@@ -310,7 +340,7 @@ static adlb_code warmup_rq_iter(void)
 /*
   Run experiment on request queue in isolation
  */
-static adlb_code expt_rq(tgt_mix tgts)
+static adlb_code expt_rq(tgt_mix tgts, bool report)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
@@ -322,38 +352,80 @@ static adlb_code expt_rq(tgt_mix tgts)
 /*
   Run experiment on work queue in isolation
  */
-static adlb_code expt_wq(prio_mix prios, tgt_mix tgts)
+static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, bool report)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
 
   adlb_code ac;
 
-  int nwus = 1000; // TODO
+  int nwus = 1024 * 512; // TODO
+  int init_qlen = 1024 * 16; // TODO
+  //int nops = 250000000;
+  int nops = 1000000;
 
-  xlb_work_unit **wus;
+  // Precompute random sequence to avoid calling rand() in loop
+  int rand_seq_len = 4096;
+  unsigned char rand_seq[rand_seq_len];
+  for (int i = 0; i < rand_seq_len; i++)
+  {
+    rand_seq[i] = (unsigned char)(((rand() >> 16) % 2) & 0xFF);
+  }
+
+  xlb_work_unit **wus, **init_wus;
+
+  ac = make_wus(prios, tgts, PAYLOAD_SIZE, init_qlen, &init_wus);
+  ADLB_CHECK(ac);
+
   ac = make_wus(prios, tgts, PAYLOAD_SIZE, nwus, &wus);
   ADLB_CHECK(ac);
 
+  // Prepopulate queue
+  for (int i = 0; i < init_qlen; i++)
+  {
+    ac = xlb_workq_add(init_wus[i]);
+    ADLB_CHECK(ac);
+  }
+
   expt_timers timers;
   time_begin(&timers);
-  
-  int nops = 0;
-  int queue_length = 0;
-  // TODO: experiment
+
+
+  for (int op = 0; op < nops; op++)
+  {
+    // Use random sequence to get somewhat random sequence of operations
+    bool add = (rand_seq[op % rand_seq_len] % 2) == 0;
+    if (add)
+    {
+      ac = xlb_workq_add(wus[op % nwus]);
+      ADLB_CHECK(ac);
+    }
+    else
+    {
+      // Get work unit - do nothing with it
+      xlb_workq_get(op % xlb_s.layout.workers, 0);
+    }
+  }
 
   time_end(&timers);
 
-  report("wq", prios, tgts, queue_length, nops, timers);
+  ac = drain_wq(-1, false);
+  ADLB_CHECK(ac);
+
+  if (report)
+  {
+    report_expt("wq", prios, tgts, init_qlen, nops, timers);
+  }
 
   free_wus(nwus, wus);
+  free_wus(init_qlen, init_wus);
   return ADLB_SUCCESS;
 }
 
 /*
   Run experiment on request queue + work queue flow
  */
-static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts)
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report)
 {
   // Reseed before experiment
   srand(RANDOM_SEED);
@@ -364,18 +436,22 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts)
 
 static void report_hdr(void)
 {
-  printf("experiment,priorities,targets,queue_length,nops,sec,nsec\n");
+  printf("experiment,priorities,targets,init_qlen,nops,nsec,sec,nsec_op\n");
 }
 
-static void report(const char *expt, prio_mix prios, tgt_mix tgts,
-                   int queue_length, int nops, expt_timers timers)
+static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
+                   int init_qlen, int nops, expt_timers timers)
 {
-  printf("%s,%s,%s,%i,%i,%lli,%li\n",
+  long long nsec = 
+    ((long long)(timers.end.tv_sec - timers.begin.tv_sec)) * 1000000000 +
+    timers.end.tv_nsec - timers.begin.tv_nsec;
+
+  printf("%s,%s,%s,%i,%i,%lli,%lf,%lf\n",
     expt,
     prio_mix_str(prios), tgt_mix_str(tgts),
-    queue_length, nops,
-    (long long)(timers.end.tv_sec - timers.begin.tv_sec),
-    timers.end.tv_nsec - timers.begin.tv_nsec);
+    init_qlen, nops,
+    nsec, nsec / (double)1e9,
+    nsec / (double)nops);
 }
 
 
