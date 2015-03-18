@@ -150,7 +150,7 @@ int64_t xlb_workq_parallel_task_count;
 work_type_counters *xlb_task_counters;
 
 adlb_code
-xlb_workq_init(int work_types, const xlb_wkrs_layout *workers)
+xlb_workq_init(int work_types, const xlb_layout *layout)
 {
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
@@ -160,12 +160,13 @@ xlb_workq_init(int work_types, const xlb_wkrs_layout *workers)
   bool ok = ptr_array_init(&wu_array, WU_ARRAY_INIT_SIZE);
   CHECK_MSG(ok, "wu_array initialisation failed");
 
-  targeted_work_size = targeted_work_entries(work_types, workers->count);
+  targeted_work_size = targeted_work_entries(work_types,
+                                    layout->my_workers);
   ac = init_work_heaps(&targeted_work, targeted_work_size);
   ADLB_CHECK(ac);
 
   host_targeted_work_size = targeted_work_entries(work_types,
-                                          workers->host_count);
+                                          layout->my_worker_hosts);
   ac = init_work_heaps(&host_targeted_work, host_targeted_work_size);
   ADLB_CHECK(ac);
 
@@ -797,8 +798,7 @@ heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
  */
 static inline int host_idx_from_rank2(int rank)
 {
-  return host_idx_from_rank(&xlb_s.layout, &xlb_s.workers,
-                            rank);
+  return host_idx_from_rank(&xlb_s.layout, rank);
 }
 
 

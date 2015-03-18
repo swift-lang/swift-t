@@ -66,11 +66,6 @@ struct xlb_state {
    */
   xlb_hostmap_mode hostmap_mode;
 
-  /**
-    Layout info about workers if this is server
-   */
-  xlb_wkrs_layout workers;
-
   /** Number of work unit types */
   int types_size;
 

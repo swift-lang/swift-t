@@ -22,6 +22,8 @@
 #include "debug.h"
 #include "location.h"
 
+static int
+my_workers_count(const xlb_layout* layout);
 static adlb_code
 build_worker2host(const struct xlb_hostnames *hostnames,
       const xlb_layout *layout, int my_workers,
@@ -34,8 +36,10 @@ build_host2workers(const xlb_layout *layout, int worker_count,
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-                xlb_layout *layout)
+    const struct xlb_hostnames *hostnames, xlb_layout *layout)
 {
+  adlb_code ac;
+
   layout->size = comm_size;
   layout->rank = comm_rank;
 
@@ -58,60 +62,60 @@ xlb_layout_init(int comm_size, int comm_rank, int nservers,
   }
   DEBUG("my_server_rank: %i", layout->my_server);
 
+  if (layout->am_server)
+  {
+    layout->my_workers = my_workers_count(layout);
+
+    ac = build_worker2host(hostnames, layout, layout->my_workers,
+                  &layout->my_worker2host, &layout->my_worker_hosts);
+    ADLB_CHECK(ac);
+
+    ac = build_host2workers(layout, layout->my_workers,
+                  layout->my_worker_hosts, layout->my_worker2host,
+                  &layout->my_host2workers);
+    ADLB_CHECK(ac);
+  }
+  else
+  {
+    layout->my_workers = 0;
+    layout->my_worker_hosts = 0;
+    layout->my_worker2host = NULL;
+    layout->my_host2workers = NULL;
+  }
+
   return ADLB_SUCCESS;
 }
 
 void
 xlb_layout_finalize(xlb_layout *layout)
 {
-  // Nothing to free at the moment
+  if (layout->my_worker2host != NULL)
+  {
+    free(layout->my_worker2host);
+    layout->my_worker2host = NULL;
+  }
+
+  if (layout->my_host2workers != NULL)
+  {
+    for (int i = 0; i < layout->my_worker_hosts; i++)
+      dyn_array_i_release(&layout->my_host2workers[i]);
+
+    free(layout->my_host2workers);
+    layout->my_host2workers = NULL;
+  }
 }
 
-adlb_code
-xlb_wkrs_layout_init(const struct xlb_hostnames *hostnames,
-                        const xlb_layout *layout,
-                        xlb_wkrs_layout *workers)
+static int
+my_workers_count(const xlb_layout* layout)
 {
-  adlb_code ac;
-
-  if (!layout->am_server)
+  int count = layout->workers / layout->servers;
+  int server_num = layout->rank - layout->workers;
+  // Lower numbered servers may get remainder
+  if (server_num < layout->workers % layout->servers)
   {
-    workers->count = 0;
-    workers->host_count = 0;
-    workers->worker2host = NULL;
-    workers->host2workers = NULL;
-    return ADLB_SUCCESS;
+    count++;
   }
-
-  workers->count = xlb_workers_count_compute(layout);
-
-  ac = build_worker2host(hostnames, layout, workers->count,
-                &workers->worker2host, &workers->host_count);
-  ADLB_CHECK(ac);
-
-  ac = build_host2workers(layout, workers->count, workers->host_count,
-                          workers->worker2host, &workers->host2workers);
-  ADLB_CHECK(ac);
-
-  return ADLB_SUCCESS;
-}
-
-void
-xlb_wkrs_layout_finalize(xlb_wkrs_layout *workers)
-{
-  if (workers->worker2host != NULL)
-  {
-    free(workers->worker2host);
-    xlb_s.workers.worker2host = NULL;
-  }
-
-  if (workers->host2workers != NULL)
-  {
-    for (int i = 0; i < workers->host_count; i++)
-      dyn_array_i_release(&workers->host2workers[i]);
-    free(workers->host2workers);
-    workers->host2workers = NULL;
-  }
+  return count;
 }
 
 static adlb_code

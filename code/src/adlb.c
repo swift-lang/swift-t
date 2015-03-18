@@ -217,15 +217,12 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
   rc = MPI_Comm_rank(comm, &comm_rank);
   MPI_CHECK(rc);
 
-  code = xlb_layout_init(comm_size, comm_rank, nservers, &xlb_s.layout);
-  ADLB_CHECK(code);
-
   struct xlb_hostnames hostnames;
   code = xlb_hostnames_gather(comm, &hostnames);
   ADLB_CHECK(code);
 
-  code = xlb_wkrs_layout_init(&hostnames, &xlb_s.layout,
-                                 &xlb_s.workers);
+  code = xlb_layout_init(comm_size, comm_rank, nservers, &hostnames,
+                         &xlb_s.layout);
   ADLB_CHECK(code);
 
   code = xlb_get_hostmap_mode(&xlb_s.hostmap_mode);
@@ -2096,8 +2093,6 @@ ADLBP_Finalize()
   xlb_data_types_finalize();
 
   xlb_layout_finalize(&xlb_s.layout);
-
-  xlb_wkrs_layout_finalize(&xlb_s.workers);
 
   return ADLB_SUCCESS;
 }

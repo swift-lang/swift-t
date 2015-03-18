@@ -38,7 +38,7 @@ typedef struct
 } xlb_request_entry; 
 
 adlb_code
-xlb_requestqueue_init(int ntypes, const xlb_wkrs_layout *workers);
+xlb_requestqueue_init(int ntypes, const xlb_layout *layout);
 
 /*
   Add a request to the queue

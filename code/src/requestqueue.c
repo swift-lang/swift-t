@@ -92,15 +92,15 @@ static inline struct list2_item *alloc_list2_node(void);
 static inline void free_list2_node(struct list2_item *node);
 
 adlb_code
-xlb_requestqueue_init(int ntypes, const xlb_wkrs_layout *workers)
+xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
 {
-  assert(workers->count >= 0);
+  assert(layout->my_workers >= 0);
   assert(ntypes >= 1);
 
-  targets = malloc(sizeof(targets[0]) * (size_t)workers->count);
+  targets = malloc(sizeof(targets[0]) * (size_t)layout->my_workers);
   ADLB_MALLOC_CHECK(targets);
 
-  for (int i = 0; i < workers->count; i++)
+  for (int i = 0; i < layout->my_workers; i++)
   {
     targets[i].item = NULL;
   }
@@ -111,7 +111,7 @@ xlb_requestqueue_init(int ntypes, const xlb_wkrs_layout *workers)
     list2_init(&type_requests[i]);
 
   // Allocate one list node per worker - otherwise will fallback to malloc/free
-  adlb_code ac = list2_node_pool_init(workers->count);
+  adlb_code ac = list2_node_pool_init(layout->my_workers);
   ADLB_CHECK(ac);
 
   request_queue_size = 0;
@@ -309,9 +309,9 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
   DEBUG("requestq_matches_tgt_node(task_tgt_idx=%i, task_type=%i)",
         task_tgt_idx, task_type);
   int result = ADLB_RANK_NULL;
-  int task_host_idx = xlb_s.workers.worker2host[task_tgt_idx];
-  struct dyn_array_i *host_workers = 
-                   &xlb_s.workers.host2workers[task_host_idx];
+  int task_host_idx = xlb_s.layout.my_worker2host[task_tgt_idx];
+  struct dyn_array_i *host_workers;
+  host_workers = &xlb_s.layout.my_host2workers[task_host_idx];
 
   for (int i = 0; i < host_workers->size; i++)
   {
@@ -391,7 +391,7 @@ xlb_requestqueue_nblocked(void)
 adlb_code xlb_requestqueue_incr_blocked(void)
 {
   nblocked++;
-  assert(nblocked <= xlb_s.workers.count);
+  assert(nblocked <= xlb_s.layout.my_workers);
   return ADLB_SUCCESS;
 }
 

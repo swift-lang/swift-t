@@ -25,22 +25,10 @@
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-                xlb_layout *layout);
+    const struct xlb_hostnames *hostnames, xlb_layout *layout);
 
 void
 xlb_layout_finalize(xlb_layout *layout);
-
-/**
-  Setup layout of workers for this server
- */
-adlb_code
-xlb_wkrs_layout_init(const struct xlb_hostnames *hostnames,
-                        const xlb_layout *layout,
-                        xlb_wkrs_layout *workers);
-
-void
-xlb_wkrs_layout_finalize(xlb_wkrs_layout *workers);
-
 
 // Small and frequently used functions to inline for performance
 __attribute__((always_inline))
@@ -109,12 +97,11 @@ xlb_workers_count_compute(const xlb_layout* layout)
 }
 
 __attribute__((always_inline))
-static inline int host_idx_from_rank(const xlb_layout *layout,
-                  const xlb_wkrs_layout *workers, int rank)
+static inline int host_idx_from_rank(const xlb_layout *layout, int rank)
 {
   assert(xlb_worker_maps_to_server(layout, rank, layout->rank));
 
-  return workers->worker2host[xlb_my_worker_idx(layout, rank)];
+  return layout->my_worker2host[xlb_my_worker_idx(layout, rank)];
 }
 
 #endif // __LAYOUT_H

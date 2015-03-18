@@ -644,9 +644,9 @@ static adlb_code attempt_match_work(int type, int putter,
 static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism)
 {
-  CHECK_MSG(parallelism <= xlb_s.workers.count + 1,
+  CHECK_MSG(parallelism <= xlb_s.layout.my_workers + 1,
       "Parallelism %i > max # workers per server %i",
-      parallelism, xlb_s.workers.count + 1);
+      parallelism, xlb_s.layout.my_workers + 1);
   adlb_code code;
 
   // Try to match parallel task to multiple workers after receiving

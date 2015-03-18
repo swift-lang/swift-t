@@ -153,9 +153,9 @@ xlb_server_init(const struct xlb_state *state)
   xlb_server_shutting_down = false;
 
   list_i_init(&workers_shutdown);
-  code = xlb_workq_init(state->types_size, &state->workers);
+  code = xlb_workq_init(state->types_size, &state->layout);
   ADLB_CHECK(code);
-  code = xlb_requestqueue_init(state->types_size, &state->workers);
+  code = xlb_requestqueue_init(state->types_size, &state->layout);
   ADLB_CHECK(code);
   xlb_data_init(state->layout.servers, xlb_server_number(state->layout.rank));
   code = setup_idle_time();
@@ -552,11 +552,11 @@ workers_idle(void)
   //TRACE("workers_idle(): workers blocked:   %i\n", blocked);
   //TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
 
-  assert(blocked <= xlb_s.workers.count);
-  assert(shutdown <= xlb_s.workers.count);
-  assert(blocked + shutdown <= xlb_s.workers.count);
+  assert(blocked <= xlb_s.layout.my_workers);
+  assert(shutdown <= xlb_s.layout.my_workers);
+  assert(blocked + shutdown <= xlb_s.layout.my_workers);
 
-  if (blocked+shutdown == xlb_s.workers.count)
+  if (blocked + shutdown == xlb_s.layout.my_workers)
     return true;
 
   return false;
