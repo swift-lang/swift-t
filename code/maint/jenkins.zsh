@@ -38,7 +38,7 @@ make V=1 install
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
 
-SUITE_RESULT="result_aggregate.xml"
+SUITE_RESULT=./tests/result_aggregate.xml
 rm -fv ${SUITE_RESULT}
 
 rm -fv tests/*.result(.N)
