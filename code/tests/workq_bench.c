@@ -109,6 +109,16 @@ static adlb_code warmup(void) {
 
       CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
     }
+
+    CHECK_MSG(xlb_requestqueue_size() == 0, "empty queue");
+
+    int workq_type_counts[xlb_s.types_size];
+    xlb_workq_type_counts(workq_type_counts, xlb_s.types_size);
+
+    for (int t = 0; t < xlb_s.types_size; t++)
+    {
+      CHECK_MSG(workq_type_counts[t] == 0, "empty queue");
+    }
   }
 
   return ADLB_SUCCESS;
