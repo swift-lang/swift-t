@@ -153,8 +153,7 @@ xlb_server_init(const struct xlb_state *state)
   xlb_server_shutting_down = false;
 
   list_i_init(&workers_shutdown);
-  code = xlb_workq_init(state->types_size, state->workers.count,
-                        state->workers.host_count);
+  code = xlb_workq_init(state->types_size, &state->workers);
   ADLB_CHECK(code);
   code = xlb_requestqueue_init();
   ADLB_CHECK(code);

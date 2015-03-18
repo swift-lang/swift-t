@@ -36,6 +36,7 @@
 #include "adlb-defs.h"
 #include "common.h"
 #include "debug.h"
+#include "layout.h"
 #include "messaging.h"
 #include "requestqueue.h"
 #include "workqueue.h"
@@ -149,7 +150,7 @@ int64_t xlb_workq_parallel_task_count;
 work_type_counters *xlb_task_counters;
 
 adlb_code
-xlb_workq_init(int work_types, int my_workers, int worker_host_count)
+xlb_workq_init(int work_types, const struct xlb_workers_layout *workers)
 {
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
@@ -159,12 +160,12 @@ xlb_workq_init(int work_types, int my_workers, int worker_host_count)
   bool ok = ptr_array_init(&wu_array, WU_ARRAY_INIT_SIZE);
   CHECK_MSG(ok, "wu_array initialisation failed");
 
-  targeted_work_size = targeted_work_entries(work_types, my_workers);
+  targeted_work_size = targeted_work_entries(work_types, workers->count);
   ac = init_work_heaps(&targeted_work, targeted_work_size);
   ADLB_CHECK(ac);
 
   host_targeted_work_size = targeted_work_entries(work_types,
-                                          worker_host_count);
+                                          workers->host_count);
   ac = init_work_heaps(&host_targeted_work, host_targeted_work_size);
   ADLB_CHECK(ac);
 
