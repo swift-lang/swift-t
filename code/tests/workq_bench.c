@@ -22,10 +22,12 @@ static const char *prio_mix_str(prio_mix prio);
 
 typedef enum {
   UNTARGETED,
-  TARGETED,
-  EQUAL_MIX,
-  SOFT_TARGETED, // soft targeted to 50% of ranks
-  // TODO - node targeted?
+  RANK_TARGETED,
+  NODE_TARGETED,
+  EQUAL_MIX, // 50% untargeted, 50% rank targeted
+  // TODO: mix with node targeted?
+  RANK_SOFT_TARGETED, // soft targeted to 50% of ranks
+  NODE_SOFT_TARGETED, // soft targeted to 50% of nodes
 } tgt_mix;
 
 static const char *tgt_mix_str(tgt_mix tgt);
@@ -75,10 +77,14 @@ static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
 
 static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result);
-static int select_wu_target(tgt_mix tgts);
 static adlb_code make_wus(prio_mix prios, tgt_mix tgts,
             size_t payload_len, int nwus, xlb_work_unit ***wu_result);
 static void free_wus(int nwus, xlb_work_unit **wus);
+
+static int select_wu_target(tgt_mix tgts);
+static bool is_soft_target(tgt_mix tgts);
+static adlb_target_accuracy get_target_accuracy(tgt_mix tgts);
+static bool same_host(int rank1, int rank2);
 
 static void make_fake_hosts(const char **fake_hosts, int comm_size);
 static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
@@ -169,7 +175,8 @@ static adlb_code run(bool run_benchmarks)
     fprintf(stderr, "Running benchmarks...\n");
     report_hdr();
 
-    tgt_mix tgts[] = {UNTARGETED, TARGETED, EQUAL_MIX, SOFT_TARGETED};
+    tgt_mix tgts[] = {UNTARGETED, RANK_TARGETED, NODE_TARGETED,
+            EQUAL_MIX, RANK_SOFT_TARGETED, NODE_SOFT_TARGETED};
     int ntgts = sizeof(tgts)/sizeof(tgts[0]);
     prio_mix prios[] = {EQUAL, UNIFORM_RANDOM};
     int nprios = sizeof(prios)/sizeof(prios[0]);
@@ -271,6 +278,8 @@ static adlb_code finalize(void)
 static adlb_code warmup(void) {
   adlb_code ac;
 
+  srand(random_seed);
+
   int warmup_iters = 2;
 
   for (int iter = 0; iter < warmup_iters; iter++)
@@ -305,19 +314,41 @@ static adlb_code warmup_wq_iter(void)
     ac = xlb_workq_add(wu);
     ADLB_CHECK(ac);
 
-    ac = make_wu(UNIFORM_RANDOM, TARGETED, payload_size, &wu);
+    ac = make_wu(UNIFORM_RANDOM, RANK_TARGETED, payload_size, &wu);
+    ADLB_CHECK(ac);
+
+    ac = xlb_workq_add(wu);
+    ADLB_CHECK(ac);
+
+    ac = make_wu(UNIFORM_RANDOM, NODE_TARGETED, payload_size, &wu);
+    ADLB_CHECK(ac);
+
+    ac = xlb_workq_add(wu);
+    ADLB_CHECK(ac);
+
+    ac = make_wu(UNIFORM_RANDOM, RANK_SOFT_TARGETED, payload_size, &wu);
+    ADLB_CHECK(ac);
+
+    ac = xlb_workq_add(wu);
+    ADLB_CHECK(ac);
+
+    ac = make_wu(UNIFORM_RANDOM, NODE_SOFT_TARGETED, payload_size, &wu);
     ADLB_CHECK(ac);
 
     ac = xlb_workq_add(wu);
     ADLB_CHECK(ac);
   }
 
+  // Including soft targeted
+  int untargeted_tasks = ntasks * 3;
+  int total_tasks = untargeted_tasks + ntasks * 2;
+
   // Check correct number of untargeted tasks
   int workq_type_counts[1];
   xlb_workq_type_counts(workq_type_counts, 1);
-  CHECK_MSG(workq_type_counts[0] == ntasks, "full queue");
+  CHECK_MSG(workq_type_counts[0] == untargeted_tasks, "full queue");
 
-  ac = drain_wq(ntasks * 2, true);
+  ac = drain_wq(total_tasks, true);
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
@@ -345,7 +376,9 @@ static adlb_code drain_wq(int nexpected, bool free_wus)
         CHECK_MSG(wu->length == payload_size, "size");
         CHECK_MSG(wu->target == ADLB_RANK_ANY ||
                   wu->target == w ||
-                  wu->opts.strictness == ADLB_TGT_STRICT_SOFT,
+                  wu->opts.strictness == ADLB_TGT_STRICT_SOFT ||
+                  (wu->opts.accuracy == ADLB_TGT_ACCRY_NODE &&
+                    same_host(wu->target, w)),
                   "target");
         removed_this_iter++;
 
@@ -377,6 +410,7 @@ static adlb_code drain_wq(int nexpected, bool free_wus)
 
 static adlb_code warmup_rq_iter(void)
 {
+  srand(random_seed);
   adlb_code ac;
 
   for (int rank = 0; rank < xlb_s.layout.workers; rank++)
@@ -414,6 +448,24 @@ static adlb_code warmup_rq_iter(void)
     CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
 
     match = xlb_requestqueue_matches_type(type);
+    CHECK_MSG(match == rank, "Expected match");
+
+    CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
+
+    // Test node accuracy - select other rank from same node
+    int host_idx = host_idx_from_rank(&xlb_s.layout, rank);
+    struct dyn_array_i *host_workers;
+    host_workers = &xlb_s.layout.my_host2workers[host_idx];
+    int other_worker_idx = host_workers->arr[rand() % host_workers->size];
+    int other_rank = xlb_rank_from_my_worker_idx(&xlb_s.layout,
+                                            other_worker_idx);
+    assert(other_rank >= 0 && other_rank < xlb_s.layout.workers);
+
+    ac = xlb_requestqueue_add(rank, type, 1, true);
+    ADLB_CHECK(ac);
+
+    match = xlb_requestqueue_matches_target(other_rank, type,
+                                ADLB_TGT_ACCRY_NODE);
     CHECK_MSG(match == rank, "Expected match");
 
     CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
@@ -465,6 +517,9 @@ static adlb_code expt_rq(tgt_mix tgts, bool report)
     }
   }
 
+  bool soft_targeted = is_soft_target(tgts);
+  adlb_target_accuracy accry = get_target_accuracy(tgts);
+
   // Start off with empty queues
 
   expt_timers timers;
@@ -486,9 +541,9 @@ static adlb_code expt_rq(tgt_mix tgts, bool report)
       int rank;
       if (curr_op->target >= 0)
       {
-        rank = xlb_requestqueue_matches_target(target, type,
-                                        ADLB_TGT_ACCRY_RANK);
-        if (tgts == SOFT_TARGETED && rank == ADLB_RANK_NULL)
+        rank = xlb_requestqueue_matches_target(target, type, accry);
+
+        if (soft_targeted && rank == ADLB_RANK_NULL)
         {
           rank = xlb_requestqueue_matches_type(type);
         }
@@ -524,11 +579,18 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   adlb_code ac;
 
+  struct expt_wq_op {
+    int rank;
+    bool add;
+  };
+
   // Precompute random sequence to avoid calling rand() in loop
-  unsigned char rand_seq[rand_seq_len];
+  struct expt_wq_op rand_ops[rand_seq_len];
   for (int i = 0; i < rand_seq_len; i++)
   {
-    rand_seq[i] = (unsigned char)((rand() >> 16) & 0xFF);
+    rand_ops[i].add = (rand() >> 16) % 2;
+    // Target for incoming request
+    rand_ops[i].rank = (rand() >> 8) % xlb_s.layout.workers;
   }
 
   xlb_work_unit **wus;
@@ -549,9 +611,9 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   for (int op = 0; op < benchmark_nops; op++)
   {
-    // Use random sequence to get somewhat random sequence of operations
-    bool add = rand_seq[op % rand_seq_len] % 2;
-    if (add)
+    struct expt_wq_op *curr_op = &rand_ops[op % rand_seq_len];
+
+    if (curr_op->add)
     {
       ac = xlb_workq_add(wus[op % num_distinct_wus]);
       ADLB_CHECK(ac);
@@ -559,7 +621,7 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
     else
     {
       // Get work unit - do nothing with it
-      xlb_workq_get(op % xlb_s.layout.workers, 0);
+      xlb_workq_get(curr_op->rank, 0);
     }
   }
 
@@ -636,7 +698,12 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
       if (wu->target >= 0)
       {
         rank = xlb_requestqueue_matches_target(wu->target, wu->type,
-                                        ADLB_TGT_ACCRY_RANK);
+                                               wu->opts.accuracy);
+
+        if (wu->opts.strictness == ADLB_TGT_STRICT_SOFT && rank == ADLB_RANK_NULL)
+        {
+          rank = xlb_requestqueue_matches_type(wu->type);
+        }
       }
       else
       {
@@ -724,10 +791,12 @@ static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
 
   int target = select_wu_target(tgts);
 
-  if (tgts == SOFT_TARGETED)
+  if (is_soft_target(tgts))
   {
     opts.strictness = ADLB_TGT_STRICT_SOFT;
   }
+
+  opts.accuracy = get_target_accuracy(tgts);
 
   xlb_work_unit_init(wu, 0, 0, 0, target, (int)payload_len, opts);
 
@@ -738,27 +807,75 @@ static adlb_code make_wu(prio_mix prios, tgt_mix tgts,
   return ADLB_SUCCESS;
 }
 
+static bool is_soft_target(tgt_mix tgts)
+{
+  return tgts == RANK_SOFT_TARGETED ||
+         tgts == NODE_SOFT_TARGETED;
+}
+
+static adlb_target_accuracy get_target_accuracy(tgt_mix tgts)
+{
+  switch (tgts)
+  {
+    case UNTARGETED:
+    case RANK_TARGETED:
+    case RANK_SOFT_TARGETED:
+    case EQUAL_MIX:
+      return ADLB_TGT_ACCRY_RANK;
+
+    case NODE_TARGETED:
+    case NODE_SOFT_TARGETED:
+      return ADLB_TGT_ACCRY_NODE;
+
+
+    default:
+      assert(false);
+      return ADLB_TGT_ACCRY_RANK;
+  }
+}
+
+static bool same_host(int rank1, int rank2)
+{
+  return host_idx_from_rank(&xlb_s.layout, rank1) ==
+         host_idx_from_rank(&xlb_s.layout, rank2);
+}
+
 static int select_wu_target(tgt_mix tgts)
 {
   if (tgts == UNTARGETED)
   {
     return ADLB_RANK_ANY;
   }
-  else if (tgts == SOFT_TARGETED)
+  else if (tgts == RANK_SOFT_TARGETED)
   {
     // Target to half of workers
     int rank = (rand() >> 8) % xlb_s.layout.workers;
 
     return rank - (rank % 2);
   }
+  else if (tgts == NODE_SOFT_TARGETED)
+  {
+    // Target to half of hosts
+    int host_idx = (rand() >> 8) % xlb_s.layout.my_worker_hosts;
+    host_idx -= host_idx % 2;
+
+    struct dyn_array_i *workers = &xlb_s.layout.my_host2workers[host_idx];
+
+    // Return random worker on host
+    int my_worker_idx = workers->arr[(rand() >> 8) % workers->size];
+    int rank = xlb_rank_from_my_worker_idx(&xlb_s.layout, my_worker_idx);
+    assert(rank >= 0 && rank < xlb_s.layout.workers);
+
+    return rank;
+  }
   else if (tgts == EQUAL_MIX)
   {
-    return (rand() % 2) ? select_wu_target(TARGETED)
+    return (rand() % 2) ? select_wu_target(RANK_TARGETED)
                         : select_wu_target(UNTARGETED);
   }
   else
   {
-    assert(tgts == TARGETED);
+    assert(tgts == RANK_TARGETED || tgts == NODE_TARGETED);
     // Random worker
     return (rand() >> 8) % xlb_s.layout.workers;
   }
@@ -908,21 +1025,14 @@ static const char *prio_mix_str(prio_mix prio)
 
 static const char *tgt_mix_str(tgt_mix tgt)
 {
-  if (tgt == UNTARGETED)
+  switch (tgt)
   {
-    return "UNTARGETED";
-  }
-  else if (tgt == TARGETED)
-  {
-    return "TARGETED";
-  }
-  else if (tgt == EQUAL_MIX)
-  {
-    return "EQUAL_MIX";
-  }
-  else
-  {
-    assert(tgt == SOFT_TARGETED);
-    return "SOFT_TARGETED";
+    case UNTARGETED: return "UNTARGETED";
+    case RANK_TARGETED: return "RANK_TARGETED";
+    case RANK_SOFT_TARGETED: return "RANK_SOFT_TARGETED";
+    case EQUAL_MIX: return "EQUAL_MIX";
+    case NODE_TARGETED: return "NODE_TARGETED";
+    case NODE_SOFT_TARGETED: return "NODE_SOFT_TARGETED";
+    default: assert(false);
   }
 }

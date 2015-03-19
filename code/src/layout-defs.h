@@ -66,7 +66,7 @@ typedef struct {
 
   /**
      Server-local mapping of host_idx to list of my_worker_idx.
-     Entries are [0..xlb_my_worker_hosts - 1]
+     Entries are [0..my_worker_hosts - 1]
      Workers are in ascending order.
    */
   struct dyn_array_i *my_host2workers;
