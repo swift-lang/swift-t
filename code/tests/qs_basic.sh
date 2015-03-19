@@ -2,7 +2,7 @@
 set -e
 
 THIS=$0
-EXEC=${THIS%.sh}.x
+EXEC=$(dirname ${THIS})/workq_bench.x
 OUTPUT=${THIS%.sh}.out
 
 ${EXEC} > ${OUTPUT} 2>&1 

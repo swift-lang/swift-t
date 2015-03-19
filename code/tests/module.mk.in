@@ -1,6 +1,7 @@
 
 DIR := tests
 
-TEST_SRCS += $(shell find $(DIR) -name "*.c" )
+TEST_EXEC_SRCS += $(wildcard $(DIR)/*.c )
+TEST_COMMON_SRCS += $(wildcard $(DIR)/common/*.c )
 
-TEST_SCRIPTS += $(shell find $(DIR) -name "*.sh" )
+TEST_SCRIPTS += $(wildcard $(DIR)/*.sh )

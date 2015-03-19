@@ -154,9 +154,9 @@ DIR  :=
 SRCS :=
 OBJS :=
 DEPS :=
-TEST_SRCS :=
-TNEST_OBJS :=
-TEST_DEPS :=
+TEST_EXEC_SRCS :=
+TEST_COMMON_SRCS :=
+TEST_SCRIPTS :=
 
 include src/module.mk
 include tests/module.mk
@@ -227,16 +227,20 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) | lib
 
 ### APPS AND TESTS
 
-TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRCS))
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRCS))
-TEST_EXECS = $(patsubst %.c, %.x, $(TEST_SRCS))
+TEST_EXECS = $(patsubst %.c, %.x, $(TEST_EXEC_SRCS))
+TEST_EXEC_OBJS = $(patsubst %.c, %.o, $(TEST_EXEC_SRCS))
+TEST_COMMON_OBJS = $(patsubst %.c, %.o, $(TEST_COMMON_SRCS))
+TEST_OBJS = $(TEST_EXEC_OBJS) $(TEST_COMMON_OBJS)
+TEST_EXEC_DEPS = $(patsubst %.c, %.d, $(TEST_EXEC_SRCS))
+TEST_COMMON_DEPS = $(patsubst %.c, %.d, $(TEST_COMMON_SRCS))
+TEST_DEPS = $(TEST_EXEC_DEPS) $(TEST_COMMON_DEPS)
 
 TEST_RESULTS = $(patsubst %.sh, %.result, $(TEST_SCRIPTS))
 TEST_TMP = $(patsubst %.sh, %.tmp, $(TEST_SCRIPTS))
 
-%.x: %.o $(INSTALL_TOKEN)
+%.x: %.o $(INSTALL_TOKEN) $(TEST_COMMON_OBJS)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(LDFLAGS) \
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(TEST_COMMON_OBJS) $(LDFLAGS) \
              -L lib -ladlb $(LIBS) \
 	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
 
