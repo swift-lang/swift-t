@@ -43,7 +43,6 @@ int payload_size = 256;
 int num_distinct_wus = 1024 * 512;
 
 /** Number of operations in benchmark run */
-// TODO: make configurable
 int benchmark_nops = 1 * 1000 * 1000;
 
 /** Length of random sequences to use */
@@ -64,7 +63,8 @@ static adlb_code drain_rq(void);
 static adlb_code expt_rq(tgt_mix tgts, bool report);
 static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
                          bool report);
-static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report);
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
+                         bool report);
 
 static void report_hdr(void);
 static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
@@ -94,11 +94,33 @@ int main(int argc, char **argv)
 
   int c;
 
-  while ((c = getopt(argc, argv, "b")) != -1)
+  while ((c = getopt(argc, argv, "bn:w:")) != -1)
   {
     switch (c) {
       case 'b':
         run_benchmarks = true;
+        break;
+      case 'n':
+        benchmark_nops = atoi(optarg);
+        if (benchmark_nops == 0)
+        {
+          fprintf(stderr, "Invalid number of ops: %s\n", optarg);
+          return 1;
+        }
+
+        fprintf(stderr, "Number of ops: %i\n", benchmark_nops);
+        break;
+      case 'w':
+        num_distinct_wus = atoi(optarg);
+        if (num_distinct_wus == 0)
+        {
+          fprintf(stderr, "Invalid number of distinct work units: %s\n",
+                          optarg);
+          return 1;
+        }
+
+        fprintf(stderr, "Number of distinct work units: %i\n",
+                num_distinct_wus);
         break;
       case '?':
         fprintf(stderr, "Unknown option %c\n", (char)(c));
@@ -113,7 +135,6 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  fprintf(stderr, "DONE!\n");
   return 0;
 }
 
@@ -155,7 +176,7 @@ static adlb_code run(bool run_benchmarks)
           ac = expt_wq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
           ADLB_CHECK(ac);
 
-          ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], report);
+          ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
           ADLB_CHECK(ac);
         }
       }
@@ -354,26 +375,27 @@ static adlb_code warmup_rq_iter(void)
   for (int rank = 0; rank < xlb_s.layout.workers; rank++)
   {
     int match;
+    int type = 0;
 
-    match = xlb_requestqueue_matches_target(rank, 0,
+    match = xlb_requestqueue_matches_target(rank, type,
                                 ADLB_TGT_ACCRY_RANK);
     CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
 
-    match = xlb_requestqueue_matches_type(0);
+    match = xlb_requestqueue_matches_type(type);
     CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
 
-    ac = xlb_requestqueue_add(rank, 0, 2, true);
+    ac = xlb_requestqueue_add(rank, type, 2, true);
     ADLB_CHECK(ac);
 
     CHECK_MSG(xlb_requestqueue_nblocked() == 1, "Check nblocked");
 
-    match = xlb_requestqueue_matches_target(rank, 0,
+    match = xlb_requestqueue_matches_target(rank, type,
                                 ADLB_TGT_ACCRY_RANK);
     CHECK_MSG(match == rank, "Expected match");
 
     CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
 
-    match = xlb_requestqueue_matches_type(0);
+    match = xlb_requestqueue_matches_type(type);
     CHECK_MSG(match == rank, "Expected match");
 
     CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
@@ -426,17 +448,18 @@ static adlb_code expt_rq(tgt_mix tgts, bool report)
 
   for (int op = 0; op < benchmark_nops; op++)
   {
-    int rank = rand_ops[op % rand_seq_len].rank;
+    struct expt_rq_op *curr_op = &rand_ops[op % rand_seq_len];
+    int rank = curr_op->rank;
     int type = 0;
 
-    if (rand_ops[op % rand_seq_len].add)
+    if (curr_op->add)
     {
       ac = xlb_requestqueue_add(rank, 0, 1, false);
       ADLB_CHECK(ac);
     }
     else
     {
-      if (rand_ops[op % rand_seq_len].targeted)
+      if (curr_op->targeted)
       {
         rank = xlb_requestqueue_matches_target(rank, type,
                                         ADLB_TGT_ACCRY_RANK);
@@ -525,18 +548,117 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   free_wus(num_distinct_wus, wus);
   free_wus(init_qlen, init_wus);
+
   return ADLB_SUCCESS;
 }
 
 /*
   Run experiment on request queue + work queue flow
  */
-static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report)
+static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
+                          bool report)
 {
   // Reseed before experiment
   srand(random_seed);
 
-  // TODO:
+  adlb_code ac;
+
+  struct expt_rwq_op {
+    int rank;
+    int wu_ix;
+    bool new_work; // Alt is new request
+  };
+
+  int wu_count = 0;
+
+  // Precompute random sequence to avoid calling rand() in loop
+  struct expt_rwq_op rand_ops[rand_seq_len];
+  for (int i = 0; i < rand_seq_len; i++)
+  {
+    rand_ops[i].new_work = (rand() >> 16) % 2;
+    if (rand_ops[i].new_work)
+    {
+      rand_ops[i].wu_ix = wu_count++ % num_distinct_wus;
+    }
+    rand_ops[i].rank = (rand() >> 8) % xlb_s.layout.workers;
+  }
+
+  xlb_work_unit **wus, **init_wus;
+
+  ac = make_wus(prios, tgts, payload_size, init_qlen, &init_wus);
+  ADLB_CHECK(ac);
+
+  ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
+  ADLB_CHECK(ac);
+
+  // Prepopulate queue
+  for (int i = 0; i < init_qlen; i++)
+  {
+    ac = xlb_workq_add(init_wus[i]);
+    ADLB_CHECK(ac);
+  }
+
+  expt_timers timers;
+  time_begin(&timers);
+
+  for (int op = 0; op < benchmark_nops; op++)
+  {
+    struct expt_rwq_op *curr_op = &rand_ops[op % rand_seq_len];
+
+    if (curr_op->new_work)
+    {
+      xlb_work_unit *wu = wus[curr_op->wu_ix % num_distinct_wus];
+      int rank;
+      if (wu->target >= 0)
+      {
+        rank = xlb_requestqueue_matches_target(wu->target, wu->type,
+                                        ADLB_TGT_ACCRY_RANK);
+      }
+      else
+      {
+        rank = xlb_requestqueue_matches_type(wu->type);
+      }
+
+      //fprintf(stderr, "Wu to rank (target %i): %p -> %i\n", wu->target, wu, rank);
+      if (rank == ADLB_RANK_NULL)
+      {
+        ac = xlb_workq_add(wu);
+        ADLB_CHECK(ac);
+      }
+    }
+    else
+    {
+      // New request
+      int rank = curr_op->rank;
+      int type = 0;
+
+      xlb_work_unit *wu = xlb_workq_get(rank, type);
+      //fprintf(stderr, "Rank to wu: %i -> %p\n", rank, wu);
+
+      if (wu == NULL)
+      {
+        ac = xlb_requestqueue_add(rank, type, 1, false);
+        ADLB_CHECK(ac);
+      }
+    }
+  }
+
+  time_end(&timers);
+
+  ac = drain_wq(-1, false);
+  ADLB_CHECK(ac);
+
+  ac = drain_rq();
+  ADLB_CHECK(ac);
+
+  if (report)
+  {
+    report_expt("rwq", prios, tgts, init_qlen, benchmark_nops, timers);
+  }
+
+  free_wus(num_distinct_wus, wus);
+  free_wus(init_qlen, init_wus);
+
   return ADLB_SUCCESS;
 }
 
