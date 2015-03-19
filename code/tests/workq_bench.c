@@ -48,6 +48,9 @@ int benchmark_nops = 1 * 1000 * 1000;
 /** Length of random sequences to use */
 int rand_seq_len = 4096;
 
+/** Maximum initial queue size to run experiments with */
+int max_init_qlen = 16 * 1024;
+
 typedef struct {
   struct timespec begin, end;
 } expt_timers;
@@ -94,7 +97,7 @@ int main(int argc, char **argv)
 
   int c;
 
-  while ((c = getopt(argc, argv, "bn:w:")) != -1)
+  while ((c = getopt(argc, argv, "bn:w:Q:")) != -1)
   {
     switch (c) {
       case 'b':
@@ -109,6 +112,16 @@ int main(int argc, char **argv)
         }
 
         fprintf(stderr, "Number of ops: %i\n", benchmark_nops);
+        break;
+      case 'Q':
+        max_init_qlen = atoi(optarg);
+        if (max_init_qlen == 0)
+        {
+          fprintf(stderr, "Invalid max init qlen: %s\n", optarg);
+          return 1;
+        }
+
+        fprintf(stderr, "Max initial queue length: %i\n", max_init_qlen);
         break;
       case 'w':
         num_distinct_wus = atoi(optarg);
@@ -172,12 +185,15 @@ static adlb_code run(bool run_benchmarks)
 
         for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
         {
-          int init_qlen = 1024 * 16; // TODO - vary
-          ac = expt_wq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
-          ADLB_CHECK(ac);
+          for (int init_qlen = 0; init_qlen <= max_init_qlen;
+                  init_qlen = init_qlen == 0 ? 1 : init_qlen * 2)
+          {
+            ac = expt_wq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
+            ADLB_CHECK(ac);
 
-          ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
-          ADLB_CHECK(ac);
+            ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
+            ADLB_CHECK(ac);
+          }
         }
       }
     }
@@ -515,10 +531,7 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
     rand_seq[i] = (unsigned char)((rand() >> 16) & 0xFF);
   }
 
-  xlb_work_unit **wus, **init_wus;
-
-  ac = make_wus(prios, tgts, payload_size, init_qlen, &init_wus);
-  ADLB_CHECK(ac);
+  xlb_work_unit **wus;
 
   ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
   ADLB_CHECK(ac);
@@ -526,7 +539,8 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
   // Prepopulate queue
   for (int i = 0; i < init_qlen; i++)
   {
-    ac = xlb_workq_add(init_wus[i]);
+    // Fill with different ones from initial work units
+    ac = xlb_workq_add(wus[num_distinct_wus - 1 - (i % num_distinct_wus)]);
     ADLB_CHECK(ac);
   }
 
@@ -560,7 +574,6 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
   }
 
   free_wus(num_distinct_wus, wus);
-  free_wus(init_qlen, init_wus);
 
   return ADLB_SUCCESS;
 }
@@ -596,10 +609,7 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
     rand_ops[i].rank = (rand() >> 8) % xlb_s.layout.workers;
   }
 
-  xlb_work_unit **wus, **init_wus;
-
-  ac = make_wus(prios, tgts, payload_size, init_qlen, &init_wus);
-  ADLB_CHECK(ac);
+  xlb_work_unit **wus;
 
   ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
   ADLB_CHECK(ac);
@@ -607,7 +617,8 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
   // Prepopulate queue
   for (int i = 0; i < init_qlen; i++)
   {
-    ac = xlb_workq_add(init_wus[i]);
+    // Fill with different ones from initial work units
+    ac = xlb_workq_add(wus[num_distinct_wus - 1 - (i % num_distinct_wus)]);
     ADLB_CHECK(ac);
   }
 
@@ -670,7 +681,6 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
   }
 
   free_wus(num_distinct_wus, wus);
-  free_wus(init_qlen, init_wus);
 
   return ADLB_SUCCESS;
 }
