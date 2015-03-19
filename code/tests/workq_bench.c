@@ -533,5 +533,7 @@ static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
     nsec, (double)nsec / (double)1e9,
     (double)nsec / (double)nops,
     nops / ((double)nsec / (double)1e9));
+  // Make progress visible
+  fflush(stdout);
 }
 
