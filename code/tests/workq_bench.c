@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "adlb.h"
 #include "checks.h"
@@ -11,8 +12,6 @@
 #include "layout.h"
 #include "requestqueue.h"
 #include "workqueue.h"
-
-#define RANDOM_SEED 123456
 
 typedef enum {
   EQUAL,
@@ -26,11 +25,18 @@ typedef enum {
   TARGETED,
   EQUAL_MIX,
   // TODO: SOFT_TARGETED - soft targeted to 50% of ranks
+  // TODO - node targeted?
 } tgt_mix;
 
 static const char *tgt_mix_str(tgt_mix tgt);
 
-#define PAYLOAD_SIZE 256
+/** Random seed to use for each experiment */
+// TODO: make configurable
+int random_seed = 123456;
+
+/** Payload size for work units */
+// TODO: make configurable
+int payload_size = 256;
 
 /** Number of distinct work units to use in benchmarks */
 // TODO: make configurable
@@ -47,7 +53,7 @@ typedef struct {
   struct timespec begin, end;
 } expt_timers;
 
-static adlb_code run(void);
+static adlb_code run(bool run_benchmarks);
 static adlb_code init(void);
 static adlb_code finalize(void);
 static adlb_code warmup(void);
@@ -84,7 +90,23 @@ int main(int argc, char **argv)
 {
   // TODO: command-line options for different modes
 
-  adlb_code ac = run();
+  bool run_benchmarks = false;
+
+  int c;
+
+  while ((c = getopt(argc, argv, "b")) != -1)
+  {
+    switch (c) {
+      case 'b':
+        run_benchmarks = true;
+        break;
+      case '?':
+        fprintf(stderr, "Unknown option %c\n", (char)(c));
+        return 1;
+    }
+  }
+
+  adlb_code ac = run(run_benchmarks);
 
   if (ac != ADLB_SUCCESS) {
     fprintf(stderr, "FAILED!: %i", ac);
@@ -96,46 +118,56 @@ int main(int argc, char **argv)
 }
 
 
-static adlb_code run(void)
+static adlb_code run(bool run_benchmarks)
 {
   adlb_code ac;
 
+  fprintf(stderr, "Initializing...\n");
   ac = init();
   ADLB_CHECK(ac);
 
+  fprintf(stderr, "Running warmup tests...\n");
   ac = warmup();
   ADLB_CHECK(ac);
 
-  report_hdr();
-
-  tgt_mix tgts[] = {UNTARGETED, TARGETED, EQUAL_MIX};
-  int ntgts = sizeof(tgts)/sizeof(tgts[0]);
-  prio_mix prios[] = {EQUAL, UNIFORM_RANDOM};
-  int nprios = sizeof(prios)/sizeof(prios[0]);
-
-  for (int exp_iter = 0; exp_iter < 5; exp_iter++)
+  if (run_benchmarks)
   {
-    bool report = exp_iter > 0;
+    fprintf(stderr, "Running benchmarks...\n");
+    report_hdr();
 
-    for (int tgt_idx = 0; tgt_idx < ntgts; tgt_idx++)
+    tgt_mix tgts[] = {UNTARGETED, TARGETED, EQUAL_MIX};
+    int ntgts = sizeof(tgts)/sizeof(tgts[0]);
+    prio_mix prios[] = {EQUAL, UNIFORM_RANDOM};
+    int nprios = sizeof(prios)/sizeof(prios[0]);
+
+    for (int exp_iter = 0; exp_iter < 5; exp_iter++)
     {
-      ac = expt_rq(tgts[tgt_idx], report);
-      ADLB_CHECK(ac);
+      bool report = exp_iter > 0;
 
-      for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
+      for (int tgt_idx = 0; tgt_idx < ntgts; tgt_idx++)
       {
-        int init_qlen = 1024 * 16; // TODO - vary
-        ac = expt_wq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
+        ac = expt_rq(tgts[tgt_idx], report);
         ADLB_CHECK(ac);
 
-        ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], report);
-        ADLB_CHECK(ac);
+        for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
+        {
+          int init_qlen = 1024 * 16; // TODO - vary
+          ac = expt_wq(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
+          ADLB_CHECK(ac);
+
+          ac = expt_rwq(prios[prio_idx], tgts[tgt_idx], report);
+          ADLB_CHECK(ac);
+        }
       }
     }
   }
 
+  fprintf(stderr, "Finalizing...\n");
+
   ac = finalize();
   ADLB_CHECK(ac);
+
+  fprintf(stderr, "Done.\n");
 
   return ADLB_SUCCESS;
 }
@@ -230,13 +262,13 @@ static adlb_code warmup_wq_iter(void)
   for (int i = 0; i < ntasks; i++)
   {
     xlb_work_unit *wu;
-    ac = make_wu(UNIFORM_RANDOM, UNTARGETED, PAYLOAD_SIZE, &wu);
+    ac = make_wu(UNIFORM_RANDOM, UNTARGETED, payload_size, &wu);
     ADLB_CHECK(ac);
 
     ac = xlb_workq_add(wu);
     ADLB_CHECK(ac);
 
-    ac = make_wu(UNIFORM_RANDOM, TARGETED, PAYLOAD_SIZE, &wu);
+    ac = make_wu(UNIFORM_RANDOM, TARGETED, payload_size, &wu);
     ADLB_CHECK(ac);
 
     ac = xlb_workq_add(wu);
@@ -273,7 +305,7 @@ static adlb_code drain_wq(int nexpected, bool free_wus)
       if (wu != NULL)
       {
         CHECK_MSG(wu->type == 0, "type");
-        CHECK_MSG(wu->length == PAYLOAD_SIZE, "size");
+        CHECK_MSG(wu->length == payload_size, "size");
         CHECK_MSG(wu->target == ADLB_RANK_ANY ||
                   wu->target == w, "target");
         removed_this_iter++;
@@ -367,7 +399,7 @@ static adlb_code drain_rq(void)
 static adlb_code expt_rq(tgt_mix tgts, bool report)
 {
   // Reseed before experiment
-  srand(RANDOM_SEED);
+  srand(random_seed);
 
   adlb_code ac;
 
@@ -436,7 +468,7 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
         bool report)
 {
   // Reseed before experiment
-  srand(RANDOM_SEED);
+  srand(random_seed);
 
   adlb_code ac;
 
@@ -449,10 +481,10 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   xlb_work_unit **wus, **init_wus;
 
-  ac = make_wus(prios, tgts, PAYLOAD_SIZE, init_qlen, &init_wus);
+  ac = make_wus(prios, tgts, payload_size, init_qlen, &init_wus);
   ADLB_CHECK(ac);
 
-  ac = make_wus(prios, tgts, PAYLOAD_SIZE, num_distinct_wus, &wus);
+  ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
   ADLB_CHECK(ac);
 
   // Prepopulate queue
@@ -502,7 +534,7 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report)
 {
   // Reseed before experiment
-  srand(RANDOM_SEED);
+  srand(random_seed);
 
   // TODO:
   return ADLB_SUCCESS;
@@ -510,7 +542,8 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, bool report)
 
 static void report_hdr(void)
 {
-  printf("experiment,priorities,targets,init_qlen,nops,nsec,sec,nsec_op,op_sec\n");
+  printf("experiment,priorities,targets,init_qlen,nops,nsec,sec,nsec_op,"
+         "op_sec\n");
 }
 
 static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
