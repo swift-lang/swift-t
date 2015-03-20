@@ -113,6 +113,11 @@ adlb_code warmup_wq(size_t payload_size);
  */
 adlb_code warmup_rq(void);
 
+/*
+  Knuth shuffle of pointer array.  Calls rand() for randomness
+ */
+void knuth_shuffle(void **A, int n);
+
 /*===============================*
   Inline function implementations
  *===============================*/

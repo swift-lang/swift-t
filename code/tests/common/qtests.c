@@ -517,3 +517,17 @@ adlb_code warmup_rq(void)
 
   return ADLB_SUCCESS;
 }
+
+void knuth_shuffle(void **A, int n)
+{
+  // Knuth shuffle
+  for (int i = n - 1; i >= 0; i--)
+  {
+    // Number 0 <= j <= i
+    int j = rand() % (i + 1);
+
+    void *tmp = A[i];
+    A[i] = A[j];
+    A[j] = tmp;
+  }
+}
