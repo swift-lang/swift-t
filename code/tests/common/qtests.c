@@ -518,7 +518,7 @@ adlb_code warmup_rq(void)
   return ADLB_SUCCESS;
 }
 
-void knuth_shuffle(void **A, int n)
+void shuffle_ptrs(void **A, int n)
 {
   // Knuth shuffle
   for (int i = n - 1; i >= 0; i--)

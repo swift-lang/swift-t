@@ -114,7 +114,7 @@ static adlb_code run2(bool targeted)
 
   // Insert in random order to better exercise queue
   srand(12345);
-  knuth_shuffle((void**)wus, nwus);
+  shuffle_ptrs((void**)wus, nwus);
 
   for (int i = 0; i < nwus; i++)
   {

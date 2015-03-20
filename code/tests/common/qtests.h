@@ -116,7 +116,7 @@ adlb_code warmup_rq(void);
 /*
   Knuth shuffle of pointer array.  Calls rand() for randomness
  */
-void knuth_shuffle(void **A, int n);
+void shuffle_ptrs(void **A, int n);
 
 /*===============================*
   Inline function implementations
