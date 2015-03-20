@@ -132,7 +132,7 @@ int main(int argc, char **argv)
   adlb_code ac = run(run_benchmarks);
 
   if (ac != ADLB_SUCCESS) {
-    fprintf(stderr, "FAILED!: %i", ac);
+    fprintf(stderr, "FAILED!: %i\n", ac);
     return 1;
   }
 
