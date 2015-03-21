@@ -54,7 +54,7 @@ int num_distinct_wus = 1024 * 512;
 int benchmark_nops = 1 * 1000 * 1000;
 
 /** Length of random sequences to use */
-int rand_seq_len = 4096;
+int rand_seq_len = 1024 * 128;
 
 /** Maximum initial queue size to run experiments with */
 int max_init_qlen = 16 * 1024;
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 
   int c;
 
-  while ((c = getopt(argc, argv, "bn:w:Q:")) != -1)
+  while ((c = getopt(argc, argv, "bn:r:Q:w:")) != -1)
   {
     switch (c) {
       case 'b':
@@ -100,6 +100,17 @@ int main(int argc, char **argv)
         }
 
         fprintf(stderr, "Number of ops: %i\n", benchmark_nops);
+        break;
+      case 'r':
+        rand_seq_len = atoi(optarg);
+        if (rand_seq_len == 0)
+        {
+          fprintf(stderr, "Invalid random sequence length: %s\n",
+                          optarg);
+          return 1;
+        }
+
+        fprintf(stderr, "Random sequence length: %i\n", rand_seq_len);
         break;
       case 'Q':
         max_init_qlen = atoi(optarg);
@@ -372,13 +383,15 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
   expt_timers timers;
   time_begin(&timers);
 
+  int wu_idx = 0;
+
   for (int op = 0; op < benchmark_nops; op++)
   {
     struct expt_wq_op *curr_op = &rand_ops[op % rand_seq_len];
 
     if (curr_op->add)
     {
-      ac = xlb_workq_add(wus[op % num_distinct_wus]);
+      ac = xlb_workq_add(wus[wu_idx++ % num_distinct_wus]);
       ADLB_CHECK(ac);
     }
     else
@@ -416,21 +429,14 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   struct expt_rwq_op {
     int rank;
-    int wu_ix;
     bool new_work; // Alt is new request
   };
-
-  int wu_count = 0;
 
   // Precompute random sequence to avoid calling rand() in loop
   struct expt_rwq_op rand_ops[rand_seq_len];
   for (int i = 0; i < rand_seq_len; i++)
   {
     rand_ops[i].new_work = (rand() >> 16) % 2;
-    if (rand_ops[i].new_work)
-    {
-      rand_ops[i].wu_ix = wu_count++ % num_distinct_wus;
-    }
     rand_ops[i].rank = (rand() >> 8) % xlb_s.layout.workers;
   }
 
@@ -450,13 +456,16 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
   expt_timers timers;
   time_begin(&timers);
 
+  int wu_idx = 0;
+
   for (int op = 0; op < benchmark_nops; op++)
   {
     struct expt_rwq_op *curr_op = &rand_ops[op % rand_seq_len];
 
     if (curr_op->new_work)
     {
-      xlb_work_unit *wu = wus[curr_op->wu_ix % num_distinct_wus];
+      xlb_work_unit *wu = wus[wu_idx++ % num_distinct_wus];
+
       int rank;
       if (wu->target >= 0)
       {
