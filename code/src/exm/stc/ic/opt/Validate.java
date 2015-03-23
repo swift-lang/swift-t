@@ -17,6 +17,7 @@ package exm.stc.ic.opt;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +32,7 @@ import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -104,6 +106,7 @@ public class Validate implements OptimizerPass {
       if (checkExecContext) {
         checkExecCx(logger, program, fn);
       }
+      checkDuplicateRefs(logger, fn);
     }
   }
   /**
@@ -384,6 +387,49 @@ public class Validate implements OptimizerPass {
     for (Block branch: cont.getBlocks()) {
       checkExecCx(logger, program, branch, cont.childContext(execCx));
     }
+  }
+
+  /**
+   * Check for duplicate references to mutable data,
+   * e.g. blocks/continuations/instructions
+   * @param logger
+   * @param mainBlock
+   */
+  private void checkDuplicateRefs(Logger logger, final Function fn) {
+    final IdentityHashMap<Object, Function> objects =
+                            new IdentityHashMap<Object, Function>();
+
+    TreeWalk.walk(logger, fn, new TreeWalker() {
+
+      private void checkDupe(Object obj) {
+        Function prev = objects.put(obj, fn);
+        if (prev != null) {
+          throw new STCRuntimeError("Duplicate construct in functions "
+                              + fn.id() + " " + prev.id() + ":\n" + obj);
+        }
+      }
+
+      @Override
+      protected void visit(Continuation cont) {
+        checkDupe(cont);
+      }
+
+      @Override
+      protected void visit(Block block) {
+        checkDupe(block);
+      }
+
+      @Override
+      protected void visit(Instruction inst) {
+        checkDupe(inst);
+      }
+
+      @Override
+      protected void visit(CleanupAction cleanup) {
+        checkDupe(cleanup);
+      }
+
+    });
   }
 
 }
