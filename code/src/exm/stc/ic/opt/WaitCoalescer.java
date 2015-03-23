@@ -28,8 +28,9 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.SetMultimap;
 
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
@@ -691,7 +692,7 @@ public class WaitCoalescer implements OptimizerPass {
    */
   private boolean pushDownWaits(Logger logger, Program prog, Function fn,
                                 Block block, ExecContext currContext) {
-    ListMultimap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
+    SetMultimap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
 
     if (logger.isTraceEnabled()) {
       logger.trace("waitMap keys: " + waitMap.keySet());
@@ -735,7 +736,7 @@ public class WaitCoalescer implements OptimizerPass {
                 Block top, ExecContext topContext,
                 StackLite<Continuation> ancestors, Block curr,
                 ExecContext currContext,
-                ListMultimap<Var, InstOrCont> waitMap) {
+                SetMultimap<Var, InstOrCont> waitMap) {
     boolean changed = false;
     ArrayList<Continuation> pushedDown = new ArrayList<Continuation>();
     /* Iterate over all instructions in this descendant block */
@@ -854,7 +855,7 @@ public class WaitCoalescer implements OptimizerPass {
 
   public boolean tryPushdownClosedVar(Logger logger, Block top,
       ExecContext topContext, StackLite<Continuation> ancestors, Block curr,
-      ExecContext currContext, ListMultimap<Var, InstOrCont> waitMap,
+      ExecContext currContext, SetMultimap<Var, InstOrCont> waitMap,
       ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
       Var v) {
     boolean changed = false;
@@ -920,10 +921,10 @@ public class WaitCoalescer implements OptimizerPass {
       Block ancestorBlock, ExecContext ancestorContext,
       StackLite<Continuation> ancestors,
       Block currBlock, ExecContext currContext, ListIterator<Statement> currBlockIt,
-      ListMultimap<Var, InstOrCont> waitMap, Var writtenV) {
+      SetMultimap<Var, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
     // Remove from outer block
-    List<InstOrCont> waits = waitMap.get(writtenV);
+    Set<InstOrCont> waits = waitMap.get(writtenV);
     Set<Instruction> movedI = new HashSet<Instruction>();
     Set<Continuation> movedC = new HashSet<Continuation>();
     // Rely on later forward Dataflow pass to remove
@@ -1064,7 +1065,7 @@ public class WaitCoalescer implements OptimizerPass {
    * @param removedI
    */
   private static void updateWaiterMap(
-      ListMultimap<Var, InstOrCont> waitMap, Set<Continuation> removedC,
+      SetMultimap<Var, InstOrCont> waitMap, Set<Continuation> removedC,
       Set<Instruction> removedI) {
     Iterator<InstOrCont> it = waitMap.values().iterator();
     while (it.hasNext()) {
@@ -1087,17 +1088,17 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
-  private static ListMultimap<Var, InstOrCont> buildWaiterMap(Program prog,
+  private static SetMultimap<Var, InstOrCont> buildWaiterMap(Program prog,
                                                           Block block) {
     // Use linked list to support more efficient removal in middle of list
-    ListMultimap<Var, InstOrCont> waitMap = LinkedListMultimap.create();
+    SetMultimap<Var, InstOrCont> waitMap = HashMultimap.create();
     findRelocatableBlockingInstructions(prog, block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
   }
 
   private static void findBlockingContinuations(Block block,
-      ListMultimap<Var, InstOrCont> waitMap) {
+      SetMultimap<Var, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
       List<BlockingVar> blockingVars = c.blockingVars(false);
       if (blockingVars != null) {
@@ -1109,7 +1110,7 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static void findRelocatableBlockingInstructions(Program prog,
-          Block block, ListMultimap<Var, InstOrCont> waitMap) {
+          Block block, SetMultimap<Var, InstOrCont> waitMap) {
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() != StatementType.INSTRUCTION) {
         continue; // Only interested in instructions

@@ -432,6 +432,49 @@ public class OptUtil {
           throw new STCRuntimeError("invalid tag " + _type);
       }
     }
+
+    /**
+     * Implement identity equality for contained object
+     * @param obj
+     * @return
+     */
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null && !(obj instanceof InstOrCont)) {
+        throw new STCRuntimeError("Bad comparison: "
+                                + this + " vs. " + obj);
+      }
+
+      InstOrCont other = (InstOrCont) obj;
+      if (_type != other._type) {
+        return false;
+      }
+
+      if (_type == InstOrContType.CONTINUATION) {
+        return this.cont == other.cont;
+      } else {
+        assert(_type == InstOrContType.INSTRUCTION);
+        return this.inst == other.inst;
+      }
+    }
+
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((_type == null) ? 0 : _type.hashCode());
+      int contentsHash;
+      if (_type == InstOrContType.CONTINUATION) {
+        contentsHash = cont.hashCode();
+      } else {
+        assert(_type == InstOrContType.INSTRUCTION);
+        contentsHash = inst.hashCode();
+      }
+      return prime * result + ((cont == null) ? 0 : contentsHash);
+    }
   }
 
   public static Var fetchForLocalOp(Block block,

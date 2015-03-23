@@ -2,9 +2,6 @@
  * Regression test for bad hoisting of subexpression out of loop
  */
 
-// SKIP-O2-TEST
-// SKIP-O3-TEST
-
 int x;
 
 foreach i in [1:100] {
