@@ -283,4 +283,9 @@ void print_longs(long* A, int count);
  */
 char* slurp(const char* filename);
 
+/**
+   Read all output/errors from process
+*/
+int slurp_process(const char** argv);
+
 #endif
