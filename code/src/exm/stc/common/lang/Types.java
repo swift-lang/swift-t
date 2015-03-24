@@ -1291,7 +1291,12 @@ public class Types {
 
     @Override
     public boolean isConcrete() {
-      return false;
+      for (Type field: fields) {
+        if (!field.isConcrete()) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 
@@ -2868,7 +2873,11 @@ public class Types {
     return type.type().structureType() == StructureType.TUPLE;
   }
 
-  public static boolean isTypeVar(Typed type) {
+  public static boolean isSubType(Typed typed) {
+	  return typed.type() instanceof SubType;
+  }
+
+public static boolean isTypeVar(Typed type) {
     return type.type().structureType() == StructureType.TYPE_VARIABLE;
   }
 
@@ -3088,8 +3097,18 @@ public class Types {
   /**
    * Represents location of execution
    */
-  public static final Type F_LOCATION = new SubType(F_INT, "location");
-  public static final Type V_LOCATION = V_INT; // Internally is int
+  public static final Type F_LOC_STRICTNESS =
+                        new SubType(F_STRING, "LocationStrictness");
+  public static final Type V_LOC_STRICTNESS =
+                        V_STRING; // Internally a string
+
+  public static final Type F_LOC_ACCURACY =
+                        new SubType(F_STRING, "LocationAccuracy");
+  public static final Type V_LOC_ACCURACY =
+                        V_STRING; // Internally a string
+
+  public static final Type F_LOCATION = buildLocationType(false);
+  public static final Type V_LOCATION = buildLocationType(true);
 
 
   private static final String VALUE_SIGIL = "$";
@@ -3115,13 +3134,25 @@ public class Types {
     registerPrimitiveType(F_FILE);
     registerPrimitiveType(F_URL);
     registerPrimitiveType(UP_FLOAT);
+
     registerPrimitiveType(F_LOCATION);
+    registerPrimitiveType(F_LOC_ACCURACY);
+    registerPrimitiveType(F_LOC_STRICTNESS);
   }
 
   public static void registerPrimitiveType(Type type) {
     String name = type.typeName();
     assert(!nativeTypes.containsKey(name)): name;
     nativeTypes.put(name, type);
+  }
+
+  private static Type buildLocationType(boolean local) {
+    List<StructField> fields = new ArrayList<StructField>();
+    fields.add(new StructField(F_INT, "rank"));
+    fields.add(new StructField(F_LOC_STRICTNESS, "strictness"));
+    fields.add(new StructField(F_LOC_ACCURACY, "accuracy"));
+
+    return new StructType(local, "location", fields);
   }
 
 }

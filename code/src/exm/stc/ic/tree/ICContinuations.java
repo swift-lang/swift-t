@@ -1264,15 +1264,31 @@ public class ICContinuations {
 
   public static class TargetLocation {
     public static final TargetLocation ANY =
-        new TargetLocation(Location.ANY_LOCATION, Arg.FALSE);
-    public final Arg location;
-    public final Arg softTarget; // Whether soft targeting
+        new TargetLocation(Location.ANY_LOCATION,
+            TaskProps.LOC_STRICTNESS_HARD_ARG,
+            TaskProps.LOC_ACCURACY_RANK_ARG);
 
-    public TargetLocation(Arg location, Arg softTarget) {
-      assert(location.type().assignableTo(Types.V_LOCATION));
-      assert(Types.isBoolVal(softTarget));
-      this.location = location;
-      this.softTarget = softTarget;
+    public final Arg rank;
+    public final Arg strictness; // Whether soft targeting
+    public final Arg accuracy; // Node or rank level, etc
+
+    public TargetLocation(Arg rank, Arg strictness, Arg accuracy) {
+      assert(rank.type().assignableTo(Types.V_INT));
+      assert(strictness.type().assignableTo(Types.V_LOC_STRICTNESS));
+      assert(accuracy.type().assignableTo(Types.V_LOC_ACCURACY));
+      this.rank = rank;
+      this.strictness = strictness;
+      this.accuracy = accuracy;
+    }
+
+    /**
+     * @param location2
+     * @return true if both have identical parameters
+     */
+    public boolean identicalTarget(TargetLocation location2) {
+      return rank.equals(location2.rank) &&
+            strictness.equals(location2.strictness) &&
+            accuracy.equals(location2.accuracy);
     }
 
   }
@@ -1427,8 +1443,9 @@ public class ICContinuations {
      * @return target location.  Non-null.
      */
     public TargetLocation targetLocation() {
-      return new TargetLocation(props.getWithDefault(TaskPropKey.LOCATION),
-                                props.getWithDefault(TaskPropKey.SOFT_LOCATION));
+      return new TargetLocation(props.getWithDefault(TaskPropKey.LOC_RANK),
+                                props.getWithDefault(TaskPropKey.LOC_STRICTNESS),
+                                props.getWithDefault(TaskPropKey.LOC_ACCURACY));
     }
 
     @Override

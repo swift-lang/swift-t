@@ -279,14 +279,32 @@ public class LocalContext extends Context {
   }
 
   /**
-   * Called when we want to create a new alias for a structure filed
+   * Called when we want to create a new alias for a structure field
    */
   @Override
   public Var createStructFieldTmp(Var struct,
       Type fieldType, List<String> fieldPath, Alloc storage) {
+    return createStructFieldTmp(struct, fieldType, fieldPath, storage, false);
+  }
+
+  /**
+   * Called when we want to create a new alias for a structure filed
+   */
+  @Override
+  public Var createStructFieldTmpVal(Var struct,
+      Type fieldType, List<String> fieldPath, Alloc storage) {
+    return createStructFieldTmp(struct, fieldType, fieldPath, storage, true);
+  }
+
+  /**
+   * Implementation function
+   * @param fieldValue: true if we're going to retrieve the value of the field
+   */
+  public Var createStructFieldTmp(Var struct,
+      Type fieldType, List<String> fieldPath, Alloc storage, boolean fieldValue) {
     // Should be unique in context
     String pathStr = buildPathStr(fieldPath);
-    String basename = Var.structFieldName(struct, pathStr);
+    String basename = Var.structFieldName(struct, pathStr, fieldValue);
     String name = basename;
     int counter = 1;
     while (lookupDef(name) != null) {

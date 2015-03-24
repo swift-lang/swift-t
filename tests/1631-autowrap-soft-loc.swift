@@ -10,8 +10,8 @@ import io;
 
 main() {
   int N = 500;
-  int target_rank = random_worker();
-  location target = location_from_rank(target_rank);
+  int target_rank = randomWorkerRank();
+  location target = locationFromRank(target_rank);
 
   int actual_ranks[];
 

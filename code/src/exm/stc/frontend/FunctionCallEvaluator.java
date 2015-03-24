@@ -287,13 +287,11 @@ public class FunctionCallEvaluator {
    */
   private boolean evalCallProperties(Context context, FnID id, FunctionCall fc,
               TaskProps propVals, Map<String, String> renames) throws UserException {
-    if (fc.annotations().isEmpty()) {
-      return false;
-    }
-
     List<Pair<TaskPropKey, Var>> propFutures =
           new ArrayList<Pair<TaskPropKey, Var>>();
     List<Var> waitVars = new ArrayList<Var>();
+    Var locationVar = null;
+
     for (TaskPropKey ann: fc.annotations().keySet()) {
       checkCallAnnotation(context, id, fc, ann);
 
@@ -305,6 +303,18 @@ public class FunctionCallEvaluator {
       propFutures.add(Pair.create(ann, future));
     }
 
+    if (fc.location() != null) {
+      checkCanTarget(context, id);
+
+      locationVar = exprWalker.eval(context, fc.location(), Types.F_LOCATION, false,
+                                    renames);
+      waitVars.add(locationVar);
+    }
+
+    if (waitVars.isEmpty()) {
+      return false;
+    }
+
     backend.startWaitStatement(context.constructName("ann-wait"),
             VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
@@ -314,8 +324,14 @@ public class FunctionCallEvaluator {
       propVals.put(x.val1, value.asArg());
     }
 
-    if (fc.softLocation()) {
-      propVals.put(TaskPropKey.SOFT_LOCATION, Arg.TRUE);
+    if (locationVar != null) {
+      populateFromLocationStruct(context, locationVar, propVals);
+    }
+
+    if (fc.softLocationOverride()) {
+      // Override strictness if @soft_location was used
+      propVals.put(TaskPropKey.LOC_STRICTNESS,
+                   TaskProps.LOC_STRICTNESS_SOFT_ARG);
     }
 
     return true;
@@ -453,6 +469,7 @@ public class FunctionCallEvaluator {
     }
   }
 
+
   /**
    * Generate backend instruction for function call
    * @param context
@@ -471,7 +488,11 @@ public class FunctionCallEvaluator {
     if (kind == FunctionCallKind.STRUCT_CONSTRUCTOR) {
       backendStructConstructor(context, id, concrete, oList, iList);
       return;
+    } else if (kind == FunctionCallKind.SUBTYPE_CONSTRUCTOR) {
+      backendSubtypeConstructor(context, id, concrete, oList, iList);
+      return;
     }
+
     assert(kind == FunctionCallKind.REGULAR_FUNCTION);
 
     if (context.hasFunctionProp(id, FnProp.DEPRECATED)) {
@@ -555,12 +576,17 @@ public class FunctionCallEvaluator {
       }
       realInputs.add(VarRepr.backendArg(par));
     }
+
     if (context.hasFunctionProp(id, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
-      Arg location = props.getWithDefault(TaskPropKey.LOCATION);
+      Arg location = props.getWithDefault(TaskPropKey.LOC_RANK);
       realInputs.add(VarRepr.backendArg(location));
-      Arg softLocation = props.getWithDefault(TaskPropKey.SOFT_LOCATION);
-      realInputs.add(VarRepr.backendArg(softLocation));
+
+      Arg locStrictness = props.getWithDefault(TaskPropKey.LOC_STRICTNESS);
+      realInputs.add(VarRepr.backendArg(locStrictness));
+
+      Arg locAccuracy = props.getWithDefault(TaskPropKey.LOC_ACCURACY);
+      realInputs.add(VarRepr.backendArg(locAccuracy));
     }
 
     // Other code always creates sync wrapper
@@ -591,12 +617,52 @@ public class FunctionCallEvaluator {
             + " Maybe you meant to annotate the function definition with "
             + "@" + Annotations.FN_PAR);
       }
-    } else if (ann == TaskPropKey.LOCATION) {
-      if (!context.hasFunctionProp(id, FnProp.TARGETABLE)) {
-        throw new UserException(context, "Tried to call non-targetable"
-            + " function " + f.originalName() + " with target");
-      }
     }
+  }
+
+  private void checkCanTarget(Context context, FnID id)
+      throws UserException {
+    if (!context.hasFunctionProp(id, FnProp.TARGETABLE)) {
+      throw new UserException(context, "Tried to call non-targetable"
+          + " function " + id.originalName() + " with target");
+    }
+  }
+
+  /**
+   * Fill extract members from struct and add to dictionary
+   * @param context
+   * @param loc
+   * @param propVals
+   * @throws UserException
+   */
+  private void populateFromLocationStruct(Context context, Var loc,
+          TaskProps propVals) throws UserException {
+    assert(loc.type().assignableTo(Types.F_LOCATION));
+
+    Var locRank = varCreator.createStructFieldTmpVal(context, loc,
+                  Types.V_INT, Collections.singletonList("rank"), Alloc.LOCAL);
+
+    Var locStrictness = varCreator.createStructFieldTmpVal(context, loc,
+        Types.V_LOC_STRICTNESS, Collections.singletonList("strictness"), Alloc.LOCAL);
+
+    Var locAccuracy = varCreator.createStructFieldTmpVal(context, loc,
+        Types.V_LOC_ACCURACY, Collections.singletonList("accuracy"), Alloc.LOCAL);
+
+    /*
+     * Retrieve seperately from the struct.  In principle this could be
+     * inefficient but in practice we hope the optimiser should be able
+     * to resolve these.
+     */
+    backend.structRetrieveSub(VarRepr.backendVar(locRank),
+              VarRepr.backendVar(loc), Arrays.asList("rank"));
+    backend.structRetrieveSub(VarRepr.backendVar(locStrictness),
+              VarRepr.backendVar(loc), Arrays.asList("strictness"));
+    backend.structRetrieveSub(VarRepr.backendVar(locAccuracy),
+              VarRepr.backendVar(loc), Arrays.asList("accuracy"));
+
+    propVals.put(TaskPropKey.LOC_RANK, locRank.asArg());
+    propVals.put(TaskPropKey.LOC_STRICTNESS, locStrictness.asArg());
+    propVals.put(TaskPropKey.LOC_ACCURACY, locAccuracy.asArg());
   }
 
   private Var packCheckpointKey(Context context,
@@ -717,5 +783,17 @@ public class FunctionCallEvaluator {
       }
     }
   }
+
+  private void backendSubtypeConstructor(Context context, FnID function,
+        FunctionType concrete, List<Var> outputs, List<Var> inputs)
+            throws UserException {
+      assert(outputs.size() == 1);
+      assert(inputs.size() == 1);
+      Var dst = outputs.get(0);
+      Var src = inputs.get(0);
+      assert(Types.isSubType(dst));
+      exprWalker.copyByValue(context, dst, src, false);
+    }
+
 
 }

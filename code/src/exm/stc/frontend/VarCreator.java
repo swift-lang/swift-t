@@ -199,6 +199,15 @@ public class VarCreator {
     return tmp;
   }
 
+  public Var createStructFieldTmpVal(Context context, Var rootStruct,
+                  Type memType, List<String> fieldPath,
+                  Alloc storage) throws UndefinedTypeException, DoubleDefineException {
+    Var tmp = context.createStructFieldTmpVal(rootStruct, memType,
+                  fieldPath, storage);
+    initialiseVariable(context, tmp);
+    return tmp;
+  }
+
   public Var createValueOfVar(Context context, Var future)
       throws UserException {
     return createValueOfVar(context, future, true);

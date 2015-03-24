@@ -262,10 +262,21 @@ public class ExprWalker {
    */
   public void copyByValue(Context context, Var dst, Var src)
                            throws UserException {
-    assert(src.type().assignableTo(dst.type()));
+    copyByValue(context, dst, src, true);
+  }
+
+
+  public void copyByValue(Context context, Var dst, Var src, boolean strictTypes)
+        throws UserException {
+    if (strictTypes) {
+      assert(src.type().assignableTo(dst.type()));
+    } else {
+      assert(src.type().getImplType().assignableTo(
+          dst.type().getImplType()));
+    }
 
     if (Types.simpleCopySupported(src)) {
-       backendAsyncCopy(context, dst, src);
+       backendAsyncCopy(context, dst, src, strictTypes);
     } else if (Types.isFile(src)) {
       copyFileByValue(dst, src);
     } else {
@@ -593,6 +604,8 @@ public class ExprWalker {
     }
     asyncOp(op.code, out, iList);
   }
+
+
   /**
    * Evaluate a tuple expression.
    * @param context
@@ -920,6 +933,7 @@ public class ExprWalker {
     }
     return backendKeys;
   }
+
   /**
    * Copy in.
    * @param struct
@@ -1001,6 +1015,7 @@ public class ExprWalker {
           throws UserException {
     assert(Types.isString(dst));
     String val = Literals.extractStringLit(context, tree);
+    assert(val != null);
     assign(dst, Arg.newString(val));
   }
 
@@ -1063,9 +1078,14 @@ public class ExprWalker {
    * @param src
    * @throws UserException
    */
-  private void backendAsyncCopy(Context context, Var dst, Var src)
-                                                throws UserException {
-    assert(src.type().assignableTo(dst.type()));
+  private void backendAsyncCopy(Context context, Var dst, Var src,
+          boolean strictTypes) throws UserException {
+    if (strictTypes) {
+      assert(src.type().assignableTo(dst.type()));
+    } else {
+      assert(src.type().getImplType().assignableTo(
+          dst.type().getImplType()));
+    }
     assert(src.storage() != Alloc.LOCAL);
     backend.asyncCopy(VarRepr.backendVar(dst), VarRepr.backendVar(src));
   }
@@ -1094,7 +1114,7 @@ public class ExprWalker {
             WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
     Var derefed = varCreator.createTmpAlias(context, dst.type());
     retrieveRef(derefed, src, false);
-    backendAsyncCopy(context, dst, derefed);
+    backendAsyncCopy(context, dst, derefed, true);
     backend.endWaitStatement();
   }
 
@@ -1127,7 +1147,7 @@ public class ExprWalker {
     Var rValDerefed = varCreator.createTmp(context,
             src.type().memberType(), false, true);
     retrieveRef(rValDerefed, src, false);
-    backendAsyncCopy(context, dst, rValDerefed);
+    backendAsyncCopy(context, dst, rValDerefed, true);
     backend.endWaitStatement();
   }
 

@@ -17,9 +17,9 @@ main {
   // Run multiple times to hopefully get one of the tasks sent to
   // the wrong worker in case of the bug
   foreach i in [1:100] {
-    L1 = location_from_rank(random_worker());
+    L1 = random_worker();
     act1 = test_fn(":)", L1);
-    exp1 = "Hello from " + fromint(L1) + ": :)";
+    exp1 = "Hello from " + L1.rank + ": :)";
     trace("\"" + act1 + "\"") =>
     assertEqual(act1, exp1, "test 1");
   }

@@ -16,6 +16,29 @@ public class TaskProp {
   public static class TaskProps extends TreeMap<TaskPropKey, Arg> {
     private static final long serialVersionUID = 1L;
 
+    // Constants: should match definitions in builtins.swift
+    public static final String LOC_STRICTNESS_HARD = "HARD";
+    public static final Arg LOC_STRICTNESS_HARD_ARG =
+                Arg.newString(LOC_STRICTNESS_HARD);
+    public static final String LOC_STRICTNESS_SOFT = "SOFT";
+    public static final Arg LOC_STRICTNESS_SOFT_ARG =
+                Arg.newString(LOC_STRICTNESS_SOFT);
+    public static final String LOC_STRICTNESS_DEFAULT =
+                LOC_STRICTNESS_HARD;
+    public static final Arg LOC_STRICTNESS_DEFAULT_ARG =
+                Arg.newString(LOC_STRICTNESS_DEFAULT);
+
+    public static final String LOC_ACCURACY_RANK = "RANK";
+    public static final Arg LOC_ACCURACY_RANK_ARG =
+                Arg.newString(LOC_ACCURACY_RANK);
+    public static final String LOC_ACCURACY_NODE = "NODE";
+    public static final Arg LOC_ACCURACY_NODE_ARG =
+                Arg.newString(LOC_ACCURACY_NODE);
+    public static final String LOC_ACCURACY_DEFAULT =
+                LOC_ACCURACY_RANK;
+    public static final Arg LOC_ACCURACY_DEFAULT_ARG =
+                Arg.newString(LOC_ACCURACY_DEFAULT);
+
     /**
      * Called to assert that bad types didn't make it past typechecking
      */
@@ -49,10 +72,12 @@ public class TaskProp {
 
       // Return default
       switch (key) {
-        case LOCATION:
+        case LOC_RANK:
           return Location.ANY_LOCATION;
-        case SOFT_LOCATION:
-          return Arg.FALSE; // Default is hard location targeting
+        case LOC_STRICTNESS:
+          return LOC_STRICTNESS_DEFAULT_ARG;
+        case LOC_ACCURACY:
+          return LOC_ACCURACY_DEFAULT_ARG;
         default:
           throw new STCRuntimeError("Unknown default value for "
               + key);
@@ -81,8 +106,13 @@ public class TaskProp {
   public static enum TaskPropKey {
     PRIORITY,
     PARALLELISM,
-    LOCATION,
-    SOFT_LOCATION, /* Boolean flag for soft or hard location constraint */
+    LOC_RANK, /* Integer rank */
+    /* Soft or hard location constraint, runtime value must be one of constants
+     * hardcoded in file */
+    LOC_STRICTNESS,
+    /* Location accuracy, runtime value must be one of constants hardcoded
+     * in file */
+    LOC_ACCURACY,
   }
 
   /** Required types for properties at language level */
@@ -95,8 +125,9 @@ public class TaskProp {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.F_INT);
     res.put(TaskPropKey.PARALLELISM, Types.F_INT);
-    res.put(TaskPropKey.LOCATION, Types.F_LOCATION);
-    res.put(TaskPropKey.SOFT_LOCATION, Types.F_BOOL);
+    res.put(TaskPropKey.LOC_RANK, Types.F_INT);
+    res.put(TaskPropKey.LOC_ACCURACY, Types.F_LOC_ACCURACY);
+    res.put(TaskPropKey.LOC_STRICTNESS, Types.F_LOC_STRICTNESS);
     return res;
   }
 
@@ -104,8 +135,9 @@ public class TaskProp {
     Map<TaskPropKey, Type> res = new HashMap<TaskPropKey, Type>();
     res.put(TaskPropKey.PRIORITY, Types.V_INT);
     res.put(TaskPropKey.PARALLELISM, Types.V_INT);
-    res.put(TaskPropKey.LOCATION, Types.V_LOCATION);
-    res.put(TaskPropKey.SOFT_LOCATION, Types.V_BOOL);
+    res.put(TaskPropKey.LOC_RANK, Types.V_INT);
+    res.put(TaskPropKey.LOC_ACCURACY, Types.V_LOC_ACCURACY);
+    res.put(TaskPropKey.LOC_STRICTNESS, Types.V_LOC_STRICTNESS);
     return res;
   }
 

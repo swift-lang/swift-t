@@ -53,6 +53,7 @@ public class Var implements Comparable<Var>, Typed {
   public static final String TMP_VAR_PREFIX = "__t:";
   public static final String ALIAS_VAR_PREFIX = "__alias:";
   public static final String STRUCT_FIELD_VAR_PREFIX = "__sf:";
+  public static final String STRUCT_FIELD_VALUE_VAR_PREFIX = "__sfv:";
   public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
   public static final String FILENAME_OF_PREFIX = "__filename:";
   public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
@@ -491,11 +492,14 @@ public class Var implements Comparable<Var>, Typed {
    * Choose a name for a struct field var
    * @param struct
    * @param fieldPath
+   * @param fieldValue
    * @return
    */
-  public static String structFieldName(Var struct, String fieldPath) {
-    return Var.STRUCT_FIELD_VAR_PREFIX
-        + struct.name() + "_" + fieldPath.replace('.', '_');
+  public static String structFieldName(Var struct, String fieldPath,
+                                       boolean fieldValue) {
+    String prefix = fieldValue ? STRUCT_FIELD_VALUE_VAR_PREFIX :
+                                 STRUCT_FIELD_VAR_PREFIX;
+    return prefix + struct.name() + "_" + fieldPath.replace('.', '_');
   }
 
   /**
