@@ -136,8 +136,8 @@ typedef enum
   ADLB_DATA_TYPE_REF,
 } adlb_data_type;
 
-// More compact representation for data type
-typedef short adlb_data_type_short;
+// Bits to use for packed representation of data type
+#define ADLB_DATA_TYPE_BITS 8
 
 // Identifier for sub-types of ADLB struct
 typedef int adlb_struct_type;
@@ -148,11 +148,11 @@ typedef int adlb_struct_type;
 typedef struct {
   union {
     struct {
-      adlb_data_type_short key_type;
-      adlb_data_type_short val_type;
+      adlb_data_type key_type : ADLB_DATA_TYPE_BITS;
+      adlb_data_type val_type : ADLB_DATA_TYPE_BITS;
     } CONTAINER;
     struct {
-      adlb_data_type_short val_type;
+      adlb_data_type val_type : ADLB_DATA_TYPE_BITS;
     } MULTISET;
     struct {
       adlb_struct_type struct_type; 

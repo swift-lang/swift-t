@@ -66,14 +66,17 @@ typedef struct {
 } adlb_ref;
 
 typedef struct {
-  // type of container keys
-  adlb_data_type_short key_type;
-  // type of container values
-  adlb_data_type_short val_type;
-  // Map from subscript to member.  Use binary subscripts as keys.
-  // This means that the binary representations of keys needs to
-  // follow expected equality rules.
+  /**
+    Map from subscript to member.  Use binary subscripts as keys.
+    Therefore binary representations of keys must be comparable.
+   */
   struct table_bp* members;
+
+  /** Type of container keys */
+  adlb_data_type key_type : ADLB_DATA_TYPE_BITS;
+
+  /** type of container values */
+  adlb_data_type val_type : ADLB_DATA_TYPE_BITS;
 } adlb_container;
 
 // Forward declaration of incomplete struct type

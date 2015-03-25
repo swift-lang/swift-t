@@ -631,8 +631,8 @@ ADLB_Unpack_container(adlb_container *container,
 
   if (init_cont)
   {
-    container->key_type = (adlb_data_type_short)key_type;
-    container->val_type = (adlb_data_type_short)val_type;
+    container->key_type = key_type;
+    container->val_type = val_type;
     container->members = table_bp_create(CONTAINER_INIT_CAPACITY);
   }
   else

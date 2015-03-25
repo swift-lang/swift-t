@@ -16,7 +16,7 @@
 typedef struct xlb_multiset_chunk_s xlb_multiset_chunk;
 
 typedef struct adlb_multiset_s {
-  adlb_data_type_short elem_type;
+  adlb_data_type elem_type : ADLB_DATA_TYPE_BITS;
   xlb_multiset_chunk **chunks;
   uint chunk_count;      // Number of actual chunks
   uint chunk_arr_size;   // Allocated size of pointer array
