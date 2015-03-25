@@ -84,7 +84,7 @@ int MkStatic_Tcl_Init(Tcl_Interp *interp)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, const char **argv)
 {
   if (!extract_bundled_files())
   {
@@ -100,7 +100,7 @@ main(int argc, char **argv)
   }
 
   turbine_code tc;
-  char *script_file = NULL;
+  const char *script_file = NULL;
   if (has_main_string)
   {
     tc = turbine_run_string(MPI_COMM_NULL, (const char*)@MAIN_SCRIPT_STRING@,
