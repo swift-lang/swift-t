@@ -64,9 +64,20 @@
 
 /* replace all occurences of substring with rep_string */
 @pure
-(string o) replace_all (string s, string substring, string rep_string, int start_index)
+(string o) replaceAll (string s, string substring, string rep_string, int start_index, int end_index)
   "turbine" "0.0.1" "replace_all"
-  [ "set <<o>> [ turbine::replace_all_impl <<s>> <<substring>> <<rep_string>> <<start_index>> ]" ];
+  [ "set <<o>> [ turbine::replace_all_impl <<s>> <<substring>> <<rep_string>> <<start_index>> <<end_index>> ]" ];
+
+@pure
+(string o) replaceAll (string s, string substring, string rep_string) {
+  o = replaceAll(s, substring, rep_string, 0, length(s));
+}
+
+// Kept for compatibility
+@pure
+(string o) replace_all (string s, string substring, string rep_string, int start_index) {
+  o = replaceAll(s, substring, rep_string, start_index, length(s));
+}
 
 @pure
 (string o) trim (string s)

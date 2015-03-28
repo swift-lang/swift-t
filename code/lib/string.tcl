@@ -279,34 +279,39 @@ namespace eval turbine {
 	set substring  [ lindex $inputs 1 ]
 	set rep_string  [ lindex $inputs 2 ]
 	set start_index  [ lindex $inputs 3 ]
+	set end_index  [ lindex $inputs 4 ]
 	rule $inputs \
             [ list replace_all_body $result $str \
-                  $substring $rep_string $start_index ] \
+                  $substring $rep_string $start_index $end_index ] \
             name "replace_all-$str-$substring-$rep_string"
     }
 
-    proc replace_all_body { result str substring rep_string start_index } {
+    proc replace_all_body { result str substring rep_string start_index end_index } {
 	set str_value         [ retrieve_decr_string $str ]
 	set substring_value   [ retrieve_decr_string $substring ]
 	set rep_string_value  [ retrieve_decr_string $rep_string ]
 	set start_index_value [ retrieve_decr_integer $start_index ]
+	set end_index_value   [ retrieve_decr_integer $end_index ]
 
 	set result_value [ replace_all_impl $str_value \
-                 $substring_value $rep_string_value $start_index_value ]
+                 $substring_value $rep_string_value \
+                 $start_index_value $end_index_value ]
 	store_string $result $result_value
     }
 
     # Replaces all occurrences of the substring with the replacement
     # string. Returns the original string if no replacement was possible
-    proc replace_all_impl {str substring rep_string start_index } {
-	set end_index [string length $str ]
+    proc replace_all_impl {str substring rep_string start_index end_index } {
         set substring_len [ string length $substring ]
         set result [ string range $str 0 [ expr {$start_index - 1} ] ]
+        # Last index substring can start out without overshooting end_index
+        set last_start [ expr {$end_index - $substring_len} ]
+        set length [ string length $str ]
 
-	for {set index $start_index} { $index <= $end_index } {incr index} {
+	for {set index $start_index} { $index <= $length } {incr index} {
 	    set r [ find_impl $str $substring $index $end_index ];
-	    if { $r == -1 } {
-              append result [ string range $str $index $end_index ]
+	    if { $r == -1 || $r > $last_start } {
+              append result [ string range $str $index $length ]
               return $result
             }
             # append skipped part
