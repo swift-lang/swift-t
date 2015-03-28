@@ -84,8 +84,17 @@
   s = string_join(array_repr(F), ",");
 }
 
-@pure (string s) string_join(string A[], string separator)
+@pure
+(string s) string_join(string A[], string separator)
   "turbine" "0.4.0" // "string_join"
   [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
+
+@pure
+(string o) toUpper(string s) "turbine" "0.8.0"
+  [ "set <<o>> [ string toupper <<s>> ] " ];
+
+@pure
+(string o) toLower(string s) "turbine" "0.8.0"
+  [ "set <<o>> [ string tolower <<s>> ] " ];
 
 #endif
