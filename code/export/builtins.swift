@@ -93,6 +93,9 @@ LocationAccuracy NODE = LocationAccuracy("NODE");
 (string o) fromfloat(float i)  "turbine" "0.0.2" "fromfloat";
 @pure @builtin_op=FLOATTOSTR
 (string o) toString(float i)  "turbine" "0.0.2" "fromfloat";
+@pure
+(string o) toString(boolean i)  "turbine" "0.8.0" "boolToString"
+  [ "set <<o>> [ turbine::boolToString_impl <<i>> ]" ];
 
 // Parsing of strings
 @pure

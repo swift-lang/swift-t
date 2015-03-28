@@ -387,6 +387,19 @@ namespace eval turbine {
         store_string $result $t
     }
 
+    proc boolToString { result input } {
+        rule $input "boolToString_body $result $input"
+    }
+
+    proc boolToString_body { result input } {
+        set v [ retrieve_decr_integer $input ]
+        store_string $result [ boolToString_impl $v ]
+    }
+
+    proc boolToString_impl { input } {
+      return [ expr {$input ? "true" : "false"} ]
+    }
+
     # Good for performance testing
     # c = 0;
     # and sleeps
