@@ -889,9 +889,7 @@ CHAR : ESCAPE_CODE | ~('\\'|'"');
 
 fragment
 ESCAPE_CODE:
-        '\\' ('a'|'b'|'f'|'n'|'r'|'t'|'v'|'\''|'"'|'\\'|'\?')
-    | '\\' '0'..'7'+ // octal escape
-    | '\\' 'x' (DIGIT|'a'..'f'|'A'..'F')+ // hex escape
+        '\\' .
     ;
 
 // String literal with c-style escape sequences
