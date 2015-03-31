@@ -51,22 +51,42 @@ handle_python_exception()
   return TCL_ERROR;
 }
 
+static PyObject* main_module = NULL;
+static PyObject* main_dict   = NULL;
+
+static bool initialized = false;
+
+static int python_init(void)
+{
+  if (initialized) return TCL_OK;
+  DEBUG_TCL_TURBINE("python: initializing...");
+  Py_InitializeEx(1);
+  main_module  = PyImport_AddModule("__main__");
+  if (main_module == NULL) return handle_python_exception();
+  main_dict  = PyModule_GetDict(main_module);
+  if (main_dict == NULL) return handle_python_exception();
+  initialized = true;
+  return TCL_OK;
+}
+
+static void python_finalize(void);
+
 /**
-   @param result: Store result pointer here
+   @param persist: If true, retain the Python interpreter,
+                   else finalize it
+   @param code: The multiline string of Python code.
+                The last line is evaluated to the returned result
+   @param output: Store result pointer here
    @return Tcl error code
  */
 static int
-python_eval(const char* code, Tcl_Obj** result)
+python_eval(bool persist, const char* code, Tcl_Obj** output)
 {
-  char* s = "NOTHING";
-
-  Py_InitializeEx(1);
   int rc;
+  char* result = "NOTHING";
 
-  PyObject* main_module  = PyImport_AddModule("__main__");
-  if (main_module == NULL) return handle_python_exception();
-  PyObject* main_dict  = PyModule_GetDict(main_module);
-  if (main_dict == NULL) return handle_python_exception();
+  rc = python_init();
+  TCL_CHECK(rc);
 
   struct list* lines = list_split_lines(code);
 
@@ -76,15 +96,14 @@ python_eval(const char* code, Tcl_Obj** result)
   {
     if (item->next == NULL)
     {
-      // This is the expression that returns the string
+      // This is the expression that returns the result string
       expression = item->data;
       break;
     }
     char* command = item->data;
     DEBUG_TCL_TURBINE("python: command: %s", command);
     rc = PyRun_SimpleString(command);
-    if (rc != 0)
-      return handle_python_exception();
+    if (rc != 0) return handle_python_exception();
     DEBUG_TCL_TURBINE("python: command done.");
   }
 
@@ -95,25 +114,37 @@ python_eval(const char* code, Tcl_Obj** result)
     PyObject* o = PyRun_String(expression, Py_eval_input,
                                main_dict, main_dict);
     if (o == NULL) return handle_python_exception();
-    rc = PyArg_Parse(o, "s", &s);
-    assert(s != NULL);
-    DEBUG_TCL_TURBINE("python: result: %s\n", s);
-    *result = Tcl_NewStringObj(s, -1);
+    rc = PyArg_Parse(o, "s", &result);
+    assert(result != NULL);
+    DEBUG_TCL_TURBINE("python: result:     %s\n", result);
+    *output = Tcl_NewStringObj(result, -1);
   }
 
-  list_destroy(lines);
+  if (!persist) python_finalize();
 
+  list_destroy(lines);
   return TCL_OK;
+}
+
+static void
+python_finalize(void)
+{
+  Py_Finalize();
+  initialized = false;
 }
 
 static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
-  char* code = Tcl_GetString(objv[1]);
+  TCL_ARGS(3);
+  int rc;
+  int persist;
+  rc = Tcl_GetBooleanFromObj(interp, objv[1], &persist);
+  TCL_CHECK_MSG(rc, "first arg should be integer!");
+  char* code = Tcl_GetString(objv[2]);
   Tcl_Obj* result = NULL;
-  int rc = python_eval(code, &result);
+  rc = python_eval(persist, code, &result);
   TCL_CHECK(rc);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -125,7 +156,7 @@ static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
   return turbine_user_errorv(interp,
                    "Turbine not compiled with Python support");
 }

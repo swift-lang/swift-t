@@ -22,4 +22,8 @@
 
 @dispatch=WORKER
 (string output) python(string code) "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python <<code>> ]" ];
+    [ "set <<output>> [ turbine::python 0 <<code>> ]" ];
+
+@dispatch=WORKER
+(string output) python_persist(string code) "turbine" "0.1.0"
+    [ "set <<output>> [ turbine::python 1 <<code>> ]" ];
