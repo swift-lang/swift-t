@@ -126,10 +126,8 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  // TODO: Throw TURBINE ERROR for cleaner handling (#601)
-  turbine_tcl_condition_failed(interp, objv[0],
-                       "Turbine not compiled with Python support");
-  return TCL_ERROR;
+  Tcl_Obj* s = Tcl_NewStringObj("Turbine not compiled with Python support",-1);
+  return turbine_user_error(interp, 1, &s);
 }
 
 #endif
