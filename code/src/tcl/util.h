@@ -105,6 +105,12 @@ void turbine_tcl_set_integer(Tcl_Interp* interp,
                              const char* name, int value);
 
 /**
+   Convenience function to get Tcl value
+ */
+void turbine_tcl_get_integer(Tcl_Interp* interp,
+                             const char* name, int* value);
+
+/**
    Convenience function to set name=value
  */
 void turbine_tcl_set_long(Tcl_Interp* interp,
@@ -147,6 +153,13 @@ Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
    Return value is error code.
  */
 int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[]);
+
+/**
+   C-friendly version of turbine_user_error.
+   Accepts printf-style arguments for error message.
+   Return value is error code.
+ */
+int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
 
 /**
    Print error message and return a Tcl error

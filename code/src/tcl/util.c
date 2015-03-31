@@ -14,14 +14,18 @@
  * limitations under the License
  */
 
+#define _GNU_SOURCE // for vasprintf
 #include <assert.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <tools.h>
 
 #include "src/tcl/util.h"
 
-int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
+int
+turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
 {
   assert(nargs >= 0);
 
@@ -34,6 +38,24 @@ int turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
   }
 
   return Tcl_EvalObjv(interp, nargs + 1, call_args, 0);
+}
+
+int
+turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  char* msg;
+  int length = vasprintf(&msg, fmt, ap);
+  valgrind_assert(length >= 0);
+  va_end(ap);
+
+  Tcl_Obj* cmd[2];
+  cmd[0] = Tcl_NewStringObj("::turbine::turbine_error", -1);
+  cmd[1] = Tcl_NewStringObj(msg, length);
+  free(msg);
+
+  return Tcl_EvalObjv(interp, 2, cmd, EMPTY_FLAG);
 }
 
 turbine_code
@@ -107,6 +129,20 @@ turbine_tcl_set_integer(Tcl_Interp* interp,
   Tcl_Obj* p = Tcl_ObjSetVar2(interp, Tcl_NewStringObj(name, -1),
                               NULL, Tcl_NewIntObj(value), 0);
   valgrind_assert(p != NULL);
+}
+
+void
+turbine_tcl_get_integer(Tcl_Interp* interp,
+                        const char* name, int* value)
+{
+  int result;
+  Tcl_Obj name_obj;
+  Tcl_SetStringObj(&name_obj, name, -1);
+  Tcl_Obj* p = Tcl_ObjGetVar2(interp, &name_obj, NULL, EMPTY_FLAG);
+  valgrind_assert(p != NULL);
+  int rc = Tcl_GetIntFromObj(interp, p, &result);
+  valgrind_assert(rc == TCL_OK);
+  *value = result;
 }
 
 void
