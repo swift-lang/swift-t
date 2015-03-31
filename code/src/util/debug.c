@@ -85,7 +85,7 @@ turbine_debug_init()
 
 /**
    All turbine_debug messages may be disabled by setting
-   DEBUG=0 (number 0) in the environment.
+   TURBINE_DEBUG=0 (number 0) in the environment.
    We have to put everything into one string before we print it,
    otherwise mpiexec -l does not print the rank things [0]
    correctly.
