@@ -25,6 +25,7 @@ TCL_SRC := $(DIR)/helpers.tcl             \
 	   $(DIR)/location.tcl            \
 	   $(DIR)/checkpoint.tcl          \
 	   $(DIR)/app.tcl                 \
+	   $(DIR)/langs.tcl               \
 	   $(DIR)/gemtc_worker.tcl
 
 # Builds the Turbine Tcl package
@@ -35,4 +36,3 @@ $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
 	     USE_MPE=@USE_MPE@ \
 	     USE_MAC=@USE_MAC@ \
              $(TCLSH_LOCAL) $(<) > lib/pkgIndex.tcl
-
