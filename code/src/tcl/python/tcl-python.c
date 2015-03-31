@@ -126,8 +126,8 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  Tcl_Obj* s = Tcl_NewStringObj("Turbine not compiled with Python support",-1);
-  return turbine_user_error(interp, 1, &s);
+  return turbine_user_errorv(interp,
+                   "Turbine not compiled with Python support");
 }
 
 #endif
