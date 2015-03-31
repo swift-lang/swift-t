@@ -134,16 +134,11 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 #endif
 
-/**
-   Shorten object creation lines.  python:: namespace is prepended
- */
-#define COMMAND(tcl_function, c_function) \
-    Tcl_CreateObjCommand(interp, "python::" tcl_function, c_function, \
-                         NULL, NULL);
+
 /**
    Called when Tcl loads this extension
  */
-int DLLEXPORT
+int
 Tclpython_Init(Tcl_Interp *interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
@@ -155,19 +150,12 @@ Tclpython_Init(Tcl_Interp *interp)
   return TCL_OK;
 }
 
-//// Just for testing:
-int P_Init(Tcl_Interp *interp)
-{
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
-    return TCL_ERROR;
-
-  if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
-    return TCL_ERROR;
-
-  tcl_python_init(interp);
-
-  return TCL_OK;
-}
+/**
+   Shorten object creation lines.  python:: namespace is prepended
+ */
+#define COMMAND(tcl_function, c_function) \
+    Tcl_CreateObjCommand(interp, "python::" tcl_function, c_function, \
+                         NULL, NULL);
 
 void
 tcl_python_init(Tcl_Interp* interp)
