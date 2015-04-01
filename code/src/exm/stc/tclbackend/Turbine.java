@@ -24,7 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutors;
+import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
@@ -551,15 +552,15 @@ class Turbine {
     return new SetVariable(target, fnCall);
   }
 
-  private static Expression tclRuleType(ExecTarget t) {
+  private static Expression tclRuleType(AsyncExecutors executors, ExecTarget t) {
     assert(t.isAsync());
 
     if (t.isDispatched()) {
       // Same as ADLB work types
-      return adlbWorkTypeVal(t.targetContext());
+      return adlbWorkTypeVal(executors, t.targetContext());
     } else {
       // Just implement as control
-      return adlbWorkTypeVal(ExecContext.control());
+      return adlbWorkTypeVal(executors, ExecContext.control());
     }
   }
 
@@ -573,7 +574,7 @@ class Turbine {
    * @param type
    * @return
    */
-  private static Sequence ruleHelper(String symbol,
+  private static Sequence ruleHelper(AsyncExecutors executors, String symbol,
           List<? extends Expression> inputs, List<Expression> action,
           ExecTarget type, ExecContext execCx, RuleProps props) {
     assert (action != null);
@@ -585,7 +586,7 @@ class Turbine {
 
     if (inputs.isEmpty()) {
       if (type.isDispatched()) {
-        return spawnTask(action, type, execCx, props);
+        return spawnTask(executors, action, type, execCx, props);
       }
     }
 
@@ -601,7 +602,7 @@ class Turbine {
 
     args.add(new TclList(inputs)); // vars to block in
     args.add(TclUtil.tclStringAsList(action)); // Tcl string to execute
-    ruleAddKeywordArgs(type, props, args);
+    ruleAddKeywordArgs(executors, type, props, args);
 
     res.add(new Command(ruleCmd, args));
 
@@ -610,29 +611,32 @@ class Turbine {
     return res;
   }
 
-  public static List<Expression> ruleKeywordArgs(TclTarget targetRank,
-          Expression targetStrictness, Expression targetAccuracy,
+  public static List<Expression> ruleKeywordArgs(AsyncExecutors executors,
+          TclTarget targetRank, Expression targetStrictness, Expression targetAccuracy,
           Expression parallelism) {
-    return ruleKeywordArgs(null, targetRank, targetStrictness, targetAccuracy,
-                           parallelism);
+    return ruleKeywordArgs(executors, null,
+        targetRank, targetStrictness, targetAccuracy, parallelism);
   }
 
-  public static List<Expression> ruleKeywordArgs(ExecTarget type,
+  public static List<Expression> ruleKeywordArgs(AsyncExecutors executors,
+      ExecTarget type,
       TclTarget targetRank, Expression targetStrictness,
       Expression targetAccuracy, Expression parallelism) {
     ArrayList<Expression> res = new ArrayList<Expression>();
-    ruleAddKeywordArgs(type, targetRank, targetStrictness, targetAccuracy,
+    ruleAddKeywordArgs(executors, type, targetRank, targetStrictness, targetAccuracy,
                        parallelism, res);
     return res;
   }
 
-  private static void ruleAddKeywordArgs(ExecTarget type, RuleProps props,
+  private static void ruleAddKeywordArgs(AsyncExecutors executors,
+      ExecTarget type, RuleProps props,
       List<Expression> args) {
-    ruleAddKeywordArgs(type, props.targetRank, props.targetStrictness,
+    ruleAddKeywordArgs(executors, type, props.targetRank, props.targetStrictness,
                 props.targetAccuracy, props.parallelism, args);
   }
 
-  private static void ruleAddKeywordArgs(ExecTarget type, TclTarget targetRank,
+  private static void ruleAddKeywordArgs(AsyncExecutors executors,
+      ExecTarget type, TclTarget targetRank,
       Expression targetStrictness, Expression targetAccuracy,
       Expression parallelism, List<Expression> args) {
     if (!targetRank.rankAny) {
@@ -654,7 +658,7 @@ class Turbine {
     // Only a single rule type with no turbine engines
     if (!isDefaultExecTarget(type)) {
       args.add(RULE_KEYWORD_TYPE);
-      args.add(tclRuleType(type));
+      args.add(tclRuleType(executors, type));
     }
 
     if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
@@ -712,7 +716,8 @@ class Turbine {
     return null;
   }
 
-  private static Sequence spawnTask(List<Expression> action, ExecTarget type,
+  private static Sequence spawnTask(AsyncExecutors executors,
+          List<Expression> action, ExecTarget type,
           ExecContext execCx, RuleProps props) {
     assert(type.isAsync());
 
@@ -748,7 +753,7 @@ class Turbine {
     Expression par = props.parallelism;
     if (props.targetRank.rankAny && par == null) {
       // Use simple spawn
-      res.append(spawnTask(targetContext, priorityVar, task));
+      res.append(spawnTask(executors, targetContext, priorityVar, task));
       return res;
     } else {
       if (par == null) {
@@ -757,7 +762,7 @@ class Turbine {
 
       List<Expression> putArgs = new ArrayList<Expression>();
       putArgs.add(props.targetRank.toTcl());
-      putArgs.add(adlbWorkTypeVal(targetContext));
+      putArgs.add(adlbWorkTypeVal(executors, targetContext));
       putArgs.add(task);
       putArgs.add(priorityVar);
       putArgs.add(par);
@@ -778,12 +783,12 @@ class Turbine {
     }
   }
 
-  private static Sequence spawnTask(ExecContext type, Value priority,
-          Expression task) {
+  private static Sequence spawnTask(AsyncExecutors executors, ExecContext type,
+      Value priority, Expression task) {
     Sequence res = new Sequence();
     if (priority != null)
       res.add(setPriority(priority));
-    res.add(new Command(ADLB_SPAWN, adlbWorkTypeVal(type), task));
+    res.add(new Command(ADLB_SPAWN, adlbWorkTypeVal(executors, type), task));
     if (priority != null)
       res.add(resetPriority());
     return res;
@@ -794,8 +799,9 @@ class Turbine {
    * @param worker
    * @return
    */
-  public static Expression asyncWorkerName(WorkContext worker) {
-    AsyncExecutor exec = AsyncExecutor.fromWorkContext(worker);
+  public static Expression asyncWorkerName(AsyncExecutors executors,
+                                          WorkContext worker) {
+    AsyncExecutor exec = executors.fromWorkContext(worker);
     if (exec == null) {
       return null;
     }
@@ -808,17 +814,18 @@ class Turbine {
     return new Token(worker.name());
   }
 
-  public static Expression adlbWorkType(ExecContext target) {
+  public static Expression adlbWorkType(AsyncExecutors executors, ExecContext target) {
     if (target.isDefaultWorkContext() ||
            target.isControlContext()) {
       return new Value("turbine::WORK_TASK");
     } else {
-      return nonDefaultWorkType(target.workContext());
+      return nonDefaultWorkType(executors, target.workContext());
     }
   }
 
-  public static Expression nonDefaultWorkTypeName(WorkContext workContext) {
-    Expression workTypeName = asyncWorkerName(workContext);
+  public static Expression nonDefaultWorkTypeName(AsyncExecutors executors,
+                                              WorkContext workContext) {
+    Expression workTypeName = asyncWorkerName(executors, workContext);
     if (workTypeName != null) {
       return workTypeName;
     }
@@ -830,20 +837,23 @@ class Turbine {
     throw new STCRuntimeError("Unknown WorkContext: " + workContext);
   }
 
-  public static Expression nonDefaultWorkType(WorkContext workContext) {
-    return Square.fnCall(ADLB_WORK_TYPE, nonDefaultWorkTypeName(workContext));
+  public static Expression nonDefaultWorkType(AsyncExecutors executors,
+                                                    WorkContext workContext) {
+    return Square.fnCall(ADLB_WORK_TYPE,
+          nonDefaultWorkTypeName(executors, workContext));
   }
 
   /**
    * Tcl is inefficient at looking up namespace vars. Have option of hardcoding
    * work ids
    */
-  public static Expression adlbWorkTypeVal(ExecContext target) {
+  public static Expression adlbWorkTypeVal(AsyncExecutors executors,
+                                           ExecContext target) {
     if (target.isControlContext() ||
         target.isDefaultWorkContext()) {
       return TURBINE_WORKER_WORK_ID;
     } else {
-      return nonDefaultWorkType(target.workContext());
+      return nonDefaultWorkType(executors, target.workContext());
     }
   }
 
@@ -851,15 +861,15 @@ class Turbine {
    * Generate code to check compatibility of STC with Turbine, so we don't
    * mistakenly hardcode wrong constants
    */
-  public static Command checkConstants() {
+  public static Command checkConstants(AsyncExecutors executors) {
     List<Expression> args = new ArrayList<Expression>();
     // Check work types
     // TODO: multiple work types
     for (ExecContext target : Arrays.asList(ExecContext.defaultWorker(),
                                             ExecContext.control())) {
       args.add(new TclString(target.toString(), true));
-      args.add(adlbWorkType(target));
-      args.add(adlbWorkTypeVal(target));
+      args.add(adlbWorkType(executors, target));
+      args.add(adlbWorkTypeVal(executors, target));
     }
 
     // Check ADLB_RANK_ANY value
@@ -907,13 +917,13 @@ class Turbine {
    * @param mode
    * @return
    */
-  public static Sequence rule(String symbol,
+  public static Sequence rule(AsyncExecutors executors, String symbol,
           List<? extends Expression> blockOn, List<Expression> action,
           ExecTarget mode, ExecContext execCx, RuleProps props) {
-    return ruleHelper(symbol, blockOn, action, mode, execCx, props);
+    return ruleHelper(executors, symbol, blockOn, action, mode, execCx, props);
   }
 
-  public static Sequence deepRule(String symbol,
+  public static Sequence deepRule(AsyncExecutors executors, String symbol,
           List<? extends Expression> inputs, int[] depths,
           Expression[] baseTypes, List<Expression> action, ExecTarget mode,
           ExecContext execCx, RuleProps props) {
@@ -940,7 +950,7 @@ class Turbine {
     args.add(new TclList(depthExprs));
     args.add(new TclList(baseTypeExprs));
     args.add(TclUtil.tclStringAsList(action));
-    ruleAddKeywordArgs(mode, props, args);
+    ruleAddKeywordArgs(executors, mode, props, args);
     res.add(new Command(DEEPRULE, args));
 
     if (props.priority != null)
@@ -948,7 +958,7 @@ class Turbine {
     return res;
   }
 
-  public static Sequence loopRule(String symbol,
+  public static Sequence loopRule(AsyncExecutors executors, String symbol,
           List<? extends Expression> args, List<? extends Expression> blockOn,
           ExecContext execCx) {
     // Assume executes on control for now
@@ -959,8 +969,8 @@ class Turbine {
     for (Expression arg : args) {
       action.add(arg);
     }
-    return ruleHelper(symbol, blockOn, action, ExecTarget.dispatchedControl(),
-                      execCx, RuleProps.DEFAULT);
+    return ruleHelper(executors, symbol, blockOn, action,
+                ExecTarget.dispatchedControl(), execCx, RuleProps.DEFAULT);
   }
 
   /**
@@ -1752,13 +1762,14 @@ class Turbine {
    *          may be null if no continuation to call
    * @return
    */
-  public static Command asyncExec(AsyncExecutor executor, Expression cmdName,
+  public static Command asyncExec(AsyncExecutors executor, Expression cmdName,
           List<Token> outVarNames, List<Expression> taskArgExprs,
           List<Pair<String, Expression>> taskPropExprs,
           List<Expression> stageIns, List<Expression> stageOuts,
           List<Expression> successContinuation, List<Expression> failureContinuation) {
 
     Token execCmd;
+    // TODO: change to filling in template
     switch (executor) {
     case COASTER:
       execCmd = ASYNC_EXEC_COASTER;

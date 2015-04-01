@@ -199,10 +199,6 @@ public class ExecContext {
           /* Deprecated synonym */
           Pair.create("LEAF", DEFAULT_WORKER_CONTEXT)));
 
-    for (Pair<String, ExecContext> cx: AsyncExecutor.execContexts()) {
-      targets.add(Pair.create(cx.val1, cx.val2));
-    }
-
     return targets;
   }
 }

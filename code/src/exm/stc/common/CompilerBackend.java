@@ -25,7 +25,7 @@ import com.google.common.collect.ListMultimap;
 
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
@@ -133,7 +133,7 @@ public interface CompilerBackend {
    * Declare a new work type that behaves the same as, but is separate from
    * the regular work context.  Not all backends will implement this.
    * This will only be called for custom work types outside of the regular
-   * control/work contexts and builtin async executors.  It should be called
+   * control/work contexts.  It should be called
    * only once for any custom work type that is declared in the program.
    * @param workType
    */

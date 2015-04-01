@@ -47,16 +47,19 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Annotations.Suppression;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutors;
+import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Pragmas;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -93,6 +96,7 @@ import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.FunctionDecl;
 import exm.stc.frontend.tree.If;
+import exm.stc.frontend.tree.InlineCode;
 import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
@@ -117,6 +121,7 @@ public class ASTWalker {
 
   private final STCMiddleEnd backend;
   private final ForeignFunctions foreignFuncs;
+  private final AsyncExecutors executors;
   private final VarCreator varCreator;
   private final LValWalker lValWalker;
   private final ExprWalker exprWalker;
@@ -125,16 +130,17 @@ public class ASTWalker {
 
   /** Track which modules are loaded and compiled */
   private final LoadedModules modules;
-
   private static enum FrontendPass {
     DEFINITIONS, // Process top level defs
     COMPILE_TOPLEVEL, // Compile top-levelcode
     COMPILE_FUNCTIONS, // Compile functions
   }
 
-  public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs) {
+  public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs,
+                   AsyncExecutors executors) {
     this.backend = backend;
     this.foreignFuncs = foreignFuncs;
+    this.executors = executors;
     this.modules = new LoadedModules();
     this.varCreator = new VarCreator(backend);
     this.wrapper = new WrapperGen(backend);
@@ -156,7 +162,7 @@ public class ASTWalker {
                  boolean preprocessed) throws UserException {
 
     GlobalContext context = new GlobalContext(mainFilePath,
-                      Logging.getSTCLogger(), foreignFuncs);
+                      Logging.getSTCLogger(), foreignFuncs, executors);
 
     // Assume root module for now
     String mainModuleName =  FilenameUtils.getBaseName(originalMainFilePath);
@@ -492,8 +498,10 @@ public class ASTWalker {
     assert(pragmaNameT.getType() == ExMParser.ID);
     String pragmaName = pragmaNameT.getText();
 
-    if (pragmaName.equals("worktypedef")) {
-      workTypeDef(context, pragmaArgs);
+    if (pragmaName.equals(Pragmas.WORK_TYPE_DEF)) {
+      defineWorkType(context, pragmaArgs);
+    } else if (pragmaName.equals(Pragmas.APP_EXECUTOR_DEF)) {
+      defineAppExecutor(context, pragmaArgs);
     } else {
       throw new UndefinedPragmaException(context, "Invalid pragma name: "
                                                       + pragmaName);
@@ -506,20 +514,75 @@ public class ASTWalker {
    * @param args args for pragma
    * @throws UserException
    */
-  private void workTypeDef(GlobalContext context, List<SwiftAST> args)
+  private void defineWorkType(GlobalContext context, List<SwiftAST> args)
                           throws UserException {
     if (args.size() != 1) {
-      throw new UserException(context, "Expected worktypedef pragma to "
-                            + "have 1 argument, but got " + args.size());
+      throw new UserException(context, "Expected " + Pragmas.WORK_TYPE_DEF +
+              " pragma to have 1 argument, but got " + args.size());
     }
     SwiftAST workTypeT = args.get(0);
     if (workTypeT.getType() != ExMParser.VARIABLE) {
-      throw new UserException(context, "Expected worktypedef pragma to "
-                                  + "have identifier name as argument");
+      throw new UserException(context, "Expected " + Pragmas.WORK_TYPE_DEF +
+                        " pragma to have identifier name as argument");
     }
     String workTypeName = workTypeT.child(0).getText();
-    ExecContext.WorkContext workCx = context.declareWorkType(workTypeName);
+    backendDeclareWorkType(context, workTypeName);
+  }
+
+  /**
+   * Define a new async executor for app functions
+   * @param context
+   * @param args args for pragma
+   * @throws UserException
+   */
+  private void defineAppExecutor(GlobalContext context, List<SwiftAST> args)
+                          throws UserException {
+    if (args.size() != 4) {
+      throw new UserException(context, "Expected " + Pragmas.APP_EXECUTOR_DEF +
+          " pragma to have 1 argument, but got " + args.size());
+    }
+    SwiftAST execNameT = args.get(0);
+    if (execNameT.getType() != ExMParser.VARIABLE) {
+      throw new UserException(context, "Expected " + Pragmas.APP_EXECUTOR_DEF +
+                        " pragma to have identifier name as argument");
+    }
+    String execName = execNameT.child(0).getText();
+
+    WorkContext workContext = backendDeclareWorkType(context, execName);
+
+    SwiftAST pkgT = args.get(1);
+    SwiftAST pkgVersionT = args.get(2);
+    if (!Literals.isLiteralString(pkgT) ||
+        !Literals.isLiteralString(pkgVersionT)) {
+      throw new UserException(context, "Expected literal strings for package "
+                                     + "name and version");
+    }
+
+    String pkg = Literals.extractLiteralString(context, pkgT);
+    String pkgVersion = Literals.extractLiteralString(context, pkgVersionT);
+
+    addRequiredPackage(pkg, pkgVersion);
+
+
+    SwiftAST tclTemplateT = args.get(3);
+    if (!Literals.isLiteralString(tclTemplateT)) {
+      throw new UserException(context, "Expected literal strings for tcl "
+          + "template for app executor");
+    }
+
+    String tclTemplateS = Literals.extractStringLit(context, tclTemplateT);
+
+    TclOpTemplate template;
+    template = InlineCode.templateFromString(context, tclTemplateS);
+
+
+    context.getAsyncExecutors().addAppExecutor(execName, workContext, template);
+  }
+  private WorkContext backendDeclareWorkType(GlobalContext context, String workTypeName)
+      throws DoubleDefineException {
+    WorkContext workCx = context.declareWorkType(workTypeName);
     backend.declareWorkType(workCx);
+    return workCx;
   }
 
   /**
@@ -1544,11 +1607,13 @@ public class ASTWalker {
                                       fdecl.defaultVals());
     tree.setIdentifier(fid);
 
-    String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
-    String version = Literals.extractLiteralString(context, tclPackage.child(1));
+    SwiftAST pkgT = tclPackage.child(0);
+    SwiftAST pkgVersionT = tclPackage.child(1);
 
-    // TODO: other types of packages
-    backend.requirePackage(new TclPackage(pkg, version));
+    String pkg = Literals.extractLiteralString(context, pkgT);
+    String version = Literals.extractLiteralString(context, pkgVersionT);
+
+    addRequiredPackage(pkg, version);
 
     int pos = REQUIRED_CHILDREN;
     TclFunRef impl = null;
@@ -1615,6 +1680,11 @@ public class ASTWalker {
       wrapper.saveWrapper(context, fid, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
     }
+  }
+
+  private void addRequiredPackage(String pkg, String version) {
+    // TODO: other types of packages
+    backend.requirePackage(new TclPackage(pkg, version));
   }
 
   private Set<String> extractTypeParams(SwiftAST typeParamsT) {
@@ -1841,15 +1911,15 @@ public class ASTWalker {
         assert(subtree.getChildCount() == 2);
         String value = subtree.child(1).getText();
         if (appFn && Annotations.FN_DISPATCH.equals(annotation)) {
-          try {
-            if (exec.val != null) {
-              throw new InvalidAnnotationException(context,
-                              "Repeated annotation " + annotation);
-            }
-            exec.val = AsyncExecutor.fromUserString(value);
-          } catch (IllegalArgumentException e) {
+          if (exec.val != null) {
             throw new InvalidAnnotationException(context,
-                "Unknown dispatch option: " + value);
+                            "Repeated annotation " + annotation);
+          }
+          exec.val = context.getAsyncExecutors().fromUserString(value);
+
+          if (exec.val == null) {
+            throw new InvalidAnnotationException(context, "Unknown executor "
+                                                 + value);
           }
         } else if (annotation.equals(Annotations.FN_SUPPRESS)) {
           try {
@@ -2010,7 +2080,7 @@ public class ASTWalker {
 
 
     syncFilePos(context, tree);
-    Out<AsyncExecutor> exec = new Out<AsyncExecutor>();
+    Out<AsyncExecutors> exec = new Out<AsyncExecutors>();
     Set<Suppression> suppressions = new HashSet<Suppression>();
     List<String> annotations = extractAppFunctionAnnotations(context,
                                         tree, 4, exec, suppressions);

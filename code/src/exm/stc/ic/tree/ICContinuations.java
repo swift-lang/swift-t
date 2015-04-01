@@ -33,7 +33,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
-import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutors;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
@@ -1647,7 +1647,7 @@ public class ICContinuations {
     /**
      * Executor that it will execute on
      */
-    private final AsyncExecutor executor;
+    private final AsyncExecutors executor;
 
     /**
      * Name of command for executor
@@ -1675,7 +1675,7 @@ public class ICContinuations {
      */
     private final boolean hasSideEffects;
 
-    public AsyncExec(String procName, AsyncExecutor executor,
+    public AsyncExec(String procName, AsyncExecutors executor,
           Arg cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
           List<Var> taskOutputs, List<Arg> taskArgs,
           Map<String, Arg> taskProps, boolean hasSideEffects) {
@@ -1686,7 +1686,7 @@ public class ICContinuations {
     }
 
     private AsyncExec(String procName, Block block, boolean newBlock,
-        AsyncExecutor executor,
+        AsyncExecutors executor,
         Arg cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<Var> taskOutputs,
         List<Arg> taskArgs, Map<String, Arg> taskProps,

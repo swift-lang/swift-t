@@ -47,7 +47,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;

@@ -39,6 +39,7 @@ import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.AsyncExecutors;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
@@ -89,13 +90,17 @@ public class GlobalContext extends Context {
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
 
+  private final AsyncExecutors executors;
+
   private final Counters<String> globalCounters = new Counters<String>();
 
   public GlobalContext(String inputFile, Logger logger,
-                        ForeignFunctions foreignFuncs) {
+                        ForeignFunctions foreignFuncs,
+                        AsyncExecutors executors) {
     super(null, logger, 0);
     this.inputFile = inputFile;
     this.foreignFuncs = foreignFuncs;
+    this.executors = executors;
 
     // Add all predefined types into type name dict
     Map<String, Type> builtInTypes = Types.getBuiltInTypes();
@@ -302,6 +307,11 @@ public class GlobalContext extends Context {
   @Override
   public ForeignFunctions getForeignFunctions() {
     return foreignFuncs;
+  }
+
+  @Override
+  public AsyncExecutors getAsyncExecutors() {
+    return executors;
   }
 
   @Override

@@ -151,20 +151,21 @@ public class Literals {
     return floatval;
   }
 
-  public static String extractLiteralString(Context context,
-                                              SwiftAST stringLiteral)
-                                          throws InvalidSyntaxException {
-    int type = stringLiteral.getType();
-    assert(type == ExMParser.STRING ||
+  public static boolean isLiteralString(SwiftAST tree) {
+    int type = tree.getType();
+    return type == ExMParser.STRING ||
            type == ExMParser.STRING_MULTI_LINE_1 ||
-           type == ExMParser.STRING_MULTI_LINE_2);
-
-    return unescapeString(context,
-                          unquote(stringLiteral.getText(), type));
+           type == ExMParser.STRING_MULTI_LINE_2;
   }
 
-  public static String unquote(String s, int type)
-  {
+  public static String extractLiteralString(Context context,
+                SwiftAST stringLit) throws InvalidSyntaxException {
+    assert isLiteralString(stringLit);
+    String unquoted = unquote(stringLit.getText(), stringLit.getType());
+    return unescapeString(context, unquoted);
+  }
+
+  public static String unquote(String s, int type) {
     if (type == ExMParser.STRING) {
       // Regular string literal
       if (s.charAt(0) == '"' ||
