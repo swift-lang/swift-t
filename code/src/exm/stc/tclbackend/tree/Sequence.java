@@ -17,6 +17,7 @@
 package exm.stc.tclbackend.tree;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,11 +26,16 @@ import java.util.List;
  * */
 public class Sequence extends TclTree {
 
+  protected final List<TclTree> members = new ArrayList<TclTree>();
 
   public Sequence() {
     super();
   }
 
+  public Sequence(List<? extends TclTree> elems) {
+    this();
+    addAll(elems);
+  }
 
   public Sequence(TclTree... elems) {
     this();
@@ -38,34 +44,31 @@ public class Sequence extends TclTree {
     }
   }
 
-
-  List<TclTree> members = new ArrayList<TclTree>();
-
-  public void add(TclTree tree)
-  {
+  public void add(TclTree tree) {
     members.add(tree);
   }
 
-  public void add(TclTree[] trees)
-  {
-    for (TclTree tree : trees)
+  public void addAll(TclTree[] trees) {
+    addAll(Arrays.asList(trees));
+  }
+
+  public void addAll(List<? extends TclTree> trees) {
+    for (TclTree tree: trees) {
       add(tree);
+    }
   }
 
   /**
    * Append at end of current sequence
    * @param seq
    */
-  public void append(Sequence seq)
-  {
+  public void append(Sequence seq) {
     members.addAll(seq.members);
   }
 
   @Override
-  public void appendTo(StringBuilder sb)
-  {
-    for (TclTree member : members)
-    {
+  public void appendTo(StringBuilder sb) {
+    for (TclTree member: members) {
       member.setIndentation(indentation);
       member.appendTo(sb);
     }

@@ -38,15 +38,15 @@ public class TclUtil {
   public static Expression argToExpr(Arg in) {
     return argToExpr(in, false);
   }
-  
+
   public static List<Expression> argsToExpr(List<Arg> in) {
     List<Expression> res = new ArrayList<Expression>(in.size());
     for (Arg a: in) {
       res.add(argToExpr(a));
     }
     return res;
-  } 
-  
+  }
+
   public static Expression argToExpr(Arg in, boolean passThroughNull) {
     if (in == null) {
       if (passThroughNull) {
@@ -75,7 +75,7 @@ public class TclUtil {
   public static Value varToExpr(Var v) {
     return varToExpr(v, false);
   }
-  
+
   public static Value varToExpr(Var v, boolean passThroughNull) {
     if (v == null) {
       if (passThroughNull) {
@@ -84,7 +84,7 @@ public class TclUtil {
         throw new STCRuntimeError("Unexpected null variable in varToExpr");
       }
     }
-    
+
     Value val = new Value(TclNamer.prefixVar(v.name()));
     if (representationMaybeTclList(v)) {
       val.setTreatAsList(true);
@@ -113,7 +113,7 @@ public class TclUtil {
   public static boolean representationMaybeTclList(Var v) {
     return representationMaybeTclList(v.type(), v.isRuntimeAlias());
   }
-  
+
   public static boolean representationMaybeTclList(Type type,
                                    Ternary isRuntimeAlias) {
     if (Types.isFile(type) || Types.isStructLocal(type) ||
@@ -126,6 +126,19 @@ public class TclUtil {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Whether to pass to Tcl code by variable name (if output).
+   * @param type
+   * @return
+   */
+  public static boolean passOutByName(Type type) {
+    if (Types.isContainer(type)) {
+      // Pass Turbine arrays by type
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -153,7 +166,7 @@ public class TclUtil {
       result.add(varToExpr(v));
     return result;
   }
-  
+
   public static TclList tclListOfArgs(List<Arg> inputs) {
     TclList result = new TclList();
     for (Arg a: inputs)
@@ -176,7 +189,7 @@ public class TclUtil {
         break;
       }
     }
-    
+
     if (canUseString) {
       return new TclString(ruleTokens, ExprContext.LIST_STRING);
     } else {

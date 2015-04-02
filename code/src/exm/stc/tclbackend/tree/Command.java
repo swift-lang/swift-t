@@ -16,11 +16,14 @@
 
 package exm.stc.tclbackend.tree;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 public class Command extends TclTree
 {
-  List<TclTree> tokens;
+  private final List<TclTree> tokens;
 
   public Command(TclTree... tokens)
   {
@@ -30,29 +33,34 @@ public class Command extends TclTree
   public Command(String cmd, List<? extends Expression> args) {
     this(new Token(cmd), args);
   }
-  
+
   public Command(Token cmd, List<? extends Expression> args) {
     tokens = new ArrayList<TclTree>(args.size() + 1);
     tokens.add(cmd);
     tokens.addAll(args);
   }
-  
+
 
   public Command(String cmd, Expression args) {
     this(cmd, Arrays.asList(args));
   }
-  
-  public Command(String... strings)
-  {
+
+  public Command(String... strings) {
     tokens = new ArrayList<TclTree>(strings.length);
     for (String s : strings)
       tokens.add(new Token(s));
   }
-  
+
+  public Command(List<? extends TclTree> args) {
+    tokens = new ArrayList<TclTree>();
+    tokens.addAll(args);
+  }
+
+
   public static Command returnCommand() {
     return new Command("return");
   }
-  
+
 
   public static Command breakCommand() {
     return new Command("break");

@@ -28,6 +28,7 @@ import exm.stc.common.util.Pair;
  * We treat control and work contexts differently even if they run on the same
  * resources: nothing that will block for an indeterminate or long amount of
  * time should run in a control context.
+ *
  */
 public class ExecContext {
   /**
@@ -43,14 +44,28 @@ public class ExecContext {
   /**
    * Represent a specific kind of worker.
    *
+   *
+   * Some WorkContexts have an associated async executor.
+   *
    * Compare based on identity
    * Include string to identify in debug messages, etc.
    */
   public static class WorkContext {
-    private String name;
+    private final String name;
+    private final AsyncExecutor asyncExecutor;
 
-    public WorkContext(String name) {
+    private WorkContext(String name, AsyncExecutor asyncExecutor) {
       this.name = name;
+      this.asyncExecutor = asyncExecutor;
+    }
+
+    public static WorkContext createSync(String name) {
+      return new WorkContext(name, null);
+    }
+
+    public static WorkContext createAsync(String name,
+        AsyncExecutor asyncExecutor) {
+      return new WorkContext(name, asyncExecutor);
     }
 
     @Override
@@ -62,7 +77,14 @@ public class ExecContext {
       return name;
     }
 
-    private static WorkContext DEFAULT = new WorkContext("WORKER");
+    /**
+     * @return executor if there is one associated, null otherwise
+     */
+    public AsyncExecutor asyncExecutor() {
+      return asyncExecutor;
+    }
+
+    private static WorkContext DEFAULT = WorkContext.createSync("WORKER");
   }
 
   private ExecContext(Kind kind, WorkContext workContext) {

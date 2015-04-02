@@ -32,7 +32,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutors;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
@@ -378,7 +378,7 @@ public class STCMiddleEnd {
   }
 
   public void startAsyncExec(String procName,
-      AsyncExecutors executor, Arg cmd, List<Var> taskOutputs,
+      AsyncExecutor executor, Arg cmd, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasSideEffects) {
 

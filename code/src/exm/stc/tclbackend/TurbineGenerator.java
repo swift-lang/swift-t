@@ -47,7 +47,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecContext.WorkContext;
@@ -83,6 +83,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
+import exm.stc.tclbackend.TclTemplateProcessor.TemplateArg;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.TypeName;
@@ -1344,11 +1345,20 @@ public class TurbineGenerator implements CompilerBackend {
     TclOpTemplate template = impls.val1;
     assert(template != null);
 
-    List<TclTree> result = TclTemplateProcessor.processTemplate(
-                            function, template, inputs, outputs);
+    List<TemplateArg> outputArgs = new ArrayList<TemplateArg>();
+    for (Var output: outputs) {
+      outputArgs.add(TemplateArg.fromOutputVar(output));
+    }
 
-    Command cmd = new Command(result.toArray(new TclTree[result.size()]));
-    pointAdd(cmd);
+    List<TemplateArg> inputArgs = new ArrayList<TemplateArg>();
+    for (Arg input: inputs) {
+      inputArgs.add(TemplateArg.fromInputArg(input));
+    }
+
+    List<TclTree> result = TclTemplateProcessor.processTemplate(
+                function.originalName(), template, inputArgs, outputArgs);
+
+    pointAdd(new Command(result));
   }
 
   @Override
@@ -3415,7 +3425,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> taskArgExprs = new ArrayList<Expression>(taskArgs.size());
     for (Arg taskArg: taskArgs) {
       // May need to expand args onto command line
-      if (executor.isCommandLine()) {
+      if (executor.isAppExecutor()) {
         taskArgExprs.add(cmdLineArgExpr(taskArg));
       } else {
         taskArgExprs.add(argToExpr(taskArg));
@@ -3452,8 +3462,8 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> failureContinuation = new ArrayList<Expression>();
     failureContinuation.add(new Token("error"));
     failureContinuation.add(new TclString(Arrays.asList(
-        new TclString("Execution of", true), argToExpr(cmdName),
-        new TclString("failed", true)), ExprContext.VALUE_STRING));
+        new TclString("Execution of ", true), argToExpr(cmdName),
+        new TclString(" failed", true)), ExprContext.VALUE_STRING));
 
     pointAdd(Turbine.asyncExec(executor, argToExpr(cmdName), outVarNames,
               taskArgExprs, taskPropExprs, stageIns, stageOuts,

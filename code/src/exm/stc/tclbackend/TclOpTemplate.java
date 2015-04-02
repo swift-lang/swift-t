@@ -18,47 +18,59 @@ public class TclOpTemplate extends LocalForeignFunction {
       TEXT,
       VARIABLE,
       DEREF_VARIABLE,
-      REF_VARIABLE,
+      REF_VARIABLE,;
+
+      public boolean isVariable() {
+        switch (this) {
+          case VARIABLE:
+          case DEREF_VARIABLE:
+          case REF_VARIABLE:
+            return true;
+          default:
+            return false;
+        }
+      }
     }
-    
+
     private final ElemKind kind;
     private final String contents;
-    
+
     private TemplateElem(ElemKind kind, String contents) {
       super();
       this.kind = kind;
       this.contents = contents;
     }
-    
+
     public static TemplateElem createTok(String text) {
       return new TemplateElem(ElemKind.TEXT, text);
     }
-    
+
     public static TemplateElem createVar(String varName, ElemKind kind) {
       return new TemplateElem(kind, varName);
     }
-    
+
     public ElemKind getKind() {
       return kind;
     }
-    
+
     public String getText() {
       if (kind == ElemKind.TEXT) {
         return contents;
       } else {
-        throw new STCRuntimeError("not text, was: " + kind); 
+        throw new STCRuntimeError("not text, was: " + kind);
       }
     }
-    
+
     public String getVarName() {
       if (kind == ElemKind.VARIABLE || kind == ElemKind.DEREF_VARIABLE ||
           kind == ElemKind.REF_VARIABLE) {
         return contents;
       } else {
-        throw new STCRuntimeError("not var, was: " + kind); 
+        throw new STCRuntimeError("not var, was: " + kind);
       }
     }
-    
+
+    @Override
     public String toString() {
       if (kind == ElemKind.VARIABLE) {
         return contents;
@@ -73,26 +85,26 @@ public class TclOpTemplate extends LocalForeignFunction {
     }
   }
 
-  private final ArrayList<TemplateElem> elems = 
+  private final ArrayList<TemplateElem> elems =
                             new ArrayList<TemplateElem>();
-  
+
   /**
    * Names of positional input variables for template
    */
   private final ArrayList<String> outNames =
                             new ArrayList<String>();
-  
+
   /**
    * Names of positional output variables for template
    */
   private final ArrayList<String> inNames =
                             new ArrayList<String>();
-  
+
   /**
    * Name of varargs (null if no varargs)
    */
   private String varArgIn = null;
-  
+
   public boolean addInName(String e) {
     return inNames.add(e);
   }
@@ -108,7 +120,7 @@ public class TclOpTemplate extends LocalForeignFunction {
   public boolean addOutNames(Collection<? extends String> c) {
     return outNames.addAll(c);
   }
-  
+
   public void setVarArgIn(String varArgIn) {
     this.varArgIn = varArgIn;
   }
@@ -116,7 +128,7 @@ public class TclOpTemplate extends LocalForeignFunction {
   public List<String> getInNames() {
     return Collections.unmodifiableList(inNames);
   }
-  
+
   public List<String> getOutNames() {
     return Collections.unmodifiableList(outNames);
   }
@@ -132,7 +144,7 @@ public class TclOpTemplate extends LocalForeignFunction {
   public void addElem(TemplateElem elem) {
     elems.add(elem);
   }
-  
+
   public List<TemplateElem> getElems() {
     return Collections.unmodifiableList(elems);
   }
@@ -144,7 +156,7 @@ public class TclOpTemplate extends LocalForeignFunction {
 
   /**
    * Check all variables reference in template are in names or out names
-   * @throws UserException 
+   * @throws UserException
    */
   public void verifyNames(Context context) throws UserException {
     List<String> badNames = new ArrayList<String>();
@@ -153,7 +165,7 @@ public class TclOpTemplate extends LocalForeignFunction {
           elem.getKind() == ElemKind.DEREF_VARIABLE ||
           elem.getKind() == ElemKind.REF_VARIABLE) {
         String varName = elem.getVarName();
-        if (!outNames.contains(varName) && 
+        if (!outNames.contains(varName) &&
             !inNames.contains(varName)) {
           badNames.add(varName);
         }

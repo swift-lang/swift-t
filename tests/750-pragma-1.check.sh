@@ -2,8 +2,8 @@
 
 for i in $(seq 0 100)
 do
-  for s in "f1( $i ) ran on A_NEW_WORK_TYPE" \
-           "f2( $i ) ran on A_NEW_WORK_TYPE" \
+  for s in "f1( $i ) ran on a_new_work_type" \
+           "f2( $i ) ran on a_new_work_type" \
            "f3( $i ) ran on WORK"
   do
     if ! grep -q -F "$s" $TURBINE_OUTPUT ; then

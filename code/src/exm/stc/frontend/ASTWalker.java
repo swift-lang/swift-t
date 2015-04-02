@@ -39,6 +39,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedPragmaException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
@@ -47,8 +48,7 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Annotations.Suppression;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutors;
-import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
@@ -111,6 +111,7 @@ import exm.stc.frontend.typecheck.TypeChecker;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TclFunRef;
 import exm.stc.tclbackend.TclOpTemplate;
+import exm.stc.tclbackend.TclOpTemplate.TemplateElem;
 import exm.stc.tclbackend.TclPackage;
 /**
  * This class walks the Swift AST.
@@ -121,7 +122,6 @@ public class ASTWalker {
 
   private final STCMiddleEnd backend;
   private final ForeignFunctions foreignFuncs;
-  private final AsyncExecutors executors;
   private final VarCreator varCreator;
   private final LValWalker lValWalker;
   private final ExprWalker exprWalker;
@@ -136,11 +136,9 @@ public class ASTWalker {
     COMPILE_FUNCTIONS, // Compile functions
   }
 
-  public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs,
-                   AsyncExecutors executors) {
+  public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs) {
     this.backend = backend;
     this.foreignFuncs = foreignFuncs;
-    this.executors = executors;
     this.modules = new LoadedModules();
     this.varCreator = new VarCreator(backend);
     this.wrapper = new WrapperGen(backend);
@@ -162,7 +160,7 @@ public class ASTWalker {
                  boolean preprocessed) throws UserException {
 
     GlobalContext context = new GlobalContext(mainFilePath,
-                      Logging.getSTCLogger(), foreignFuncs, executors);
+                      Logging.getSTCLogger(), foreignFuncs);
 
     // Assume root module for now
     String mainModuleName =  FilenameUtils.getBaseName(originalMainFilePath);
@@ -526,7 +524,8 @@ public class ASTWalker {
                         " pragma to have identifier name as argument");
     }
     String workTypeName = workTypeT.child(0).getText();
-    backendDeclareWorkType(context, workTypeName);
+    WorkContext workCx = WorkContext.createSync(workTypeName);
+    backendDeclareWorkType(context, workTypeName, workCx);
   }
 
   /**
@@ -539,7 +538,7 @@ public class ASTWalker {
                           throws UserException {
     if (args.size() != 4) {
       throw new UserException(context, "Expected " + Pragmas.APP_EXECUTOR_DEF +
-          " pragma to have 1 argument, but got " + args.size());
+          " pragma to have 4 argument, but got " + args.size());
     }
     SwiftAST execNameT = args.get(0);
     if (execNameT.getType() != ExMParser.VARIABLE) {
@@ -548,41 +547,55 @@ public class ASTWalker {
     }
     String execName = execNameT.child(0).getText();
 
-    WorkContext workContext = backendDeclareWorkType(context, execName);
-
-    SwiftAST pkgT = args.get(1);
-    SwiftAST pkgVersionT = args.get(2);
-    if (!Literals.isLiteralString(pkgT) ||
-        !Literals.isLiteralString(pkgVersionT)) {
+    String pkg = Literals.extractStringLit(context, args.get(1));
+    String pkgVersion = Literals.extractStringLit(context, args.get(2));
+    if (pkg == null || pkgVersion == null) {
       throw new UserException(context, "Expected literal strings for package "
                                      + "name and version");
     }
 
-    String pkg = Literals.extractLiteralString(context, pkgT);
-    String pkgVersion = Literals.extractLiteralString(context, pkgVersionT);
-
     addRequiredPackage(pkg, pkgVersion);
 
 
-    SwiftAST tclTemplateT = args.get(3);
-    if (!Literals.isLiteralString(tclTemplateT)) {
-      throw new UserException(context, "Expected literal strings for tcl "
-          + "template for app executor");
+    String tclTemplateS = Literals.extractStringLit(context, args.get(3));
+    if (tclTemplateS == null) {
+      throw new UserException(context, "Expected literal string for "
+          + "app executor code template");
     }
 
-    String tclTemplateS = Literals.extractStringLit(context, tclTemplateT);
+    TclOpTemplate template = makeAppExecutorTemplate(context, tclTemplateS);
 
+    AsyncExecutor exec = new AsyncExecutor(execName, template, true);
+
+    WorkContext workCx = WorkContext.createAsync(execName, exec);
+
+    backendDeclareWorkType(context, execName, workCx);
+  }
+
+  private TclOpTemplate makeAppExecutorTemplate(GlobalContext context,
+      String tclTemplateS) throws UserException {
     TclOpTemplate template;
     template = InlineCode.templateFromString(context, tclTemplateS);
 
+    template.addInNames(AsyncExecutor.EXEC_ARG_NAMES);
+    template.verifyNames(context);
 
-    context.getAsyncExecutors().addAppExecutor(execName, workContext, template);
+    Set<String> usedNames = new HashSet<String>(AsyncExecutor.EXEC_ARG_NAMES);
+    // Warn if template is missing expected args
+    for (TemplateElem elem: template.getElems()) {
+      if (elem.getKind().isVariable()) {
+        usedNames.remove(elem.getVarName());
+      }
+    }
+
+    return template;
   }
-  private WorkContext backendDeclareWorkType(GlobalContext context, String workTypeName)
+
+  private void backendDeclareWorkType(GlobalContext context, String workTypeName,
+      WorkContext workCx)
       throws DoubleDefineException {
-    WorkContext workCx = context.declareWorkType(workTypeName);
+    context.declareWorkType(workTypeName, workCx);
     backend.declareWorkType(workCx);
-    return workCx;
   }
 
   /**
@@ -1869,18 +1882,17 @@ public class ASTWalker {
    * @param tree
    * @param firstChild
    * @return
-   * @throws InvalidAnnotationException
+   * @throws UserException
    */
   private List<String> extractFunctionAnnotations(Context context,
       SwiftAST tree, int firstChild, Set<Suppression> supps)
-              throws InvalidAnnotationException {
+              throws UserException {
     return extractFunctionAnnotations(context, tree, firstChild,
-            false, new Out<AsyncExecutor>(), supps);
+            false, new Out<ExecContext>(), supps);
   }
   private List<String> extractAppFunctionAnnotations(Context context,
-      SwiftAST tree, int firstChild,  Out<AsyncExecutor> exec,
-      Set<Suppression> supps)
-          throws InvalidAnnotationException {
+      SwiftAST tree, int firstChild,  Out<ExecContext> exec,
+      Set<Suppression> supps) throws UserException {
     return extractFunctionAnnotations(context, tree, firstChild,
               true, exec, supps);
   }
@@ -1892,11 +1904,12 @@ public class ASTWalker {
    * @param firstChild
    * @return
    * @throws InvalidAnnotationException
+   * @throws UndefinedExecContextException
    */
   private List<String> extractFunctionAnnotations(Context context,
           SwiftAST tree, int firstChild, boolean appFn,
-          Out<AsyncExecutor> exec, Set<Suppression> suppressions)
-              throws InvalidAnnotationException {
+          Out<ExecContext> exec, Set<Suppression> suppressions)
+              throws InvalidAnnotationException, UndefinedExecContextException {
     exec.val = null;
 
     List<String> annotations = new ArrayList<String>();
@@ -1915,12 +1928,8 @@ public class ASTWalker {
             throw new InvalidAnnotationException(context,
                             "Repeated annotation " + annotation);
           }
-          exec.val = context.getAsyncExecutors().fromUserString(value);
 
-          if (exec.val == null) {
-            throw new InvalidAnnotationException(context, "Unknown executor "
-                                                 + value);
-          }
+          exec.val = context.lookupExecContext(value);
         } else if (annotation.equals(Annotations.FN_SUPPRESS)) {
           try {
             Suppression supp = Suppression.fromUserString(value);
@@ -2080,10 +2089,10 @@ public class ASTWalker {
 
 
     syncFilePos(context, tree);
-    Out<AsyncExecutors> exec = new Out<AsyncExecutors>();
+    Out<ExecContext> execCx = new Out<ExecContext>();
     Set<Suppression> suppressions = new HashSet<Suppression>();
     List<String> annotations = extractAppFunctionAnnotations(context,
-                                        tree, 4, exec, suppressions);
+                                        tree, 4, execCx, suppressions);
 
     syncFilePos(context, tree);
     boolean hasSideEffects = true, deterministic = false;
@@ -2108,8 +2117,11 @@ public class ASTWalker {
 
     backend.startFunction(id, backendOutArgs, backendInArgs,
                           ExecTarget.syncControl());
+    ExecContext targetContext = execCx.val == null ? ExecContext.defaultWorker()
+                                                   : execCx.val;
+
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs,
-                       hasSideEffects, deterministic, exec.val, props,
+                       hasSideEffects, deterministic, targetContext, props,
                        suppressions);
     backend.endFunction();
   }
@@ -2130,17 +2142,23 @@ public class ASTWalker {
   private void genAppFunctionBody(Context context, SwiftAST appBody,
           List<Var> inArgs, List<Var> outArgs,
           boolean hasSideEffects,
-          boolean deterministic, AsyncExecutor asyncExec,
+          boolean deterministic, ExecContext targetCx,
           TaskProps props, Set<Suppression> suppressions) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
     assert(appBody.getType() == ExMParser.APP_BODY);
     assert(appBody.getChildCount() >= 1);
+    assert(targetCx != null);
 
     // Extract command from AST
     SwiftAST cmdT = appBody.child(0);
     assert(cmdT.getType() == ExMParser.COMMAND);
     assert(cmdT.getChildCount() >= 1);
+
+    if (!targetCx.isAnyWorkContext()) {
+      throw new InvalidAnnotationException(context, "Execution context "
+                              + targetCx + " cannot execute app functions");
+    }
 
     // Evaluate any argument expressions
     AppCmdArgs evaledArgs = evalAppCmdArgs(context, cmdT);
@@ -2153,13 +2171,10 @@ public class ASTWalker {
 
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<WaitVar>> wait = selectAppWaitVars(context,
-                                evaledArgs.cmd, evaledArgs.args, inArgs, outArgs, redirFutures);
+                              evaledArgs.cmd, evaledArgs.args, inArgs, outArgs,
+                              redirFutures);
     Map<String, Var> fileNames = wait.val1;
     List<WaitVar> waitVars = wait.val2;
-
-    // Ensure it executes in correct context
-    ExecContext targetCx = (asyncExec == null) ? ExecContext.defaultWorker() :
-                                                 asyncExec.execContext();
 
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
@@ -2206,6 +2221,7 @@ public class ASTWalker {
                 VarRepr.backendArg(retrieved.redirects.stdin, true),
                 VarRepr.backendArg(retrieved.redirects.stdout, true),
                 VarRepr.backendArg(retrieved.redirects.stderr, true));
+    AsyncExecutor asyncExec = targetCx.workContext().asyncExecutor();
     if (asyncExec == null) {
       backend.runExternal(retrieved.cmd, beLocalArgs, beLocalInfiles, beLocalOutputs,
                         beLocalRedirects, hasSideEffects, deterministic);

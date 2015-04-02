@@ -35,7 +35,6 @@ import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.AsyncExecutors;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.FnID;
@@ -132,12 +131,6 @@ public abstract class Context {
    * @return global info about foreign functions
    */
   public abstract ForeignFunctions getForeignFunctions();
-
-
-  /**
-   * @return global info about async executors
-   */
-  public abstract AsyncExecutors getAsyncExecutors();
 
   /**
    * Lookup definition corresponding to name

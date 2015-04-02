@@ -39,9 +39,9 @@ import exm.stc.common.exceptions.InvalidOverloadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.AsyncExecutors;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -90,17 +90,13 @@ public class GlobalContext extends Context {
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
 
-  private final AsyncExecutors executors;
-
   private final Counters<String> globalCounters = new Counters<String>();
 
   public GlobalContext(String inputFile, Logger logger,
-                        ForeignFunctions foreignFuncs,
-                        AsyncExecutors executors) {
+                        ForeignFunctions foreignFuncs) {
     super(null, logger, 0);
     this.inputFile = inputFile;
     this.foreignFuncs = foreignFuncs;
-    this.executors = executors;
 
     // Add all predefined types into type name dict
     Map<String, Type> builtInTypes = Types.getBuiltInTypes();
@@ -310,11 +306,6 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public AsyncExecutors getAsyncExecutors() {
-    return executors;
-  }
-
-  @Override
   public Var lookupVarUnsafe(String variable) {
     return variables.get(variable);
   }
@@ -329,13 +320,12 @@ public class GlobalContext extends Context {
     return types.get(typeName);
   }
 
-  public ExecContext.WorkContext declareWorkType(String name) throws DoubleDefineException {
+  public void declareWorkType(String name, WorkContext workCx)
+      throws DoubleDefineException {
     // Should be case insensitive
     String canonicalName = name.toUpperCase();
     LogHelper.debug(this, "Defined work type " + canonicalName);
-    ExecContext.WorkContext workCx = new ExecContext.WorkContext(canonicalName);
     addExecContext(canonicalName, ExecContext.worker(workCx));
-    return workCx;
   }
 
   public void addExecContexts(List<Pair<String, ExecContext>> contexts)

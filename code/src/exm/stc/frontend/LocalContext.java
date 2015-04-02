@@ -24,7 +24,6 @@ import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.AsyncExecutors;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.DefaultVals;
 import exm.stc.common.lang.ExecContext;
@@ -231,11 +230,6 @@ public class LocalContext extends Context {
   @Override
   public ForeignFunctions getForeignFunctions() {
     return globals.getForeignFunctions();
-  }
-
-  @Override
-  public AsyncExecutors getAsyncExecutors() {
-    return globals.getAsyncExecutors();
   }
 
   @Override

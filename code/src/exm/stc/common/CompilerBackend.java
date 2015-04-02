@@ -25,7 +25,7 @@ import com.google.common.collect.ListMultimap;
 
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.AsyncExecutors.AsyncExecutor;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
