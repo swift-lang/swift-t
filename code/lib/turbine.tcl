@@ -43,8 +43,8 @@ namespace eval turbine {
     namespace export WORK_TASK
 
     # Custom work type list
-    variable custom_work_types
-    set custom_work_types [ list ]
+    variable addtl_work_types
+    set addtl_work_types [ list ]
 
     # Mode is SERVER, WORK, or name of asynchronous executor
     variable mode
@@ -177,13 +177,12 @@ namespace eval turbine {
 
         set workers_running_sum 0
 
-        variable custom_work_types
-        set other_work_types [ concat [ available_executors ] \
-                                      $custom_work_types ]
+        variable addtl_work_types
+        set other_work_types [ concat $addtl_work_types ]
 
         global env
         foreach work_type $other_work_types {
-          set env_var "TURBINE_${work_type}_WORKERS"
+          set env_var "TURBINE_[ string toupper ${work_type} ]_WORKERS"
           set worker_count 0
           if { [ info exists env($env_var) ] } {
             set worker_count $env($env_var)
@@ -225,6 +224,14 @@ namespace eval turbine {
     proc register_all_executors {} {
       noop_exec_register
       coaster_register
+
+      variable addtl_work_types
+      # Also ensure async executors are available
+      foreach executor [ available_executors ] {
+        if { [ lsearch -exact $addtl_work_types $executor ] == -1 } {
+          lappend addtl_work_types $executor
+        }
+      }
     }
 
     # Basic rank allocation with only servers and regular workers
@@ -344,9 +351,12 @@ namespace eval turbine {
     # Declare custom work types to be implemented by regular worker.
     # Must be declared before turbine::init
     proc declare_custom_work_types { args } {
-        variable custom_work_types
+        variable addtl_work_types
         foreach work_type $args {
-            lappend custom_work_types $work_type
+          # Avoid duplicates
+          if { [ lsearch -exact $addtl_work_types $work_type ] == -1 } {
+            lappend addtl_work_types $work_type
+          }
         }
     }
 

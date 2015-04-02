@@ -48,8 +48,8 @@ namespace eval turbine {
     }
 
     proc custom_worker { rules startup_cmd mode } {
-        variable custom_work_types
-        if { [ lsearch -exact $custom_work_types $mode ] != -1 } {
+        variable addtl_work_types
+        if { [ lsearch -exact [ available_executors ] $mode ] == -1 } {
             # Standard worker with custom work type
             standard_worker $rules $startup_cmd $mode
         } else {

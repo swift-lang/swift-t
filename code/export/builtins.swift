@@ -38,6 +38,10 @@ LocationStrictness SOFT = LocationStrictness("SOFT");
 LocationAccuracy RANK = LocationAccuracy("RANK");
 LocationAccuracy NODE = LocationAccuracy("NODE");
 
+// App executors
+pragma appexecdef COASTER "turbine" "0.8.0"
+    "turbine::async_exec_coaster <<cmd>> <<args>> <<stage_in>> <<stage_out>> <<props>> <<success>> <<failure>>";
+
 // Arithmetic
 @pure @minmax @builtin_op=POW_INT
 (float o) pow_integer(int base, int exponent) "turbine" "0.0.2" "pow_integer";
