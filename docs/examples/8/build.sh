@@ -1,4 +1,8 @@
-#!/bin/sh -ex
+#!/bin/bash -e
+
+source $(turbine -S)
+
+set -x
 
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname $MPICC ) )
