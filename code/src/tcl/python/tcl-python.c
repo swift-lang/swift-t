@@ -71,6 +71,8 @@ static int python_init(void)
 
 static void python_finalize(void);
 
+static char* python_result_default = "NOTHING";
+
 /**
    @param persist: If true, retain the Python interpreter,
                    else finalize it
@@ -83,7 +85,7 @@ static int
 python_eval(bool persist, const char* code, Tcl_Obj** output)
 {
   int rc;
-  char* result = "NOTHING";
+  char* result = python_result_default;
 
   rc = python_init();
   TCL_CHECK(rc);
