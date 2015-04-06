@@ -938,14 +938,19 @@ variables, both represented by +b+, are assigned different values.
 
 == Operators
 
-The following binary arithmetic operators on numbers are defined:
+=== Numeric operators
 
 +&#43;+ (plus), +-+ (minus), +\*+ (times), +/+ (divide),
-+%/+ (integer divide), +%%+ (modulus), +**+ (power)
++%/+ (integer divide), +%%+ (modulus), +**+ (power).
 
-+&&+ (boolean and), +||+ (boolean or),
 +==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
-+>=+ (greater than or equal to), +&lt;=+ (less than or equal to)
++>=+ (greater than or equal to), +&lt;=+ (less than or equal to).
+
++-+ (negate).
+
+=== Boolean operators
+
++&&+ (boolean and), +||+ (boolean or).
 
 +xor()+ is a builtin function.
 
@@ -954,11 +959,19 @@ concurrency).  For conditional execution, use an +if+ statement.
 
 The following unary operators are defined:
 
-+-+ (negate), +!+ (boolean not)
++!+ (boolean not).
 
-String concatenation is also performed with +&#43;+ (plus).  +==+ and
-+!=+ may also be used on strings.  Operator +s1/s2+ is equivalent to
-+s1&#43;"/"&#43;s2+.
+=== String operators
+
+* String concatenation is also performed with +&#43;+ (plus).  
+
+* +==+ and +!=+ may also be used on strings.  
+
+* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.  
+
+* The Python-style string format operator +format%(arg1,arg2,...)+ is
+  equivalent to +sprintf(format, arg1, arg2,...)+.  The parentheses
+  may be omitted for single arguments.
 
 == Standard library
 
@@ -1012,9 +1025,9 @@ As +printf()+ in C
 
 *Import:* +string+
 
-+substring(string s, int start, int length) -> string+::
-Obtain substring of given string +s+ starting at character +start+ and of
-length +length+
++substring(string s, int start, int end) -> string+::
+Obtain substring of given string +s+ starting from character +start+
+to character +end+.
 
 +find(string s, string substring, int start_index, int end_index) -> int+::
 Find the index of the first occurence of the string +substring+ within
