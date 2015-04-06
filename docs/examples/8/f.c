@@ -16,6 +16,7 @@ f(MPI_Comm comm, int k)
   MPI_Barrier(comm);
   sleep(task_rank);
   MPI_Barrier(comm);
+  MPI_Comm_free(&comm);
   if (task_rank == 0)
     // Return a real value
     return sin(k+task_size);
