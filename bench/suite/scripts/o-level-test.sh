@@ -42,7 +42,6 @@ for i in `seq -w $n`; do
   export TURBINE_LOG=0
   export ADLB_PERF_COUNTERS=1
   export ADLB_PRINT_TIME=1
-  PF=annealing-exm.olevel$i
   OUT=${O_PREFIX}.out
   COUNTS=${O_PREFIX}.counts
 
@@ -54,6 +53,7 @@ for i in `seq -w $n`; do
   export ADLB_SERVERS=3
   PROCS=8
 
+  set -x 
   turbine -n${PROCS} $TCL $ARGS 2>&1 | tee $OUT
   if [[ $? -eq 0 ]]; then
     echo "SUCCESS"

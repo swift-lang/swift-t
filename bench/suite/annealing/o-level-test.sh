@@ -1,7 +1,7 @@
 #!/bin/bash
 SCS=~/ExM/scicolsim.git/
 
-export STC_FLAGS="-T no-engine -I $SCS/src"
+export STC_FLAGS="-I $SCS/src"
 
 export TURBINE_USER_LIB=$SCS 
 
@@ -27,4 +27,4 @@ ARGS="--graph_file=${SCS}/data/movie_graph.txt \
 
 export ARGS
 
-../scripts/o-level-test.sh $SCS/src/annealing-exm.swift ./o-levels.txt ./o-levels-out
+../scripts/o-level-test.sh $SCS/src/annealing-exm.swift ../scripts/o-levels.txt ./o-levels-out

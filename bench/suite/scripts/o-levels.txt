@@ -1,0 +1,15 @@
+-O0 
+-O0 -f value-number -f propagate-aliases -f dead-code-elim
+-O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold
+-O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold -f controlflow-fusion
+-O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold -f controlflow-fusion -f merge-refcounts -f cancel-refcounts -f piggyback-refcounts -f batch-refcounts -f hoist-refcounts
+-O1
+-O1 -f dataflow-op-inline
+-O1 -f dataflow-op-inline -f wait-coalesce
+-O1 -f dataflow-op-inline -f wait-coalesce -f function-signature -f loop-simplify
+-O1 -f dataflow-op-inline -f wait-coalesce -f function-signature -f loop-simplify -f hoisting
+-O2
+-O2 -f function-inline
+-O2 -f function-inline -f pipeline
+-O2 -f function-inline -f pipeline -f reorder-insts
+-O3
