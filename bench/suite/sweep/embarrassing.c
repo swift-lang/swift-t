@@ -107,7 +107,8 @@ int main(int argc, char *argv[])
         for (int j = 0; j < M; j++) {
           char buf[1024];
           int len = sprintf(buf, "%i %i\n", i, j);
-          ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, WORKT, 1, 1);
+          ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, WORKT,
+                   ADLB_DEFAULT_PUT_OPTS);
         }
         tasks_put += M;
       }

@@ -34,7 +34,7 @@ void launch_task(adlb_datum_id *ids, int N, int row, int col) {
           ids[IX(row, col-1, N)], 
           ids[IX(row, col, N)]);
   int rc = ADLB_Put(buffer, tasklen+1, ADLB_RANK_ANY, 0,
-                    WAVEFRONT_WORK, 0, 1);
+                    WAVEFRONT_WORK, ADLB_DEFAULT_PUT_OPTS);
   assert(rc == ADLB_SUCCESS);
 }
 
@@ -157,13 +157,13 @@ int main(int argc, char *argv[])
       for (int i = 0; i < N; i++) {
         double val = i;
         rc = ADLB_Store(ids[IX(i, 0, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                          &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
+                          &val, sizeof(val), ADLB_WRITE_REFC, ADLB_NO_REFC);
         assert(rc == ADLB_SUCCESS);
         
         // Don't double-assign [0][0]
         if (i != 0) {
           rc = ADLB_Store(ids[IX(0, i, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                            &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
+                            &val, sizeof(val), ADLB_WRITE_REFC, ADLB_NO_REFC);
           assert(rc == ADLB_SUCCESS);
         }
       }
@@ -239,9 +239,9 @@ int main(int argc, char *argv[])
           if (row == N - 1 && col == N - 1) {
             double brval;
             adlb_data_type t;
-            int l;
+            size_t l;
             rc = ADLB_Retrieve(ids[IX(N-1, N-1, N)], ADLB_NO_SUB,
-                                ADLB_RETRIEVE_READ_RC,
+                                ADLB_RETRIEVE_READ_REFC,
                                 &t, &brval, &l);
             assert(rc == ADLB_SUCCESS);
             assert(l == sizeof(double));
@@ -278,8 +278,8 @@ int main(int argc, char *argv[])
         double pred_vals[3];
         for (int v = 0; v < 3; v++) {
           adlb_data_type t;
-          int l;
-          rc = ADLB_Retrieve(preds[v], ADLB_NO_SUB, ADLB_RETRIEVE_READ_RC,
+          size_t l;
+          rc = ADLB_Retrieve(preds[v], ADLB_NO_SUB, ADLB_RETRIEVE_READ_REFC,
                                          &t, &pred_vals[v], &l);
           assert(rc == ADLB_SUCCESS);
           assert(l == sizeof(double));
@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 
         double new_val = sqrt(pred_vals[0] + pred_vals[1] + pred_vals[2]) + 1;
         rc = ADLB_Store(result_id, ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                      &new_val, sizeof(new_val), ADLB_WRITE_RC, ADLB_NO_RC);   
+                      &new_val, sizeof(new_val), ADLB_WRITE_REFC, ADLB_NO_REFC);   
         assert(rc == ADLB_SUCCESS);
       }
     }

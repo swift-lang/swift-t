@@ -24,7 +24,8 @@ typedef struct {
 } uts_task;
 
 void spawn_uts(const uts_task *task) {
-  int rc = ADLB_Put(task, sizeof(*task), ADLB_RANK_ANY, -1, WORKT, 1, 1);
+  adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
+  int rc = ADLB_Put(task, sizeof(*task), ADLB_RANK_ANY, -1, WORKT, opts);
   assert(rc == ADLB_SUCCESS);
 }
 

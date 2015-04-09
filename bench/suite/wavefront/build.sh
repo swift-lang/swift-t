@@ -23,7 +23,6 @@ ${CC} ${CFLAGS} ${LDFLAGS} ${ADLB_PROG}.c  ${LIBS} -o ${ADLB_PROG}
 STC=$INST/stc/bin/stc
 STC_OPTLEVEL=${STC_OPTLEVEL:--O2}
 STC_FLAGS="$STC_OPTLEVEL"
-STC_FLAGS+=" -T no-engine"
 
 STC=$INST/stc/bin/stc
 
@@ -31,7 +30,6 @@ for OPT in 0 1 2 3
 do
   STC_OPTLEVEL="-O$OPT"
   STC_FLAGS="$STC_OPTLEVEL"
-  STC_FLAGS+=" -T no-engine"
   
   echo -n O$OPT
   PREFIX=wavefront

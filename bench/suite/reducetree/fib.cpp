@@ -33,7 +33,7 @@ using namespace std;
 
 void mystore(adlb_datum_id id, long val) {
     ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_INTEGER,
-               &val, sizeof(long), ADLB_WRITE_RC, ADLB_NO_RC);
+               &val, sizeof(long), ADLB_WRITE_REFC, ADLB_NO_REFC);
 }
 
 adlb_datum_id spawnfib(int N) {
@@ -42,7 +42,8 @@ adlb_datum_id spawnfib(int N) {
       ADLB_Create_integer(ADLB_DATA_ID_NULL, DEFAULT_CREATE_PROPS,
                           &id);
       int len = sprintf(buf, "fib %i %li\n", N, id);
-      ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL, 1, 1);
+      ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL,
+               ADLB_DEFAULT_PUT_OPTS);
       return id;
 }
 
@@ -58,10 +59,12 @@ void spawnfib2(adlb_datum_id *f1, adlb_datum_id *f2, int N1, int N2) {
       rc = ADLB_Multicreate(specs, 2);
       assert(rc == ADLB_SUCCESS);
       int len = sprintf(buf, "fib %i %li\n", N1, specs[0].id);
-      rc = ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL, 1, 1);
+      rc = ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL,
+                    ADLB_DEFAULT_PUT_OPTS);
       assert(rc == ADLB_SUCCESS);
       len = sprintf(buf, "fib %i %li\n", N2, specs[1].id);
-      rc = ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL, 1, 1);
+      rc = ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, CONTROL,
+                    ADLB_DEFAULT_PUT_OPTS);
       assert(rc == ADLB_SUCCESS);
       *f1 = specs[0].id;
       *f2 = specs[1].id;
@@ -72,7 +75,8 @@ void spawnadd(adlb_datum_id result, adlb_datum_id f1, adlb_datum_id f2)
   char buf[1024];
   adlb_datum_id wait_ids[] = {f1, f2};
   int len = sprintf(buf, "add %li %li %li\n", result, f1, f2);
-  int rc = ADLB_Put_rule(buf, len+1, ADLB_RANK_ANY, -1, CONTROL, 1, 1,
+  int rc = ADLB_Dput(buf, len+1, ADLB_RANK_ANY, -1, CONTROL,
+                         ADLB_DEFAULT_PUT_OPTS,
                          "", wait_ids, 2, NULL, 0);
   assert(rc == ADLB_SUCCESS);
 }
@@ -81,7 +85,8 @@ void spawnfin(adlb_datum_id result)
 {
   char buf[1024];
   int len = sprintf(buf, "fin %li\n", result);
-  int rc = ADLB_Put_rule(buf, len+1, ADLB_RANK_ANY, -1, CONTROL, 1, 1,
+  int rc = ADLB_Dput(buf, len+1, ADLB_RANK_ANY, -1, CONTROL,
+                         ADLB_DEFAULT_PUT_OPTS,
                          "", &result, 1, NULL, 0);
   assert(rc == ADLB_SUCCESS);
 }
@@ -90,8 +95,8 @@ void spawnfin(adlb_datum_id result)
 long getnum(adlb_datum_id id) {
           long result_val;
           adlb_data_type t;
-          int l;
-          adlb_code code = ADLB_Retrieve(id, ADLB_NO_SUB, ADLB_RETRIEVE_READ_RC,
+          size_t l;
+          adlb_code code = ADLB_Retrieve(id, ADLB_NO_SUB, ADLB_RETRIEVE_READ_REFC,
                                          &t, &result_val, &l);
           assert(code == ADLB_SUCCESS);
           //printf("Got <%ld> = %ld\n", id, result_val);
