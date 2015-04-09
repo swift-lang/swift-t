@@ -183,6 +183,14 @@ public class Var implements Comparable<Var>, Typed {
                     VarProvenance.renamed(this), mappedDecl);
   }
 
+  public Var convertToLocal(Alloc newStorage, DefType newDefType) {
+    assert(this.defType.isGlobal());
+    assert(this.storage == Alloc.GLOBAL_VAR);
+
+    return new Var(type, name, newStorage, newDefType,
+                   VarProvenance.renamed(this));
+  }
+
   @Override
   public int hashCode() {
     return hashCode;

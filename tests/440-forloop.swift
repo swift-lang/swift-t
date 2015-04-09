@@ -1,5 +1,4 @@
 /* Regression test - combination of for loop and global scope */
-// SKIP-THIS-TEST
 
 int x;
 

@@ -28,6 +28,8 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -155,6 +157,11 @@ public class UniqueVarNames implements OptimizerPass {
     if (existing.usedNames.contains(var.name())) {
       String newName = chooseNewName(existing.usedNames, var);
       Var newVar = var.makeRenamed(newName);
+
+      if (newVar.storage() == Alloc.GLOBAL_VAR) {
+        newVar = newVar.convertToLocal(Alloc.TEMP, DefType.LOCAL_COMPILER);
+      }
+
       fn.addUsedVarName(newVar);
 
       Arg oldVal = renames.put(var, Arg.newVar(newVar));

@@ -157,6 +157,7 @@ public class Validate implements OptimizerPass {
   private void checkUniqueVarNamesContRec(Logger logger, Function fn,
       Map<String, Var> declared, HierarchicalSet<Var> unavailable,
       Continuation c) {
+
     for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
       checkVarUnique(logger, fn, declared, v);
     }
@@ -287,9 +288,9 @@ public class Validate implements OptimizerPass {
     if (var.defType().isGlobal()) {
       Var declaredGlobal = declared.get(var.name());
       if (declaredGlobal == null) {
-        throw new STCRuntimeError("Missing global constant: " + var.name());
+        throw new STCRuntimeError("Missing global: " + var.name());
       } else {
-        // Check that definitions matcch
+        // Check that definitions match
         assert(declaredGlobal.identical(var));
       }
     } else {
