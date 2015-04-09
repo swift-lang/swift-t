@@ -91,7 +91,8 @@ public class HoistLoops implements OptimizerPass {
 
       // Set up map for top block of function
       HoistTracking mainBlockState =
-          global.makeChild(f.mainBlock(), true, ExecContext.control(), 0, 0);
+          global.makeChild(f.mainBlock(), true, true,
+                           ExecContext.control(), 0, 0);
 
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
@@ -180,7 +181,7 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, false, ExecContext.control(), 0, 0,
+      this(null, null, false, true, ExecContext.control(), 0, 0,
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
@@ -199,6 +200,7 @@ public class HoistLoops implements OptimizerPass {
       Logging.getSTCLogger().trace("Child of " + c.getType() + " " + " childHoist: " + childHoist);
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
       HoistTracking childState = makeChild(childBlock, c.isAsync(),
+          c.target().isDispatched(),
           c.childContext(execCx), childHoist, childLoopHoist);
       // make sure loop iteration variables, etc are tracked
       for (Var v: c.constructDefinedVars()) {
@@ -216,7 +218,7 @@ public class HoistLoops implements OptimizerPass {
     }
 
     private HoistTracking(HoistTracking parent,
-        Block block, boolean async, ExecContext execCx,
+        Block block, boolean async, boolean dispatched, ExecContext execCx,
         int maxHoist, int maxLoopHoist,
         HierarchicalMap<Var, Block> writeMap,
         HierarchicalMap<Var, Block> piecewiseWriteMap,
@@ -226,6 +228,7 @@ public class HoistLoops implements OptimizerPass {
       this.parent = parent;
       this.block = block;
       this.async = async;
+      this.dispatched = dispatched;
       this.execCx = execCx;
       this.maxHoist = maxHoist;
       this.maxLoopHoist = maxLoopHoist;
@@ -243,6 +246,9 @@ public class HoistLoops implements OptimizerPass {
 
     /** Whether it executes asynchronously from parent */
     public final boolean async;
+
+    /** Whether it is dispatched from parent */
+    public final boolean dispatched;
 
     /** Execution context */
     public final ExecContext execCx;
@@ -293,9 +299,9 @@ public class HoistLoops implements OptimizerPass {
     }
 
     public HoistTracking makeChild(Block childBlock, boolean async,
-                       ExecContext newExecCx,
+                        boolean dispatched, ExecContext newExecCx,
                        int maxHoist, int maxLoopHoist) {
-      return new HoistTracking(this, childBlock, async, execCx,
+      return new HoistTracking(this, childBlock, async, dispatched, execCx,
                               maxHoist, maxLoopHoist,
                               writeMap.makeChildMap(),
                               piecewiseWriteMap.makeChildMap(),
@@ -372,13 +378,21 @@ public class HoistLoops implements OptimizerPass {
           c.getType() == ContinuationType.LOOP ||
           c.getType() == ContinuationType.NESTED_BLOCK) {
       return true;
-    } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
-            !((WaitStatement)c).hasExplicit() &&
-            Location.isAnyLocation(((WaitStatement)c).targetLocation().rank, true)) {
+    } else if (c.getType() == ContinuationType.WAIT_STATEMENT) {
       // Don't hoist through wait statements that have explicit
       // ordering constraints or locations.
       // TODO: Could relax this assumption for target locations for basic operations
       //      like variable lookups
+
+      WaitStatement w = (WaitStatement)c;
+      if (w.hasExplicit()) {
+        // Explicitly added by programmer - don't mess with it
+        return false;
+      } else if (!Location.isAnyLocation(w.targetLocation().rank, true)) {
+        // Going to specific rank
+        return false;
+      }
+
       return true;
     }
     return false;
@@ -490,7 +504,10 @@ public class HoistLoops implements OptimizerPass {
     int maxCorrectContext = maxHoistContext(logger, state,
                                 inst.execMode(), maxHoist);
 
-    maxHoist = Math.max(maxHoist, maxCorrectContext);
+    maxHoist = Math.min(maxHoist, maxCorrectContext);
+
+    if (logger.isTraceEnabled())
+      logger.trace("maxHoist after checking contexts was " + maxHoist);
 
     if (maxHoist <= 0) {
       return false;
@@ -510,9 +527,22 @@ public class HoistLoops implements OptimizerPass {
   private int maxHoistContext(Logger logger, HoistTracking state,
                         ExecTarget target, int maxHoist) {
     int maxCorrectContext = 0;
+    /*
+     * Avoid hoisting work through dispatches.
+     */
+    boolean respectDispatch = (target.targetContext() != null &&
+        target.targetContext() != ExecContext.control() &&
+        target.targetContext() != ExecContext.wildcard());
+
     HoistTracking curr = state;
     for (int hoist = 1; hoist <= maxHoist; hoist++) {
+      // Don't go to parent if this was in a dispatch
+      if (curr.dispatched && respectDispatch) {
+        break;
+      }
+
       curr = state.parent;
+
       if (target.canRunIn(curr.execCx)) {
         maxCorrectContext = hoist;
       }

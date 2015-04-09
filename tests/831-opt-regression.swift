@@ -2,8 +2,6 @@ import io;
 
 /* Regression test for compile error */
 // COMPILE-ONLY-TEST
-// SKIP-O2-TEST
-// SKIP-O3-TEST
 
 @pure @dispatch=WORKER
 (float o) my_log (float x, float base) "turbine" "0.7.0" [
