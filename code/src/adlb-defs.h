@@ -101,10 +101,10 @@ typedef struct {
 } adlb_put_opts;
 
 static const adlb_put_opts ADLB_DEFAULT_PUT_OPTS = {
-    .priority = 0,
-    .parallelism = 1,
-    .strictness = ADLB_TGT_STRICT_HARD,
-    .accuracy = ADLB_TGT_ACCRY_RANK,
+    0, /* priority */
+    1, /* parallelism */
+    ADLB_TGT_STRICT_HARD, /* strictness */
+    ADLB_TGT_ACCRY_RANK, /* accuracy */
 };
 
 /**
