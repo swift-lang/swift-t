@@ -287,7 +287,7 @@ static adlb_code expt_rq(tgt_mix tgts, bool report)
     else
     {
       // Target for incoming work unit
-      rand_ops[i].target = select_wu_target(&xlb_s.layout, tgts);
+      rand_ops[i].target = select_wu_target(tgts);
     }
   }
 
@@ -369,8 +369,7 @@ static adlb_code expt_wq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   xlb_work_unit **wus;
 
-  ac = make_wus(&xlb_s.layout, prios, tgts, payload_size,
-                num_distinct_wus, &wus);
+  ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
   ADLB_CHECK(ac);
 
   // Prepopulate queue
@@ -443,8 +442,7 @@ static adlb_code expt_rwq(prio_mix prios, tgt_mix tgts, int init_qlen,
 
   xlb_work_unit **wus;
 
-  ac = make_wus(&xlb_s.layout, prios, tgts, payload_size,
-                num_distinct_wus, &wus);
+  ac = make_wus(prios, tgts, payload_size, num_distinct_wus, &wus);
   ADLB_CHECK(ac);
 
   // Prepopulate queue
