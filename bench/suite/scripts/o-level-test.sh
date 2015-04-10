@@ -55,7 +55,7 @@ for i in `seq $n`; do
 
   set -x 
   turbine -n${PROCS} $TCL $ARGS 2>&1 | tee $OUT
-  if [[ $? -eq 0 ]]; then
+  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
     echo "SUCCESS"
     $(dirname $0)/opcounts.py  < $OUT > $COUNTS
   else 
