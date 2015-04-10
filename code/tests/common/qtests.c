@@ -338,6 +338,8 @@ int select_wu_target(tgt_mix tgts)
   }
   else if (tgts == NODE_SOFT_TARGETED)
   {
+    // TODO: doesn't work on worker
+
     // Target to half of hosts
     int host_idx = (rand() >> 8) % xlb_s.layout.my_worker_hosts;
     host_idx -= host_idx % 2;
