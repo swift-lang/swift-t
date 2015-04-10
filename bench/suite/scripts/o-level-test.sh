@@ -34,7 +34,7 @@ for i in `seq $n`; do
 
   if [[ $? -ne 0 ]]; then
     echo "FAILED COMPILE $i"
-    exit 1
+    continue
   fi
 
   export TURBINE_DEBUG=0
