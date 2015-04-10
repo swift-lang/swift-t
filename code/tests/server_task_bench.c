@@ -306,7 +306,7 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
       }
 
       my_ops++;
-      wu_idx = (wu_idx + 1 % num_distinct_wus);
+      wu_idx = (wu_idx + 1) % num_distinct_wus;
     }
 
     CHECK_MSG(ac == ADLB_SHUTDOWN, "Expected shutdown, got adlb_code %i", ac);
