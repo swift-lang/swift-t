@@ -24,11 +24,11 @@ done < ${OLEVELS}
 
 PREFIX=$(basename ${SWIFT%.*})
 
-#set -x
-for i in `seq -w $n`; do
+for i in `seq $n`; do
   olevel=${olevels[$i]}
   echo $i: ${olevel}
-  O_PREFIX=${OUTDIR}/${PREFIX}.olevel$i
+  padded_i=$(printf "%03d" $i)
+  O_PREFIX=${OUTDIR}/${PREFIX}.olevel$padded_i
   TCL=${O_PREFIX}.tcl
   stc ${STC_FLAGS} $olevel -C ${O_PREFIX}.ic ${STC_FLAGS} ${SWIFT} ${TCL}
 
