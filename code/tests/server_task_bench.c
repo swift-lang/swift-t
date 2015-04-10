@@ -54,8 +54,11 @@ int benchmark_nops = 1 * 1000 * 1000;
 /** Length of random sequences to use */
 int rand_seq_len = 1024 * 128;
 
-/** Maximum initial queue size to run experiments with */
+/** Minimum and maximum initial queue size to run experiments with, and
+    growth multiplier */
+int min_init_qlen = 128;
 int max_init_qlen = 16 * 1024;
+int qlen_growth = 2;
 
 static adlb_code run(void);
 static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
@@ -68,6 +71,7 @@ static void report_expt(const char *expt, prio_mix prios, tgt_mix tgts,
 int main(int argc, char **argv)
 {
   int c;
+  int n;
 
   while ((c = getopt(argc, argv, "n:r:Q:w:")) != -1)
   {
@@ -95,14 +99,15 @@ int main(int argc, char **argv)
         fprintf(stderr, "Random sequence length: %i\n", rand_seq_len);
         break;
       case 'Q':
-        max_init_qlen = atoi(optarg);
-        if (max_init_qlen == 0)
+        n = sscanf(optarg, "%i:%i:%i", &min_init_qlen, &max_init_qlen, &qlen_growth);
+        if (n != 3 || min_init_qlen < 1 || max_init_qlen < min_init_qlen || qlen_growth < 2)
         {
-          fprintf(stderr, "Invalid max init qlen: %s\n", optarg);
+          fprintf(stderr, "Invalid min/max/growth init qlen: %s\n", optarg);
           return 1;
         }
 
-        fprintf(stderr, "Max initial queue length: %i\n", max_init_qlen);
+        fprintf(stderr, "Min/max/multiplier for initial queue length: %i:%i:%i\n",
+                min_init_qlen, max_init_qlen, qlen_growth);
         break;
       case 'w':
         num_distinct_wus = atoi(optarg);
@@ -161,8 +166,8 @@ static adlb_code run()
     {
       for (int prio_idx = 0; prio_idx < nprios; prio_idx++)
       {
-        for (int init_qlen = 128; init_qlen <= max_init_qlen;
-                init_qlen = init_qlen == 0 ? 1 : init_qlen * 2)
+        for (int init_qlen = min_init_qlen; init_qlen <= max_init_qlen;
+                init_qlen = init_qlen == 0 ? 1 : init_qlen * qlen_growth)
         {
           ac = expt(prios[prio_idx], tgts[tgt_idx], init_qlen, report);
           ADLB_CHECK(ac);
