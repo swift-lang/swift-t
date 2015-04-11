@@ -1836,13 +1836,13 @@ public class ICInstructions {
                         List<Var> loopUsedVars,
                         List<Boolean> blockingVars) {
       this(newLoopVars, loopUsedVars, blockingVars,
-           initClosedVars(newLoopVars.size(), false));
+           initClosedVars(newLoopVars));
     }
 
-    private static List<Boolean> initClosedVars(int length, boolean val) {
-      ArrayList<Boolean> res = new ArrayList<Boolean>(length);
-      for (int i = 0; i < length; i++) {
-        res.add(val);
+    private static List<Boolean> initClosedVars(List<Arg> vars) {
+      ArrayList<Boolean> res = new ArrayList<Boolean>(vars.size());
+      for (int i = 0; i < vars.size(); i++) {
+        res.add(false);
       }
       return res;
     }
@@ -1897,8 +1897,9 @@ public class ICInstructions {
       for (int i = 0; i < this.blockingVars.size(); i++) {
         // Add those that we need to wait for and that aren't closed
         Arg initVal = this.newLoopVars.get(i);
-        boolean mustWait = initVal.isVar() && this.blockingVars.get(i)
-                                           && !this.closedVars.get(i);
+        boolean mustWait = initVal.isVar() &&
+            Types.canWaitForFinalize(initVal.getVar()) &&
+            this.blockingVars.get(i) && !this.closedVars.get(i);
         boolean newMustWait = mustWait && !alreadySeen.contains(initVal.getVar());
         waitFor.add(newMustWait);
         if (newMustWait) {

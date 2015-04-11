@@ -3355,16 +3355,19 @@ public class TurbineGenerator implements CompilerBackend {
       for (Var v: usedVariables) {
         nextIterArgs.add(varToExpr(v));
       }
-      ArrayList<Value> blockingVals = new ArrayList<Value>();
+      ArrayList<Var> blockingVars2 = new ArrayList<Var>();
       assert(newVals.size() == blockingVars.size());
       for (int i = 0; i < newVals.size(); i++) {
         Arg newVal = newVals.get(i);
         if (blockingVars.get(i) && newVal.isVar()) {
-          blockingVals.add(varToExpr(newVal.getVar()));
+          assert(Types.canWaitForFinalize(newVal)) : newVal;
+
+          blockingVars2.add(newVal.getVar());
         }
       }
       pointAdd(Turbine.loopRule(context.loopName,
-          nextIterArgs, blockingVals, execContextStack.peek()));
+          nextIterArgs, getTurbineWaitIDs(blockingVars2),
+          execContextStack.peek()));
     }
   }
 
