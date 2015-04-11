@@ -485,7 +485,9 @@ public class RCPlacer {
   private void piggybackDecrementsOnDeclarations(Logger logger,
       GlobalVars globals, Function fn, Block block,
       RCTracker tracker, RefCountType rcType) {
-    if (!RCUtil.piggybackEnabled()) {
+    if (!RCUtil.piggybackEnabled() ||
+        !RCUtil.cancelEnabled()) {
+      // Don't support if no cancelling - can lead to double piggyback
       return;
     }
 

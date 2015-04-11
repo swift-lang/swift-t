@@ -359,7 +359,9 @@ public class RCTracker {
    * @param amount
    */
   void incrDirect(AliasKey key, RefCountType rcType, long amount) {
-    getCounters(rcType, RCDir.fromAmount(amount)).add(key, amount);
+    if (amount != 0) {
+      getCounters(rcType, RCDir.fromAmount(amount)).add(key, amount);
+    }
   }
 
   void decr(Var var, RefCountType type, long amount) {
