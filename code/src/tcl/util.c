@@ -45,17 +45,32 @@ turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  char* msg;
-  int length = vasprintf(&msg, fmt, ap);
-  valgrind_assert(length >= 0);
+
+  if (strcmp(TCL_VERSION, "8.5") == 0)
+  {
+    // Our nice error handling does not work in Tcl 8.5
+    // (EvalObjv segvs)
+    vprintf(fmt, ap);
+    printf("\n");
+    return TCL_ERROR;
+  }
+  else
+  {
+    // Tcl 8.6+
+    char* msg;
+    int length = vasprintf(&msg, fmt, ap);
+    valgrind_assert(length >= 0);
+
+    Tcl_Obj* cmd[2];
+    cmd[0] = Tcl_NewStringObj("::turbine::turbine_error", -1);
+    cmd[1] = Tcl_NewStringObj(msg, length);
+    free(msg);
+
+    Tcl_EvalObjv(interp, 2, cmd, EMPTY_FLAG);
+  }
   va_end(ap);
 
-  Tcl_Obj* cmd[2];
-  cmd[0] = Tcl_NewStringObj("::turbine::turbine_error", -1);
-  cmd[1] = Tcl_NewStringObj(msg, length);
-  free(msg);
-
-  return Tcl_EvalObjv(interp, 2, cmd, EMPTY_FLAG);
+  return TCL_ERROR;
 }
 
 turbine_code
