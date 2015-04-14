@@ -314,7 +314,8 @@ public class ForeachLoops {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startForeachLoop(loopName, container, loopVar, loopCounterVar,
                 splitDegree, leafDegree, containerClosed,
-                passedVars, startIncrements, constStartIncrements);
+                passedVars, startIncrements, constStartIncrements,
+                endDecrements);
       this.loopBody.generate(logger, gen, info);
       gen.endForeachLoop(splitDegree, containerClosed, endDecrements);
     }
@@ -543,7 +544,7 @@ public class ForeachLoops {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.startRangeLoop(loopName, loopVar, loopCounterVar, start, end, increment,
                          splitDegree, leafDegree, passedVars, startIncrements,
-                         constStartIncrements);
+                         constStartIncrements, endDecrements);
       this.loopBody.generate(logger, gen, info);
       gen.endRangeLoop(splitDegree, endDecrements);
     }

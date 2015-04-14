@@ -2590,7 +2590,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void startForeachLoop(String loopName, Var container, Var memberVar,
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
         List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-        ListMultimap<Var, RefCount> constIncrs) {
+        ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs) {
     boolean haveKeys = loopCountVar != null;
 
     boolean isKVContainer;
@@ -2647,12 +2647,14 @@ public class TurbineGenerator implements CompilerBackend {
       handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
       assert(!localContainer);
+
       tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
       startForeachSplit(loopName, container, tclContainer.variable(),
           splitDegree, leafDegree, haveKeys, passedVars, perIterIncrs,
-          constIncrs);
+          constIncrs, perIterDecrs);
       isDict = haveKeys;
     }
+
     startForeachInner(tclContainer, memberVar, loopCountVar, isDict);
   }
 
@@ -2669,7 +2671,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startForeachSplit(String procName, Var arrayVar,
       String contentsVar, int splitDegree, int leafDegree, boolean haveKeys,
       List<PassedVar> usedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs) {
     // load array size
     pointAdd(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
@@ -2685,7 +2687,8 @@ public class TurbineGenerator implements CompilerBackend {
       splitUsedVars.add(new PassedVar(arrayVar, false));
     }
     startRangeSplit(procName, splitUsedVars, perIterIncrs, splitDegree,
-                    leafDegree, LiteralInt.ZERO, lastIndex, LiteralInt.ONE);
+                    leafDegree, LiteralInt.ZERO, lastIndex, LiteralInt.ONE,
+                    perIterDecrs);
 
     // need to find the length of this split since that is what the turbine
     //  call wants
@@ -2735,7 +2738,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs) {
     if (countVar != null) {
       // TODO
       throw new STCRuntimeError("Backend doesn't support counter var in range " +
@@ -2746,11 +2749,13 @@ public class TurbineGenerator implements CompilerBackend {
       assert(Types.isIntVal(loopVar));
       String loopVarName = prefixVar(loopVar);
       startIntRangeLoop(loopName, loopVarName, start, end, increment,
-          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs,
+          perIterDecrs);
     } else {
       assert(start.isImmFloat()) : "Invalid range loop type " + start.type();
       startFloatRangeLoop(loopName, loopVar, start, end, increment,
-          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+          splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs,
+          perIterDecrs);
     }
 
   }
@@ -2758,7 +2763,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void startFloatRangeLoop(String loopName, Var loopVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs) {
     assert(start.isImmFloat());
     assert(end.isImmFloat());
     assert(increment.isImmFloat());
@@ -2790,7 +2795,8 @@ public class TurbineGenerator implements CompilerBackend {
 
     startIntRangeLoop2(loopName, dummyLoopVar.variable(),
         LiteralInt.ZERO, iterLimitVar, LiteralInt.ONE,
-        splitDegree, leafDegree, passedVars2, perIterIncrs, constIncrs);
+        splitDegree, leafDegree, passedVars2, perIterIncrs, constIncrs,
+        perIterDecrs);
 
     // TODO: need pass in values?
     // Compute real float loop var
@@ -2801,20 +2807,22 @@ public class TurbineGenerator implements CompilerBackend {
   private void startIntRangeLoop(String loopName, String loopVarName,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs) {
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs) {
     assert(start.isImmInt());
     assert(end.isImmInt());
     assert(increment.isImmInt());
 
     startIntRangeLoop2(loopName, loopVarName,
         argToExpr(start), argToExpr(end), argToExpr(increment),
-        splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs);
+        splitDegree, leafDegree, passedVars, perIterIncrs, constIncrs,
+        perIterDecrs);
   }
 
   private void startIntRangeLoop2(String loopName, String loopVarName,
       Expression start, Expression end, Expression incr,
       int splitDegree, int leafDegree, List<PassedVar> passedVars,
-      List<RefCount> perIterIncrs, ListMultimap<Var, RefCount> constIncrs) {
+      List<RefCount> perIterIncrs, ListMultimap<Var, RefCount> constIncrs,
+      List<RefCount> perIterDecrs) {
     if (!perIterIncrs.isEmpty()) {
       // Increment references by # of iterations
       pointAdd(new SetVariable(TCLTMP_ITERSTOTAL,
@@ -2826,7 +2834,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (splitDegree > 0) {
       startRangeSplit(loopName, passedVars, perIterIncrs,
-              splitDegree, leafDegree, start, end, incr);
+              splitDegree, leafDegree, start, end, incr, perIterDecrs);
       startRangeLoopInner(loopName, loopVarName,
           TCLTMP_RANGE_LO_V, TCLTMP_RANGE_HI_V, TCLTMP_RANGE_INC_V);
     } else {
@@ -2862,18 +2870,26 @@ public class TurbineGenerator implements CompilerBackend {
    * @param startE start of range (inclusive)
    * @param endE end of range (inclusive)
    * @param incrE
+   * @param perIterDecrs
    * @param usedVariables
    */
   private void startRangeSplit(String loopName,
           List<PassedVar> passedVars, List<RefCount> perIterIncrs, int splitDegree,
           int leafDegree, Expression startE, Expression endE,
-          Expression incrE) {
+          Expression incrE, List<RefCount> perIterDecrs) {
+
+    List<Var> mustPass = RefCount.extractVars(perIterDecrs);
+
     // Create two procedures that will be called: an outer procedure
     //  that recursively breaks up the foreach loop into chunks,
     //  and an inner procedure that actually runs the loop
     List<String> commonFormalArgs = new ArrayList<String>();
     for (PassedVar pv: passedVars) {
-      commonFormalArgs.add(prefixVar(pv.var.name()));
+      commonFormalArgs.add(prefixVar(pv.var));
+      mustPass.remove(pv.var);
+    }
+    for (Var var: mustPass) {
+      commonFormalArgs.add(prefixVar(var));
     }
 
     Value loVal = Value.numericValue(TCLTMP_RANGE_LO);
@@ -2889,6 +2905,9 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> commonArgs = new ArrayList<Expression>();
     for (PassedVar pv: passedVars) {
       commonArgs.add(varToExpr(pv.var));
+    }
+    for (Var var: mustPass) {
+      commonArgs.add(varToExpr(var));
     }
 
     List<Expression> outerCallArgs = new ArrayList<Expression>(commonArgs);

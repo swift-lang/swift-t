@@ -192,7 +192,7 @@ compile_test()
   local ARGS=""
   if [ -f "${STC_ARGS}" ]
   then
-    ARGS=$(cat ${STC_ARGS})
+    ARGS=( $( < "${TEST_PATH}.stcargs" ) )
   fi
 
   if (( VERBOSE ))

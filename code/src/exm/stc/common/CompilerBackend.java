@@ -17,6 +17,7 @@ package exm.stc.common;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -255,7 +256,7 @@ public interface CompilerBackend {
       Var container, Var memberVar, Var loopCountVar, int splitDegree,
       int leafDegree, boolean arrayClosed,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs);
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs);
 
   /**
    * Finish the parallel foreach loop over array.
@@ -287,7 +288,7 @@ public interface CompilerBackend {
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
       Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
-      ListMultimap<Var, RefCount> constIncrs);
+      ListMultimap<Var, RefCount> constIncrs, List<RefCount> perIterDecrs);
 
   /**
    * Finish the range loop
@@ -398,6 +399,14 @@ public interface CompilerBackend {
     }
 
     public static final List<RefCount> NONE = Collections.emptyList();
+
+    public static List<Var> extractVars(List<? extends RefCount> rcs) {
+      List<Var> vars = new ArrayList<Var>();
+      for (RefCount rc: rcs) {
+        vars.add(rc.var);
+      }
+      return vars;
+    }
   }
 
   /**
