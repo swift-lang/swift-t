@@ -1657,7 +1657,7 @@ public class ICInstructions {
     }
   }
 
-  public static class RunExternal extends Instruction {
+  public static class ExecExternal extends Instruction {
     private Arg cmd;
     private final ArrayList<Arg> inFiles;
     private final ArrayList<Var> outFiles;
@@ -1666,10 +1666,10 @@ public class ICInstructions {
     private final boolean hasSideEffects;
     private final boolean deterministic;
 
-    public RunExternal(Arg cmd, List<Arg> inFiles, List<Var> outFiles,
+    public ExecExternal(Arg cmd, List<Arg> inFiles, List<Var> outFiles,
                List<Arg> args, Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
-      super(Opcode.RUN_EXTERNAL);
+      super(Opcode.EXEC);
       this.cmd = cmd;
       this.inFiles = new ArrayList<Arg>(inFiles);
       this.outFiles = new ArrayList<Var>(outFiles);
@@ -1713,7 +1713,7 @@ public class ICInstructions {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, args, outFiles, inFiles,
+      gen.execExternal(cmd, args, outFiles, inFiles,
                   redirects, hasSideEffects, deterministic);
     }
 
@@ -1808,7 +1808,7 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new RunExternal(cmd, inFiles, outFiles,
+      return new ExecExternal(cmd, inFiles, outFiles,
               args, redirects, hasSideEffects, deterministic);
     }
 

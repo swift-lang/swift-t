@@ -1416,7 +1416,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void runExternal(Arg cmd, List<Arg> args,
+  public void execExternal(Arg cmd, List<Arg> args,
           List<Var> outFiles, List<Arg> inFiles,
           Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {

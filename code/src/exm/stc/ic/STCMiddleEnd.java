@@ -78,7 +78,7 @@ import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
-import exm.stc.ic.tree.ICInstructions.RunExternal;
+import exm.stc.ic.tree.ICInstructions.ExecExternal;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
@@ -441,7 +441,7 @@ public class STCMiddleEnd {
                                           program.foreignFunctions()));
   }
 
-  public void runExternal(Arg cmd, List<Arg> args, List<Arg> inFiles,
+  public void execExternal(Arg cmd, List<Arg> args, List<Arg> inFiles,
                           List<Var> outFiles, Redirects<Arg> redirects,
                           boolean hasSideEffects, boolean deterministic) {
     assert(Types.isStringVal(cmd));
@@ -455,7 +455,7 @@ public class STCMiddleEnd {
     }
 
 
-    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles,
+    currBlock().addInstruction(new ExecExternal(cmd, inFiles, outFiles,
                       args, redirects, hasSideEffects, deterministic));
   }
 

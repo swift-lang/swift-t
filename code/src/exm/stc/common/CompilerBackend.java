@@ -498,7 +498,7 @@ public interface CompilerBackend {
    * Generate command to run an external application immediately
    * @param redirects
    */
-  public void runExternal(Arg cmd, List<Arg> args,
+  public void execExternal(Arg cmd, List<Arg> args,
            List<Var> outFiles, List<Arg> inFiles,
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);

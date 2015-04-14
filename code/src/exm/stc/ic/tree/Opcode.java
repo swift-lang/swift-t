@@ -35,7 +35,7 @@ public enum Opcode {
   LOCAL_OP, ASYNC_OP,
 
   // Run external program
-  RUN_EXTERNAL,
+  EXEC,
 
   // Manage reference counts of datastore variables
   INCR_READERS, DECR_READERS, DECR_WRITERS, INCR_WRITERS,

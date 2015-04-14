@@ -2223,7 +2223,7 @@ public class ASTWalker {
                 VarRepr.backendArg(retrieved.redirects.stderr, true));
     AsyncExecutor asyncExec = targetCx.workContext().asyncExecutor();
     if (asyncExec == null) {
-      backend.runExternal(retrieved.cmd, beLocalArgs, beLocalInfiles, beLocalOutputs,
+      backend.execExternal(retrieved.cmd, beLocalArgs, beLocalInfiles, beLocalOutputs,
                         beLocalRedirects, hasSideEffects, deterministic);
     } else {
       String aeName = context.constructName("async-exec");
