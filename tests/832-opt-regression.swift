@@ -1,5 +1,3 @@
-// SKIP-THIS-TEST
-
 import location;
 import io;
 
@@ -8,15 +6,13 @@ import io;
   "set <<o>> test"
 ];
 
-PY=locationFromRank(0);
-
-s1 = @location=PY workf();
+s1 = @location=randomWorker() workf();
 
 wait(s1)
 {
   int N = 10;
   for (int i = 0; i < N ; i = i + 1) {
-    printf("hello");
+    printf("hello " + i);
   }
 }
 

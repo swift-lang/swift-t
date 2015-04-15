@@ -948,9 +948,6 @@ class Turbine {
   public static Sequence loopRule(String symbol,
           List<? extends Expression> args, List<? extends Expression> blockOn,
           ExecContext execCx) {
-    // Assume executes on control for now
-    assert (execCx.isControlContext()) : execCx;
-
     List<Expression> action = new ArrayList<Expression>();
     action.add(new Token(symbol));
     for (Expression arg : args) {
