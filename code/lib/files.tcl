@@ -428,12 +428,14 @@ namespace eval turbine {
     proc physical_file_copy { dstpath srcpath } {
       # TODO: is this the best way to do this?
       log "physical file copy \"$srcpath\" => \"$dstpath\""
+      ensure_directory_exists2 $dstpath
       file copy -force $srcpath $dstpath
     }
 
     proc copy_local_file_contents { dst src } {
       set dstpath [ local_file_path $dst ]
       set srcpath [ local_file_path $src ]
+      ensure_directory_exists2 $dstpath
       file copy -force $srcpath $dstpath
     }
 
@@ -621,6 +623,7 @@ namespace eval turbine {
     proc file_write_body { dst str } {
         set str_val [ retrieve_decr_string $str ]
 	set d [ get_filename_val $dst ]
+        ensure_directory_exists2 $d
 	set fp [ ::open $d w+ ]
         puts -nonewline $fp $str_val
 	close $fp
@@ -632,6 +635,7 @@ namespace eval turbine {
     # TODO: calling convention not figured out yet
     proc file_write_local { local_file_name data } {
         upvar $local_file_name local_file
+        ensure_directory_exists2 $local_file_name
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
         puts -nonewline $fp $data
 	close $fp
