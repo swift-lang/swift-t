@@ -1399,6 +1399,7 @@ info_waiting()
     int c = sprintf(buffer, "%10s ", id_string);
     transform_tostring(buffer+c, t);
     printf("\t%s\n", buffer);
+    DEBUG("Payload: %.*s", t->work->length, t->work->payload);
 
     item = item->next;
   }
