@@ -8,10 +8,10 @@ export SWIFT_PATH=$SCS/lib
 export PATH=$PATH:~/ExM/inst/stc/bin:~/ExM/inst/turbine/bin
 
 ARGS="--graph_file=${SCS}/data/movie_graph.txt \
-            --annealingcycles=1 \
+            --annealingcycles=50 \
             --evoreruns=100 --reruns_per_task=1 \
             --minrange=58 --maxrange=108 --rangeinc=50 \
-            --n_epochs=30 --n_steps=1"
+            --n_epochs=30 --n_steps=50"
 
 export ARGS
 
