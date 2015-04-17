@@ -274,10 +274,8 @@ public class ComponentGraph {
       logger.trace("walkUpRec: visit " + node + " pathUp: " + pathUp);
     }
 
-    if (!pathUp.isEmpty()) {
-      // Note: add all visited nodes from this root down
-      walkDownRec(node, pathUp, results, visited);
-    }
+    // Note: add all visited nodes from this root down
+    walkDownRec(node, pathUp, results, visited);
 
     // Explore all possible routes to roots
     List<Edge> parentEdges = parents.get(node);
