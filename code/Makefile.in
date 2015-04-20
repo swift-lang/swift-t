@@ -204,6 +204,7 @@ MPI_LIB :=
 ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
   ifneq ($(MPI_LIB_DIR),)
     MPI_LIB += -L$(MPI_LIB_DIR)
+    RPATH_MPI = yes
   endif
 endif
 MPI_LIB_FLAGS = @USE_MPI_LIB_SPEC@
@@ -281,33 +282,53 @@ LIBS :=
 LIBS += -L$(ADLB)/lib -ladlb
 LIBS += -L$(C_UTILS)/lib -lexmcutils
 ifeq ($(filter $(TCL_LIB_DIR),$(SYSTEM_LIBS)),)
-	LIBS += -L$(TCL_LIB_DIR)
+  LIBS += -L$(TCL_LIB_DIR)
+  RPATH_TCL = yes
 endif
 LIBS += -l$(TCL_LIB_NAME)
 ifeq ($(ENABLE_MPE),1)
-	LIBS += -L$(USE_MPE)/lib -lmpe
+  ifeq ($(filter $(USE_MPE),$(SYSTEM_LIBS)),)
+    LIBS += -L$(USE_MPE)/lib
+    RPATH_MPE = yes
+  endif
+  LIBS += -lmpe
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
-	ifneq ($(USE_PYTHON_LIBDIR),0)
-		ifneq ($(USE_PYTHON_LIBDIR),)
-			LIBS += -L$(USE_PYTHON_LIBDIR)
-		endif
-	endif
-	LIBS += -l$(USE_PYTHON_NAME)
+  ifneq ($(USE_PYTHON_LIBDIR),0)
+    ifneq ($(USE_PYTHON_LIBDIR),)
+      ifeq ($(filter $(USE_PYTHON_LIBDIR),$(SYSTEM_LIBS)),)
+        LIBS += -L$(USE_PYTHON_LIBDIR)
+        RPATH_PYTHON = yes
+      endif
+    endif
+  endif
+  LIBS += -l$(USE_PYTHON_NAME)
 endif
 ifeq ($(HAVE_R),1)
-	R_LIB = $(USE_R)/lib
-	LIBS += -L$(R_LIB) -lR
+  R_LIB = $(USE_R)/lib
+  ifeq ($(filter $(R_LIB),$(SYSTEM_LIBS)),)
+    LIBS += -L$(R_LIB)
+    RPATH_R = yes
+  endif
+  LIBS += -lR
 endif
 ifeq ($(HAVE_JULIA),1)
-	JULIA_LIB = $(USE_JULIA)/usr/lib
-	LIBS += -L$(JULIA_LIB) -ljulia
+  JULIA_LIB = $(USE_JULIA)/usr/lib
+  ifeq ($(filter $(JULIA_LIB),$(SYSTEM_LIBS)),)
+    LIBS += -L$(JULIA_LIB)
+    RPATH_JULIA = yes
+  endif
+  LIBS += -ljulia
 endif
 
 ifeq ($(HAVE_COASTER),1)
-	COASTER_LIB := $(USE_COASTER)/lib
-	LIBS += -L$(COASTER_LIB) -lcoasterclient
+  COASTER_LIB := $(USE_COASTER)/lib
+  ifeq ($(filter $(COASTER_LIB),$(SYSTEM_LIBS)),)
+    LIBS += -L$(COASTER_LIB)
+    RPATH_COASTER = yes
+  endif
+  LIBS += -lcoasterclient
 endif
 
 # HDF5 variables are blank if HDF5 is not enabled
@@ -317,35 +338,38 @@ LIBS += $(HDF5_LINK_FLAGS)
 # If we are using libtcl*.a, need to always include these libraries
 # TODO: would also be needed if we're doing full static link
 ifeq ($(strip $(TCL_LIB_SO)),)
-	LIBS += $(TCL_LIB_DEPS)
+  LIBS += $(TCL_LIB_DEPS)
 endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
+# Build RPath to link to libraries at runtime.
+# Avoid adding system directories to RPATH - this often causes the wrong
+# version of the library to be linked from the system path.
 RPATHS :=
 RPATHS += -Wl,-rpath -Wl,$(INSTALL_LIB)
 RPATHS += -Wl,-rpath -Wl,$(ADLB)/lib
 RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
-ifneq ($(MPI_LIB_DIR),)
-	RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
+ifeq ($(RPATH_MPI),yes)
+  RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 endif
-RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
-ifeq ($(ENABLE_MPE),1)
-	RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
+ifeq ($(RPATH_COASTER),yes)
+  RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 endif
-ifeq ($(HAVE_PYTHON),1)
-	ifneq ($(USE_PYTHON_LIBDIR),0)
-		RPATHS += -Wl,-rpath -Wl,$(USE_PYTHON_LIBDIR)
-	endif
+ifeq ($(RPATH_MPE),yes)
+  RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
 endif
-ifeq ($(HAVE_R),1)
-	RPATHS += -Wl,-rpath -Wl,$(R_LIB)
+ifeq ($(RPATH_PYTHON),yes)
+  RPATHS += -Wl,-rpath -Wl,$(USE_PYTHON_LIBDIR)
 endif
-ifeq ($(HAVE_JULIA),1)
-	RPATHS += -Wl,-rpath -Wl,$(JULIA_LIB)
+ifeq ($(RPATH_R),yes)
+  RPATHS += -Wl,-rpath -Wl,$(R_LIB)
 endif
-ifeq ($(HAVE_COASTER),1)
-	RPATHS += -Wl,-rpath -Wl,$(COASTER_LIB)
+ifeq ($(RPATH_JULIA),yes)
+  RPATHS += -Wl,-rpath -Wl,$(JULIA_LIB)
+endif
+ifeq ($(RPATH_COASTER),yes)
+  RPATHS += -Wl,-rpath -Wl,$(COASTER_LIB)
 endif
 
 ### INCLUDES
