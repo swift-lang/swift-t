@@ -17,13 +17,16 @@ print
 
 TGZ=examples.tar.gz
 
-FILES=( $( find examples/[1-9] -maxdepth 1   \
-              -name "*.sh"     -o \
-              -name "*.f90"    -o \
-              -name "*.[chfi]" -o \
-              -name "*.tcl"    -o \
-              -name "*.swift"  -o \
-              -name "Makefile"    \
+date "+%m/%d/%Y %I:%M%p" > examples/timestamp.txt
+
+FILES=( examples/timestamp.txt )
+FILES+=( $( find examples/[1-9] -maxdepth 1   \
+              -name "*.sh"     -o             \
+              -name "*.f90"    -o             \
+              -name "*.[chfi]" -o             \
+              -name "*.tcl"    -o             \
+              -name "*.swift"  -o             \
+              -name "Makefile"
       ) )
 
 tar cfzv ${TGZ} ${FILES}
