@@ -14,6 +14,22 @@
  * limitations under the License
  */
 #include <heap.h>
+
+// GCC 4.4.6 does not allow redefinition of typedef heap_idx_t
+#ifdef __GNUC__
+// This is an approximation
+#if __GNUC__ < 5 && __GNUC_MINOR__ <= 4 // Older GCC
+#define redefinition_allowed 0
+#else // Newer GCC
+#define redefinition_allowed 1
+#endif
+#else // Not GCC
+// We assume redefinition is allowed (but don't know for sure).
+#define redefinition_allowed 1
+#endif
+
+#if redefinition_allowed
 #include <heap_ii.h>
 #include <heap_iu32.h>
+#endif
 // Empty module to make sure that heap headers compile
