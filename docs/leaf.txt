@@ -69,7 +69,10 @@ Additionally, you may call Swift/T from native code.
 
 Complete code samples for each example are found in this tar file:
 
-* link:downloads/examples.tar.gz[] (12 KB)
+* link:downloads/examples.tar.gz[examples.tar.gz]
+Timestamp:
+include::examples/timestamp.txt[]
+(12 KB)
 
 When you unpack this file, you will have a directory +examples/+.
 Change to this directory and +source setup.sh+ to obtain build
