@@ -1,14 +1,13 @@
 
+# Use ./build.sh to run this
+
 all: prog-f90 prog-cxx pkgIndex.tcl prog-swift.tcl
 
 ### Settings:
 
-TCL = $(HOME)/sfw/tcl-8.6.0
-TCL_VERSION = 8.6
-
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 
-CXXFLAGS = -I . $(TCL_INCLUDE_SPEC) -fPIC -g
+CXXFLAGS = -I . ${TCL_INCLUDE_SPEC} -fPIC -g
 
 ### FORTWRAP
 
