@@ -22,6 +22,7 @@ contains
     array%s(i) = v
   end subroutine
 
+  ! Calling this function is the point of this whole example!
   ! SNIPPET 1
   subroutine func(argc, argv, output)
 
@@ -48,4 +49,3 @@ contains
   end subroutine
 
 end module
-
