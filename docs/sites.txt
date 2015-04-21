@@ -981,7 +981,7 @@ module load swift-t
 * Install http://instagram-engineering.tumblr.com/post/11399488246/simplifying-ec2-ssh-connections[+ec2-host+] on your local system
 * Launch EC2 instances.
 ** Enable SSH among instances.
-** Firewall settings must allow all all TCP/IP traffic for MPICH to run.
+** Firewall settings must allow all TCP/IP traffic for MPICH to run.
 ** If necessary, install Swift/T
 ** An AMI with Swift/T installed is available
 * Use the provided script +turbine/scripts/submit/ec2/turbine-setup-ec2.zsh+.
@@ -989,11 +989,28 @@ module load swift-t
 ** This will configure SSH settings and create a hosts file for MPICH
    and install them on the EC2 instance
 
-To run:
+Then:
+
+. Compile your Swift script with STC.
++
 ----
-export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
-turbine program.tic
+stc program.swift
 ----
+. Run with:
++
+----
+turbine -f $HOME/hosts.txt program.tic
+----
+
+NOTE: It is best to have a shared file system such as NFS running on
+your nodes to maintain code and data (plenty of information is
+available on the WWW on how to configure this).  If not, you will need
+to +scp+ the STC-generated +*.tic+ code to each node before running
++turbine+, and you will have to be very careful about how you access
+data files (Swift/T does not stage data to worker nodes or forward I/O
+operations to another node).  Swift/T's
+http://swift-lang.org/Swift-T/guide.html#location[location syntax] may
+be useful.
 
 == Mac OS X
 
