@@ -284,7 +284,7 @@ heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
 . Run:
 +
 ----
-export TURBINE_LAUNCH_OPTS='-f hosts.txt'
+export TURBINE_LAUNCH_OPTIONS='-f hosts.txt'
 turbine -l -n 4 program.tic
 ----
 +
