@@ -353,7 +353,7 @@ RPATHS += -Wl,-rpath -Wl,$(C_UTILS)/lib
 ifeq ($(RPATH_MPI),yes)
   RPATHS += -Wl,-rpath -Wl,$(MPI_LIB_DIR)
 endif
-ifeq ($(RPATH_COASTER),yes)
+ifeq ($(RPATH_TCL),yes)
   RPATHS += -Wl,-rpath -Wl,$(TCL_LIB_DIR)
 endif
 ifeq ($(RPATH_MPE),yes)
