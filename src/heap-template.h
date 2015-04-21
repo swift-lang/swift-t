@@ -59,7 +59,11 @@
 #define HEAP_NAME_(prefix, name) HEAP_NAME__(prefix, name)
 #define HEAP_NAME(name) HEAP_NAME_(HEAP_PFX, name)
 
+#ifndef __HEAP_IDX_T_DEFINED
+#define __HEAP_IDX_T_DEFINED
 typedef uint32_t heap_idx_t;
+#endif
+
 typedef HEAP_KEY_T HEAP_NAME(key_t);
 typedef HEAP_VAL_T HEAP_NAME(val_t);
 
