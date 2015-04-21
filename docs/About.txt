@@ -2,7 +2,7 @@
 = STC Docs: About.txt
 
 First, make a soft link in this directory to swift.css, found at:
-https://svn.mcs.anl.gov/repos/exm/www
+https://svn.mcs.anl.gov/repos/exm/www/css
 
 To build and install everything, run:
 
