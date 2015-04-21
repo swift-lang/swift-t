@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # MAKE-EXAMPLES-TGZ.ZSH
-# Pack example programs for WWW
+# Pack example leaf functions for WWW
 
 set -eu
 
@@ -24,6 +24,7 @@ FILES+=( $( find examples/[1-9] -maxdepth 1   \
               -name "*.sh"     -o             \
               -name "*.f90"    -o             \
               -name "*.[chfi]" -o             \
+              -name "*.cxx"    -o             \
               -name "*.tcl"    -o             \
               -name "*.swift"  -o             \
               -name "Makefile"
