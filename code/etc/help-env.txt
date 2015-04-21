@@ -12,5 +12,5 @@ TURBINE RUNTIME ENVIRONMENT
    ADLB_DEBUG=0
                          disable ADLB debugging (if enabled)
 
-   TURBINE_LAUNCH_OPTS
+   TURBINE_LAUNCH_OPTIONS
                          provide additional arguments to mpiexec
