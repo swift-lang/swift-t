@@ -2,9 +2,10 @@ Swift/T is an implicitly parallel programming language for composing functions
 and command-line executables into massively parallel applications.
 
 The Swift/T user guide and prepackaged distributions are available online at
-the Swift/T homepage: http://swift-lang.org/Swift-T/
+the Swift/T homepage: http://swift-lang.org/Swift-T/.  We recommend
+that you start there if you are new to Swift or Swift/T.
 
-You can find the documentation corresponding to this version of Swift/T
+You can also find the user guide and other documentation for Swift/T
 in the stc sub-project under docs.  See Documentation section for
 instructions on building.
 
