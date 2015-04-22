@@ -30,13 +30,12 @@ packages on Ubuntu.
 Swift/T will generally work fine with these, but many distributions are
 slow to update their MPI package.
 
-Swift/T Quick Build instructions
+Swift/T Quick Build Instructions
 --------------------------------
 These quick build instructions assume you have tcl8.6 or greater
 and an MPI distribution that supports the MPI 2 or MPI 3.0 standards.
-We do not cover building for all possible systems: if you encounter
-a problem, the Swift/T user guide has instructions on building on
-specific systems.
+This section does not cover all supported systems: if you encounter
+a problem, refer to the Swift/T user guide.
 
 Checkout this project:
 
@@ -50,13 +49,13 @@ Create a build settings file:
 Open dev/build/exm-settings.sh in a text editor to update any settings
 You should update these settings at a minimum to set install and source
 locations:
-    
+
     EXM_PREFIX=/path/to/install
     EXM_SRC_ROOT="${SCRIPT_DIR}/../.."
 
 If you using an MPI 2.x but not MPI 3.0 compatible distribution, you will
 need to set:
- 
+
     MPI_VERSION=2
 
 You can build with this command:
@@ -97,7 +96,7 @@ to configure, compile and install mpich3:
 
 Build System Details
 --------------------
-Swift/T is comprised of several modules, whichuse two different build systems:
+Swift/T is comprised of several modules, which use two different build systems:
 autotools/configure/make for C/C++/Fortran modules, and ant for Java modules.
 You can build the modules separately, but the scripts and configuration files
 in exm-setting.sh speed up the process and make it easier to consistently
@@ -115,7 +114,7 @@ is in `asciidoc` format.  You can look at the main documentation in text
 format in `swift.txt`.  You can also compile the documentation to html
 by running:
 
-  ./make-stc-docs.zsh 
+  ./make-stc-docs.zsh
 
 A sites guide that provides guidance for configuring Swift/T on various
 systems is at `turbine/docs/sites.txt`.
