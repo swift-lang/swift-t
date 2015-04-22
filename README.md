@@ -1,12 +1,8 @@
-This is an umbrella project that pulls in all the dependencies required for
-Swift/T, an implicitly parallel programming language for composing functions
+Swift/T is an implicitly parallel programming language for composing functions
 and command-line executables into massively parallel applications.
 
-If you are not doing development, prepackaged distributions are available
-at http://www.mcs.anl.gov/exm/local/guides/swift.html
-
-The Swift/T user guide is available online at:
-http://www.mcs.anl.gov/exm/local/guides/swift.html
+The Swift/T user guide and prepackaged distributions are available online at
+the Swift/T homepage: http://swift-lang.org/Swift-T/
 
 You can find the documentation corresponding to this version of Swift/T
 in the stc sub-project under docs.  See Documentation section for
@@ -45,11 +41,6 @@ Checkout this project:
 
     git clone https://github.com/swift-lang/swift-t.git swift-t
     cd swift-t
-
-Checkout all submodule projects:
-
-    git submodule init
-    git submodule update
 
 Create a build settings file:
 
