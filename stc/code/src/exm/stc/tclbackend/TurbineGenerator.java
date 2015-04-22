@@ -616,6 +616,7 @@ public class TurbineGenerator implements CompilerBackend {
       pointAdd(Turbine.batchDeclareFiles(
           batchedFileVarNames, batchedFileArgs, batchedFileIsMappeds));
     }
+  }
 
   private TclList createArgs(Var var, Arg initReaders, Arg initWriters) {
     List<Expression> createArgs = new ArrayList<Expression>();
