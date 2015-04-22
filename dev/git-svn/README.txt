@@ -1,5 +1,7 @@
 Scripts to automatically move changes from svn to github
 
+THESE ARE NOW OBSOLETE SINCE WE HAVE MIGRATED TO DEVELOPING ON GITHUB
+
 Files:
 --------
 checkout.sh: Checkout all repositories under current directories
