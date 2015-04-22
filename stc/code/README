@@ -2,8 +2,8 @@ STC (the Swift to Turbine Compiler) is an optimizing compiler designed
 to compile Swift/T, a high-level dataflow language, in such a way
 that it can run an a distributed memory dataflow runtime, Turbine.
 
-STC is developed as part of the ExM project.  For further details on
-ExM, visit http://exm.xstack.org
+STC is developed as part of the Swift-T project.
+For further details, visit http://swift-lang.org/Swift-T
 
 Contact
 =======

@@ -3,8 +3,9 @@ lb is a distributed MPI-based load balancer and data-store.
 lb depends on:
  * c-utils, for data structures and other utilities
 
-lb is being developed as part of the ExM project.  For further details
-on ExM, visit http://exm.xstack.org
+lb is being developed as part of the Swift-T project.
+
+For further details, visit http://swift-lang.org/Swift-T
 
 The lb source code was originally derived from ADLB-M. For further
 information on ADLB-M, visit http://www.cs.mtsu.edu/~rbutler/adlb/.

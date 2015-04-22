@@ -3,8 +3,8 @@ task-parallel data-flow-based applications. It depends directly on:
  * lb, a distributed MPI-based load balancer and data-store
  * c-utils, for data structures and other utilities
 
-Turbine is developed as part of the ExM project.  For further details on
-ExM, visit http://exm.xstack.org
+Turbine is developed as part of the Swift-T project.
+For further details, visit http://swift-lang.org/Swift-T
 
 Building
 ========

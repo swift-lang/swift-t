@@ -1,7 +1,7 @@
 c-utils is collection of data structures and other utility functions.
 
-c-utils is developed as part of the ExM project.  For further details on
-ExM, visit http://exm.xstack.org
+c-utils is developed as part of the Swift-T project.
+For further details, visit http://swift-lang.org/Swift-T
 
 Building
 ========

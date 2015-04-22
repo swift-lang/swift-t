@@ -33,21 +33,15 @@ Swift/T is based on the following key technologies:
 
 Get involved!
 
-See the list of current issues:
-
-https://code.google.com/p/exm-issues/issues
-
-You can suggest new issues or try to address one of the current ones
-
-(ExM is the name of the original grant for this project)
-
-Also, for background, see the Support section here:
-
-http://www.mcs.anl.gov/exm/local/guides/swift.html#_support
+Swift/T site:
+http://swift-lang.org/Swift-T
 
 GitHub site:
 
-https://github.com/timarmstrong
+https://github.com/swift-lang
+
+The list of current issues is hosted on the GitHub issue tracker.
+You can suggest new issues or try to address one of the current ones
 
 Personal Contacts:
 =======
