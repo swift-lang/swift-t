@@ -1,0 +1,228 @@
+#!/bin/zsh -f
+
+set -eu
+
+# Exit codes: (cf. ExitCode.java)
+EXIT_ERROR_SCRIPT=6
+
+STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+STC=${STC_HOME}/bin/stc
+STC_ENV="$STC_HOME/conf/stc-env.sh"
+
+source "$STC_HOME/scripts/stc-config.sh"
+
+TURBINE=${TURBINE_HOME}/bin/turbine
+
+STC_OPTS=()
+TURBINE_OPTS=()
+
+usage()
+{
+  print "swift-t: Use 'swift-t -h' for help."
+}
+
+help()
+{
+  printf "Swift/T HELP\n\n"
+  printf "\t swift-t <options> <program.swift>\n\n"
+  printf "\t Compiles program.swift with STC and runs it with Turbine\n"
+  printf "\t You may provide STC and/or Turbine options\n\n"
+  # These options are available in the swift-t interface:
+  printf  "STC OPTIONS\n\n"
+  cat ${STC_HOME}/etc/help-options-1.txt
+  # These options are only available in the swift-t interface:
+  cat ${STC_HOME}/etc/help-options-3.txt
+  print
+  printf "TURBINE OPTIONS\n\n"
+  cat ${TURBINE_HOME}/etc/help-options-1.txt
+  print
+  cat ${TURBINE_HOME}/etc/help-env.txt
+  print
+  # These are details about compiler flag terms
+  cat ${STC_HOME}/etc/help-option-terms.txt
+  print
+  print "TOOL USAGE"
+  print
+  print "You may want to run STC and Turbine individually."
+  print "Use 'stc -h' to see STC help and optimization list"
+  print "Use 'turbine -h' to see Turbine help"
+  print
+  cat ${STC_HOME}/etc/help-footer.txt
+  print
+  exit 0
+}
+
+
+report_version()
+{
+  ${STC} -v
+  exit 0
+}
+
+PROGRAM_TCL=""
+CHECK_DATES=0
+VERBOSE=0
+EXEC_STRING=""
+
+# Process all flags: split among this script, STC, or Turbine
+SWIFT_T_CHARS="hE:i:o:t:vV"
+STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
+TURBINE_CHARS="e:i:lm:n:s:xX"
+CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
+while getopts ${CHARS} OPTION
+do
+  # declare OPTION
+  # Note: We make heavy use of the rarely-used ;& in the following
+  case ${OPTION} in
+
+    # Swift/T arguments:
+    E) EXEC_STRING+=${OPTARG} ;;
+    i) EXEC_STRING+="import ${OPTARG};" ;;
+    h) help ; exit 0 ;;
+    v) report_version ;;
+    V) (( ++VERBOSE ))
+       if (( VERBOSE == 2 )) ; then set -x ; fi ;;
+    o) PROGRAM_TCL=${OPTARG} ;;
+    u) CHECK_DATES=1 ;;
+
+    # STC arguments:
+    A) ;& d) ;& D) ;& I) ;&
+    j) ;& L) ;& O) ;& p) ;& r)
+      STC_OPTS+=( -${OPTION} ${OPTARG} )
+      ;;
+
+    # Turbine arguments
+    e) ;& i) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
+      TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
+      ;;
+
+    # Turbine pass-through
+    t)
+      FLAG=${OPTARG%:*}
+      ARG=${OPTARG#*:}
+      TURBINE_OPTS+=( -${FLAG} ${ARG} )
+      ;;
+
+    # Errors
+    *)
+      # ZSH prints an error message
+      usage
+      exit 1
+  esac
+done
+shift $(( OPTIND - 1 ))
+
+# Handle temp file creation across platforms
+# Always has .SUFFIX somewhere
+make_temp()
+{
+  local SUFFIX=$1
+  local PROGRAM_DIR=$2
+  local NAME=$3
+  # Linux:
+  MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
+  if (( ${MKTEMP_VERSION} > 2 ))
+  then
+    # Modern mktemp.  .tic at the end.
+    local SUFFIX_ARG
+    SUFFIX_ARG=( --suffix .${SUFFIX} )
+  else
+    # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
+    local SUFFIX_ARG=""
+    NAME=${NAME}.${SUFFIX}
+  fi
+  mktemp ${SUFFIX_ARG} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
+  # TODO: Mac?
+}
+
+EXEC_SWIFT=""
+if [[ ${EXEC_STRING} == "" ]]
+then
+  # Normal filename.swift to compile/run
+  if [[ ${#*} == 0 ]]
+  then
+    usage
+    return 1
+  fi
+  PROGRAM_SWIFT=$1
+  shift
+else
+  # Create/compile/run/delete -E string
+  PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
+
+  echo ${EXEC_STRING} >> ${PROGRAM_SWIFT}
+fi
+ARGS=( ${*} )
+
+if [[ ! -r ${PROGRAM_SWIFT} ]]
+then
+  print "Could not read: ${PROGRAM_SWIFT}"
+  exit 1
+fi
+
+message()
+{
+  (( VERBOSE )) && print ${*}
+}
+
+verbose()
+{
+  message ${*}
+  ${*}
+}
+
+message "Swift/T"
+
+make_stc_output()
+{
+  # Set up STC file arguments
+  if [[ ${PROGRAM_TCL} == "" ]]
+  then
+    PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
+    PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
+    NAME=${PROGRAM_FILE%.swift}
+    PROGRAM_TCL=$( make_temp "tic" ${PROGRAM_DIR} ${NAME} )
+    DELETE_PROGRAM_TCL=1
+  fi
+}
+
+DELETE_PROGRAM_TCL=0
+SKIP_COMPILE=0
+
+if (( CHECK_DATES ))
+then
+  if [[ -e ${PROGRAM_TCL} ]] && \
+     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]]
+  then
+    SKIP_COMPILE=1
+    message "${PROGRAM_TCL} is up-to-date."
+  fi
+fi
+
+if (( ! SKIP_COMPILE ))
+then
+  # Run STC
+  make_stc_output
+  message "Compiling: ${PROGRAM_SWIFT}"
+  message "       to: ${PROGRAM_TCL}"
+  verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+fi
+
+# Run Turbine
+message "Running:   ${PROGRAM_TCL}"
+verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
+
+# Clean up
+if (( DELETE_PROGRAM_TCL ))
+then
+  message "Removing: ${PROGRAM_TCL}"
+  rm ${PROGRAM_TCL}
+fi
+
+if [[ ${EXEC_STRING} != "" ]]
+then
+  message "Removing: ${PROGRAM_SWIFT}"
+  rm ${PROGRAM_SWIFT}
+fi
+
+exit 0

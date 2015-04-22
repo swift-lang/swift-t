@@ -1,0 +1,93 @@
+Annotated performance counters
+The counters are reported for each ADLB server
+
+
+ADLB Operation Counters
+=======================
+# Admin traffic
+CHECK_IDLE(25) 0
+# Notifications for containers
+CONTAINER_REFERENCE(20) 45
+# Self explanatory
+CONTAINER_SIZE(21) 0
+# Self explanatory
+CONTAINER_TYPEOF(19) 0
+# Create a single variable
+CREATE_HEADER(4) 3
+# Enumerate container contents
+ENUMERATE(12) 2121
+# Check if container element exists
+EXISTS(7) 77109
+# Only upon errors
+FAIL(35) 0
+# Blocking task get requests, including data notifications
+GET(2) 28117
+# Poll for tasks
+IGET(3) 0
+# Insert a container in a container
+INSERT_ATOMIC(16) 0
+# Lock a data element
+LOCK(22) 0
+# Create multible variables at once
+MULTICREATE(5) 26323
+# Create a task
+PUT(1) 25704
+# Any reference count modifications
+REFCOUNT_INCR(15) 17222
+# Retrieve data (including container elements)
+RETRIEVE(11) 236317
+# Admin traffic
+SHUTDOWN_SERVER(27) 0
+# Admin traffic
+SHUTDOWN_WORKER(26) 0
+# Store data (including container elemens)
+STORE_HEADER(8) 107778
+# Subscribe to data to get notification
+SUBSCRIBE(13) 135645
+# Server-to-server sync when server needs to do operation on another server
+SYNC_REQUEST(24) 0
+# Type of variable
+TYPEOF(18) 0
+# Get the next unique data id
+UNIQUE(17) 0
+# Opposite of lock
+UNLOCK(23) 0
+
+Task counters
+=============
+# worktype_0 == worker tasks
+# worktype_1 == control tasks and notifications
+# parallel == parallel tasks
+# targeted == targeted tasks (usually data notifications)
+# single   == regular tasks
+# net      == total tasks going through system
+# total    == total tasks, with stolen tasks double-counted
+# bypass   == matched immediately to receiver
+# enqueued == added to queue, no receiver right now
+worktype_0_parallel_bypass 0
+worktype_0_parallel_enqueued 0
+worktype_0_parallel_net 0
+worktype_0_parallel_stolen 0
+worktype_0_parallel_total 0
+worktype_0_single_bypass 31
+worktype_0_single_enqueued 25169
+worktype_0_single_net 25200
+worktype_0_single_stolen 0
+worktype_0_single_total 25200
+worktype_0_targeted_bypass 0
+worktype_0_targeted_enqueued 0
+worktype_0_targeted_total 0
+worktype_1_parallel_bypass 0
+worktype_1_parallel_enqueued 0
+worktype_1_parallel_net 0
+worktype_1_parallel_stolen 0
+worktype_1_parallel_total 0
+worktype_1_single_bypass 0
+worktype_1_single_enqueued 504
+worktype_1_single_net 504
+worktype_1_single_stolen 0
+worktype_1_single_total 504
+worktype_1_targeted_bypass 0
+worktype_1_targeted_enqueued 894
+worktype_1_targeted_total 894
+

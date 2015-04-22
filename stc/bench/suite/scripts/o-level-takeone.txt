@@ -1,0 +1,28 @@
+-O3
+-O3 -F constant-fold
+-O3 -F dead-code-elim
+-O3 -F value-number
+-O3 -F algebra
+-O3 -F finalized-var
+-O3 -F flatten-nested
+-O3 -F shared-constants
+-O3 -F demote-globals
+-O3 -F unroll-loops
+-O3 -F controlflow-fusion
+-O3 -F propagate-aliases
+-O3 -F merge-refcounts
+-O3 -F cancel-refcounts
+-O3 -F piggyback-refcounts
+-O3 -F batch-refcounts
+-O3 -F hoist-refcounts
+-O3 -F dataflow-op-inline
+-O3 -F wait-coalesce
+-O3 -F hoisting
+-O3 -F function-signature
+-O3 -F array-build
+-O3 -F loop-simplify
+-O3 -F function-inline -F full-function-inline
+-O3 -F pipeline
+-O3 -F reorder-insts
+-O3 -F expand-loops
+-O3 -F full-unroll

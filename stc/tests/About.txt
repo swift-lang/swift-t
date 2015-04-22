@@ -1,0 +1,146 @@
+
+= STC Test Suite
+
+== Overview
+
+Each test has to compile and run or else it fails
+
+We compile each Swift script to the corresponding Tcl script, then run
+Turbine on it.
+
+Use +run-tests.zsh+ to run the tests.  This automates the following
+simplified command lines:
+----
+stc 100-test.swift 100-test.tcl
+turbine -n 2 100-test.tcl
+----
+
+This creates stc logs, intermediate code, and output files.
+
+== Invocation
+
+Available arguments:
+
++-c+:: Continue after failure
++-C+:: Compile only
++-D+:: Run disabled tests 
++-e+:: Show error outputs from tests
++-f <OPTION>+:: Use +stc -f OPTION+
++-F <OPTION>+:: Use +stc -F OPTION+
++-J:: Enable JaCoCo code coverage.
++-k <SKIP>+:: Skip the first SKIP tests
++-l+:: Enable Turbine data leak check
++-n <COUNT>+:: Run only COUNT tests
++-O <VALUE>+:: Use +stc -O VALUE+
++-p <PATTERN>+:: Run only tests with name containing string PATTERN
++-P <PATTERN>+:: Skip tests with name containing string PATTERN
++-V+ Verbose: turn on +set -x+ to debug +run-tests.zsh+ itself
+
+Environment variables:
+
+Environment variables are generally passed to subprocesses: stc, turbine, etc.
+Some useful ones are:
+
++STC_LOG_TRACE+:: if set to true, produce trace-level log output from STC (default is debug-level
+
+== Supporting files
+
+Supporting files are optional. 
+
+* Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
+  create input files, etc.  Must return exit code 0 or test fails.
+  This is sourced by the test script in a zsh subshell in such a way
+  that any environment variables set will be available for STC and
+  Turbine when running that test.
+* Check script: TEST.check.sh: Is run after STC and Turbine.  Can
+  check outputs, remove files, etc.  Must return exit code 0 or test
+  fails.  E.g., can examine TEST.out for correctness.
+* TEST.exp: Each line of this file must be in TEST.out or test fails.
+* TEST.args: Arguments for run time, passed to user Swift program
+* TEST.stcargs: Arguments for STC, used to modify STC behavior
+
+== Tokens
+
+Included in comments in TEST.swift to modify test behavior
+
+NOTE: Tests that do not run should be linked to issues in exm-issues
+
+* SKIP-THIS-TEST: Skips test entirely.
+* COMPILE-ONLY-TEST: Skip running the test.
+* THIS-TEST-SHOULD-NOT-COMPILE: If TEST.swift compiles, test fails.  
+  Used to test for Swift code that STC should reject.
+* THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails.
+  Used to test for Swift logic that should crash Turbine.
+
+== Numbering
+
+The tests are numbered for lexical sorting by shell glob.
+
+000::       Script fragments, noops, assert()s
+100::       Basic function calls, errors
+200::       Conditionals, recursion, expressions
+300::       Arrays, structs
+400::       For 
+*        400: foreach
+*        410: if
+*        420: for
+*        450: Associative arrays
+*        480: Key functions on arrays
+500::       Types 
+*        560: files
+*        580: foreach
+*        590: blobs
+600::    Various uses
+*        600: User builtins
+*        620: User includes (CPP)   
+*        630: app functions
+*        640-679: Advanced type usage
+*        680: Advanced app function features
+*        690: File features (copies, etc.)
+700::       STC standard library
+*        700: strings
+*        710: argc/argv
+*        729: math
+*        730: stdio
+*        740: Misc. libraries
+*        750: Pragmas
+*        760: Advanced I/O
+*        780: MPE
+*        790: External scripting languages (R, Python)
+800::       Error outputs
+900::       Apps (Formerly advanced constructs)
+*        900: MapReduce
+*        910: iterate - move to 400?
+*        920: wait() {}
+*        940: Globals
+*        950: Stats
+*        960: Updateables
+*        970: PIPS snippets
+*        980: RDCEP snippets
+*        990: NAMD
+
+== Adding a test
+
+Simply create tests/TEST.swift and run-tests.zsh should find it.
+Optionally add setup script, check script, expected output.
+
+== Clean
+
+Use ./clean.sh to clean up files created by the test suite
+
+== JUnit tests
+
+STC also has pure Java unit/integration tests in addition to these system
+tests.  These can be run by invoking +ant test+ in the code directory.
+
+== Code Coverage
+
+If you enable JaCoCo code coverage, a .jacoco.exec file will be generated
+for each test.  You can generate a coverage report from these by running
++ant full.coverage.report+ in the stc code directory.  If you have a
+non-standard layout, you may need to specify the location of the
+directory with .jacoco.exec files with +-Dsystem.test.out.dir=path/to/test/output+.
+
+// Local Variables:
+// mode: doc;
+// End:

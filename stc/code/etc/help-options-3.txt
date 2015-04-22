@@ -1,0 +1,6 @@
+    -t <flag>:<value> 
+         Turbine pass-through
+         Pass -<flag> <value> to Turbine
+    -u 
+         Only compile program.swift if it is newer than 
+         output file *.tic (requires use of -o)

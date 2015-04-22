@@ -1,0 +1,19 @@
+# +=======================================================+
+# | Manifest file to build Turbine application executable |
+# +=======================================================+
+
+# Manifest info: required to generate .c file and pkgIndex.tcl
+# ------------------------------------------------------------
+
+# Name and version of Tcl package
+pkg_name = lognorm_task
+pkg_version = 0.0
+
+# lib scripts are executed in specified order, before main_script and
+# after lib_inits
+lib_script = lib/lognorm.tcl
+lib_script = lib/lognorm_task.tcl
+
+# main script. If provided, always runs this main script.  Otherwise
+# script file is specified as first command line argument (like tclsh)
+main_script = embarrassing_lognorm.tcl

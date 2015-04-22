@@ -1,0 +1,6 @@
+
+SWIFT/T BENCHMARKS
+
+First, generate the package utilities: see util/About.txt
+
+Then, find test-specific directions in the test directory.

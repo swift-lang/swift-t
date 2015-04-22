@@ -1,0 +1,1 @@
+-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt

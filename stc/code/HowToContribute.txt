@@ -1,0 +1,55 @@
+
+How to Contribute to Swift/T
+
+Swift/T is an interesting project to work on if you are interested in
+any subset of the following areas:
+
+* compilers
+** language-language translators
+** parser generators (ANTLR)
+** data flow languages and run time technologies
+
+* languages for big computer systems:
+** high performance computing
+** cloud computing
+** distributed computing
+** MPI
+** master-worker systems
+** alternatives to MapReduce
+
+* libraries, frameworks, and abstractions
+** dataflow libraries for common tasks
+** environments for rapid prototyping
+
+Swift/T is based on the following key technologies:
+
+* ANTLR for parsing, with a Java-based compiler
+* Tcl as a run time implementation language
+* MPI for communication
+* ADLB for master-worker task distribution
+* A large amount of Tcl run time libraries and user libraries
+* A small number of core libraries in C
+* SWIG to connect user libraries to Swift
+
+Get involved!
+
+See the list of current issues:
+
+https://code.google.com/p/exm-issues/issues
+
+You can suggest new issues or try to address one of the current ones
+
+(ExM is the name of the original grant for this project)
+
+Also, for background, see the Support section here:
+
+http://www.mcs.anl.gov/exm/local/guides/swift.html#_support
+
+GitHub site:
+
+https://github.com/timarmstrong
+
+Personal Contacts:
+=======
+Tim Armstrong: tga@uchicago.edu
+Justin M Wozniak: wozniak@mcs.anl.gov

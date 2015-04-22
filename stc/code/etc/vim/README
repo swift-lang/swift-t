@@ -1,0 +1,9 @@
+Syntax highlighting for VIM.
+
+Installation
+============
+Copy to your .vim directory:
+
+   mkdir -p ~/.vim/syntax ~/.vim/ftdetect
+   cp syntax/swift.vim ~/.vim/syntax
+   cp ftdetect/swift.vim ~/.vim/ftdetect
