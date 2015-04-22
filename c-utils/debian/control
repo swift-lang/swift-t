@@ -1,0 +1,15 @@
+Source: c-utils
+Section: unknown
+Priority: extra
+Maintainer: Yadu Nand <yadunand@uchicago.edu>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.4
+Homepage: http://sites.google.com/site/exmcomputing
+#Vcs-Git: git://git.debian.org/collab-maint/c-utils.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/c-utils.git;a=summary
+
+Package: c-utils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich2 (>= 1.4.1)
+Description: Misc. C utilities for ExM software
+ Misc. C utilities for ExM software

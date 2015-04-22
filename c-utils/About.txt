@@ -1,0 +1,147 @@
+
+= c-utils: Abstract Data Type (ADT) Reference
+
+Many functions in the list and table modules often perform the same
+function on slightly different data structures.  The last component
+of the function name, the suffix, specifies the behavior. Some conventions
+about what function suffix does are listed here.
+
+Many of the ADTs do not implement all of the given functions.
+
+= Definitions
+
+target: The target data structure
+key: In a key/value structure, the key part
+data: In a key/value structure, the value/data part
+cmp: A comparator function
+entry: Internal data structure representing allocated memory
+
+= Type reference
+
+list: A singly linked list
+list2: Doubly linked list
+table: A hash table
+
+= Subtype reference
+
+ADTs have subtypes: the type of data structure stored.  For example,
+table_sp maps strings (char*) to pointers (void*).  The specifiers
+follow the printf conventions.
+
+i: integer
+l: long integer
+s: string (char*)
+p: pointer (void*)
+
+== Common cases
+
+These cases are so common they are simplified:
+
+table_ refers to what would be table_sp_
+list_ refers to what would be list_p_
+
+= Function reference
+
+== Creation
+
+ADT   _create()
+      { allocate and initialize ADT - NULL if out of memory }
+bool  _init()
+      { initialize ADT in-place - false if out of memory }
+
+      _parse()
+
+== Addition
+
+void  _append(target, key)
+      { to tail of list }
+bool  _add(target, key)
+      { to tail of list - should allow duplicates }
+bool  _push(target, key)
+      { to head of list - should allow duplicates }
+bool  _add_unique(target, cmp(), key)
+      { false and do nothing if key found }
+bool  _add_item(target, item)
+
+== Search
+
+bool  _contains(target, key)
+bool  _matches(target, cmp(), data)
+DATA  _search(target, key)
+DATA  _inspect(target, data, n)
+      { search for data in target that matches given data in n bytes
+        uses memcmp }
+
+== Modify
+
+void  _update(target, key, data, offset, length)
+      { reset part of the value of the given key }
+void  _set(target, key, data)
+      { reset the value of the given key }
+void  _move(target, key_old, key_new)
+      { reset the key, leave the same data }
+
+== Retrieve
+
+DATA  _pop() { head }
+DATA  _peek() { head }
+DATA  _head() { head }
+DATA  _poll() { tail }
+DATA  _get(i)
+
+LIST  _select(target, key)
+LIST  _pop(target, key)
+LIST  _select_where(target, cmp(), pattern)
+LIST  _pop_where(target, cmp(), pattern)
+
+== Remove
+
+bool  _remove(target, key)
+DATA  _remove(target, key)
+bool  _erase(target, key, n)
+       { uses memcmp on key }
+
+ENTRY _remove_item(target, key)
+
+void  _remove_where(target, cmp())
+
+== Destruction
+
+void  _clear()   truncate ADT- do not free data
+void  _free()    clear and free the ADT- do not free data
+void  _delete()  clear the ADT and free data
+void  _destroy() _delete() + _free()
+void  _release() For tables and heaps: free the internal array- use
+                 when empty or after clear()
+                 Illegal after _free()
+
+== Output
+
+Definitions:
+[printf]: uses printf
+[fprintf]: uses fprintf
+[static]: writes to static memory location - see implementation details
+[given]: writes to given memory location
+[dynamic]: allocates memory and writes to that
+
+void  _printf(format, target)         [printf]
+void  _fprintf(FILE, format, target)  [fprintf]
+void  _dump(f(), target)              [printf]
+void  _fdump(FILE, f(), target)       [fprintf]
+char* _output(f, target)              [static]
+int   _sprintf(s, format, target)     [given]
+int   _snprintf(s, n, format, target) [given]
+int   _marshal(s, n, f(), target)     [given]
+char* _serialize()                    [dynamic]
+char* _serialize_ptrs(target)         [dynamic]
+
+= Source documentation
+
+All user source documentation should be in the *.h files
+Users can use this file for reference
+Implementation notes can be in the *.c files
+
+= Third-party libraries
+
+jenkins-hash and lookup3 are third-party libraries.
+

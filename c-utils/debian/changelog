@@ -1,0 +1,5 @@
+c-utils (0.6.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Yadu Nand <yadunand@uchicago.edu>  Mon, 11 Nov 2013 11:22:54 -0600
