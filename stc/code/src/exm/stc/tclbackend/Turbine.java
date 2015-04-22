@@ -36,7 +36,6 @@ import exm.stc.tclbackend.TclTemplateProcessor.TemplateArg;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.Expression;
-import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.LiteralInt;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;

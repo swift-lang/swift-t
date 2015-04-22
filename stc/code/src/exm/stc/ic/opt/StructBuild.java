@@ -68,7 +68,6 @@ public class StructBuild extends FunctionOptimizerPass {
           List<Arg> inputs = inst.getInputs();
           List<Arg> fields = inputs.subList(1, inputs.size());
           assignedPaths.put(struct, Arg.extractStrings(fields));
-          System.err.println(inst);
         }
       }
     }

@@ -1294,12 +1294,7 @@ public class Types {
 
     @Override
     public boolean isConcrete() {
-      for (Type field: fields) {
-        if (!field.isConcrete()) {
-          return false;
-        }
-      }
-      return true;
+      return false;
     }
   }
 
