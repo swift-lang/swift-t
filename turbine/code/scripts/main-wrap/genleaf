@@ -1,0 +1,311 @@
+#!/bin/bash -eu
+
+# set -x
+
+# Generate leaf function, given a C/C++ source
+# user-code.c --> user-leaf.tcl
+
+if ! TARGET=$( readlink $0 )
+then
+  TARGET=$0
+fi
+
+export GENLEAF_HOME=$( cd $( dirname $TARGET ) ; /bin/pwd )
+
+# Defaults:
+# File extension (c or cc (for C++))
+LANG=c
+MACHINE=vanilla-gcc
+MAIN=0
+# If not 0, include this list of dynamic objects
+OBJLISTFILE=0
+# If 1, do static build
+export STATIC=0
+# Verbosity (0-3)
+VERBOSE=0
+
+show_machine_files()
+{
+  ( cd $GENLEAF_HOME/settings
+    ls machine.*.sh | sed 's/machine\.\(.*\).sh/ \t * \1/' )
+}
+
+usage()
+{
+  echo "genleaf: usage:"
+  echo
+  printf "\t\t genleaf <OPTIONS> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
+  echo
+  printf "\t where: \n"
+  printf "\t\t MACHINE     is the machine type\n"
+  printf "\t\t USER_SOURCE is a *.c file\n"
+  printf "\t\t FUNCNAME is a user function other than main\n"
+  printf "\t\t USER_HEADER is the corresponding *.h file\n"
+  printf "\t\t USER_SWIFT  is the input Swift file\n"
+  echo
+  printf "\t options: \n"
+  printf "\t\t -h            \t Show usage guide.\n"
+  printf "\t\t -m <MACHINE>  \t Use a specific machine file (default: vanilla)\n"
+  printf "\t\t -s <MANIFEST> \t Do a static build with the provided manifest file.\n"
+  printf "\t\t -v            \t Increase verbosity.  May be given up to thrice.\n"
+  echo
+  printf "\t environment: \n"
+  printf "\t\t TCL_VERSION \t The Tcl version (default 8.5).\n"
+  printf "\t\t FLAGS       \t Extra C/C++ compiler flags.\n"
+  echo
+  echo "known machine types:"
+  show_machine_files
+}
+
+crash()
+{
+  MSG=$*
+  echo "crash!"
+  echo $MSG
+  exit 1
+}
+
+while getopts "f:hs:vx:" OPTION
+do
+  case $OPTION in
+    f)
+      OBJLISTFILE=$OPTARG
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    s)
+      STATIC=1
+      MANIFEST=$OPTARG
+      echo "using manifest: $MANIFEST"
+      ;;
+    v)
+      VERBOSE=$(( VERBOSE + 1 ))
+      ;;
+    x)
+      LANG=$OPTARG
+      ;;
+    *)
+      # Bash prints an error message
+      exit 1
+  esac
+done
+shift $(( OPTIND - 1 ))
+(( VERBOSE > 2 )) && set -x
+
+message()
+{
+  if (( $VERBOSE >= 1 ))
+    then
+    echo $*
+  fi
+}
+
+action()
+# An action important enough to show the user what we are doing
+{
+  if (( $VERBOSE >= 2 ))
+  then
+    echo $*
+    echo
+  fi
+  $*
+}
+
+if (( ${#*} != 3 ))
+then
+  echo "genleaf requires 4 arguments."
+  echo "genleaf received ${#*} arguments!"
+  echo
+  usage
+  exit 1
+fi
+
+USER_SOURCE=$(echo "${1}" | awk -F: '{print $1}') #field before colon
+USER_FUNC=$(echo "${1}" | awk -F: '{print $2}') #field after colon
+USER_HEADER=$2
+USER_SWIFT=$3
+
+export USER_LEAF=${USER_SOURCE%.*}_leaf
+# Capitalize first letter of symbol
+#       - required for Tcl extension init function
+export USER_LEAF_INIT=${USER_LEAF^}_Init
+
+MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
+[[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
+source $MACHINE_FILE
+
+FLAGS=${FLAGS:-}
+CFLAGS+=" $FLAGS $TCL_INCLUDE_SPEC $PIC -g $STD"
+CXXFLAGS+=" $FLAGS $TCL_INCLUDE_SPEC $PIC -g"
+
+# The compiler to use for user code
+COMPILER=$CC
+FLAGS=$CFLAGS
+if [[ $LANG == "cc" ]]
+then
+  COMPILER=$CXX
+  FLAGS=$CXXFLAGS
+fi
+message "using COMPILER=$COMPILER"
+
+for f in $USER_SOURCE $USER_HEADER
+do
+  [[ -f $f ]] || crash "File not found:" $f
+done
+
+if [[ ! -d $TCL_HOME ]]
+then
+  crash "Could not find TCL_HOME: $TCL_HOME"
+fi
+
+TCLSH=${TCLSH:-}
+if [[ $TCLSH == "" ]]
+then
+  TCLS=$( ls $TCL_HOME/bin/tclsh* )
+  for t in $TCLS
+  do
+    if [[ -x $t ]]
+    then
+      TCLSH=$t
+      break
+    fi
+  done
+  [[ $TCLSH == "" ]] && crash "Could not find a tclsh!"
+fi
+
+#check if main or non-main
+if [ -z "${USER_FUNC}" ] ; then
+    MAIN=1
+else
+    # get user function signature
+    RET_TYPE=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ')
+    USER_FUNC_SIG=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ' --complement | grep -o '^.*)' )
+    #put comma separated arg list into array
+    TMP=$(echo "${USER_FUNC_SIG}" | sed 's/.*(\(.*\))/\1/')
+    IFS=',' read -a USER_FUNC_ARGS <<< "${TMP}"
+    EXPECTED_ARGC=$((${#USER_FUNC_ARGS[@]} + 1))
+fi
+
+#step 1. Replace the main function in the source code with an ordinary function and push it into header
+if (( $MAIN == 1 )) ; then
+    message "creating: $USER_LEAF.$LANG"
+    sed "s/main(.*)/main_leaf(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".$LANG || echo "something went wrong"
+
+    #add main to header
+    {
+     cat $USER_HEADER
+     echo 'int main_leaf(int argc, char** argv);'
+    } > "${USER_LEAF}".h
+
+else
+
+   cp $USER_SOURCE "${USER_LEAF}".$LANG
+
+   #add func to header
+   if [ -f $USER_HEADER ] ; then
+       cp $USER_HEADER "${USER_LEAF}".h
+   else
+       echo $RET_TYPE $USER_FUNC_SIG';' > "${USER_LEAF}".h
+   fi
+fi
+
+#step 2. Generate extension.[ch]
+if (( $MAIN == 1 ))
+then
+  message "creating: extension.$LANG"
+  m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.$LANG
+  message "creating: extension.h"
+  m4 $GENLEAF_HOME/templates/extension-main.template.h > extension.h
+else
+  crash "We only support main functions!"
+fi
+
+#step 3 Generate make-package.tcl
+message "creating: make-package.tcl"
+m4 $GENLEAF_HOME/templates/make-package.template.tcl > make-package.tcl
+
+#step 4. Generate user leaf *.tcl
+if (( $MAIN == 1 )) ; then
+  message "creating: ${USER_LEAF}.tcl"
+  m4 $GENLEAF_HOME/templates/main-leaf.template.tcl > ${USER_LEAF}.tcl
+else
+  crash "We only support main functions!"
+fi
+
+#step 5. Substitute on mainapp
+message "creating: user-code.swift"
+sed 's/mainapp/(int v) main_leaf(string A[]) "main_leaf" "0.0" "main_leaf_wrap"/' < $USER_SWIFT > user-code.swift
+
+(( $VERBOSE >= 2)) && echo
+
+(( $STATIC == 1 )) && PIC=""
+
+#step 6. call stc
+message "running STC: user-code.swift -> user-code.tic"
+action $STC -u -j $(\which java) -F checkpointing -r ${PWD} user-code.swift
+
+#step 7. Build user library
+# a. compile user-leaf.c
+message "compiling: ${USER_LEAF}.$LANG"
+action $COMPILER $FLAGS -c -o "${USER_LEAF}".o "${USER_LEAF}".$LANG
+
+# b. compile extension.c
+message "compiling: extension.$LANG"
+action $COMPILER $FLAGS -c -o extension.o extension.$LANG
+
+MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
+
+# Slurp shared object list if necessary
+if [[ $OBJLISTFILE != 0 ]]
+then
+  OBJLIST=( $( cat $OBJLISTFILE ) )
+else
+  OBJLIST=""
+fi
+
+if (( $STATIC == 0 ))
+then
+  # c. link shared library
+  message "creating: lib$USER_LEAF.so"
+  action $CC $SHARED -o lib$USER_LEAF.so  \
+    extension.o $USER_LEAF.o              \
+    ${OBJLIST[@]}                         \
+    -L $TCL_HOME/lib -l tcl$TCL_VERSION   \
+    -Wl,-rpath -Wl,$TCL_HOME/lib
+else
+  # c. link static library and executable
+  action ar -cr main_leaf.a \
+             extension.o $USER_LEAF.o
+  action $MKSTATIC $MANIFEST -c static_main_leaf.c
+  action $CC $CFLAGS -I . \
+    -I{$MPI_HOME,$TURBINE_HOME,$ADLB_HOME,$C_UTILS_HOME}/include \
+    -c -o static_main_leaf.{o,c}
+  action $MPICC -o static_main_leaf static_main_leaf.o main_leaf.a \
+    -L $TCL_HOME/lib -ltcl${TCL_VERSION} \
+    -L $TURBINE_HOME/lib \
+       -l tclturbine -l tclturbinestatic -l tclturbine  \
+    $( $MKSTATIC $MANIFEST --link-objs ) \
+    $( $MKSTATIC $MANIFEST --link-flags ) \
+    -L $ADLB_HOME/lib -ladlb \
+    -L $C_UTILS_HOME/lib -lexmcutils \
+    -l m -l dl -pthread
+
+    # -L $ADLB_HOME/lib -l adlb \
+    # -L $C_UTILS_HOME/lib -l exmcutils \
+
+  #link
+  #/soft/compilers/wrappers/xl/mpixlcxx -o static_main_leaf static_main_leaf.o main_leaf.a -L /home/wozniak/Public/sfw/ppc64/bgq-gcc/tcl-8.5.12/lib -ltcl8.5 -L/home/wozniak/Public/sfw/ppc64/turbine/lib -L/home/wozniak/Public/sfw/ppc64/lb/lib -L/home/wozniak/Public/sfw/ppc64/c-utils/lib -ltclturbinestatic -ltclturbine -ltclturbinestaticres -ladlb -lexmcutils -lm
+fi
+
+#step 8. Invoke make-package
+message
+message "running make-package: creating pkgIndex.tcl"
+action $TCLSH ./make-package.tcl
+
+# Declare victory.
+message "genleaf successful."
+
+
+#$(for i in "${USER_FUNC_ARGS[@]}"; do type=$(echo "${i}" | cut -f1 -d' '); varname=$(echo "${i}"|cut -f2 -d' '); echo $type $varnaeme = ($type) malloc(sizeof($type)); done)

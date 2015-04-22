@@ -1,0 +1,24 @@
+# +=======================================================+
+# | Manifest file to build Turbine application executable |
+# +=======================================================+
+
+# Manifest info: required to generate .c file and pkgIndex.tcl
+# ------------------------------------------------------------
+
+# Name of Tcl package
+# A directory with pkgIndex.tcl is optionally created by processing tool
+pkg_name = staticapp-1
+pkg_version = 0.1
+
+# lib scripts are executed before main script
+lib_script = staticapp-1-lib.tcl
+
+# C function names to initialise Tcl modules
+# TODO: test linking C functions
+# lib_init = other_stuff_init
+
+# headers for user Tcl code
+# lib_include = user_stuff.h
+
+# main scripts
+main_script = staticapp-1.tcl

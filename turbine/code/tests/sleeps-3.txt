@@ -1,0 +1,5 @@
+declare file 1 tmp.txt
+
+sleep 0
+sleep 0
+sleep 0

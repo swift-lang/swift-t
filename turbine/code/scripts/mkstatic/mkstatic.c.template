@@ -1,0 +1,214 @@
+/*
+ * Copyright 2013 University of Chicago and Argonne National Laboratory
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License
+ */
+
+/**
+  Alternative launcher program that can be used in place of tclsh
+  to launch a Tcl script.  Avoids need to dynamically load libraries.
+
+  Tim Armstrong - Dec 11 2013
+ */
+
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <tcl.h>
+#include <mpi.h>
+
+#include <turbine.h>
+#include <tcl-turbine.h>
+#include <static-pkg.h>
+
+static bool extract_bundled_files(void);
+
+@USER_HEADERS@
+
+static const bool has_main_string = @HAS_MAIN_SCRIPT_STRING@;
+static const unsigned char @MAIN_SCRIPT_STRING@[];
+
+@RESOURCE_DECLS@
+
+// Functions to initialize packages
+@PKG_INIT_FNS@
+
+/*
+  Initialize a fresh Tcl interpreter with all libraries.
+  This can be used to initialize child interpreters too.
+  For this purpose this function is declared in the mkstatic.h header.
+ */
+int MkStatic_Tcl_Init(Tcl_Interp *interp)
+{
+  int skip_tcl_init = @SKIP_TCL_INIT@;
+  if (!skip_tcl_init)
+  {
+    int rc = Tcl_Init(interp);
+    if (rc != TCL_OK)
+    {
+      fprintf(stderr, "Unexpected error initializing Tcl Interpreter:\n");
+      Tcl_Eval(interp, "puts $errorInfo");
+      return rc;
+    }
+  }
+  else
+  {
+    // Do any setup required before running init scripts
+    @TCL_CUSTOM_PRE_INIT@
+  }
+  @TCL_LIB_INIT@
+
+  // Make Turbine package available to interpreter
+  if (register_tcl_turbine_static_pkg(interp) != TCL_OK)
+  {
+    // Error info already printed by function
+    return TCL_ERROR;
+  }
+
+  // Setup user packages to be loaded with package require
+  @REGISTER_USER_PKGS@
+  return TCL_OK;
+}
+
+int
+main(int argc, const char **argv)
+{
+  if (!extract_bundled_files())
+  {
+    exit(1);
+  }
+
+
+  Tcl_Interp *interp = Tcl_CreateInterp();
+
+  if (MkStatic_Tcl_Init(interp) != TCL_OK)
+  {
+    exit(1);
+  }
+
+  turbine_code tc;
+  const char *script_file = NULL;
+  if (has_main_string)
+  {
+    tc = turbine_run_string(MPI_COMM_NULL, (const char*)@MAIN_SCRIPT_STRING@,
+                            argc, argv, NULL, interp);
+  }
+  else
+  {
+    if (argc < 2)
+    {
+      printf("%s: first argument must be script file!\n", argv[0]);
+      exit(EXIT_FAILURE);
+    }
+
+    // Get script from first argument
+    script_file = argv[1];
+
+    // Pass remaining arguments minus script to turbine_run
+    for (int i = 1; i < argc - 1; i++)
+    {
+      argv[i] = argv[i+1];
+    }
+    argc--;
+    tc = turbine_run_interp(MPI_COMM_NULL, script_file, argc, argv, NULL,
+                            interp);
+  }
+
+  if (tc == TURBINE_SUCCESS)
+  {
+    return 0;
+  }
+  else
+  {
+    char code_name[TURBINE_CODE_STRING_MAX];
+    turbine_code_tostring(code_name, tc);
+    if (script_file != NULL)
+    {
+      fprintf(stderr, "Error executing script file %s: turbine error "
+                      "%s (%i)\n", script_file, code_name, tc);
+    } else {
+      fprintf(stderr, "Error executing compiled in main script "
+                      "(source %s): turbine error %s (%i)\n",
+                      "@MAIN_SCRIPT_FILE@", code_name, tc);
+    }
+    Tcl_Eval(interp, "puts $errorInfo");
+    return 2;
+  }
+  return 0;
+}
+
+static bool extract_bundled_files(void)
+{
+  const char *dst_dir = "/tmp";
+
+  // Check POSIX temporary dir location
+  if (getenv("TMPDIR") != NULL)
+  {
+    dst_dir = getenv("TMPDIR");
+  }
+
+  if (getenv("MKSTATIC_TMPDIR") != NULL)
+  {
+    dst_dir = getenv("MKSTATIC_TMPDIR");
+  }
+  
+  // Note: assume dst_dir exists
+
+  for (int i = 0; i < @BUNDLED_FILES_COUNT@; i++)
+  {
+    const char *name = @BUNDLED_FILE_NAMES@[i];
+    const unsigned char *data = @BUNDLED_FILE_DATA@[i];
+    size_t len = *@BUNDLED_FILE_LENS@[i];
+
+    char path[strlen(dst_dir) + strlen(name) + 1];
+    sprintf(path, "%s/%s", dst_dir, name);
+    FILE *out = fopen(path, "wb");
+    if (out == NULL)
+    {
+      fprintf(stderr, "Could not open %s for writing\n", path);
+      return false;
+    }
+
+    if (fwrite(data, 1, len, out) != len)
+    {
+      fprintf(stderr, "Error writing to file %s: %s\n", path,
+                      strerror(errno));
+      return false;
+    }
+
+    if (fclose(out) != 0)
+    {
+      fprintf(stderr, "Error closing file %s: %s\n", path,
+                       strerror(errno));
+      return false;
+    }
+
+  }
+
+  return true;
+}
+
+// Binary data for Tcl main script
+@MAIN_SCRIPT_DATA@
+
+// Binary data for resources
+@RESOURCE_DATA@
+
+/*
+  Local Variables:
+  mode: c
+  End:
+*/

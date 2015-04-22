@@ -1,0 +1,16 @@
+# +=======================================================+
+# | Manifest file to build Turbine application executable |
+# +=======================================================+
+
+# Manifest info: required to generate .c file and pkgIndex.tcl
+# ------------------------------------------------------------
+
+# Name of Tcl package
+# A directory with pkgIndex.tcl is optionally created by processing tool
+pkg_name = test
+pkg_version = 0.1
+
+main_script = staticapp-bundled-1.tcl
+
+bundled_file = staticapp-bundled-1.1.data
+bundled_file = staticapp-bundled-1.2.data

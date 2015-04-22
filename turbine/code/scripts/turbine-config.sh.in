@@ -1,0 +1,68 @@
+
+# BASH-formatted setup script filtered by turbine/configure
+#
+# Influential environment variables include:
+# TURBINE_USER_LIB - directory for user library code
+# TURBINE_STATIC_EXEC - if true, try to use statically linked executable
+
+TURBINE_HOME=@prefix@
+TURBINE_VERSION=@TURBINE_VERSION@
+export C_UTILS=@USE_C_UTILS@
+export TCL=@USE_TCL@
+export TCLSH=@USE_TCLSH@
+export ADLB=@USE_ADLB@
+
+export MPI_IMPL=@MPI_IMPL@
+# Only one of the following is used
+export MPI=@USE_MPI@
+export MPI_LIB=@USE_MPI_LIB_DIR@
+export TURBINE_LAUNCHER=@USE_LAUNCHER@
+export TURBINE_LINE_OUTPUT_FLAG=@MPI_LINE_OUTPUT_FLAG@
+export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
+export TURBINE_MAC=@USE_MAC@
+
+# If we have pkgIndex.tcl/.so package
+TURBINE_PKG_AVAIL=@ENABLE_SHARED@
+
+TCLLIBPATH=
+if [[ -n ${SWIFT_PATH:-} ]]
+then
+  TCLLIBPATH+="${SWIFT_PATH} "
+elif [[ -n ${TURBINE_PATH:-} ]]
+then
+  TCLLIBPATH+="${TURBINE_PATH} "
+elif [[ -n ${TURBINE_USER_LIB:-} ]]
+then
+  TCLLIBPATH+="${TURBINE_USER_LIB} "
+fi
+
+EXEC_SCRIPT=${EXEC_SCRIPT:-0}
+TURBINE_STATIC_EXEC=${TURBINE_STATIC_EXEC:-0}
+if (( EXEC_SCRIPT ))
+then
+  # Run script directly
+  export TCLSH=""
+elif (( TURBINE_STATIC_EXEC ))
+then
+  # Use statically linked executable with builtin Turbine package
+  export TCLSH=${TURBINE_SH}
+elif (( !TURBINE_PKG_AVAIL ))
+then
+  # Don't have dynamically loadable package - must use statically linked
+  # executable
+  export TCLSH=${TURBINE_SH}
+else
+  # Use regular tclsh plus loadable Turbine Tcl package
+  if [[ ${TCLSH} == "" ]]
+  then
+    echo "Could not find tclsh!"
+    return 1
+  fi
+  TCLLIBPATH+="${TURBINE_HOME}/lib"
+fi
+
+export TCLLIBPATH
+
+export TURBINE_MACHINE=@USE_MACHINE@
+
+return 0
