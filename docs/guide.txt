@@ -963,11 +963,11 @@ The following unary operators are defined:
 
 === String operators
 
-* String concatenation is also performed with +&#43;+ (plus).  
+* String concatenation is also performed with +&#43;+ (plus).
 
-* +==+ and +!=+ may also be used on strings.  
+* +==+ and +!=+ may also be used on strings.
 
-* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.  
+* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.
 
 * The Python-style string format operator +format%(arg1,arg2,...)+ is
   equivalent to +sprintf(format, arg1, arg2,...)+.  The parentheses
@@ -1637,6 +1637,41 @@ Other settings:: additional configuration keys are passed through to the
 
 For more information on configuring and using Coasters, please refer
 to the http://swift-lang.org/docs/[Swift/K documentation].
+
+=== Custom App Executors (Advanced)
+It is possible to extend Swift/T with additional app executors.
+To implement an executor, you need to write C code implementing the
++turbine_executor+ interface (defined in +turbine/executors/exec_interface.h+).
+Your +turbine_executor+ implementation is registered at runtime by calling the
++turbine_add_async_exec+ function.  The details of the interface
+are documented in +exec_interface.h+.
+
+You also need to register the
+executor with Swift by adding a +appexecdef+ statement in your
+Swift source code, typically in a module that is imported to enable your
+executor.  The +appexecdef+ statement provides a Tcl template that is
+used to start jobs in your executor.  You must implement this Tcl function
+as part of implementing the executor.  For example, the coaster executor is
+defined as follows:
+
+----
+pragma appexecdef COASTER "turbine" "0.8.0"
+    "turbine::async_exec_coaster <<cmd>> <<args>> <<stage_in>> <<stage_out>> <<props>> <<success>> <<failure>>";
+----
+
+The arguments are:
+
++cmd+:: a string with the executable to run
++args+:: a list of command-line arguments to pass to the executable
++stage_in+:: a list of files to stage in (currently unused)
++stage_out+:: a list of files to stage out (currently unused)
++props+:: a Tcl dictionary of properties to pass to the executor.
+          This includes +stdin+, +stdout+, +stderr+ for input/output
+          redirects and any executor-specific options.
++success+/+failure+:: Tcl code that is executed on success or failure.
+          Your executor implementation only needs to save these values
+          and return them once the app completes (this is documented
+          in +exec_interface.h+).
 
 === External scripting support
 
@@ -2374,7 +2409,7 @@ static library or object files in the manifest file.
 *** If building a fully static executable, you can
   provide the +-static+ flag, plus all object files, plus +-L+
   and +-l+ flags for all required library directories and libraries.
-  This requires that all libraries have static archives (+*.a+), 
+  This requires that all libraries have static archives (+*.a+),
   including Tcl (simply build Tcl with +--disable-shared+).
 +
 ----

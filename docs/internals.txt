@@ -84,11 +84,9 @@ There are three non-overlapping categories:
 
 +targeted+: targeted tasks (usually data notifications)
 
-Each of these is divided by the ADLB work type tag:
-
-+worktype_0+: worker tasks
-
-+worktype_1+: control tasks and notifications
+Each of these is divided by the ADLB work type tag.
++worktype_0+ are regular tasks, other worktypes are
+alternative work types.
 
 We collect several statistics:
 
