@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -eu
+
+echo "Running autoheader..."
+autoheader 
+echo "Running autoconf..."
+autoreconf -f 
+echo "ADLB: bootstrap: OK"
+exit 0
