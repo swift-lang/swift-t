@@ -33,13 +33,12 @@ packages on Ubuntu.
 Swift/T will generally work fine with these, but many distributions are
 slow to update their MPI package.
 
-Swift/T Quick Build instructions
+Swift/T Quick Build Instructions
 --------------------------------
 These quick build instructions assume you have tcl8.6 or greater
 and an MPI distribution that supports the MPI 2 or MPI 3.0 standards.
-We do not cover building for all possible systems: if you encounter
-a problem, the Swift/T user guide has instructions on building on
-specific systems.
+This section does not cover all supported systems: if you encounter
+a problem, refer to the Swift/T user guide.
 
 Checkout this project:
 
@@ -105,7 +104,7 @@ to configure, compile and install mpich3:
 
 Build System Details
 --------------------
-Swift/T is comprised of several modules, whichuse two different build systems:
+Swift/T is comprised of several modules, which use two different build systems:
 autotools/configure/make for C/C++/Fortran modules, and ant for Java modules.
 You can build the modules separately, but the scripts and configuration files
 in exm-setting.sh speed up the process and make it easier to consistently
