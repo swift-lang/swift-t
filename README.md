@@ -3,10 +3,10 @@ Swift/T, an implicitly parallel programming language for composing functions
 and command-line executables into massively parallel applications.
 
 If you are not doing development, prepackaged distributions are available
-at http://www.mcs.anl.gov/exm/local/guides/swift.html
+at: http://swift-lang.org/Swift-T/downloads.html
 
 The Swift/T user guide is available online at:
-http://www.mcs.anl.gov/exm/local/guides/swift.html
+http://swift-lang.org/Swift-T/guide.html
 
 You can find the documentation corresponding to this version of Swift/T
 in the stc sub-project under docs.  See Documentation section for
@@ -58,13 +58,13 @@ Create a build settings file:
 Open dev/build/exm-settings.sh in a text editor to update any settings
 You should update these settings at a minimum to set install and source
 locations:
-    
+
     EXM_PREFIX=/path/to/install
     EXM_SRC_ROOT="${SCRIPT_DIR}/../.."
 
 If you using an MPI 2.x but not MPI 3.0 compatible distribution, you will
 need to set:
- 
+
     MPI_VERSION=2
 
 You can build with this command:
@@ -123,7 +123,7 @@ is in `asciidoc` format.  You can look at the main documentation in text
 format in `swift.txt`.  You can also compile the documentation to html
 by running:
 
-  ./make-stc-docs.zsh 
+  ./make-stc-docs.zsh
 
 A sites guide that provides guidance for configuring Swift/T on various
 systems is at `turbine/docs/sites.txt`.
