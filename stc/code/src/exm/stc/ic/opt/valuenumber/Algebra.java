@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -74,7 +75,7 @@ public class Algebra {
     }
 
     // Now arg1 should be var, arg2 constant
-    List<ArgOrCV> vals = state.findCongruent(args.val1.asArg(),
+    Set<ArgOrCV> vals = state.findCongruent(new ArgOrCV(args.val1.asArg()),
                                              CongruenceType.VALUE);
     if (logger.isTraceEnabled()) {
       logger.trace("found congruent: " + vals);

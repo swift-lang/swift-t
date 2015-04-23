@@ -175,15 +175,15 @@ public class UnifiedValues {
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
 
       Arg firstLoc = branchStates.get(0).findCanonical(cv, congType);
+      if (firstLoc == null) {
+        // Not associated with location
+        continue;
+      }
 
       for (int i = 0; i < branchStates.size(); i++) {
         Congruences bs = branchStates.get(i);
         Arg loc = bs.findCanonical(cv, congType);
         if (loc == null) {
-          // Detect errors in canonicalisation
-          Logging.getSTCLogger().warn("Internal warning: Could not locate "
-                      + cv + " " + congType + " on branch + " + i,
-                      new Exception());
           skip = true;
           continue;
         }

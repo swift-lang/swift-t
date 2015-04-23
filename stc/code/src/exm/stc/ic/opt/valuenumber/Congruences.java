@@ -62,13 +62,7 @@ import exm.stc.ic.tree.Opcode;
  * variable is mapped: we can only have one mapped variable in each
  * congruence set, and it must be the canonical member
  *
- * TODO: get arithmetic logic to rerun upon change
- * TODO: inconsistent sets in child after canonicalization
- *    -> When we're doing the first walk over the tree, this def.
- *       shouldn't happen
- *    -> When we're doing the replacement walk, it isn't necessarily a problem:
- *       maybe just need to re-lookup canonical to make sure it wasn't
- *       recanonicalized.
+ * TODO: get algebra logic to rerun upon change
  */
 public class Congruences implements AliasFinder {
 
@@ -225,26 +219,18 @@ public class Congruences implements AliasFinder {
             Arg location, ArgCV value, IsAssign isAssign,
             CongruentSets congruent, boolean addConsequential, int stmtIndex)
                 throws OptUnsafeError {
-    // LocCV may already be in congruent set
-    Arg canonLoc = congruent.findCanonical(location);
-    // Canonicalize value based on existing congruences
-    ArgOrCV canonVal = congruent.canonicalize(consts, value);
-
-    // Check if value is already associated with a location
-    Arg canonLocFromVal = congruent.findCanonicalInternal(canonVal);
-    if (canonLocFromVal == null) {
-      // Handle case where value not congruent to anything yet.
-      // Just add val to arg's set
-      congruent.addToSet(consts, canonVal, canonLoc);
-    } else {
+    // Canonicalize both values
+    ArgOrCV canonLoc = congruent.findCanonical(location);
+    assert(canonLoc.isArg()); // Arg shouldn't canonicalize to non-arg
+    ArgOrCV canonVal = congruent.findCanonical(consts, value);
       // Need to merge together two existing sets
-      mergeSets(errContext, canonVal, consts, congruent,
-                canonLocFromVal, canonLoc, isAssign, stmtIndex);
-    }
+    mergeSets(errContext, canonVal, consts, congruent,
+              canonVal, canonLoc, isAssign, stmtIndex);
 
     if (addConsequential) {
-      addInverses(consts, errContext, canonLoc, canonVal, stmtIndex);
-      addInferred(consts, errContext, congruent, stmtIndex, canonLoc, canonVal);
+      addInverses(consts, errContext, canonLoc.arg(), canonVal, stmtIndex);
+      addInferred(consts, errContext, congruent, stmtIndex, canonLoc.arg(),
+                  canonVal);
     }
   }
 
@@ -255,152 +241,6 @@ public class Congruences implements AliasFinder {
       assert(congType == CongruenceType.ALIAS);
       return byAlias;
     }
-  }
-
-  /**
-   * Add any inverse operations that can be directly inferred from
-   * a value that was just added
-   * @param errContext
-   * @param canonLoc
-   * @param canonVal
-   * @throws OptUnsafeError
-   */
-  private void addInverses(GlobalConstants consts, String errContext,
-                          Arg canonLoc, ArgOrCV canonVal, int stmtIndex)
-                              throws OptUnsafeError {
-    if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
-      ComputedValue<Arg> cv = canonVal.cv();
-      Arg invOutput = cv.getInput(0);
-
-      // Only add value congruences to be safe
-      // It might be possible to handle ALIAS congruences, e.g. for
-      // STORE_REF/LOAD_REF pair here later on (TODO)
-      if (cv.op().isAssign(false)) {
-        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), false);
-        assert(invVal != null): canonLoc.getVar();
-        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      } else if (cv.op().isRecursiveAssign()) {
-        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
-        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      } else if (cv.op().isRetrieve(false)) {
-        ArgCV invVal;
-        if (cv.op() == Opcode.LOAD_FILE) {
-          // Extra arg required
-          invVal = ComputedValue.assignFileCompVal(canonLoc, Arg.FALSE);
-        } else {
-          invVal = ComputedValue.assignCompVal(invOutput, canonLoc, false);
-        }
-        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      } else if (cv.op().isRecursiveRetrieve()) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput, canonLoc, true);
-        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      }
-    } else if (canonVal.isArg() && canonVal.arg().isVar() &&
-               canonVal.arg().getVar().storage() == Alloc.GLOBAL_CONST) {
-      // Add value for retrieval of global
-      Var globalConst = canonVal.arg().getVar();
-      Arg constVal = consts.lookupByVar(globalConst);
-      assert(constVal != null);
-      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst, false);
-      updateInv(consts, errContext, constVal, invVal, stmtIndex);
-    }
-  }
-
-  private void addInferred(GlobalConstants consts, String errContext,
-      CongruentSets congruent, int stmtIndex, Arg canonLoc, ArgOrCV canonVal)
-      throws OptUnsafeError {
-    if (canonVal.isCV()) {
-      ArgCV cv = canonVal.cv();
-      for (ArgCV extra: Algebra.tryAlgebra(this, cv)) {
-        update(consts, errContext, canonLoc, extra, IsAssign.NO,
-               congruent, false, stmtIndex);
-      }
-      if (cv.isArrayMemberVal() || cv.isArrayMember()) {
-        Var arr = cv.getInput(0).getVar();
-        Arg ix = cv.getInput(1);
-        update(consts, errContext, Arg.TRUE,
-                  ComputedValue.arrayContainsCV(arr, ix), IsAssign.NO,
-                  congruent, false, stmtIndex);
-      }
-      addInferredFilename(errContext, congruent, canonLoc, cv, stmtIndex);
-    }
-  }
-
-  /**
-   * Attempt to infer filenames when stores/retrieves occur
-   * @param errContext
-   * @param congruent
-   * @param canonLoc
-   * @param cv
-   * @throws OptUnsafeError
-   */
-  private void addInferredFilename(String errContext,
-          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
-                  throws OptUnsafeError {
-    if (cv.op() == Opcode.STORE_FILE) {
-      addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
-    } else if (cv.op() == Opcode.LOAD_FILE) {
-      addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
-    } else if (cv.isFilenameAliasCV()) {
-      addInferredFilenameAlias(errContext, congruent, canonLoc, cv, stmtIndex);
-    } else if (cv.op().isRetrieveContainer(true)) {
-      addInferredRetrieveContainer(errContext, congruent, canonLoc, cv,
-                                   stmtIndex);
-    } else if (cv.op().isStoreContainer(true)) {
-      addInferredStoreContainer(errContext, congruent, canonLoc, cv,
-          stmtIndex);
-    }
-  }
-
-  private void addInferredFilenameAlias(String errContext,
-          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
-                  throws OptUnsafeError {
-    Var file = cv.getInput(0).getVar();
-    // Retrieving alias == filename
-    equateValues(errContext, congruent, stmtIndex,
-            ComputedValue.filenameValCV(file),
-            ComputedValue.retrieveCompVal(canonLoc.getVar(), false));
-  }
-
-  private void addInferredLoadFile(String errContext, CongruentSets congruent,
-          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
-    Var file = cv.getInput(0).getVar();
-    equateValues(errContext, congruent, stmtIndex,
-            ComputedValue.filenameValCV(file),
-            ComputedValue.localFilenameCV(canonLoc.getVar()));
-  }
-
-  private void addInferredStoreFile(String errContext, CongruentSets congruent,
-          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
-    Var localFile = cv.getInput(0).getVar();
-    Arg setFilename = cv.getInput(1);
-    if (setFilename.isBool() && setFilename.getBool()) {
-      // Only if the filename was definitely set by store
-      ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
-      ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
-      equateValues(errContext, congruent, stmtIndex,
-                          srcFilename, dstFilename);
-    }
-  }
-
-  private void addInferredRetrieveContainer(String errContext,
-      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
-          throws OptUnsafeError {
-    // TODO: also transfer across element info, etc
-    Var src = cv.getInput(0).getVar();
-    equateValues(errContext, congruent, stmtIndex,
-            ComputedValue.containerSizeCV(src, false),
-            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
-  }
-
-  private void addInferredStoreContainer(String errContext,
-      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
-          throws OptUnsafeError {
-    // TODO: also transfer across element info, etc
-    Var src = cv.getInput(0).getVar();
-    equateValues(errContext, congruent, stmtIndex,
-            ComputedValue.containerSizeCV(src, false),
-            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
   }
 
   /**
@@ -417,29 +257,12 @@ public class Congruences implements AliasFinder {
           CongruentSets congruent, int stmtIndex,
           ArgCV val1, ArgCV val2) throws OptUnsafeError {
     /*
-     * Three cases:
-     * 1. Both already present
-     *    => merge canonical(val1) and canonical(val2)
-     * 2. One present (assume WLOG val1)
-     *    => add val2 to canonical(val1)
-     * 3. Neither present yet
-     *    => Save equivalence
-     *    => Later, WLOG, assume val1 added to canon(val1)
-     *       Then add val2 to canonical(val1)
+     * Merge the two sets
      */
-    Arg canon1 = congruent.findCanonical(consts, val1);
-    Arg canon2 = congruent.findCanonical(consts, val2);
-    if (canon1 != null && canon2 != null) {
-      mergeSets(errContext, "Equating " + val1 + " == " + val2, consts,
-                congruent, canon1, canon2, IsAssign.NO, stmtIndex);
-    } else if (canon1 == null && canon2 != null) {
-      congruent.addToSet(consts, new ArgOrCV(val1), canon2);
-    } else if (canon1 != null && canon2 == null) {
-      congruent.addToSet(consts, new ArgOrCV(val2), canon1);
-    } else {
-      assert(canon1 == null && canon2 == null);
-      congruent.addEquivalence(consts, val1, val2);
-    }
+    ArgOrCV canon1 = congruent.findCanonical(consts, val1);
+    ArgOrCV canon2 = congruent.findCanonical(consts, val2);
+    mergeSets(errContext, "Equating " + val1 + " == " + val2, consts,
+              congruent, canon1, canon2, IsAssign.NO, stmtIndex);
   }
 
   private void updateInv(GlobalConstants consts, String errContext,
@@ -460,7 +283,8 @@ public class Congruences implements AliasFinder {
    */
   private void mergeSets(String errContext, Object mergeCause,
       GlobalConstants consts, CongruentSets congruent,
-      Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) throws OptUnsafeError {
+      ArgOrCV oldLoc, ArgOrCV newLoc, IsAssign newIsAssign, int stmtIndex)
+          throws OptUnsafeError {
     if (newLoc.equals(oldLoc)) {
       // Already merged
       return;
@@ -471,8 +295,8 @@ public class Congruences implements AliasFinder {
 
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
-    Arg winner = preferred(congruent, oldLoc, newLoc, newIsAssign, stmtIndex);
-    Arg loser = (winner == oldLoc ? newLoc : oldLoc);
+    ArgOrCV winner = preferred(congruent, oldLoc, newLoc, newIsAssign, stmtIndex);
+    ArgOrCV loser = (winner.equals(oldLoc) ? newLoc : oldLoc);
     if (logger.isTraceEnabled()) {
       logger.trace("old: " + oldLoc + " vs. new: " + newLoc +
                    " winner: " + winner);
@@ -487,12 +311,12 @@ public class Congruences implements AliasFinder {
    * @param canonicalFromVal
    */
   private void changeCanonical(GlobalConstants consts,
-          CongruentSets congruent, Arg oldVal, Arg newVal) {
+          CongruentSets congruent, ArgOrCV oldVal, ArgOrCV newVal) {
     assert(!oldVal.equals(newVal));
 
     if (congruent.congType == CongruenceType.VALUE) {
       // Two mapped variables with same value aren't interchangeable: abort!
-      if (oldVal.isMapped() != Ternary.FALSE) {
+      if (oldVal.isArg() && oldVal.arg().isMapped() != Ternary.FALSE) {
         return;
       }
     }
@@ -510,22 +334,28 @@ public class Congruences implements AliasFinder {
    * @throw {@link OptUnsafeError} if problem found
    */
   private void checkNoContradiction(String errContext,
-    CongruenceType congType, Object mergeCause, Arg val1, Arg val2)
+    CongruenceType congType, Object mergeCause, ArgOrCV val1, ArgOrCV val2)
     throws OptUnsafeError {
     boolean contradiction = false;
-    if (congType == CongruenceType.VALUE) {
-      if (val1.isConst() && val2.isConst() && !val1.equals(val2)) {
-        contradiction = true;
-      }
-    } else {
-      assert(congType == CongruenceType.ALIAS);
-      assert(val1.isVar() && val2.isVar());
-      if (val1.getVar().storage() != Alloc.ALIAS &&
-          val2.getVar().storage() != Alloc.ALIAS &&
-          !val1.getVar().equals(val2.getVar())) {
-        contradiction = true;
+
+    if (val1.isArg() && val2.isArg()) {
+      Arg arg1 = val1.arg();
+      Arg arg2 = val2.arg();
+      if (congType == CongruenceType.VALUE) {
+        if (arg1.isConst() && arg2.isConst() && !arg1.equals(arg2)) {
+          contradiction = true;
+        }
+      } else {
+        assert(congType == CongruenceType.ALIAS);
+        assert(arg1.isVar() && arg2.isVar());
+        if (arg1.getVar().storage() != Alloc.ALIAS &&
+            arg2.getVar().storage() != Alloc.ALIAS &&
+            !arg1.getVar().equals(arg2.getVar())) {
+          contradiction = true;
+        }
       }
     }
+
     if (contradiction) {
       Logging.uniqueWarn("Invalid code detected during optimization. "
           + "Conflicting values congruence type " + congType + " "
@@ -545,18 +375,35 @@ public class Congruences implements AliasFinder {
    * a closed var with a non-closed var, we may produce incorrect results.
    * @param track
    * @param congType
-   * @param oldArg current one
-   * @param newArg oldOne
+   * @param oldVal current one
+   * @param newVal oldOne
    * @return the preferred of the two args
    */
-  private Arg preferred(CongruentSets congruent,
-            Arg oldArg, Arg newArg, IsAssign newIsAssign, int stmtIndex) {
+  private ArgOrCV preferred(CongruentSets congruent,
+            ArgOrCV oldVal, ArgOrCV newVal, IsAssign newIsAssign,
+            int stmtIndex) {
+    if (oldVal.isArg() && newVal.isArg()) {
+      return preferredArg(congruent, oldVal, newVal, newIsAssign, stmtIndex);
+    } else if (oldVal.isArg()) {
+      return oldVal;
+    } else if (newVal.isArg()) {
+      return newVal;
+    } else {
+      // Default to old val
+      return oldVal;
+    }
+  }
+
+  private ArgOrCV preferredArg(CongruentSets congruent,
+              ArgOrCV oldVal, ArgOrCV newVal, IsAssign newIsAssign, int stmtIndex) {
+    Arg oldArg = oldVal.arg();
+    Arg newArg = newVal.arg();
     if (congruent.congType == CongruenceType.VALUE) {
       // Constants trump all
       if (isConst(oldArg)) {
-        return oldArg;
+        return oldVal;
       } else if (isConst(newArg)) {
-        return newArg;
+        return newVal;
       }
       /*
        * If newArg was stored directly to the location, doesn't make
@@ -567,7 +414,7 @@ public class Congruences implements AliasFinder {
        * more aggressively in those cases.
        */
       if (newIsAssign == IsAssign.TO_VALUE) {
-        return newArg;
+        return newVal;
       }
 
     } else {
@@ -576,16 +423,16 @@ public class Congruences implements AliasFinder {
       // Shouldn't have alias equivalence on values
       // Prefer non-alias (i.e. direct handle)
       if (oldArg.getVar().storage() != Alloc.ALIAS) {
-        return oldArg;
+        return oldVal;
       } else if (newArg.getVar().storage() != Alloc.ALIAS){
-        return newArg;
+        return newVal;
       }
     }
 
     // Check if accessible (based on passability).
     // Assume new one is accessible
     if (!congruent.isAccessible(oldArg.getVar())) {
-       return newArg;
+       return newVal;
     }
 
     // Prefer closed
@@ -593,15 +440,15 @@ public class Congruences implements AliasFinder {
       // Check if this gives us a reason to prefer newArg
       if (isRecClosed(newArg.getVar(), stmtIndex) &&
           !isRecClosed(oldArg.getVar(), stmtIndex)) {
-        return newArg;
+        return newVal;
       } else if (isClosed(newArg.getVar(), stmtIndex)
               && !isClosed(oldArg.getVar(), stmtIndex)) {
-        return newArg;
+        return newVal;
       }
     }
 
     // otherwise keep old arg
-    return oldArg;
+    return oldVal;
   }
 
   /**
@@ -609,17 +456,18 @@ public class Congruences implements AliasFinder {
    * @param arg
    * @return
    */
-  static boolean isConst(Arg arg) {
+  private static boolean isConst(Arg arg) {
     return arg.isConst() ||
         (arg.isVar() && arg.getVar().storage().isConst());
   }
 
   private Var getCanonicalAlias(Arg varArg) {
     assert(varArg.isVar()) : varArg;
-    Arg canonical = byAlias.findCanonical(varArg);
-    assert(canonical.isVar()) : "Should only have a variable as" +
+    ArgOrCV canonical = byAlias.findCanonical(varArg);
+    assert(canonical.isArg());
+    assert(canonical.arg().isVar()) : "Should only have a variable as" +
     		    " canonical member in ALIAS congruence relationship";
-    return canonical.getVar();
+    return canonical.arg().getVar();
   }
 
   /**
@@ -628,13 +476,13 @@ public class Congruences implements AliasFinder {
    * @return Canonical alias, or null
    */
   private Var getCanonicalAlias(ArgCV val) {
-    Arg canonical = byAlias.findCanonicalInternal(val);
-    if (canonical == null) {
+    ArgOrCV canonical = byAlias.findCanonical(consts, val);
+    if (canonical == null || !canonical.isArg()) {
       return null;
     }
-    assert(canonical.isVar()) : "Should only have a variable as" +
+    assert(canonical.arg().isVar()) : "Should only have a variable as" +
             " canonical member in ALIAS congruence relationship";
-    return canonical.getVar();
+    return canonical.arg().getVar();
   }
 
   /**
@@ -674,7 +522,7 @@ public class Congruences implements AliasFinder {
     }
     maybeAssigned.add(assigned);
 
-    // TODO: will need to unify stored state
+    // TODO: will need to unify stored state from branches
     // TODO: will need to merge maybeAssigned info upon congruence merges.
     //          E.g. if A[x], A[y] are stored and we find out that x == y
   }
@@ -698,11 +546,10 @@ public class Congruences implements AliasFinder {
                                             ArgCV val) {
     // Canonicalize location as appropriate
     //  (e.g. root var by alias and subscripts by value)
-    // TODO: will need to recanonicalize?
 
     if (val.isArrayMemberVal() || val.isArrayMember()) {
-      Arg arr = byAlias.findCanonical(val.getInput(0));
-      Arg ix = byValue.findCanonical(val.getInput(1));
+      Arg arr = byAlias.findCanonical(val.getInput(0)).arg();
+      Arg ix = byValue.findCanonical(val.getInput(1)).arg();
       return Arrays.asList(arr, ix);
     } else if (val.isStructFieldVal() || val.isStructFieldAlias() ||
         val.isStructFieldCopy() || val.isStructFieldValRef()) {
@@ -711,19 +558,19 @@ public class Congruences implements AliasFinder {
       assert(inputs.size() >= 2);
 
       Arg struct = inputs.get(0);
-      result.add(byAlias.findCanonical(struct));
+      result.add(byAlias.findCanonical(struct).arg());
 
       for (int i = 1; i < inputs.size(); i++) {
         Arg field = inputs.get(i);
 
-        result.add(byValue.findCanonical(field));
+        result.add(byValue.findCanonical(field).arg());
       }
       return result;
     } else if (val.isFilenameValCV() ||
                val.isFilenameAliasCV() ||
                val.isLocalFilenameCV()) {
       return Arrays.asList(Arg.newString("filename"),
-                           byAlias.findCanonical(val.getInput(0)));
+                           byAlias.findCanonical(val.getInput(0)).arg());
     } else {
       throw new STCRuntimeError("Don't know how to canonicalize " +
                             val + " for assignment value tracking");
@@ -947,14 +794,17 @@ public class Congruences implements AliasFinder {
     Set<Var> expanded = null;
 
     for (Var closed: nonAlias) {
-      for (Arg merged: byAlias.mergedCanonicalsThisScope(closed.asArg())) {
-        assert(merged.isVar());
-        if (expanded == null) {
-          // Copy to new set
-          expanded = new HashSet<Var>();
-          expanded.addAll(nonAlias);
+      Iterable<ArgOrCV> scopeMerged =
+          byAlias.mergedCanonicalsThisScope(new ArgOrCV(closed.asArg()));
+      for (ArgOrCV merged: scopeMerged) {
+        if (merged.isArg() && merged.arg().isVar()) {
+          if (expanded == null) {
+            // Copy to new set
+            expanded = new HashSet<Var>();
+            expanded.addAll(nonAlias);
+          }
+          expanded.add(merged.arg().getVar());
         }
-        expanded.add(merged.getVar());
       }
     }
     if (expanded != null) {
@@ -1000,7 +850,16 @@ public class Congruences implements AliasFinder {
    * @return
    */
   public Arg findRetrieveResult(Var v, boolean recursive) {
-    return byValue.findRetrieveResult(v.asArg(), recursive);
+    ArgOrCV val = byValue.findRetrieveResult(v.asArg(), recursive);
+
+    return maybeArg(val);
+  }
+
+  private Arg maybeArg(ArgOrCV val) {
+    if (val != null) {
+      return val.maybeArg();
+    }
+    return null;
   }
 
   public Set<Var> retrieveResultAvail() {
@@ -1009,21 +868,25 @@ public class Congruences implements AliasFinder {
 
   public Arg findValue(Var var) {
     assert(var != null);
-    return byValue.findCanonical(var.asArg());
+    ArgOrCV val = byValue.findCanonical(var.asArg());
+
+    return maybeArg(val);
   }
 
   /**
    * @return canonical location for given value, null if not stored anywhere
    */
   public Arg findCanonical(ArgCV val, CongruenceType congType) {
-    return getCongruentSet(congType).findCanonical(consts, val);
+    ArgOrCV canon = getCongruentSet(congType).findCanonical(consts, val);
+
+    return maybeArg(canon);
   }
 
   public boolean isAvailable(ArgCV val, CongruenceType congType) {
     return findCanonical(val, congType) != null;
   }
 
-  public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType) {
+  public Set<ArgOrCV> findCongruent(ArgOrCV arg, CongruenceType congType) {
     return getCongruentSet(congType).findCongruentValues(arg);
   }
 
@@ -1031,15 +894,13 @@ public class Congruences implements AliasFinder {
   @Override
   public List<Var> getAliasesOf(Var var) {
     List<Var> result = new ArrayList<Var>();
-    Arg canonical = byAlias.findCanonical(var.asArg());
-    if (canonical.isVar()) {
-      result.add(canonical.getVar());
-    }
-    for (Arg alias: byAlias.allMergedCanonicals(canonical)) {
-      if (alias.isVar()) {
-        result.add(alias.getVar());
+
+    for (ArgOrCV alias: byAlias.findCongruentValues(var.asArg())) {
+      if (alias.isArg() && alias.arg().isVar()) {
+        result.add(alias.arg().getVar());
       }
     }
+
     return result;
   }
 
@@ -1108,6 +969,163 @@ public class Congruences implements AliasFinder {
 
   public boolean isAccessible(Var var) {
     return byValue.isAccessible(var);
+  }
+
+  /**
+   * Add any inverse operations that can be directly inferred from
+   * a value that was just added
+   * @param errContext
+   * @param canonLoc
+   * @param canonVal
+   * @throws OptUnsafeError
+   */
+  private void addInverses(GlobalConstants consts, String errContext,
+                          Arg canonLoc, ArgOrCV canonVal, int stmtIndex)
+                              throws OptUnsafeError {
+    Pair<Arg, ArgCV> result = inverseVal(consts, canonLoc, canonVal);
+
+    if (result != null) {
+      updateInv(consts, errContext, result.val1, result.val2, stmtIndex);
+    }
+  }
+
+  private Pair<Arg, ArgCV> inverseVal(GlobalConstants consts, Arg canonLoc,
+      ArgOrCV canonVal) {
+    ArgCV invVal = null;
+    Arg invLoc = null;
+    if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
+      ComputedValue<Arg> cv = canonVal.cv();
+      invLoc = cv.getInput(0);
+
+      // Only add value congruences to be safe
+      // It might be possible to handle ALIAS congruences, e.g. for
+      // STORE_REF/LOAD_REF pair here later on (TODO)
+      if (cv.op().isAssign(false)) {
+        invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), false);
+        assert(invVal != null): canonLoc.getVar();
+      } else if (cv.op().isRecursiveAssign()) {
+        invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
+      } else if (cv.op().isRetrieve(false)) {
+        if (cv.op() == Opcode.LOAD_FILE) {
+          // Extra arg required
+          invVal = ComputedValue.assignFileCompVal(canonLoc, Arg.FALSE);
+        } else {
+          invVal = ComputedValue.assignCompVal(invLoc, canonLoc, false);
+        }
+      } else if (cv.op().isRecursiveRetrieve()) {
+        invVal = ComputedValue.assignCompVal(invLoc, canonLoc, true);
+      }
+    } else if (canonVal.isArg() && canonVal.arg().isVar() &&
+               canonVal.arg().getVar().storage() == Alloc.GLOBAL_CONST) {
+      // Add value for retrieval of global
+      Var globalConst = canonVal.arg().getVar();
+      invLoc = consts.lookupByVar(globalConst);
+      assert(invLoc != null);
+      invVal = ComputedValue.retrieveCompVal(globalConst, false);
+    }
+
+    if (invVal == null) {
+      return null;
+    } else {
+      return  Pair.create(invLoc, invVal);
+    }
+  }
+
+  private void addInferred(GlobalConstants consts, String errContext,
+      CongruentSets congruent, int stmtIndex, Arg canonLoc, ArgOrCV canonVal)
+      throws OptUnsafeError {
+    if (canonVal.isCV()) {
+      ArgCV cv = canonVal.cv();
+      for (ArgCV extra: Algebra.tryAlgebra(this, cv)) {
+        update(consts, errContext, canonLoc, extra, IsAssign.NO,
+               congruent, false, stmtIndex);
+      }
+      if (cv.isArrayMemberVal() || cv.isArrayMember()) {
+        Var arr = cv.getInput(0).getVar();
+        Arg ix = cv.getInput(1);
+        update(consts, errContext, Arg.TRUE,
+                  ComputedValue.arrayContainsCV(arr, ix), IsAssign.NO,
+                  congruent, false, stmtIndex);
+      }
+      addInferredFilename(errContext, congruent, canonLoc, cv, stmtIndex);
+    }
+  }
+
+  /**
+   * Attempt to infer filenames when stores/retrieves occur
+   * @param errContext
+   * @param congruent
+   * @param canonLoc
+   * @param cv
+   * @throws OptUnsafeError
+   */
+  private void addInferredFilename(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+                  throws OptUnsafeError {
+    if (cv.op() == Opcode.STORE_FILE) {
+      addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op() == Opcode.LOAD_FILE) {
+      addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.isFilenameAliasCV()) {
+      addInferredFilenameAlias(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op().isRetrieveContainer(true)) {
+      addInferredRetrieveContainer(errContext, congruent, canonLoc, cv,
+                                   stmtIndex);
+    } else if (cv.op().isStoreContainer(true)) {
+      addInferredStoreContainer(errContext, congruent, canonLoc, cv,
+          stmtIndex);
+    }
+  }
+
+  private void addInferredFilenameAlias(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+                  throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    // Retrieving alias == filename
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.retrieveCompVal(canonLoc.getVar(), false));
+  }
+
+  private void addInferredLoadFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.localFilenameCV(canonLoc.getVar()));
+  }
+
+  private void addInferredStoreFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var localFile = cv.getInput(0).getVar();
+    Arg setFilename = cv.getInput(1);
+    if (setFilename.isBool() && setFilename.getBool()) {
+      // Only if the filename was definitely set by store
+      ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
+      ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
+      equateValues(errContext, congruent, stmtIndex,
+                          srcFilename, dstFilename);
+    }
+  }
+
+  private void addInferredRetrieveContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
+  }
+
+  private void addInferredStoreContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
   }
 
   /**
