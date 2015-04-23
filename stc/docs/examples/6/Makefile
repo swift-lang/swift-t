@@ -3,22 +3,51 @@
 
 all: prog-f90 prog-cxx pkgIndex.tcl prog-swift.tcl
 
+INCLUDES = -I . ${TCL_INCLUDE_SPEC}
+
+LIBS = $(TCL_LIB_SPEC) \
+	-Wl,-rpath -Wl,$(TCL)/lib
+
 ### Settings:
-
+ifeq (${COMPILER},)
+$(warning Set COMPILER!)
+endif
+ifeq (${COMPILER},GNU)
+CXX = g++
+CXXFLAGS = $(INCLUDES) -fPIC -g
+FC = gfortran
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
-
-CXXFLAGS = -I . ${TCL_INCLUDE_SPEC} -fPIC -g
+LDFLAGS = -lgfortran
+endif
+ifeq (${COMPILER},BGQ-GNU)
+# CXX=powerpc64-bgq-linux-g++
+# CXXFLAGS = $(INCLUDES) -g
+# FC=powerpc64-bgq-linux-gfortran
+# FFLAGS=-ffree-form -cpp -I . -fPIC -fmax-errors=3 -g # -std=f2003 
+endif
+ifeq (${COMPILER},BGQ)
+CXX = /soft/compilers/wrappers/xl/mpixlcxx
+CXXFLAGS = $(INCLUDES) -qpic -g
+FC = /soft/compilers/wrappers/xl/mpixlf90_r
+FFLAGS = -I . -qpic -g
+LDFLAGS = -L/soft/compilers/ibmcmp-nov2013/xlf/bg/14.1/lib64 -lxlopt -lxlf90 -lxlfmath -lxl
+endif
 
 ### FORTWRAP
 
 FORTWRAP_OUT = FortFuncs.h FortFuncs.cpp FortWrap.h \
 	string_array.h string_array.cpp CppWrappers.f90
 
-$(FORTWRAP_OUT): .fortwrap
-
-.fortwrap: func.f90
+$(FORTWRAP_OUT): func.f90
+#	which fortwrap.py
 	fortwrap.py $(<)
-	touch .fortwrap
+ifeq (${COMPILER},BGQ)
+#	Fixes for BG/Q:
+	sed -i s/_MOD/_NMOD/ $(FORTWRAP_OUT)
+#       This DEALLOCATE fails on the BG/Q
+#       This "fix" creates a memory leak but I'm stumped. -Justin
+	sed -i s/DEALLOCATE/!DEALLOCATE/ CppWrappers.f90
+endif
 
 ### SWIG
 
@@ -29,34 +58,31 @@ func_wrap.cxx: FortFuncs.h string_array.h func.i
 ### C++
 
 %.o: %.cxx
-	g++ -c $(CXXFLAGS) $(<)
+	$(CXX) -c $(CXXFLAGS) $(<)
 
 # Extra dependency:
 prog-cxx.o: prog-cxx.cxx $(FORTWRAP_OUT)
 
 %.o: %.cpp
-	g++ -c $(CXXFLAGS) $(<)
+	$(CXX) -c $(CXXFLAGS) $(<)
 
 ### Fortran
 
 %.o: %.f90
-	gfortran -c $(FFLAGS) $(<)
+	$(FC) -c $(FFLAGS) $(<)
 
 # Extra dependency:
 prog-f90.o: prog-f90.f90 func.o
 
 ### Programs:
 
-LIBS = $(TCL_LIB_SPEC) -lgfortran \
-		-Wl,-rpath -Wl,$(TCL)/lib
-
 prog-f90: $(OBJS) prog-f90.o func.o
-	g++ -o $(@) prog-f90.o func.o  \
-		$(LIBS)
+	$(CXX) -o $(@) prog-f90.o func.o  \
+		$(LIBS) $(LDFLAGS)
 
 prog-cxx: prog-cxx.o string_array.o CppWrappers.o FortFuncs.o
-	g++ -o $(@) prog-cxx.o string_array.o CppWrappers.o FortFuncs.o func.o \
-		$(LIBS)
+	$(CXX) -o $(@) prog-cxx.o string_array.o CppWrappers.o FortFuncs.o func.o \
+		$(LIBS) $(LDFLAGS)
 
 ### Tcl:
 
