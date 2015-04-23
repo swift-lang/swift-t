@@ -2,13 +2,16 @@ package exm.stc.common.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import org.junit.Ignore;
 import org.junit.Test;
+
+import exm.stc.common.util.ScopedUnionFind.UnionFindSubscriber;
 
 public class ScopedUnionFindTest {
 
@@ -176,7 +179,6 @@ public class ScopedUnionFindTest {
    * Test merging
    */
   @Test
-  @Ignore // TODO: not working
   public void testPropagateChild3() {
     ScopedUnionFind<Integer> uf = buildBasic();
     ScopedUnionFind<Integer> child = buildChild(uf);
@@ -190,7 +192,6 @@ public class ScopedUnionFindTest {
     affected = uf.merge(50, 200);
     assertEquals(new HashSet<Integer>(Arrays.asList(200)), affected);
 
-
     assertEquals(50, (int)uf.lookup(50));
     assertEquals(100, (int)uf.lookup(100));
     assertEquals(50, (int)uf.lookup(200));
@@ -200,8 +201,32 @@ public class ScopedUnionFindTest {
     assertEquals(50, (int)child.lookup(200));
   }
 
+  @Test
+  public void testNotification() {
+    ScopedUnionFind<Integer> uf = buildBasic();
+    ScopedUnionFind<Integer> child = buildChild(uf);
 
-  /**
-   * TODO: more intensive testing of scenarios with propagating to child
-   */
+    NotificationSaver<Integer> subscriber = new NotificationSaver<Integer>();
+
+    child.subscribe(4, true, subscriber);
+    child.subscribe(4, false, subscriber);
+
+    child.merge(3, 4);
+
+    assertEquals(2, subscriber.notifs.size());
+    assertEquals((Integer)3, subscriber.notifs.get(0).val1);
+    assertEquals((Integer)4, subscriber.notifs.get(0).val2);
+    assertEquals((Integer)3, subscriber.notifs.get(1).val1);
+    assertEquals((Integer)4, subscriber.notifs.get(1).val2);
+  }
+
+  private static class NotificationSaver<T> implements UnionFindSubscriber<T> {
+    final List<Pair<T, T>> notifs = new ArrayList<Pair<T, T>>();
+
+    @Override
+    public void notifyMerge(T winner, T loser) {
+      notifs.add(Pair.create(winner, loser));
+    }
+
+  }
 }

@@ -1,7 +1,9 @@
 package exm.stc.common.util;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
@@ -41,7 +43,9 @@ public class ScopedUnionFind<T> {
   /**
    * Children that we might need to propagate changes to
    */
-  private final SetMultimap<T, ScopedUnionFind<T>> subscribed;
+  private final SetMultimap<Pair<T, Boolean>, UnionFindSubscriber<T>> subscribed;
+
+  private final Subscriber subscriber = new Subscriber();
 
   private ScopedUnionFind(ScopedUnionFind<T> parent) {
     this.parent = parent;
@@ -86,21 +90,23 @@ public class ScopedUnionFind<T> {
 
     Set<T> affectedMembers = members(loserCanon);
 
-    // TODO: add self link?
-
     // Already same set, do nothing
     if (affectedMembers.contains(winnerCanon)) {
       return Collections.emptySet();
     }
 
-    // Allow children to update before modifying here
-    notifyChanged(winnerCanon, loserCanon);
+    // Notify before change
+    notifyChanged(true, winnerCanon, loserCanon);
 
     for (T affectedMember: affectedMembers) {
       canonical.put(affectedMember, winnerCanon);
     }
 
-    subscribeToUpdates(winnerCanon);
+    subscribeToParentUpdates(winnerCanon);
+    subscribeToParentUpdates(loserCanon);
+
+    // Notify after change
+    notifyChanged(false, winnerCanon, loserCanon);
 
     return Collections.unmodifiableSet(affectedMembers);
   }
@@ -118,7 +124,6 @@ public class ScopedUnionFind<T> {
 
     ScopedUnionFind<T> curr = this;
     while (curr != null) {
-      // TODO: can we avoid duplicates here?
       members.addAll(curr.canonical.getByValue(canon));
       curr = curr.parent;
     }
@@ -130,17 +135,81 @@ public class ScopedUnionFind<T> {
    * Subscribe to canonical updates
    * @param winnerCanon
    */
-  private void subscribeToUpdates(T x) {
-    ScopedUnionFind<T> curr = this.parent;
+  private void subscribeToParentUpdates(T x) {
+    if (parent != null) {
+      parent.subscribe(x, true, subscriber);
+    }
+  }
+
+  /**
+   * Subscribe to get notifications when a value x is merged into
+   * another.
+   * @param x
+   * @param before if true, notify before change applied
+   * @param subscriber
+   */
+  public void subscribe(T x, boolean before, UnionFindSubscriber<T> subscriber) {
+    ScopedUnionFind<T> curr = this;
     while (curr != null) {
-      curr.subscribed.put(x, this);
+      curr.subscribed.put(Pair.create(x, before), subscriber);
       curr = curr.parent;
     }
   }
 
-  private void notifyChanged(T winnerCanon, T loserCanon) {
-    for (ScopedUnionFind<T> subscriber: subscribed.get(loserCanon)) {
-      subscriber.merge(winnerCanon, loserCanon);
+  private void notifyChanged(boolean before, T winnerCanon, T loserCanon) {
+    Pair<T, Boolean> key = Pair.create(loserCanon, before);
+    for (UnionFindSubscriber<T> subscriber: subscribed.get(key)) {
+      subscriber.notifyMerge(winnerCanon, loserCanon);
     }
+  }
+
+  public Collection<Entry<T, T>> entries() {
+    return Collections.unmodifiableMap(canonical).entrySet();
+  }
+
+  /**
+   * Build a multimap with all set members
+   * @return
+   */
+  public SetMultimap<T, T> sets() {
+    SetMultimap<T, T> result = HashMultimap.create();
+
+    ScopedUnionFind<T> curr = this;
+    while (curr != null) {
+      result.putAll(curr.canonical.inverse());
+      curr = curr.parent;
+    }
+
+    return result;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    ScopedUnionFind<T> curr = this;
+    while (curr != null) {
+      if (sb.length() > 0) {
+        sb.append(" => \n");
+      }
+      sb.append(curr.canonical.toString());
+      curr = curr.parent;
+    }
+    return super.toString();
+  }
+
+  public Iterable<T> keys() {
+    return Collections.unmodifiableSet(canonical.keySet());
+  }
+
+  public static interface UnionFindSubscriber<T> {
+    public void notifyMerge(T winner, T loser);
+  }
+
+  private class Subscriber implements UnionFindSubscriber<T> {
+    @Override
+    public void notifyMerge(T winner, T loser) {
+      merge(winner, loser);
+    }
+
   }
 }
