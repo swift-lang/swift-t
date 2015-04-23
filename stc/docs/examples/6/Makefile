@@ -18,6 +18,7 @@ CXXFLAGS = $(INCLUDES) -fPIC -g
 FC = gfortran
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 LDFLAGS = -lgfortran
+SHARED = -shared 
 endif
 ifeq (${COMPILER},BGQ-GNU)
 # CXX=powerpc64-bgq-linux-g++
@@ -27,10 +28,13 @@ ifeq (${COMPILER},BGQ-GNU)
 endif
 ifeq (${COMPILER},BGQ)
 CXX = /soft/compilers/wrappers/xl/mpixlcxx
-CXXFLAGS = $(INCLUDES) -qpic -g
+CXXFLAGS = $(INCLUDES) -qpic -g -qnoeh 
 FC = /soft/compilers/wrappers/xl/mpixlf90_r
 FFLAGS = -I . -qpic -g
-LDFLAGS = -L/soft/compilers/ibmcmp-nov2013/xlf/bg/14.1/lib64 -lxlopt -lxlf90 -lxlfmath -lxl
+LDFLAGS = -qnoeh -L/soft/compilers/ibmcmp-nov2013/xlf/bg/14.1/lib64 \
+	  -lxlopt -lxlf90 -lxlfmath -lxl \
+          -L/soft/compilers/ibmcmp-nov2012/lib64/bg -libmc++
+SHARED = -qmkshrobj
 endif
 
 ### FORTWRAP
@@ -90,9 +94,9 @@ pkgIndex.tcl: make-package.tcl libfunc.so
 	tclsh make-package.tcl > $(@)
 
 libfunc.so: func_wrap.o string_array.o CppWrappers.o FortFuncs.o func.o helpers.o
-	g++ -shared -o $(@) \
+	$(CXX) $(SHARED) -o $(@) \
 		func_wrap.o string_array.o CppWrappers.o FortFuncs.o func.o helpers.o \
-		$(LIBS)
+		$(LIBS) $(LDFLAGS)
 
 ### Swift:
 
