@@ -2,12 +2,34 @@
 *~
 *.o
 *.so
+*.a
+
+# GCC dependency files
+*.d
+
+# Autoconf stuff
+configure
+config.cache
+config.h*
+config.status
+autom4te.cache
+config.log
+
+# Autoconf-generated Makefiles
+Makefile
+*.mk
 
 # STC output
 *.tic
 
+# Tcl packages
+pkgIndex.tcl
+
 # Fortran output
 *.mod
+
+# SWIG output
+*_wrap.c
 
 # Cobalt junk
 *.output
