@@ -35,3 +35,7 @@ pkgIndex.tcl
 *.output
 *.error
 *.cobaltlog
+
+# Eclipse project data
+.project
+.cproject
