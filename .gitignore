@@ -1,0 +1,15 @@
+.gitignore
+*~
+*.o
+*.so
+
+# STC output
+*.tic
+
+# Fortran output
+*.mod
+
+# Cobalt junk
+*.output
+*.error
+*.cobaltlog
