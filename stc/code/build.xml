@@ -219,7 +219,8 @@
 
         <batchtest todir="${test.out.dir}" fork="true">
           <resources>
-            <fileset dir="${test.build.dir}" includes="**/*.class"/>
+            <fileset dir="${test.build.dir}" includes="**/*.class"
+                                             excludes="**/*$*.class"/>
           </resources>
 
           <formatter type="plain"/>
