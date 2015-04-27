@@ -251,29 +251,6 @@ public class ClosedVarTracker {
       logger.trace(var + " is closed: " + ce);
 
     closed.put(var, ce);
-
-    // TODO: do this as a post-processing step?
-    /*
-    // Do DFS on the dependency graph to find all dependencies
-    // that are now enabled
-    Stack<Var> work = new Stack<Var>();
-    work.add(var);
-    while (!work.empty()) {
-      Var v = work.pop();
-      // they might already be in closed, but add anyway
-      closed.add(v);
-      CopyOnWriteSmallSet<Var> deps = dependsOn.remove(v);
-      if (deps != null) {
-        assert (!useTransitiveDeps) : "Tracking transitive dependencies "
-            + "unsafe until reordering disabled";
-        if (logger.isTraceEnabled())
-          logger.trace(deps + " are closed because of " + v);
-        work.addAll(deps);
-      }
-    }
-    if (recursive) {
-      recursivelyClosed.add(var);
-    }*/
   }
 
   /**
