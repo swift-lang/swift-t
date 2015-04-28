@@ -88,15 +88,16 @@ public class ScopedUnionFind<T> {
     T winnerCanon = lookup(winner);
     T loserCanon = lookup(loser);
 
-    Set<T> affectedMembers = members(loserCanon);
 
     // Already same set, do nothing
-    if (affectedMembers.contains(winnerCanon)) {
+    if (loserCanon.equals(winnerCanon)) {
       return Collections.emptySet();
     }
 
     // Notify before change
     notifyChanged(true, winnerCanon, loserCanon);
+
+    Set<T> affectedMembers = members(loserCanon);
 
     for (T affectedMember: affectedMembers) {
       canonical.put(affectedMember, winnerCanon);
