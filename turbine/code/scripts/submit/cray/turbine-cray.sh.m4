@@ -32,11 +32,11 @@ ifelse(getenv(QUEUE), `',,
 #PBS -o getenv(OUTPUT_FILE)
 
 ### Set the job size using appropriate directives for this system
-ifelse(getenv(BLUE_WATERS), `true',
+ifelse(getenv(CRAY_PPN), `true',
 ### Blue Waters mode
-ifelse(getenv(BLUE_WATERS_FEATURE), `',
+ifelse(getenv(CRAY_FEATURE), `',
 #PBS -l nodes=getenv(NODES):ppn=getenv(PPN),
-#PBS -l nodes=getenv(NODES):ppn=getenv(PPN):getenv(BLUE_WATERS_FEATURE)
+#PBS -l nodes=getenv(NODES):ppn=getenv(PPN):getenv(CRAY_FEATURE)
 ),
 ifelse(getenv(TITAN), `true',
 #PBS -l nodes=getenv(NODES),
