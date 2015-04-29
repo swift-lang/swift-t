@@ -953,6 +953,8 @@ Configure Turbine with:
 
 Swan is a Cray XC40 at Cray.
 
+*As of:* 4/29/2015
+
 ==== Public installation
 
 A public installation may be run at: +~p01951/Public/sfw/swift-t/stc/bin/swift-t+
@@ -962,6 +964,11 @@ Run with, e.g.:
 export CRAY_PPN=true
 swift-t -m cray -n 4 program.swift
 ----
+
+==== Supporting software
+
+* Tcl:  +/home/users/p01951/Public/sfw/tcl-8.6.2/bin/tclsh8.6+
+* SWIG: +/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig+
 
 ==== Build procedure
 
