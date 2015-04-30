@@ -1042,11 +1042,11 @@ module use /home/users/p01577/Public/modules
 module load swift-t
 ----
 
-== Edison
+=== Edison
 
 Edison is a Cray XC30 system at NERSC. 
 
-=== Install setup
+==== Install setup
 
 Load appropriate modules:
 
