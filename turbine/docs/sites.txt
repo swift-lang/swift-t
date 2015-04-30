@@ -1099,6 +1099,82 @@ ant install -Ddist.dir=/scratch2/scratchdirs/ketan/exm-install/stc -Dturbine.hom
 ----
 
 
+==== Environment
+
+Set environment. Add the following to your .bashrc.ext (or equivalent)
+
+----
+export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:$SCRATCH/exm-install/turbine/scripts/submit/cray
+source ~/.bash.ext
+----
+
+==== A simple script
+
+Now let us try to compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
+
+----
+/**
+   Example 1 - HELLO.SWIFT
+*/
+
+import io;
+
+main
+{
+  printf("Hello world!");
+}
+----
+
+Compile the above script using stc:
+
+----
+stc hello.swift
+----
+
+A TCL (.tic) file will be generated on successful compilation. Run the generated TCL file using turbine-cray submit script:
+
+----
+turbine-cray-run.zsh -n 2 hello.tic
+----
+
+Output from the above command will be similar to the following:
+
+----
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+`hello.tic' -> `/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/hello.tic'
+SCRIPT=hello.tic
+PPN=1
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/turbine-cray.sh
+JOB_ID=2816478.edique02
+----
+
+Inspect the results with:
+
+----
+cat /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/output.txt.2816478.edique02.out
+----
+
+The following will be the contents:
+
+----
+   0.000 MODE: WORK
+   0.000 WORK TYPES: WORK
+   0.000 WORKERS: 1 RANKS: 0 - 0
+   0.000 SERVERS: 1 RANKS: 1 - 1
+   0.000 WORK WORKERS: 1 RANKS: 0 - 0
+   0.000 MODE: SERVER
+   0.062 function:swift:constants
+   0.062 enter function: __entry
+Hello world!
+   0.163 turbine finalizing
+   0.104 turbine finalizing
+Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50
+----
+
 == Cloud
 
 === EC2
