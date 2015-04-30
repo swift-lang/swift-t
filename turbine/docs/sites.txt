@@ -1042,6 +1042,63 @@ module use /home/users/p01577/Public/modules
 module load swift-t
 ----
 
+=== Edison
+
+Edison is a Cray XC30 system at NERSC. 
+
+== Install setup
+
+Load appropriate modules:
+
+----
+module unload PrgEnv-intel darshan cray-shmem
+module load PrgEnv-gnu java
+----
+
+Download the latest exm code:
+
+----
+cd $SCRATCH
+wget http://swift-lang.org/Swift-T/downloads/exm-0.8.0.tar.gz
+tar zxf exm-0.8.0.tar.gz
+----
+
+Install c-utils:
+
+----
+cd $SCRATCH/exm-0.8.0/c-utils
+./configure --enable-shared --prefix=/scratch2/scratchdirs/ketan/exm-install/c-utils
+make && make install
+----
+
+Install adlb:
+
+----
+cd $SCRATCH/exm-0.8.0/lb
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include 
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+./configure CC=gcc --with-c-utils=/scratch2/scratchdirs/ketan/exm-install/c-utils --prefix=/scratch2/scratchdirs/ketan/exm-install/lb --enable-mpi-2
+make && make install
+----
+
+Install turbine:
+
+----
+cd $SCRATCH/exm-0.8.0/turbine
+./configure --with-adlb=/scratch2/scratchdirs/ketan/exm-install/lb --with-c-utils=/scratch2/scratchdirs/ketan/exm-install/c-utils \
+--prefix=/scratch2/scratchdirs/ketan/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+make && make install
+----
+
+Install stc: 
+
+----
+cd $SCRATCH/exm-0.8.0/stc
+ant install -Ddist.dir=/scratch2/scratchdirs/ketan/exm-install/stc -Dturbine.home=/scratch2/scratchdirs/ketan/exm-install/turbine
+----
+
+
 == Cloud
 
 === EC2
