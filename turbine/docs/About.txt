@@ -3,9 +3,7 @@
 
 Currently served at: http://swift-lang.org/Swift-T/*.html
 
-Create a soft link to sfw/stc/trunk/docs/swift.css
-
-Edit downloads.txt or sites.txt
+Edit sites.txt
 
 Run ./build.sh to make HTML
 
@@ -14,6 +12,8 @@ Run ./build.sh to make HTML
 Preview in local browser
 
 Commit txt files (to ExM repo)
+
+Copy sites.html to turbine-sites.html
 
 Copy turbine-*.html to https://svn.ci.uchicago.edu/svn/vdl2/www/Swift-T
 
