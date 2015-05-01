@@ -1,0 +1,174 @@
+The Swift Parallel Scripting Language for ALCF Systems
+=======================================================
+
+////
+Main ALCF content blurb.
+In SVN: https://svn.mcs.anl.gov/repos/exm/www/alcf
+To be pasted here: http://www.alcf.anl.gov/swift
+////
+
+
+Introduction
+-------------
+
+Swift is an implicitly parallel functional language that makes it
+easier to script high-level applications or workflows composed from
+serial or parallel programs. Recently made available across ALCF
+systems, it has been used to script application workflows in a broad
+range of diverse disciplines from protein structure prediction to
+modeling global agriculture to processing data from APS beamline
+experiments.
+
+Swift scripts can be written with little or no experience in parallel
+programming, enabling scientists and engineers to leverage and
+integrate parallel systems such as ALCF systems, XSEDE resources,
+campus clusters, and clouds. It automates high-level parallelization,
+data movement, and failure recovery.
+
+On ALCF systems, Swift can be used to automate workflows that run large
+ensembles of smaller parallel programs within Blue Gene/Q sub-block jobs; to
+automate workflows between multiple ALCF systems and external resources or data
+servers; and to compose very high performance applications running within a
+single large job on _Mira_. 
+
+Swift Implementations 
+----------------------
+
+Swift currently has two implementations, a classic Karajan based (Swift/K) and
+a new Turbine based (Swift/T). Here we discuss how to choose between K and T
+for a given application. Both implementations of Swift are installed on ALCF
+resources in public locations and are maintained by ANL staff.
+
+Swift has multiple modes of operation that support various use cases.  The
+following is a guide for when to use which Swift features.
+
+* Use the <<swift-t,*Swift/T language*>> when:
+** You want to generate a large-scale MPI program from a high-level
+   script that organizes concurrent calls to existing C, C++, or
+   Fortran code on the BG/Q
+** You want to run Python or R code at large scale on the BG/Q
+* Use <<main-wrapping,*Swift/T main-wrapping*>> when:
+** You want to call an existing program as a library from the Swift/T
+   framework on the BG/Q
+* Use <<sub-jobs,*Swift/K sub-jobs*>> when:
+** You want to use Cobalt sub-jobs, running and managing many
+   variably-sized MPI jobs within a single large Cobalt allocation
+* Use <<swift-k,*Swift/K*>> when:
+** You want to run many long-running Cobalt jobs as part of a
+   campaign, organized as a workflow.
+
+The same Swift language is used in all of these systems.  See below
+for more information.
+
+[[swift-t]]
+Swift/T
+~~~~~~~
+
+Swift/T is a programming language that allows users to rapidly construct highly
+scalable applications from snippets of existing application code. Swift/T does
+not require MPI programming; it generates an MPI program from a
+high-level script.
+
+The analysis cluster (Tukey) allows you to call external programs from Swift/T
+(unlike the minimal BG/Q OS). On these systems, you can use Swift/T app
+functions to rapidly develop a scalable, scripted analysis solution.
+
+An overview of Swift/T may be found here:
+
+http://swift-lang.org/Swift-T
+
+The Swift/T language guide may be found here:
+
+http://swift-lang.org/Swift-T/guide.html
+
+Swift/T is already installed on ALCF systems.  See the usage notes
+here:
+http://swift-lang.org/Swift-T/turbine-sites.html#_blue_gene_q[Sites Guide]
+
+An example use on Cetus is:
+
+----
+PATH=/home/wozniak/Public/sfw/stc/bin:$PATH
+edit myprogram.swift
+swift-t -m cobalt -n 2 myprogram.swift
+----
+
+Just edit your Swift program and run!  The +swift-t+ program compiles and
+submits your job to Cobalt, reporting a job ID. Swift/T requires at least 2
+processors.
+
+Swift/T allows you to link your application code with it to create massive
+concurrency without explicit use of MPI. See the docs for more information.
+
+[[main-wrapping]]
+Swift/T docs on main-wrapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to call an existing C program from Swift/T on the BG/Q, we provide
+a simplified procedure called main-wrapping. It automatically wraps your C
+main() function for access by Swift.
+
+See here for more information:
+
+http://www.mcs.anl.gov/~ketan/main-wrap.html
+
+[[sub-jobs]]
+Swift/K docs on running sub-jobs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to call an existing program from Swift, but cannot recompile it for
+use by Swift/T, you may benefit from our sub-jobs mechanism, which allows you to
+efficiently execute many small jobs from within a large Cobalt allocation.
+
+See here for more information:
+////
+https://svn.ci.uchicago.edu/svn/vdl2/SwiftApps/subjobs/README.txt
+////
+http://www.mcs.anl.gov/~ketan/subjobs.html
+
+[[swift-k]]
+Swift/K for long-running campaigns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Swift/K can be used to run on the login nodes and manage long-running
+campaigns. Swift/K will perform +qsub+ for you as the workflow progresses,
+monitoring job completion, submitting additional work, and retrying failed
+runs.
+
+See here for more information:
+
+http://swift-lang.org
+
+Further Information
+--------------------
+
+http://swift-lang.org/Swift-T/turbine-sites.html#_tukey
+
+Primary Contact:
+
+Michael Wilde, wilde@anl.gov
+
+Staff Involved:
+
+Michael Wilde, David Kelly, http://www.mcs.anl.gov/~ketan[Ketan Maheshwari],
+http://www.mcs.anl.gov/~wozniak[Justin Wozniak]
+
+Other Collaborators:
+
+Timothy Armstrong, Mihael Hategan, Yadu Nand Babuji, Daniel S. Katz,
+Ian Foster
+
+Funding:
+
+National Science Foundation and US Department of Energy Office of
+Science, with additional support from the National Institutes of
+Health, Argonne National Laboratory and the University of Chicago
+Computation Institute
+
+
+////
+Local Variables:
+mode: doc;
+eval: (auto-fill-mode 1)
+End:
+////

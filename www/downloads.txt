@@ -1,0 +1,199 @@
+
+= Swift/T Downloads
+
+////
+Post to:
+/nfs/www.mcs.anl.gov/content/research/projects/exm/local/downloads
+Which is:
+http://www.mcs.anl.gov/exm/local/downloads/downloads.html
+////
+
+== Overview
+
+This page has information regarding the current and historical Swift/T
+releases.
+
+Swift/T consists of multiple components which have their own version
+numbers.  The release numbers are formatted as +major.minor.bugfix+.
+
+Swift/T will make feature releases on a monthly basis, which increment
+the +minor+ version number.
+
+Downloadable packages based on SVN +trunk+ and/or SVN access may be
+made available to certain users as necessary.
+
+== Series 0.8
+
+=== Current/stable: 0.8.0
+
+* Release 0.8.0 [link:downloads/exm-0.8.0.tar.gz[exm-0.8.0.tar.gz]] (11 MB)
+* 4/6/2015
+
+*Changes:*
+
+* Open code syntax in Swift: +main{}+ function is no longer required
+* Advanced targeting modes for data-intensive applications
+* New string format operator
+* Initial support for Swift/* standard library 
+  (language convergence with Swift/K)
+
+== Series 0.7
+
+=== 0.7.0
+
+* Release 0.7.0 [link:downloads/exm-0.7.0.tar.gz[exm-0.7.0.tar.gz]] (6.5 MB)
+* 11/15/2014
+
+*Changes:*
+
+* Support for remote execution via Coasters 
+* New +swift-t+ tool combines +stc+ and +turbine+
+* New soft targeting feature for data-intensive computing
+* Ability to retry +app+ functions
+* More features for +TURBINE_OUTPUT+
+* Default number of processes is now 2 (not 3)
+* Renamed +aprun+ scheduler to +cray+
+* Renamed +setup.sh+ to +bootstrap+
+* STC output is now in a +*.tic+ file by default
+
+== Series 0.6 
+
+=== 0.6.1
+
+* Release 0.6.1 [link:downloads/exm-0.6.1.tar.gz[exm-0.6.1.tar.gz]] (6.5 MB)
+* 7/15/2014
+
+*Changes:* 
+
+* Checkpointing
+* New container features - faster arrays, etc.
+* Pushed data dependencies into ADLB- no more Turbine engines.
+  Reduces process overhead of Turbine engines
+* Support for Julia
+
+=== 0.6.0 
+
+Swift/T 0.6.0 was a limited preview package.
+
+== Series 0.5
+
+=== 0.5.1
+
+* Release 0.5.1 [link:downloads/exm-0.5.1.tar.gz[exm-0.5.1.tar.gz]] (6.5 MB)
+* 7/15/2014
+
+*Changes:* 
+
+* Minor output fix
+
+=== 0.5.0
+
+* Release 0.5.0 [link:downloads/exm-0.5.0.tar.gz[exm-0.5.0.tar.gz]] (6.5 MB)
+* 10/9/2013
+
+*Changes:*
+
+* Full implementation of garbage collection
+* Improved Cobalt support
+* Improved Python, R support
+* Support for additional array key types (string, float, boolean, etc)
+* New Turbine worker service feature- 
+  allows launching a user-specified service on a Swift worker node
+* Full support for +@location+ feature- 
+  allows sending a Swift task to a specific rank or hostname
+* New miscellaneous builtin functions
+
+== Series 0.4
+
+=== 0.4.0
+
+* Release 0.4.0 [link:downloads/exm-0.4.0.tar.gz[exm-0.4.0.tar.gz]] (6.4 MB)
+* 7/15/2013
+
+*Changes:*
+
+* Built-in support for Python and R
+* New directory concatenation operator
+* Renamed I/O functions: new names: +read()+, +write()+
+* Support for Tcl 8.6
+* STC provides a default output file name
+* New Swift syntax for multiline strings
+
+== Series 0.3
+
+=== 0.3.0
+
+* Release 0.3.0 [link:downloads/exm-0.3.0.tar.gz[exm-0.3.0.tar.gz]] (6.4 MB)
+* 5/12/2013
+
+*Changes:*
+
+* Many new builtin functions, including:
+** File operations
+** Functions to deal with Fortran data
+* Parallel tasks available at the Swift level (+@par+)
+* Task location targeting available at the Swift level (+@location+)
+* Ability to call Swift as a library from a larger MPI program
+* Statement sequencing syntax (+=&gt;+)
+* Syntax for scientific notation
+* New Swift module framework based on +import+ statement
+* Compile-time constants available from STC command line (with optimization)
+* Many improvements to STC optimizations
+
+== Series 0.2
+
+=== 0.2.1
+
+* Release 0.2.1 [link:downloads/exm-0.2.1.tar.gz[exm-0.2.1.tar.gz]] (5.8 MB)
+* 2/18/2013
+
+*Changes:*
+
+* Build fixes for the Mac- thanks to Yongyang Cai for interaction
+* Build fix for +strnlen()+ on some machines
+* Installation fix for SLURM
+
+=== 0.2.0
+
+* Release 0.2.0 [link:downloads/exm-0.2.0.tar.gz[exm-0.2.0.tar.gz]] (5.8 MB)
+* 2/6/2013
+
+*Changes:*
+
+* Many new builtin functions
+* Many STC optimization improvements
+* Improved app function support, including output redirection
+* Experimental support for garbage collection
+* Limited type inference
+* +type+ and +typedef+ statements
+* Parallel task support in ADLB: not yet available from Swift
+
+== Series 0.1
+
+=== 0.1.1
+
+* Release 0.1.1 [link:downloads/exm-0.1.0.tar.gz[exm-0.1.1.tar.gz]] (5.8 MB)
+* 11/20/2012
+
+*Changes:*
+
+* New string functions
+* New I/O functions
+* Significant runtime local performance improvements
+* STC loop hoisting optimization - improves performance significantly
+  for some patterns such as accessing multidimensional array in loop
+* Miscellaneous bug fixes in STC
+* Experimental support for automatically generating Tcl wrappers
+  for user extension functions
+* Swift/T syntax change: replace +@x@+ with +@prio=x+ for priority annotation
+
+=== 0.1.0
+
+* Release 0.1.0 [link:downloads/exm-0.1.0.tar.gz[exm-0.1.0.tar.gz]] (5.7 MB)
+* 10/15/2012
+
+////
+Local Variables:
+mode: doc
+End:
+////

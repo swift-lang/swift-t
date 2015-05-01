@@ -1,0 +1,23 @@
+
+//// 
+Notes for Swift/ALCF web content maintenance
+////
+
+-- Subjobs: http://www.mcs.anl.gov/~ketan/subjobs.html
+
+In: https://svn.ci.uchicago.edu/svn/vdl2/SwiftApps/subjobs/README.txt
+
+-- main-wrapping general tutorial/guide:
+   http://www.mcs.anl.gov/~ketan/main-wrap.html
+
+In: https://svn.mcs.anl.gov/repos/exm/apps/main-wrap/???.txt
+
+-- main-wrapping Rosetta application example:
+   http://www.mcs.anl.gov/~ketan/rosetta.README.html
+
+
+////
+Local Variables:
+mode: doc;
+End:
+////
