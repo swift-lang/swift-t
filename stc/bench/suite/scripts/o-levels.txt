@@ -1,4 +1,5 @@
 -O0 
+-O0 -f value-number -f dead-code-elim -f demote-globals
 -O0 -f value-number -f propagate-aliases -f dead-code-elim
 -O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold
 -O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold -f controlflow-fusion
@@ -8,8 +9,8 @@
 -O1 -f dataflow-op-inline -f wait-coalesce
 -O1 -f dataflow-op-inline -f wait-coalesce -f function-signature -f loop-simplify
 -O1 -f dataflow-op-inline -f wait-coalesce -f function-signature -f loop-simplify -f hoisting
--O2
--O2 -f function-inline
--O2 -f function-inline -f pipeline
--O2 -f function-inline -f pipeline -f reorder-insts
+-O2 -F function-inline
+-O2 -f full-function-inline
+-O2 -f full-function-inline -f pipeline
+-O2 -f full-function-inline -f pipeline -f reorder-insts
 -O3
