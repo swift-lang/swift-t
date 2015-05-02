@@ -1,9 +1,9 @@
 -O0 
 -O0 -f value-number -f dead-code-elim -f demote-globals
--O0 -f value-number -f propagate-aliases -f dead-code-elim
--O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold
--O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold -f controlflow-fusion
--O0 -f value-number -f propagate-aliases -f dead-code-elim -f shared-constants -f constant-fold -f controlflow-fusion -f merge-refcounts -f cancel-refcounts -f piggyback-refcounts -f batch-refcounts -f hoist-refcounts
+-O0 -f value-number -f dead-code-elim -f demote-globals -f propagate-aliases
+-O0 -f value-number -f dead-code-elim -f demote-globals -f propagate-aliases -f shared-constants -f constant-fold
+-O0 -f value-number -f dead-code-elim -f demote-globals -f propagate-aliases -f shared-constants -f constant-fold -f controlflow-fusion
+-O0 -f value-number -f dead-code-elim -f demote-globals -f propagate-aliases -f shared-constants -f constant-fold -f controlflow-fusion -f merge-refcounts -f cancel-refcounts -f piggyback-refcounts -f batch-refcounts -f hoist-refcounts
 -O1
 -O1 -f dataflow-op-inline
 -O1 -f dataflow-op-inline -f wait-coalesce
