@@ -23,3 +23,5 @@ else
     echo "${OUT} did not have expected contents"
     exit 1
 fi
+
+rm lines.txt tail.txt

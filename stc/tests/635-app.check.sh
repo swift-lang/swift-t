@@ -7,7 +7,6 @@ if [ ! -f "${OUT}" ]; then
     exit 1
 fi
 
-
 if diff ${IN} ${OUT} ; then
     rm "${IN}" "${OUT}"
     exit 0
@@ -15,4 +14,3 @@ else
     echo "${OUT} did not have expected contents"
     exit 1
 fi
-

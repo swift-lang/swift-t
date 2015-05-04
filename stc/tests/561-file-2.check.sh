@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 if [ ! -f 561-out1.txt ]; then
     echo "561-out1.txt was not created"
     exit 1
@@ -17,7 +19,6 @@ else
     exit 1
 fi
 
-
 contents=`cat 561-out2.txt`
 if [ "$contents" = "bye world!" ] ; then
     rm 561-out2.txt
@@ -25,3 +26,5 @@ else
     echo "561-out2 did not have expected contents"
     exit 1
 fi
+
+rm joe.txt
