@@ -31,8 +31,8 @@ help()
   printf "TURBINE OPTIONS\n\n"
   cat ${TURBINE_HOME}/etc/help-options-1.txt
   print
-  printf "SWIFT-T PASSTHROUGH FEATURE\n\n"
-  # These options are only available in the SWIFT-T interface:
+  printf "SWIFT-T OPTIONS\n\n"
+  printf "These options are available in the swift-t program but not stc.\n\n"
   cat ${STC_HOME}/etc/help-options-3.txt
   print
   printf "TURBINE PASSTHROUGH OPTIONS\n\n"
@@ -66,6 +66,7 @@ PROGRAM_TCL=""
 CHECK_DATES=0
 VERBOSE=0
 EXEC_STRING=""
+IMPORT_STRING=""
 
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hE:i:o:t:vV"
@@ -80,7 +81,7 @@ do
 
     # Swift/T arguments:
     E) EXEC_STRING+=${OPTARG} ;;
-    i) EXEC_STRING+="import ${OPTARG};" ;;
+    i) IMPORT_STRING+="import ${OPTARG};" ;;
     h) help ; exit 0 ;;
     v) report_version ;;
     V) (( ++VERBOSE ))
@@ -115,6 +116,29 @@ do
 done
 shift $(( OPTIND - 1 ))
 
+# Print a message when we are verbose.
+message()
+{
+  zparseopts -D -E t=T # Accept -t for TAB
+  if (( VERBOSE ))
+  then
+    if (( ${#T} ))
+    then
+      printf "\t"
+    fi
+    printf "%s\n" "${*}"
+  fi
+}
+
+# Print a command when we are verbose, then execute it
+verbose()
+{
+  message -t ${*}
+  ${*}
+}
+
+message "Swift/T"
+
 # Handle temp file creation across platforms
 # Always has .SUFFIX somewhere
 make_temp()
@@ -138,10 +162,11 @@ make_temp()
   # TODO: Mac?
 }
 
+DELETE_PROGRAM_SWIFT=0
 EXEC_SWIFT=""
-if [[ ${EXEC_STRING} == "" ]]
+if [[ ${EXEC_STRING} == "" && ${IMPORT_STRING} == "" ]]
 then
-  # Normal filename.swift to compile/run
+  # Normal program.swift to compile/run
   if [[ ${#*} == 0 ]]
   then
     usage
@@ -149,11 +174,21 @@ then
   fi
   PROGRAM_SWIFT=$1
   shift
+elif [[ ${EXEC_STRING} == "" ]]
+  then
+  # Create/compile/run/delete imports + program.swift
+  PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
+  message "Writing: ${PROGRAM_SWIFT}"
+  echo ${IMPORT_STRING} >  ${PROGRAM_SWIFT}
+  cat $1                >> ${PROGRAM_SWIFT}
+  shift
+  DELETE_PROGRAM_SWIFT=1
 else
   # Create/compile/run/delete -E string
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-
-  echo ${EXEC_STRING} >> ${PROGRAM_SWIFT}
+  message "Writing: ${PROGRAM_SWIFT}"
+  echo ${IMPORT_STRING} ${EXEC_STRING} >> ${PROGRAM_SWIFT}
+  DELETE_PROGRAM_SWIFT=1
 fi
 ARGS=( ${*} )
 
@@ -162,19 +197,6 @@ then
   print "Could not read: ${PROGRAM_SWIFT}"
   exit 1
 fi
-
-message()
-{
-  (( VERBOSE )) && print ${*}
-}
-
-verbose()
-{
-  message ${*}
-  ${*}
-}
-
-message "Swift/T"
 
 make_stc_output()
 {
@@ -222,7 +244,7 @@ then
   rm ${PROGRAM_TCL}
 fi
 
-if [[ ${EXEC_STRING} != "" ]]
+if (( DELETE_PROGRAM_SWIFT ))
 then
   message "Removing: ${PROGRAM_SWIFT}"
   rm ${PROGRAM_SWIFT}
