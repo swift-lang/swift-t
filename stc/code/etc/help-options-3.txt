@@ -1,6 +1,9 @@
-    -t <flag>:<value> 
+    -E <code>
+         Compile and execute the given string of Swift code.
+         E.g., swift-t -E 'import io; printf("HI");'
+    -i <module>
+         Import the given module before running STC.
+         E.g., swift-t -i io -E 'printf("HI");'
+    -t <flag>:<value>
          Turbine pass-through
-         Pass -<flag> <value> to Turbine
-    -u 
-         Only compile program.swift if it is newer than 
-         output file *.tic (requires use of -o)
+         Passes -<flag> <value> to Turbine
