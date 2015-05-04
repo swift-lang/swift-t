@@ -23,18 +23,21 @@ usage()
 
 help()
 {
-  printf "Swift/T HELP\n\n"
-  printf "\t swift-t <options> <program.swift>\n\n"
-  printf "\t Compiles program.swift with STC and runs it with Turbine\n"
-  printf "\t You may provide STC and/or Turbine options\n\n"
-  # These options are available in the swift-t interface:
-  printf  "STC OPTIONS\n\n"
+  cat ${STC_HOME}/etc/help-swift-t-header.txt
+  printf "STC OPTIONS\n\n"
+  # These options are available from SWIFT-T or STC:
   cat ${STC_HOME}/etc/help-options-1.txt
-  # These options are only available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-3.txt
   print
   printf "TURBINE OPTIONS\n\n"
   cat ${TURBINE_HOME}/etc/help-options-1.txt
+  print
+  printf "SWIFT-T PASSTHROUGH FEATURE\n\n"
+  # These options are only available in the SWIFT-T interface:
+  cat ${STC_HOME}/etc/help-options-3.txt
+  print
+  printf "TURBINE PASSTHROUGH OPTIONS\n\n"
+  printf "You must use the pass-through feature to access these options.\n\n"
+  cat ${TURBINE_HOME}/etc/help-options-2.txt
   print
   cat ${TURBINE_HOME}/etc/help-env.txt
   print
