@@ -7,6 +7,9 @@ if [ -f 6390.txt ]; then
     echo "Error: contents of 6390.txt was $contents"
     exit 1
   fi
+else
+  echo "Error: file 6390.txt was not created."
+  exit 1
 fi
 
 # cleanup symlink

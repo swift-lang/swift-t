@@ -34,13 +34,13 @@ namespace eval turbine {
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
     set result [ list ]
     if { ! [ string equal $stdin_src /dev/stdin ] } {
-      lappend result "stdin=$stdin_src"
+      lappend result "stdin $stdin_src"
     }
     if { ! [ string equal $stdout_dst /dev/stdout ] } {
-      lappend result "stdout=$stdout_dst"
+      lappend result "stdout $stdout_dst"
     }
     if { ! [ string equal $stderr_dst /dev/stderr ] } {
-      lappend result "stderr=$stderr_dst"
+      lappend result "stderr $stderr_dst"
     }
     return $result
   }
@@ -70,7 +70,7 @@ namespace eval turbine {
       if { $tcl_version >= 8.6 } {
         try {
           c::sync_exec $cmd {*}$args \
-              < $stdin_src > $stdout_dst 2> $stderr_dst
+              {*}$stdin_src {*}$stdout_dst {*}$stderr_dst
         } trap {TURBINE ERROR} { msg } {
           # Error: try again
           app_error $tries $msg $cmd $args
@@ -162,23 +162,23 @@ namespace eval turbine {
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
 
-    # Default to sending stdout/stderr to process stdout/stderr
-    set stdin_src "/dev/stdin"
-    set stdout_dst "/dev/stdout"
-    set stderr_dst "/dev/stderr"
+    # Default to leaving stdin/stdout/stderr unset
+    set stdin_src  ""
+    set stdout_dst ""
+    set stderr_dst ""
 
     if { [ dict exists $kwopts stdin ] } {;
-      set stdin_src "[ dict get $kwopts stdin ]"
+      set stdin_src "< [ dict get $kwopts stdin ]"
     }
     if { [ dict exists $kwopts stdout ] } {
       set dst [ dict get $kwopts stdout ]
       ensure_directory_exists2 $dst
-      set stdout_dst "$dst"
+      set stdout_dst "> $dst"
     }
     if { [ dict exists $kwopts stderr ] } {
       set dst [ dict get $kwopts stderr ]
       ensure_directory_exists2 $dst
-      set stderr_dst "$dst"
+      set stderr_dst "> $dst"
     }
   }
 

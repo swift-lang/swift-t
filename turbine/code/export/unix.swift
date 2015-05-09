@@ -45,4 +45,9 @@ app printenv()
   "printenv";
 }
 
+app (file o) echo(string s)
+{
+  "echo" s @stdout=o;
+}
+
 #endif
