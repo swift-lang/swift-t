@@ -1,0 +1,79 @@
+
+:toc:
+
+Swift-ALCF Tutorial
+====================
+
+////
+
+This file is on the web at:
+
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+== Introduction
+
+This tutorial aims at 
+
+Two Flavors of Swift: K and T..
+
+Both T and K are installed on ALCF systems..
+
+== Chosing between K and T
+
+A decision tree to chose between T and K is shown below:
+
+
+== Example 1. Hello World
+Text here
+
+=== Hello World in K
+K text here
+
+=== Hello World in T
+T text here
+
+== Example 2. Parallel Execution
+Text here
+
+=== Mandelbrot in K
+K Mandelbrot here
+
+=== Mandelbrot in T
+T Mandelbrot here
+
+== Execution Modes in K
+Text here
+
+=== Cobalt script mode
+Simple Cobalt mode here.
+
+=== Cobalt sub-block mode
+sub-block mode here.
+
+=== Seamless execution between Mira and Tukey
+Text here
+
+== Execution Modes in T
+Text here
+
+=== Mainwrap: Wrap functions
+Text here
+
+== Appendix 1. Troubleshoot
+Troubleshoot text here
+
+== Appendix 2. Swift Config
+Swift config details here
+
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////

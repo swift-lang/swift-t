@@ -1046,47 +1046,57 @@ module load swift-t
 
 Edison is a Cray XC30 system at NERSC. 
 
-==== Install setup
+==== Public Installation
 
-Load appropriate modules:
+A public installation may be run at: +/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t+
+
+Run with, e.g.:
+----
+swift-t -m cray -n 4 program.swift
+----
+
+
+==== Build Procedure
+
+Load (and unload) appropriate modules:
 
 ----
 module unload PrgEnv-intel darshan cray-shmem
 module load PrgEnv-gnu java
 ----
 
-Download the latest exm code:
+Clone the latest exm code:
 
 ----
 cd $SCRATCH
-wget http://swift-lang.org/Swift-T/downloads/exm-0.8.0.tar.gz
-tar zxf exm-0.8.0.tar.gz
+git clone https://github.com/swift-lang/swift-t.git
+cd swift-t
 ----
 
 Install c-utils:
 
 ----
-cd $SCRATCH/exm-0.8.0/c-utils
-./configure --enable-shared --prefix=/scratch2/scratchdirs/ketan/exm-install/c-utils
+cd $SCRATCH/swift-t/c-utils
+./configure --enable-shared --prefix=$SCRATCH/exm-install/c-utils
 make && make install
 ----
 
 Install adlb:
 
 ----
-cd $SCRATCH/exm-0.8.0/lb
+cd $SCRATCH/swift-t/lb
 CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include 
 LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
-./configure CC=gcc --with-c-utils=/scratch2/scratchdirs/ketan/exm-install/c-utils --prefix=/scratch2/scratchdirs/ketan/exm-install/lb --enable-mpi-2
+./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
 make && make install
 ----
 
 Install turbine:
 
 ----
-cd $SCRATCH/exm-0.8.0/turbine
-./configure --with-adlb=/scratch2/scratchdirs/ketan/exm-install/lb --with-c-utils=/scratch2/scratchdirs/ketan/exm-install/c-utils \
---prefix=/scratch2/scratchdirs/ketan/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
+cd $SCRATCH/swift-t/turbine
+./configure --with-adlb=$SCRATCH/exm-install/lb --with-c-utils=$SCRATCH/exm-install/c-utils \
+--prefix=$SCRATCH/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
 --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
 make && make install
 ----
@@ -1094,8 +1104,8 @@ make && make install
 Install stc: 
 
 ----
-cd $SCRATCH/exm-0.8.0/stc
-ant install -Ddist.dir=/scratch2/scratchdirs/ketan/exm-install/stc -Dturbine.home=/scratch2/scratchdirs/ketan/exm-install/turbine
+cd $SCRATCH/swift-t/stc
+ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-install/turbine
 ----
 
 
@@ -1108,9 +1118,18 @@ export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:
 source ~/.bash.ext
 ----
 
+
+Note that with Swift installed as a module, the above steps will disappear and the only step needed will be to load the module:
+
+----
+module load swift-t
+module load swift-k
+----
+
+
 ==== A simple script
 
-Now let us try to compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
+To compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
 
 ----
 /**
@@ -1125,17 +1144,18 @@ main
 }
 ----
 
-Compile the above script using stc:
+Compile and run the above script using +swift-t+:
 
 ----
-stc hello.swift
+swift-t -m "cray" hello.swift
 ----
 
-A TCL (.tic) file will be generated on successful compilation. Run the generated TCL file using turbine-cray submit script:
+NOTE: The -m flag determines the machine type: "cray", "pbs", "cobalt", etc.
 
-----
-turbine-cray-run.zsh -n 2 hello.tic
-----
+
+A Turbine Intermediate Code (.tic) file will be generated on successful compilation.
+The +swift-t+ command builds a job specification script and submits it to the
+scheduler.
 
 Output from the above command will be similar to the following:
 
@@ -1155,7 +1175,7 @@ JOB_ID=2816478.edique02
 Inspect the results with:
 
 ----
-cat /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/output.txt.2816478.edique02.out
+cat $TURBINE_OUTPUT/output.txt.2816478.edique02.out
 ----
 
 The following will be the contents:
@@ -1174,6 +1194,66 @@ Hello world!
    0.104 turbine finalizing
 Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50
 ----
+
+==== A second example
+
+The following example joins multiple files (n times in parallel) using the Unix
++cat+ utility:
+
+----
+import files;
+import string;
+
+app (file out) cat (file input) {
+  "/bin/cat" input @stdout=out
+}
+
+foreach i in [0:9]{
+  file joined<sprintf("joined%i.txt", i)> = cat(input_file("data.txt"));
+}
+----
+
+Save the above script as +catsn.swift+.
+
+Prepare input file as:
+
+----
+echo "contents of data.txt">data.txt
+----
+
+Set TURBINE_OUTPUT to current directory:
+
+----
+export TURBINE_OUTPUT=$PWD
+----
+
+Run the script as:
+
+----
+swift-t -m "cray" catsn.swift
+----
+
+On successful compilation and job submission, output similar to the following will be produced:
+
+----
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+`./swift-t-catsn.hzS.tic' -> `/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/swift-t-catsn.hzS.tic'
+SCRIPT=./swift-t-catsn.hzS.tic
+PPN=1
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/turbine-cray.sh
+JOB_ID=2835290.edique02
+----
+
+Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT directory:
+
+----
+cat $TURBINE_OUTPUT/joined4.txt
+----
+
 
 == Cloud
 
