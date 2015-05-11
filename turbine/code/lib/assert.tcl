@@ -83,7 +83,7 @@ namespace eval turbine {
         set arg2_value [ retrieve_decr $arg2 ]
         set msg_value [ retrieve_decr_string $msg ]
         if { $arg1_value >= $arg2_value } {
-            error "Assertion failed $arg1_value >= $arg2_value: $msg_value"
+            turbine_error "Assertion failed $arg1_value >= $arg2_value: $msg_value"
         } else {
             log "assertLT: $arg1_value $arg2_value"
         }
@@ -106,7 +106,7 @@ namespace eval turbine {
         set arg2_value [ retrieve_decr $arg2 ]
         set msg_value [ retrieve_decr_string $msg ]
         if { $arg1_value > $arg2_value } {
-            error "Assertion failed $arg1_value > $arg2_value: $msg_value"
+            turbine_error "Assertion failed $arg1_value > $arg2_value: $msg_value"
         } else {
             log "assertLTE: $arg1_value $arg2_value"
         }
