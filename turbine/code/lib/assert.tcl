@@ -61,7 +61,7 @@ namespace eval turbine {
 
     proc assertEqual_impl { arg1 arg2 msg } {
         if { $arg1 != $arg2 } {
-            error "Assertion failed $arg1 != $arg2: $msg"
+            turbine_error "Assertion failed $arg1 != $arg2: $msg"
         } else {
             log "assertEqual $arg1 $arg2 passed: $msg"
         }
