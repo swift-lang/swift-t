@@ -178,7 +178,7 @@ namespace eval turbine {
     if { [ dict exists $kwopts stderr ] } {
       set dst [ dict get $kwopts stderr ]
       ensure_directory_exists2 $dst
-      set stderr_dst "> $dst"
+      set stderr_dst "2> $dst"
     }
   }
 
