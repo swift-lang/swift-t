@@ -34,13 +34,13 @@ namespace eval turbine {
   # Build up a log message with stdio information
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
     set result [ list ]
-    if { ! [ string equal $stdin_src /dev/stdin ] } {
+    if { [ string length $stdin_src  ] > 0 } {
       lappend result "stdin $stdin_src"
     }
-    if { ! [ string equal $stdout_dst /dev/stdout ] } {
+    if { [ string length $stdout_dst ] > 0 } {
       lappend result "stdout $stdout_dst"
     }
-    if { ! [ string equal $stderr_dst /dev/stderr ] } {
+    if { [ string length $stderr_dst ] > 0 } {
       lappend result "stderr $stderr_dst"
     }
     return $result
