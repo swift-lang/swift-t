@@ -232,8 +232,8 @@ run_test()
   SETUP_SCRIPT=${TEST_NAME}.setup.sh
   CHECK_SCRIPT=${TEST_NAME}.check.sh
 
-  SETUP_OUTPUT=${TCL_FILE%.tcl}.setup.out
-  CHECK_OUTPUT=${TCL_FILE%.tcl}.check.out
+  SETUP_OUTPUT=${TCL_FILE%.tic}.setup.out
+  CHECK_OUTPUT=${TCL_FILE%.tic}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
   TURBINE_OUTPUT=${TEST_OUT_PATH}.out
   TURBINE_XPT_RELOAD_OUTPUT=${TEST_OUT_PATH}.reload.out
