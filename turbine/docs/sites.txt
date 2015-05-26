@@ -26,7 +26,7 @@ programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.
 
 For each machine, a *public installation* and/or a *build procedure* will
-be provided.  The user need only follow one set of directions.
+be provided.  The user need follow only one set of directions.
 
 [[login_node]]
 A *login node installation* may be available on certain systems.  This
@@ -35,13 +35,6 @@ acceptable for short debugging runs of 1 minute or less.  If you do
 this, you should run +swift-t+ or +turbine+ under the +nice+ command.
 It will affect other users so please be cautious when using this mode
 for debugging.
-
-TIP: When running on a big HPC machine, it may be difficult to get STC
-(a Java-based program) running.  STC output (+program.tic+) is
-platform-independent.  You may run STC to develop and debug your
-script on your local workstation, then simply copy +program.tic+ to
-the big machine for execution.  Just make sure that the STC and
-Turbine versions are compatible (the same release number).
 
 === Public installations
 
@@ -87,6 +80,23 @@ To report a problem, simply email exm-user@mcs.anl.gov .
 
 * See the link:./swift.html[Swift/T Guide] for more information about Swift/T.
 * Join the ExM (Swift/T project) http://lists.mcs.anl.gov/mailman/listinfo/exm-user[user mailing list].
+
+== Swift-Turbine compilation
+
+Swift/T usage starts with developing and testing a Swift/T script.
+See the main link:guide.html[Swift/T usage guide] for more
+information.
+
+In short, you use STC to compile the Swift script into a format that
+the runtime, Turbine, can run.  You may compile and run in one step
+with +swift-t+ or run +stc+ and +turbine+ separately.
+
+When running on a big HPC machine, it may be difficult to get STC
+(a Java-based program) running.  STC output (+program.tic+) is
+platform-independent.  You may run STC to develop and debug your
+script on your local workstation, then simply copy +program.tic+ to
+the big machine for execution.  Just make sure that the STC and
+Turbine versions are compatible (the same release number).
 
 == Turbine as MPI program
 
@@ -136,16 +146,26 @@ SLURM:: +turbine-slurm-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
 
-A typical invocation is:
+The +swift-t+ and +turbine+ programs have a +-m+ option that accepts
++pbs+, +cobalt+, +cray+, or +slurm+.
 
+A typical invocation is (one step compile-and-run):
 ----
 swift-t -m pbs -n 96 -s settings.sh program.swift
 ----
 
-or:
-
+or (just compile):
 ----
 stc program.swift
+----
+
+or (just run):
+----
+turbine -m pbs -n 96 -s settings.sh program.tic
+----
+
+or (just run):
+----
 turbine-pbs-run.zsh -n 96 -s settings.sh program.tic
 ----
 
@@ -1045,7 +1065,7 @@ module load swift-t
 
 === Edison
 
-Edison is a Cray XC30 system at NERSC. 
+Edison is a Cray XC30 system at NERSC.
 
 ==== Public Installation
 
@@ -1086,7 +1106,7 @@ Install adlb:
 
 ----
 cd $SCRATCH/swift-t/lb
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include 
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
 LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
 ./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
 make && make install
@@ -1102,7 +1122,7 @@ cd $SCRATCH/swift-t/turbine
 make && make install
 ----
 
-Install stc: 
+Install stc:
 
 ----
 cd $SCRATCH/swift-t/stc
