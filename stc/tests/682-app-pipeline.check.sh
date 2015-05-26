@@ -1,4 +1,1 @@
-#!/bin/sh
-set -e
-
-rm output-[012].data
+rm output-[012].data count-[012].data
