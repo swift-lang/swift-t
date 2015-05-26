@@ -1,4 +1,5 @@
 #!/bin/sh
+set -eu
 
 for outfile in bob.txt bob2.txt
 do
@@ -9,10 +10,10 @@ do
 
   contents=`cat $outfile`
   if [ "$contents" = "hello world!" ] ; then
-      rm $outfile alice.txt
-      exit 0
+      rm $outfile
   else
       echo "$outfile did not have expected contents"
       exit 1
   fi
 done
+rm alice.txt
