@@ -1,0 +1,44 @@
+
+When publishing scientific results that used Swift, please cite one of
+these publications.  Papers may be downloaded from: http://swift-lang.org/papers/index.php
+
+Compiler techniques for massively scalable implicit task parallelism
+Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster.
+Proc. SC 2014.
+
+Swift/T: Scalable data flow programming for distributed-memory task-parallel applications
+Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Daniel S. Katz, Ewing Lusk, and Ian T. Foster.
+Proc. CCGrid 2013.
+
+Swift: A language for distributed parallel scripting
+Michael Wilde, Mihael Hategan, Justin M. Wozniak, Ben Clifford, Daniel S. Katz, and Ian Foster.
+Parallel Computing 37(9), 2011.
+
+Other Swift publications:
+
+Big data staging with MPI-IO for interactive X-ray science
+Justin M. Wozniak, Hemant Sharma, Timothy G. Armstrong, Michael Wilde, Jonathan D. Almer, and Ian Foster.
+Proc. Big Data Computing 2014.
+
+Petascale Tcl with NAMD, VMD, and Swift/T
+James C. Phillips, John E. Stone, Kirby L. Vandivort, Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Klaus Schulten.
+Proc. High Performance Technical Computing in Dynamic Languages at SC 2014.
+
+Language features for scalable distributed-memory dataflow computing
+Justin M. Wozniak, Michael Wilde, and Ian T. Foster.
+Proc. Data-Flow Execution Models for Extreme-Scale Computing at PACT 2014.
+
+Turbine: A distributed-memory dataflow engine for high performance many-task applications
+Justin M. Wozniak, Timothy G. Armstrong, Ketan Maheshwari, Ewing L. Lusk, Daniel S. Katz, Michael Wilde, and Ian T. Foster.
+Fundamenta Informaticae 28(3), 2013.
+
+Dataflow coordination of data-parallel tasks via MPI 3.0
+Justin M. Wozniak, Tom Peterka, Timothy G. Armstrong, James Dinan, Ewing L. Lusk, Michael Wilde, and Ian T. Foster.
+Proc. Recent Advances in Message Passing Interface (EuroMPI) 2013.
+
+////
+Local Variables:
+mode: doc;
+eval: (auto-fill-mode 1)
+End:
+////
