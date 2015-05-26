@@ -1,3 +1,1 @@
-#!/bin/sh
-
-rm test-316-*.data
+rm test-316-*.data input.txt
