@@ -21,7 +21,7 @@ Settings:
 
 == How to use this guide
 
-This manual provides a reference on how to run Swift/T Turbine
+This manual provides a reference on how to run Swift/Turbine
 programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.
 
@@ -562,20 +562,21 @@ turbine-cobalt-run.zsh -n 2 program.tic
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
+===== Public installation: Mira/Cetus
+
+*As of:* 0.8.0 - 5/26/2015
+
+* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
+* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
+* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
+* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
 ===== Public installation: Vesta
 
 *As of:* 0.7.0 - 12/16/2014
 
 * STC: +~wozniak/Public/sfw/stc/bin/stc+
 * Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
-
-===== Public installation: Mira/Cetus
-
-*As of:* 0.5.0 - 4/4/2014
-
-* STC: +~wozniak/Public/ppc64/stc/bin/stc+
-* Turbine:
-+~wozniak/Public/ppc64/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
 
 ==== Build procedure
 
