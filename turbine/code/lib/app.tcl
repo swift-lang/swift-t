@@ -31,6 +31,7 @@ namespace eval turbine {
     set app_backoff 0.1
   }
 
+  # Build up a log message with stdio information
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
     set result [ list ]
     if { ! [ string equal $stdin_src /dev/stdin ] } {
@@ -63,6 +64,7 @@ namespace eval turbine {
 
     set success true
     set tries 0
+    # Begin retry loop: break on success
     while { true } {
       incr tries
       log "shell: $cmd $args $stdios"
@@ -71,19 +73,18 @@ namespace eval turbine {
         try {
           c::sync_exec $cmd {*}$args \
               {*}$stdin_src {*}$stdout_dst {*}$stderr_dst
+          break
         } trap {TURBINE ERROR} { msg } {
           # Error: try again
           app_error $tries $msg $cmd $args
           continue
         }
-        # Success
-        break
       } else {
         # Tcl 8.5
-        if { ! [ catch { c::sync_exec $cmd {*}$args \
-                         < $stdin_src > $stdout_dst 2> $stderr_dst } \
+        if { ! [ catch { c::sync_exec $cmd {*}$args          \
+                             {*}$stdin_src                   \
+                             {*}$stdout_dst {*}$stderr_dst } \
                      results options ] } {
-          # No error: success
           break
         }
         # Error: try again
