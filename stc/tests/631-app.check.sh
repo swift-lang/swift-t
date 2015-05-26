@@ -1,4 +1,6 @@
 #!/bin/sh
+set -eu
+
 OUT="631-outfile.txt"
 
 if [ ! -f "${OUT}" ]; then
@@ -17,8 +19,9 @@ hello some text
 
 if [ "$contents" = "${exp_contents}" ] ; then
     rm "${OUT}"
-    exit 0
 else
     echo "${OUT} did not have expected contents"
     exit 1
 fi
+
+rm helloworld.txt
