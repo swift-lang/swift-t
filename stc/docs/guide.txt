@@ -18,11 +18,12 @@ v0.8.0, March 2015
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
 
+[[support]]
 == Support
 
-An overview of Swift/T may be found at the ExM project site:
+An overview of Swift/T may be found at the main Swift site:
 
-https://sites.google.com/site/exmcomputing
+http://swift-lang.org/Swift-T
 
 The Swift/T user discussion mailing list is found here:
 
@@ -41,14 +42,19 @@ for specific systems.
 
 === Installation of Prerequisites
 
+All Swift/T prerequisites can be installed using the appropriate
+package manager for your system.
+
 1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
 +
-** On compute clusters, an MPI will almost certainly be pre-installed
+** On maintained compute clusters, an MPI implementation
+   will almost certainly be pre-installed.
 ** Many operating systems provide packages with MPI implementations
-  that are usable, but often outdated.
-  E.g. the +mpich2+ package on Debian/Ubuntu.
+   that are usable, but often outdated.
+   E.g. the +mpich2+ package on Debian/Ubuntu.
 ** See http://www.mpich.org[MPICH Guides] for information on installing the
-  latest version of MPICH.
+   latest version of MPICH.
+** Installing MPICH from source is not difficult.
 ** Other MPI implementations are <<Build_configuration, supported>> as well.
 +
 Swift/T attempts to use MPI 3.0 functionality by default.  If you
@@ -59,20 +65,22 @@ the manual build process).
 +
 2. Install or locate Tcl 8.6.
 +
-* Tcl is available through the package manager on many systems.
-   You may need to install an additional Tcl development package
-   in addition to the standard tcl package,
-   e.g. +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu systems.
+* You may need to install an additional Tcl development package
+  in addition to the standard Tcl package,
+  e.g., +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu (APT) systems.
 * Source distributions are available at the http://www.tcl.tk[Tcl web
-site]
-* Tcl 8.5 is also acceptable.
+  site]
+* Tcl 8.5 is also acceptable.  (Swift/T optionally uses Tcl 8.6
+  features to produce cleaner error messages.)
 +
-3. Install or locate SWIG
-+
-* You can check if SWIG is installed by running +swig -version+
-* SWIG is available through the package manager on many systems.
-* Source distributions are available at
-   the http://swig.org[SWIG web site]
+3. Ensure you have these third-party software development tools (APT
+   packages are denoted in parentheses):
+   SWIG (+swig+), ZSH (+zsh+), Apache Ant (+ant+), a Java Development
+   Kit (+default-jdk+), Make (+make+), and GCC for C (+gcc+).
+
+Swift/T is primarily tested with OpenJDK&#43;GCC and IBM Java&#43;XLC
+   (on the IBM Blue Gene).  If you have difficulties with other
+   compilers, please <<support,contact us>>.
 
 === Installation of Swift/T from Source
 
