@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -35,6 +36,8 @@
 #define __USE_GNU
 #endif
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <stdint.h>
 #include <inttypes.h>
@@ -539,7 +542,7 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-        
+
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
@@ -894,7 +897,7 @@ Turbine_ParseIntImpl_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(3);
-  
+
   int base;
   int rc = Tcl_GetIntFromObj(interp, objv[2], &base);
   TCL_CHECK(rc);
@@ -975,23 +978,102 @@ Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static void
+redirect_error_exit(const char *file, const char *purpose)
+{
+  fprintf(stderr, "error opening %s for %s: %s\n", file, purpose,
+          strerror(errno));
+  exit(1);
+}
+
+static void
+dup2_error_exit(const char *purpose)
+{
+  fprintf(stderr, "error duplicating file for %s: %s\n", purpose,
+          strerror(errno));
+  exit(1);
+}
+
+static void
+close_error_exit(const char *purpose)
+{
+  fprintf(stderr, "error closing file for %s: %s\n", purpose,
+          strerror(errno));
+  exit(1);
+}
+
 static int
 Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  char cmd[16*1024];
-  char* p = &cmd[0];
-  for (int i = 1; i < objc; i++)
+  int rc;
+  TCL_CONDITION(objc >= 5, "Requires at least 4 arguments");
+
+  const char *stdin_file = Tcl_GetString(objv[1]);
+  const char *stdout_file = Tcl_GetString(objv[2]);
+  const char *stderr_file = Tcl_GetString(objv[3]);
+
+  char *cmd = Tcl_GetString(objv[4]);
+
+  int cmd_offset = 4;
+  int cmd_argc = objc - cmd_offset;
+  char *cmd_argv[cmd_argc + 1];
+  cmd_argv[0] = cmd;
+  cmd_argv[cmd_argc] = NULL; // Need to null terminate for execvp
+  for (int i = 1; i < cmd_argc; i++)
   {
-    char* s = Tcl_GetString(objv[i]);
-    if (s[0] == '>' || s[0] == '<' || strcmp(s,"2>") == 0)
-      append(p, "%s ", s);
-    else
-      append(p, "\"%s\" ", s);
+    cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
+  }
+
+  pid_t child = fork();
+  TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
+  if (child == 0)
+  {
+    // Setup redirects
+    if (stdin_file[0] != '\0')
+    {
+      int in_fd = open(stdin_file, O_RDONLY);
+      if (in_fd == -1) redirect_error_exit(stdin_file, "input redirection");
+
+      rc = dup2(in_fd, 0);
+      if (rc == -1) dup2_error_exit("input redirection");
+
+      rc = close(in_fd);
+      if (rc == -1) close_error_exit("input redirection");
+    }
+
+    if (stdout_file[0] != '\0')
+    {
+      int out_fd = open(stdout_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+      if (out_fd == -1) redirect_error_exit(stdin_file, "output redirection");
+
+      rc = dup2(out_fd, 1);
+      if (rc == -1) dup2_error_exit("output redirection");
+
+      rc = close(out_fd);
+      if (rc == -1) close_error_exit("output redirection");
+    }
+
+    if (stderr_file[0] != '\0')
+    {
+      int err_fd = open(stderr_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
+      if (err_fd == -1) redirect_error_exit(stdin_file, "output redirection");
+
+      rc = dup2(err_fd, 2);
+      if (rc == -1) dup2_error_exit("output redirection");
+
+      rc = close(err_fd);
+      if (rc == -1) close_error_exit("output redirection");
+    }
+
+    rc = execvp(cmd, cmd_argv);
+    TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
+                  strerror(errno));
   }
 
   int exitcode;
-  exec_system(cmd, &exitcode);
+  waitpid(child, &exitcode, 0);
+
   if (exitcode != 0)
   {
     if (tcl_version > 8.5)

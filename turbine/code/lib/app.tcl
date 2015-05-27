@@ -71,8 +71,8 @@ namespace eval turbine {
       set start [ clock milliseconds ]
       if { $tcl_version >= 8.6 } {
         try {
-          c::sync_exec $cmd {*}$args \
-              {*}$stdin_src {*}$stdout_dst {*}$stderr_dst
+          c::sync_exec $stdin_src $stdout_dst $stderr_dst $cmd {*}$args
+
           break
         } trap {TURBINE ERROR} { msg } {
           # Error: try again
@@ -127,7 +127,7 @@ namespace eval turbine {
   # based on parameters present in provided dictionary
   # For use of Tcl's exec command
   proc setup_redirects_tcl { kwopts stdin_var stdout_var stderr_var } {
-    #FIXME: strange behaviour can happen if user args have e.g "<"
+    #Note: strange behaviour can happen if user args have e.g "<"
     # or ">" or "|" at start
     upvar 1 $stdin_var stdin_src
     upvar 1 $stdout_var stdout_dst
@@ -157,8 +157,6 @@ namespace eval turbine {
   # based on parameters present in provided dictionary
   # For use of Turbine's C-based sync_exec command
   proc setup_redirects_c { kwopts stdin_var stdout_var stderr_var } {
-    #FIXME: strange behaviour can happen if user args have e.g "<"
-    # or ">" or "|" at start
     upvar 1 $stdin_var stdin_src
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
@@ -169,17 +167,17 @@ namespace eval turbine {
     set stderr_dst ""
 
     if { [ dict exists $kwopts stdin ] } {;
-      set stdin_src "< [ dict get $kwopts stdin ]"
+      set stdin_src "[ dict get $kwopts stdin ]"
     }
     if { [ dict exists $kwopts stdout ] } {
       set dst [ dict get $kwopts stdout ]
       ensure_directory_exists2 $dst
-      set stdout_dst "> $dst"
+      set stdout_dst "$dst"
     }
     if { [ dict exists $kwopts stderr ] } {
       set dst [ dict get $kwopts stderr ]
       ensure_directory_exists2 $dst
-      set stderr_dst "2> $dst"
+      set stderr_dst "$dst"
     }
   }
 
