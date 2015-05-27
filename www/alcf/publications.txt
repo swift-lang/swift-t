@@ -1,6 +1,6 @@
 
 When publishing scientific results that used Swift, please cite one of
-these publications.  Papers may be downloaded from: http://swift-lang.org/papers/index.php
+these publications.  Papers may be downloaded from: http://swift-lang.org/papers
 
 Compiler techniques for massively scalable implicit task parallelism
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster.
