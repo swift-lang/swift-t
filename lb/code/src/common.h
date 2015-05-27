@@ -76,6 +76,9 @@ struct xlb_state {
   bool perfc_enabled;
 
   double max_malloc;
+
+  /** Default placement policy to use for new data */
+  adlb_placement placement;
 };
 
 /** Global system state */
@@ -100,4 +103,8 @@ double xlb_wtime(void);
  */
 adlb_code xlb_env_long(const char *env_var, long *val);
 
+/**
+    Get placement policy setting from environment.
+ */
+adlb_code xlb_env_placement(adlb_placement *placement);
 #endif

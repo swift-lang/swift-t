@@ -72,3 +72,45 @@ adlb_code xlb_env_long(const char *env_var, long *val)
   *val = tmp_val;
   return ADLB_SUCCESS;
 }
+
+adlb_code xlb_env_placement(adlb_placement *placement)
+{
+  const char *s = getenv("ADLB_PLACEMENT");
+  if (s == NULL || strlen(s) == 0)
+  {
+    // Undefined or empty: leave val untouched
+    *placement = ADLB_PLACE_DEFAULT;
+    return ADLB_NOTHING;
+  }
+
+  const size_t MAX_PLACEMENT_LEN = 64;
+
+  char buf[MAX_PLACEMENT_LEN + 1];
+  strncpy(buf, s, MAX_PLACEMENT_LEN);
+  buf[MAX_PLACEMENT_LEN] = '\0';
+
+  for (char *p = buf; *p != '\0'; p++)
+  {
+    *p = (char)tolower(*p);
+  }
+
+  if (strcmp(buf, "random") == 0)
+  {
+    *placement = ADLB_PLACE_RANDOM;
+  }
+  else if (strcmp(buf, "local") == 0)
+  {
+    *placement = ADLB_PLACE_LOCAL;
+  }
+  else if (strcmp(buf, "default") == 0)
+  {
+    *placement = ADLB_PLACE_DEFAULT;
+  }
+  else
+  {
+    ERR_PRINTF("Invalid ADLB_PLACEMENT value: %s\n", s);
+    return ADLB_ERROR;
+  }
+
+  return ADLB_SUCCESS;
+}

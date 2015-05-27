@@ -63,7 +63,7 @@ static MPI_Group adlb_group;
 
 static int mpi_version;
 
-static inline int choose_data_server();
+static inline int choose_data_server(void);
 
 #define XLB_GET_RESP_HDR_IX 0
 #define XLB_GET_RESP_PAYLOAD_IX 1
@@ -180,6 +180,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   adlb_data_code dc = xlb_data_types_init();
   ADLB_DATA_CHECK(dc);
+
+  code = xlb_env_placement(&xlb_s.placement);
+  ADLB_CHECK(code);
 
   code = xlb_get_reqs_init();
   ADLB_CHECK(code);
@@ -1082,33 +1085,25 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   int to_server_rank;
   MPI_Status status;
   MPI_Request request;
+  adlb_data_code dc;
 
   if (id != ADLB_DATA_ID_NULL) {
     to_server_rank = ADLB_Locate(id);
-    if (xlb_s.layout.am_server && to_server_rank == xlb_s.layout.rank)
-    {
-      adlb_data_code dc = xlb_data_create(id, type, &type_extra, &props);
-      ADLB_DATA_CHECK(dc);
-      return ADLB_SUCCESS;
-    }
   } else {
-    if (xlb_s.layout.am_server)
-    {
-      adlb_datum_id unique_id;
-      adlb_data_code dc = xlb_data_unique(&unique_id);
-      ADLB_DATA_CHECK(dc);
-
-      dc = xlb_data_create(unique_id, type, &type_extra, &props);
-      ADLB_DATA_CHECK(dc);
-
-      if (new_id != NULL)
-      {
-        *new_id = unique_id;
-      }
-      return ADLB_SUCCESS;
-    }
-    to_server_rank = xlb_s.layout.my_server;
+    to_server_rank = choose_data_server();
   }
+
+  if (to_server_rank == xlb_s.layout.rank)
+  {
+    if (id == ADLB_DATA_ID_NULL) {
+      dc = xlb_data_unique(&id);
+      ADLB_DATA_CHECK(dc);
+    }
+    dc = xlb_data_create(id, type, &type_extra, &props);
+    ADLB_DATA_CHECK(dc);
+    return ADLB_SUCCESS;
+  }
+
   ADLB_create_spec data = { id, type, type_extra, props };
 
   struct packed_create_response resp;
@@ -1154,7 +1149,10 @@ adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count)
   // Allocated ids (ADLB_DATA_ID_NULL if failed)
   adlb_datum_id ids[count];
 
-  if (xlb_s.layout.am_server)
+  // TODO: option to split between servers
+  int server = choose_data_server();
+
+  if (server == xlb_s.layout.rank)
   {
     adlb_data_code dc;
     dc = xlb_data_multicreate(specs, count, ids);
@@ -1162,8 +1160,6 @@ adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count)
   }
   else
   {
-    int server = choose_data_server();
-
     IRECV(ids, (int)sizeof(ids), MPI_BYTE, server, ADLB_TAG_RESPONSE);
 
     SEND(specs, (int)sizeof(ADLB_create_spec) * count, MPI_BYTE,
@@ -1432,10 +1428,22 @@ get_next_server()
   Choose server to create data on
  */
 static inline int
-choose_data_server()
+choose_data_server(void)
 {
-  // For now, create on own server
-  return xlb_s.layout.my_server;
+  int server;
+  switch (xlb_s.placement)
+  {
+    case ADLB_PLACE_LOCAL:
+      server = xlb_s.layout.my_server;
+      break;
+    case ADLB_PLACE_DEFAULT:
+    case ADLB_PLACE_RANDOM:
+    default:
+      server = xlb_random_server();
+      break;
+  }
+
+  return server;
 }
 
 adlb_code
