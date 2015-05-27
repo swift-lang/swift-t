@@ -4,8 +4,8 @@
 
 # Set these for your system:
 
-# Get Turbine's Tcl location
-TURBINE_HOME=$( cd $( dirname $( which turbine ) )/.. ; /bin/pwd )
-source ${TURBINE_HOME}/scripts/turbine-build-config.sh
-export TCL_INCLUDE_SPEC
+# Get Turbine's build settings
+source $( turbine -S )
+export TCL_INCLUDE_SPEC TCL_HOME
+
 export BLAS=${BLAS:-${HOME}/Downloads/BLAS/BLAS.a}
