@@ -70,6 +70,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/noop-exec-1.tcl      \
                 $(DIR)/soft_target.tcl      \
                 $(DIR)/sync-exec-1.tcl      \
+                $(DIR)/data-placement-1.tcl    \
 
 #                 $(DIR)/blob-big.tcl            \
 

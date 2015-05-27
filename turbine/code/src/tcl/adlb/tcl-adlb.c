@@ -1319,30 +1319,56 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   *props = DEFAULT_CREATE_PROPS;
   props->release_write_refs = turbine_release_write_rc_policy(*type);
 
-  if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                          &(props->read_refcount));
-    TCL_CHECK_MSG(rc, "could not get read_refcount argument");
+  // Separate integer and keyword args (for backward compatibility)
+  const int max_int_args = 4;
+  int n_int_args = 0;
+  int int_args[max_int_args];
+
+  for (;argpos < objc; argpos++)
+  {
+    if (n_int_args < max_int_args)
+    {
+      rc = Tcl_GetIntFromObj(interp, objv[argpos],
+                            &int_args[n_int_args]);
+      if (rc == TCL_OK)
+      {
+        n_int_args++;
+        continue;
+      }
+    }
+
+    // Must be keyword arg
+    const char *argname = Tcl_GetString(objv[argpos]);
+    if (strcmp(argname, "placement") == 0)
+    {
+      TCL_CONDITION(argpos + 1 < objc, "Missing placement argument");
+      const char *placement_s = Tcl_GetString(objv[argpos + 1]);
+      adlb_code ac = ADLB_string_to_placement(placement_s, &props->placement);
+      TCL_CONDITION(ac = ADLB_SUCCESS, "invalid placement string %s",
+                    placement_s);
+      argpos++;
+    }
+    else
+    {
+      TCL_RETURN_ERROR("Invalid argument to data create call: %s",
+                       argname);
+    }
   }
 
-  if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                        &(props->write_refcount));
-    TCL_CHECK_MSG(rc, "could not get write_refcount argument");
+  if (n_int_args >= 1) {
+    props->read_refcount = int_args[0];
   }
 
-  if (argpos < objc) {
-    int symbol;
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &symbol);
-    TCL_CHECK_MSG(rc, "could not get debug symbol argument");
-    props->symbol = (adlb_dsym)symbol;
+  if (n_int_args >= 2) {
+    props->write_refcount = int_args[1];
   }
 
-  if (argpos < objc) {
-    int permanent;
-    rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
-    TCL_CHECK_MSG(rc, "could not get permanent argument");
-    props->permanent = permanent != 0;
+  if (n_int_args >= 3) {
+    props->symbol = (adlb_dsym)int_args[2];
+  }
+
+  if (n_int_args >= 4) {
+    props->permanent = int_args[3] != 0;
   }
 
   return TCL_OK;
@@ -1518,6 +1544,27 @@ parse_variable_spec_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
             &(spec->type), &(spec->type_extra), &(spec->props));
   TCL_CHECK(rc);
 
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::locate <id>
+
+   Returns server rank
+ */
+static int
+ADLB_Locate_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int rc;
+
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+
+  int rank = ADLB_Locate(handle.id);
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(rank));
   return TCL_OK;
 }
 
@@ -5919,6 +5966,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("create",    ADLB_Create_Cmd);
   COMMAND("multicreate",ADLB_Multicreate_Cmd);
   COMMAND("create_globals",ADLB_Create_Globals_Cmd);
+  COMMAND("locate",    ADLB_Locate_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("exists_sub", ADLB_Exists_Sub_Cmd);
   COMMAND("closed", ADLB_Closed_Cmd);

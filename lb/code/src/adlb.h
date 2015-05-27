@@ -433,6 +433,13 @@ adlb_code ADLB_Data_string_totype(const char* type_string,
 
 const char *ADLB_Data_type_tostring(adlb_data_type type);
 
+/*
+  Convert string to placement enum value.
+  Case insensitive.
+ */
+adlb_code ADLB_string_to_placement(const char *string,
+                           adlb_placement *placement);
+
 adlb_code ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
                  int *request_counts, int *untargeted_work_counts);
 
