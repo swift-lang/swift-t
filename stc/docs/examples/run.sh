@@ -1,6 +1,9 @@
 #!/bin/bash -eu
 
-source ./setup.sh
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
+cd ${THIS}
+
+source setup.sh
 
 # Sanity check variables:
 TCL_INCLUDE=${TCL_INCLUDE_SPEC:2}
@@ -24,3 +27,5 @@ do
   )
   echo
 done
+
+echo "$0: OK"
