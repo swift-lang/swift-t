@@ -273,6 +273,16 @@ struct packed_get_response
   int parallelism;
 };
 
+
+/*
+  Create spec with additional internal info
+ */
+typedef struct {
+  ADLB_create_spec spec;
+  int server;
+  int idx;
+} xlb_create_spec;
+
 struct packed_create_response
 {
   adlb_data_code dc;

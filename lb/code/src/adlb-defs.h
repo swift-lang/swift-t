@@ -270,6 +270,7 @@ typedef struct {
     bool permanent : 1;
     bool release_write_refs : 1;
     adlb_dsym symbol;
+    adlb_placement placement;
   } adlb_create_props;
 
   // Default settings for new variables
@@ -279,6 +280,7 @@ typedef struct {
     false, /* permanent */
     false, /* release_write_refs */
     ADLB_DSYM_NULL, /* symbol */
+    ADLB_PLACE_DEFAULT, /* placement */
   };
 
   // Information for new variable creation

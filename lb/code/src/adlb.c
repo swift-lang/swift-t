@@ -63,7 +63,7 @@ static MPI_Group adlb_group;
 
 static int mpi_version;
 
-static inline int choose_data_server(void);
+static inline int choose_data_server(adlb_placement placement);
 
 #define XLB_GET_RESP_HDR_IX 0
 #define XLB_GET_RESP_PAYLOAD_IX 1
@@ -93,6 +93,7 @@ static struct {
 } xlb_get_reqs;
 
 #define XLB_GET_REQS_INIT_SIZE 16
+
 
 static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers);
 
@@ -1090,7 +1091,7 @@ ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
   if (id != ADLB_DATA_ID_NULL) {
     to_server_rank = ADLB_Locate(id);
   } else {
-    to_server_rank = choose_data_server();
+    to_server_rank = choose_data_server(props.placement);
   }
 
   if (to_server_rank == xlb_s.layout.rank)
@@ -1141,38 +1142,81 @@ ADLBP_Create(adlb_datum_id id, adlb_data_type type,
   return ADLBP_Create_impl(id, type, type_extra, props, new_id);
 }
 
+/*
+  Comparison function for specs to sort by server in ascending order
+ */
+static int create_spec_cmp(const void *p1, const void *p2)
+{
+  const xlb_create_spec *spec1 = p1, *spec2 = p2;
+  if (spec1->server < spec2->server)
+  {
+    return -1;
+  }
+  else if (spec1->server > spec2->server)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
 adlb_code ADLBP_Multicreate(ADLB_create_spec *specs, int count)
 {
   MPI_Request request;
   MPI_Status status;
 
-  // Allocated ids (ADLB_DATA_ID_NULL if failed)
+  // Temporary specs (reorder and store allocated ids)
+  xlb_create_spec tmp_specs[count];
   adlb_datum_id ids[count];
-
-  // TODO: option to split between servers
-  int server = choose_data_server();
-
-  if (server == xlb_s.layout.rank)
-  {
-    adlb_data_code dc;
-    dc = xlb_data_multicreate(specs, count, ids);
-    ADLB_DATA_CHECK(dc);
-  }
-  else
-  {
-    IRECV(ids, (int)sizeof(ids), MPI_BYTE, server, ADLB_TAG_RESPONSE);
-
-    SEND(specs, (int)sizeof(ADLB_create_spec) * count, MPI_BYTE,
-         server, ADLB_TAG_MULTICREATE);
-    WAIT(&request, &status);
-  }
-
-  // Check success by inspecting ids
   for (int i = 0; i < count; i++) {
-    if (ids[i] == ADLB_DATA_ID_NULL) {
-      return ADLB_ERROR;
+    tmp_specs[i].idx = i;
+    tmp_specs[i].spec = specs[i];
+    tmp_specs[i].server = choose_data_server(specs[i].props.placement);
+  }
+
+  // Sort so that we can send them to servers in batches
+  qsort(tmp_specs, (size_t)count, sizeof(tmp_specs[0]), create_spec_cmp);
+
+  int pos = 0;
+
+  while (pos < count)
+  {
+    int batch_start = pos;
+    int server = tmp_specs[pos++].server;
+    while (tmp_specs[pos].server == server)
+    {
+      pos++;
     }
-    specs[i].id = ids[i];
+
+    int batch_size = pos - batch_start;
+    TRACE("Send batch of size %i/%i from %i to %i", batch_size,
+          count, xlb_s.layout.rank, server);
+    if (server == xlb_s.layout.rank)
+    {
+      adlb_data_code dc;
+      dc = xlb_data_multicreate(&tmp_specs[batch_start], batch_size, ids);
+      ADLB_DATA_CHECK(dc);
+    }
+    else
+    {
+      IRECV(ids, (int)sizeof(ids[0]) * batch_size, MPI_BYTE, server,
+            ADLB_TAG_RESPONSE);
+
+      SEND(&tmp_specs[batch_start], (int)sizeof(tmp_specs[0]) * batch_size,
+           MPI_BYTE, server, ADLB_TAG_MULTICREATE);
+      WAIT(&request, &status);
+    }
+
+    // Check success by inspecting ids
+    // Copy results back to input
+    for (int i = 0; i < batch_size; i++) {
+      if (ids[i] == ADLB_DATA_ID_NULL) {
+        return ADLB_ERROR;
+      }
+      specs[tmp_specs[batch_start + i].idx].id = ids[i];
+    }
   }
   return ADLB_SUCCESS;
 }
@@ -1428,10 +1472,13 @@ get_next_server()
   Choose server to create data on
  */
 static inline int
-choose_data_server(void)
+choose_data_server(adlb_placement placement)
 {
   int server;
-  switch (xlb_s.placement)
+  if (placement == ADLB_PLACE_DEFAULT)
+    placement = xlb_s.placement;
+
+  switch (placement)
   {
     case ADLB_PLACE_LOCAL:
       server = xlb_s.layout.my_server;

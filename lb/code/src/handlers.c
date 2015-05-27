@@ -1065,9 +1065,9 @@ handle_multicreate(int caller)
   rc = find_req_bytes(&req_bytes, caller, ADLB_TAG_MULTICREATE);
   ADLB_CHECK(rc);
 
-  assert(req_bytes % (int)sizeof(ADLB_create_spec) == 0);
-  int count = req_bytes / (int)sizeof(ADLB_create_spec);
-  ADLB_create_spec *specs = malloc((size_t)req_bytes);
+  assert(req_bytes % (int)sizeof(xlb_create_spec) == 0);
+  int count = req_bytes / (int)sizeof(xlb_create_spec);
+  xlb_create_spec *specs = malloc((size_t)req_bytes);
   RECV(specs, req_bytes, MPI_BYTE, caller, ADLB_TAG_MULTICREATE);
 
   adlb_datum_id new_ids[count];

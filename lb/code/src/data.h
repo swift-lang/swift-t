@@ -51,7 +51,7 @@ adlb_data_code xlb_data_create(adlb_datum_id id, adlb_data_type type,
                            const adlb_type_extra *type_extra,
                            const adlb_create_props *props);
 
-adlb_data_code xlb_data_multicreate(const ADLB_create_spec *specs,
+adlb_data_code xlb_data_multicreate(const xlb_create_spec *specs,
         int count, adlb_datum_id *new_ids);
 
 adlb_data_code xlb_data_exists(adlb_datum_id id, adlb_subscript subscript,
