@@ -527,7 +527,9 @@ xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       if (xlb_s.layout.am_server)
       {
         // update reference count (can be local or remote)
-        dc = xlb_incr_refc_svr(change->id, change->rc, notifs);
+        bool wait = change->must_preacquire;
+        dc = xlb_incr_refc_svr(change->id, change->rc, notifs,
+                               wait);
         ADLB_DATA_CHECK(dc);
       }
       else

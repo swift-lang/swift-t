@@ -532,6 +532,7 @@ typedef enum
   ADLB_SYNC_STEAL_PROBE_RESP, // Respond to probe
   ADLB_SYNC_STEAL, // Carry out steal
   ADLB_SYNC_REFCOUNT, // Modify reference count
+  ADLB_SYNC_REFCOUNT_WAIT, // Modify reference count - wait for response
   ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
   ADLB_SYNC_NOTIFY, // Notify after subscription to a datum
   ADLB_SYNC_SHUTDOWN, // Shutdown server

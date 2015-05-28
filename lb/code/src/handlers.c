@@ -1187,6 +1187,7 @@ handle_store(int caller)
     rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
                                 &prep, &send_notifs);
     ADLB_CHECK(rc);
+    DEBUG("SEnding store response");
 
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 

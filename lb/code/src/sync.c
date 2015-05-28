@@ -608,7 +608,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
 }
 
 adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
-                            adlb_refc change)
+                            adlb_refc change, bool wait)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
@@ -616,7 +616,7 @@ adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
   // Avoid send uninitialized bytes for memory checking tools
   memset(hdr, 0, PACKED_SYNC_SIZE);
 #endif
-  hdr->mode = ADLB_SYNC_REFCOUNT;
+  hdr->mode = wait ? ADLB_SYNC_REFCOUNT_WAIT : ADLB_SYNC_REFCOUNT;
   hdr->incr.id = id;
   hdr->incr.change = change;
   return xlb_sync2(target, hdr, NULL);
@@ -643,7 +643,8 @@ msg_from_target(int target, int response)
 static inline bool sync_accept_required(adlb_sync_mode mode)
 {
   if (mode == ADLB_SYNC_REQUEST ||
-      mode == ADLB_SYNC_STEAL)
+      mode == ADLB_SYNC_STEAL ||
+      mode == ADLB_SYNC_REFCOUNT_WAIT)
   {
     return true;
   }
@@ -802,6 +803,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       break;
 
     case ADLB_SYNC_REFCOUNT:
+    case ADLB_SYNC_REFCOUNT_WAIT:
       /*
         We defer handling of server->server refcounts to avoid potential
         deadlocks if the refcount decrement triggers a cycle of reference
@@ -820,7 +822,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
               but will delay notifications
        */
 
-      if (defer_svr_ops)
+      if (mode == ADLB_SYNC_REFCOUNT && defer_svr_ops)
       {
         DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
         code = enqueue_pending(ACCEPTED_REFC, rank, hdr, NULL);

@@ -19,8 +19,8 @@
   be exposed as part of public ADLB interface.
  */
 
-#ifndef __XLB_DATA_INTERNAL_H
-#define __XLB_DATA_INTERNAL_H
+#ifndef __XLB_CLIENT_INTERNAL_H
+#define __XLB_CLIENT_INTERNAL_H
 
 #include "adlb-defs.h"
 #include "adlb_types.h"
@@ -35,4 +35,4 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, size_t length, adlb_refc refcount_decr,
             adlb_refc store_refcounts, adlb_notif_t *notifs);
 
-#endif // __XLB_DATA_INTERNAL_H
+#endif // __XLB_CLIENT_INTERNAL_H

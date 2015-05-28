@@ -1364,8 +1364,10 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
                        store_refcounts, &notifs);
   ADLB_CHECK(final_rc); // Check for ADLB_ERROR, not other codes
 
+  DEBUG("Before Notify");
   rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);
+  DEBUG("After Notify");
 
   xlb_free_notif(&notifs);
 

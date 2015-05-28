@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "adlb.h"
+#include "client_internal.h"
 #include "common.h"
 #include "data_cleanup.h"
 #include "data_internal.h"
@@ -17,10 +18,11 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
        xlb_refc_changes *changes);
 
 adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
-                               adlb_notif_t *notifs)
+                               adlb_notif_t *notifs, bool wait)
 {
   assert(xlb_s.layout.am_server); // Only makes sense to run on server
 
+  adlb_code ac;
   adlb_data_code dc;
 
   if (!xlb_s.read_refc_enabled)
@@ -49,7 +51,7 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
     DEBUG("server->server %i->%i local refcount <%"PRId64"> "
         "r += %i w += %i", xlb_s.layout.rank, server,
         id, change.read_refcount, change.write_refcount);
-    adlb_code code = xlb_sync_refcount(server, id, change);
+    adlb_code code = xlb_sync_refcount(server, id, change, wait);
     DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
   }
   return ADLB_DATA_SUCCESS;

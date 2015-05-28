@@ -11,10 +11,11 @@
 #include "data_internal.h"
 #include "notifications.h"
 
-/* Decrement reference count of given id.  Must be called on a server */
+/* Decrement reference count of given id.  Must be called on a server
+   wait: if true, wait until refcount is confirmed. */
 adlb_data_code
 xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
-                adlb_notif_t *notifs);
+                adlb_notif_t *notifs, bool wait);
 
 /* Modify reference count of locally stored datum.
    Send any consequent notifications or messages.

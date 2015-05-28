@@ -119,13 +119,14 @@ xlb_sync_steal(int target, const int *work_counts, int size,
                int max_memory, int *response);
 
 /*
-  Send a refcount operation to another server, and return as soon
-  as it is sent.
-  TODO: can we guarantee in all circumstances that this operation will
-  be applied without a decrement-before-increment race?
+  Send a refcount operation to another server.
+  
+  If wait is true, wait for response.
+  Otherwise, return as soon as it is sent.
  */
 adlb_code
-xlb_sync_refcount(int target, adlb_datum_id id, adlb_refc change);
+xlb_sync_refcount(int target, adlb_datum_id id, adlb_refc change,
+                  bool wait);
 
 typedef struct {
   MPI_Request req;
