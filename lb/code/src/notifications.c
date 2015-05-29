@@ -196,9 +196,9 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
+  adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
   if (server == xlb_s.layout.rank)
   {
-    adlb_refc decr = { .read_refcount = 0, .write_refcount = write_decr };
     // Ok to cast away const, since we're forcing it to copy
     adlb_data_code dc = xlb_data_store(id, subscript, (void*)value, length,
                     true, NULL, type, decr, transferred_refs, notifs);
@@ -208,7 +208,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   }
 
   // Store value, maybe accumulating more notification/ref setting work
-  rc = xlb_store(id, subscript, type, value, length, ADLB_WRITE_REFC,
+  rc = xlb_store(id, subscript, type, value, length, decr,
                  transferred_refs, notifs);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");

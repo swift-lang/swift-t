@@ -2223,6 +2223,10 @@ anchor:env_hostmap_disable[]
 +ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
 (avoiding some communication overhead).
 
++ADLB_PLACEMENT+:: Change the placement policy.  Alternatives are:
+      random (place data on a random server - the default) and
+      local (place data on the local server).
+
 +VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>.
 
 +GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.

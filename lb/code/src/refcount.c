@@ -22,7 +22,6 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
 {
   assert(xlb_s.layout.am_server); // Only makes sense to run on server
 
-  adlb_code ac;
   adlb_data_code dc;
 
   if (!xlb_s.read_refc_enabled)

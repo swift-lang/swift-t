@@ -822,7 +822,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
               but will delay notifications
        */
 
-      if (mode == ADLB_SYNC_REFCOUNT && defer_svr_ops)
+      if (defer_svr_ops)
       {
         DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
         code = enqueue_pending(ACCEPTED_REFC, rank, hdr, NULL);
