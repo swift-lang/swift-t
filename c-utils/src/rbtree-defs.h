@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 University of Chicago and Argonne National Laboratory
+ * Copyright 2013-2015 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,19 @@
  */
 
 /*
- *  Simple binary heap with integer keys and pointer values.
- *  a .
+ * rbtree-defs.h
+ *  Created on: May 29, 2015
+ *      Author: Tim Armstrong
  *
- *  Implements a min-heap
- *
- *  Tim Armstrong, 2012-2014
+ * Red-black tree common definitions
  */
 
-#ifndef __HEAP_H
-#define __HEAP_H
+#ifndef __RBTREE_DEFS_H
+#define __RBTREE_DEFS_H
 
-#define HEAP_KEY_T int
-#define HEAP_VAL_T void*
-#define HEAP_PFX heap_
+typedef enum
+{
+  RED, BLACK
+} rbtree_color;
 
-#include "heap-template.h"
-
-#endif // __HEAP_H
+#endif // __RBTREE_DEFS_H

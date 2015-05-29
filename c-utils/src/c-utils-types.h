@@ -21,6 +21,8 @@
 #ifndef __CUTILS_TYPES_H
 #define __CUTILS_TYPES_H
 
+// stdbool.h includes the bool typedef
+#include <stdbool.h>
 // stdint.h includes fixed-width types like int64_t
 #include <stdint.h>
 // inttypes.h contains format specifiers like PRId64

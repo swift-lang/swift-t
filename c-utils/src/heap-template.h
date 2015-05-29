@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 University of Chicago and Argonne National Laboratory
+ * Copyright 2013-2014 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -387,6 +387,7 @@ HEAP_DECREASE_KEY(HEAP_T *heap, heap_idx_t i, HEAP_KEY_T newkey)
   HEAP_SIFT_UP(heap, i);
 }
 
+#ifndef HEAP_KEEP_DEFNS
 // Cleanup defined macros
 #undef HEAP_T
 #undef HEAP_ENTRY_T
@@ -412,3 +413,12 @@ HEAP_DECREASE_KEY(HEAP_T *heap, heap_idx_t i, HEAP_KEY_T newkey)
 #undef HEAP_ADD_ENTRY
 #undef HEAP_ADD
 #undef HEAP_DECREASE_KEY
+
+#undef HEAP_NAME__
+#undef HEAP_NAME_
+#undef HEAP_NAME
+
+#undef HEAP_KEY_T
+#undef HEAP_VAL_T
+#undef HEAP_PFX
+#endif // HEAP_KEEP_DEFNS

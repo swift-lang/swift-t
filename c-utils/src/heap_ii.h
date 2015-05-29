@@ -31,8 +31,4 @@
 
 #include "heap-template.h"
 
-#undef HEAP_KEY_T
-#undef HEAP_VAL_T
-#undef HEAP_PFX
-
 #endif // __HEAP_II_H
