@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 University of Chicago and Argonne National Laboratory
+ * Copyright 2013-2015 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,33 @@
  */
 
 /*
- * rbtree-template.c
+ * rbtree-bp.h
+ *
  *  Created on: May 29, 2015
  *      Author: Tim Armstrong
  *
- * Based on rbtree.c
- *
- *  Created on: Oct 26, 2012
- *      Author: wozniak
- *
+ * Red-black tree with binary keys and pointer values
  */
 
-#define RBTREE_KEEP_DEFNS
-#include "rbtree.h"
+#ifndef RBTREE_BP_H
+#define RBTREE_BP_H
 
-static bool rbtree_key_copy(RBTREE_KEY_T *dst, RBTREE_KEY_T src)
-{
-  *dst = src;
-  return true;
-}
+#include <stddef.h>
 
-#define RBTREE_KEY_INVALID 0
-#define RBTREE_KEY_LEQ(a, b) (a) <= (b)
-#define RBTREE_KEY_EQ(a, b) (a) == (b)
-#define RBTREE_KEY_COPY(a, b) rbtree_key_copy(&(a), (b))
-#define RBTREE_KEY_FREE(k) // Do nothing
+typedef struct {
+  void *key;
+  size_t length;
+} rbtree_bp_key_t;
 
-#define RBTREE_KEY_PRNF "%"PRId64
-#define RBTREE_KEY_PRNA(k) (k)
 
-#include "rbtree-template.c"
+// TODO: freeing key
+
+#define RBTREE_KEY_T rbtree_bp_key_t
+#define RBTREE_VAL_T void*
+#define RBTREE_TYPENAME rbtree_bp
+#define RBTREE_PFX rbtree_bp_
+
+#include "rbtree-template.h"
+
+#endif
 

@@ -69,7 +69,8 @@ replace(struct RBTREE_NODE* P,
   else if (s == RIGHT)
     P->right = R;
   else
-    valgrind_fail("replace: P-!>N %"PRId64"->%"PRId64"\n", P->key, N->key);
+    valgrind_fail("replace: P-!>N "RBTREE_KEY_PRNF"->"RBTREE_KEY_PRNF
+              "\n", RBTREE_KEY_PRNA(P->key), RBTREE_KEY_PRNA(N->key));
 }
 
 static inline struct RBTREE_NODE*
@@ -108,7 +109,13 @@ create_node(RBTREE_KEY_T key, RBTREE_VAL_T data)
   node->parent = NULL;
   node->right = NULL;
   node->left = NULL;
-  node->key = key;
+  bool ok = RBTREE_KEY_COPY(node->key, key);
+  if (!ok)
+  {
+    free(node);
+    return NULL;
+  }
+
   node->data = data;
   node->color = RED;
   return node;
@@ -297,7 +304,8 @@ static inline void
 rbtree_add_node_impl(struct RBTREE_TYPENAME* target,
                      struct RBTREE_NODE* N)
 {
-  DEBUG_RBTREE("rbtree_add_node_impl: %"PRId64"\n", N->key);
+  DEBUG_RBTREE("rbtree_add_node_impl: "RBTREE_KEY_PRNF"\n",
+               RBTREE_KEY_PRN(N->key));
   DEBUG_RBTREE("before:\n");
   // RBTREE_PRINT(target);
   N->color = RED;
@@ -327,7 +335,7 @@ rbtree_add_loop(struct RBTREE_TYPENAME* target,
   target->size++;
   while (true)
   {
-    if (node->key <= p->key)
+    if (RBTREE_KEY_LEQ(node->key, p->key))
     {
       if (p->left == NULL)
       {
@@ -365,9 +373,9 @@ RBTREE_SEARCH_NODE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key)
 static inline struct RBTREE_NODE*
 search_node_loop(struct RBTREE_NODE* p, RBTREE_KEY_T key)
 {
-  while (key != p->key)
+  while (!RBTREE_KEY_EQ(key, p->key))
   {
-    if (key < p->key)
+    if (RBTREE_KEY_LEQ(key, p->key))
       if (p->left == NULL)
         return NULL;
       else
@@ -421,7 +429,8 @@ color(struct RBTREE_NODE* N)
  */
 #define show_node(t) { \
   if (t == NULL) DEBUG_RBTREE("%s: NULL\n", #t); \
-  else DEBUG_RBTREE("%s: %c%"PRId64"\n", #t, color(t), t->key); \
+  else DEBUG_RBTREE("%s: %c"RBTREE_KEY_PRNF"\n", #t, color(t), \
+                    RBTREE_KEY_PRNA(t->key)); \
 }
 
 static inline void swap_nodes(struct RBTREE_TYPENAME* target,
@@ -430,7 +439,8 @@ static inline void swap_nodes(struct RBTREE_TYPENAME* target,
 void
 RBTREE_REMOVE_NODE(struct RBTREE_TYPENAME* target, struct RBTREE_NODE* N)
 {
-  DEBUG_RBTREE("rbtree_remove_node: %"PRId64"\n", N->key);
+  DEBUG_RBTREE("rbtree_remove_node: "RBTREE_KEY_PRNF"\n",
+               RBTREE_KEY_PRNA(N->key));
   valgrind_assert(target->size >= 1);
 
   DEBUG_RBTREE("before:\n");
@@ -563,7 +573,8 @@ RBTREE_LEFTMOST(struct RBTREE_TYPENAME* target)
     return NULL;
 
   struct RBTREE_NODE* result = rbtree_leftmost_loop(target->root);
-  DEBUG_RBTREE("rbtree_leftmost: %"PRId64"\n", result->key);
+  DEBUG_RBTREE("rbtree_leftmost: "RBTREE_KEY_PRNF"\n",
+               RBTREE_KEY_PRNA(result->key));
   return result;
 }
 
@@ -571,7 +582,7 @@ RBTREE_KEY_T
 RBTREE_LEFTMOST_KEY(struct RBTREE_TYPENAME* target)
 {
   if (target->size == 0)
-    return 0;
+    return RBTREE_KEY_INVALID;
 
   struct RBTREE_NODE* node = rbtree_leftmost_loop(target->root);
   RBTREE_KEY_T result = node->key;
@@ -835,7 +846,8 @@ bool
 RBTREE_MOVE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key_old,
             RBTREE_KEY_T key_new)
 {
-  DEBUG_RBTREE("rbtree_move: %"PRId64" -> %"PRId64"\n", key_old, key_new);
+  DEBUG_RBTREE("rbtree_move: "RBTREE_KEY_PRNF" -> "RBTREE_KEY_PRNF"\n",
+              RBTREE_KEY_PRNA(key_old), RBTREE_KEY_PRNA(key_new));
   struct RBTREE_NODE* p = RBTREE_SEARCH_NODE(target, key_old);
   if (p == NULL)
     return false;
@@ -944,7 +956,8 @@ rbtree_print_loop(struct RBTREE_NODE* node, int level)
   append(p, "+ ");
   for (int i = 0; i < level; i++)
     append(p, " ");
-  append(p, "%c%"PRId64"", color(node), node->key);
+  append(p, "%c"RBTREE_KEY_PRNF"", color(node),
+         RBTREE_KEY_PRNA(node->key));
   printf("%s\n", buffer);
 
   if (node->left == NULL && node->right == NULL)
@@ -954,8 +967,8 @@ rbtree_print_loop(struct RBTREE_NODE* node, int level)
   if (node->left != NULL)
   {
     valgrind_assert_msg(node->left->parent == node,
-                        "node: %c%"PRId64"->left is not linked back",
-                        color(node), node->key);
+            "node: %c"RBTREE_KEY_PRNF"->left is not linked back",
+            color(node), RBTREE_KEY_PRNA(node->key));
     rbtree_print_loop(node->left, level+1);
   }
   else
@@ -965,8 +978,8 @@ rbtree_print_loop(struct RBTREE_NODE* node, int level)
   if (node->right != NULL)
   {
     valgrind_assert_msg(node->right->parent == node,
-                        "node: %c%"PRId64"->right is not linked back",
-                        color(node), node->key);
+                "node: %c"RBTREE_KEY_PRNF"->right is not linked back",
+                color(node), RBTREE_KEY_PRNA(node->key));
     rbtree_print_loop(node->right, level+1);
   }
   else
@@ -1001,6 +1014,7 @@ rbtree_free_subtree(struct RBTREE_NODE* node, RBTREE_CALLBACK cb)
     rbtree_free_subtree(node->right, cb);
   if (cb != NULL)
     cb(node, node->data);
+  RBTREE_KEY_FREE(node->key);
   free(node);
 }
 

@@ -36,6 +36,29 @@ bin_key_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
 }
 
 /*
+  Check if first binary key is less than or equal to the second in
+  lexical order.
+  Inline in header for performance
+ */
+static inline bool
+bin_key_leq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
+{
+  size_t min_len = (key1_len < key2_len) ? key1_len : key2_len;
+  int prefix_cmp = memcmp(key1, key2, min_len);
+  if (prefix_cmp == 0)
+  {
+    // If same length, equal
+    // If different length, shorter key is lesser
+    return key1_len <= key2_len;
+  }
+  else
+  {
+    // Only true if less than
+    return prefix_cmp < 0;
+  }
+}
+
+/*
   Calculate hash for binary key
   Inline in header for performance
  */
