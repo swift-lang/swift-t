@@ -35,9 +35,8 @@ table_bp_dump2(const char* format, const table_bp* target,
 static table_bp_entry*
 find_bucket(const table_bp* T, const void* key, size_t key_len);
 
-static bool 
-bucket_add_head(table_bp_entry *head, void* key, size_t key_len,
-                void* data);
+static bool
+bucket_add_head(table_bp_entry *head, binkey_packed_t key, void* data);
 
 static bool
 bucket_add_tail(table_bp_entry *head, table_bp_entry *entry,
@@ -76,7 +75,7 @@ bool table_bp_init(table_bp* target, int capacity)
 }
 
 /**
-   
+
 */
 bool
 table_bp_init_custom(table_bp* target, int capacity, float load_factor)
@@ -147,12 +146,10 @@ void table_bp_free_callback(table_bp* target, bool free_root,
         next = e->next; // Store next right away
 
         if (callback != NULL)
-          callback(table_bp_get_key(e), e->key_len, e->data);
+          callback(table_bp_get_key(e), table_bp_get_key_len(e), e->data);
 
-        if (!table_bp_inline_key(e->key_len))
-        {
-          free(e->__key);
-        }
+        binkey_packed_free(&e->key);
+
         if (!is_head) {
           // head is stored in array, rest were malloced separately
           free(e);
@@ -191,10 +188,8 @@ table_bp_destroy(table_bp* target)
       {
         next = e->next; // Store next right away
 
-        if (!table_bp_inline_key(e->key_len))
-        {
-          free(e->__key);
-        }
+        binkey_packed_free(&e->key);
+
         free(e->data);
 
         if (!is_head)
@@ -229,9 +224,8 @@ find_bucket(const table_bp* T, const void* key, size_t key_len)
  Add at head
  key: appropriate representation with inlining
  */
-static bool 
-bucket_add_head(table_bp_entry *head, void* key, size_t key_len,  
-                void* data)
+static bool
+bucket_add_head(table_bp_entry *head, binkey_packed_t key, void* data)
 {
   if (table_bp_entry_valid(head))
   {
@@ -247,8 +241,7 @@ bucket_add_head(table_bp_entry *head, void* key, size_t key_len,
   }
 
   // Put new data in head
-  head->__key = key;
-  head->key_len = key_len;
+  head->key = key;
   head->data = data;
   return true;
 }
@@ -316,32 +309,21 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
       return false;
   }
 
-  /* 
+  /*
    * Add at head of list to avoid traversing list.  This means that in
    * case of duplicate keys, the newest is returned
    */
   table_bp_entry *head = find_bucket(target, key, key_len);
-  
-  void *key_repr;
-  
-  if (table_bp_inline_key(key_len))
+
+  binkey_packed_t key_repr;
+
+  bool ok = binkey_packed_set(&key_repr, key, key_len);
+  if (!ok)
   {
-    // Store inline
-    // Initialize to avoid clash with invalid value
-    key_repr = 0;
-    memcpy(&key_repr, key, key_len);
-  }
-  else
-  {
-    key_repr = malloc(key_len);
-    if (key_repr == NULL)
-    {
-      return false;
-    }
-    memcpy(key_repr, key, key_len);
+    return false;
   }
 
-  bool ok = bucket_add_head(head, key_repr, key_len, data);
+  ok = bucket_add_head(head, key_repr, data);
   if (ok)
   {
     target->size++;
@@ -350,8 +332,7 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
   else
   {
     // Free allocated key
-    if (!table_bp_inline_key(key_len))
-      free(key_repr);
+    binkey_packed_free(&key_repr);
     return false;
   }
 }
@@ -407,8 +388,8 @@ table_bp_set(table_bp* target, const void* key, size_t key_len,
 
 /**
    @param value: this is used to return the value if found
-   @return true if found, false if not 
-   
+   @return true if found, false if not
+
    if value is NULL and return is true, this means that the key exists
    but the value is NULL
 */
@@ -477,10 +458,9 @@ table_bp_remove(table_bp* table, const void* key, size_t key_len,
   if (e != NULL)
   {
     *data = e->data; // Store data for caller
-    if (!table_bp_inline_key(e->key_len))
-      free(e->__key);
+    binkey_packed_free(&e->key);
 
-    table_bp_remove_entry(e, prev); 
+    table_bp_remove_entry(e, prev);
     table->size--;
     return true;
   }
@@ -503,12 +483,12 @@ table_bp_expand(table_bp *T)
   {
     return false;
   }
-  
+
   for (int i = 0; i < new_capacity; i++)
   {
     table_bp_clear_entry(&new_array[i]);
   }
-  
+
   // Rehash and move all entries from old table
   for (int i = 0; i < T->capacity; i++)
   {
@@ -528,7 +508,8 @@ table_bp_expand(table_bp *T)
 
       // all entries should be valid if we get here
       assert(table_bp_entry_valid(e));
-      int new_ix = binkey_hash(table_bp_get_key(e), e->key_len, new_capacity);
+      int new_ix = binkey_hash(table_bp_get_key(e),
+            table_bp_get_key_len(e), new_capacity);
 
       // Add at tail of new buckets to preserve insert order.
       // This requires traversing list, but collisions should be fairly
@@ -545,7 +526,7 @@ table_bp_expand(table_bp *T)
       }
     }
   }
-  
+
   free(T->array);
   T->array = new_array;
   T->capacity = new_capacity;
@@ -584,7 +565,7 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
     for (table_bp_entry *e = head; e != NULL; e = e->next)
     {
       printf("(");
-      binkey_printf(table_bp_get_key(e), e->key_len);
+      binkey_printf(table_bp_get_key(e), table_bp_get_key_len(e));
       if (include_vals)
       {
         printf(", ");
@@ -620,7 +601,7 @@ bucket_keys_string_length(const table_bp_entry *head)
     {
       // Each byte is two hex digits in string repr.
       // Plus separator char
-      result += e->key_len * 2 + 1;
+      result += table_bp_get_key_len(e) * 2 + 1;
     }
   }
   return result;
@@ -669,7 +650,7 @@ bucket_keys_tostring(char *result, const table_bp_entry *head)
   for (const table_bp_entry *e = head; e != NULL; e = e->next)
   {
     // Each byte is two hex digits in string repr.
-    p += binkey_sprintf(p, table_bp_get_key(e), e->key_len);
+    p += binkey_sprintf(p, table_bp_get_key(e), table_bp_get_key_len(e));
     p[0] = ' ';
     p++;
   }
@@ -686,7 +667,7 @@ bucket_tostring(char *result, size_t size, const char *format,
     return 0;
   }
   char* p = result;
-  
+
   p += sprintf(p, "[");
 
   // Check for empty bucket
@@ -694,7 +675,7 @@ bucket_tostring(char *result, size_t size, const char *format,
   {
     for (const table_bp_entry *item = head; item; item = item->next)
     {
-      p = bp_append_pair(p, table_bp_get_key(item), item->key_len,
+      p = bp_append_pair(p, table_bp_get_key(item), table_bp_get_key_len(item),
                          format, item->data, item->next != NULL);
     }
   }
@@ -729,7 +710,8 @@ table_bp_keys_tostring_slice(char* result, const table_bp* target,
     }
     if (c >= offset+count && count != -1)
       break;
-    p += binkey_sprintf(p, table_bp_get_key(item), item->key_len);
+    p += binkey_sprintf(p, table_bp_get_key(item),
+                      table_bp_get_key_len(item));
     *(p++) = ' ';
     c++;
   }

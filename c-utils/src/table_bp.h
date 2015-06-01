@@ -27,17 +27,13 @@
 
 typedef struct table_bp_entry table_bp_entry;
 
-#define TABLE_BP_INVALID_KEY ((void*)0x1)
+#define TABLE_BP_INVALID_KEY BINKEY_PACKED_INVALID
 
 struct table_bp_entry
 {
-  /* key_len == 0 and __key = TABLE_BP_INVALID_KEY indicates empty entry
-   *.Entry entries are only used to mark empty hash table buckets. */
-  
   /* We sometimes store key inline in pointer.  Use table_bp_get_key to
    * access the value of the key correctly */
-  void* __key; 
-  size_t key_len;
+  binkey_packed_t key;
   void* data; // NULL is valid data
   table_bp_entry *next;
 };
@@ -124,7 +120,7 @@ void  table_bp_dumpkeys(const table_bp* target);
  */
 static inline bool table_bp_inline_key(size_t key_len)
 {
-  return key_len <= sizeof(void*);
+  return binkey_packed_inline(key_len);
 }
 
 /*
@@ -132,21 +128,17 @@ static inline bool table_bp_inline_key(size_t key_len)
  */
 static inline const void *table_bp_get_key(const table_bp_entry *e)
 {
-  if (table_bp_inline_key(e->key_len))
-  {
-    // Pointer itself holds data
-    return &e->__key;
-  }
-  else
-  {
-    return e->__key;
-  }
+  return binkey_packed_get(&e->key);
+}
+
+static inline size_t table_bp_get_key_len(const table_bp_entry *e)
+{
+  return binkey_packed_len(&e->key);
 }
 
 static inline void table_bp_clear_entry(table_bp_entry *entry)
 {
-  entry->__key = TABLE_BP_INVALID_KEY;
-  entry->key_len = 0;
+  binkey_packed_clear(&entry->key);
   entry->data = NULL;
   entry->next = NULL;
 }
@@ -157,7 +149,7 @@ static inline void table_bp_clear_entry(table_bp_entry *entry)
 static inline bool
 table_bp_entry_valid(const table_bp_entry *e)
 {
-  return e->key_len > 0 || e->__key != TABLE_BP_INVALID_KEY;
+  return binkey_packed_valid(&e->key);
 }
 
 /*
@@ -167,6 +159,6 @@ table_bp_entry_valid(const table_bp_entry *e)
 static inline bool
 table_bp_key_match(const void *key, size_t key_len, const table_bp_entry *e)
 {
-  return bin_key_eq(key, key_len, table_bp_get_key(e), e->key_len);
+  return bin_key_eq(key, key_len, table_bp_get_key(e), e->key.key_len);
 }
 #endif // __TABLE_BP_H

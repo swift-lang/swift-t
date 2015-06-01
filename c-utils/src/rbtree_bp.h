@@ -20,7 +20,10 @@
  *  Created on: May 29, 2015
  *      Author: Tim Armstrong
  *
- * Red-black tree with binary keys and pointer values
+ * Red-black tree with binary keys and pointer values.
+ *
+ * The implementation will copy keys for internal use and
+ * may allocate additional memory per key.
  */
 
 #ifndef RBTREE_BP_H

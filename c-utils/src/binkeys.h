@@ -22,8 +22,92 @@
 #define __CUTILS_BINKEYS
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include "jenkins-hash.h"
+
+typedef struct {
+  /* key_len == 0 and __key = TABLE_BP_INVALID_KEY indicates empty entry
+   *.Entry entries are only used to mark empty hash table buckets. */
+
+  /* We sometimes store key inline in pointer.  Use table_bp_get_key to
+   * access the value of the key correctly */
+  void* __key;
+  size_t key_len;
+
+} binkey_packed_t;
+
+#define BINKEY_PACKED_INVALID ((void*)0x1)
+
+/*
+  returns: whether we store packed key inline in pointer
+ */
+static inline bool binkey_packed_inline(size_t key_len)
+{
+  return key_len <= sizeof(void*);
+}
+
+static inline bool binkey_packed_valid(const binkey_packed_t *key)
+{
+  return key->key_len > 0 || key->__key != BINKEY_PACKED_INVALID;
+}
+
+static inline const void *binkey_packed_get(const binkey_packed_t *key)
+{
+  if (binkey_packed_inline(key->key_len))
+  {
+    // Pointer itself holds data
+    return &key->__key;
+  }
+  else
+  {
+    return key->__key;
+  }
+}
+
+static inline size_t binkey_packed_len(const binkey_packed_t *key)
+{
+  return key->key_len;
+}
+
+static inline void binkey_packed_clear(binkey_packed_t *key)
+{
+  key->__key = BINKEY_PACKED_INVALID;
+  key->key_len = 0;
+}
+
+static inline void binkey_packed_free(binkey_packed_t *key)
+{
+  if (!binkey_packed_inline(key->key_len))
+    free(key->__key);
+}
+
+/*
+  Set binkey, allocating memory if necessary
+  Return false on malloc error
+ */
+static inline bool
+binkey_packed_set(binkey_packed_t *key_repr, const void *key,
+                  size_t key_len)
+{
+  if (binkey_packed_inline(key_len))
+  {
+    // Store inline
+    // Initialize to avoid clash with invalid value
+    key_repr->__key = 0;
+    memcpy(&key_repr->__key, key, key_len);
+  }
+  else
+  {
+    key_repr->__key = malloc(key_len);
+    if (key_repr->__key == NULL)
+    {
+      return false;
+    }
+    memcpy(key_repr->__key, key, key_len);
+  }
+  return true;
+}
 
 /*
   Check if two binary keys are equal.
