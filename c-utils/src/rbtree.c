@@ -36,8 +36,8 @@ static bool rbtree_key_copy(RBTREE_KEY_T *dst, RBTREE_KEY_T src)
 }
 
 #define RBTREE_KEY_INVALID 0
-#define RBTREE_KEY_LEQ(a, b) (a) <= (b)
-#define RBTREE_KEY_EQ(a, b) (a) == (b)
+#define RBTREE_KEY_LEQ(a, b) ((a) <= (b))
+#define RBTREE_KEY_EQ(a, b) ((a) == (b))
 #define RBTREE_KEY_COPY(a, b) rbtree_key_copy(&(a), (b))
 #define RBTREE_KEY_FREE(k) // Do nothing
 

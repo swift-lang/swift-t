@@ -147,10 +147,17 @@ main()
   for (int i = 0; i < n; i++)
     rbtree_add(&T, A[i], NULL);
   shuffle(A, n);
+  print_longs(A, n);
+  printf("\n");
   for (int i = 0; i < n; i++)
   {
-    printf("removing: %li\n", A[i]);
-    bool b = rbtree_remove(&T, A[i], NULL);
+    int64_t key = A[i];
+    printf("removing: %li (size %i root %"PRId64")\n",
+            key, T.size, T.root->key);
+    struct rbtree_node *n = rbtree_search_node(&T, key);
+    printf("found node %p: key %li\n", n, n->key);
+    assert(n->key == key);
+    bool b = rbtree_remove(&T, key, NULL);
     assert(b);
     rbtree_print(&T);
   }
