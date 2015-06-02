@@ -27,9 +27,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "src/tools.h"
-
+#include "src/c-utils-tests.h"
 #include "src/rbtree.h"
+#include "src/tools.h"
 
 static void
 pop_all(struct rbtree* T)
@@ -47,7 +47,7 @@ pop_all(struct rbtree* T)
     rbtree_print(T);
     pops++;
   }
-  assert(pops == size);
+  ASSERT_TRUE(pops == size);
 }
 
 static bool
@@ -156,9 +156,9 @@ main()
             key, T.size, T.root->key);
     struct rbtree_node *n = rbtree_search_node(&T, key);
     printf("found node %p: key %li\n", n, n->key);
-    assert(n->key == key);
+    ASSERT_TRUE(n->key == key);
     bool b = rbtree_remove(&T, key, NULL);
-    assert(b);
+    ASSERT_TRUE(b);
     rbtree_print(&T);
   }
 
@@ -166,7 +166,7 @@ main()
 
   int m = 8;
   int moves = 2;
-  assert(moves < m/2);
+  ASSERT_TRUE(moves < m/2);
 
   long B[m];
   for (int i = 0; i < m; i++)
@@ -223,6 +223,97 @@ main()
   printf("SIZE: %i\n", T.size);
 
   test_empty_iterator();
+
+  // TEST - range search
+  printf("RANGE SEARCH\n");
+
+  int MAX_RANGE = 100;
+  // Add odds only so there are gaps
+  for (int i = 1; i < MAX_RANGE; i += 2)
+  {
+    rbtree_add(&T, i, (void*)(long)i);
+
+    for (int j = 0; j < MAX_RANGE; j++)
+    {
+      struct rbtree_node *n = rbtree_search_range(&T, j);
+      if (j <= i)
+      {
+        // Should return exact match or one after
+        int exp_key = j + (1 - j % 2);
+        ASSERT_TRUE_MSG(n->key == exp_key, "Expected lookup of %i to be"
+                                  "%i after adding %i", j, exp_key, i);
+        for (int k = exp_key + 2; k <= i; k += 2)
+        {
+          struct rbtree_node *nn = rbtree_next_node(n);
+
+          ASSERT_TRUE_MSG(nn->key == k, "Expected %"PRId64" == %i", nn->key, k);
+          ASSERT_TRUE_MSG((long)nn->data == k, "Expected %li == %i", (long)nn->data, k);
+
+          // Check prev node works
+          ASSERT_TRUE(rbtree_prev_node(nn) == n);
+
+          n = nn;
+        }
+
+        // Should be at last valid node
+        ASSERT_TRUE(rbtree_next_node(n) == NULL);
+      }
+      else
+      {
+        ASSERT_TRUE_MSG(rbtree_search_range(&T, j) == NULL,
+                    "Expected lookup of %i to be NULL", j);
+      }
+    }
+
+    // Check that searching past last always returns NULL
+    ASSERT_TRUE_MSG(rbtree_search_range(&T, i + 1) == NULL,
+                    "Expected lookup of %i to be NULL", i + 1);
+  }
+
+  // Check that we get all duplicates
+  int DUPES_OF_2 = 10;
+  for (int i = 0; i < DUPES_OF_2; i++)
+  {
+    rbtree_add(&T, 2, NULL);
+  }
+  int found_dupes = 0;
+  struct rbtree_node *node = rbtree_search_range(&T, 2);
+  while (node != NULL && node->key == 2)
+  {
+    found_dupes++;
+    node = rbtree_next_node(node);
+  }
+  ASSERT_TRUE_MSG(found_dupes == DUPES_OF_2, "Expected %i == %i",
+                  DUPES_OF_2, found_dupes);
+
+  rbtree_clear(&T);
+
+  /*
+    Regression test for duplicates.
+    Root should be 1
+    Left and right subtree should have many zeroes and twos
+    Additional one should be deep in a subtree
+   */
+  rbtree_add(&T, 1, NULL);
+  for (int i = 0; i < 100; i++)
+  {
+    rbtree_add(&T, 0, NULL);
+    rbtree_add(&T, 2, NULL);
+  }
+  rbtree_add(&T, 1, NULL);
+
+  printf("RANGE SEARCH REGRESSION 1\n");
+  found_dupes = 0;
+  node = rbtree_search_range(&T, 1);
+  while (node != NULL && node->key == 1)
+  {
+    printf("Found %p %"PRId64"\n", node, node->key);
+    found_dupes++;
+    node = rbtree_next_node(node);
+  }
+  ASSERT_TRUE_MSG(found_dupes == 2, "Expected %i == %i",
+                  2, found_dupes);
+
   printf("DONE\n");
   return 0;
 }

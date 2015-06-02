@@ -17,8 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "src/c-utils-tests.h"
+
 #include <table_ip.h>
-#include <assert.h>
 
 static void null_cb(int k, void *v);
 
@@ -28,7 +29,7 @@ int main() {
   bool ok;
 
   ok = table_ip_init(&T, 4);
-  assert(ok);
+  ASSERT_TRUE(ok);
 
   // force expand several times
   int N = 64;
@@ -38,7 +39,7 @@ int main() {
 
     void *val = (void*)(long)i;
     ok = table_ip_add(&T, key, val);
-    assert(ok);
+    ASSERT_TRUE(ok);
 
     // Check iteration works;
     int count = 0;
@@ -47,9 +48,9 @@ int main() {
       count++;
     }
     printf("i=%i count=%i\n", i, count);
-    assert(count == i + 1);
+    ASSERT_TRUE(count == i + 1);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
 
   for (int i = 0; i < N; i++)
   {
@@ -57,11 +58,11 @@ int main() {
     int key = ((i*29) + 30) % N;
     void *val;
     bool found = table_ip_search(&T, key, &val);
-    assert(found);
+    ASSERT_TRUE(found);
     printf("Search: %i=%li\n", key, (long)val);
-    assert(((long)val) == key);
+    ASSERT_TRUE(((long)val) == key);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
   
   for (int i = 0; i < N; i++)
   {
@@ -69,11 +70,11 @@ int main() {
     int key = ((i*29) + 5) % N;
     void *val;
     bool found = table_ip_remove(&T, key, &val);
-    assert(found);
+    ASSERT_TRUE(found);
     printf("Remove: %i=%li\n", key, (long)val);
-    assert(((long)val) == key);
+    ASSERT_TRUE(((long)val) == key);
   }
-  assert(T.size == 0);
+  ASSERT_TRUE(T.size == 0);
 
   // Free
   table_ip_free_callback(&T, false, NULL);
@@ -88,14 +89,14 @@ int main() {
 
     void *val = (void*)((long)key);
     ok = table_ip_add(&T, key, val);
-    assert(ok);
+    ASSERT_TRUE(ok);
     
     void *search_val;
     ok = table_ip_search(&T, key, &search_val);
-    assert(ok);
-    assert(val == search_val);
+    ASSERT_TRUE(ok);
+    ASSERT_TRUE(val == search_val);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
 
   // Try printing
   printf("\n\ntable_ip_dump:\n");

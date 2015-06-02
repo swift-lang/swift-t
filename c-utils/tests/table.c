@@ -17,8 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "src/c-utils-tests.h"
+
 #include <table.h>
-#include <assert.h>
 
 static size_t make_key(char *out, int n);
 static void null_cb(const char *k, void *v);
@@ -29,7 +30,7 @@ int main() {
   bool ok;
 
   ok = table_init(&T, 4);
-  assert(ok);
+  ASSERT_TRUE(ok);
 
   // force expand several times
   int N = 64;
@@ -40,7 +41,7 @@ int main() {
 
     void *val = (void*)(long)i;
     ok = table_add(&T, key, val);
-    assert(ok);
+    ASSERT_TRUE(ok);
 
     // Check iteration works;
     int count = 0;
@@ -49,9 +50,9 @@ int main() {
       count++;
     }
     printf("i=%i count=%i\n", i, count);
-    assert(count == i + 1);
+    ASSERT_TRUE(count == i + 1);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
 
   for (int i = 0; i < N; i++)
   {
@@ -61,11 +62,11 @@ int main() {
     make_key(key, j);
     void *val;
     bool found = table_search(&T, key, &val);
-    assert(found);
+    ASSERT_TRUE(found);
     printf("Search: %s=%li\n", key, (long)val);
-    assert(((long)val) == j);
+    ASSERT_TRUE(((long)val) == j);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
   
   for (int i = 0; i < N; i++)
   {
@@ -75,11 +76,11 @@ int main() {
     make_key(key, j);
     void *val;
     bool found = table_remove(&T, key, &val);
-    assert(found);
+    ASSERT_TRUE(found);
     printf("Remove: %s=%li\n", key, (long)val);
-    assert(((long)val) == j);
+    ASSERT_TRUE(((long)val) == j);
   }
-  assert(T.size == 0);
+  ASSERT_TRUE(T.size == 0);
 
   // Free
   table_free_callback(&T, false, NULL);
@@ -96,14 +97,14 @@ int main() {
 
     void *val = (void*)((long)j);
     ok = table_add(&T, key, val);
-    assert(ok);
+    ASSERT_TRUE(ok);
     
     void *search_val;
     ok = table_search(&T, key, &search_val);
-    assert(ok);
-    assert(val == search_val);
+    ASSERT_TRUE(ok);
+    ASSERT_TRUE(val == search_val);
   }
-  assert(T.size == N);
+  ASSERT_TRUE(T.size == N);
 
   // Try printing
   printf("\n\ntable_dump:\n");
