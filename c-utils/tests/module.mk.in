@@ -4,6 +4,7 @@ TEST_SRC += tests/list.c
 TEST_SRC += tests/heap.c
 TEST_SRC += tests/tree.c
 TEST_SRC += tests/rbtree.c
+TEST_SRC += tests/rbtree_bp.c
 TEST_SRC += tests/log.c
 TEST_SRC += tests/readfile.c
 TEST_SRC += tests/version.c

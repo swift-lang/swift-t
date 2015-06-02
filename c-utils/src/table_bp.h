@@ -159,6 +159,6 @@ table_bp_entry_valid(const table_bp_entry *e)
 static inline bool
 table_bp_key_match(const void *key, size_t key_len, const table_bp_entry *e)
 {
-  return bin_key_eq(key, key_len, table_bp_get_key(e), e->key.key_len);
+  return binkey_eq(key, key_len, table_bp_get_key(e), e->key.key_len);
 }
 #endif // __TABLE_BP_H

@@ -109,12 +109,20 @@ binkey_packed_set(binkey_packed_t *key_repr, const void *key,
   return true;
 }
 
+static inline bool
+binkey_packed_copy(binkey_packed_t *key_repr,
+                   const binkey_packed_t *key_repr2)
+{
+  return binkey_packed_set(key_repr, binkey_packed_get(key_repr2),
+                           binkey_packed_len(key_repr2));
+}
+
 /*
   Check if two binary keys are equal.
   Inline in header for performance
  */
 static inline bool
-bin_key_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
+binkey_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
 {
   return key1_len == key2_len && memcmp(key1, key2, key1_len) == 0;
 }
@@ -125,7 +133,7 @@ bin_key_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
   Inline in header for performance
  */
 static inline bool
-bin_key_leq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
+binkey_leq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
 {
   size_t min_len = (key1_len < key2_len) ? key1_len : key2_len;
   int prefix_cmp = memcmp(key1, key2, min_len);
@@ -140,6 +148,20 @@ bin_key_leq(const void *key1, size_t key1_len, const void *key2, size_t key2_len
     // Only true if less than
     return prefix_cmp < 0;
   }
+}
+
+static inline bool binkey_packed_eq(const binkey_packed_t *k1,
+                               const binkey_packed_t *k2)
+{
+  return binkey_eq(binkey_packed_get(k1), binkey_packed_len(k1),
+                   binkey_packed_get(k2), binkey_packed_len(k2));
+}
+
+static inline bool binkey_packed_leq(const binkey_packed_t *k1,
+                               const binkey_packed_t *k2)
+{
+  return binkey_leq(binkey_packed_get(k1), binkey_packed_len(k1),
+                   binkey_packed_get(k2), binkey_packed_len(k2));
 }
 
 /*

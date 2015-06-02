@@ -19,6 +19,7 @@
  *
  *  Created on: June 01, 2015
  *      Author: Tim Armstrong
+ *
  * Based on:
  * rbtree.c
  *
@@ -37,9 +38,9 @@
 #include "src/rbtree_bp.h"
 
 static void
-pop_all(struct rbtree* T)
+pop_all(struct rbtree_bp* T)
 {
-  long k;
+  binkey_packed_t k;
   void* v;
   int size = T->size;
   int pops = 0;

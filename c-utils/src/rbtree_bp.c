@@ -32,32 +32,16 @@
 
 #include <stdlib.h>
 
-static const rbtree_bp_key_t rbtree_key_invalid = { NULL, 0 };
-
-static bool
-rbtree_bp_key_set(rbtree_bp_key_t *dst, rbtree_bp_key_t src)
-{
-  dst->key = malloc(src.length);
-  if (dst->key == NULL)
-  {
-    return false;
-  }
-  memcpy(dst->key, src.key, src.length);
-  dst->length = src.length;
-
-  return true;
-}
+static const binkey_packed_t rbtree_key_invalid = { NULL, 0 };
 
 #define RBTREE_KEY_INVALID rbtree_key_invalid;
-#define RBTREE_KEY_LEQ(a, b) bin_key_leq((a).key, (a).length, \
-                                         (b).key, (b).length)
-#define RBTREE_KEY_EQ(a, b) bin_key_eq((a).key, (a).length, \
-                                       (b).key, (b).length)
-#define RBTREE_KEY_COPY(a, b) rbtree_bp_key_set(&(a), (b))
-#define RBTREE_KEY_FREE(k) free((k).key)
+#define RBTREE_KEY_LEQ(a, b) binkey_packed_leq(&(a), &(b))
+#define RBTREE_KEY_EQ(a, b) binkey_packed_eq(&(a), &(b))
+#define RBTREE_KEY_COPY(a, b) binkey_packed_copy(&(a), &(b))
+#define RBTREE_KEY_FREE(k) binkey_packed_free(&(k))
 
 #define RBTREE_KEY_PRNF "%p (%zu)"
-#define RBTREE_KEY_PRNA(k) (k).key, (k).length
+#define RBTREE_KEY_PRNA(k) binkey_packed_get(&(k)), binkey_packed_len(&(k))
 
 #include "rbtree-template.c"
 

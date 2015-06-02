@@ -98,6 +98,6 @@ bp_append_pair(char* ptr, const void *key, size_t key_len,
 static inline bool
 list_bp_key_match(const void *key, size_t key_len, struct list_bp_item *item)
 {
-  return bin_key_eq(key, key_len, item->key, item->key_len);
+  return binkey_eq(key, key_len, item->key, item->key_len);
 }
 #endif //__LIST_BP_H

@@ -31,15 +31,9 @@
 
 #include <stddef.h>
 
-typedef struct {
-  void *key;
-  size_t length;
-} rbtree_bp_key_t;
+#include "binkeys.h"
 
-
-// TODO: freeing key
-
-#define RBTREE_KEY_T rbtree_bp_key_t
+#define RBTREE_KEY_T binkey_packed_t
 #define RBTREE_VAL_T void*
 #define RBTREE_TYPENAME rbtree_bp
 #define RBTREE_PFX rbtree_bp_
