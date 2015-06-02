@@ -401,8 +401,8 @@ ADLB_Pack_container(const adlb_container *container,
 
   TABLE_BP_FOREACH(members, item)
   {
-    assert(item->key_len <= INT_MAX);
-    size_t key_len = item->key_len;
+    size_t key_len = table_bp_key_len(item);
+    assert(key_len <= INT_MAX);
     // append key; append val
     size_t required = *output_pos + VINT_MAX_BYTES + key_len;
     dc = ADLB_Resize_buf(output, output_caller_buffer, required);
@@ -941,7 +941,7 @@ static char *data_repr_container(const adlb_container *c)
     size_t value_strlen = (value_s == NULL) ? sizeof(null_str) :
                                               strlen(value_s);
     dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
-                   (item->key_len - 1) + value_strlen + 7);
+                   (table_bp_key_len(item) - 1) + value_strlen + 7);
     assert(dc == ADLB_DATA_SUCCESS);
     if (c->key_type == ADLB_DATA_TYPE_STRING)
     {

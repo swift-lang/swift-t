@@ -131,9 +131,25 @@ static inline const void *table_bp_get_key(const table_bp_entry *e)
   return binkey_packed_get(&e->key);
 }
 
-static inline size_t table_bp_get_key_len(const table_bp_entry *e)
+/*
+  Get length of key
+ */
+static inline size_t table_bp_key_len(const table_bp_entry *e)
 {
   return binkey_packed_len(&e->key);
+}
+
+/*
+  Helper to manually free table entry.
+ */
+static inline void table_bp_free_entry(table_bp_entry *e, bool is_head)
+{
+  binkey_packed_free(&e->key);
+
+  if (!is_head) {
+    // head is stored in array, rest were malloced separately
+    free(e);
+  }
 }
 
 static inline void table_bp_clear_entry(table_bp_entry *entry)

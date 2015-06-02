@@ -132,16 +132,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
           DATA_CHECK(dc);
           free(d);
         }
-        if (!table_bp_inline_key(item->key_len))
-        {
-          assert(item->__key != NULL);
-          free(item->__key);
-        }
       }
-     
       // Free list node and move to next
-      if (free_mem && item != head) // Head is part of array
-        free(item);
+      if (free_mem)
+        table_bp_free_entry(item, item == head);
     }
 
 

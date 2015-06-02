@@ -146,14 +146,9 @@ void table_bp_free_callback(table_bp* target, bool free_root,
         next = e->next; // Store next right away
 
         if (callback != NULL)
-          callback(table_bp_get_key(e), table_bp_get_key_len(e), e->data);
+          callback(table_bp_get_key(e), table_bp_key_len(e), e->data);
 
-        binkey_packed_free(&e->key);
-
-        if (!is_head) {
-          // head is stored in array, rest were malloced separately
-          free(e);
-        }
+        table_bp_free_entry(e, is_head);
       }
     }
   }
@@ -509,7 +504,7 @@ table_bp_expand(table_bp *T)
       // all entries should be valid if we get here
       assert(table_bp_entry_valid(e));
       int new_ix = binkey_hash(table_bp_get_key(e),
-            table_bp_get_key_len(e), new_capacity);
+            table_bp_key_len(e), new_capacity);
 
       // Add at tail of new buckets to preserve insert order.
       // This requires traversing list, but collisions should be fairly
@@ -565,7 +560,7 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
     for (table_bp_entry *e = head; e != NULL; e = e->next)
     {
       printf("(");
-      binkey_printf(table_bp_get_key(e), table_bp_get_key_len(e));
+      binkey_printf(table_bp_get_key(e), table_bp_key_len(e));
       if (include_vals)
       {
         printf(", ");
@@ -601,7 +596,7 @@ bucket_keys_string_length(const table_bp_entry *head)
     {
       // Each byte is two hex digits in string repr.
       // Plus separator char
-      result += table_bp_get_key_len(e) * 2 + 1;
+      result += table_bp_key_len(e) * 2 + 1;
     }
   }
   return result;
@@ -650,7 +645,7 @@ bucket_keys_tostring(char *result, const table_bp_entry *head)
   for (const table_bp_entry *e = head; e != NULL; e = e->next)
   {
     // Each byte is two hex digits in string repr.
-    p += binkey_sprintf(p, table_bp_get_key(e), table_bp_get_key_len(e));
+    p += binkey_sprintf(p, table_bp_get_key(e), table_bp_key_len(e));
     p[0] = ' ';
     p++;
   }
@@ -675,7 +670,7 @@ bucket_tostring(char *result, size_t size, const char *format,
   {
     for (const table_bp_entry *item = head; item; item = item->next)
     {
-      p = bp_append_pair(p, table_bp_get_key(item), table_bp_get_key_len(item),
+      p = bp_append_pair(p, table_bp_get_key(item), table_bp_key_len(item),
                          format, item->data, item->next != NULL);
     }
   }
@@ -711,7 +706,7 @@ table_bp_keys_tostring_slice(char* result, const table_bp* target,
     if (c >= offset+count && count != -1)
       break;
     p += binkey_sprintf(p, table_bp_get_key(item),
-                      table_bp_get_key_len(item));
+                      table_bp_key_len(item));
     *(p++) = ' ';
     c++;
   }

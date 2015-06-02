@@ -1521,9 +1521,9 @@ pack_member(adlb_container *cont, table_bp_entry *item,
   adlb_data_code dc;
   if (include_keys)
   {
-    assert(item->key_len <= INT_MAX);
+    assert(table_bp_key_len(item) <= INT_MAX);
     dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
-            table_bp_get_key(item), item->key_len,
+            table_bp_get_key(item), table_bp_key_len(item),
             true, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
@@ -1957,7 +1957,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
   TABLE_BP_FOREACH(c->members, item)
   {
     adlb_subscript component = { .key = table_bp_get_key(item),
-                                 .length = item->key_len };
+                                 .length = table_bp_key_len(item) };
 
     // Ensure subscript valid in event of reallocation
     if (subscript_uses_buf)
