@@ -951,14 +951,11 @@ static void
 rbtree_print_loop(struct RBTREE_NODE* node, int level)
 {
   valgrind_assert(node != NULL);
-  char buffer[level+16];
-  char* p = &buffer[0];
-  append(p, "+ ");
+  printf("+ ");
   for (int i = 0; i < level; i++)
-    append(p, " ");
-  append(p, "%c"RBTREE_KEY_PRNF"", color(node),
+    printf(" ");
+  printf("%c"RBTREE_KEY_PRNF"\n", color(node),
          RBTREE_KEY_PRNA(node->key));
-  printf("%s\n", buffer);
 
   if (node->left == NULL && node->right == NULL)
     return;

@@ -46,27 +46,29 @@ pop_all(struct rbtree_bp* T)
   int pops = 0;
   while (true)
   {
-    bool b = rbtree_pop(T, &k, &v);
+    bool b = rbtree_bp_pop(T, &k, &v);
     if (!b) { printf("POPPED NULL\n"); break; }
-    printf("popped: %li=%s\n\n", k, (char*) v);
+    printf("popped: %s=%s\n\n", (char*)binkey_packed_get(&k), (char*) v);
     printf("STABLE:\n");
-    rbtree_print(T);
+    rbtree_bp_print(T);
     pops++;
   }
   assert(pops == size);
 }
 
 static bool
-test_cb(struct rbtree_node* node, void* user_data)
+test_cb(struct rbtree_bp_node* node, void* user_data)
 {
-  printf("node: %li %s\n", node->key, (char*) node->data);
+  printf("node: %s %s\n", (char*)binkey_packed_get(&node->key),
+                          (char*) node->data);
   return false;
 }
 
 static bool
-empty_cb(struct rbtree_node* node, void* user_data)
+empty_cb(struct rbtree_bp_node* node, void* user_data)
 {
-  printf("node: %li %s\n", node->key, (char*) node->data);
+  printf("node: %s %s\n", (char*)binkey_packed_get(&node->key),
+                           (char*) node->data);
   return true;
 }
 
@@ -74,9 +76,9 @@ static bool
 test_empty_iterator()
 {
 
-  struct rbtree T;
-  rbtree_init(&T);
-  bool found = rbtree_iterator(&T, empty_cb, NULL);
+  struct rbtree_bp T;
+  rbtree_bp_init(&T);
+  bool found = rbtree_bp_iterator(&T, empty_cb, NULL);
   if (found)
   {
     fprintf(stderr, "Found something in empty tree\n");
@@ -86,33 +88,60 @@ test_empty_iterator()
   return true;
 }
 
+#define BUF_SIZE 512
+
+/*
+  Make key with numeric representation plus padding to get a
+  range of key sizes.
+  Add numeric padding so that for positive numbers up to 9999,
+  lexical order matches numeric order.
+ */
+static binkey_packed_t make_key(char buf[BUF_SIZE], int val)
+{
+  int pos = 0;
+  pos += sprintf(buf, "%04i", val);
+  while (pos < BUF_SIZE - 1 && pos < val)
+  {
+    buf[pos++] = '_';
+  }
+
+  buf[pos++] = '\0';
+
+  binkey_packed_t packed;
+  bool ok = binkey_packed_set(&packed, buf, (size_t)pos);
+  assert(ok);
+
+  return packed;
+}
+
 int
 main()
 {
-  struct rbtree T;
-  rbtree_init(&T);
+  struct rbtree_bp T;
+  rbtree_bp_init(&T);
 
   // TEST 1:
 
-  rbtree_add(&T, 12, "hello");
-  rbtree_add(&T, 8,  "hello");
-  rbtree_add(&T, 9,  "hello");
-  rbtree_add(&T, 10, "hello");
-  rbtree_add(&T, 7,  "hello");
-  rbtree_add(&T, 15, "hello");
-  rbtree_add(&T, 14, "hello");
-  rbtree_add(&T, 13, "hello");
-  rbtree_print(&T);
+  char buf[BUF_SIZE], buf2[BUF_SIZE];
+
+  rbtree_bp_add(&T, make_key(buf, 12), "hello");
+  rbtree_bp_add(&T, make_key(buf, 8),  "hello");
+  rbtree_bp_add(&T, make_key(buf, 9),  "hello");
+  rbtree_bp_add(&T, make_key(buf, 10), "hello");
+  rbtree_bp_add(&T, make_key(buf, 7),  "hello");
+  rbtree_bp_add(&T, make_key(buf, 15), "hello");
+  rbtree_bp_add(&T, make_key(buf, 14), "hello");
+  rbtree_bp_add(&T, make_key(buf, 13), "hello");
 
   printf("\nITERATOR...\n");
-  rbtree_iterator(&T, test_cb, NULL);
+  rbtree_bp_iterator(&T, test_cb, NULL);
 
   printf("\nREMOVING...\n");
 
   void* data;
-  rbtree_remove(&T, 12, &data);
+  rbtree_bp_remove(&T, make_key(buf, 12), &data);
   printf("remove ok.\n");
-  rbtree_print(&T);
+  rbtree_bp_print(&T);
 
   pop_all(&T);
 
@@ -122,8 +151,8 @@ main()
 
   for (long i = 1; i <= 20; i++)
   {
-    rbtree_add(&T, i, "hello");
-    rbtree_print(&T);
+    rbtree_bp_add(&T, make_key(buf, i), "hello");
+    rbtree_bp_print(&T);
   }
 
   pop_all(&T);
@@ -136,10 +165,10 @@ main()
     A[i] = i;
   shuffle(A, n);
   for (int i = 0; i < n; i++)
-    rbtree_add(&T, A[i], NULL);
+    rbtree_bp_add(&T, make_key(buf, A[i]), NULL);
 
   printf("COMPLETE TREE:\n");
-  rbtree_print(&T);
+  rbtree_bp_print(&T);
   printf("\n");
 
   pop_all(&T);
@@ -151,14 +180,15 @@ main()
   print_longs(A, n);
   printf("\n");
   for (int i = 0; i < n; i++)
-    rbtree_add(&T, A[i], NULL);
+    rbtree_bp_add(&T, make_key(buf, A[i]), NULL);
   shuffle(A, n);
   for (int i = 0; i < n; i++)
   {
-    printf("removing: %li\n", A[i]);
-    bool b = rbtree_remove(&T, A[i], NULL);
+    binkey_packed_t key = make_key(buf, A[i]); 
+    printf("removing: %li (%s)\n", A[i], buf);
+    bool b = rbtree_bp_remove(&T, key, NULL);
     assert(b);
-    rbtree_print(&T);
+    rbtree_bp_print(&T);
   }
 
   // TEST 5: moves
@@ -198,26 +228,26 @@ main()
   // add all data
   printf("ADDING...\n");
   for (int i = 0; i < m; i++)
-    rbtree_add(&T, B[i], NULL);
-  rbtree_print(&T);
+    rbtree_bp_add(&T, make_key(buf, B[i]), NULL);
+  rbtree_bp_print(&T);
 
   // remove all dests (make space for moves)
   printf("REMOVING DESTS...\n");
   for (int i = 0; i < moves; i++)
-    rbtree_remove(&T, D[i], NULL);
-  rbtree_print(&T);
+    rbtree_bp_remove(&T, make_key(buf, D[i]), NULL);
+  rbtree_bp_print(&T);
 
   printf("MOVING...\n");
   // do each move
   for (int i = 0; i < moves; i++)
   {
     printf("moving: %li to %li\n", S[i], D[i]);
-    rbtree_move(&T, S[i], D[i]);
+    rbtree_bp_move(&T, make_key(buf, S[i]), make_key(buf2, D[i]));
     printf("move done.\n");
-    rbtree_print(&T);
+    rbtree_bp_print(&T);
   }
 
-  rbtree_clear(&T);
+  rbtree_bp_clear(&T);
 
   printf("SIZE: %i\n", T.size);
 

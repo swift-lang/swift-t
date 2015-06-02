@@ -40,8 +40,9 @@ static const binkey_packed_t rbtree_key_invalid = { NULL, 0 };
 #define RBTREE_KEY_COPY(a, b) binkey_packed_copy(&(a), &(b))
 #define RBTREE_KEY_FREE(k) binkey_packed_free(&(k))
 
-#define RBTREE_KEY_PRNF "%p (%zu)"
-#define RBTREE_KEY_PRNA(k) binkey_packed_get(&(k)), binkey_packed_len(&(k))
+#define RBTREE_KEY_PRNF "%.*s (%zu)"
+#define RBTREE_KEY_PRNA(k) (int)binkey_packed_len(&(k)), \
+     (const char*)binkey_packed_get(&(k)), binkey_packed_len(&(k))
 
 #include "rbtree-template.c"
 

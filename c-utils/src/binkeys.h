@@ -106,6 +106,8 @@ binkey_packed_set(binkey_packed_t *key_repr, const void *key,
     }
     memcpy(key_repr->__key, key, key_len);
   }
+  key_repr->key_len = key_len;
+
   return true;
 }
 
