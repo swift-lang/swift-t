@@ -1454,9 +1454,6 @@ handle_refcount_incr(int caller)
   adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change,
                                     XLB_NO_ACQUIRE, NULL, &notifs);
 
-  // Shouldn't set any references based on this
-  assert(notifs.references.count == 0);
-
   DEBUG("data_reference_count => %i", dc);
 
   struct packed_incr_resp resp = {

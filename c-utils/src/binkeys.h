@@ -111,6 +111,28 @@ binkey_packed_set(binkey_packed_t *key_repr, const void *key,
   return true;
 }
 
+/*
+  Set, but don't copy
+ */
+static inline void
+binkey_packed_set_unsafe(binkey_packed_t *key_repr, void *key,
+                  size_t key_len)
+{
+  if (binkey_packed_inline(key_len))
+  {
+    // Store inline
+    // Initialize to avoid clash with invalid value
+    key_repr->__key = 0;
+    memcpy(&key_repr->__key, key, key_len);
+  }
+  else
+  {
+    key_repr->__key = key;
+  }
+  key_repr->key_len = key_len;
+
+}
+
 static inline bool
 binkey_packed_copy(binkey_packed_t *key_repr,
                    const binkey_packed_t *key_repr2)
