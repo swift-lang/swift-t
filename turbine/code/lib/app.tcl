@@ -81,9 +81,8 @@ namespace eval turbine {
         }
       } else {
         # Tcl 8.5
-        if { ! [ catch { c::sync_exec $cmd {*}$args          \
-                             {*}$stdin_src                   \
-                             {*}$stdout_dst {*}$stderr_dst } \
+        if { ! [ catch { c::sync_exec $stdin_src \
+                         $stdout_dst $stderr_dst $cmd $args } \
                      results options ] } {
           break
         }
