@@ -70,7 +70,7 @@ export getenv(ENV_LIST)
 
 # Run Turbine:
 ${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
-            ${VALGRIND} ${TCLSH} ${COMMAND}
+            ${VALGRIND} ${COMMAND}
 CODE=${?}
 
 echo
