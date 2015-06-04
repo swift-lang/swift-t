@@ -1024,7 +1024,8 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
   }
-
+  printf("cmd_argc: %i\n", cmd_argc);
+  
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
   if (child == 0)
