@@ -81,6 +81,8 @@ namespace eval turbine {
         }
       } else {
         # Tcl 8.5
+        puts "Tcl 8.5"
+        puts "$cmd _${args}_"
         if { ! [ catch { c::sync_exec $stdin_src \
                          $stdout_dst $stderr_dst $cmd $args } \
                      results options ] } {
