@@ -18,6 +18,8 @@
 
 # Runs test suite on Jenkins server
 
+# Any arguments to this script are passed to run-tests.zsh
+
 check_error()
 {
   CODE=$1
@@ -63,7 +65,7 @@ cd tests
 
 export ADLB_PERF_COUNTERS=0
 nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
-      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
+      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
