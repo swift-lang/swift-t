@@ -72,7 +72,6 @@ namespace eval turbine {
       if { $tcl_version >= 8.6 } {
         try {
           c::sync_exec $stdin_src $stdout_dst $stderr_dst $cmd {*}$args
-
           break
         } trap {TURBINE ERROR} { msg } {
           # Error: try again
@@ -81,10 +80,8 @@ namespace eval turbine {
         }
       } else {
         # Tcl 8.5
-        puts "Tcl 8.5"
-        puts "$cmd _${args}_"
         if { ! [ catch { c::sync_exec $stdin_src \
-                         $stdout_dst $stderr_dst $cmd $args } \
+                             $stdout_dst $stderr_dst $cmd {*}$args } \
                      results options ] } {
           break
         }

@@ -1019,12 +1019,9 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
   int cmd_argc = objc - cmd_offset;
   char *cmd_argv[cmd_argc + 1];
   cmd_argv[0] = cmd;
-  cmd_argv[cmd_argc] = NULL; // Need to null terminate for execvp
   for (int i = 1; i < cmd_argc; i++)
-  {
     cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
-  }
-  printf("cmd_argc: %i\n", cmd_argc);
+  cmd_argv[cmd_argc] = NULL; // Need to NULL-terminate for execvp()
   
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
