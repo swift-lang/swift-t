@@ -1,4 +1,5 @@
-#!/bin/zsh -efu
+#!/bin/zsh -f
+set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -73,7 +74,6 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
        ADLB_DEBUG=${ADLB_DEBUG}
        MPIRUN_LABEL=1
        TURBINE_CACHE_SIZE=0
-       N=${N}
      )
 
 if [[ ${MODE} == "BGQ" ]]

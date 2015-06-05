@@ -79,6 +79,7 @@ export ADLB_DEBUG=${ADLB_DEBUG:-1}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
 export VERBOSE=0
+export ADLB_PRINT_TIME=${ADLB_PRINT_TIME:-1}
 
 turbine_log()
 # Fills in turbine.log file after job submission
