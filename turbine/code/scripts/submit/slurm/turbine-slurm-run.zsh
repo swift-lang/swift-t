@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -25,23 +26,54 @@
 # NODES: Number of nodes to use
 # PPN:   Processes-per-node
 
-PROGRAM=$1
+print "TURBINE-SLURM"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
-declare TURBINE_HOME
-source ${TURBINE_HOME}/scripts/helpers.zsh
+source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 if [[ ${?} != 0 ]]
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
   return 1
 fi
+declare TURBINE_HOME
 
+
+print run-init done
 checkvars PROGRAM NODES PPN
-declare   PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
-setup-turbine-slurm.zsh
-exitcode "setup-turbine-slurm failed!"
+TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
+TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
-sbatch --exclusive --constraint=ib ./turbine-slurm.sh ${PROGRAM}
+m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+
+print "wrote: ${TURBINE_SLURM}"
+
+Q=""
+if (( ${+QUEUE} ))
+then
+  Q="--partition=${QUEUE}"
+fi
+
+set -x
+sbatch --exclusive --constraint=ib \
+  --output=${OUTPUT_FILE}          \
+  --error=${OUTPUT_FILE}           \
+  ${Q}                             \
+  --job-name=${TURBINE_JOBNAME}    \
+  ${TURBINE_SLURM} ${PROGRAM} ${ARGS} | read __ __ __ JOB_ID
+
+# JOB_ID must be an integer:
+if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
+then
+  abort "sbatch failed!"
+fi
+declare JOB_ID
+
+# Fill in turbine.log
+turbine_log >> ${LOG_FILE}
+# Fill in jobid.txt
+print ${JOB_ID} > ${JOB_ID_FILE}
+
+return 0

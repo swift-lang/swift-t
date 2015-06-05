@@ -15,22 +15,34 @@
 
 # RUN-INIT
 
-# Common queue  submission setup file used by Cobalt and PBS
-#   (and APRUN)
-# Used to process command line arguments, initialize basic settings
-# before launching qsub
+# Common queue submission setup file used by Cobalt, PBS, SLURM, Cray.
 
-set -e
+# Used to process command line arguments, initialize basic settings
+# before launching qsub (or equivalent)
+
+set -eu
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
+# Turbine-specific environment (with defaults)
+export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
+export ADLB_SERVERS=${ADLB_SERVERS:-1}
+export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
+export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
+export TURBINE_LOG=${TURBINE_LOG:-1}
+export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
+export ADLB_DEBUG=${ADLB_DEBUG:-1}
+export WALLTIME=${WALLTIME:-00:05:00}
+export PPN=${PPN:-1}
+export VERBOSE=0
+
 turbine_log()
-# Fills in turbine.log file after job completion
+# Fills in turbine.log file after job submission
 {
   print "JOB:               ${JOB_ID}"
   print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
-  print "WORK_DIRECTORY:    ${WORK_DIRECTORY}"
+  print "TURBINE_OUTPUT:    ${TURBINE_OUTPUT}"
   print "HOSTNAME:          $( hostname -d )"
   print "SUBMITTED:         $( date_nice )"
   print "PROCS:             ${PROCS}"
@@ -55,9 +67,6 @@ then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
-export WALLTIME=${WALLTIME:-00:15:00}
-export VERBOSE=0
-export PPN=${PPN:-1}
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -118,6 +127,11 @@ then
   print "PROCS must be an integer: you set PROCS=${PROCS}"
   return 1
 fi
+
+# Round NODES up for extra processes
+export NODES=$(( PROCS/PPN ))
+(( PROCS % PPN )) && (( NODES++ )) || true
+declare NODES PROCS PPN
 
 export SCRIPT=$1
 checkvar SCRIPT
@@ -196,7 +210,7 @@ then
   print "done: ${INIT_SCRIPT}"
 fi
 
-# Log file for turbine-cobalt settings
+# Log file for Turbine settings
 LOG_FILE=${TURBINE_OUTPUT}/turbine.log
 # All output from job, including error stream
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
@@ -204,6 +218,7 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 cp -v ${SCRIPT} ${TURBINE_OUTPUT}
+export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 

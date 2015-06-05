@@ -41,26 +41,7 @@ export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
-# Log file for turbine-cobalt settings
-LOG_FILE=${TURBINE_OUTPUT}/turbine-pbs.log
-
-print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
-SCRIPT_NAME=$( basename ${SCRIPT} )
-cp ${SCRIPT} ${TURBINE_OUTPUT}
-export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
-
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
-# Turbine-specific environment (with defaults)
-export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
-export ADLB_SERVERS=${ADLB_SERVERS:-1}
-export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
-export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
-export TURBINE_LOG=${TURBINE_LOG:-1}
-export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
-export ADLB_DEBUG=${ADLB_DEBUG:-1}
-export PPN=${PPN:-4}
-export N=${N:-0}
 
 # We use PBS -V to export all environment variables to the job
 # Evaluate any user turbine-pbs-run -e K=V settings here:
@@ -69,19 +50,8 @@ do
   eval export ${kv}
 done
 
-declare SCRIPT_NAME
-
-declare PROCS PPN
-
-# Round NODES up for extra processes
-export NODES=$(( PROCS/PPN ))
-(( PROCS % PPN )) && (( NODES++ )) || true
-declare NODES
-
 TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine.pbs.m4
 TURBINE_PBS=${TURBINE_OUTPUT}/turbine.pbs
-
-touch ${TURBINE_PBS}
 
 # Filter/create the PBS submit file
 m4 ${TURBINE_PBS_M4} > ${TURBINE_PBS}
@@ -95,18 +65,7 @@ qsub ${TURBINE_PBS} | read JOB_ID
 declare JOB_ID
 
 # Fill in log.txt
-{
-  print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
-  print "HOSTNAME:          $( hostname -d )"
-  print "SUBMITTED:         $( date_nice )"
-  print "PROCS:             ${PROCS}"
-  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
-  print "WALLTIME:          ${WALLTIME}"
-  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
-} >> ${LOG_FILE}
-
+turbine_log >> ${LOG_FILE}
 # Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
 
