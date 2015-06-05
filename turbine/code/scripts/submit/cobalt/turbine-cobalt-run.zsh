@@ -20,15 +20,10 @@
 
 # Environment variables that must be set:
 # MODE: Either "cluster", "BGP", or "BGQ"
-# QUEUE: The queue name to use
 
 # Environment variables that may be set:
+# QUEUE: The queue name to use (optional)
 # PROJECT: The project name to use (default none)
-# TURBINE_OUTPUT_ROOT: Where to put Turbine output-
-#          a subdirectory based on the current time
-#          will be created, reported, and used
-#          (default ~/turbine-output)
-# PPN: Processes-per-node: see below: (default 1)
 
 # On Eureka:   usually set PPN=8
 # On the BG/P: usually set PPN=4
@@ -62,6 +57,8 @@ N=${N:-0}
 
 # declare MODE
 
+checkvars -e MODE
+
 if [[ ${MODE} == "cluster" ]]
 then
   MODE_ARG=""
@@ -75,6 +72,12 @@ then
 else
   print "Unknown mode: ${MODE}"
   exit 1
+fi
+
+QUEUE_ARG=""
+if (( ${+QUEUE} ))
+then
+  QUEUE_ARG=( -q ${QUEUE} )
 fi
 
 env+=( TCLLIBPATH="${TCLLIBPATH}"
@@ -93,14 +96,8 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
 if [[ ${MODE} == "BGQ" ]]
 then
   env+=( BG_SHAREDMEMSIZE=32MB
-         PAMID_VERBOSE=1
-       )
+         PAMID_VERBOSE=1 )
 fi
-
-# Round NODES up for extra processes
-NODES=$(( PROCS/PPN ))
-(( PROCS % PPN )) && (( NODES++ )) || true
-declare PROCS NODES PPN
 
 if [[ ${CHANGE_DIRECTORY} == "" ]]
 then
@@ -129,24 +126,25 @@ then
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
-       -q ${QUEUE}             \
+       ${QUEUE_ARG}            \
        --cwd ${WORK_DIRECTORY} \
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-       --jobname "Swift" \
+       --jobname ${TURBINE_JOBNAME}    \
        ${TURBINE_OUTPUT}/turbine-cobalt.sh | \
     read JOB_ID
 else # Blue Gene
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
-       -q ${QUEUE}             \
+       ${QUEUE_ARG}            \
        --cwd ${WORK_DIRECTORY} \
        --env "${ENV}"          \
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${=ARGS} | \
+       --jobname ${TURBINE_JOBNAME}    \
+        ${TCLSH} ${PROGRAM} ${=ARGS} | \
     read JOB_ID
 fi
 

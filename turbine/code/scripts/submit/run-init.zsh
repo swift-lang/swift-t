@@ -31,13 +31,14 @@
 #   WALLTIME: Formatted according to specific scheduler
 #   TURBINE_OUTPUT_ROOT, TURBINE_OUTPUT_FORMAT: See sites guide
 # OUTPUT:
-#   SCRIPT: User-provided script name from $1
+#   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
 #   JOB_ID: Job ID from the scheduler
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
-#   COMMAND=${SCRIPT_NAME} ${ARGS}
+#   COMMAND="${TCLSH} ${PROGRAM} ${ARGS}"
+#       or: "${PROGRAM} ${ARGS}" for executables
 #   NODES: Number of nodes derived from PROCS and PPN
 #   LOG_FILE:    Path to turbine.log
 #   OUTPUT_FILE: Path to output.txt
@@ -97,7 +98,6 @@ CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
-declare PROCS
 (( ! ${+PROCS} )) && PROCS=0
 [[ ${PROCS} == "" ]] && PROCS=0
 export PROCS
