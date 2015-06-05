@@ -12,14 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
-# Reusable shell helpers
+
+# HELPERS.ZSH
+# Reusable general-purpose shell helper functions.
 
 KB=1024
 MB=$(( 1024*KB ))
 GB=$(( 1024*MB ))
 
-# Verbose operation
 @()
+# Verbose operation
 {
   print
   print ${*}
@@ -92,24 +94,36 @@ crash()
 }
 
 checkvar()
+# Assert variable is set 
+# If given -e, refer to user environment in error message
 {
+  zparseopts -D -E e=E
   local VAR=$1
 
   if [[ ${(P)VAR} == "" ]]
     then
-    crash "Not set: ${VAR}"
+    if (( ${#E} > 0 ))
+    then
+      crash "You must set environment variable: ${VAR}"
+    else
+      crash "Not set: ${VAR}"
+    fi
   fi
   return 0
 }
 
 checkvars()
+# Assert all variables are set 
+# If given -e, refer to user environment in error message
 {
+  local E=""
+  zparseopts -D -E e=E
   local VARS
   VARS=( ${*} )
   local V
   for V in ${VARS}
    do
-   checkvar ${V}
+   checkvar ${E} ${V}
   done
   return 0
 }
@@ -218,6 +232,7 @@ uptodate()
 }
 
 rm0()
+# Allows for no arguments without the danger of rm -f
 {
   (( ! ${#*} )) && return
   rm ${*}
