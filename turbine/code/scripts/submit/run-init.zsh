@@ -15,10 +15,49 @@
 
 # RUN-INIT
 
-# Common queue submission setup file used by Cobalt, PBS, SLURM, Cray.
-
+# Common queue submission setup file.
 # Used to process command line arguments, initialize basic settings
-# before launching qsub (or equivalent)
+# before launching qsub or equivalent.
+# Sets many environment and shell variables described below.
+
+# This script copies the user TIC to TURBINE_OUTPUT
+# then cd's to TURBINE_OUTPUT and runs from there.
+
+# VARIABLES:
+# INPUT:
+#   Positional arguments: $1->SCRIPT, rest->ARGS
+#   PROCS: Number of MPI processes
+#   PPN: Processes-per-node: see below: (default 1)
+#   WALLTIME: Formatted according to specific scheduler
+#   TURBINE_OUTPUT_ROOT, TURBINE_OUTPUT_FORMAT: See sites guide
+# OUTPUT:
+#   SCRIPT: User-provided script name from $1
+#   ARGS:   User-provided args from ${*} after shift
+#   JOB_ID: Job ID from the scheduler
+#   SCRIPT_NAME=$( basename ${SCRIPT} )
+#   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
+#   TURBINE_WORKERS
+#   COMMAND=${SCRIPT_NAME} ${ARGS}
+#   NODES: Number of nodes derived from PROCS and PPN
+#   LOG_FILE:    Path to turbine.log
+#   OUTPUT_FILE: Path to output.txt
+#   JOB_ID_FILE: Path to jobid.txt
+# INPUT/OUTPUT:
+#   TURBINE_JOBNAME
+# NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
+#   TURBINE_OUTPUT: See sites guide
+#   ADLB_SERVERS
+#   ADLB_EXHAUST_TIME
+#   TURBINE_LOG
+#   TURBINE_DEBUG
+#   ADLB_DEBUG
+
+# Files:
+# Creates TURBINE_OUTPUT containing:
+# Copy of the user TIC
+# turbine.log: Summary of job metadata
+# jobid.txt: The JOB_ID from the scheduler
+# output.txt: The job stdout and stderr
 
 set -eu
 
@@ -217,7 +256,7 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-cp -v ${SCRIPT} ${TURBINE_OUTPUT}
+cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
