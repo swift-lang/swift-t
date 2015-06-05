@@ -1,4 +1,5 @@
-#!/bin/zsh -ef
+#!/bin/zsh -f
+set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -55,7 +56,10 @@ m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
 print "wrote: ${TURBINE_CRAY}"
 
 QUEUE_ARG=""
-[[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
+if (( ${+QUEUE} ))
+then
+  QUEUE_ARG="-q ${QUEUE}"
+fi
 
 # We use PBS -V to export all environment variables to the job
 # Evaluate any user turbine-pbs-run -e K=V settings here:
