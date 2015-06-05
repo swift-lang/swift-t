@@ -260,8 +260,10 @@ public class Main {
   private static void usage(Options opts) {
     HelpFormatter fmt = new HelpFormatter();
     fmt.printHelp("stc", opts, true);
-    System.out.println("requires arguments: <input> <output>");
-    System.out.println("see wrapper script for usage");
+    System.out.println(
+      "The first filename is the input; it is required.\n"   +
+      "The second filename is the output; it is optional.\n" +
+      "Use stc -h for full help.");
   }
 
   /**

@@ -24,6 +24,7 @@ usage()
 help()
 {
   cat ${STC_HOME}/etc/help-swift-t-header.txt
+  print
   printf "STC OPTIONS\n\n"
   # These options are available from SWIFT-T or STC:
   cat ${STC_HOME}/etc/help-options-1.txt

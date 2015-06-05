@@ -226,7 +226,13 @@ function set_opt_level() {
 
 help()
 {
-  printf "STC HELP\n\n"
+  print "STC HELP\n"
+
+  print "stc <options> <program.swift> <program.tic>?"
+  print "Compiles program.swift."
+  print "The <program.tic> argument is optional."
+  print
+  print "Swift/T Guide: http://swift-lang.org/Swift-T/guide.html\n"
   # These options are available in the swift-t interface:
   cat ${STC_HOME}/etc/help-options-1.txt
   # These options are not available in the swift-t interface:
