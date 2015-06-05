@@ -4878,6 +4878,20 @@ ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  int result; 
+#ifdef ENABLE_XPT
+  result = 1;
+#else
+  result = 0;
+#endif
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+  return TCL_OK;
+}
+    
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
   filename: the filename of the checkpoint file.  If empty string,
@@ -4944,8 +4958,7 @@ ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                                     "checkpointing");
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
-  return TCL_ERROR;
+  return TCL_OK;
 #endif
 }
 
@@ -6017,6 +6030,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("struct_create_nested_container",
                         ADLB_Struct_Create_Nested_Container_Cmd);
   COMMAND("struct_create_nested_bag", ADLB_Struct_Create_Nested_Bag_Cmd);
+  COMMAND("xpt_enabled", ADLB_Xpt_Enabled_Cmd);
   COMMAND("xpt_init", ADLB_Xpt_Init_Cmd);
   COMMAND("xpt_finalize", ADLB_Xpt_Finalize_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);

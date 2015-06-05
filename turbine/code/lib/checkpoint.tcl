@@ -47,6 +47,9 @@ namespace eval turbine {
   # TURBINE_XPT_INDEX_MAX: max size in bytes
   proc xpt_init2 { } {
     variable xpt_mode
+
+    if { ! [ adlb::xpt_enabled ] } return 
+
     # Defaults
     # Default to periodic_flush
     set flush_mode periodic_flush
@@ -150,3 +153,8 @@ namespace eval turbine {
     adlb::xpt_finalize
   }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 2
+# End:
