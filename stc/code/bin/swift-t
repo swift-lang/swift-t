@@ -103,7 +103,11 @@ do
     # Turbine pass-through
     t)
       FLAG=${OPTARG%:*}
-      ARG=${OPTARG#*:}
+      ARG=
+      if (( ${#OPTARG} > 1 ))
+      then
+        ARG=${OPTARG#*:}
+      fi
       TURBINE_OPTS+=( -${FLAG} ${ARG} )
       ;;
 

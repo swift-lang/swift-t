@@ -1,4 +1,5 @@
-#!/bin/zsh -ef
+#!/bin/zsh -f
+set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -14,34 +15,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# usage:
-#  turbine-pbs-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
-#                      <SCRIPT> [<ARG>]*
+# TURBINE PBS RUN
 
-# Environment variables that must be set:
-# QUEUE: The queue name to use
+# See run-init.zsh for usage
 
-# Environment variables that may be set:
-# PROJECT: The project name to use (default none)
-# TURBINE_OUTPUT_ROOT: Where to put Turbine output-
-#          a subdirectory based on the current time
-#          will be created, reported, and used
-#          (default ~/turbine-output)
-# PPN: Processes-per-node: see below
-
-# Runs job in TURBINE_OUTPUT
-# Pipes output and error to TURBINE_OUTPUT/output.txt
-# Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
-
-# Convention note: This script uses -n <processes>
-# (We follow the mpiexec convention.)
+print "TURBINE-PBS SCRIPT"
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
-# declare TURBINE_HOME
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-
-JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
+if [[ ${?} != 0 ]]
+then
+  print "Broken Turbine installation!"
+  declare TURBINE_HOME
+  return 1
+fi
 
 # We use PBS -V to export all environment variables to the job
 # Evaluate any user turbine-pbs-run -e K=V settings here:

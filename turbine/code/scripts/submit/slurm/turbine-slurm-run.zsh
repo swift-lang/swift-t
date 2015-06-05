@@ -15,18 +15,10 @@ set -eu
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE-SLURM-RUN
+# TURBINE SLURM RUN
 # Creates a SLURM run file and runs it on the given program
 
-# USAGE
-# > VAR1=VALUE1 VAR2=VALUE2 turbine-slurm-run.zsh <PROGRAM> <ARGS>*
-
-# ENVIRONMENT
-# TODO: User input should be PROCS, not NODES (#648)
-# NODES: Number of nodes to use
-# PPN:   Processes-per-node
-
-print "TURBINE-SLURM"
+print "TURBINE-SLURM SCRIPT"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
@@ -37,7 +29,6 @@ then
   return 1
 fi
 declare TURBINE_HOME
-
 
 print run-init done
 checkvars PROGRAM NODES PPN
@@ -50,17 +41,17 @@ m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
-Q=""
+QUEUE_ARG=""
 if (( ${+QUEUE} ))
 then
-  Q="--partition=${QUEUE}"
+  QUEUE_ARG="--partition=${QUEUE}"
 fi
 
 set -x
 sbatch --exclusive --constraint=ib \
   --output=${OUTPUT_FILE}          \
   --error=${OUTPUT_FILE}           \
-  ${Q}                             \
+  ${QUEUE_ARG}                     \
   --job-name=${TURBINE_JOBNAME}    \
   ${TURBINE_SLURM} ${PROGRAM} ${ARGS} | read __ __ __ JOB_ID
 

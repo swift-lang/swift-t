@@ -17,36 +17,10 @@
 # TURBINE-CRAY-RUN
 # Creates an APRUN run file and runs it on the given program
 
-# usage:
-#  turbine-cray-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
-#                        [-x] [-X]
-#                           <SCRIPT> [<ARG>]*
-#
-# -x: if provide, program is executable rather than Tcl script
-# -X: use turbine_sh launcher instead of tclsh
-
-# Environment variables that may be set:
-# QUEUE: The queue name to use
-# PROJECT: The project name to use (default none)
-# PPN:            Processes-per-node
-# WALLTIME:       Time limit.  Default: 00:15:00 (15 minutes)
-# TURBINE_OUTPUT_ROOT: Where to put Turbine output-
-#          a subdirectory based on the current time
-#          will be created, reported, and used
-#          (default ~/turbine-output)
-# TURBINE_OUTPUT: Directory in which to place output
 # MPICH_CUSTOM_RANK_ORDER: executable that prints Mpich rank order file
 #          to standard output, for MPICH_RANK_REORDER_METHOD=3
 
-# Runs job in TURBINE_OUTPUT
-# Pipes output and error to TURBINE_OUTPUT/output.txt
-# Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
-
-# Convention note: This script uses -n <processes>
-# (We follow the mpiexec convention.)
-
-# NOTE: See the sourced helpers.zsh script for definitions of some
-#       shell functions used here.
+print "TURBINE-CRAY SCRIPT"
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 if [[ ${?} != 0 ]]
@@ -57,15 +31,6 @@ fi
 # declare TURBINE_HOME
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-
-checkvars SCRIPT PPN TURBINE_OUTPUT WALLTIME
-export SCRIPT
-declare SCRIPT PPN TURBINE_OUTPUT WALLTIME QUEUE
-
-# Round NODES up for extra processes
-export NODES=$(( PROCS/PPN ))
-(( PROCS % PPN )) && (( NODES++ )) || true
-declare PROCS NODES
 
 # Setup custom rank order
 if (( ${+MPICH_CUSTOM_RANK_ORDER} ))
@@ -85,9 +50,6 @@ fi
 TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
 TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
 
-mkdir -pv ${TURBINE_OUTPUT}
-touch ${TURBINE_CRAY}
-
 m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
 
 print "wrote: ${TURBINE_CRAY}"
@@ -95,6 +57,8 @@ print "wrote: ${TURBINE_CRAY}"
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
 
+# We use PBS -V to export all environment variables to the job
+# Evaluate any user turbine-pbs-run -e K=V settings here:
 for kv in ${env}
 do
   print "user environment variable: ${kv}"
@@ -126,17 +90,4 @@ JOB_ID=$( print ${QSUB_OUT} | tr -d " " ) # Trim
 declare JOB_ID
 print ${JOB_ID} > ${TURBINE_OUTPUT}/jobid.txt
 
-LOG_FILE=${TURBINE_OUTPUT}/turbine.log
-{
-  print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
-  print "HOSTNAME:          $( hostname -d )"
-  print "SUBMITTED:         $( date_nice )"
-  print "PROCS:             ${PROCS}"
-  print "PPN:               ${PPN}"
-  print "NODES:             ${NODES}"
-  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
-  print "WALLTIME:          ${WALLTIME}"
-  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
-} >> ${LOG_FILE}
+turbine_log >> ${LOG_FILE}

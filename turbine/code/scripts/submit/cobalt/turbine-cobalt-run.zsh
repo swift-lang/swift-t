@@ -14,24 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# usage:
-#  turbine-cobalt -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
-#                 <SCRIPT> [<ARG>]*
+# See run-init.zsh for usage
 
 # Environment variables that must be set:
 # MODE: Either "cluster", "BGP", or "BGQ"
 
-# Environment variables that may be set:
-# QUEUE: The queue name to use (optional)
-# PROJECT: The project name to use (default none)
-
-# On Eureka:   usually set PPN=8
 # On the BG/P: usually set PPN=4
 # On the BG/Q: usually set PPN=16
-
-# Runs job in TURBINE_OUTPUT
-# Pipes output and error to TURBINE_OUTPUT/output.txt
-# Creates TURBINE_OUTPUT/log.txt and TURBINE_OUTPUT/jobid.txt
 
 # Convention note: This script uses -n <processes>
 #                  Cobalt qsub uses -n <nodes>
@@ -40,20 +29,14 @@
 print "TURBINE-COBALT SCRIPT"
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
-
-source ${TURBINE_HOME}/scripts/turbine-config.sh
-
+# source ${TURBINE_HOME}/scripts/turbine-config.sh
+if [[ ${?} != 0 ]]
+then
+  print "Broken Turbine installation!"
+  declare TURBINE_HOME
+  return 1
+fi
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-
-# Turbine-specific environment (with defaults)
-ADLB_SERVERS=${ADLB_SERVERS:-1}
-TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
-ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-0.1}
-ADLB_PRINT_TIME=${ADLB_PRINT_TIME:-0}
-TURBINE_LOG=${TURBINE_LOG:-1}
-TURBINE_DEBUG=${TURBINE_DEBUG:-1}
-ADLB_DEBUG=${ADLB_DEBUG:-1}
-N=${N:-0}
 
 # declare MODE
 
@@ -121,8 +104,10 @@ fi
 if [[ ${MODE} == "cluster" ]]
 then
   export COMMAND
-  m4 ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
-     ${TURBINE_OUTPUT}/turbine-cobalt.sh
+  TURBINE_COBALT_M4=${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4
+  TURBINE_COBALT=${TURBINE_OUTPUT}/turbine-cobalt.sh
+  m4 ${TURBINE_COBALT_M4} > ${TURBINE_COBALT}
+  print "wrote: ${TURBINE_COBALT}"
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \

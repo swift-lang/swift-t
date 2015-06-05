@@ -15,6 +15,9 @@
 
 # RUN-INIT
 
+# NOTE: See the sourced helpers.zsh script for definitions of some
+#       shell functions used here.
+
 # Common queue submission setup file.
 # Used to process command line arguments, initialize basic settings
 # before launching qsub or equivalent.

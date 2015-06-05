@@ -33,7 +33,7 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 #PBS -V
 
 VERBOSE=getenv(VERBOSE)
-if (( ${VERBOSE} )) 
+if (( ${VERBOSE} ))
 then
  set -x
 fi
@@ -45,16 +45,13 @@ echo
 cd ${PBS_O_WORKDIR}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
-TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
-EXEC_SCRIPT=getenv(EXEC_SCRIPT)
-PROGRAM=getenv(PROGRAM)
-ARGS=getenv(ARGS)
+COMMAND=getenv(COMMAND)
 
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 START=$( date +%s.%N )
-${TURBINE_LAUNCHER} ${TCLSH} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCHER} ${TCLSH} ${COMMAND}
 STOP=$( date +%s.%N )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
