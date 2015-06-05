@@ -224,6 +224,13 @@ then
 fi
 
 # Just use mpiexec right now
+if [[ ${TURBINE_LAUNCHER} == 0 ]]
+then
+  print "Turbine is not configured for the mpiexec launcher!"
+  print "Use turbine -m <machine> ."
+  exit 1
+fi
+
 # Allows user to insert valgrind
 ${TURBINE_LAUNCHER} ${OPTIONS} ${=VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
