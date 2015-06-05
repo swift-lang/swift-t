@@ -266,7 +266,6 @@ then
     if [[ ${?} != 0 ]]
     then
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
-        USE_LAUNCHER=mpiexec-not-found
     fi
 fi
 
