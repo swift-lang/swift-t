@@ -94,14 +94,15 @@ crash()
 }
 
 checkvar()
-# Assert variable is set 
+# Assert variable is set
 # If given -e, refer to user environment in error message
 {
-  zparseopts -D -E e=E
+  local E=""
+  zparseopts -D e=E
   local VAR=$1
 
-  if [[ ${(P)VAR} == "" ]]
-    then
+  if ! (( ${(P)+VAR} ))
+  then
     if (( ${#E} > 0 ))
     then
       crash "You must set environment variable: ${VAR}"
@@ -113,17 +114,17 @@ checkvar()
 }
 
 checkvars()
-# Assert all variables are set 
+# Assert all variables are set
 # If given -e, refer to user environment in error message
 {
   local E=""
-  zparseopts -D -E e=E
+  zparseopts -D e=E
   local VARS
   VARS=( ${*} )
   local V
   for V in ${VARS}
-   do
-   checkvar ${E} ${V}
+  do
+    checkvar ${E} ${V}
   done
   return 0
 }
