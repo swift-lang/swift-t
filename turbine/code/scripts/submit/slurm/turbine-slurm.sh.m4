@@ -33,11 +33,16 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
 echo TURBINE-SLURM.SH
 
-export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
+VERBOSE=getenv(VERBOSE)
+if (( ${VERBOSE} ))
+then
+ set -x
+fi
+
+TURBINE_HOME=getenv(TURBINE_HOME)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-COMMAND=getenv(COMMAND)
+COMMAND="getenv(COMMAND)"
 
-set -x
 ${TURBINE_LAUNCHER} ${COMMAND}
 # Return exit code from mpirun
