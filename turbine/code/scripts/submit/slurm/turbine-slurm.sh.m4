@@ -19,8 +19,6 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
-echo TURBINE-SLURM.SH
-
 # Define a convenience macro
 # This simply does environment variable substition when m4 runs
 define(`getenv', `esyscmd(printf -- "$`$1'")')
@@ -28,21 +26,18 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
 #SBATCH --time=getenv(WALLTIME)
 #SBATCH --nodes=getenv(NODES)
-#SBATCH --ntassks-per-node=getenv(PPN)
+#SBATCH --ntasks-per-node=getenv(PPN)
 #SBATCH --workdir=getenv(TURBINE_OUTPUT)
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
+echo TURBINE-SLURM.SH
+
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
+source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
-EXEC_SCRIPT=getenv(EXEC_SCRIPT)
-
-# Hack for Midway
-# MPI=${HOME}/sfw/mvapich-1.9b
-# MPI=/software/mvapich2-2.0-el6-x86_64
+COMMAND=getenv(COMMAND)
 
 set -x
-# ${MPI}/bin/mpirun ${TCLSH} ${PROGRAM}
-${TURBINE_LAUNCHER} ${TCLSH} ${*}
+${TURBINE_LAUNCHER} ${COMMAND}
 # Return exit code from mpirun

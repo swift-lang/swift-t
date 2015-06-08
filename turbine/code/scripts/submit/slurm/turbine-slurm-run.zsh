@@ -30,7 +30,6 @@ then
 fi
 declare TURBINE_HOME
 
-print run-init done
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 

@@ -71,7 +71,6 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 # Turbine-specific environment (with defaults)
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
 export ADLB_SERVERS=${ADLB_SERVERS:-1}
-export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
 export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
 export TURBINE_LOG=${TURBINE_LOG:-1}
 export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
@@ -85,11 +84,12 @@ turbine_log()
 # Fills in turbine.log file after job submission
 {
   print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
+  print "COMMAND:           ${COMMAND}"
   print "TURBINE_OUTPUT:    ${TURBINE_OUTPUT}"
   print "HOSTNAME:          $( hostname -d )"
   print "SUBMITTED:         $( date_nice )"
   print "PROCS:             ${PROCS}"
+  print "NODES:             ${NODES}"
   print "PPN:               ${PPN}"
   print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
@@ -174,6 +174,7 @@ fi
 # Round NODES up for extra processes
 export NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
+export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
 declare NODES PROCS PPN
 
 export SCRIPT=$1
@@ -262,6 +263,18 @@ print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
+if (( EXEC_SCRIPT ))
+then
+  # Uses turbine_sh launcher
+  export COMMAND="${TURBINE_HOME}/bin/turbine_sh ${PROGRAM} ${ARGS}"
+elif (( TURBINE_STATIC_EXEC ))
+then
+  # User static executable
+  export COMMAND="${PROGRAM} ${ARGS}"
+else
+  # Normal case
+  export COMMAND="${TCLSH} ${PROGRAM} ${ARGS}"
+fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
