@@ -121,6 +121,10 @@ report_version()
   then
     echo " using Python: ${TURBINE_USE_PYTHON}"
   fi
+  if [[ ${TURBINE_USE_R} != 0 ]]
+  then
+    echo " using R: ${TURBINE_USE_R}"
+  fi
 }
 
 if (( REPORT_VERSION ))
