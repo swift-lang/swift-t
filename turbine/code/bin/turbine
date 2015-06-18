@@ -109,21 +109,21 @@ fi
 
 report_version()
 {
-  echo "Turbine ${TURBINE_VERSION}"
-  echo " in: ${TURBINE_HOME}"
+  print "Turbine ${TURBINE_VERSION}"
+  print " in: ${TURBINE_HOME}"
   SOURCE_TXT=${TURBINE_HOME}/etc/source.txt
   if [[ -f ${SOURCE_TXT} ]]
   then
-    echo " installed from: $( cat ${SOURCE_TXT} )"
+    print " installed from: $( cat ${SOURCE_TXT} )"
   fi
-  echo " using Tcl: ${TCLSH}"
+  print " using Tcl: ${TCLSH}"
   if [[ ${TURBINE_USE_PYTHON} != 0 ]]
   then
-    echo " using Python: ${TURBINE_USE_PYTHON}"
+    print " using Python: ${TURBINE_USE_PYTHON}"
   fi
   if [[ ${TURBINE_USE_R} != 0 ]]
   then
-    echo " using R: ${TURBINE_USE_R}"
+    print " using R: ${TURBINE_USE_R}"
   fi
 }
 
