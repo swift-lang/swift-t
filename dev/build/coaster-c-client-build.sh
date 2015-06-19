@@ -37,6 +37,8 @@ fi
 
 if (( RUN_AUTOTOOLS )); then
   ./autogen.sh
+elif [ ! -f configure ]; then
+  ./autogen.sh
 fi
 
 if (( CONFIGURE )); then
