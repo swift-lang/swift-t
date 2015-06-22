@@ -1,0 +1,116 @@
+
+////
+Swift/T devguide, asciidoc format
+////
+
+= Swift/T Developers' Guide
+v0.8.0, June 2015
+
+:toc:
+:numbered:
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+This document is for developers interested in modifying the Swift/T
+codebase.
+
+This document assumes you know everything in the
+http://swift-lang.org/Swift-T/guide.html[general user guide] first.
+
+== Git
+
+Everything, including this document, is in:
+git@github.com:swift-lang/swift-t.git
+
+== Code conventions
+
+* Eclipse is highly recommended.
+* There should be no whitespace at end-of-line.  If you are fixing
+  whitespace, put that fix in its own commit.
+
+=== C code
+
+* Open brace after newline
+
+==== C-Utils
+
+
+
+==== ADLB
+
+User-visible symbols are prefixed with ADLB_ and follow the MPI/ADLB
+capitalization conventions.
+
+Internal symbols are prefixed with xlb_ and use all lower case except
+for macros/constants.
+
+==== Turbine
+
+=== Java code
+
+* Open brace before newline
+
+== Testing
+
+Each component has a testing mechanism:
+
+=== C-Utils
+
+Just do +make test_results+.
+
+=== ADLB
+
+ADLB is primarily tested in the Turbine test suite, but you can do
++make test_results+ here too.  See also +make apps/batcher.x+.
+
+=== Turbine
+
+Just do +make test_results+.
+
+=== STC
+
+Just do +tests/run-tests.zsh+.
+
+=== Automated testing
+
+Swift/T is tested nightly on an ANL/MCS-internal Jenkins server.  It
+is difficult to grant access to this system to external persons.
+
+== How to learn the code
+
+=== Prerequisites
+
+* Strong Unix programming: C, Make, shell.  (We use ZSH for convenience and
+  readability but strive to keep things close to the POSIX shell.)
+* Basic MPI knowledge is necessary.  Swift/T only uses a small portion
+  of MPI, the basic sends and receives.  You need to be able to write
+  and run toy MPI programs.
+* The main ADLB features are just blocking send/receive.  There are
+  some nonblocking calls that are only necessary for advanced internal
+  features (work stealing probes).
+* Moderate Tcl knowledge is necessary for Turbine.  We make pervasive
+  use of Tcl extensions to C, but rarely use advanced Tcl language
+  tricks.  SWIG is optional.
+* Moderate Java knowledge is necessary for STC.  You need to know
+  ANTLR.  STC does not use any other complex Java APIs.
+* Concurrency: We do not use threads or any concurrency model.  All
+  Swift/T concurrency comes from ADLB/MPI and the Turbine +rule+
+  statement.  This makes things mostly sequential and easier to debug.
+
+=== Things to do
+
+* Read the http://swift-lang.org/papers[papers]
+* Read the tests, particularly the Turbine tests.  There are fewer of
+  them but they demonstrate how Swift/T implements Swift semantics.
+  See the STC test guide (About.txt) for further notes.
+* Run the http://swift-lang.org/Swift-T/leaf.html[leaf guide examples]
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////
