@@ -68,6 +68,8 @@ building, or want to ensure that a specific version is used, you can
 modify configuration, for example to explicitly set the location of
 Tcl or MPI.
 
+**Note**: You might need to install `zsh` for a successful build. Just type `sudo apt-get install zsh`.
+
 After this initial build, you can do a quick build and install of
 all components using the fast build script:
 
