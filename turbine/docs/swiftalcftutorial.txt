@@ -21,11 +21,11 @@ This tutorial aims at
 
 Two Flavors of Swift: K and T..
 
-Both T and K are installed on ALCF systems..
+Both are installed and available for use on ALCF systems..
 
-== Chosing between K and T
+== Choosing between K and T
 
-A decision tree to chose between T and K is shown below:
+A decision tree to pick between T and K is shown below:
 
 
 == Example 1. Hello World
@@ -55,16 +55,16 @@ Simple Cobalt mode here.
 === Cobalt sub-block mode
 sub-block mode here.
 
-=== Seamless execution between Mira and Tukey
+=== Seamless execution between Mira and Cooley
 Text here
 
 == Execution Modes in T
 Text here
 
-=== Mainwrap: Wrap functions
+=== Mainwrap: Wrap main and other functions
 Text here
 
-== Appendix 1. Troubleshoot
+== Appendix 1. Troubleshoot and Debug
 Troubleshoot text here
 
 == Appendix 2. Swift Config
