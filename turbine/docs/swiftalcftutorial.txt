@@ -25,8 +25,18 @@ Both are installed and available for use on ALCF systems..
 
 == Choosing between K and T
 
-A decision tree to pick between T and K is shown below:
+Use Swift/T if:
 
+- your tasks are short (seconds to subseconds)
+- your workflow fits well into a single scheduler (e.g., PBS) job
+- you can optionally link your application code against the Swift/T framework.
+
+Use Swift/K if:
+
+- your apps are longer-running (minutes to hours)
+- your apps are complex executables that can not be readily linked into Swift/T
+- your workflows have time-varying resource demands
+- It is advantageous to break your resource requests into multiple smaller jobs
 
 == Example 1. Hello World
 Text here
