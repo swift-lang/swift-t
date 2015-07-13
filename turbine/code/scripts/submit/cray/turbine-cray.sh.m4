@@ -94,22 +94,7 @@ echo
 PROCS=getenv(`PROCS')
 TURBINE_WORKERS=$(( ${PROCS} - ${ADLB_SERVERS} ))
 
-# Log the parameters
-echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "SCRIPT:       ${SCRIPT} ${ARGS}"
-echo "PROCS:        ${PROCS}"
-echo "NODES:        ${NODES}"
-echo "PPN:          ${PPN}"
-echo "WALLTIME:     ${WALLTIME}"
-echo
-echo "TURBINE_WORKERS: ${TURBINE_WORKERS}"
-echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
-echo
-
 cd ${TURBINE_OUTPUT}
-
-echo "TCLSH:        ${TCLSH}"
-echo
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 

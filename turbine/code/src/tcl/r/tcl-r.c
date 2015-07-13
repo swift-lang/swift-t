@@ -20,7 +20,7 @@
  *  Created on: May 22, 2013
  *      Author: wozniak
  *
- *  Tcl extension calling into Python interpreter
+ *  Tcl extension calling into R interpreter
  */
 
 #include "config.h"

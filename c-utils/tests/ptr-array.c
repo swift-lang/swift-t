@@ -9,8 +9,9 @@
  *      Author: armstrong
  */
 
-#include <assert.h>
 #include <stdio.h>
+
+#include "src/c-utils-tests.h"
 
 #include <ptr_array.h>
 
@@ -20,23 +21,23 @@ main()
   bool ok;
   struct ptr_array pa;
   ptr_array_init(&pa, 8);
-  assert(pa.arr != NULL);
-  assert(pa.capacity == 8);
-  assert(pa.free_count == 8);
+  ASSERT_TRUE(pa.arr != NULL);
+  ASSERT_TRUE(pa.capacity == 8);
+  ASSERT_TRUE(pa.free_count == 8);
 
   int n = 17;
   uint32_t idxs[n];
   for (size_t i = 0; i < n; i++)
   {
     ok = ptr_array_add(&pa, (void*)i, &idxs[i]);
-    assert(ok);
+    ASSERT_TRUE(ok);
 
-    assert(idxs[i] >= 0);
-    assert(idxs[i] < pa.capacity);
-    assert(pa.arr[idxs[i]] == (void*)i);
+    ASSERT_TRUE(idxs[i] >= 0);
+    ASSERT_TRUE(idxs[i] < pa.capacity);
+    ASSERT_TRUE(pa.arr[idxs[i]] == (void*)i);
   }
-  assert(pa.capacity >= n);
-  assert(pa.free_count == pa.capacity - n);
+  ASSERT_TRUE(pa.capacity >= n);
+  ASSERT_TRUE(pa.free_count == pa.capacity - n);
 
   // Now, remove a subset of values
   int skip = 3;
@@ -44,11 +45,11 @@ main()
   for (size_t i = 0; i < n; i += skip)
   {
     void *val = ptr_array_remove(&pa, idxs[i]);
-    assert((size_t)val == i);
+    ASSERT_TRUE((size_t)val == i);
     removed++;
   }
-  assert(pa.capacity >= n - removed);
-  assert(pa.free_count == pa.capacity - n + removed);
+  ASSERT_TRUE(pa.capacity >= n - removed);
+  ASSERT_TRUE(pa.free_count == pa.capacity - n + removed);
 
   for (size_t i = 0; i < n; i++)
   {
@@ -57,11 +58,11 @@ main()
     if (i % skip == 0)
     {
       // Should have been removed
-      assert(val == NULL);
+      ASSERT_TRUE(val == NULL);
     }
     else
     {
-      assert(val == (void*)i);
+      ASSERT_TRUE(val == (void*)i);
     }
   }
 
@@ -72,18 +73,18 @@ main()
   {
     uint32_t idx;
     ok = ptr_array_add(&pa, (void*)i, &idx);
-    assert(ok);
-    assert(ptr_array_get(&pa, idx) == (void*)i);
+    ASSERT_TRUE(ok);
+    ASSERT_TRUE(ptr_array_get(&pa, idx) == (void*)i);
   }
 
-  assert(pa.free_count == pa.capacity - (n - removed + to_readd));
+  ASSERT_TRUE(pa.free_count == pa.capacity - (n - removed + to_readd));
   // Should not have expanded - was enough space
-  assert(pa.capacity == prev_capacity);
+  ASSERT_TRUE(pa.capacity == prev_capacity);
 
   ptr_array_clear(&pa);
-  assert(pa.arr == NULL);
-  assert(pa.capacity == 0);
-  assert(pa.free_count == 0);
+  ASSERT_TRUE(pa.arr == NULL);
+  ASSERT_TRUE(pa.capacity == 0);
+  ASSERT_TRUE(pa.free_count == 0);
   printf("DONE\n");
   return 0;
 }

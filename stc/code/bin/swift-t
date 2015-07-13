@@ -1,5 +1,8 @@
 #!/bin/zsh -f
 
+# SWIFT-T 
+# Main user interface script
+
 set -eu
 
 # Exit codes: (cf. ExitCode.java)
@@ -60,6 +63,8 @@ help()
 report_version()
 {
   ${STC} -v
+  print
+  ${TURBINE} -v
   exit 0
 }
 

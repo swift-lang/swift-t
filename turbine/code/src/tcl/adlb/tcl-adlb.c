@@ -63,7 +63,6 @@
 
 #include <log.h>
 
-#include <memory.h>
 #include <table_bp.h>
 #include <tools.h>
 #include <vint.h>

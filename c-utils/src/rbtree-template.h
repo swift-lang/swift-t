@@ -87,7 +87,6 @@ void RBTREE_ADD_NODE(struct RBTREE_TYPENAME* target, struct RBTREE_NODE* node);
 #define RBTREE_SEARCH_NODE RBTREE_NAME(search_node)
 struct RBTREE_NODE* RBTREE_SEARCH_NODE(struct RBTREE_TYPENAME* target,
                                        RBTREE_KEY_T key);
-
 /**
    Remove key from tree
    @param data If non-NULL, store data here
@@ -102,6 +101,12 @@ bool RBTREE_REMOVE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key, RBTREE_VAL_
 void RBTREE_REMOVE_NODE(struct RBTREE_TYPENAME* target,
                         struct RBTREE_NODE* node);
 
+/**
+   Frees the node and the key
+ */
+#define RBTREE_FREE_NODE RBTREE_NAME(free_node)
+void RBTREE_FREE_NODE(struct RBTREE_NODE* node);
+
 #define RBTREE_POP RBTREE_NAME(pop)
 bool RBTREE_POP(struct RBTREE_TYPENAME* target, RBTREE_KEY_T* key, RBTREE_VAL_T* data);
 
@@ -110,6 +115,31 @@ struct RBTREE_NODE* RBTREE_LEFTMOST(struct RBTREE_TYPENAME* target);
 
 #define RBTREE_LEFTMOST_KEY RBTREE_NAME(leftmost_key)
 RBTREE_KEY_T RBTREE_LEFTMOST_KEY(struct RBTREE_TYPENAME* target);
+
+#define RBTREE_RIGHTMOST RBTREE_NAME(rightmost)
+struct RBTREE_NODE* RBTREE_RIGHTMOST(struct RBTREE_TYPENAME* target);
+
+#define RBTREE_RIGHTMOST_KEY RBTREE_NAME(rightmost_key)
+RBTREE_KEY_T RBTREE_RIGHTMOST_KEY(struct RBTREE_TYPENAME* target);
+
+#define RBTREE_SEARCH_RANGE RBTREE_NAME(search_range)
+struct RBTREE_NODE*
+RBTREE_SEARCH_RANGE(struct RBTREE_TYPENAME* target,
+                    RBTREE_KEY_T key);
+/**
+  Return next node in key order, or NULL if no such node.
+ */
+#define RBTREE_NEXT_NODE RBTREE_NAME(next_node)
+struct RBTREE_NODE *
+RBTREE_NEXT_NODE(struct RBTREE_NODE* node);
+
+/**
+  Return previous node in key order, or NULL if no such node.
+ */
+#define RBTREE_PREV_NODE RBTREE_NAME(prev_node)
+struct RBTREE_NODE *
+RBTREE_PREV_NODE(struct RBTREE_NODE* node);
+
 
 /**
    Call callback on each rbtree node until the callback returns false

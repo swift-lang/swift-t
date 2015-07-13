@@ -18,7 +18,7 @@ Creates a library in lib/
 To use:
 
 #include the headers from src/ that you want to use.
-link with -L woztools/lib -l woztools
+link with -L c-utils/lib -l exmcutils
 
 Configure options:
 

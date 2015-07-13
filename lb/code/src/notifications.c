@@ -400,7 +400,6 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
       adlb_notif_rank *notif = &ranks->notifs[i];
       int target = notif->rank;
       bool processed_locally = false;
-
       if (xlb_s.layout.am_server && target == xlb_s.layout.rank)
       {
         adlb_code rc = xlb_notify_server_self(notif);

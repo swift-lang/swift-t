@@ -266,7 +266,6 @@ then
     if [[ ${?} != 0 ]]
     then
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
-        USE_LAUNCHER=mpiexec-not-found
     fi
 fi
 
@@ -587,28 +586,31 @@ fi
 AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
+# Python
+# By default, use default location
+# USE_PYTHON should not be used programmatically
+USE_PYTHON=0
+USE_PYTHON_INCLUDE=0
+USE_PYTHON_LIB=0
+USE_PYTHON_NAME=python2.7
 HAVE_PYTHON=0
+
 AC_ARG_ENABLE(python,
     AS_HELP_STRING([--enable-python],
                    [Enable calling python]),
     [
       HAVE_PYTHON=1
+      USE_PYTHON="yes"
     ])
-
-# By default, use default location
-USE_PYTHON=0
-USE_PYTHON_INCLUDE=0
-USE_PYTHON_LIB=0
-USE_PYTHON_NAME=python2.7
 
 AC_ARG_WITH(python,
    AS_HELP_STRING([--with-python],
                    [Use this python directory]),
   [
       HAVE_PYTHON=1
-      USE_PYTHON=${withval}
       AC_CHECK_FILE(${USE_PYTHON}/include/python2.7/Python.h, [],
                     [AC_MSG_ERROR([Could not find python header!])])
+      USE_PYTHON=${withval}
       USE_PYTHON_INCLUDE=${USE_PYTHON}/include
       USE_PYTHON_LIBDIR=${USE_PYTHON}/lib
       USE_PYTHON_NAME=libpython2.7.so
@@ -620,12 +622,12 @@ AC_ARG_WITH(python-lib,
                     provide fully qualified path]),
     [
       HAVE_PYTHON=1
-      USE_PYTHON=1
       USE_PYTHON_LIB=${withval}
       AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
                     [AC_MSG_ERROR([Could not find python!])])
-      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON} )
+      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
       USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
+      USE_PYTHON=${USE_PYTHON_LIB} # Copy 
     ])
 
 if [[ ${USE_PYTHON} != 0 ]]
@@ -638,6 +640,7 @@ fi
 
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
 AC_SUBST(HAVE_PYTHON)
+AC_SUBST(USE_PYTHON)
 AC_SUBST(USE_PYTHON_INCLUDE)
 AC_SUBST(USE_PYTHON_LIBDIR)
 AC_SUBST(USE_PYTHON_NAME)

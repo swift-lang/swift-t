@@ -46,7 +46,13 @@ then
   QUEUE_ARG="--partition=${QUEUE}"
 fi
 
-# set -x
+# SLURM exports all environment variables to the job by default
+# Evaluate any user turbine-slurm-run -e K=V settings here:
+for kv in ${env}
+do
+  eval export ${kv}
+done
+
 sbatch --exclusive --constraint=ib \
   --output=${OUTPUT_FILE}          \
   --error=${OUTPUT_FILE}           \

@@ -21,12 +21,22 @@ This tutorial aims at
 
 Two Flavors of Swift: K and T..
 
-Both T and K are installed on ALCF systems..
+Both are installed and available for use on ALCF systems..
 
-== Chosing between K and T
+== Choosing between K and T
 
-A decision tree to chose between T and K is shown below:
+Use Swift/T if:
 
+- your tasks are short (seconds to subseconds)
+- your workflow fits well into a single scheduler (e.g., PBS) job
+- you can optionally link your application code against the Swift/T framework.
+
+Use Swift/K if:
+
+- your apps are longer-running (minutes to hours)
+- your apps are complex executables that can not be readily linked into Swift/T
+- your workflows have time-varying resource demands
+- It is advantageous to break your resource requests into multiple smaller jobs
 
 == Example 1. Hello World
 Text here
@@ -55,16 +65,16 @@ Simple Cobalt mode here.
 === Cobalt sub-block mode
 sub-block mode here.
 
-=== Seamless execution between Mira and Tukey
+=== Seamless execution between Mira and Cooley
 Text here
 
 == Execution Modes in T
 Text here
 
-=== Mainwrap: Wrap functions
+=== Mainwrap: Wrap main and other functions
 Text here
 
-== Appendix 1. Troubleshoot
+== Appendix 1. Troubleshoot and Debug
 Troubleshoot text here
 
 == Appendix 2. Swift Config

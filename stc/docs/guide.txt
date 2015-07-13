@@ -1,7 +1,7 @@
 
 ////
 Swift/T guide, asciidoc format
-http://www.mcs.anl.gov/exm/local/guides/stc.html
+http://swift-lang.org/Swift-T/guide.html
 ////
 
 :toc:

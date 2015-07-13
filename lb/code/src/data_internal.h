@@ -24,7 +24,7 @@
 #include "adlb-defs.h"
 #include "adlb_types.h"
 #include "data.h"
-#include <list_b.h>
+#include <rbtree_bp.h>
 
 /**
  * Set initial capacity to be fairly small since in practice most
@@ -62,18 +62,40 @@ static inline void xlb_data_init_status(adlb_data_status *s)
 #define ADLB_DATA_INIT_STATUS \
   { .set = 0, .permanent = 0, .release_write_refs = 0}
 
+typedef enum {
+  LISTENER_NOTIF,
+  LISTENER_REF,
+} xlb_listener_tag;
+
+typedef struct {
+  int rank;
+  int work_type;
+} xlb_listener_notif;
+
+typedef struct {
+  adlb_datum_id id;
+  adlb_refc acquire;
+  int write_decr;
+  size_t subscript_len;
+  char subscript_data[];
+} xlb_listener_reference;
+
 /*
  * Rank listening for notification
  */
 typedef struct {
-  int rank;
-  int work_type;
+  xlb_listener_tag tag;
+  union {
+    xlb_listener_notif notif; // Store small one inline
+    xlb_listener_reference *ref; // Store larger one elsewhere
+  };
 } xlb_listener;
 
 typedef struct
 {
   adlb_datum_storage data;
-  struct list_b listeners; /* list of xlb_listeners */
+  // TODO: would be ideal to store listener inline in entry,i.e rbtree_bb
+  struct rbtree_bp listeners; // ordered map: subscript->xlb_listener
   int read_refcount; // Number of open read refs
   int write_refcount; // Number of open write refs
   adlb_data_type type;
@@ -157,7 +179,7 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
 adlb_data_code
 xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
           adlb_refc change, xlb_refc_acquire acquire,
-          bool *garbage_collected, adlb_notif_t *notifs);
+          bool defer_gc, bool *garbage_collected, adlb_notif_t *notifs);
 
 /*
   Utility function to resize string buffer using realloc if needed

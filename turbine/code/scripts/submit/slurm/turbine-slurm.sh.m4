@@ -35,14 +35,16 @@ echo TURBINE-SLURM.SH
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
-TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
-EXEC_SCRIPT=getenv(EXEC_SCRIPT)
+VERBOSE=getenv(VERBOSE)
+if (( ${VERBOSE} ))
+then
+ set -x
+fi
 
-# Hack for Midway
-# MPI=${HOME}/sfw/mvapich-1.9b
-# MPI=/software/mvapich2-2.0-el6-x86_64
+TURBINE_HOME=getenv(TURBINE_HOME)
+source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-# set -x
-# ${MPI}/bin/mpirun ${TCLSH} ${PROGRAM}
-${TURBINE_LAUNCHER} ${TCLSH} ${*}
+COMMAND="getenv(COMMAND)"
+
+${TURBINE_LAUNCHER} ${COMMAND}
 # Return exit code from mpirun

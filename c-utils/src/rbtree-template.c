@@ -40,6 +40,19 @@
 #define DEBUG_RBTREE(args...)
 #endif
 
+static inline struct RBTREE_NODE*
+rbtree_leftmost_loop(struct RBTREE_NODE* N);
+
+static inline struct RBTREE_NODE*
+rbtree_rightmost_loop(struct RBTREE_NODE* N);
+
+static inline void delete_one_child(struct RBTREE_TYPENAME* target,
+                                    struct RBTREE_NODE* N);
+
+static inline void swap_nodes(struct RBTREE_TYPENAME* target,
+                              struct RBTREE_NODE* N,
+                              struct RBTREE_NODE* R);
+
 static inline tree_side
 which_side(struct RBTREE_NODE* parent, struct RBTREE_NODE* child)
 {
@@ -359,43 +372,162 @@ rbtree_add_loop(struct RBTREE_TYPENAME* target,
 }
 
 static inline struct RBTREE_NODE*
-search_node_loop(struct RBTREE_NODE* p, RBTREE_KEY_T key);
+search_node_exact(struct RBTREE_NODE* p, RBTREE_KEY_T key);
 
 struct RBTREE_NODE*
 RBTREE_SEARCH_NODE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key)
 {
-  if (target->size == 0)
-    return NULL;
-
-  return search_node_loop(target->root, key);
+  return search_node_exact(target->root, key);
 }
 
+/*
+  Find a node matching key.  If multiple matching nodes exist,
+  returns the closest to root.
+ */
 static inline struct RBTREE_NODE*
-search_node_loop(struct RBTREE_NODE* p, RBTREE_KEY_T key)
+search_node_exact(struct RBTREE_NODE* p, RBTREE_KEY_T key)
 {
-  while (!RBTREE_KEY_EQ(key, p->key))
+  while (p != NULL && !RBTREE_KEY_EQ(key, p->key))
   {
     if (RBTREE_KEY_LEQ(key, p->key))
-      if (p->left == NULL)
-        return NULL;
-      else
-        p = p->left;
+      p = p->left;
     else
-      if (p->right == NULL)
-        return NULL;
-      else
-        p = p->right;
+      p = p->right;
   }
   return p;
 }
 
-static inline void delete_one_child(struct RBTREE_TYPENAME* target,
-                                    struct RBTREE_NODE* N);
+static inline struct RBTREE_NODE*
+search_node_succ(struct RBTREE_NODE* p, RBTREE_KEY_T key);
+
+struct RBTREE_NODE*
+RBTREE_SEARCH_RANGE(struct RBTREE_TYPENAME* target,
+                    RBTREE_KEY_T key)
+{
+  return search_node_succ(target->root, key);
+}
+
+/*
+  Find a node matching key, or the immediate successor if not
+  present.  If multiple nodes match key, return leftmost node.
+  If no successor, return NULL.
+ */
+static inline struct RBTREE_NODE*
+search_node_succ(struct RBTREE_NODE* p, RBTREE_KEY_T key)
+{
+  struct RBTREE_NODE *parent = NULL;
+  while (p != NULL && !RBTREE_KEY_EQ(key, p->key))
+  {
+    parent = p;
+    if (RBTREE_KEY_LEQ(key, p->key))
+    {
+      p = p->left;
+    }
+    else
+    {
+      p = p->right;
+    }
+  }
+
+  // p is either null or match closest to root
+  if (p == NULL)
+  {
+    if (parent == NULL)
+      return NULL;
+    /* Find successor of the key.
+       If key was node at missing subtree, then its parent is always
+       either its immediate predecessor or successor.
+     */
+    if (RBTREE_KEY_LEQ(key, parent->key)) // Parent is successor
+      return parent;
+    else
+      // Parent is predecessor: successor of key is successor of parent
+      return RBTREE_NEXT_NODE(parent);
+  }
+  else if (p->left != NULL)
+  {
+    // Found match, check for duplicates in left subtree.
+    while (true)
+    {
+      while (p->left != NULL && RBTREE_KEY_EQ(key, p->left->key))
+        p = p->left;
+     
+      // Cannot go further left
+      if (p->left == NULL)
+        break;
+
+      // Need to check right subtree of left.  Everything in left
+      // subtree is <= key, so if we keep going right we either
+      // find an equal node, or find something matching the key
+      struct RBTREE_NODE *p2 = p->left->right;
+      while (p2 != NULL && !RBTREE_KEY_EQ(p2->key, key))
+        p2 = p2->right;
+
+      if (p2 == NULL)
+        break;
+      else
+        p = p2;
+    }
+  }
+  return p;
+}
+
+struct RBTREE_NODE *
+RBTREE_NEXT_NODE(struct RBTREE_NODE* node)
+{
+  // If node has right subtree, successor is leftmost node in it
+  if (node->right != NULL)
+    return rbtree_leftmost_loop(node->right);
+
+  // Need to search up until we find point where current node is in
+  // left subtree.  If it's the rightmost node, there is no next node.
+  while (node->parent != NULL)
+  {
+    if (node->parent->left == node)
+    {
+      return node->parent;
+    }
+    node = node->parent;
+  }
+
+  return NULL;
+  // Successor is either leftmost node in right subtree or parent
+  if (node->right != NULL)
+  {
+    return node->parent; // Will be NULL if
+  }
+}
+
+struct RBTREE_NODE *
+RBTREE_PREV_NODE(struct RBTREE_NODE* node)
+{
+  // If node has left subtree, predecessor is rightmost node in it
+  if (node->left != NULL)
+    return rbtree_rightmost_loop(node->left);
+
+  // Need to search up until we find point where current node is in
+  // right subtree.  If it's the leftmost node, there is no next node.
+  while (node->parent != NULL)
+  {
+    if (node->parent->right == node)
+    {
+      return node->parent;
+    }
+    node = node->parent;
+  }
+
+  return NULL;
+  // Successor is either leftmost node in right subtree or parent
+  if (node->left != NULL)
+  {
+    return node->parent; // Will be NULL if
+  }
+}
 
 bool
 RBTREE_REMOVE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key, RBTREE_VAL_T* data)
 {
-  struct RBTREE_NODE* N = search_node_loop(target->root, key);
+  struct RBTREE_NODE* N = search_node_exact(target->root, key);
   if (N == NULL)
     return false;
 
@@ -407,9 +539,6 @@ RBTREE_REMOVE(struct RBTREE_TYPENAME* target, RBTREE_KEY_T key, RBTREE_VAL_T* da
   free(N);
   return true;
 }
-
-static inline struct RBTREE_NODE*
-rbtree_leftmost_loop(struct RBTREE_NODE* N);
 
 /**
    Get color as character
@@ -433,9 +562,6 @@ color(struct RBTREE_NODE* N)
                     RBTREE_KEY_PRNA(t->key)); \
 }
 
-static inline void swap_nodes(struct RBTREE_TYPENAME* target,
-                              struct RBTREE_NODE* N,
-                              struct RBTREE_NODE* R);
 void
 RBTREE_REMOVE_NODE(struct RBTREE_TYPENAME* target, struct RBTREE_NODE* N)
 {
@@ -561,7 +687,7 @@ RBTREE_POP(struct RBTREE_TYPENAME* target, RBTREE_KEY_T* key, RBTREE_VAL_T* data
   *data = node->data;
 
   RBTREE_REMOVE_NODE(target, node);
-  free(node);
+  RBTREE_FREE_NODE(node);
 
   return true;
 }
@@ -604,6 +730,48 @@ rbtree_leftmost_loop(struct RBTREE_NODE* N)
       break;
     }
     N = N->left;
+  }
+  return result;
+}
+
+struct RBTREE_NODE*
+RBTREE_RIGHTMOST(struct RBTREE_TYPENAME* target)
+{
+  if (target->size == 0)
+    return NULL;
+
+  struct RBTREE_NODE* result = rbtree_rightmost_loop(target->root);
+  DEBUG_RBTREE("rbtree_rightmost: "RBTREE_KEY_PRNF"\n",
+               RBTREE_KEY_PRNA(result->key));
+  return result;
+}
+
+RBTREE_KEY_T
+RBTREE_RIGHTMOST_KEY(struct RBTREE_TYPENAME* target)
+{
+  if (target->size == 0)
+    return RBTREE_KEY_INVALID;
+
+  struct RBTREE_NODE* node = rbtree_rightmost_loop(target->root);
+  RBTREE_KEY_T result = node->key;
+  return result;
+}
+
+static inline struct RBTREE_NODE*
+rbtree_rightmost_loop(struct RBTREE_NODE* N)
+{
+  if (N == NULL)
+    return NULL;
+
+  struct RBTREE_NODE* result = NULL;
+  while (true)
+  {
+    if (N->right == NULL)
+    {
+      result = N;
+      break;
+    }
+    N = N->right;
   }
   return result;
 }
@@ -1011,6 +1179,11 @@ rbtree_free_subtree(struct RBTREE_NODE* node, RBTREE_CALLBACK cb)
     rbtree_free_subtree(node->right, cb);
   if (cb != NULL)
     cb(node, node->data);
+  RBTREE_FREE_NODE(node);
+}
+
+void RBTREE_FREE_NODE(struct RBTREE_NODE* node)
+{
   RBTREE_KEY_FREE(node->key);
   free(node);
 }
