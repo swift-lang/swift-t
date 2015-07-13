@@ -30,7 +30,6 @@ then
 fi
 declare TURBINE_HOME
 
-print run-init done
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
@@ -47,7 +46,7 @@ then
   QUEUE_ARG="--partition=${QUEUE}"
 fi
 
-set -x
+# set -x
 sbatch --exclusive --constraint=ib \
   --output=${OUTPUT_FILE}          \
   --error=${OUTPUT_FILE}           \
