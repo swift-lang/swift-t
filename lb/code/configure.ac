@@ -220,11 +220,12 @@ AC_MSG_RESULT([${MPI_VERSION_LINE}])
 MPI_VERSION=$( echo ${MPI_VERSION_LINE} | cut -d ' ' -f 5 )
 if [[ ${ADLB_MPI_VERSION} == 3 ]]
 then
-  [[ ${MPI_VERSION} == 3 ]] || \
-    AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
-                  You must 1) re-configure with --enable-mpi-2
-                              which disables parallel tasks; or
-                           2) use an MPI 3 implementation])
+  dnl [[ ${MPI_VERSION} == 3 ]] || \
+  dnl   AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
+  dnl                 You must 1) re-configure with --enable-mpi-2
+  dnl                             which disables parallel tasks; or
+  dnl                          2) use an MPI 3 implementation])
+  :
 fi
 rm -f mpi_version.c.txt
 
