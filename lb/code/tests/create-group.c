@@ -31,80 +31,50 @@
 #include <tools.h>
 #include "src/debug.h"
 
-static void task(void* data, MPI_Comm comm);
+int rank_world;
 
 int
-main()
+main(int argc, char* argv[])
 {
+  if (argc != 2)
+    crash("usage: <parallelism>\n");
+
   int mpi_argc = 0;
   char** mpi_argv = NULL;
   MPI_Init(&mpi_argc, &mpi_argv);
-  int types[2] = {0, 1};
-  int nservers = 1;
-  int am_server;
-  MPI_Comm adlb_comm = MPI_COMM_WORLD;
-  MPI_Comm worker_comm;
-  ADLB_Init(nservers, 2, types, &am_server, adlb_comm, &worker_comm);
+  MPI_Comm comm_task;
+  MPI_Group group_world;
+  MPI_Group group_task;
+  int rank_task;
 
-  int tasks_per_worker = 1;
+  int parallelism;
+  int n = sscanf(argv[1], "%i", &parallelism);
+  if (n != 1)
+    crash("parallelism must be an integer!\n");
 
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank_world);
+  MPI_Comm_group(MPI_COMM_WORLD, &group_world);
 
-  if (am_server)
+  // Recv ranks for output comm
+  int ranks[parallelism];
+  for (int i = 0; i < parallelism; i++)
+    ranks[i] = i;
+  int rc = MPI_Group_incl(group_world, parallelism, ranks, &group_task);
+  assert(rc == MPI_SUCCESS);
+
+  rc = MPI_Comm_create_group(MPI_COMM_WORLD, group_task, 0, &comm_task);
+  assert(rc == MPI_SUCCESS);
+  MPI_Group_free(&group_task);
+
+  if (rank_world < parallelism)
   {
-    ADLB_Server(1);
+    MPI_Comm_rank(comm_task, &rank_task);
+    printf("rank_task: %i\n", rank_task);
+    MPI_Barrier(comm_task);
   }
-  else
-  {
-    char buffer[128];
-    for (int i = 0; i < tasks_per_worker; i++)
-    {
-      sprintf(buffer, "PARALLEL_STRING from: %i #%i", rank, i);
-      adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
-      opts.parallelism = 2;
-      ADLB_Put(buffer, (int)strlen(buffer)+1, ADLB_RANK_ANY, rank, 0, opts);
-    }
-    while (true)
-    {
-      int length;
-      int answer;
-      int type;
-      MPI_Comm task_comm;
-      adlb_code rc =
-          ADLB_Get(0, buffer, &length, &answer, &type, &task_comm);
-      if (rc == ADLB_SHUTDOWN)
-        break;
-      if (task_comm == MPI_COMM_SELF)
-      {
-        printf("SELF\n");
-      }
-      else
-      {
-        printf("PARALLEL TASK\n");
-        task(buffer, task_comm);
-      }
-    }
-  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (rank_world == 0) printf("TEST OK\n");
 
-  ADLB_Finalize();
   MPI_Finalize();
   return 0;
-}
-
-static void
-task(void* data, MPI_Comm comm)
-{
-  TRACE_START;
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
-  printf("TASK: rank: %i\n", rank);
-  printf("TASK: size: %i\n", size);
-  printf("DATA: %s\n", (char*) data);
-  unsigned int delay = (unsigned int)random_between(1,10);
-  sleep(delay);
-  MPI_Barrier(comm);
-  MPI_Comm_free(&comm);
-  TRACE_END;
 }
