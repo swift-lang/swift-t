@@ -120,7 +120,7 @@ if [ ! -z "$MPI_LIB_NAME" ]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --disable-zlib"
+  EXTRA_ARGS+=" --without-zlib"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then

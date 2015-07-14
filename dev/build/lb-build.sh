@@ -55,7 +55,7 @@ if [[ ${MPI_VERSION} == 2 ]]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --disable-zlib"
+  EXTRA_ARGS+=" --without-zlib"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then
