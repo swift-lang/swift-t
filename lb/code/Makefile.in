@@ -241,7 +241,7 @@ TEST_TMP = $(patsubst %.sh, %.tmp, $(TEST_SCRIPTS))
 %.x: %.o $(INSTALL_TOKEN) $(TEST_COMMON_OBJS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(TEST_COMMON_OBJS) $(LDFLAGS) \
-             -L lib -ladlb $(LIBS) \
+             -L lib -ladlb $(LIBS) -lm \
 	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
 
 tests: $(TEST_EXECS)
