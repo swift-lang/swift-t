@@ -43,7 +43,6 @@
 
 /**
   Asserts that condition is true, else returns given error code.
-  Note: This is disabled if NDEBUG is defined
 */
 #define CHECK_MSG(rc, args...)                  \
   { if (!(rc)) {                                             \
@@ -54,7 +53,6 @@
 
 /**
    Checks that an MPI return code is MPI_SUCCESS
-   Note: This is disabled if NDEBUG is defined
  */
 #define MPI_CHECK(rc)  \
   { if (rc != MPI_SUCCESS) { \
@@ -63,7 +61,6 @@
 
 /**
    Checks that an ADLB return code is not ADLB_ERROR
-   Note: This is disabled if NDEBUG is defined
    If used in nested functions that all return adlb_code, can
    create something like a stack trace
  */
