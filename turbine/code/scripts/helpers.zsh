@@ -421,3 +421,17 @@ turbine_stats_walltime()
 # mode: sh
 # sh-basic-offset: 2
 # End:
+
+clm()
+# Select columns from input with awk
+{
+    CMD="{ print"
+    for (( i=1 ; i<=${#*} ; i++ ))
+    do
+	eval idx='${'${i}'}'
+	CMD="${CMD} "'$'${idx}
+	(( i < ${#*} )) && CMD=${CMD}'" "'
+    done
+    CMD=${CMD}" }"
+    awk "${CMD}"
+}
