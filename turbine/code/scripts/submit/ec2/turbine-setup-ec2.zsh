@@ -36,6 +36,11 @@ TURBINE_USER=root
 TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 declare TURBINE_HOME
 source ${TURBINE_HOME}/scripts/helpers.zsh
+if [[ ${?} != 0 ]]
+then
+    print "turbine-setup-ec2: configuration error!"
+    exit 1
+fi
 
 TURBINE_EC2_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 exitcode "turbine-setup-ec2: configuration error!"
