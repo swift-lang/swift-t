@@ -49,11 +49,10 @@ sed "s@TURBINE_EC2_KEY@${KEY}@;s/TURBINE_USER/${TURBINE_USER}/" \
   < ${TURBINE_EC2_HOME}/config.template > ./config
 exitcode "turbine-setup-ec2: configuration error!"
 
-HOSTS=( $( ec2-host | clm 2) )
-
-HOSTFILE=$( mktemp )
+HOSTS=( $( ec2-host | clm 2 ) )
 exitcode "Could not run ec2-host!"
 
+HOSTFILE=$( mktemp )
 ec2-host | clm 2 > ${HOSTFILE}
 exitcode "Could not write HOSTFILE: ${HOSTFILE}"
 
