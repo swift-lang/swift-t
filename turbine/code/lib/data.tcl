@@ -39,8 +39,11 @@ namespace eval turbine {
         container_lookup container_list               \
         container_insert notify_waiter                \
         read_refcount_incr read_refcount_decr         \
-        write_refcount_incr write_refcount_decr
+        write_refcount_incr write_refcount_decr       \
+        create_globals
 
+    variable global_vars
+    set global_vars [ dict create ]
 
     # Shorten strings in the log if the user requested that
     # log_string_mode is set at init time
@@ -273,7 +276,7 @@ namespace eval turbine {
             } else {
               set result [ adlb::retrieve $id struct ]
             }
-            
+
             if { $cache } {
               # TODO: need full struct type
               #c::cache_store $id struct $result
@@ -324,7 +327,7 @@ namespace eval turbine {
             } else {
               set result [ adlb::retrieve $id float ]
             }
-            
+
             if { $cache } {
               c::cache_store $id float $result
             }
@@ -435,9 +438,9 @@ namespace eval turbine {
 
     # Free local blob
     proc free_local_blob { blob } {
-        if { [ string length $blob ] == 0 } { 
+        if { [ string length $blob ] == 0 } {
             puts "WARNING: free_local_blob: received nothing!"
-            return 
+            return
         }
       if { [ llength $blob ] == 3 } {
         debug [ format "free_local_blob: \[%x %d %s\]" \
@@ -465,7 +468,7 @@ namespace eval turbine {
     proc retrieve_decr_blob_string { id } {
       return [ retrieve_blob_string $id 1 ]
     }
-    
+
     proc multi_retrieve { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ list ]
       foreach id $ids {
@@ -483,7 +486,7 @@ namespace eval turbine {
 
       return $result
     }
-    
+
     proc multi_retrieve_kv { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ dict create ]
       dict for {key id} $ids {
@@ -519,7 +522,7 @@ namespace eval turbine {
 
       return $result
     }
-    
+
     proc multi_retrieve_kv_decr { ids decr {cachemode CACHED} args } {
       set result [ dict create ]
 
@@ -579,6 +582,37 @@ namespace eval turbine {
         set i [ expr {$i + 1} ]
         set result [ string range $s $i end ]
         return $result
+    }
+
+    # usage: turbine::declare_globals <usernames> <specs>
+    # varnames: user-facing variable names
+    # specs: variable create specs
+    # returns the list of IDs
+    #
+    # Adds variables to the global_vars dict
+    proc declare_globals { varnames specs } {
+      variable global_vars
+
+      set n [ llength $varnames ]
+      if { $n != [ llength $specs ] } {
+        error "Length of names must match specs: [ llength $varnames ] vs\
+              [ llength $specs ]"
+      }
+
+      set ids [ adlb::create_globals {*}$specs ]
+
+      for { set i 0 } { $i < $n } { incr i } {
+        set varname [ lindex $varnames $i ]
+        set id [ lindex $ids $i ]
+        dict append global_vars $varname $id
+      }
+
+      return $ids
+    }
+
+    proc get_globals_map { } {
+      variable global_vars
+      return $global_vars
     }
 }
 

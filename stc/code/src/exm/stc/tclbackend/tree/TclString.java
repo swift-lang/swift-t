@@ -15,6 +15,7 @@
  */
 package exm.stc.tclbackend.tree;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -168,6 +169,14 @@ public class TclString extends Expression
         }
       }
     }
+  }
+
+  public static List<TclString> makeList(List<String> strings, boolean escape) {
+    List<TclString> result = new ArrayList<TclString>(strings.size());
+    for (String string: strings) {
+      result.add(new TclString(string, escape));
+    }
+    return result;
   }
 }
 

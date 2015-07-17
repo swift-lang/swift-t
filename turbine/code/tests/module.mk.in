@@ -71,6 +71,8 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/soft_target.tcl      \
                 $(DIR)/sync-exec-1.tcl      \
                 $(DIR)/data-placement-1.tcl    \
+	        $(DIR)/adlb-globals.tcl     \
+	        $(DIR)/turbine-globals.tcl     \
 
 #                 $(DIR)/blob-big.tcl            \
 
