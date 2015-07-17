@@ -348,14 +348,15 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 
 ==== Public installation
 
-*As of:* 0.2.1 - 02/11/2013
+*As of:* master - 07/17/2015
 
-* STC: +~wozniak/Public/stc-0.0.3/bin/stc+
+* STC: +~wozniak/Public/sfw/compute/gcc/stc/bin+
+* Turbine: +~wozniak/Public/sfw/compute/gcc/turbine/bin+
 
 To run:
 
 ----
-srun ~wozniak/Public/turbine-0.1.1/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/program.tic
+swift-t -m slurm -n 2 program.swift
 ----
 
 ==== Build procedure
