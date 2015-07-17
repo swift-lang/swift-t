@@ -91,7 +91,7 @@ class Turbine {
 
   private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
   private static final Token MULTICREATE = adlbFn("multicreate");
-  private static final Token CREATE_GLOBALS = adlbFn("create_globals");
+  private static final Token DECLARE_GLOBALS = turbFn("declare_globals");
   private static final Token MAKE_FILE_TDS = turbFn("make_file_tds");
 
   // Container insert
@@ -1667,11 +1667,15 @@ class Turbine {
       return new Sequence();
     }
 
-    return lassign(createGlobals(parameters), varNames);
+    return lassign(createGlobals(varNames, parameters), varNames);
   }
 
-  private static Square createGlobals(List<TclList> parameters) {
-    return Square.fnCall(CREATE_GLOBALS, parameters);
+  private static Square createGlobals(List<String> varNames,
+                                      List<TclList> parameters) {
+    ;
+    return Square.fnCall(DECLARE_GLOBALS,
+        new TclList(TclString.makeList(varNames, true)),
+        new TclList(parameters));
   }
 
   public static TclTree batchDeclareFiles(List<String> fileVarNames,
@@ -1707,9 +1711,8 @@ class Turbine {
     }
 
 
-    return lassign(
-        Square.fnCall(MAKE_FILE_TDS, createGlobals(parameters), isMappedList),
-        fileVarNames);
+    return lassign(Square.fnCall(MAKE_FILE_TDS,
+        createGlobals(fileVarNames, parameters), isMappedList), fileVarNames);
   }
 
   private static TclTree lassign(Expression expr, List<String> varNames) {
