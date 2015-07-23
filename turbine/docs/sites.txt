@@ -697,7 +697,7 @@ These environment variables may be placed in your +-s+
 
 ==== Build procedure
 
-*As of:* 8/27/2014
+*As of:* 7/23/2015
 
 Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
 flags to configure the MPI library.
@@ -707,15 +707,15 @@ flags to configure the MPI library.
 ----
 ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
 CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
 --enable-mpi-2
 ----
 +
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
 ----
 
 ==== Submitting jobs
