@@ -707,15 +707,15 @@ flags to configure the MPI library.
 ----
 ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
 CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 --enable-mpi-2
 ----
 +
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
 ----
 
 ==== Submitting jobs
@@ -933,17 +933,15 @@ flags to configure the MPI library.
 * Configure ADLB with:
 +
 ----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
---enable-mpi-2
+$ export CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+$ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+$ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enable-mpi-2
 ----
 +
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
 ----
 
 ==== Build procedure with MPE
