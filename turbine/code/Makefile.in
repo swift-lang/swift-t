@@ -274,6 +274,14 @@ endif
 ifeq ($(HAVE_COASTER),1)
 	INCLUDES += -I $(USE_COASTER)/include
 endif
+ifeq ($(ENABLE_ZLIB),1)
+  ifeq ($(filter $(ZLIB_HOME)/lib,$(SYSTEM_LIBS)),)
+    INCLUDES += -I $(ZLIB_HOME)/include
+    LIBS += -L $(ZLIB_HOME)/lib
+    RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+  endif
+  LIBS += -lz
+endif
 
 HDF5_CPPFLAGS = @HDF5_CPPFLAGS@
 CFLAGS += $(DEFINES) $(INCLUDES) $(HDF5_CPPFLAGS)

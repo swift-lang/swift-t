@@ -86,7 +86,6 @@ AX_CHECK_ZLIB([ENABLE_ZLIB=1],
    AC_MSG_ERROR([Could not find zlib: use --with-zlib or --without-zlib.
                  Note that Swift/Turbine checkpointing and HDF
                  both require zlib and can both be disabled.]))
-CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
 
