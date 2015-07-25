@@ -20,7 +20,7 @@ AC_INIT([Turbine], [turbine_version()], [wozniak@mcs.anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
-m4_include([m4/ifblank.m4])
+m4_include([../../dev/m4/ifblank.m4])
 
 TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
@@ -81,7 +81,7 @@ AC_PATH_PROG([SWIG],[swig],[0])
 # broken location for --with-zlib, it will find a different one!
 # This is problematic on cross-compiled systems (like BG/Q).
 ENABLE_ZLIB=0
-m4_include([m4/ax_check_zlib.m4])
+m4_include([../../dev/m4/ax_check_zlib.m4])
 AX_CHECK_ZLIB([ENABLE_ZLIB=1],
    AC_MSG_ERROR([Could not find zlib: use --with-zlib or --without-zlib.
                  Note that Swift/Turbine checkpointing and HDF
@@ -1119,7 +1119,7 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
-m4_include([m4/ax_lib_hdf5.m4])
+m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 echo "HDF5 support: ${with_hdf5}"
 if [[ ${with_hdf5} == "no" ]]
@@ -1147,14 +1147,7 @@ AC_SUBST(ENABLE_DEV)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
-# We take system libraries out of arguments to the linker (#546)
-if [[ ${USE_MAC} == "no" ]]
-then
-    # This does not work on the Mac
-    ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
-else
-     touch system-libs.txt
-fi
+m4_include([../../dev/m4/syslibs.m4])
 
 echo
 echo "Preparing config files: please wait..."

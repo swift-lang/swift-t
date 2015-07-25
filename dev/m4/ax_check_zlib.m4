@@ -64,6 +64,8 @@
 
 #serial 14
 
+# Customized version for Swift/T
+
 AU_ALIAS([CHECK_ZLIB], [AX_CHECK_ZLIB])
 AC_DEFUN([AX_CHECK_ZLIB],
 #
@@ -104,10 +106,6 @@ then
 
   ZLIB_OLD_LDFLAGS=$LDFLAGS
   ZLIB_OLD_CPPFLAGS=$CPPFLAGS
-  if test -n "${ZLIB_HOME}"; then
-        LDFLAGS="$LDFLAGS -L${ZLIB_HOME}/lib"
-        CPPFLAGS="$CPPFLAGS -I${ZLIB_HOME}/include"
-  fi
   AC_LANG_SAVE
   AC_LANG_C
   AC_CHECK_LIB([z], [inflateEnd], [zlib_cv_libz=yes], [zlib_cv_libz=no])
