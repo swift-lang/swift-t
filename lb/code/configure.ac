@@ -261,7 +261,6 @@ then
   then
     AC_MSG_ERROR([Could not find zlib! (required for checkpoint)])
   fi
-  CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 fi
 AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)

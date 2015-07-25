@@ -105,6 +105,8 @@ C_UTILS = @USE_C_UTILS@
 
 INCLUDES = -I . -I src -I $(C_UTILS)/include
 
+SYSTEM_LIBS = $(shell cat system-libs.txt)
+
 LDFLAGS  = @LDFLAGS@
 LIBS = @LIBS@
 CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
@@ -132,9 +134,9 @@ ENABLE_ZLIB = @ENABLE_ZLIB@
 ZLIB = @ZLIB_HOME@
 
 ifeq ($(ENABLE_ZLIB),1)
-  CFLAGS += -I$(ZLIB)/include
-  ifneq ($(ZLIB),/usr)
-    # Do not refer to /usr/lib - this can clobber the MPICH location
+  # Do not add system libraries - this can clobber the MPICH location, etc
+  ifeq ($(filter $(ZLIB_HOME)/lib,$(SYSTEM_LIBS)),)
+    CFLAGS += -I$(ZLIB)/include
     LIBS += -L $(ZLIB)/lib
     RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
   endif
