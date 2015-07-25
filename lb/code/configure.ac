@@ -7,7 +7,7 @@
 define([adlb_version],
     regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
-m4_include([m4/ifblank.m4])
+m4_include([../../dev/m4/ifblank.m4])
 
 AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
 AC_PREREQ(2.63)
@@ -89,6 +89,7 @@ AC_HEADER_STDBOOL
 AC_C_INLINE
 AC_C_RESTRICT
 
+m4_include([../../dev/m4/syslibs.m4])
 
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
@@ -252,7 +253,7 @@ then
   ENABLE_ZLIB=0
   ZLIB_HOME=0
   AC_FUNC_FSEEKO
-  m4_include([m4/ax_check_zlib.m4])
+  m4_include([../../dev/m4/ax_check_zlib.m4])
   AX_CHECK_ZLIB([ENABLE_ZLIB=1],
                 AC_MSG_ERROR([Could not find zlib! (required for checkpoint)]))
   # Check that we got a sensible location

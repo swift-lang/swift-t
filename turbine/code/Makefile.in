@@ -199,9 +199,9 @@ MACHINE = @USE_MACHINE@
 MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 # The actual linker arguments:
-INCLUDES += -I $(MPI_INCLUDE)
 MPI_LIB :=
 ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
+  INCLUDES += -I $(MPI_INCLUDE)
   ifneq ($(MPI_LIB_DIR),)
     MPI_LIB += -L$(MPI_LIB_DIR)
     RPATH_MPI = yes
@@ -244,7 +244,8 @@ HAVE_COASTER = @HAVE_COASTER@
 USE_COASTER  = @USE_COASTER@
 
 # Record ZLIB setting in comments for debugging:
-# ENABLE_ZLIB: @ENABLE_ZLIB@
+ENABLE_ZLIB = @ENABLE_ZLIB@
+ZLIB_HOME = @ZLIB_HOME@
 
 CFLAGS += $(STD)
 CFLAGS += -g
