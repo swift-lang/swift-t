@@ -238,11 +238,13 @@ HDF5 support is being disabled (equivalent to --with-hdf5=no).
         CPPFLAGS=$HDF5_CPPFLAGS
         LIBS=$HDF5_LIBS
         LDFLAGS=$HDF5_LDFLAGS
-        AC_CHECK_HEADER([hdf5.h], [ac_cv_hadf5_h=yes], [ac_cv_hadf5_h=no])
+        AC_CHECK_HEADER([hdf5.h], [ac_cv_hdf5_h=yes], [ac_cv_hdf5_h=no])
         AC_CHECK_LIB([hdf5], [H5Fcreate], [ac_cv_libhdf5=yes],
                      [ac_cv_libhdf5=no])
+        HAVE_HDF5=1
         if test "$ac_cv_hadf5_h" = "no" && test "$ac_cv_libhdf5" = "no" ; then
-          AC_MSG_WARN([Unable to compile HDF5 test program])
+          AC_MSG_WARN([Unable to compile HDF5 test program!])
+          HAVE_HDF5=0
         fi
         dnl Look for HDF5's high level library
         AC_HAVE_LIBRARY([hdf5_hl], [HDF5_LIBS="$HDF5_LIBS -lhdf5_hl"], [], [])
@@ -303,7 +305,7 @@ HDF5 support is being disabled (equivalent to --with-hdf5=no).
 	AC_SUBST([HDF5_FC])
 	AC_SUBST([HDF5_FFLAGS])
 	AC_SUBST([HDF5_FLIBS])
-	AC_DEFINE([HAVE_HDF5], [1], [Defined if you have HDF5 support])
+	AC_DEFINE([HAVE_HDF5], [$HAVE_HDF5], [Defined if you have HDF5 support])
     fi
 fi
 ])
