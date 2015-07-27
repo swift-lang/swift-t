@@ -245,7 +245,7 @@ USE_COASTER  = @USE_COASTER@
 
 # Record ZLIB setting in comments for debugging:
 ENABLE_ZLIB = @ENABLE_ZLIB@
-ZLIB_HOME = @ZLIB_HOME@
+ZLIB = @ZLIB_HOME@
 
 CFLAGS += $(STD)
 CFLAGS += -g
@@ -275,10 +275,10 @@ ifeq ($(HAVE_COASTER),1)
 	INCLUDES += -I $(USE_COASTER)/include
 endif
 ifeq ($(ENABLE_ZLIB),1)
-  ifneq ($(strip $(ZLIB_HOME)), "")
-    ifeq ($(filter $(ZLIB_HOME)/lib,$(SYSTEM_LIBS)),)
-      INCLUDES += -I $(ZLIB_HOME)/include
-      LIBS += -L $(ZLIB_HOME)/lib
+  ifneq ($(strip $(ZLIB)), "")
+    ifeq ($(filter $(ZLIB)/lib,$(SYSTEM_LIBS)),)
+      INCLUDES += -I $(ZLIB)/include
+      LIBS += -L $(ZLIB)/lib
       RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
     endif
   endif
