@@ -73,6 +73,7 @@ AC_DEFUN([AX_CHECK_ZLIB],
 #
 [AC_MSG_CHECKING(if zlib is wanted)
 zlib_places="/usr/local /usr /opt/local /sw"
+zlib_with_arg=
 AC_ARG_WITH([zlib],
 [  --with-zlib=DIR         root directory path of zlib installation @<:@defaults to
                           /usr/local or /usr if not found in /usr/local@:>@
@@ -82,6 +83,7 @@ AC_ARG_WITH([zlib],
   if test -d "$withval"
   then
     zlib_places="$withval $zlib_places"
+    zlib_with_arg="$withval"
   else
     AC_MSG_WARN([Sorry, $withval does not exist, checking usual places])
   fi
@@ -96,27 +98,53 @@ fi],
 #
 if test -n "${zlib_places}"
 then
-	# check the user supplied or any other more or less 'standard' place:
-	#   Most UNIX systems      : /usr/local and /usr
-	#   MacPorts / Fink on OSX : /opt/local respectively /sw
-	for ZLIB_HOME in ${zlib_places} ; do
-	  if test -f "${ZLIB_HOME}/include/zlib.h"; then break; fi
-	  ZLIB_HOME=""
-	done
+	AC_LANG_SAVE
+	AC_LANG_C
+	# first, if defaults are being used, check directly w/o modifying flags
+	zlib_do_manual_search=no
+	if test -z "${zlib_with_arg}"
+	then
+		AC_MSG_NOTICE([performing direct check of zlib])
+		AC_CHECK_LIB([z], [inflateEnd], [zlib_cv_libz=yes], [zlib_cv_libz=no])
+		AC_CHECK_HEADER([zlib.h], [zlib_cv_zlib_h=yes], [zlib_cv_zlib_h=no])
+		if test "$zlib_cv_libz" = "yes" && test "$zlib_cv_zlib_h" = "yes"
+		then
+			AC_MSG_NOTICE([direct zlib check succeeded])
+			# action-if-found (mirror logic on manual search success, except don't set flags)
+			m4_ifblank([$1],[
+                AC_DEFINE([HAVE_LIBZ], [1],
+                          [Define to 1 if you have `z' library (-lz)])
+               ],[
+                $1
+               ])
+		else
+			AC_MSG_WARN([Unable to find zlib on system paths, searching manually])
+			zlib_do_manual_search=yes
+		fi
+	else
+		zlib_do_manual_search=yes
+	fi
 
-  ZLIB_OLD_LDFLAGS=$LDFLAGS
-  ZLIB_OLD_CPPFLAGS=$CPPFLAGS
-  AC_LANG_SAVE
-  AC_LANG_C
-  AC_CHECK_LIB([z], [inflateEnd], [zlib_cv_libz=yes], [zlib_cv_libz=no])
-  AC_CHECK_HEADER([zlib.h], [zlib_cv_zlib_h=yes], [zlib_cv_zlib_h=no])
-  AC_LANG_RESTORE
-  if test "$zlib_cv_libz" = "yes" && test "$zlib_cv_zlib_h" = "yes"
-  then
-    #
-    # If both library and header were found, action-if-found
-    #
-    m4_ifblank([$1],[
+	if test "$zlib_do_manual_search" = yes
+	then
+		# check the user supplied or any other more or less 'standard' place:
+		#   Most UNIX systems      : /usr/local and /usr
+		#   MacPorts / Fink on OSX : /opt/local respectively /sw
+		for ZLIB_HOME in ${zlib_places} ; do
+		  if test -f "${ZLIB_HOME}/include/zlib.h"; then break; fi
+		  ZLIB_HOME=""
+		done
+
+		ZLIB_OLD_LDFLAGS=$LDFLAGS
+		ZLIB_OLD_CPPFLAGS=$CPPFLAGS
+		AC_CHECK_LIB([z], [inflateEnd], [zlib_cv_libz=yes], [zlib_cv_libz=no])
+		AC_CHECK_HEADER([zlib.h], [zlib_cv_zlib_h=yes], [zlib_cv_zlib_h=no])
+		if test "$zlib_cv_libz" = "yes" && test "$zlib_cv_zlib_h" = "yes"
+		then
+			#
+			# If both library and header were found, action-if-found
+			#
+			m4_ifblank([$1],[
                 CPPFLAGS="$CPPFLAGS -I${ZLIB_HOME}/include"
                 LDFLAGS="$LDFLAGS -L${ZLIB_HOME}/lib"
                 LIBS="-lz $LIBS"
@@ -128,13 +156,16 @@ then
                 CPPFLAGS="$ZLIB_OLD_CPPFLAGS"
                 $1
                ])
-  else
-    #
-    # If either header or library was not found, action-if-not-found
-    #
-    m4_default([$2],[
-                AC_MSG_ERROR([either specify a valid zlib installation with --with-zlib=DIR or disable zlib usage with --without-zlib])
-                ])
-  fi
+		else
+			#
+			# If either header or library was not found, action-if-not-found
+			#
+			AC_MSG_NOTICE([neither header or lib was found on search path test])
+			m4_default([$2],[
+					AC_MSG_ERROR([either specify a valid zlib installation with --with-zlib=DIR or disable zlib usage with --without-zlib])
+					])
+		fi
+	fi
+	AC_LANG_RESTORE
 fi
 ])
