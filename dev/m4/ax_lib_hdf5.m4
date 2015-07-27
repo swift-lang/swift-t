@@ -305,7 +305,7 @@ HDF5 support is being disabled (equivalent to --with-hdf5=no).
 	AC_SUBST([HDF5_FC])
 	AC_SUBST([HDF5_FFLAGS])
 	AC_SUBST([HDF5_FLIBS])
-	AC_DEFINE([HAVE_HDF5], [$HAVE_HDF5], [Defined if you have HDF5 support])
+	AC_DEFINE_UNQUOTED([HAVE_HDF5], [$HAVE_HDF5], [Defined if you have HDF5 support])
     fi
 fi
 ])
