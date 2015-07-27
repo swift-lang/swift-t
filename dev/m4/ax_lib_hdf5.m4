@@ -1,3 +1,7 @@
+
+# This file was modified for Swift/T to disable HDF5 if a
+# compile test fails.  -Justin Wozniak. July 27, 2015.
+
 # ===========================================================================
 #        http://www.gnu.org/software/autoconf-archive/ax_lib_hdf5.html
 # ===========================================================================
