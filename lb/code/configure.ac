@@ -250,16 +250,11 @@ AC_SUBST(XLB_ENABLE_XPT)
 if [[ ${XLB_ENABLE_XPT} == yes ]]
 then
   ENABLE_ZLIB=0
-  ZLIB_HOME=0
+  ZLIB_HOME=
   AC_FUNC_FSEEKO
   m4_include([../../dev/m4/ax_check_zlib.m4])
   AX_CHECK_ZLIB([ENABLE_ZLIB=1],
                 AC_MSG_ERROR([Could not find zlib! (required for checkpoint)]))
-  # Check that we got a sensible location
-  if [[ ! -d "$ZLIB_HOME" ]]
-  then
-    AC_MSG_ERROR([Could not find zlib! (required for checkpoint)])
-  fi
 fi
 AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)

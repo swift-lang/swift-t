@@ -135,10 +135,12 @@ ZLIB = @ZLIB_HOME@
 
 ifeq ($(ENABLE_ZLIB),1)
   # Do not add system libraries - this can clobber the MPICH location, etc
-  ifeq ($(filter $(ZLIB_HOME)/lib,$(SYSTEM_LIBS)),)
-    CFLAGS += -I$(ZLIB)/include
-    LIBS += -L $(ZLIB)/lib
-    RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+  ifneq ($(strip $(ZLIB)), "")
+    ifeq ($(filter $(ZLIB)/lib,$(SYSTEM_LIBS)),)
+      CFLAGS += -I$(ZLIB)/include
+      LIBS += -L $(ZLIB)/lib
+      RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+    endif
   endif
   LIBS += -lz
 endif
