@@ -37,7 +37,7 @@ main()
 
   // Build up arguments
   int argc = 3;
-  char* argv[argc];
+  const char* argv[argc];
   argv[0] = "howdy";
   argv[1] = "ok";
   argv[2] = "bye";
