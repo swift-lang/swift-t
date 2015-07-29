@@ -144,6 +144,7 @@ HDF5_LIBS=""
 HDF5_FC=""
 HDF5_FFLAGS=""
 HDF5_FLIBS=""
+HAVE_HDF5=0
 
 dnl Try and find hdf5 compiler tools and options.
 if test "$with_hdf5" = "yes"; then
