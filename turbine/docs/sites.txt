@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-Swift/T v0.8.0, March 2015
+Swift/T v0.8.0, August 2015
 
 ////
 
@@ -903,15 +903,16 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 This installation is for use on the <<login_node,login node>>.
 
-* Swift/T trunk - 6/11/2013
-* Turbine: +~wozniak/Public/turbine-trunk-beagle-login+
-* STC: +~wozniak/Public/stc-trunk-beagle-login+
+* Swift/T master - 8/3/2015
+* Turbine: +~wozniak/Public/sfw/x86_64/swift-t/turbine+
+* STC: +~wozniak/Public/sfw/x86_64/swift-t/+
 
 ===== Compute nodes
 
-* Swift/T trunk - 6/11/2013
-* Turbine: +/lustre/beagle/wozniak/Public/turbine+
-* STC: +/lustre/beagle/wozniak/Public/stc+
+* Swift/T trunk - 8/3/2015
+* Turbine: +~wozniak/Public/sfw/beagle/swift-t/turbine+
+* STC: +~wozniak/Public/sfw/beagle/swift-t/+
+* This installation is configured with http://swift-lang.org/Swift-T/guide.html#_calling_python[Python]
 
 To run:
 
@@ -919,10 +920,26 @@ To run:
 variables are honored, plus the <<variables,Turbine scheduler
 variables>> and <<options,Turbine scheduler
 options>>..
-2. Run submit script (in +turbine/scripts/submit/cray+):
+2. Run Swift:
 +
 ----
-turbine-aprun-run.zsh -n <numprocs> script.tcl --arg1=value1 ...
+swift-t -m cray -n <numprocs> script.swift --arg1=value1 ...
+----
++
+or:
++
+Run Turbine:
++
+----
+turbine -m cray -n <numprocs> script.tic --arg1=value1 ...
+----
++
+or:
++
+Run the submit script directly (in +turbine/scripts/submit/cray+):
++
+----
+turbine-cray-run.zsh -n <numprocs> script.tic --arg1=value1 ...
 ----
 
 ==== Build procedure
@@ -941,7 +958,7 @@ $ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enab
 * In the Turbine configure step, replace the +--with-mpi+ option with:
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
 ----
 
 ==== Build procedure with MPE
