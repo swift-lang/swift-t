@@ -905,13 +905,13 @@ This installation is for use on the <<login_node,login node>>.
 
 * Swift/T master - 8/3/2015
 * Turbine: +~wozniak/Public/sfw/x86_64/swift-t/turbine+
-* STC: +~wozniak/Public/sfw/x86_64/swift-t/+
+* STC: +~wozniak/Public/sfw/x86_64/swift-t/stc+
 
 ===== Compute nodes
 
 * Swift/T trunk - 8/3/2015
 * Turbine: +~wozniak/Public/sfw/beagle/swift-t/turbine+
-* STC: +~wozniak/Public/sfw/beagle/swift-t/+
+* STC: +~wozniak/Public/sfw/beagle/swift-t/stc+
 * This installation is configured with http://swift-lang.org/Swift-T/guide.html#_calling_python[Python]
 
 To run:
