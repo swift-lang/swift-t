@@ -622,6 +622,7 @@ the problem.
 +
 ----
 CC=mpixlc
+--enable-xlc
 --disable-static
 --with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
 --with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
@@ -629,6 +630,7 @@ CC=mpixlc
 --without-zlib
 --without-hdf5
 --disable-static-pkg
+--disable-checkpoint
 ----
 
 *External scripting:*
@@ -910,8 +912,8 @@ This installation is for use on the <<login_node,login node>>.
 ===== Compute nodes
 
 * Swift/T trunk - 8/3/2015
-* Turbine: +~wozniak/Public/sfw/beagle/swift-t/turbine+
-* STC: +~wozniak/Public/sfw/beagle/swift-t/stc+
+* Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/turbine+
+* STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/stc+
 * This installation is configured with http://swift-lang.org/Swift-T/guide.html#_calling_python[Python]
 
 To run:
