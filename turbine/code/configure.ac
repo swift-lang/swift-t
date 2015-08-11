@@ -621,7 +621,7 @@ AC_ARG_WITH(python-lib,
                     [AC_MSG_ERROR([Could not find python!])])
       USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
       USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
-      USE_PYTHON=${USE_PYTHON_LIB} # Copy 
+      USE_PYTHON=${USE_PYTHON_LIB} # Copy
     ])
 
 if [[ ${HAVE_PYTHON} == 1 ]]
@@ -1114,7 +1114,7 @@ AC_SUBST(USE_XLC)
 
 m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
-if [[ ${HAVE_HDF5} == 1 ]]
+if [[ "${HAVE_HDF5}" == 1 ]]
 then
     echo "HDF5 enabled"
 else
