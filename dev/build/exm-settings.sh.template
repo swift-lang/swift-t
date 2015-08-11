@@ -92,6 +92,9 @@ MPI_VERSION=3
 # Do full static build (default is dynamic)
 # EXM_STATIC_BUILD=1
 
+# HDF5 location (yes/no/PATH location of h5cc)
+# WITH_HDF5=no
+
 #+================================+
 #| Default build behavior         |
 #+================================+
