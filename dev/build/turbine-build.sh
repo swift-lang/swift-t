@@ -149,5 +149,15 @@ fi
 if (( MAKE_CLEAN )); then
   make clean
 fi
-make -j ${MAKE_PARALLELISM}
+if ! make -j ${MAKE_PARALLELISM}
+then
+  rm deps_contents.txt
+  echo
+  echo Make failed.  The following may be useful:
+  echo
+  set -x
+  make check_includes
+  exit 1
+fi
+
 make install
