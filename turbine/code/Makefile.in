@@ -439,9 +439,9 @@ TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
 TEST_SRC_MANIFEST :=
-TEST_SRC :=
+TEST_SRC_C :=
 include tests/module.mk
-TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
+TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC_C))
 ifeq ($(ENABLE_STATIC_PKG),1)
 	TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
 endif
@@ -781,3 +781,6 @@ debug_build:
 	@echo TURBINE_SRC: $(TURBINE_SRC)
 	@echo TURBINE_OBJS: $(TURBINE_OBJS)
 	@echo TESTS: $(TESTS)
+	@echo TEST_SRC_C: $(TEST_SRC_C)
+# 	@echo STATIC_PKG_DEPS: $(STATIC_PKG_DEPS)
+# 	@echo EXISTING_D: $(EXISTING_D)
