@@ -23,7 +23,7 @@
 
 # Defaults:
 # Number of processes
-PROCS=2
+PROCS=${PROCS:-2}
 # Use MPI rank line prefixing?
 LINE_PREFIX_ENABLED=0
 LINE_PREFIX=
@@ -141,7 +141,7 @@ print_help()
   cat ${TURBINE_HOME}/etc/help-options-1.txt
   # These options are not available from swift-t
   cat ${TURBINE_HOME}/etc/help-options-2.txt
-  print 
+  print
   cat ${TURBINE_HOME}/etc/help-env.txt
   print
   cat ${TURBINE_HOME}/etc/help-footer.txt
@@ -206,7 +206,7 @@ check_machine()
   local M
   for M in $( ls ${TURBINE_HOME}/scripts/submit )
   do
-    [[ ${MACHINE_MODE} == ${M} ]] && return 
+    [[ ${MACHINE_MODE} == ${M} ]] && return
   done
   # We didn't find a match
   echo "No such machine: ${MACHINE_MODE}"
