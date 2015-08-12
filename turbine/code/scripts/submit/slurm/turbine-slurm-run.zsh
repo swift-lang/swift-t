@@ -46,6 +46,12 @@ then
   QUEUE_ARG="--partition=${QUEUE}"
 fi
 
+ACCOUNT_ARG=""
+if (( ${+PROJECT} ))
+then
+  ACCOUNT_ARG="--account=${PROJECT}"
+fi
+
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine-slurm-run -e K=V settings here:
 for kv in ${env}
@@ -56,7 +62,7 @@ done
 sbatch --exclusive --constraint=ib \
   --output=${OUTPUT_FILE}          \
   --error=${OUTPUT_FILE}           \
-  ${QUEUE_ARG}                     \
+  ${QUEUE_ARG} ${ACCOUNT_ARG}      \
   --job-name=${TURBINE_JOBNAME}    \
   ${TURBINE_SLURM} ${PROGRAM} ${ARGS} | read __ __ __ JOB_ID
 
