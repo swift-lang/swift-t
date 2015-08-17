@@ -228,7 +228,7 @@ through to the scheduler
 
 +-V+:: Make script verbose.  This typically just applies +set -x+,
 allowing you to inspect variables and arguments as passed to the
-system scheduler.
+system scheduler (+qsub+).
 
 +-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
        (reduces number of files that must be read from file system).
@@ -417,27 +417,59 @@ turbine-cobalt-run.zsh -n 3 program.tic
 http://www.lcrc.anl.gov/about/blues[Blues] is a 310-node x86
 cluster at ANL.  It uses PBS.
 
+*As of:* Master, 8/17/2015
+
 ==== Public installation
 
-* STC: +~wozniak/Public/stc/bin/stc+
+* +~wozniak/Public/sfw/blues/compute/stc/bin/swift-t+
+* +~wozniak/Public/sfw/blues/compute/turbine/bin/turbine+
+
+This installation has Python enabled.
 
 To run:
 ----
-$ export QUEUE=batch
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
-$ ~wozniak/Public/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tcl
+$ export QUEUE=batch # or other settings
 ----
 
 See the <<variables,Turbine scheduler variables>> and
 <<options,Turbine run script options>> for additional settings.
 
+Use +swift-t+:
+----
+swift-t -m pbs -n 8 program.swift
+----
+or Turbine:
+----
+stc program.swift
+turbine -m pbs -n 8 program.tic
+----
+or the Turbine PBS run script:
+----
+stc program.swift
+turbine-pbs-run.zsh -n 8 program.tic
+----
+
 ==== Build procedure
 
-Apparently need to append to use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
+Use GCC 4.8.2 and MVAPICH 2.0:
 ----
+$ PATH=/soft/gcc/4.8.2/bin:$PATH
 $ which gcc
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+/soft/gcc/4.8.2/bin/gcc
+$ PATH=/soft/mvapich2/2.0-gcc-4.7.2/bin:$PATH
+$ which mpicc
+/soft/mvapich2/2.0-gcc-4.7.2/bin/mpicc
 ----
+
+////
+ Used to need this:
+ and set +LD_LIBRARY_PATH+:
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+////
+
+A public Tcl is in: +&#126;wozniak/Public/sfw/tcl-8.6.4+
+
+A public Python is in: +&#126;wozniak/Public/sfw/Python-2.7.8+
 
 === Fusion
 
