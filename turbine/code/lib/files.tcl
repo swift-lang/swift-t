@@ -451,8 +451,7 @@ namespace eval turbine {
 
     variable mktemp_files
 
-    # return the filename of a unique temporary file
-    # TODO: Do this w/o exec #364
+    # Return the filename of a unique temporary file
     proc mktemp { } {
         global env
         variable mktemp_files
@@ -465,8 +464,8 @@ namespace eval turbine {
                 set tmpdir "/tmp"
             }
             try {
-                # This can fail with "too many open files"
-                file tempfile result $tmpdir/.turbine
+                # Subcommand tempfile returns an fd: we do not use it
+                close [ file tempfile result $tmpdir/.turbine ]
             } on error e {
                 turbine_error "Error creating temporary file!\n $e"
             }
