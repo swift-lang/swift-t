@@ -15,11 +15,11 @@ set -eu
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE PBS RUN
+# TURBINE SGE RUN
 
 # See run-init.zsh for usage
 
-print "TURBINE-PBS SCRIPT"
+print "TURBINE-SGE SCRIPT"
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 
@@ -31,22 +31,22 @@ then
   return 1
 fi
 
-# We use PBS -V to export all environment variables to the job
-# Evaluate any user turbine-pbs-run -e K=V settings here:
+# We use SGE -V to export all environment variables to the job
+# Evaluate any user turbine-sge-run -e K=V settings here:
 for kv in ${env}
 do
   eval export ${kv}
 done
 
-TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine.pbs.m4
-TURBINE_PBS=${TURBINE_OUTPUT}/turbine.pbs
+TURBINE_SGE_M4=${TURBINE_HOME}/scripts/submit/sge/turbine.sge.m4
+TURBINE_SGE=${TURBINE_OUTPUT}/turbine.sge
 
-# Filter/create the PBS submit file
-m4 ${TURBINE_PBS_M4} > ${TURBINE_PBS}
-print "wrote: ${TURBINE_PBS}"
+# Filter/create the SGE submit file
+m4 ${TURBINE_SGE_M4} > ${TURBINE_SGE}
+print "wrote: ${TURBINE_SGE}"
 
 # Launch it!
-qsub ${TURBINE_PBS} | read JOB_ID
+qsub ${TURBINE_SGE} | read JOB_ID
 
 [[ ${JOB_ID} != "" ]] || abort "qsub failed!"
 

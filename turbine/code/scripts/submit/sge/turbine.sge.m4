@@ -15,9 +15,9 @@ changecom(`dnl')#!/bin/bash
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE.PBS.M4
-# Turbine PBS template.  This is automatically filled in
-# by M4 in turbine-pbs-run.zsh
+# TURBINE.SGE.M4
+# Turbine SGE template.  This is automatically filled in
+# by M4 in turbine-sge-run.zsh
 
 # Created: esyscmd(`date')
 
@@ -25,12 +25,14 @@ changecom(`dnl')#!/bin/bash
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
-#PBS -N getenv(TURBINE_JOBNAME)
-#PBS -l nodes=getenv_nospace(NODES):ppn=getenv(PPN)
-#PBS -l walltime=getenv(WALLTIME)
-#PBS -j oe
-#PBS -o getenv(OUTPUT_FILE)
-#PBS -V
+# # $ -A getenv(PROJECT)
+# $ -l h rt=getenv(WALLTIME)
+#$ -N getenv(TURBINE_JOBNAME)
+#$ -j y
+# $ -cwd getenv(TURBINE_OUTPUT)
+# # $ -o getenv(OUTPUT_FILE)
+#$ -pe mpich getenv(PROCS)
+#$ -V
 
 VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))
@@ -38,14 +40,14 @@ then
  set -x
 fi
 
-echo "TURBINE-PBS"
+echo "TURBINE-SGE"
 date
 echo
 
-cd ${PBS_O_WORKDIR}
+cd ${SGE_O_WORKDIR}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
-COMMAND=getenv(COMMAND)
+COMMAND="getenv(COMMAND)"
 
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
