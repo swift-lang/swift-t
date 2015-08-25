@@ -27,8 +27,11 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
 ifelse(getenv_nospace(PROJECT), `',,
 #$ -A getenv(PROJECT))
+ifelse(getenv_nospace(QUEUE), `',,
+#$ -q getenv(QUEUE))
 #$ -l h_rt=getenv(WALLTIME)
 #$ -N getenv(TURBINE_JOBNAME)
+# Merge stdout/stderr:
 #$ -j y
 #$ -o getenv(OUTPUT_FILE)
 #$ -pe getenv(TURBINE_SGE_PE) getenv(PROCS)
