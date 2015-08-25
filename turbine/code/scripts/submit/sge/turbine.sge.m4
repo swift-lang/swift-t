@@ -25,13 +25,13 @@ changecom(`dnl')#!/bin/bash
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
-# # $ -A getenv(PROJECT)
-# $ -l h rt=getenv(WALLTIME)
+ifelse(getenv_nospace(PROJECT), `',,
+#$ -A getenv(PROJECT))
+#$ -l h_rt=getenv(WALLTIME)
 #$ -N getenv(TURBINE_JOBNAME)
 #$ -j y
-# $ -cwd getenv(TURBINE_OUTPUT)
-# # $ -o getenv(OUTPUT_FILE)
-#$ -pe mpich getenv(PROCS)
+#$ -o getenv(OUTPUT_FILE)
+#$ -pe sge_pe getenv(PROCS)
 #$ -V
 
 VERBOSE=getenv(VERBOSE)
@@ -44,7 +44,7 @@ echo "TURBINE-SGE"
 date
 echo
 
-cd ${SGE_O_WORKDIR}
+cd getenv(TURBINE_OUTPUT)
 
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
