@@ -24,6 +24,8 @@
 # Defaults:
 # Number of processes
 PROCS=${PROCS:-2}
+# Environment variables for mpiexec execution
+ENV_VARS=()
 # Use MPI rank line prefixing?
 LINE_PREFIX_ENABLED=0
 LINE_PREFIX=
@@ -72,7 +74,13 @@ do
       EXEC_SCRIPT=1
       ;;
     # Pass through to scheduler script:
-    C) ;& d) ;& e) ;& i) ;& o) ;& s) ;& t)
+    C) ;& d) ;& i) ;& o) ;& s) ;& t)
+      SCHED_OPTS+=( -${OPTION} ${OPTARG} )
+      ;;
+    e)
+      # Set environment variable
+      # Not sure yet if using scheduler script, so place in both arrays
+      ENV_VARS+=( ${OPTARG} )
       SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     \?)
@@ -238,6 +246,11 @@ then
   print "Use turbine -m <machine> ."
   exit 1
 fi
+
+for KV in ${ENV_VARS}
+do
+  eval export ${KV}
+done
 
 # Allows user to insert valgrind
 ${TURBINE_LAUNCHER} ${OPTIONS} ${=VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
