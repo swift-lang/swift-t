@@ -31,7 +31,7 @@ ifelse(getenv_nospace(PROJECT), `',,
 #$ -N getenv(TURBINE_JOBNAME)
 #$ -j y
 #$ -o getenv(OUTPUT_FILE)
-#$ -pe sge_pe getenv(PROCS)
+#$ -pe getenv(TURBINE_SGE_PE) getenv(PROCS)
 #$ -V
 
 VERBOSE=getenv(VERBOSE)

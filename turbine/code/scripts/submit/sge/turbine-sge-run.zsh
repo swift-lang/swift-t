@@ -31,6 +31,13 @@ then
   return 1
 fi
 
+if (( ! ${+TURBINE_SGE_PE} ))
+then
+  print "You must set environment variable TURBINE_SGE_PE"
+  print "to the desired parallel environment!"
+  return 1
+fi
+
 # We use SGE -V to export all environment variables to the job
 # Evaluate any user turbine-sge-run -e K=V settings here:
 for kv in ${env}
