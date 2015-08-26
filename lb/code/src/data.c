@@ -2067,9 +2067,8 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
       xlb_notif_init(nrank, listener->notif.rank, id, node_sub,
                      listener->notif.work_type);
 
-      // #define ADLB_PRIDSUB "<%"PRId64">:%s[%.*s] (%s)"
       TRACE("Add notif "ADLB_PRIDSUB" to rank %i",
-            ADLB_PRIDSUB_ARGS(id, dsym, sub), nrank->rank);
+            ADLB_PRIDSUB_ARGS(id, d->symbol, sub), nrank->rank);
 
       free(listener);
     }

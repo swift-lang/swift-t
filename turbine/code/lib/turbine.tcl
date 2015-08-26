@@ -291,7 +291,7 @@ namespace eval turbine {
           }
         }
 
-        log "MODE: $mode"
+        debug "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
             log_rank_layout $work_types
         }
