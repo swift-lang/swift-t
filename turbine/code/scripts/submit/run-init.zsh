@@ -195,6 +195,20 @@ fi
 
 [[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
 
+# TODO:
+# for KV in ${ENV_VARS}
+# do
+#   if [[ ${KV} =~ ".*=.*" ]]
+#   then
+#     # Have K=V
+#     export ${KV}
+#   else
+#     # Have just K - fill in V
+#     set -x
+#     export ${KV}=${(P)KV}
+#   fi
+# done
+
 START=$( date +%s )
 
 if [[ ${PROCS} == 0 ]]
