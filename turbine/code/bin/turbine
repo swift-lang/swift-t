@@ -249,7 +249,15 @@ fi
 
 for KV in ${ENV_VARS}
 do
-  eval export ${KV}
+  if [[ ${KV} =~ ".*=.*" ]]
+  then
+    # Have K=V
+    export ${KV}
+  else
+    # Have just K - fill in V
+    set -x
+    export ${KV}=${(P)KV}
+  fi
 done
 
 # Allows user to insert valgrind
