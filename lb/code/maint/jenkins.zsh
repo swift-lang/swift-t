@@ -29,8 +29,16 @@ mpicc -show
 echo
 
 ./bootstrap
-mkdir -p /tmp/exm-install
-./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb --with-c-utils=/tmp/exm-install/c-utils
+
+# Build once with trace logging on to see if it builds
+./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb \
+  --enable-log-debug --enable-log-trace --enable-log-trace-mpi
+echo
+make clean
+make
+
+# Now build for tests without logging
+./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb
 echo
 make clean
 make V=1 install
