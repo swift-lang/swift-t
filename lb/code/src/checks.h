@@ -84,7 +84,7 @@
     ERR_PRINTF("ADLB_ENGINE_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
-#define ADLB_MALLOC_CHECK(ptr) { \
+#define ADLB_ASSERT_MALLOC(ptr) { \
   if (ptr == NULL) { \
     ERR_PRINTF("ADLB_MALLOC_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}

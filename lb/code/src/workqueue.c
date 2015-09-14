@@ -217,7 +217,7 @@ xlb_workq_init(int work_types, const xlb_layout *layout)
 static adlb_code init_work_heaps(heap_iu32_t** heap_array, int count)
 {
   *heap_array = malloc(sizeof((*heap_array)[0]) * (size_t)count);
-  ADLB_MALLOC_CHECK(*heap_array);
+  ADLB_ASSERT_MALLOC(*heap_array);
 
   for (int i = 0; i < count; i++)
   {

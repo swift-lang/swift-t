@@ -265,7 +265,7 @@ adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result)
 {
   xlb_work_unit *wu = work_unit_alloc(payload_len);
-  ADLB_MALLOC_CHECK(wu);
+  ADLB_ASSERT_MALLOC(wu);
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   if (prios == EQUAL) {
@@ -302,7 +302,7 @@ adlb_code make_wus(prio_mix prios, tgt_mix tgts,
   adlb_code ac;
 
   xlb_work_unit **wus = malloc(sizeof(wus[0]) * (size_t)nwus);
-  ADLB_MALLOC_CHECK(wus);
+  ADLB_ASSERT_MALLOC(wus);
 
   for (int i = 0; i < nwus; i++)
   {

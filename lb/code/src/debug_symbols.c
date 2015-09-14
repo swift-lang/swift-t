@@ -89,13 +89,13 @@ adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
   }
 
   symbol_table_entry *e = malloc(sizeof(symbol_table_entry));
-  ADLB_MALLOC_CHECK(e);
+  ADLB_ASSERT_MALLOC(e);
 
   e->name = strdup(data.name);
-  ADLB_MALLOC_CHECK(e->name);
+  ADLB_ASSERT_MALLOC(e->name);
   
   e->context = strdup(data.context);
-  ADLB_MALLOC_CHECK(e->context);
+  ADLB_ASSERT_MALLOC(e->context);
   
   bool ok = table_lp_add(&dsyms, symbol, e);
   CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
