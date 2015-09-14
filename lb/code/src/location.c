@@ -91,14 +91,14 @@ hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
   hostnames->name_length = name_length;
 
   hostnames->my_name = malloc(name_length);
-  ADLB_MALLOC_CHECK(hostnames->my_name);
+  ADLB_ASSERT_MALLOC(hostnames->my_name);
 
   // This prevents valgrind errors:
   memset(hostnames->my_name, 0, name_length);
 
   hostnames->all_names = malloc((size_t)comm_size *
                       name_length * sizeof(char));
-  ADLB_MALLOC_CHECK(hostnames->all_names);
+  ADLB_ASSERT_MALLOC(hostnames->all_names);
 
   return ADLB_SUCCESS;
 }
@@ -151,7 +151,7 @@ xlb_hostmap_init(const xlb_layout *layout,
                  struct xlb_hostmap **hostmap)
 {
   *hostmap = malloc(sizeof(**hostmap));
-  ADLB_MALLOC_CHECK(*hostmap);
+  ADLB_ASSERT_MALLOC(*hostmap);
 
   bool debug_hostmap = false;
   char* t = getenv("ADLB_DEBUG_HOSTMAP");

@@ -92,7 +92,7 @@ static adlb_code run()
   CHECK_MSG(matched_rank == target_rank, "should match");
 
   xlb_work_unit *wu = work_unit_alloc(payload_size);
-  ADLB_MALLOC_CHECK(wu);
+  ADLB_ASSERT_MALLOC(wu);
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.accuracy = ADLB_TGT_ACCRY_NODE;

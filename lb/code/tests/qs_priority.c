@@ -102,7 +102,7 @@ static adlb_code run2(bool targeted)
   for (int i = 0; i < nwus; i++)
   {
     xlb_work_unit *wu = work_unit_alloc(payload_size);
-    ADLB_MALLOC_CHECK(wu);
+    ADLB_ASSERT_MALLOC(wu);
 
     adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
     // Assign distinct priority to each element

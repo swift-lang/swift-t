@@ -352,7 +352,7 @@ handle_dput(int caller)
 
   MPI_Request request;
   xlb_work_unit *work = work_unit_alloc((size_t)p->length);
-  ADLB_MALLOC_CHECK(work);
+  ADLB_ASSERT_MALLOC(work);
 
   xlb_work_unit_init(work, p->type, caller, p->answer,
                      p->target, p->length, p->opts);
@@ -1152,7 +1152,7 @@ handle_store(int caller)
   {
     xfer_alloced = true;
     xfer = malloc(hdr.length);
-    ADLB_MALLOC_CHECK(xfer);
+    ADLB_ASSERT_MALLOC(xfer);
   }
   else
   {

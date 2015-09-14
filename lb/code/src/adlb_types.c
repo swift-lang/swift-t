@@ -73,7 +73,7 @@ adlb_data_code
 xlb_data_types_init(void)
 {
   bool ok = table_init(&xlb_data_types, 64);
-  check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
+  ADLB_DATA_ASSERT_MSG(ok, ADLB_ERROR_OOM, "Out of memory");
 
   // Add builtin types
   for (int i = 0; i < type_entries_size; i++)

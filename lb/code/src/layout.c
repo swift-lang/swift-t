@@ -126,7 +126,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
 {
   *worker2host = malloc(sizeof((*worker2host)[0]) *
                               (size_t)my_workers);
-  ADLB_MALLOC_CHECK(*worker2host);
+  ADLB_ASSERT_MALLOC(*worker2host);
 
   struct table host_name_idx_map;
   bool ok = table_init(&host_name_idx_map, 128);
@@ -168,7 +168,7 @@ build_host2workers(const xlb_layout *layout, int worker_count,
   /* Build inverse map */
   *host2workers = malloc(sizeof((*host2workers)[0]) *
                                (size_t)host_count);
-  ADLB_MALLOC_CHECK(*host2workers);
+  ADLB_ASSERT_MALLOC(*host2workers);
 
   for (int i = 0; i < host_count; i++)
   {

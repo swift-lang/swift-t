@@ -751,7 +751,7 @@ static adlb_code xlb_get_reqs_expand(int min_size)
 
   xlb_get_req_impl *new_reqs;
   new_reqs = malloc(sizeof(xlb_get_req_impl) * (size_t) new_size);
-  ADLB_MALLOC_CHECK(new_reqs);
+  ADLB_ASSERT_MALLOC(new_reqs);
 
   xlb_get_reqs.reqs = new_reqs;
   xlb_get_reqs.size = new_size;
@@ -762,7 +762,7 @@ static adlb_code xlb_get_reqs_expand(int min_size)
 
     // Track unused entries
     struct list_i_item *node = malloc(sizeof(struct list_i_item));
-    ADLB_MALLOC_CHECK(node);
+    ADLB_ASSERT_MALLOC(node);
     node->data = i;
     list_i_add_item(&xlb_get_reqs.unused_reqs, node);
   }
@@ -1713,7 +1713,7 @@ ADLBP_Enumerate(adlb_datum_id container_id,
     if (include_keys || include_vals)
     {
       *data = malloc(res.length);
-      ADLB_MALLOC_CHECK(*data);
+      ADLB_ASSERT_MALLOC(*data);
 
       adlb_code ac = mpi_recv_big(*data, res.length,
                                   to_server_rank, ADLB_TAG_RESPONSE);

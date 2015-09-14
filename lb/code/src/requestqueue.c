@@ -98,7 +98,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   assert(ntypes >= 1);
 
   targets = malloc(sizeof(targets[0]) * (size_t)layout->my_workers);
-  ADLB_MALLOC_CHECK(targets);
+  ADLB_ASSERT_MALLOC(targets);
 
   for (int i = 0; i < layout->my_workers; i++)
   {
@@ -106,7 +106,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   }
 
   type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
-  ADLB_MALLOC_CHECK(type_requests);
+  ADLB_ASSERT_MALLOC(type_requests);
   for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
 
@@ -149,12 +149,12 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   {
     // Otherwise store on heap
     R = malloc(sizeof(*R));
-    ADLB_MALLOC_CHECK(R);
+    ADLB_ASSERT_MALLOC(R);
   }
 
   struct list2* L = &type_requests[type];
   struct list2_item* item = alloc_list2_node();
-  ADLB_MALLOC_CHECK(item);
+  ADLB_ASSERT_MALLOC(item);
 
   R->rank = rank;
   R->type = type;
@@ -509,7 +509,7 @@ static inline adlb_code list2_node_pool_init(int size)
   for (int i = 0; i < size; i++)
   {
     struct list2_item *item = malloc(sizeof(struct list2_item));
-    ADLB_MALLOC_CHECK(item);
+    ADLB_ASSERT_MALLOC(item);
     list2_node_pool.free_array[i] = item;
   }
 
