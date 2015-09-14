@@ -42,6 +42,7 @@ declare_pair(all, finalize);
 
 declare_pair(svr, busy);
 declare_pair(svr, put);
+declare_pair(svr, dput);
 declare_pair(svr, get);
 declare_pair(svr, iget);
 declare_pair(svr, amget);
@@ -73,6 +74,8 @@ declare_pair(wkr, subscribe);
 declare_pair(wkr, store);
 declare_pair(wkr, retrieve);
 declare_pair(wkr, close);
+declare_pair(wkr, exists);
+declare_pair(wkr, get_refcounts);
 
 int xlb_mpe_svr_info;
 
