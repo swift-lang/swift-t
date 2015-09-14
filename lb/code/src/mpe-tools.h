@@ -54,6 +54,7 @@ extern_declare_pair(svr, busy);
 extern_declare_pair(svr, put);
 extern_declare_pair(svr, dput);
 extern_declare_pair(svr, get);
+extern_declare_pair(svr, amget);
 extern_declare_pair(svr, sync);
 extern_declare_pair(svr, steal);
 extern_declare_pair(svr, shutdown);
@@ -74,7 +75,13 @@ extern_declare_pair(dmn, shutdown);
 // Client calls:
 // Task operations:
 extern_declare_pair(wkr, put);
+extern_declare_pair(wkr, dput);
 extern_declare_pair(wkr, get);
+extern_declare_pair(wkr, aget);
+extern_declare_pair(wkr, aget_test);
+extern_declare_pair(wkr, aget_wait);
+extern_declare_pair(wkr, amget);
+extern_declare_pair(wkr, iget);
 // Data module:
 extern_declare_pair(wkr, unique);
 extern_declare_pair(wkr, create);
