@@ -122,9 +122,9 @@ RPATH += -Wl,-rpath -Wl,$(C_UTILS)/lib
 ENABLE_MPE = @ADLB_ENABLE_MPE@
 MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
-ifeq ($(ENABLE_MPE),1)
+ifeq ($(ENABLE_MPE),yes)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS) -I $(MPE)/include
-	LDFLAGS += # -mpilog
+	LDFLAGS += -mpilog
 	LIBS += -L $(MPE)/lib -lmpe
         RPATH += -Wl,-rpath -Wl,$(MPE)/lib
 endif
