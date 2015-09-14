@@ -94,7 +94,7 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
       dc = xlb_datum_cleanup(d, (adlb_data_type)set->elem_type,
                     free_mem, release_read, release_write,
                     to_acquire, refcs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
     if (free_mem)
       free(set->chunks[i]);
@@ -173,7 +173,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
   adlb_data_type elem_type = (adlb_data_type)set->elem_type;
 
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   size_t output_pos = 0; // Amount of output used
   int c = 0; // Count of members added to result
@@ -198,7 +198,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
       adlb_datum_storage *elem = &chunk->arr[pos_in_chunk];
       dc = ADLB_Pack_buffer(elem, elem_type, true, &tmp_buf,
                 output, &use_caller_buf, &output_pos);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       c++;
       pos_in_chunk++;
     }
@@ -239,7 +239,7 @@ xlb_multiset_repr(xlb_multiset *set, char **repr)
 
 
       dc = xlb_resize_str(&res, &res_len, res_pos, elem_repr_len);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       if (first)
       {
@@ -255,7 +255,7 @@ xlb_multiset_repr(xlb_multiset *set, char **repr)
   }
 
   dc = xlb_resize_str(&res, &res_len, res_pos, 1);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   res_pos += sprintf(&res[res_pos], "}");
 

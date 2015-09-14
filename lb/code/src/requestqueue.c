@@ -98,7 +98,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   assert(ntypes >= 1);
 
   targets = malloc(sizeof(targets[0]) * (size_t)layout->my_workers);
-  ADLB_ASSERT_MALLOC(targets);
+  ADLB_CHECK_MALLOC(targets);
 
   for (int i = 0; i < layout->my_workers; i++)
   {
@@ -106,7 +106,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   }
 
   type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
-  ADLB_ASSERT_MALLOC(type_requests);
+  ADLB_CHECK_MALLOC(type_requests);
   for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
 
@@ -139,7 +139,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
        * requests out of order, and with more complicated data structures.
        * We leave it to the client code to avoid doing this for now.
        */
-      CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
+      ADLB_CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
             " for different work types from same rank."
             " Rank: %i Types: %i, %i", rank, R->type, type);
       return merge_request(R, rank, type, count, blocking);
@@ -149,12 +149,12 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   {
     // Otherwise store on heap
     R = malloc(sizeof(*R));
-    ADLB_ASSERT_MALLOC(R);
+    ADLB_CHECK_MALLOC(R);
   }
 
   struct list2* L = &type_requests[type];
   struct list2_item* item = alloc_list2_node();
-  ADLB_ASSERT_MALLOC(item);
+  ADLB_CHECK_MALLOC(item);
 
   R->rank = rank;
   R->type = type;
@@ -509,7 +509,7 @@ static inline adlb_code list2_node_pool_init(int size)
   for (int i = 0; i < size; i++)
   {
     struct list2_item *item = malloc(sizeof(struct list2_item));
-    ADLB_ASSERT_MALLOC(item);
+    ADLB_CHECK_MALLOC(item);
     list2_node_pool.free_array[i] = item;
   }
 

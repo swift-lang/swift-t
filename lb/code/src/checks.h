@@ -44,19 +44,41 @@
 /**
   Asserts that condition is true, else returns given error code.
 */
-#define CHECK_MSG(rc, args...)                  \
-  { if (!(rc)) {                                             \
-      ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
-      ERR_PRINTF(args);                                          \
-      ERR_PRINTF("\n");                                          \
+#define ADLB_CHECK_MSG(rc, args...)                            \
+  { if (!(rc)) {                                               \
+      ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+      ERR_PRINTF(args);                                        \
+      ERR_PRINTF("\n");                                        \
       return ADLB_ERROR; }}
+
+
+#define verbose_error(code, format, args...)                \
+  {                                                         \
+    printf("ADLB ERROR:\n");                                \
+    printf(format "\n", ## args);                           \
+    printf("\t in: %s()\n", __FUNCTION__);                  \
+    printf("\t at: %s:%i\n", __FILE__, __LINE__);           \
+    return code;                                            \
+  }
+
+/**
+    Allows user to check an exceptional condition,
+    print an error message, and return an error code in one swoop.
+    Works with adlb_code and adlb_data_code
+*/
+#define ADLB_CHECK_MSG_CODE(condition, code, format, args...) \
+  { if (! (condition))                                        \
+    {                                                         \
+      verbose_error(code, format, ## args)                    \
+    }                                                         \
+  }
 
 /**
    Checks that an MPI return code is MPI_SUCCESS
  */
-#define MPI_CHECK(rc)  \
-  { if (rc != MPI_SUCCESS) { \
-    ERR_PRINTF("MPI_CHECK FAILED: %s:%i\n", __FILE__, __LINE__);\
+#define MPI_CHECK(rc)                                            \
+  { if (rc != MPI_SUCCESS) {                                     \
+    ERR_PRINTF("MPI_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
 /**
@@ -84,7 +106,7 @@
     ERR_PRINTF("ADLB_ENGINE_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
-#define ADLB_ASSERT_MALLOC(ptr) { \
+#define ADLB_CHECK_MALLOC(ptr) { \
   if (ptr == NULL) { \
     ERR_PRINTF("ADLB_MALLOC_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}

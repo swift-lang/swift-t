@@ -134,7 +134,7 @@ xlb_sync_init(void)
   {
     xlb_sync_recvs = malloc((size_t)xlb_sync_recv_size *
                             sizeof(xlb_sync_recvs[0]));
-    ADLB_ASSERT_MALLOC(xlb_sync_recvs);
+    ADLB_CHECK_MALLOC(xlb_sync_recvs);
   }
   else
   {
@@ -146,7 +146,7 @@ xlb_sync_init(void)
   for (int i = 0; i < xlb_sync_recv_size; i++)
   {
     xlb_sync_recvs[i].buf = malloc(PACKED_SYNC_SIZE);
-    ADLB_ASSERT_MALLOC(xlb_sync_recvs[i].buf);
+    ADLB_CHECK_MALLOC(xlb_sync_recvs[i].buf);
     // Initiate requests for all in queue
     IRECV2(xlb_sync_recvs[i].buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &xlb_sync_recvs[i].req);
@@ -172,7 +172,7 @@ xlb_sync_init(void)
   xlb_pending_sync_head = 0;
   xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
                                 (size_t)xlb_pending_sync_size);
-  ADLB_ASSERT_MALLOC(xlb_pending_syncs);
+  ADLB_CHECK_MALLOC(xlb_pending_syncs);
   xlb_pending_notif_count = 0;
 
   /*
@@ -835,7 +835,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
               hdr->incr.change.write_refcount);
         adlb_data_code dc = xlb_incr_refc_local(hdr->incr.id,
                                     hdr->incr.change, true);
-        CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
+        ADLB_CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
         code = ADLB_SUCCESS;
       }
       // Then we're done - already sent sync response to caller
@@ -890,7 +890,7 @@ adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
       break;
     case ACCEPTED_REFC:
       dc = xlb_incr_refc_local(hdr->incr.id, hdr->incr.change, true);
-      CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
+      ADLB_CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
       break;
     case DEFERRED_NOTIFY:
       rc = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
@@ -949,7 +949,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   {
     assert(sub_hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(sub_hdr->subscript_len);
-    ADLB_ASSERT_MALLOC(malloced_subscript);
+    ADLB_CHECK_MALLOC(malloced_subscript);
     
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)sub_hdr->subscript_len, MPI_BYTE,
@@ -1041,7 +1041,7 @@ static adlb_code enqueue_deferred_notify(int rank,
   {
     assert(sub_length <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(sub_length);
-    ADLB_ASSERT_MALLOC(malloced_subscript);
+    ADLB_CHECK_MALLOC(malloced_subscript);
     
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)sub_length, MPI_BYTE,
@@ -1088,7 +1088,7 @@ adlb_code xlb_handle_notify_sync(int rank,
   {
     assert(hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(hdr->subscript_len);
-    ADLB_ASSERT_MALLOC(malloced_subscript);
+    ADLB_CHECK_MALLOC(malloced_subscript);
     
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)hdr->subscript_len, MPI_BYTE,
@@ -1132,7 +1132,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
     DEBUG("Resizing to accommodate %i pending", xlb_pending_sync_size);
     xlb_pending_syncs = realloc(xlb_pending_syncs,
                       sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
-    ADLB_ASSERT_MALLOC(xlb_pending_syncs);
+    ADLB_CHECK_MALLOC(xlb_pending_syncs);
     /* Entries are in: [head..count) ++ [0..head)
      * Copy [0..head) to [count..count+head) to account for new size
      * End result is all entries in [head..head+count] */
@@ -1156,7 +1156,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
   else
   {
     entry->hdr = malloc(PACKED_SYNC_SIZE);
-    ADLB_ASSERT_MALLOC(entry->hdr);
+    ADLB_CHECK_MALLOC(entry->hdr);
     memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
   }
   xlb_pending_sync_count++;

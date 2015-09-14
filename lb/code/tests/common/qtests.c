@@ -123,7 +123,7 @@ static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
   {
     const char *expect = hosts[rank];
     const char *actual = xlb_hostnames_lookup(hostnames, rank);
-    CHECK_MSG(strcmp(expect, actual) == 0,
+    ADLB_CHECK_MSG(strcmp(expect, actual) == 0,
           "Expected \"%s\" Actual \"%s\"", expect, actual);
   }
 
@@ -160,7 +160,7 @@ static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
         matches++;
       }
     }
-    CHECK_MSG(matches == 1, "expected %i in ranks for host %s",
+    ADLB_CHECK_MSG(matches == 1, "expected %i in ranks for host %s",
               rank, hostname);
   }
 
@@ -224,10 +224,10 @@ adlb_code drain_wq(int expected_payload_size, int nexpected,
 
       if (wu != NULL)
       {
-        CHECK_MSG(wu->type == 0, "type");
-        CHECK_MSG(expected_payload_size < 0 ||
+        ADLB_CHECK_MSG(wu->type == 0, "type");
+        ADLB_CHECK_MSG(expected_payload_size < 0 ||
                   wu->length == expected_payload_size, "size");
-        CHECK_MSG(wu->target == ADLB_RANK_ANY ||
+        ADLB_CHECK_MSG(wu->target == ADLB_RANK_ANY ||
                   wu->target == w ||
                   wu->opts.strictness == ADLB_TGT_STRICT_SOFT ||
                   (wu->opts.accuracy == ADLB_TGT_ACCRY_NODE &&
@@ -248,7 +248,7 @@ adlb_code drain_wq(int expected_payload_size, int nexpected,
       break;
     }
 
-    CHECK_MSG(removed_this_iter > 0, "Removed %i/%i before running out",
+    ADLB_CHECK_MSG(removed_this_iter > 0, "Removed %i/%i before running out",
               nremoved, nexpected);
 
     nremoved += removed_this_iter;
@@ -256,7 +256,7 @@ adlb_code drain_wq(int expected_payload_size, int nexpected,
 
   int workq_type_counts[1];
   xlb_workq_type_counts(workq_type_counts, 1);
-  CHECK_MSG(workq_type_counts[0] == 0, "empty queue");
+  ADLB_CHECK_MSG(workq_type_counts[0] == 0, "empty queue");
 
   return ADLB_SUCCESS;
 }
@@ -265,7 +265,7 @@ adlb_code make_wu(prio_mix prios, tgt_mix tgts,
                     size_t payload_len, xlb_work_unit **wu_result)
 {
   xlb_work_unit *wu = work_unit_alloc(payload_len);
-  ADLB_ASSERT_MALLOC(wu);
+  ADLB_CHECK_MALLOC(wu);
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   if (prios == EQUAL) {
@@ -302,7 +302,7 @@ adlb_code make_wus(prio_mix prios, tgt_mix tgts,
   adlb_code ac;
 
   xlb_work_unit **wus = malloc(sizeof(wus[0]) * (size_t)nwus);
-  ADLB_ASSERT_MALLOC(wus);
+  ADLB_CHECK_MALLOC(wus);
 
   for (int i = 0; i < nwus; i++)
   {
@@ -399,7 +399,7 @@ adlb_code warmup_wq(size_t payload_size)
 
   for (int rank = 0; rank < xlb_s.layout.workers; rank++)
   {
-    CHECK_MSG(xlb_workq_get(rank, 0) == NULL,
+    ADLB_CHECK_MSG(xlb_workq_get(rank, 0) == NULL,
               "workq_get failed for rank %i", rank);
   }
   // test work queue
@@ -445,7 +445,7 @@ adlb_code warmup_wq(size_t payload_size)
   // Check correct number of untargeted tasks
   int workq_type_counts[1];
   xlb_workq_type_counts(workq_type_counts, 1);
-  CHECK_MSG(workq_type_counts[0] == untargeted_tasks, "full queue");
+  ADLB_CHECK_MSG(workq_type_counts[0] == untargeted_tasks, "full queue");
 
   ac = drain_wq((int)payload_size, total_tasks, true);
   ADLB_CHECK(ac);
@@ -461,11 +461,11 @@ adlb_code warmup_rq(void)
   {
     int match = xlb_requestqueue_matches_target(rank, 0,
                                 ADLB_TGT_ACCRY_RANK);
-    CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
+    ADLB_CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
 
     match = xlb_requestqueue_matches_target(rank, 0,
                                 ADLB_TGT_ACCRY_NODE);
-    CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
+    ADLB_CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
   }
 
   for (int rank = 0; rank < xlb_s.layout.workers; rank++)
@@ -475,26 +475,26 @@ adlb_code warmup_rq(void)
 
     match = xlb_requestqueue_matches_target(rank, type,
                                 ADLB_TGT_ACCRY_RANK);
-    CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
+    ADLB_CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
 
     match = xlb_requestqueue_matches_type(type);
-    CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
+    ADLB_CHECK_MSG(match == ADLB_RANK_NULL, "Unexpected match");
 
     ac = xlb_requestqueue_add(rank, type, 2, true);
     ADLB_CHECK(ac);
 
-    CHECK_MSG(xlb_requestqueue_nblocked() == 1, "Check nblocked");
+    ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 1, "Check nblocked");
 
     match = xlb_requestqueue_matches_target(rank, type,
                                 ADLB_TGT_ACCRY_RANK);
-    CHECK_MSG(match == rank, "Expected match");
+    ADLB_CHECK_MSG(match == rank, "Expected match");
 
-    CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
+    ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
 
     match = xlb_requestqueue_matches_type(type);
-    CHECK_MSG(match == rank, "Expected match");
+    ADLB_CHECK_MSG(match == rank, "Expected match");
 
-    CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
+    ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
 
     // Test node accuracy - select other rank from same node
     int host_idx = host_idx_from_rank(&xlb_s.layout, rank);
@@ -510,12 +510,12 @@ adlb_code warmup_rq(void)
 
     match = xlb_requestqueue_matches_target(other_rank, type,
                                 ADLB_TGT_ACCRY_NODE);
-    CHECK_MSG(match == rank, "Expected match");
+    ADLB_CHECK_MSG(match == rank, "Expected match");
 
-    CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
+    ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "Check nblocked");
   }
 
-  CHECK_MSG(xlb_requestqueue_size() == 0, "empty queue");
+  ADLB_CHECK_MSG(xlb_requestqueue_size() == 0, "empty queue");
 
   return ADLB_SUCCESS;
 }

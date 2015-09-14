@@ -102,7 +102,7 @@ static adlb_code run2(bool targeted)
   for (int i = 0; i < nwus; i++)
   {
     xlb_work_unit *wu = work_unit_alloc(payload_size);
-    ADLB_ASSERT_MALLOC(wu);
+    ADLB_CHECK_MALLOC(wu);
 
     adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
     // Assign distinct priority to each element
@@ -138,9 +138,9 @@ static adlb_code run2(bool targeted)
     }
 
     xlb_work_unit *wu = xlb_workq_get(worker, type);
-    CHECK_MSG(wu != NULL, "expected wu");
+    ADLB_CHECK_MSG(wu != NULL, "expected wu");
 
-    CHECK_MSG(expected_priority == wu->opts.priority,
+    ADLB_CHECK_MSG(expected_priority == wu->opts.priority,
             "wrong priority: expected %i vs actual %i",
             expected_priority, wu->opts.priority);
 

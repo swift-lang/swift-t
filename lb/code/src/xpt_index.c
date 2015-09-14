@@ -88,14 +88,14 @@ adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
   size_t length;
   adlb_code rc = ADLB_Retrieve(id, subscript, refcounts, &type,
                                buffer, &length);
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in "
+  ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in "
             "container %"PRId64, id);
   if (rc == ADLB_NOTHING)
   {
     // Not present
     return ADLB_NOTHING;
   }
-  CHECK_MSG(length >= 1, "Checkpoint index val too small: %zu", length);
+  ADLB_CHECK_MSG(length >= 1, "Checkpoint index val too small: %zu", length);
 
   // Type flag goes at end of buffer
   char in_file_flag = ((char*)buffer)[length - 1];
@@ -107,14 +107,14 @@ adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
     // Write info to binary buffer
     char *pos = (char*)buffer;
     size_t filename_len;
-    CHECK_MSG(length >= sizeof(filename_len), "Buffer not large enough "
+    ADLB_CHECK_MSG(length >= sizeof(filename_len), "Buffer not large enough "
             "for filename len: %zu v %zu", length, sizeof(filename_len));
     MSG_UNPACK_BIN(pos, &filename_len);
 
     // Check buffer was expected size (members plus in_file byte)
     size_t exp_length = sizeof(filename_len) + filename_len +
         sizeof(res_file->val_offset) + sizeof(res_file->val_len) + 1;
-    CHECK_MSG(length == exp_length, "Buffer not expected size: %zu vs %zu",
+    ADLB_CHECK_MSG(length == exp_length, "Buffer not expected size: %zu vs %zu",
               length, exp_length);
 
     // Extract filename if needed
@@ -125,7 +125,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, size_t key_len,
     else
     {
       res_file->file = malloc(filename_len + 1);
-      CHECK_MSG(res_file->file != NULL, "Error allocating filename");
+      ADLB_CHECK_MSG(res_file->file != NULL, "Error allocating filename");
       memcpy(res_file->file, pos, filename_len);
       res_file->file[filename_len] = '\0';
       pos += filename_len;
@@ -185,7 +185,7 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
   }
   else
   {
-    CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
+    ADLB_CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
       "Checkpoint data too long: %zu vs. %llu", key_len, ADLB_XPT_MAX);
     // Set file flag
     memcpy(xlb_xfer, entry->DATA.data, entry->DATA.length);
@@ -203,7 +203,7 @@ adlb_code xlb_xpt_index_add(const void *key, size_t key_len,
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!
-  CHECK_MSG(rc == ADLB_SUCCESS || rc == ADLB_REJECTED,
+  ADLB_CHECK_MSG(rc == ADLB_SUCCESS || rc == ADLB_REJECTED,
             "Error storing checkpoint entry");
 
   return ADLB_SUCCESS;

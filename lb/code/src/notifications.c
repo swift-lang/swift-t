@@ -653,7 +653,7 @@ xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add)
 
   void *ptr = realloc(notifs->notifs, sizeof(notifs->notifs[0]) *
                                       (size_t)new_size);
-  ADLB_ASSERT_MALLOC(ptr);
+  ADLB_CHECK_MALLOC(ptr);
 
   notifs->notifs = ptr;
   notifs->size = new_size;
@@ -677,7 +677,7 @@ xlb_refs_expand(adlb_ref_data *refs, int to_add)
 
   void *ptr = realloc(refs->data, sizeof(refs->data[0]) *
                        (size_t)new_size);
-  ADLB_ASSERT_MALLOC(ptr);
+  ADLB_CHECK_MALLOC(ptr);
 
   refs->data = ptr;
   refs->size = new_size;
@@ -699,7 +699,7 @@ xlb_refc_changes_expand(xlb_refc_changes *c, int to_add)
     new_size = needed;
 
   void *ptr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
-  ADLB_ASSERT_MALLOC(ptr);
+  ADLB_CHECK_MALLOC(ptr);
 
 #if XLB_INDEX_REFC_CHANGES
   // Init index, use 1.0 load factor so realloced at same pace as array
@@ -733,7 +733,7 @@ xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 
   void *ptr = realloc(notifs->to_free,
                     sizeof(notifs->to_free[0]) * (size_t)new_size);
-  ADLB_ASSERT_MALLOC(ptr);
+  ADLB_CHECK_MALLOC(ptr);
 
   notifs->to_free = ptr;
   notifs->to_free_size = new_size;
@@ -829,7 +829,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     else
     {
       packed_notifs = malloc(notif_bytes);
-      ADLB_ASSERT_MALLOC(packed_notifs);
+      ADLB_CHECK_MALLOC(packed_notifs);
       prepared->free_packed_notifs = true;
     }
     prepared->packed_notifs = packed_notifs;
@@ -848,7 +848,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     else
     {
       packed_refs = malloc(refs_bytes);
-      ADLB_ASSERT_MALLOC(packed_refs);
+      ADLB_CHECK_MALLOC(packed_refs);
       prepared->free_packed_refs = true;
     }
     prepared->packed_refs = packed_refs;
@@ -1072,7 +1072,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     assert(extra_data_count >= 0);
 
     extra_data = malloc(bytes);
-    ADLB_ASSERT_MALLOC(extra_data);
+    ADLB_CHECK_MALLOC(extra_data);
     
     ac = xlb_to_free_add(notifs, extra_data);
     ADLB_CHECK(ac);
@@ -1083,7 +1083,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     // Locate the separate data entries in the buffer
     extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) *
                              (size_t)extra_data_count);
-    ADLB_ASSERT_MALLOC(extra_data_ptrs);
+    ADLB_CHECK_MALLOC(extra_data_ptrs);
     
     ac = xlb_to_free_add(notifs, extra_data_ptrs);
     ADLB_CHECK(ac)
@@ -1107,7 +1107,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
     struct packed_notif *tmp = malloc(sizeof(struct packed_notif) *
                                              (size_t)added_count);
-    ADLB_ASSERT_MALLOC(tmp);
+    ADLB_CHECK_MALLOC(tmp);
 
     RECV(tmp, (int)sizeof(tmp[0]) * added_count,
         MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
@@ -1147,7 +1147,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
     struct packed_reference *tmp =
         malloc(sizeof(struct packed_reference) * (size_t)added_count);
-    ADLB_ASSERT_MALLOC(tmp);
+    ADLB_CHECK_MALLOC(tmp);
 
     RECV(tmp, added_count * (int)sizeof(tmp[0]), MPI_BYTE,
          to_server_rank, ADLB_TAG_RESPONSE_NOTIF);

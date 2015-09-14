@@ -207,7 +207,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
             const adlb_create_props *props)
 {
   TRACE("data_create(%"PRId64")", id);
-  check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%"PRId64"\n", id);
 
   DEBUG("Create "ADLB_PRID" t:%s r:%i w:%i",
@@ -221,7 +221,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
           ADLB_Data_type_tostring(type_extra->CONTAINER.val_type));
 
 #ifndef NDEBUG
-  check_verbose(!table_lp_contains(&tds, id), ADLB_DATA_ERROR_DOUBLE_DECLARE,
+  ADLB_CHECK_MSG_CODE(!table_lp_contains(&tds, id), ADLB_DATA_ERROR_DOUBLE_DECLARE,
                 ADLB_PRID" already exists",
                 ADLB_PRID_ARGS(id, props->symbol));
 #endif
@@ -234,7 +234,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   }
 
   adlb_datum* d = malloc(sizeof(adlb_datum));
-  check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
+  ADLB_CHECK_MSG_CODE(d != NULL, ADLB_DATA_ERROR_OOM,
                 "Out of memory while allocating datum");
   d->type = type;
   d->symbol = props->symbol;
@@ -243,12 +243,12 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   table_lp_add(&tds, id, d);
 
   adlb_data_code dc = datum_init_props(id, d, props);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   if (ADLB_Data_is_compound(type))
   {
     dc = ADLB_Init_compound(&d->data, type, *type_extra, false);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
     d->status.set = true;
   }
   return ADLB_DATA_SUCCESS;
@@ -266,12 +266,12 @@ adlb_data_code xlb_data_multicreate(const xlb_create_spec *specs,
     }
     adlb_datum_id new_id;
     dc = xlb_data_unique(&new_id);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
     new_ids[i] = new_id;
 
     dc = xlb_data_create(new_id, spec->type, &spec->type_extra,
                      &spec->props);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -285,9 +285,9 @@ adlb_data_code xlb_data_multicreate(const xlb_create_spec *specs,
 static adlb_data_code
 datum_init_props(adlb_datum_id id, adlb_datum *d,
                  const adlb_create_props *props) {
-  check_verbose(props->read_refcount >= 0, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(props->read_refcount >= 0, ADLB_DATA_ERROR_INVALID,
                 "read_refcount negative: %i", props->read_refcount);
-  check_verbose(props->write_refcount >= 0, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(props->write_refcount >= 0, ADLB_DATA_ERROR_INVALID,
                 "write_refcount negative: %i", props->write_refcount);
   d->read_refcount = props->read_refcount;
   d->write_refcount = props->write_refcount;
@@ -319,7 +319,7 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
   }
   else
   {
-    check_verbose(d != NULL, ADLB_DATA_ERROR_INVALID,
+    ADLB_CHECK_MSG_CODE(d != NULL, ADLB_DATA_ERROR_INVALID,
         ADLB_PRID" does not exist, can't check existence of subscript",
         ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
     bool sub_exists;
@@ -327,7 +327,7 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
     adlb_data_type result_type;
     dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                      &sub_exists, &lookup_result, &result_type);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     *result = (lookup_result != NULL);
     DEBUG("Exists: "ADLB_PRIDSUB" => %s", ADLB_PRIDSUB_ARGS(
@@ -339,12 +339,12 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
 adlb_data_code
 xlb_data_typeof(adlb_datum_id id, adlb_data_type* type)
 {
-  check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_NULL,
+  ADLB_CHECK_MSG_CODE(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_NULL,
                 "given ADLB_DATA_ID_NULL");
 
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   *type = d->type;
   DEBUG("typeof: "ADLB_PRID" => %i", ADLB_PRID_ARGS(id,
@@ -362,10 +362,10 @@ xlb_data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   adlb_data_type t = d->type;
-  check_verbose(t == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(t == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                 "not a container: "ADLB_PRID,
                 ADLB_PRID_ARGS(id, d->symbol));
   *key_type = (adlb_data_type)d->data.CONTAINER.key_type;
@@ -379,7 +379,7 @@ adlb_data_code xlb_data_permanent(adlb_datum_id id)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   d->status.permanent = true;
   return ADLB_DATA_SUCCESS;
@@ -389,7 +389,7 @@ adlb_data_code
 xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
 {
   bool found = table_lp_search(&tds, id, (void**)d);
-  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
+  ADLB_CHECK_MSG_CODE(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: "ADLB_PRID,
                 ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
   assert(*d != NULL);
@@ -401,7 +401,7 @@ adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
 {
   adlb_datum *d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   result->read_refcount = d->read_refcount;
   result->write_refcount = d->write_refcount;
@@ -421,7 +421,7 @@ xlb_data_reference_count(adlb_datum_id id, adlb_refc change,
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
   return xlb_refc_incr(d, id, change, acquire, false,
                        garbage_collected, notifs);
 }
@@ -446,7 +446,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
   if (xlb_s.read_refc_enabled && read_incr != 0 &&
                                    !d->status.permanent) {
     // Shouldn't get here if disabled
-    check_verbose(xlb_s.read_refc_enabled, ADLB_DATA_ERROR_INVALID,
+    ADLB_CHECK_MSG_CODE(xlb_s.read_refc_enabled, ADLB_DATA_ERROR_INVALID,
                   "Internal error: should not get here with read reference "
                   "counting disabled");
 
@@ -454,7 +454,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
       Should not go negative.  Can go to zero and back up if write
       refcount still present.
      */
-    check_verbose(d->read_refcount >= 0 &&
+    ADLB_CHECK_MSG_CODE(d->read_refcount >= 0 &&
                    d->read_refcount + read_incr >= 0,
                 ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
                 ADLB_PRID" read_refcount: %i incr: %i",
@@ -470,7 +470,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
 
   if (write_incr != 0) {
     // Should not go negative
-    check_verbose(d->write_refcount > 0 &&
+    ADLB_CHECK_MSG_CODE(d->write_refcount > 0 &&
                    d->write_refcount + write_incr >= 0,
                 ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
                 ADLB_PRID" write_refcount: %i incr: %i",
@@ -481,7 +481,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
       // If we're keeping around read-only version, release
       // only write refs here
       dc = add_close_notifs(id, d, true, NULL, notifs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       closed = true;
     }
@@ -497,7 +497,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
     if (garbage_collected != NULL)
       *garbage_collected = true;
     dc = datum_gc(id, d, acquire, &notifs->refcs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
   else
   {
@@ -511,7 +511,7 @@ xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
       // Have to release or acquire references
       dc = xlb_incr_referand(&d->data, d->type, false, release_write_refs,
                    acquire, &notifs->refcs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
   }
   return ADLB_DATA_SUCCESS;
@@ -529,7 +529,7 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
 {
   DEBUG("datum_gc: "ADLB_PRID,
       ADLB_PRID_ARGS(id, d->symbol));
-  check_verbose(!d->status.permanent, ADLB_DATA_ERROR_UNKNOWN,
+  ADLB_CHECK_MSG_CODE(!d->status.permanent, ADLB_DATA_ERROR_UNKNOWN,
           "Garbage collecting permanent data");
 
   if (d->status.set)
@@ -537,11 +537,11 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
     // Cleanup the storage if initialized
     adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, true,
                                 true, true, to_acquire, refcs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   // This list should be empty since data being destroyed
-  check_verbose(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
         "%i listeners for garbage collected datum "ADLB_PRID,
         d->listeners.size, ADLB_PRID_ARGS(id, d->symbol));
 
@@ -558,7 +558,7 @@ xlb_data_lock(adlb_datum_id id, int rank, bool* result)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   if (table_lp_contains(&locked, id))
   {
@@ -581,7 +581,7 @@ xlb_data_unlock(adlb_datum_id id)
 {
   int* r;
   bool found = table_lp_remove(&locked, id, (void**)&r);
-  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
+  ADLB_CHECK_MSG_CODE(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: "ADLB_PRID,
                 ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
   free(r);
@@ -602,7 +602,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   if (!adlb_has_sub(subscript))
   {
@@ -621,7 +621,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     bool found;
 
     dc = subscript_is_set(id, d, subscript, &found);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (!found)
     {
@@ -632,13 +632,13 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       binkey_packed_set_unsafe(&key, (void*)subscript.key, subscript.length);
 
       xlb_listener *listener = malloc(sizeof(*listener));
-      DATA_CHECK_MALLOC(listener);
+      ADLB_DATA_CHECK_MALLOC(listener);
       listener->tag = LISTENER_NOTIF;
       listener->notif.rank = rank;
       listener->notif.work_type = work_type;
 
       bool ok = rbtree_bp_add(&d->listeners, key, listener);
-      check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
+      ADLB_CHECK_MSG_CODE(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
 
       TRACE("Added %i to listeners for "ADLB_PRIDSUB, rank,
           ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
@@ -665,7 +665,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     else
     {
       xlb_listener *listener = malloc(sizeof(*listener));
-      DATA_CHECK_MALLOC(listener);
+      ADLB_DATA_CHECK_MALLOC(listener);
 
       listener->tag = LISTENER_NOTIF;
       listener->notif.rank = rank;
@@ -674,7 +674,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       binkey_packed_set_unsafe(&key, NULL, 0);
 
       bool ok = rbtree_bp_add(&d->listeners, key, listener);
-      check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
+      ADLB_CHECK_MSG_CODE(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
       *subscribed = true;
     }
   }
@@ -704,7 +704,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   adlb_code ac;
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   bool sub_exists;
   // Is the subscript already pointing to a data identifier?
@@ -713,12 +713,12 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 
   dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                         &sub_exists, &val_data, &val_type);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   TRACE("lookup datum for ref: "ADLB_PRIDSUB": %p",
           ADLB_PRIDSUB_ARGS(id, d->symbol, subscript), val_data);
 
-  check_verbose(ref_type == val_type, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(ref_type == val_type, ADLB_DATA_ERROR_TYPE,
     ADLB_PRIDSUB" type mismatch when setting up reference expected"
     " %i actual %i\n", ADLB_PRIDSUB_ARGS(id, d->symbol, subscript),
     ref_type, val_type);
@@ -726,31 +726,31 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   if (val_data != NULL)
   {
     dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     // Get ownership in case internal pointer freed later
     dc = ADLB_Own_data(caller_buffer, result);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (caller_buffer == NULL ||
         result->caller_data != caller_buffer->data)
     {
       // Allocated memory, must free
       ac = xlb_to_free_add(notifs, result->caller_data);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
 
     if (adlb_has_sub(ref_sub) && copy_subscript)
     {
       // Need to make a copy of the subscript data
       void *sub_storage = malloc(ref_sub.length);
-      DATA_CHECK_MALLOC(sub_storage);
+      ADLB_DATA_CHECK_MALLOC(sub_storage);
 
       memcpy(sub_storage, ref_sub.key, ref_sub.length);
       ref_sub.key = sub_storage;
 
       ac = xlb_to_free_add(notifs, sub_storage);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
 
     // add reference setting work to notifications
@@ -764,7 +764,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     xlb_refc_acquire to_acquire2 = { .subscript = subscript,
                                    .refcounts = to_acquire };
     dc = xlb_refc_incr(d, id, decr, to_acquire2, false, NULL, notifs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     return ADLB_DATA_SUCCESS;
   }
@@ -772,22 +772,22 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   result->data = result->caller_data = NULL; // Signal data not found
 
   // Is the container closed?
-  check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
         "Attempting to subscribe to non-existent subscript\n"
         "on a closed container:  "ADLB_PRIDSUB,
         ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
-  check_verbose(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
         "Container_reference consumes a read reference count, but "
         "reference count was %d for "ADLB_PRID, d->read_refcount,
         ADLB_PRID_ARGS(id, d->symbol));
 
 
   xlb_listener_reference *ref = alloc_listener_reference(ref_sub.length);
-  check_verbose(ref != NULL, ADLB_DATA_ERROR_OOM,
+  ADLB_CHECK_MSG_CODE(ref != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
 
   xlb_listener *listener = malloc(sizeof(*listener));
-  check_verbose(listener != NULL, ADLB_DATA_ERROR_OOM,
+  ADLB_CHECK_MSG_CODE(listener != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
   listener->tag = LISTENER_REF;
   listener->ref = ref;
@@ -833,7 +833,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Make sure we are allowed to write this data
   if (d->write_refcount <= 0)
@@ -851,13 +851,13 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   {
     dc = data_store_subscript(id, d, subscript, buffer, length, copy,
           took_ownership, type, store_refcounts, notifs, &freed_datum);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
   else
   {
     dc = data_store_root(id, d, buffer, length, copy, took_ownership,
           type, store_refcounts, notifs, &freed_datum);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   // Handle reference count decrease
@@ -866,7 +866,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   if (refcount_decr.write_refcount > 0 || refcount_decr.read_refcount > 0)
   {
     // Avoid accessing freed memory
-    check_verbose(!freed_datum, ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
+    ADLB_CHECK_MSG_CODE(!freed_datum, ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
         "Taking write reference count below zero on datum "
         ADLB_PRID, ADLB_PRID_ARGS(id, d->symbol));
 
@@ -874,7 +874,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_refc_incr(d, id, incr, XLB_NO_ACQUIRE, false, NULL, notifs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -892,7 +892,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 {
   adlb_data_code dc;
 
-  check_verbose(type == d->type, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(type == d->type, ADLB_DATA_ERROR_TYPE,
           "Type mismatch: expected %s actual %s\n",
           ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
 
@@ -900,7 +900,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   bool initialize = !d->status.set;
   dc = ADLB_Unpack2(&d->data, d->type, buffer, length, copy,
                     store_refcounts, initialize, took_ownership);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
   d->status.set = true;
 
   if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
@@ -917,7 +917,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
     // Need to handle subscript notifications
     dc = add_recursive_notifs(d, id, ADLB_NO_SUB, &d->data, d->type,
                               notifs, freed_datum);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -938,7 +938,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
   adlb_datum_storage *data = &d->data;
   adlb_data_type data_type = d->type;
 
-  check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
+  ADLB_CHECK_MSG_CODE(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
       "subscript of datum initialized without type "ADLB_PRID,
       ADLB_PRID_ARGS(id, d->symbol));
 
@@ -954,9 +954,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       assert(adlb_has_sub(curr_sub));
       adlb_data_type elem_type;
       elem_type = (adlb_data_type)data->MULTISET->elem_type;
-      check_verbose(value != NULL, ADLB_DATA_ERROR_INVALID,
+      ADLB_CHECK_MSG_CODE(value != NULL, ADLB_DATA_ERROR_INVALID,
               "Don't support reserving subscripts for multiset type");
-      check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
+      ADLB_CHECK_MSG_CODE(type == elem_type, ADLB_DATA_ERROR_TYPE,
               "Type mismatch for multiset val: expected %s actual %s\n",
               ADLB_Data_type_tostring(elem_type),
               ADLB_Data_type_tostring(type));
@@ -964,7 +964,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       const adlb_datum_storage *elem;
       dc = xlb_multiset_add(data->MULTISET, value, length,
                             store_refcounts, &elem);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
       {
@@ -1000,7 +1000,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       if (value != NULL)
       {
-        check_verbose(type == (adlb_data_type)c->val_type,
+        ADLB_CHECK_MSG_CODE(type == (adlb_data_type)c->val_type,
                     ADLB_DATA_ERROR_TYPE,
                     "Type mismatch for container value: "
                     "given: %s required: %s\n",
@@ -1011,7 +1011,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
         dc = ADLB_Unpack2(entry, (adlb_data_type)c->val_type, value,
                   length, copy, store_refcounts, true, took_ownership);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
 
         if (found)
         {
@@ -1027,7 +1027,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         {
           DEBUG("Creating new container entry");
           dc = container_add(c, curr_sub, entry);
-          DATA_CHECK(dc);
+          ADLB_DATA_CHECK_CODE(dc);
         }
 
         if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
@@ -1044,14 +1044,14 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
           dc = insert_notifications(d, id, subscript,
                     entry, value, length, type,
                     notifs, freed_datum);
-          DATA_CHECK(dc);
+          ADLB_DATA_CHECK_CODE(dc);
         }
       }
       else
       {
         // Use NULL pointer value to represent reserved but not set
         dc = container_add(c, curr_sub, NULL);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
       }
       return ADLB_DATA_SUCCESS;
     }
@@ -1063,7 +1063,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       size_t curr_sub_pos;
       dc = xlb_struct_lookup(data->STRUCT, curr_sub, true, &field,
                              &field_type, &curr_sub_pos);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       assert(curr_sub_pos <= curr_sub.length);
 
@@ -1075,7 +1075,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         {
           dc = xlb_struct_assign_field(field, field_type, value, length,
                                        type, store_refcounts);
-          DATA_CHECK(dc);
+          ADLB_DATA_CHECK_CODE(dc);
 
           if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
           {
@@ -1091,7 +1091,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
             dc = insert_notifications(d, id, subscript,
                       &field->data, value, length, type,
                       notifs, freed_datum);
-            DATA_CHECK(dc);
+            ADLB_DATA_CHECK_CODE(dc);
           }
         }
         else
@@ -1114,7 +1114,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         if (!field->initialized)
         {
           // Can't initialize non-compound fields like this
-          check_verbose(ADLB_Data_is_compound(field_type.type),
+          ADLB_CHECK_MSG_CODE(ADLB_Data_is_compound(field_type.type),
             ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
             "Uninitialized subscript:  "ADLB_PRIDSUB " "
             "Remaining bytes %zu", ADLB_PRIDSUB_ARGS(id, d->symbol,
@@ -1122,7 +1122,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
           dc = ADLB_Init_compound(&d->data, field_type.type,
                                   field_type.extra, true);
-          DATA_CHECK(dc);
+          ADLB_DATA_CHECK_CODE(dc);
         }
         // Some of subscript left:
         // update data, subscript, etc. for next iteration
@@ -1174,7 +1174,7 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d, bool defer_gc,
         ADLB_PRID_ARGS(id, d->symbol), d->listeners.size);
   adlb_data_code dc = append_notifs(id, d, ADLB_NO_SUB, defer_gc,
                                     gced, notifs);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1204,7 +1204,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 
   adlb_datum* d;
   dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Result code for retrieve
   adlb_data_code result_code = ADLB_DATA_SUCCESS;
@@ -1224,7 +1224,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
     bool sub_exists;
     dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                           &sub_exists, &val_data, &val_type);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (val_data == NULL)
     {
@@ -1233,7 +1233,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   }
 
   dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   *type = val_type;
 
@@ -1242,14 +1242,14 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
     if (ADLB_REFC_NOT_NULL(decr))
     {
       dc = ADLB_Own_data(caller_buffer, result);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
 
     xlb_refc_acquire to_acquire2 = { .refcounts = to_acquire,
                                    .subscript = subscript };
     dc = xlb_refc_incr(d, id, adlb_refc_negate(decr),
                 to_acquire2, false, NULL, notifs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   return result_code;
@@ -1291,7 +1291,7 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
         return ADLB_DATA_SUCCESS;
       case ADLB_DATA_TYPE_STRUCT:
       {
-        check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
+        ADLB_CHECK_MSG_CODE(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
             "subscript of struct initialized without type "ADLB_PRID,
             ADLB_PRID_ARGS(id, dsym));
 
@@ -1300,7 +1300,7 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
         size_t sub_pos;
         dc = xlb_struct_lookup(d->STRUCT, subscript, true, &field,
                                &field_type, &sub_pos);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
 
         assert(sub_pos <= subscript.length);
 
@@ -1346,7 +1346,7 @@ subscript_is_set(adlb_datum_id id, adlb_datum* d,
 
   bool is_container = d->type == ADLB_DATA_TYPE_CONTAINER;
   bool is_struct = d->type == ADLB_DATA_TYPE_STRUCT;
-  check_verbose(is_container || is_struct,
+  ADLB_CHECK_MSG_CODE(is_container || is_struct,
           ADLB_DATA_ERROR_INVALID, "accessing subscript on "
           "invalid type: %s for "ADLB_PRIDSUB,
           ADLB_Data_type_tostring(d->type), ADLB_PRIDSUB_ARGS(
@@ -1360,13 +1360,13 @@ subscript_is_set(adlb_datum_id id, adlb_datum* d,
   }
   else if (is_struct)
   {
-    check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't access "
+    ADLB_CHECK_MSG_CODE(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't access "
         "subscript of struct initialized without type "ADLB_PRID,
         ADLB_PRID_ARGS(id, d->symbol));
     // This will check validity of subscript as side-effect
     dc = xlb_struct_subscript_init(d->data.STRUCT, subscript,
                                   true, is_set);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
     TRACE("Struct subscript initialized: %i", (int)*is_set);
   }
 
@@ -1443,7 +1443,7 @@ extract_members(adlb_container *cont, int count, int offset,
   bool use_caller_buf;
 
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Allocate some temporary storage on stack
   adlb_buffer tmp_buf;
@@ -1464,7 +1464,7 @@ extract_members(adlb_container *cont, int count, int offset,
       }
       dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
                        output, &use_caller_buf, &output_pos);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
     c++;
   }
@@ -1501,13 +1501,13 @@ pack_member(adlb_container *cont, table_bp_entry *item,
     dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
             table_bp_get_key(item), table_bp_key_len(item),
             true, result, result_caller_buffer, result_pos);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
   if (include_vals)
   {
     dc = ADLB_Pack_buffer(item->data, (adlb_data_type)cont->val_type,
           true, tmp_buf, result, result_caller_buffer, result_pos);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -1557,7 +1557,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
   TRACE("data_enumerate(%"PRId64")", id);
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   if (d->type == ADLB_DATA_TYPE_CONTAINER)
   {
@@ -1569,7 +1569,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
       dc = extract_members(&d->data.CONTAINER, count, offset,
                                   include_keys, include_vals,
                                   caller_buffer, data);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
 
     *actual = slice_size;
@@ -1581,7 +1581,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
-    check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, ADLB_PRID
+    ADLB_CHECK_MSG_CODE(!include_keys, ADLB_DATA_ERROR_TYPE, ADLB_PRID
         " with type multiset does not have keys to enumerate",
         ADLB_PRID_ARGS(id, d->symbol));
     int slice_size = enumerate_slice_size(offset, count,
@@ -1591,7 +1591,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
       // Extract members to buffer
       dc = xlb_multiset_extract_slice(d->data.MULTISET, offset, slice_size,
                                       caller_buffer, data);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
 
     *actual = slice_size;
@@ -1616,7 +1616,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(container_id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   switch (d->type)
   {
@@ -1661,14 +1661,14 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
 
   dc = insert_notifications2(d, id, subscript, false,
       value_type, notifs, garbage_collected);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   TRACE("remove container_ref "ADLB_PRIDSUB,
       ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
 
   dc = add_recursive_notifs(d, id, subscript, value,
               value_type, notifs, garbage_collected);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1690,17 +1690,17 @@ insert_notifications2(adlb_datum *d,
   if (copy_sub && adlb_has_sub(subscript))
   {
     void *subscript_ptr = malloc(subscript.length);
-    DATA_CHECK_MALLOC(subscript_ptr);
+    ADLB_DATA_CHECK_MALLOC(subscript_ptr);
 
     memcpy(subscript_ptr, subscript.key, subscript.length);
     subscript.key = subscript_ptr;
 
     adlb_code ac = xlb_to_free_add(notifs, subscript_ptr);
-    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
   }
 
   dc = append_notifs(id, d, subscript, false, garbage_collected, notifs);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1721,7 +1721,7 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
 
   dc = insert_notifications2(d, id, sub, copy_sub, val_type,
               notifs, garbage_collected);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1749,7 +1749,7 @@ add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
     dc = subscript_notifs_rec(d, id, value, value_type,
           &sub_buffer, &sub_caller_buf, assigned_sub, notifs,
           garbage_collected);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     ADLB_Free_buf(&sub_buffer, sub_caller_buf);
   }
@@ -1801,7 +1801,7 @@ concat_subscripts(adlb_subscript sub1, adlb_subscript sub2,
     // Combine subscripts
     result->length = sub1.length + sub2.length;
     dc = ADLB_Resize_buf(sub_buf, sub_caller_buf, result->length);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (sub1.key != sub_buf->data)
     {
@@ -1850,12 +1850,12 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
     adlb_subscript child_sub;
     dc = concat_subscripts(subscript, component, &child_sub,
                            sub_buf, sub_caller_buf);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     // Check for subscriptions on this subscript
     dc = all_notifs_step(d, id, child_sub, true, item->data,
             (adlb_data_type)c->val_type, notifs, garbage_collected);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (*garbage_collected)
     {
@@ -1867,7 +1867,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
     dc = subscript_notifs_rec(d, id, item->data,
         (adlb_data_type)c->val_type, sub_buf, sub_caller_buf, child_sub,
         notifs, garbage_collected);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     if (*garbage_collected)
     {
@@ -1909,7 +1909,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
         // Append child subscript to buffer
         dc = ADLB_Resize_buf(sub_buf, sub_caller_buf,
                              subscript.length + max_key_len);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
 
         if (subscript_uses_buf)
         {
@@ -1938,7 +1938,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       // Check for subscriptions on this subscript
       dc = all_notifs_step(d, id, child_sub, true, &field->data,
               field_type, notifs, garbage_collected);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       if (*garbage_collected)
       {
@@ -1949,7 +1949,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       dc = subscript_notifs_rec(d, id, &field->data, field_type,
                      sub_buf, sub_caller_buf, child_sub, notifs,
                      garbage_collected);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       if (*garbage_collected)
       {
@@ -1977,12 +1977,12 @@ remove_listeners_node(struct rbtree_bp *listeners,
   {
     // Must allocate new memory
     void *sub_alloced = malloc(sub->length);
-    DATA_CHECK_MALLOC(sub_alloced);
+    ADLB_DATA_CHECK_MALLOC(sub_alloced);
     memcpy(sub_alloced, sub->key, sub->length);
     sub->key = sub_alloced;
 
     adlb_code ac = xlb_to_free_add(notifs, sub_alloced);
-    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
   }
 
   rbtree_bp_remove_node(listeners, node);
@@ -2036,10 +2036,10 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
     {
       // Remove node from listeners and sort out subscript memory
       dc = remove_listeners_node(&d->listeners, &node_sub, node, notifs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       ac = xlb_notifs_expand(&notifs->notify, 1);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
       if (node_sub.length != sub.length)
       {
@@ -2052,9 +2052,9 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
          */
         bool is_set;
         dc = subscript_is_set(id, d, node_sub, &is_set);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
 
-        check_verbose(is_set, ADLB_DATA_ERROR_UNRESOLVED,
+        ADLB_CHECK_MSG_CODE(is_set, ADLB_DATA_ERROR_UNRESOLVED,
                 "UNFILLED SUBSCRIBE "
                 ADLB_PRIDSUB" rank: %i work_type: %i "
                 "after "ADLB_PRIDSUB" was set",
@@ -2103,11 +2103,11 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
         bool is_set;
         dc = lookup_subscript(id, d->symbol, &d->data, node_sub, d->type,
                               &is_set, &val_data, &val_type);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
 
 
         // TODO: also flag as invalid and send back to engine here
-        check_verbose(is_set, ADLB_DATA_ERROR_UNRESOLVED,
+        ADLB_CHECK_MSG_CODE(is_set, ADLB_DATA_ERROR_UNRESOLVED,
                 "UNFILLED CONTAINER REFERENCE "
                 ADLB_PRIDSUB" -> "ADLB_PRIDSUB" "
                 "after "ADLB_PRIDSUB" was set",
@@ -2124,22 +2124,22 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
 
       adlb_binary_data packed_val;
       dc = ADLB_Pack(val_data, val_type, NULL, &packed_val);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       dc = ADLB_Own_data(NULL, &packed_val);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       ac = xlb_to_free_add(notifs, packed_val.caller_data);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
       // Remove node from listeners and sort out subscript memory
       dc = remove_listeners_node(&d->listeners, &node_sub, node, notifs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       ac = xlb_refs_add(&notifs->references, ref_listener->id,
              ref_sub, val_type, packed_val.data, packed_val.length,
              ref_listener->acquire, ref_listener->write_decr);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
       xlb_refc_acquire acquire = XLB_NO_ACQUIRE;
 
@@ -2161,11 +2161,11 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
       // Update refcounts if necessary
       dc = xlb_refc_incr(d, id, read_decr, acquire, defer_gc,
                          gced, notifs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
 
       // Retain listener memory with subscript
       ac = xlb_to_free_add(notifs, ref_listener);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+      ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
 
       free(listener);
@@ -2183,7 +2183,7 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 {
   adlb_datum *d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Attempt to reserve
   dc = data_reserve_subscript(id, d, subscript);
@@ -2195,7 +2195,7 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
     adlb_data_type type;
     dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                     &sub_exists, &val, &type);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     assert(sub_exists);
 
@@ -2204,7 +2204,7 @@ xlb_data_insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   }
   else
   {
-    DATA_CHECK(dc); // Check for other errors
+    ADLB_DATA_CHECK_CODE(dc); // Check for other errors
 
     *created = true;
     *value_present = false;
@@ -2356,7 +2356,7 @@ xlb_data_finalize()
   table_lp_free_callback(&tds, false, free_td_entry);
 
   adlb_data_code dc = xlb_struct_finalize();
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   xlb_data_types_finalize();
   if (failed_during_finalize)

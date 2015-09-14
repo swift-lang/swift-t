@@ -53,7 +53,7 @@ adlb_code xlb_dsyms_init(void)
   assert(!dsyms_init);
   bool ok = table_lp_init(&dsyms, 1024);
 
-  CHECK_MSG(ok, "Error initialising debug symbols");
+  ADLB_CHECK_MSG(ok, "Error initialising debug symbols");
 
   dsyms_init = true;
   return ADLB_SUCCESS;
@@ -70,12 +70,12 @@ void xlb_dsyms_finalize(void)
 adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
                                  adlb_dsym_data data)
 {
-  CHECK_MSG(dsyms_init, "Debug symbols module not init");
-  CHECK_MSG(symbol != ADLB_DSYM_NULL, "Cannot add "
+  ADLB_CHECK_MSG(dsyms_init, "Debug symbols module not init");
+  ADLB_CHECK_MSG(symbol != ADLB_DSYM_NULL, "Cannot add "
       "ADLB_DSYM_NULL as debug symbol for %s:%s",
       data.name, data.context);
-  CHECK_MSG(data.name != NULL, "name for debug symbol was NULL");
-  CHECK_MSG(data.context != NULL, "context for debug symbol was NULL");
+  ADLB_CHECK_MSG(data.name != NULL, "name for debug symbol was NULL");
+  ADLB_CHECK_MSG(data.context != NULL, "context for debug symbol was NULL");
   
   // free existing entry if needed
   symbol_table_entry *prev_entry;
@@ -89,16 +89,16 @@ adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
   }
 
   symbol_table_entry *e = malloc(sizeof(symbol_table_entry));
-  ADLB_ASSERT_MALLOC(e);
+  ADLB_CHECK_MALLOC(e);
 
   e->name = strdup(data.name);
-  ADLB_ASSERT_MALLOC(e->name);
+  ADLB_CHECK_MALLOC(e->name);
   
   e->context = strdup(data.context);
-  ADLB_ASSERT_MALLOC(e->context);
+  ADLB_CHECK_MALLOC(e->context);
   
   bool ok = table_lp_add(&dsyms, symbol, e);
-  CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
+  ADLB_CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
 
   return ADLB_SUCCESS;
 }

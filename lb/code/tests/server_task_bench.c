@@ -146,7 +146,7 @@ static adlb_code run()
   int mpi_argc = 0;
   char** mpi_argv = NULL;
   int rc = MPI_Init(&mpi_argc, &mpi_argv);
-  CHECK_MSG(rc == MPI_SUCCESS, "error setting up MPI");
+  ADLB_CHECK_MSG(rc == MPI_SUCCESS, "error setting up MPI");
 
   fprintf(stderr, "Running benchmarks...\n");
   report_hdr();
@@ -201,10 +201,10 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
   int ntypes = 1;
   int types[1] = { 0 };
 
-  CHECK_MSG(init_qlen * 2 <= benchmark_nops, "init queue length %i must be "
+  ADLB_CHECK_MSG(init_qlen * 2 <= benchmark_nops, "init queue length %i must be "
            "less than half number of operations %i", init_qlen,
            benchmark_nops);
-  CHECK_MSG(benchmark_nops % 2 == 0, "Benchmark op count %i must be even",
+  ADLB_CHECK_MSG(benchmark_nops % 2 == 0, "Benchmark op count %i must be even",
            benchmark_nops);
   // 1 put and 1 get per task
   int benchmark_ntasks = benchmark_nops / 2;
@@ -217,7 +217,7 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
   // Create copy to isolate any interference.
   MPI_Comm comm;
   int rc = MPI_Comm_dup(MPI_COMM_WORLD, &comm);
-  CHECK_MSG(rc == MPI_SUCCESS, "comm dup");
+  ADLB_CHECK_MSG(rc == MPI_SUCCESS, "comm dup");
 
 
   int am_server;
@@ -309,7 +309,7 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
       wu_idx = (wu_idx + 1) % num_distinct_wus;
     }
 
-    CHECK_MSG(ac == ADLB_SHUTDOWN, "Expected shutdown, got adlb_code %i", ac);
+    ADLB_CHECK_MSG(ac == ADLB_SHUTDOWN, "Expected shutdown, got adlb_code %i", ac);
 
     free_wus(num_distinct_wus, wus);
   }
@@ -320,7 +320,7 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
   // Verify that we did the correct number of operations
   int sum_ops;
   rc = MPI_Allreduce(&my_ops, &sum_ops, 1, MPI_INT, MPI_SUM, comm);
-  CHECK_MSG(sum_ops == benchmark_nops, "Wrong number of ops executed "
+  ADLB_CHECK_MSG(sum_ops == benchmark_nops, "Wrong number of ops executed "
         "expected %i actual %i", benchmark_nops, sum_ops);
 
   MPI_Comm_free(&comm);

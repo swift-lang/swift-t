@@ -147,7 +147,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   int rc;
   rc = MPI_Initialized(&initialized);
   MPI_CHECK(rc);
-  CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
+  ADLB_CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
   xlb_s.start_time = MPI_Wtime();
 
@@ -160,7 +160,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   for (int i = 0; i < ntypes; i++)
   {
-    CHECK_MSG(type_vect[i] == i,
+    ADLB_CHECK_MSG(type_vect[i] == i,
         "Only support type_vect with types 0..ntypes-1: "
         "type_vect[%i] was %i", i, type_vect[i]);
   }
@@ -307,7 +307,7 @@ adlb_put_target_server(int target, int *to_server)
   else if (target < xlb_s.layout.size)
     *to_server = xlb_map_to_server(&xlb_s.layout, target);
   else
-    CHECK_MSG(target >= 0 && target < xlb_s.layout.size,
+    ADLB_CHECK_MSG(target >= 0 && target < xlb_s.layout.size,
               "ADLB_Put(): invalid target rank: %i", target);
   return ADLB_SUCCESS;
 }
@@ -315,14 +315,14 @@ adlb_put_target_server(int target, int *to_server)
 static inline adlb_code
 adlb_put_check_params(int target, int type, adlb_put_opts opts)
 {
-  CHECK_MSG(target == ADLB_RANK_ANY ||
+  ADLB_CHECK_MSG(target == ADLB_RANK_ANY ||
             (target >= 0 && target < xlb_s.layout.workers),
             "ADLB_Put(): invalid target: %i", target);
 
-  CHECK_MSG(type >= 0 && type < xlb_s.types_size,
+  ADLB_CHECK_MSG(type >= 0 && type < xlb_s.types_size,
             "ADLB_Put(): invalid work type: %d\n", type);
 
-  CHECK_MSG(mpi_version >= 3 || opts.parallelism == 1,
+  ADLB_CHECK_MSG(mpi_version >= 3 || opts.parallelism == 1,
             "ADLB_Put(): "
             "parallel tasks not supported for MPI version %i",
             mpi_version);
@@ -526,7 +526,7 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   TRACE_START;
 
-  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
+  ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
@@ -571,7 +571,7 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
 {
   DEBUG("xlb_parallel_comm_setup(): parallelism=%i", parallelism);
   // Parallel tasks require MPI 3.  Cf. configure.ac
-  CHECK_MSG(ADLB_MPI_VERSION >= 3, "Parallel tasks not supported for MPI "
+  ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3, "Parallel tasks not supported for MPI "
                                    "version %i < 3", ADLB_MPI_VERSION);
   #if ADLB_MPI_VERSION >= 3
   MPI_Status status;
@@ -600,7 +600,7 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   MPI_Status status;
   MPI_Request request;
 
-  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
+  ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
             "ADLB_Iget(): Bad work type: %i\n", type_requested);
 
   struct packed_get_response g;
@@ -719,11 +719,11 @@ static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
 static adlb_code xlb_get_req_lookup(adlb_get_req handle,
                                     xlb_get_req_impl **req)
 {
-  CHECK_MSG(handle >= 0 && handle < xlb_get_reqs.size,
+  ADLB_CHECK_MSG(handle >= 0 && handle < xlb_get_reqs.size,
             "Invalid adlb_get_req: out of range (%i)", handle);
 
   xlb_get_req_impl *tmp = &xlb_get_reqs.reqs[handle];
-  CHECK_MSG(tmp->in_use, "Invalid or old adlb_get_req (%i)", handle);
+  ADLB_CHECK_MSG(tmp->in_use, "Invalid or old adlb_get_req (%i)", handle);
 
   *req = tmp;
   return ADLB_SUCCESS;
@@ -751,7 +751,7 @@ static adlb_code xlb_get_reqs_expand(int min_size)
 
   xlb_get_req_impl *new_reqs;
   new_reqs = malloc(sizeof(xlb_get_req_impl) * (size_t) new_size);
-  ADLB_ASSERT_MALLOC(new_reqs);
+  ADLB_CHECK_MALLOC(new_reqs);
 
   xlb_get_reqs.reqs = new_reqs;
   xlb_get_reqs.size = new_size;
@@ -762,7 +762,7 @@ static adlb_code xlb_get_reqs_expand(int min_size)
 
     // Track unused entries
     struct list_i_item *node = malloc(sizeof(struct list_i_item));
-    ADLB_ASSERT_MALLOC(node);
+    ADLB_CHECK_MALLOC(node);
     node->data = i;
     list_i_add_item(&xlb_get_reqs.unused_reqs, node);
   }
@@ -788,7 +788,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
     return ADLB_SUCCESS;
   }
 
-  CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
+  ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Amget(): Bad work type: %i\n", type_requested);
 
   ac = xlb_get_reqs_alloc(reqs, nreqs);
@@ -950,7 +950,7 @@ static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
   }
 
   // TODO: remove when we support parallel tasks with Amget
-  CHECK_MSG(req->hdr.parallelism == 1, "Don't yet support "
+  ADLB_CHECK_MSG(req->hdr.parallelism == 1, "Don't yet support "
             "receiving parallel tasks with ADLB_Aget or ADLB_Amget");
 
   // TODO: parallel task logic e.g. communicator creation
@@ -1383,7 +1383,7 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript,
   MPI_Status status;
   MPI_Request request;
 
-  CHECK_MSG(length < ADLB_DATA_MAX,
+  ADLB_CHECK_MSG(length < ADLB_DATA_MAX,
             "ADLB_Store(): value too long: %llu max: %llu\n",
             (long long unsigned) length, ADLB_DATA_MAX);
 
@@ -1713,7 +1713,7 @@ ADLBP_Enumerate(adlb_datum_id container_id,
     if (include_keys || include_vals)
     {
       *data = malloc(res.length);
-      ADLB_ASSERT_MALLOC(*data);
+      ADLB_CHECK_MALLOC(*data);
 
       adlb_code ac = mpi_recv_big(*data, res.length,
                                   to_server_rank, ADLB_TAG_RESPONSE);
@@ -2088,7 +2088,7 @@ ADLBP_Finalize()
   adlb_code rc;
   int flag;
   MPI_Finalized(&flag);
-  CHECK_MSG(!flag,
+  ADLB_CHECK_MSG(!flag,
             "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
 
 #ifdef XLB_ENABLE_XPT
