@@ -23,6 +23,7 @@
 
 #include "adlb-defs.h"
 #include "adlb_types.h"
+#include "checks.h"
 #include "data.h"
 #include <rbtree_bp.h>
 
@@ -103,30 +104,12 @@ typedef struct
   adlb_data_status status;
 } adlb_datum;
 
-#define verbose_error(code, format, args...)                \
-  {                                                         \
-    printf("ADLB DATA ERROR:\n");                           \
-    printf(format "\n", ## args);                           \
-    printf("\t in: %s()\n", __FUNCTION__);                  \
-    printf("\t at: %s:%i\n", __FILE__, __LINE__);           \
-    return code;                                            \
-  }
 
-/**
-    Allows user to check an exceptional condition,
-    print an error message, and return an error code in one swoop.
-    This is disabled if NDEBUG is set
-*/
-#define check_verbose(condition, code, format, args...) \
-  { if (! (condition))                                        \
-    {                                                         \
-      verbose_error(code, format, ## args)                    \
-    }                                                         \
-  }
+/// ADLB DATA MODULE CHECKS
 
 #if ENABLE_LOG_DEBUG
 // Include traceback
-#define DATA_CHECK(rc) \
+#define ADLB_DATA_CHECK_CODE(rc) \
   { adlb_data_code _rc = (rc);                              \
     if (_rc != ADLB_DATA_SUCCESS) {                         \
       printf("ADLB DATA CHECK FAILED: %s:%s:%i\n",          \
@@ -135,38 +118,38 @@ typedef struct
   }}
 
 // Check adlb_code, translate to dc
-#define DATA_CHECK_ADLB(ac, dc) \
+#define ADLB_DATA_CHECK_ADLB(ac, dc) \
   { adlb_code _ac = (ac);                              \
     if (_ac != ADLB_SUCCESS) {                         \
       printf("ADLB DATA CHECK FAILED: %s:%s:%i\n",     \
          __FUNCTION__, __FILE__, __LINE__);            \
       return dc;                                       \
   }}
-#else
+#else // ENABLE_LOG_DEBUG
 // Just return
-#define DATA_CHECK(rc) \
+#define ADLB_DATA_CHECK_CODE(rc) \
   { adlb_data_code _rc = (rc);                              \
     if (_rc != ADLB_DATA_SUCCESS) {                         \
       return _rc;                                           \
   }}
 
-#define DATA_CHECK_ADLB(ac, dc) \
+#define ADLB_DATA_CHECK_ADLB(ac, dc) \
   { adlb_code _ac = (ac);                              \
     if (_ac != ADLB_SUCCESS) {                         \
       return dc;                                       \
   }}
 
-#endif
+#endif // ENABLE_LOG_DEBUG
 
-#define DATA_CHECK_MALLOC(ptr) { \
-  check_verbose((ptr) != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
+#define ADLB_DATA_CHECK_MALLOC(ptr) { \
+  ADLB_CHECK_MSG_CODE((ptr) != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
 }
 
 // Helper macro to create/resize an array.  Given NULL, realloc() allocates
 // the initial array.  On error, return ADLB_DATA_ERROR_OOM
 #define DATA_REALLOC(array, new_count) {                               \
   array = realloc((array), sizeof((array)[0]) * (new_count));          \
-  DATA_CHECK_MALLOC(array);                                            \
+  ADLB_DATA_CHECK_MALLOC(array);                                            \
 }
 
 adlb_data_code

@@ -120,11 +120,11 @@ adlb_code xlb_xpt_write_init(const char *filename, xlb_xpt_state *state)
   // Open file for reading and writing
   // TODO: if file already exists from previous one, this won't truncate
   state->fd = open(filename, O_RDWR | O_CREAT, S_IRWXU);
-  CHECK_MSG(state->fd != -1, "Error opening file %s for write. "
+  ADLB_CHECK_MSG(state->fd != -1, "Error opening file %s for write. "
         "Error code %i. %s", filename, errno, strerror(errno));
 
   state->buffer = malloc(XLB_XPT_BUFFER_SIZE);
-  CHECK_MSG(state->buffer != NULL, "Error allocating buffer");
+  ADLB_CHECK_MSG(state->buffer != NULL, "Error allocating buffer");
   state->buffer_used = 0;
 
   xpt_block_num_t block = first_block((xpt_rank_t)xlb_s.layout.rank,
@@ -177,7 +177,7 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state)
   free(state->buffer);
   state->buffer = NULL;
 
-  CHECK_MSG(rc == 0, "Error closing checkpoint file: Error code %i %s",
+  ADLB_CHECK_MSG(rc == 0, "Error closing checkpoint file: Error code %i %s",
               errno, strerror(errno));
   return ADLB_SUCCESS;
 }
@@ -218,7 +218,7 @@ static adlb_code flush_buffers(xlb_xpt_state *state)
     {
       TRACE("pwrite %ui bytes @ %zi", write_size, curr_pos);
       ssize_t pwc = pwrite(state->fd, buf_pos, write_size, curr_pos);
-      CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
+      ADLB_CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
               "offset %zi", curr_pos);
 
       buf_pos += write_size;
@@ -296,7 +296,7 @@ static adlb_code xpt_header_write(xlb_xpt_state *state)
 
   // Make sure header gets written out
   rc = xlb_xpt_flush(state);
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error flushing header");
+  ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Error flushing header");
   return ADLB_SUCCESS;
 }
 
@@ -439,7 +439,7 @@ xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
     if (to_read > 0)
     {
       ssize_t read_b = pread(state->fd, buf_pos, to_read, read_offset);
-      CHECK_MSG(read >= 0, "Error reading back checkpoint value: "
+      ADLB_CHECK_MSG(read >= 0, "Error reading back checkpoint value: "
                 "%d: %s", errno, strerror(errno));
       if (read_b < to_read)
       {
@@ -478,11 +478,11 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state,
         val_offset, state->filename);
 
   ac = seek_read(state, val_offset);
-  CHECK_MSG(ac == ADLB_SUCCESS, "Error seeking to %zi in file %s\n",
+  ADLB_CHECK_MSG(ac == ADLB_SUCCESS, "Error seeking to %zi in file %s\n",
           val_offset, state->filename);
 
   ac = blkread(state, buffer, (xpt_block_pos_t)val_len);
-  CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %zu bytes at offset "
+  ADLB_CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %zu bytes at offset "
           "%zi in file %s", val_len,
           val_offset, state->filename);
 
@@ -499,7 +499,7 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state)
 
   // Then try to force sync to disk
   int rc = fsync(state->fd);
-  CHECK_MSG(rc != EOF, "Error flushing checkpoint file");
+  ADLB_CHECK_MSG(rc != EOF, "Error flushing checkpoint file");
   DEBUG("Finished flushing checkpoint file");
 
   return ADLB_SUCCESS;
@@ -512,7 +512,7 @@ adlb_code
 xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
 {
   state->file = fopen(filename, "rb");
-  CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
+  ADLB_CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
 
   state->curr_rank = 0;
   state->curr_block = 0;
@@ -520,7 +520,7 @@ xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
   state->end_of_stream = false;
 
   int magic_num = fgetc(state->file);
-  CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
+  ADLB_CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
         " at start of checkpoint file %s: may be corrupted or not"
         " checkpoint", magic_num, filename);
   state->curr_block_pos++;
@@ -551,13 +551,13 @@ xpt_header_read(xlb_xpt_read_state *state, const char *filename)
    */
   adlb_code rc;
   rc = checked_fread_uint32(state, &state->block_size);
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
+  ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
   rc = checked_fread_uint32(state, &state->ranks);
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
+  ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
 
-  CHECK_MSG(state->block_size > 0, "Block size cannot be zero in file "
+  ADLB_CHECK_MSG(state->block_size > 0, "Block size cannot be zero in file "
             "%s", filename);
-  CHECK_MSG(state->ranks > 0, "Ranks cannot be zero in file %s",
+  ADLB_CHECK_MSG(state->ranks > 0, "Ranks cannot be zero in file %s",
             filename);
   // TODO: header checksum?
   return ADLB_SUCCESS;
@@ -572,7 +572,7 @@ adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state)
 
   int rc = fclose(state->file);
   state->file = NULL;
-  CHECK_MSG(rc == 0, "Error closing checkpoint file");
+  ADLB_CHECK_MSG(rc == 0, "Error closing checkpoint file");
   return ADLB_SUCCESS;
 }
 
@@ -581,7 +581,7 @@ xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank)
 {
   assert(state->file != NULL);
   DEBUG("Select rank %"PRIu32" for reading", rank);
-  CHECK_MSG(rank < state->ranks, "Invalid rank: %"PRIu32, rank);
+  ADLB_CHECK_MSG(rank < state->ranks, "Invalid rank: %"PRIu32, rank);
   state->curr_rank = rank;
   xpt_rank_t rank_block1 = first_block(state->curr_rank, state->ranks);
   adlb_code rc = block_read_move(state, rank_block1);
@@ -658,7 +658,7 @@ block_read_move(xlb_xpt_read_state *state, xpt_block_num_t new_block)
     return ADLB_DONE;
   }
 
-  CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
+  ADLB_CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
         " at start of checkpoint block: may be corrupted", magic_num);
 
   state->end_of_stream = false; // Not at end of stream

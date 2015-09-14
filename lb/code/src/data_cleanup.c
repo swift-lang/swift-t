@@ -48,14 +48,14 @@ xlb_datum_cleanup(adlb_datum_storage *d,
       assert(!adlb_has_sub(to_acquire.subscript));
       dc = xlb_incr_referand(d, type, release_read, release_write,
                              to_acquire, refcs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
 
     if (free_mem)
     {
       // Then free memory
       dc = ADLB_Free_storage(d, type);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
     return ADLB_DATA_SUCCESS;
   }
@@ -121,7 +121,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
 
         dc = xlb_incr_referand(d, (adlb_data_type)container->val_type,
                 release_read, release_write, field_acquire, refcs);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
       }
       // Free the memory for value and key
       if (free_mem)
@@ -129,7 +129,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
         if (d != NULL)
         {
           dc = ADLB_Free_storage(d, (adlb_data_type)container->val_type);
-          DATA_CHECK(dc);
+          ADLB_DATA_CHECK_CODE(dc);
           free(d);
         }
       }

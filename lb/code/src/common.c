@@ -66,7 +66,7 @@ adlb_code xlb_env_long(const char *env_var, long *val)
   // Try to parse as number
   char *end = NULL;
   long tmp_val = strtol(s, &end, 10);
-  CHECK_MSG(end != NULL && end != s && *end == '\0',
+  ADLB_CHECK_MSG(end != NULL && end != s && *end == '\0',
         "Invalid env var \"%s\": not a long int", s)
 
   // Whole string was number

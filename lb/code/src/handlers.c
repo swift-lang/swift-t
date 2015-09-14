@@ -352,7 +352,7 @@ handle_dput(int caller)
 
   MPI_Request request;
   xlb_work_unit *work = work_unit_alloc((size_t)p->length);
-  ADLB_ASSERT_MALLOC(work);
+  ADLB_CHECK_MALLOC(work);
 
   xlb_work_unit_init(work, p->type, caller, p->answer,
                      p->target, p->length, p->opts);
@@ -386,7 +386,7 @@ handle_dput(int caller)
   xlb_engine_code tc = xlb_engine_put(name, name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
-  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding data-dependent work");
+  ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding data-dependent work");
 
   if (ready)
   {
@@ -493,7 +493,7 @@ xlb_put_work_unit(xlb_work_unit *work)
     // Attempt to redirect work unit to another worker
     if (targeted)
     {
-      CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
+      ADLB_CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
       worker = xlb_requestqueue_matches_target(target, type,
                                                work->opts.accuracy);
     }
@@ -605,7 +605,7 @@ static adlb_code attempt_match_work(int type, int putter,
   // Attempt to redirect work unit to another worker
   if (targeted)
   {
-    CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
+    ADLB_CHECK_MSG(target < xlb_s.layout.size, "Invalid target: %i", target);
     worker = xlb_requestqueue_matches_target(target, type,
                                              opts.accuracy);
     if (worker == ADLB_RANK_NULL &&
@@ -644,7 +644,7 @@ static adlb_code attempt_match_work(int type, int putter,
 static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism)
 {
-  CHECK_MSG(parallelism <= xlb_s.layout.my_workers,
+  ADLB_CHECK_MSG(parallelism <= xlb_s.layout.my_workers,
             "Task with parallelism %i can never execute: "
             "server has %i workers!\n",
             parallelism, xlb_s.layout.my_workers);
@@ -1152,7 +1152,7 @@ handle_store(int caller)
   {
     xfer_alloced = true;
     xfer = malloc(hdr.length);
-    ADLB_ASSERT_MALLOC(xfer);
+    ADLB_CHECK_MALLOC(xfer);
   }
   else
   {

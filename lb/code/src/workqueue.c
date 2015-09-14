@@ -158,7 +158,7 @@ xlb_workq_init(int work_types, const xlb_layout *layout)
   adlb_code ac;
 
   bool ok = ptr_array_init(&wu_array, WU_ARRAY_INIT_SIZE);
-  CHECK_MSG(ok, "wu_array initialisation failed");
+  ADLB_CHECK_MSG(ok, "wu_array initialisation failed");
 
   targeted_work_size = targeted_work_entries(work_types,
                                     layout->my_workers);
@@ -217,12 +217,12 @@ xlb_workq_init(int work_types, const xlb_layout *layout)
 static adlb_code init_work_heaps(heap_iu32_t** heap_array, int count)
 {
   *heap_array = malloc(sizeof((*heap_array)[0]) * (size_t)count);
-  ADLB_ASSERT_MALLOC(*heap_array);
+  ADLB_CHECK_MALLOC(*heap_array);
 
   for (int i = 0; i < count; i++)
   {
     bool ok = heap_iu32_init_empty(&(*heap_array)[i]);
-    CHECK_MSG(ok, "Could not allocate memory for heap");
+    ADLB_CHECK_MSG(ok, "Could not allocate memory for heap");
   }
 
   return ADLB_SUCCESS;
@@ -290,7 +290,7 @@ static adlb_code xlb_workq_add_serial(xlb_work_unit* wu)
   uint32_t wu_idx;
 
   bool ok = ptr_array_add(&wu_array, wu, &wu_idx);
-  CHECK_MSG(ok, "Could not add work unit");
+  ADLB_CHECK_MSG(ok, "Could not add work unit");
 
   if (wu->target >= 0)
   {
@@ -307,7 +307,7 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
   // Untargeted single-process task
   heap_iu32_t* H = &untargeted_work[wu->type];
   bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
-  CHECK_MSG(b, "out of memory expanding heap");
+  ADLB_CHECK_MSG(b, "out of memory expanding heap");
 
   if (xlb_s.perfc_enabled)
   {
@@ -335,7 +335,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
       H = host_targeted_work_heap(host_idx, wu->type);
     }
     bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
-    CHECK_MSG(b, "out of memory expanding heap");
+    ADLB_CHECK_MSG(b, "out of memory expanding heap");
   }
   else
   {
@@ -352,7 +352,7 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
 
     heap_iu32_t* H = &untargeted_work[wu->type];
     bool b = heap_iu32_add(H, -modified_priority, wu_idx);
-    CHECK_MSG(b, "out of memory expanding heap");
+    ADLB_CHECK_MSG(b, "out of memory expanding heap");
   }
 
   if (xlb_s.perfc_enabled)

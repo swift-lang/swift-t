@@ -126,18 +126,18 @@ build_worker2host(const struct xlb_hostnames *hostnames,
 {
   *worker2host = malloc(sizeof((*worker2host)[0]) *
                               (size_t)my_workers);
-  ADLB_ASSERT_MALLOC(*worker2host);
+  ADLB_CHECK_MALLOC(*worker2host);
 
   struct table host_name_idx_map;
   bool ok = table_init(&host_name_idx_map, 128);
-  CHECK_MSG(ok, "Table init failed");
+  ADLB_CHECK_MSG(ok, "Table init failed");
 
   *host_count = 0;
   for (int i = 0; i < my_workers; i++)
   {
     int rank = xlb_rank_from_my_worker_idx(layout, i);
     const char *host_name = xlb_hostnames_lookup(hostnames, rank);
-    CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
+    ADLB_CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
               "rank %i", rank);
 
     unsigned long host_idx;
@@ -145,7 +145,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
     {
       host_idx = (unsigned long)(*host_count)++;
       ok = table_add(&host_name_idx_map, host_name, (void*)host_idx);
-      CHECK_MSG(ok, "Table add failed");
+      ADLB_CHECK_MSG(ok, "Table add failed");
     }
     (*worker2host)[i] = (int)host_idx;
     DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
@@ -168,19 +168,19 @@ build_host2workers(const xlb_layout *layout, int worker_count,
   /* Build inverse map */
   *host2workers = malloc(sizeof((*host2workers)[0]) *
                                (size_t)host_count);
-  ADLB_ASSERT_MALLOC(*host2workers);
+  ADLB_CHECK_MALLOC(*host2workers);
 
   for (int i = 0; i < host_count; i++)
   {
     ok = dyn_array_i_init(&(*host2workers)[i], 4);
-    CHECK_MSG(ok, "dyn_array init failed");
+    ADLB_CHECK_MSG(ok, "dyn_array init failed");
   }
 
   for (int i = 0; i < worker_count; i++)
   {
     int host_idx = worker2host[i];
     ok = dyn_array_i_add(&(*host2workers)[host_idx], i);
-    CHECK_MSG(ok, "dyn_array add failed");
+    ADLB_CHECK_MSG(ok, "dyn_array add failed");
   }
 
   return ADLB_SUCCESS;

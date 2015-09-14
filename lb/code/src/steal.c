@@ -72,7 +72,7 @@ adlb_code
 xlb_steal_init(void)
 {
   bool ok = table_ip_init(&sent_steal_probes, 128);
-  CHECK_MSG(ok, "Error initing table_ip");
+  ADLB_CHECK_MSG(ok, "Error initing table_ip");
 
   return ADLB_SUCCESS;
 }
@@ -106,7 +106,7 @@ xlb_random_steal_probe(void)
   
   // Mark as sent to avoid duplicates
   bool ok = table_ip_add(&sent_steal_probes, target, (void*)0x1);
-  CHECK_MSG(ok, "error adding to table");
+  ADLB_CHECK_MSG(ok, "error adding to table");
 
   return ADLB_SUCCESS;
 }
@@ -139,7 +139,7 @@ xlb_handle_steal_probe_resp(int caller,
   // Mark probe as received
   void *tmp;
   bool found = table_ip_remove(&sent_steal_probes, caller, &tmp);
-  CHECK_MSG(found, "probe not found");
+  ADLB_CHECK_MSG(found, "probe not found");
 
   const int *caller_type_counts = (int*)hdr->sync_data;
   if (xlb_can_steal(caller_type_counts))

@@ -23,7 +23,7 @@ static xlb_struct_type_info *struct_types = NULL;
                              struct_types[type].initialized)
 
 #define check_valid_type(type) { \
-    check_verbose(is_valid_type(type), ADLB_DATA_ERROR_INVALID, \
+    ADLB_CHECK_MSG_CODE(is_valid_type(type), ADLB_DATA_ERROR_INVALID, \
             "Invalid type id %i", type); \
   }
 
@@ -88,7 +88,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
                     const char **field_names)
 {
   adlb_data_code dc;
-  check_verbose(type >= 0, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(type >= 0, ADLB_DATA_ERROR_INVALID,
         "Struct type id %i was negative", type);
   assert(field_count >= 0);
   assert(type_name != NULL);
@@ -98,17 +98,17 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   adlb_data_type tmp_type;
   adlb_type_extra tmp_extra;
   dc = xlb_data_type_lookup(type_name, &tmp_type, &tmp_extra);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
-  check_verbose(tmp_type == ADLB_DATA_TYPE_NULL, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(tmp_type == ADLB_DATA_TYPE_NULL, ADLB_DATA_ERROR_TYPE,
             "Type called %s already exists", type_name);
 
   // Check array big enough
   dc = resize_struct_types(type);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   xlb_struct_type_info *t = &struct_types[type];
-  check_verbose(!t->initialized, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(!t->initialized, ADLB_DATA_ERROR_INVALID,
                 "struct type %i already initialized", type);
 
   t->initialized = true;
@@ -129,12 +129,12 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   extra.STRUCT.struct_type = type;
 
   dc = xlb_data_type_add(type_name, ADLB_DATA_TYPE_STRUCT, extra);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Also add alias name, e.g. struct1, for backward compatibility
   char *tmp_type_name;
   int n = asprintf(&tmp_type_name, "struct%i", type);
-  check_verbose(n != -1, ADLB_DATA_ERROR_OOM, "Error printing string");
+  ADLB_CHECK_MSG_CODE(n != -1, ADLB_DATA_ERROR_OOM, "Error printing string");
   dc = xlb_data_type_add(tmp_type_name, ADLB_DATA_TYPE_STRUCT, extra);
   free(tmp_type_name);
 
@@ -151,7 +151,7 @@ adlb_data_code xlb_struct_finalize(void)
     for (int i = 0; i < struct_types_size; i++)
     {
       adlb_data_code dc = struct_type_free(&struct_types[i]);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
     }
     free(struct_types);
     struct_types = NULL;
@@ -218,11 +218,11 @@ struct_subscript_pop(adlb_subscript *sub, int *field_ix,
 
   int64_t field_ix64;
   dc = ADLB_Int64_parse(sub_str, component_len, &field_ix64);
-  check_verbose(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
         "Invalid subscript component: \"%.*s\" len %zu",
         (int)component_len, sub_str, component_len);
 
-  check_verbose(field_ix64 >= 0 && field_ix64 <= INT_MAX,
+  ADLB_CHECK_MSG_CODE(field_ix64 >= 0 && field_ix64 <= INT_MAX,
       ADLB_DATA_ERROR_INVALID, "Struct index out of range: %"PRId64,
       field_ix64);
 
@@ -265,7 +265,7 @@ adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s)
   xlb_struct_type_info *t = &struct_types[type];
 
   adlb_struct *tmp = alloc_struct(t);
-  check_verbose(tmp != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
+  ADLB_CHECK_MSG_CODE(tmp != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
 
   tmp->type = type;
   for (int i = 0; i < t->field_count; i++)
@@ -293,21 +293,21 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
   adlb_data_code dc;
 
   assert(s != NULL);
-  check_verbose(length >= sizeof(adlb_packed_struct_hdr), ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE(length >= sizeof(adlb_packed_struct_hdr), ADLB_DATA_ERROR_INVALID,
                 "buffer too small for serialized struct");
   const adlb_packed_struct_hdr *hdr = data;
   check_valid_type(hdr->type);
   xlb_struct_type_info *t = &struct_types[hdr->type];
   size_t min_length = sizeof(adlb_packed_struct_hdr) +
                 sizeof(hdr->field_offsets[0]) * (size_t)t->field_count;
-  check_verbose((size_t)length >= min_length, ADLB_DATA_ERROR_INVALID,
+  ADLB_CHECK_MSG_CODE((size_t)length >= min_length, ADLB_DATA_ERROR_INVALID,
                 "buffer too small for header of struct type %s: is %zub, "
                 "but expected >= %zub", t->type_name, length, min_length);
 
   if (init_struct)
   {
     *s = alloc_struct(t);
-    check_verbose(*s != NULL, ADLB_DATA_ERROR_OOM, "Couldn't allocate struct");
+    ADLB_CHECK_MSG_CODE(*s != NULL, ADLB_DATA_ERROR_OOM, "Couldn't allocate struct");
     (*s)->type = hdr->type;
 
     for (int i = 0; i < t->field_count; i++)
@@ -319,7 +319,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
   else
   {
     assert(is_valid_type((*s)->type));
-    check_verbose((*s)->type == hdr->type, ADLB_DATA_ERROR_TYPE,
+    ADLB_CHECK_MSG_CODE((*s)->type == hdr->type, ADLB_DATA_ERROR_TYPE,
              "Type of target struct doesn't match source data: %s vs. %s",
               struct_types[(*s)->type].type_name, t->type_name);
   }
@@ -351,7 +351,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, size_t length,
         // Free any existing data
         dc = ADLB_Free_storage(&(*s)->fields[i].data,
                                t->field_types[i].type);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
       }
 
       ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
@@ -386,7 +386,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 
   bool using_caller_buf;
   dc = ADLB_Init_buf(caller_buffer, &result_buf, &using_caller_buf, hdr_size);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // Add header info
   (*hdr)->type = s->type;
@@ -401,7 +401,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
     if (init)
     {
       dc = ADLB_Pack(&s->fields[i].data, field_t, NULL, &field_data);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       assert(field_data.data != NULL);
     }
     else
@@ -411,7 +411,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 
     dc = ADLB_Resize_buf(&result_buf, &using_caller_buf,
                          buf_pos + field_data.length + 1);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     // Mark start of data
     (*hdr)->field_offsets[i] = buf_pos;
@@ -442,7 +442,7 @@ static adlb_data_code get_field(adlb_struct *s, int field_ix,
 {
   check_valid_type(s->type);
   *st = &struct_types[s->type];
-  check_verbose(field_ix >= 0 && field_ix < (*st)->field_count,
+  ADLB_CHECK_MSG_CODE(field_ix >= 0 && field_ix < (*st)->field_count,
                  ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
                  "Looking up field #%i in struct type %s with %i fields",
                  field_ix, (*st)->type_name, (*st)->field_count);
@@ -467,14 +467,14 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
     size_t consumed;
 
     dc = struct_subscript_pop(&sub, &field_ix, &consumed);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
 
     pos += consumed;
 
     adlb_struct_field *curr_field;
     xlb_struct_type_info *st;
     dc = get_field(s, field_ix, &st, &curr_field);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
     TRACE("Pop sub %i", field_ix);
     adlb_struct_field_type *field_type = &st->field_types[field_ix];
 
@@ -492,7 +492,7 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
       {
         dc = xlb_new_struct(field_type->extra.STRUCT.struct_type,
                             &curr_field->data.STRUCT);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
         curr_field->initialized = true;
       }
       // Another iteration if it's a valid struct
@@ -517,7 +517,7 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
   adlb_struct_field *f;
   xlb_struct_type_info *st;
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   *type = st->field_types[field_ix].type;
   DEBUG("Field type: %s", ADLB_Data_type_tostring(*type));
@@ -541,15 +541,15 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
   adlb_struct_field_type field_type;
   size_t sub_pos;
   dc = xlb_struct_lookup(s, subscript, false, &field, &field_type, &sub_pos);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
-  check_verbose(sub_pos == subscript.length,
+  ADLB_CHECK_MSG_CODE(sub_pos == subscript.length,
         ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
         "Could not lookup full subscript: remainder was [%.*s]",
         (int)(subscript.length - sub_pos),
         ((const char*)subscript.key) + sub_pos);
 
-  check_verbose(field->initialized, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+  ADLB_CHECK_MSG_CODE(field->initialized, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
         "Subscript [%.*s] not initialized", (int)subscript.length,
         (const char*)subscript.key);
 
@@ -571,7 +571,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
   // Initialize subscripts as a way to validate path
   bool init_nested = validate_path;
   dc = xlb_struct_lookup(s, subscript, init_nested, &field, &field_type, &sub_pos);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   if (sub_pos == subscript.length)
   {
@@ -605,11 +605,11 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
   adlb_data_code dc;
 
   // Non-compound fields can only be initialized/assigned once
-  check_verbose(ADLB_Data_is_compound(field_type.type) ||
+  ADLB_CHECK_MSG_CODE(ADLB_Data_is_compound(field_type.type) ||
         !field->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
         "Field already set");
 
-  check_verbose(field_type.type == data_type, ADLB_DATA_ERROR_TYPE,
+  ADLB_CHECK_MSG_CODE(field_type.type == data_type, ADLB_DATA_ERROR_TYPE,
         "Invalid type %s when assigning to struct field: expected %s",
         ADLB_Data_type_tostring(field_type.type),
         ADLB_Data_type_tostring(data_type));
@@ -618,7 +618,7 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
   // Can safely cast data since we're forcing it to copy
   dc = ADLB_Unpack2(&field->data, data_type, (void*)data, length, true,
                     refcounts, !field->initialized, NULL);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
   field->initialized = true;
 
   return ADLB_DATA_SUCCESS;
@@ -631,7 +631,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   adlb_struct_field *f;
   xlb_struct_type_info *st;
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   return xlb_struct_assign_field(f, st->field_types[field_ix],
                                  data, length, type, refcounts);
@@ -649,15 +649,15 @@ adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
   size_t sub_pos;
   dc = xlb_struct_lookup(s, subscript, init_nested, &field,
                          &field_type, &sub_pos);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
-  check_verbose(sub_pos == subscript.length,
+  ADLB_CHECK_MSG_CODE(sub_pos == subscript.length,
         ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
         "Could not lookup full subscript: remainder was [%.*s]",
         (int)(subscript.length - sub_pos),
         ((const char*)subscript.key) + sub_pos);
 
-  check_verbose(field->initialized, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+  ADLB_CHECK_MSG_CODE(field->initialized, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
         "Subscript [%.*s] not initialized", (int)subscript.length,
         (const char*)subscript.key);
 
@@ -681,7 +681,7 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
       if (s->fields[i].initialized)
       {
         dc = ADLB_Free_storage(&s->fields[i].data, t->field_types[i].type);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
       }
     }
   }
@@ -716,12 +716,12 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
     size_t consumed;
     dc = struct_subscript_pop(&to_acquire.subscript, &acquire_ix,
                               &consumed);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
     DEBUG("xlb_struct_cleanup sub after: [%.*s]",
           (int)to_acquire.subscript.length,
           (const char*)to_acquire.subscript.key);
 
-    check_verbose(acquire_ix < t->field_count, ADLB_DATA_ERROR_INVALID,
+    ADLB_CHECK_MSG_CODE(acquire_ix < t->field_count, ADLB_DATA_ERROR_INVALID,
                 "Out of range struct index: %i, type %s field count %i",
                 acquire_ix, t->type_name, t->field_count);
   }
@@ -730,7 +730,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   {
     if (!s->fields[i].initialized)
     {
-      check_verbose(i != acquire_ix, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+      ADLB_CHECK_MSG_CODE(i != acquire_ix, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
           "Could not acquire subscript [%.*s]",
           (int)to_acquire.subscript.length,
           (const char*)to_acquire.subscript.key);
@@ -752,12 +752,12 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
         // Call directly so fewer recursive calls for nested structs
         dc = xlb_struct_cleanup(field_data->STRUCT, free_mem,
               release_read, release_write, acquire_field, refcs);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
         break;
       default:
         dc = xlb_datum_cleanup(field_data, field_type, free_mem,
                 release_read, release_write, acquire_field, refcs);
-        DATA_CHECK(dc);
+        ADLB_DATA_CHECK_CODE(dc);
         break;
     }
   }
@@ -765,7 +765,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   if (free_mem)
   {
     dc = xlb_free_struct(s, true, false);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
   return ADLB_DATA_SUCCESS;
 }

@@ -84,15 +84,15 @@ static adlb_code run()
   // Different node
   matched_rank = xlb_requestqueue_matches_target(shouldnt_match_rank,
                                             type, ADLB_TGT_ACCRY_NODE);
-  CHECK_MSG(matched_rank == ADLB_RANK_NULL, "shouldn't match");
+  ADLB_CHECK_MSG(matched_rank == ADLB_RANK_NULL, "shouldn't match");
 
   // Same node but different rank
   matched_rank = xlb_requestqueue_matches_target(should_match_rank,
                                           type, ADLB_TGT_ACCRY_NODE);
-  CHECK_MSG(matched_rank == target_rank, "should match");
+  ADLB_CHECK_MSG(matched_rank == target_rank, "should match");
 
   xlb_work_unit *wu = work_unit_alloc(payload_size);
-  ADLB_ASSERT_MALLOC(wu);
+  ADLB_CHECK_MALLOC(wu);
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.accuracy = ADLB_TGT_ACCRY_NODE;
@@ -104,10 +104,10 @@ static adlb_code run()
   xlb_work_unit *matched_wu;
 
   matched_wu = xlb_workq_get(shouldnt_match_rank, type);
-  CHECK_MSG(matched_wu == NULL, "Shouldn't match");
+  ADLB_CHECK_MSG(matched_wu == NULL, "Shouldn't match");
   
   matched_wu = xlb_workq_get(should_match_rank, type);
-  CHECK_MSG(matched_wu == wu, "Should match");
+  ADLB_CHECK_MSG(matched_wu == wu, "Should match");
 
   fprintf(stderr, "Finalizing...\n");
 

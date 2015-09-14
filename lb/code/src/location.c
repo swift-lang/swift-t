@@ -91,14 +91,14 @@ hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
   hostnames->name_length = name_length;
 
   hostnames->my_name = malloc(name_length);
-  ADLB_ASSERT_MALLOC(hostnames->my_name);
+  ADLB_CHECK_MALLOC(hostnames->my_name);
 
   // This prevents valgrind errors:
   memset(hostnames->my_name, 0, name_length);
 
   hostnames->all_names = malloc((size_t)comm_size *
                       name_length * sizeof(char));
-  ADLB_ASSERT_MALLOC(hostnames->all_names);
+  ADLB_CHECK_MALLOC(hostnames->all_names);
 
   return ADLB_SUCCESS;
 }
@@ -151,7 +151,7 @@ xlb_hostmap_init(const xlb_layout *layout,
                  struct xlb_hostmap **hostmap)
 {
   *hostmap = malloc(sizeof(**hostmap));
-  ADLB_ASSERT_MALLOC(*hostmap);
+  ADLB_CHECK_MALLOC(*hostmap);
 
   bool debug_hostmap = false;
   char* t = getenv("ADLB_DEBUG_HOSTMAP");
@@ -273,7 +273,7 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
 adlb_code
 ADLB_Hostmap_stats(unsigned int* count, unsigned int* name_max)
 {
-  CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
+  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
             "ADLB_Hostmap_stats: hostmap is disabled!");
   struct utsname u;
   *count = (uint)xlb_s.hostmap->map.size;
@@ -285,7 +285,7 @@ adlb_code
 ADLB_Hostmap_lookup(const char* name, int max,
                     int* output, int* actual)
 {
-  CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
+  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
             "ADLB_Hostmap_lookup: hostmap is disabled!");
   struct list_i* L;
   bool b = table_search(&xlb_s.hostmap->map, name, (void*) &L);
@@ -306,7 +306,7 @@ adlb_code
 ADLB_Hostmap_list(char* output, unsigned int max,
                   unsigned int offset, int* actual)
 {
-  CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
+  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
             "ADLB_Hostmap_list: hostmap is disabled!");
   // Number of chars written
   int count = 0;

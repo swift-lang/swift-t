@@ -173,7 +173,7 @@ xlb_server_init(const struct xlb_state *state)
   ADLB_CHECK(code);
 
   xlb_engine_code tc = xlb_engine_init(state->layout.rank);
-  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
+  ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
 
   xlb_server_ready_work.work = NULL;
   xlb_server_ready_work.size = 0;

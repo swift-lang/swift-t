@@ -120,7 +120,7 @@ adlb_code ADLB_Xpt_write(const void *key, size_t key_len, const void *val,
   bool do_persist = persist != ADLB_NO_PERSIST;
   xpt_index_entry entry;
   
-  CHECK_MSG(xlb_xpt_write_enabled || !do_persist, "Writing to checkpoint "
+  ADLB_CHECK_MSG(xlb_xpt_write_enabled || !do_persist, "Writing to checkpoint "
             "was not enabled, cannot write a checkpoint entry");
 
   if (index_add)
@@ -131,7 +131,7 @@ adlb_code ADLB_Xpt_write(const void *key, size_t key_len, const void *val,
       do_persist = true;
       entry.in_file = true;
       // Fill in file location upon write
-      CHECK_MSG(xlb_xpt_write_enabled, "%zu > %i Checkpoint value size exceeded "
+      ADLB_CHECK_MSG(xlb_xpt_write_enabled, "%zu > %i Checkpoint value size exceeded "
                 "maximum size for checkpoint index, but writing to file "
                 "not enabled", val_len, max_index_val_bytes);
     }
@@ -214,7 +214,7 @@ adlb_code ADLB_Xpt_lookup(const void *key, size_t key_len,
     size_t val_len = res.FILE_LOC.val_len;
     result->data = result->caller_data = malloc(val_len);
     result->length = val_len;
-    ADLB_MALLOC_CHECK(result->data);
+    ADLB_CHECK_MALLOC(result->data);
     
     rc = read_file_val(&res.FILE_LOC, result->caller_data, val_len);
     // Make sure memory is freed before returning
@@ -240,7 +240,7 @@ static adlb_code read_file_val(xpt_file_loc *file_loc,
   adlb_code rc; 
   if (file_loc->file == NULL)
   {
-    CHECK_MSG(xlb_xpt_write_enabled, "No checkpoint file currently open "
+    ADLB_CHECK_MSG(xlb_xpt_write_enabled, "No checkpoint file currently open "
               "for writing");
     // Read from file being written
     return xlb_xpt_read_val_w(&xpt_state, file_loc->val_offset,
@@ -251,7 +251,7 @@ static adlb_code read_file_val(xpt_file_loc *file_loc,
     // Read from file
     xlb_xpt_read_state *rstate;
     rc = cached_open_read(&rstate, file_loc->file);
-    CHECK_MSG(rc == ADLB_SUCCESS, "Couldn't open file %s to read "
+    ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Couldn't open file %s to read "
               "checkpoint value\n", file_loc->file)
     return xlb_xpt_read_val_r(rstate, file_loc->val_offset,
                               val_len, buffer);
@@ -274,7 +274,7 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
   }
 
   tmp = malloc(sizeof(xlb_xpt_read_state));
-  ADLB_MALLOC_CHECK(tmp);
+  ADLB_CHECK_MALLOC(tmp);
   adlb_code rc = xlb_xlb_xpt_open_read(tmp, filename);
   if (rc != ADLB_SUCCESS)
   {
@@ -295,11 +295,11 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
 adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
                           int load_rank, int loaders)
 {
-  CHECK_MSG(xlb_xpt_initialized, "Checkpointing must be initialized "
+  ADLB_CHECK_MSG(xlb_xpt_initialized, "Checkpointing must be initialized "
                                  "before reloading");
-  CHECK_MSG(stats != NULL, "Must provide stats argument");
-  CHECK_MSG(loaders >= 0, "Invalid loaders count: %i", loaders);
-  CHECK_MSG(load_rank >= 0 && load_rank < loaders, "Load rank %i out of"
+  ADLB_CHECK_MSG(stats != NULL, "Must provide stats argument");
+  ADLB_CHECK_MSG(loaders >= 0, "Invalid loaders count: %i", loaders);
+  ADLB_CHECK_MSG(load_rank >= 0 && load_rank < loaders, "Load rank %i out of"
             " range: [0,%i]", load_rank, loaders - 1);
 
   adlb_code rc;
@@ -315,12 +315,12 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
   //                           max_index_val_bytes + key_size);
   buffer.length = 4 * 1024 * 1024;
   buffer.data = malloc(buffer.length);
-  ADLB_MALLOC_CHECK(buffer.data);
+  ADLB_CHECK_MALLOC(buffer.data);
 
   const xpt_rank_t ranks = read_state->ranks;
   stats->ranks = ranks;
   stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
-  ADLB_MALLOC_CHECK(stats->rank_stats);
+  ADLB_CHECK_MALLOC(stats->rank_stats);
   for (int i = 0; i < ranks; i++)
   {
     stats->rank_stats[i].loaded = false;
@@ -385,7 +385,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
       // Allocate larger buffer to fit
       buffer->length = key_len;
       buffer->data = realloc(buffer->data, buffer->length);
-      ADLB_MALLOC_CHECK(buffer->data);
+      ADLB_CHECK_MALLOC(buffer->data);
       rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
                         &val_len, &val_ptr, &val_offset);
     }
@@ -435,7 +435,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
       entry.DATA.length = val_len;
     }
     rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
-    CHECK_MSG(rc == ADLB_SUCCESS, "Error loading checkpoint into index");
+    ADLB_CHECK_MSG(rc == ADLB_SUCCESS, "Error loading checkpoint into index");
     DEBUG("Loaded checkpoint for rank %i val_len: %i in_file: %s",
           rank, (int)val_len, entry.in_file ? "true" : "false");
 

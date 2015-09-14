@@ -38,7 +38,7 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
 
     dc = xlb_data_reference_count(id, change, XLB_NO_ACQUIRE, NULL,
                                   notifs);
-    DATA_CHECK(dc);
+    ADLB_DATA_CHECK_CODE(dc);
   }
   else
   {
@@ -51,7 +51,7 @@ adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
         "r += %i w += %i", xlb_s.layout.rank, server,
         id, change.read_refcount, change.write_refcount);
     adlb_code code = xlb_sync_refcount(server, id, change, wait);
-    DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
+    ADLB_DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -62,12 +62,13 @@ adlb_data_code xlb_incr_refc_local(adlb_datum_id id, adlb_refc change,
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
                            XLB_NO_ACQUIRE, NULL, &notifs);
-  DATA_CHECK(dc);
+  ADLB_DATA_CHECK_CODE(dc);
 
   // handle notifications here if needed
   adlb_code rc = xlb_notify_all(&notifs);
-  check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
-      "Error processing notifications for <%"PRId64">", id);
+  ADLB_CHECK_MSG_CODE(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
+                      "Error processing notifications for "
+                      "<%"PRId64">", id);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -91,18 +92,18 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_CONTAINER:
       dc = xlb_members_cleanup(&d->CONTAINER, false, release_read,
                               release_write, to_acquire, changes);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
       dc = xlb_multiset_cleanup(d->MULTISET, false, false,
             release_read, release_write, to_acquire, changes);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
       dc = xlb_struct_cleanup(d->STRUCT, false,
           release_read, release_write, to_acquire, changes);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       break;
     case ADLB_DATA_TYPE_REF:
       assert(!adlb_has_sub(to_acquire.subscript));
@@ -111,11 +112,11 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       dc = xlb_update_refc_id(d->REF.id, &d->REF.read_refs,
          &d->REF.write_refs, release_read, release_write,
          to_acquire.refcounts, changes);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK_CODE(dc);
       break;
     default:
-      check_verbose(false, ADLB_DATA_ERROR_TYPE,
-                    "datum_gc(): unknown type %u>", type);
+      ADLB_CHECK_MSG_CODE(false, ADLB_DATA_ERROR_TYPE,
+                          "datum_gc(): unknown type %u>", type);
       break;
   }
   return ADLB_DATA_SUCCESS;
@@ -139,9 +140,10 @@ apply_refc(bool releasing, int *curr_refc, int acquire_refc,
 
   TRACE("RC UP curr: %i", *curr_refc);
 
-  check_verbose(acquire_refc == 0 || *curr_refc > 0,
-        ADLB_DATA_ERROR_REFCOUNT_NEGATIVE, "Trying to acquire refcount,"
-        " but own no references");
+  ADLB_CHECK_MSG_CODE(acquire_refc == 0 || *curr_refc > 0,
+                      ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
+                      "Trying to acquire refcount, "
+                      "but own no references");
 
   if (releasing)
   {
@@ -199,9 +201,11 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
   {
     dc = apply_refc(release_read, read_refc,
             to_acquire.read_refcount, &read_acquired, &read_remainder);
-    check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
-            "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
-            id, *read_refc, to_acquire.read_refcount, (int)release_read);
+    ADLB_CHECK_MSG_CODE(dc == ADLB_DATA_SUCCESS, dc,
+                        "Error updating read refcount of"
+                        "<%"PRId64"> r=%i acquiring %i release:%i",
+                        id, *read_refc, to_acquire.read_refcount,
+                        (int)release_read);
   }
   else
   {
@@ -210,7 +214,7 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
 
   dc = apply_refc(release_write, write_refc,
           to_acquire.write_refcount, &write_acquired, &write_remainder);
-  check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
+  ADLB_CHECK_MSG_CODE(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
             "refcount of <%"PRId64"> w=%i acquiring %i release:%i",
             id, *write_refc, to_acquire.write_refcount, (int)release_write);
 
@@ -221,7 +225,7 @@ xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
                               (write_remainder > 0 && write_acquired == 0);
     ac = xlb_refc_changes_add(changes, id, read_remainder, write_remainder,
                             must_preacquire);
-    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
   }
   return ADLB_DATA_SUCCESS;
 }

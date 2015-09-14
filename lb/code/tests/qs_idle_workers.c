@@ -74,62 +74,62 @@ static adlb_code run()
   ac = qs_init(COMM_SIZE, my_rank, nservers, fake_hosts, 1);
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 0, "initial nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "initial nblocked");
 
   ac = xlb_requestqueue_incr_blocked();
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 1, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 1, "nblocked");
 
   ac = xlb_requestqueue_incr_blocked();
   ADLB_CHECK(ac);
-  CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
 
   // Non-blocking request
   ac = xlb_requestqueue_add(target_rank, type, 5, false);
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
 
   // Last one blocks
   ac = xlb_requestqueue_add(target_rank, type, 5, true);
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 3, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 3, "nblocked");
 
   // Remove by type
   int rank = xlb_requestqueue_matches_type(type);
-  CHECK_MSG(rank == target_rank, "rank");
+  ADLB_CHECK_MSG(rank == target_rank, "rank");
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
 
   ac = xlb_requestqueue_add(target_rank, type, 1, true);
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 3, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 3, "nblocked");
 
   // Remove by target
   rank = xlb_requestqueue_matches_target(target_rank, type,
                                       ADLB_TGT_ACCRY_RANK);
-  CHECK_MSG(rank == target_rank, "rank");
+  ADLB_CHECK_MSG(rank == target_rank, "rank");
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 2, "nblocked");
 
   ac = xlb_requestqueue_decr_blocked();
   ADLB_CHECK(ac);
   ac = xlb_requestqueue_decr_blocked();
   ADLB_CHECK(ac);
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 0, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "nblocked");
 
   // Remove remaining non-blocking tasks
   for (int i = 0; i < 9; i++)
   {
     rank = xlb_requestqueue_matches_type(0);
-    CHECK_MSG(rank == target_rank, "rank");
+    ADLB_CHECK_MSG(rank == target_rank, "rank");
   }
 
-  CHECK_MSG(xlb_requestqueue_nblocked() == 0, "nblocked");
+  ADLB_CHECK_MSG(xlb_requestqueue_nblocked() == 0, "nblocked");
 
   ac = qs_finalize();
   ADLB_CHECK(ac);
