@@ -22,6 +22,7 @@
  *      Author: wozniak
  *
  *  Debugging macros
+ *  These may be enabled at configure time with --enable-log-*
  *  These all may be disabled at compile time with NDEBUG
  *  or at run time by setting environment variable XLB_DEBUG=0
  */
