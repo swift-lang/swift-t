@@ -610,9 +610,9 @@ int start = 0;
 int stop = 10;
 int step = 2;
 // Array of length 10:
-int A[] = [start:stop];
+int A[] = [start:stop-1];
 // Array of length 5, containing only even numbers:
-int B[] = [start:stop:step];
+int B[] = [start:stop-1:step];
 ----
 
 Array literals may also be expressed with list syntax:
