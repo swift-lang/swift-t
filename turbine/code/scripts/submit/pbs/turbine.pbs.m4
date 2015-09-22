@@ -42,7 +42,7 @@ echo "TURBINE-PBS"
 date
 echo
 
-cd ${PBS_O_WORKDIR}
+cd ${TURBINE_OUTPUT}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND=getenv(COMMAND)
