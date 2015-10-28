@@ -93,12 +93,7 @@ fi
 ENV_LIST=${env}
 export ENV_LIST
 
-if (( ${EXEC_SCRIPT} == 0 ))
-then
-  COMMAND="${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
-else
-  COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
-fi
+print $COMMAND
 
 # Launch it
 if [[ ${MODE} == "cluster" ]]
@@ -129,7 +124,7 @@ else # Blue Gene
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \
-        ${TCLSH} ${PROGRAM} ${=ARGS} | \
+        ${COMMAND} | \
     read JOB_ID
 fi
 

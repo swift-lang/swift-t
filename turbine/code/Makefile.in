@@ -18,7 +18,7 @@ PACKAGE = lib/pkgIndex.tcl
 # Components of enabled Tcl packages (libraries, index files, etc)
 PACKAGE_ARTIFACTS :=
 
-BUILD_ALL_TARGETS = libs
+BUILD_ALL_TARGETS = libs $(TURBINE_EXECUTABLES) 
 
 ifeq ($(ENABLE_SHARED),1)
   # Shared libraries are required for tcl package
@@ -30,7 +30,7 @@ ifeq ($(ENABLE_STATIC_PKG),1)
   BUILD_ALL_TARGETS += $(TURBINE_EXECUTABLES)
 endif
 
-all: $(BUILD_ALL_TARGETS)
+all: $(BUILD_ALL_TARGETS) $(BINS)
 
 turbine: $(TURBINE)
 
@@ -572,7 +572,7 @@ $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
         $(<) \
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
-        $(LIBS) \
+        $(LIBS) -lm \
 	$(RPATHS) \
 	-o $(@)
 

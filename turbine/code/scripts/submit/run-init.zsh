@@ -263,11 +263,11 @@ print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
-if (( EXEC_SCRIPT ))
+if (( TURBINE_STATIC_EXEC ))
 then
   # Uses turbine_sh launcher
   export COMMAND="${TURBINE_HOME}/bin/turbine_sh ${PROGRAM} ${ARGS}"
-elif (( TURBINE_STATIC_EXEC ))
+elif (( EXEC_SCRIPT ))
 then
   # User static executable
   export COMMAND="${PROGRAM} ${ARGS}"

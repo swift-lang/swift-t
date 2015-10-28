@@ -13,4 +13,4 @@
    -x
           Program is an executable rather than Tcl (*.tic) script
    -X
-          Use statically linked Turbine library
+          Use statically linked Turbine (turbine_sh)
