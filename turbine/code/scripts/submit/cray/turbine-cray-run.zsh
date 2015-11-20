@@ -50,22 +50,29 @@ fi
 # Filter the template to create the PBS submit script
 TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
 TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
-
 m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
-
 print "wrote: ${TURBINE_CRAY}"
 
+# If the user specified a queue, we use it:
 QUEUE_ARG=""
 if (( ${+QUEUE} ))
 then
   QUEUE_ARG="-q ${QUEUE}"
 fi
 
+# Convert any user turbine-cray-run -e K=V settings to qsub -e K=V:
+export APRUN_ENV=''
+for kv in ${env}
+do
+  print "user environment variable: ${kv}"
+  APRUN_ENV+="-e ${kv} "
+done
+
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
 # Read all output from qsub
 QSUB_OUT=""
-qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
+qsub -V ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   while read T ; do QSUB_OUT+="${T} " ; done
 
 # Did we get a job number?

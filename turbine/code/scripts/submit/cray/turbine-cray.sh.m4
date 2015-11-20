@@ -45,8 +45,8 @@ ifelse(getenv(TITAN), `true',
 #PBS -l mppnppn=getenv(PPN)))
 ### End job size directives selection
 
-# Pass all environment variables to the job
-#PBS -V
+# This is ineffective- we have to use 'aprun -e'
+# PBS -V
 
 # Merge stdout/stderr
 #PBS -j oe
@@ -110,14 +110,14 @@ if [ -z "$OUTPUT_FILE" ]
 then
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${ENVS} \
+    aprun -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${ENVS} \
-          ${TCLSH} ${SCRIPT_NAME} ${ARGS}               \
-            2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
+    aprun -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
+          ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
+                     2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
 
 # Local Variables:
