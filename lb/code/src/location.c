@@ -86,7 +86,6 @@ static adlb_code
 hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
                 size_t name_length)
 {
-
   // Length of nodenames
   hostnames->name_length = name_length;
 
