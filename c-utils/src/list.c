@@ -105,10 +105,6 @@ list_append(struct list* target, struct list_item* item)
   return item;
 }
 
-/**
-   Create new list from string of words.
-   Parse words separated by space or tab, insert each into list.
- */
 struct list*
 list_split_words(char* s)
 {

@@ -53,8 +53,16 @@ struct list* list_create(void);
 struct list_item* list_add(struct list* target, void* data);
 #define list_push(target, data) list_add(target, data)
 
+/**
+   Create new list from string of words.
+   Parse words separated by space or tab, insert each into list.
+ */
 struct list* list_split_words(char* s);
 
+/**
+   Create new list from string of lines.
+   Parse lines separated by newline character.
+ */
 struct list* list_split_lines(const char* s);
 
 /**
