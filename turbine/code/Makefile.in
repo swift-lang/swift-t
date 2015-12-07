@@ -200,8 +200,8 @@ MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 # The actual linker arguments:
 MPI_LIB :=
+INCLUDES += -I $(MPI_INCLUDE)
 ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
-  INCLUDES += -I $(MPI_INCLUDE)
   ifneq ($(MPI_LIB_DIR),)
     MPI_LIB += -L$(MPI_LIB_DIR)
     RPATH_MPI = yes
