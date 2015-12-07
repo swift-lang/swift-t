@@ -4,6 +4,8 @@
  *
  *  Created on: Oct 24, 2014
  *      Author: wozniak
+ *
+ * THIS CODE IS DEAD- See tcl-turbine.c -- #77
  */
 
 #include <stdio.h>
