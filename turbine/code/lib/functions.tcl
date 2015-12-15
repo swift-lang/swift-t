@@ -507,8 +507,12 @@ namespace eval turbine {
 
     # create a void type (i.e. just set it)
     proc make_void { o i } {
-        empty i
+        # Do this in reverse order for faster propagation
+        # (Pretend to read inputs AFTER setting output!)
         store_void $o
+        foreach v $i {
+            read_refcount_decr $v
+        }
     }
 
     proc zero { outputs inputs } {

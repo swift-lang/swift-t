@@ -25,10 +25,17 @@
 // External type
 type external void;
 
+/** makeVoid() == make_void() == propagate()
+ */
 @pure
-(void o) makeVoid () "turbine" "0.0.2" "make_void";
+(void o) makeVoid (int|float|string|boolean|void|file... v)
+"turbine" "0.0.2" "make_void";
 @pure
-(void o) make_void () "turbine" "0.0.2" "make_void";
+(void o) make_void (int|float|string|boolean|void|file... v)
+"turbine" "0.0.2" "make_void";
+@pure
+(void o) propagate(int|float|string|boolean|void|file... v)
+"turbine" "0.0.2" "make_void";
 
 // Location values
 // TODO: naming? convert to enum?
@@ -61,7 +68,6 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 (int n) length(string s)
 "turbine" "0.0.2"
 [ "set <<n>> [ string length <<s>> ]" ];
-
 
 // This is used by the string/ directory catenation operator
 @pure @builtin_op=DIRCAT
