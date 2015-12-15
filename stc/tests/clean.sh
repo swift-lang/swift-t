@@ -1,11 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 
 # Clean up test suite outputs
 
-# Note: *funcs.tcl are required for Swift/T builtin function tests
-
-TCL=$( ls *.tcl | grep -v "funcs.tcl\|make-package.tcl\|pkgIndex.tcl" )
-rm -f ${TCL}
+rm -f *.tic
 rm -f *.ic
 rm -f *.out
 rm -f *.stc.*
