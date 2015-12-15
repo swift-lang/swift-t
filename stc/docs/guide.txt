@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.8.0, March 2015
+v0.8.0, December 2015
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -987,8 +987,8 @@ Each category of function is shown with the required import
 statement, if necessary.
 
 Functions that accept an input of any type are denoted +anything+.
-Functions that accept variable numbers of arguments are denoted with
-ellipsis +...+.
+Functions that accept variable numbers of arguments (including zero)
+are denoted with ellipsis (+.++.++.+).
 
 A function that accepts more than one type is denoted as +f(int|string)+.
 
@@ -998,7 +998,10 @@ If a function is described below an *Import:* label, be sure to
 === General
 
 +xor(boolean,boolean) -> boolean+:: Exclusive logical or
-+make_void() -> void+:: Create a void value
++propagate(int|float|string|boolean|void|file...) -> void+::
+Create a void value. +
+(+make_void()+ and +makeVoid()+ are deprecated
+aliases for this function.)
 +size(A[]) -> int+:: Obtain the size of array +A+
 +contains(A[], key) -> boolean+:: Test that future +A[key]+ exists.
 This function blocks until +A+ is closed.  Consumers of +A[key]+ may
