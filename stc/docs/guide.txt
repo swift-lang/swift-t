@@ -25,11 +25,16 @@ An overview of Swift/T may be found at the main Swift site:
 
 http://swift-lang.org/Swift-T
 
-The Swift/T user discussion mailing list is found here:
+The Swift user discussion mailing lists are found here:
 
-http://lists.mcs.anl.gov/mailman/listinfo/exm-user
+http://swift-lang.org/support/index.php
+
+The Swift/T issue tracker is here:
+
+http://github.com/swift-lang/swift-t/issues
 
 == Installation
+
 Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
