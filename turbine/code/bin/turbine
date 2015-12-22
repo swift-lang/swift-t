@@ -1,4 +1,7 @@
-#!/bin/zsh
+#!/bin/zsh -f
+# We use zsh -f to avoid reloading user startup files and
+# resetting environment, e.g., LD_LIBRARY_PATH.
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -249,15 +252,7 @@ fi
 
 for KV in ${ENV_VARS}
 do
-  if [[ ${KV} =~ ".*=.*" ]]
-  then
-    # Have K=V
-    export ${KV}
-  else
-    # Have just K - fill in V
-    set -x
-    export ${KV}=${(P)KV}
-  fi
+  export ${KV}
 done
 
 # Allows user to insert valgrind
