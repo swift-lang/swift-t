@@ -9,6 +9,14 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 
+# C++ is only used if R is enabled
+CXX = @CXX@
+CXXFLAGS = -g -Wall -O1 -fPIC
+
+# LD is used to link *.so
+# It is CC unless we need CXX
+LD = @LD@
+
 # Separate different types of CFLAGS
 INCLUDES :=
 DEFINES  :=
@@ -265,6 +273,9 @@ ifeq ($(HAVE_PYTHON),1)
 endif
 ifeq ($(HAVE_R),1)
 	INCLUDES += -I $(USE_R)/include
+        R_LIBRARY = $(USE_R)/library
+        INCLUDES += -I $(R_LIBRARY)/RInside/include
+        INCLUDES += -I $(R_LIBRARY)/Rcpp/include
 endif
 ifeq ($(HAVE_JULIA),1)
 	INCLUDES += -I $(USE_JULIA)/src
@@ -322,6 +333,8 @@ ifeq ($(HAVE_R),1)
     LIBS += -L$(R_LIB)
     RPATH_R = yes
   endif
+  RINSIDE_LIB = $(USE_R)/library/RInside/lib
+  LIBS += -L$(RINSIDE_LIB) -l RInside
   LIBS += -lR
 endif
 ifeq ($(HAVE_JULIA),1)
@@ -375,6 +388,7 @@ ifeq ($(RPATH_PYTHON),yes)
 endif
 ifeq ($(RPATH_R),yes)
   RPATHS += -Wl,-rpath -Wl,$(R_LIB)
+  RPATHS += -Wl,-rpath -Wl,$(RINSIDE_LIB)
 endif
 ifeq ($(RPATH_JULIA),yes)
   RPATHS += -Wl,-rpath -Wl,$(JULIA_LIB)
@@ -416,7 +430,7 @@ TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
-TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
+TURBINE_OBJS := $(patsubst %.c, %.o, $(TURBINE_SRC)) $(TCL_R_OBJS)
 
 STATIC_PKG_OBJS = $(patsubst %.c, %.o, $(STATIC_PKG_SRC))
 
@@ -527,7 +541,7 @@ ifeq ($(ENABLE_SHARED),0)
 	@exit 1
 endif
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
+	$(E) $(LD) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
              $(LIBS) \
              $(RPATHS) \
