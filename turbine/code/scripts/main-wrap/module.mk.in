@@ -1,7 +1,7 @@
 
-DIR = scripts/main-wrap
+DIR := scripts/main-wrap
 
-SCRIPTS_MAINWRAP := 
+SCRIPTS_MAINWRAP :=
 SCRIPTS_MAINWRAP += $(DIR)/genleaf
 SCRIPTS_MAINWRAP += $(wildcard $(DIR)/settings/*.sh)
 SCRIPTS_MAINWRAP += $(wildcard $(DIR)/templates/*.c)
