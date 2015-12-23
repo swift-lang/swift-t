@@ -31,13 +31,8 @@
 #include <tcl.h>
 
 #if HAVE_R==1
-#include <Rinternals.h>
-#include <Rembedded.h>
-#include <R_ext/Parse.h>
-#include <R_ext/Print.h>
+#include "rinside-adapter.h"
 #endif
-
-#include <list.h>
 
 #include "src/tcl/util.h"
 
@@ -46,122 +41,27 @@
 #if HAVE_R==1
 
 static int
-handle_r_error(const char* msg)
-{
-  printf("R ERROR: %s\n", msg);
-  return TCL_ERROR;
-}
-
-static bool r_initialized = false;
-
-/**
-   Note that we are not allowed to re-initialize R
-   @return R return code: 1=success, 0=failure
- */
-static int
-init_r(void)
-{
-  int rc = 1;
-  if (! r_initialized)
-  {
-    // setenv("R_HOME", "/usr/lib/R", 1);
-    char* Rargs[] = { "R", "--no-save", "--silent" };
-    rc = Rf_initEmbeddedR(3, Rargs);
-    r_initialized = true;
-  }
-  return rc;
-}
-
-static int
-eval_r_line(Tcl_Interp* interp, Tcl_Obj* const objv[],
-            const char* cmd, SEXP* result)
-{
-  ParseStatus status;
-  SEXP expr = Rf_mkString(cmd);
-  TCL_CONDITION(expr != NULL, "Bad R code[type 1]: %s", cmd);
-  SEXP code = R_ParseVector(expr, 1, &status, R_NilValue);
-  TCL_CONDITION(code != NULL, "Bad R code[type 2]: %s", cmd);
-  TCL_CONDITION(status == PARSE_OK, "Bad R code [type 3]: %s", cmd);
-  if (TYPEOF(code) == EXPRSXP)
-  {
-    *result = Rf_eval(VECTOR_ELT(code, 0), R_GlobalEnv);
-    // printf("value: ");
-    // Rf_PrintValue(*result);
-  }
-  else
-    TCL_RETURN_ERROR("Bad R code [type 4]: %s", cmd);
-  return TCL_OK;
-}
-
-/**
-   Currently cannot finalize R because we cannot re-initialize R
- */
-static void
-finalize_r(void)
-{
-  // Rf_endEmbeddedR(0);
-}
-
-/**
-   See note in R's printutils.c
-*/
-const char *Rf_EncodeElement(SEXP x, int indx, int quote, char dec);
-
-/**
-   @param result: Store result pointer here
-   @return Tcl error code
- */
-static int
-r_eval(Tcl_Interp* interp, Tcl_Obj* const objv[],
-       const char* code, Tcl_Obj** result)
-{
-  SEXP x;
-  int rc;
-
-  rc = init_r();
-  if (!rc)
-    return handle_r_error("Could not initialize R!");
-
-  struct list* lines = list_split_lines(code);
-  char* expression = NULL;
-  for (struct list_item* item = lines->head; item; item = item->next)
-  {
-    if (item->next == NULL)
-    {
-      // This is the expression that returns the string
-      expression = item->data;
-      break;
-    }
-    char* command = item->data;
-    rc = eval_r_line(interp, objv, command, &x);
-    TCL_CHECK(rc);
-  }
-
-  // The string from R:
-  const char* s;
-  rc = eval_r_line(interp, objv, expression, &x);
-  TCL_CHECK(rc);
-  // This line gives a warning because it is not in any R header:
-  s = Rf_EncodeElement(x, 0, 0, '.');
-  // printf("s: %s\n", s);
-
-  *result = Tcl_NewStringObj(s, -1);
-
-  finalize_r();
-  list_destroy(lines);
-
-  return TCL_OK;
-}
-
-static int
 R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
+  // A chunk of R code that does not return anything:
   char* code = Tcl_GetString(objv[1]);
-  Tcl_Obj* result;
-  int rc = r_eval(interp, objv, code, &result);
-  TCL_CHECK(rc);
+  // A chunk of R code that returns a string to Swift:
+  char* return_expression = Tcl_GetString(objv[2]);
+
+  // The string result from R:
+  char* s;
+  int length;
+
+  bool status;
+  status = use_rinside_void(code);
+  if (!status) return turbine_user_errorv(interp, "User error in R");
+  status = use_rinside_expr(return_expression, &s, &length);
+  if (!status) return turbine_user_errorv(interp, "User error in R");
+
+  Tcl_Obj* result = Tcl_NewStringObj(s, length);
+  free(s);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

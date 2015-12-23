@@ -73,6 +73,7 @@ fi
 
 # Checks for programs
 AC_PROG_CC
+LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
 # We trust the user's install and omit AC_PROG_INSTALL
@@ -664,6 +665,9 @@ AC_ARG_WITH(r,
       USE_R=${withval}
       AC_CHECK_FILE(${USE_R}/include/R.h, [],
                     [AC_MSG_ERROR([Could not find R header!])])
+      # C++ is only required if we enable R
+      AC_PROG_CXX
+      LD=${CXX}
   ])
 
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
@@ -1140,6 +1144,7 @@ AC_ARG_ENABLE(dev,
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
+AC_SUBST(LD)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 

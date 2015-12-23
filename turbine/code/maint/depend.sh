@@ -32,7 +32,10 @@ D_FILE=$3
 shift 3
 CFLAGS=${*}
 
-${CC} -M -MG ${CFLAGS} ${C_FILE} | \
+# Note that we define DEPS so that we can detect that
+# we are doing a dependency scan and can skip problematic
+# code sections, i.e., C++
+${CC} -D DEPS -M -MG ${CFLAGS} ${C_FILE} | \
    sed -e "s@^\(.*\)\.o:@$DIR/\1.d $DIR/\1.o:@" > ${D_FILE}
 
 for DEP in ${DEP_DROP}
