@@ -1,6 +1,6 @@
 #!/bin/zsh -f
 
-# SWIFT-T 
+# SWIFT-T
 # Main user interface script
 
 set -eu
@@ -129,6 +129,7 @@ shift $(( OPTIND - 1 ))
 # Print a message when we are verbose.
 message()
 {
+  local T
   zparseopts -D -E t=T # Accept -t for TAB
   if (( VERBOSE ))
   then
