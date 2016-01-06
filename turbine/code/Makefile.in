@@ -334,7 +334,7 @@ ifeq ($(HAVE_R),1)
     RPATH_R = yes
   endif
   RINSIDE_LIB = $(USE_R)/library/RInside/lib
-  LIBS += -L$(RINSIDE_LIB) -l RInside
+  LIBS += -L$(RINSIDE_LIB) -lRInside
   LIBS += -lR
 endif
 ifeq ($(HAVE_JULIA),1)
