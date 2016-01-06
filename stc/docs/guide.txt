@@ -1821,6 +1821,7 @@ NOTE: To use this, Turbine must be configured with R enabled
  +R_HOME+ to the directory containing the R installation.  For the APT
  package, this is +/usr/lib/R+.
 
+[[julia]]
 ==== Calling Julia
 
 Consider the following Swift script:
