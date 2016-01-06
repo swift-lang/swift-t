@@ -39,3 +39,4 @@ pkgIndex.tcl
 # Eclipse project data
 .project
 .cproject
+.autotools
