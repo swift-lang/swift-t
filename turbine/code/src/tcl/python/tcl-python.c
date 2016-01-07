@@ -49,7 +49,22 @@ handle_python_exception()
 {
   printf("\n");
   printf("PYTHON EXCEPTION:\n");
+
+  #if PY_MAJOR_VERSION >= 3
+
+  PyObject *exc,*val,*tb;
+  PyErr_Fetch(&exc,&val,&tb);
+  PyObject_Print(exc, stdout, Py_PRINT_RAW);
+  printf("\n");
+  PyObject_Print(val, stdout, Py_PRINT_RAW);
+  printf("\n");
+
+  #else // Python 2
+
   PyErr_Print();
+
+  #endif
+
   return TCL_ERROR;
 }
 
