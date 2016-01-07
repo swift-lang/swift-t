@@ -586,16 +586,41 @@ fi
 AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
-# By default, use default location
+# By default, use default location and version 2.7
+USE_PY_VERSION_MAJOR=2
+USE_PY_VERSION_MINOR=7
+USE_PY_VERSION_SUFFIX=
 USE_PYTHON_INCLUDE=0
 USE_PYTHON_LIB=0
-USE_PYTHON_NAME=python2.7
+USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
 HAVE_PYTHON=0
+
+AC_ARG_WITH(python-version-major,
+   AS_HELP_STRING([--with-python-version-major],
+                   [Use this version (Default: 2)]),
+   [
+     USE_PY_VERSION_MAJOR=${withval}
+   ],[ echo unset ])
+AC_ARG_WITH(python-version-minor,
+   AS_HELP_STRING([--with-python-version-minor],
+                   [Use this version (Default: 7)]),
+   [
+     USE_PY_VERSION_MINOR=${withval}
+   ])
+AC_ARG_WITH(python-version-suffix,
+   AS_HELP_STRING([--with-python-version-suffix],
+                   [Use this version (Default: <none>)]),
+   [
+     USE_PY_VERSION_SUFFIX=${withval}
+   ])
 
 AC_ARG_ENABLE(python,
     AS_HELP_STRING([--enable-python],
                    [Enable calling python]),
     [
+      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
+      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
+
       HAVE_PYTHON=1
     ])
 
@@ -603,12 +628,15 @@ AC_ARG_WITH(python,
    AS_HELP_STRING([--with-python],
                    [Use this python directory]),
   [
+      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
+      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
+
       HAVE_PYTHON=1
-      AC_CHECK_FILE(${withval}/include/python2.7/Python.h, [],
+      AC_CHECK_FILE(${withval}/include/python${USE_PYTHON_VERSION}/Python.h, [],
                     [AC_MSG_ERROR([Could not find python header!])])
       USE_PYTHON_INCLUDE=${withval}/include
       USE_PYTHON_LIBDIR=${withval}/lib
-      USE_PYTHON_NAME=libpython2.7.so
+      USE_PYTHON_NAME=libpython${USE_PYTHON_VERSION}.so
   ])
 
 AC_ARG_WITH(python-lib,
@@ -634,6 +662,15 @@ then
 fi
 
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
+AC_DEFINE_UNQUOTED([USE_PY_VERSION_MAJOR],
+                   $USE_PY_VERSION_MAJOR,[Python version: major])
+AC_DEFINE_UNQUOTED([USE_PY_VERSION_MINOR],
+                   $USE_PY_VERSION_MINOR,[Python version: minor])
+AC_DEFINE_UNQUOTED([USE_PY_VERSION_SUFFIX],
+                   $USE_PY_VERSION_SUFFIX,[Python version: suffix])
+AC_SUBST(USE_PY_VERSION_MAJOR)
+AC_SUBST(USE_PY_VERSION_MINOR)
+AC_SUBST(USE_PY_VERSION_SUFFIX)
 AC_SUBST(HAVE_PYTHON)
 AC_SUBST(USE_PYTHON_INCLUDE)
 AC_SUBST(USE_PYTHON_LIBDIR)
