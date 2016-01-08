@@ -50,7 +50,7 @@ use_rinside_expr(const char* expr, char** result, int* length)
   {
     string s = R_interpreter->parseEval(c);
     // Convert result to C string
-    n = s.length()+1;
+    n = s.length();
     t = (char*) malloc(n);
     strncpy(t, s.c_str(), n);
   }
