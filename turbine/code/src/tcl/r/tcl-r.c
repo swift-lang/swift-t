@@ -50,18 +50,25 @@ R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   // A chunk of R code that returns a string to Swift:
   char* return_expression = Tcl_GetString(objv[2]);
 
-  // The string result from R:
-  char* s;
-  int length;
+  // The string result from R: Default is empty string
+  char* s = "";
+  int   length = 0;
+  bool  empty = true;
 
   bool status;
   status = use_rinside_void(code);
   if (!status) return turbine_user_errorv(interp, "User error in R");
-  status = use_rinside_expr(return_expression, &s, &length);
-  if (!status) return turbine_user_errorv(interp, "User error in R");
+
+  if (strlen(return_expression) > 0)
+  {
+    empty = false;
+    status = use_rinside_expr(return_expression, &s, &length);
+    if (!status) return turbine_user_errorv(interp, "User error in R");
+  }
 
   Tcl_Obj* result = Tcl_NewStringObj(s, length);
-  free(s);
+  if (!empty)
+    free(s);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
