@@ -279,6 +279,14 @@ lookup_java()
       JVM="unset"
     fi
   fi
+
+  if [[ ! -x ${JVM} ]]
+  then
+    # Broken Java: User gave bad stc -j argument
+    print "Cannot run java!"
+    print "Tried: ${JVM}"
+    exit 1
+  fi
 }
 
 report_version()
