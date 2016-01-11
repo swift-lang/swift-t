@@ -61,14 +61,6 @@ then
   QUEUE_ARG="-q ${QUEUE}"
 fi
 
-# We use PBS -V to export all environment variables to the job
-# Evaluate any user turbine-pbs-run -e K=V settings here:
-for kv in ${env}
-do
-  print "user environment variable: ${kv}"
-  export ${kv}
-done
-
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
 # Read all output from qsub

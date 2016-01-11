@@ -130,7 +130,13 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
       OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e)
-      env+=${OPTARG}
+      KV=${OPTARG}
+      if [[ ! ${OPTARG} =~ ".*=.*" ]]
+      then
+        # Look up unset environment variables
+        KV="${KV}=${(P)KV}"
+      fi
+      env+=${KV}
       ;;
     i)
        INIT_SCRIPT=${OPTARG}
@@ -194,20 +200,6 @@ then
 fi
 
 [[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
-
-# TODO:
-# for KV in ${ENV_VARS}
-# do
-#   if [[ ${KV} =~ ".*=.*" ]]
-#   then
-#     # Have K=V
-#     export ${KV}
-#   else
-#     # Have just K - fill in V
-#     set -x
-#     export ${KV}=${(P)KV}
-#   fi
-# done
 
 START=$( date +%s )
 
@@ -291,6 +283,9 @@ else
 fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
+
+export ENV
+export ENV_PAIRS="${env}"
 
 ## Local Variables:
 ## mode: sh
