@@ -77,7 +77,7 @@
          includes="**/*.class"
          manifest="META-INF/MANIFEST.MF"/>
   </target>
-  
+
   <target name="test.jar"
           depends="compile.tests">
     <jar destfile="${stc.test.jar}"
@@ -104,7 +104,7 @@
       <compilerarg value="-Xlint:-cast"/>
     </javac>
   </target>
-  
+
   <target name="compile.tests" depends="jar">
     <mkdir dir="${test.build.dir}"/>
     <javac srcdir="${test.src.dir}"
@@ -336,11 +336,19 @@
       <fileset dir="${test.build.dir}"/>
     </delete>
   </target>
-  
+
   <target name="clean.test.out" if="test.out.dir.exists">
     <delete includeemptydirs="true">
       <fileset dir="${test.out.dir}"/>
     </delete>
+  </target>
+
+  <!-- Use this when you get UnsupportedClassVersionError:
+       It means you are not using the Java you think you are using.
+  -->
+  <target name="java-version">
+    <echo>ant.java.version: ${ant.java.version}</echo>
+    <echo>java.version: ${java.version}</echo>
   </target>
 
 </project>
