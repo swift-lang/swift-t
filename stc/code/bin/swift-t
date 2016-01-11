@@ -245,8 +245,10 @@ then
 fi
 
 # Run Turbine
+EXITCODE=0
 message "Running:   ${PROGRAM_TCL}"
-verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS}
+verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
+  EXITCODE=1
 
 # Clean up
 if (( DELETE_PROGRAM_TCL ))
@@ -261,4 +263,4 @@ then
   rm ${PROGRAM_SWIFT}
 fi
 
-exit 0
+exit ${EXITCODE}
