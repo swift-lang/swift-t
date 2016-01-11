@@ -98,16 +98,25 @@ cd ${TURBINE_OUTPUT}
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
+# Put environment variables from run-init into 'aprun -e' format
+ENVS=""
+for KV in ${ENV_PAIRS}
+do
+    ENVS+="-e ${KV} "
+done
+
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT_NAME} ${ARGS}
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${ENVS} \
+          ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 ${ENVS} \
+          ${TCLSH} ${SCRIPT_NAME} ${ARGS}               \
             2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
 
