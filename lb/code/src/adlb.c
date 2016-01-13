@@ -339,8 +339,8 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   int response;
 
   DEBUG("ADLB_Put: type=%i target=%i priority=%i strictness=%i "
-        "accuracy=%i x%i %.*s", type, target, opts.priority,
-        opts.strictness, opts.accuracy, opts.parallelism, length,
+        "accuracy=%i x%i length=%i \"%.*s\"", type, target, opts.priority,
+        opts.strictness, opts.accuracy, opts.parallelism, length, length,
         (char*) payload);
 
   rc = adlb_put_check_params(target, type, opts);
@@ -418,8 +418,8 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   int response;
   adlb_code rc;
 
-  DEBUG("ADLB_Dput: target=%i x%i %.*s",
-        target, opts.parallelism, length, (char*) payload);
+  DEBUG("ADLB_Dput: target=%i x%i length=%i %.*s",
+        target, opts.parallelism, length, length, (char*) payload);
 
   rc = adlb_put_check_params(target, type, opts);
   ADLB_CHECK(rc);
