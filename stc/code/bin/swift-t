@@ -96,7 +96,7 @@ do
     u) CHECK_DATES=1 ;;
 
     # STC arguments:
-    A) ;& d) ;& D) ;& I) ;&
+    A) ;& d) ;& D) ;& F) ;& f) ;& I) ;&
     j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
