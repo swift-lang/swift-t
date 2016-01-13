@@ -944,7 +944,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
-             target_rank, work_type, cmd, priority);
+             target_rank, work_type, cmd, opts.priority);
 
 
   adlb_code ac = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
@@ -971,7 +971,8 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.priority = ADLB_curr_priority;
 
-  DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i", work_type, cmd, priority);
+  DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i",
+             work_type, cmd, opts.priority);
   int rc = ADLB_Put(cmd, cmd_len+1, ADLB_RANK_ANY, adlb_comm_rank,
                     work_type, opts);
 
