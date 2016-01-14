@@ -1680,7 +1680,7 @@ Turbine_CopyTo_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(4);
-  int         comm_int;
+  int comm_int;
   int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   const char* name_in  = Tcl_GetString(objv[2]);
