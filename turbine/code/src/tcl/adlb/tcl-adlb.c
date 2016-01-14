@@ -1344,7 +1344,7 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
       TCL_CONDITION(argpos + 1 < objc, "Missing placement argument");
       const char *placement_s = Tcl_GetString(objv[argpos + 1]);
       adlb_code ac = ADLB_string_to_placement(placement_s, &props->placement);
-      TCL_CONDITION(ac = ADLB_SUCCESS, "invalid placement string %s",
+      TCL_CONDITION(ac == ADLB_SUCCESS, "invalid placement string %s",
                     placement_s);
       argpos++;
     }
