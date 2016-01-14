@@ -387,7 +387,7 @@ typedef struct {
 
   /** Size of the pre-allocated XLB transfer buffer */
   // Tim Armstrong - 9 Jan 2015 - why so small?
-  #define ADLB_XFER_SIZE (10*1024)
+  #define ADLB_XFER_SIZE (100*1024)
 
   /**
     printf specifiers for printing data identifier with debug symbol.
