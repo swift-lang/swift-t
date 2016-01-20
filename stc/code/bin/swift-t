@@ -151,26 +151,41 @@ verbose()
 message "Swift/T"
 
 # Handle temp file creation across platforms
-# Always has .SUFFIX somewhere
+# Always has .SUFFIX somewhere, preferably at the end
 make_temp()
 {
   local SUFFIX=$1
   local PROGRAM_DIR=$2
   local NAME=$3
-  # Linux:
-  MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
-  if (( ${MKTEMP_VERSION} > 2 ))
+  local MKTEMP_TYPE=""
+  local SUFFIX_ARG=""
+
+  # Attempt to determine mktemp version
+  # Mac mktemp does not support -V
+  if mktemp -V >& /dev/null
   then
-    # Modern mktemp.  .tic at the end.
-    local SUFFIX_ARG
-    SUFFIX_ARG=( --suffix .${SUFFIX} )
+    # Linux:
+    MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
+    if (( ${MKTEMP_VERSION} > 2 ))
+    then
+      MKTEMP_TYPE="Linux"
+    else
+      MKTEMP_TYPE="BSD"
+    fi
   else
-    # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
-    local SUFFIX_ARG=""
-    NAME=${NAME}.${SUFFIX}
+    MKTEMP_TYPE="Mac"
   fi
+
+  if [[ ${MKTEMP_TYPE} == "Linux" ]]
+  then
+      # Modern mktemp.  .tic at the end.
+      SUFFIX_ARG=( --suffix .${SUFFIX} )
+  else
+      # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
+      NAME=${NAME}.${SUFFIX}
+  fi
+
   mktemp ${SUFFIX_ARG} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
-  # TODO: Mac?
 }
 
 DELETE_PROGRAM_SWIFT=0
