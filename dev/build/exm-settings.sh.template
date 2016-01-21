@@ -136,7 +136,7 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 EXM_SRC_ROOT=${EXM_SRC_ROOT:-$(${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3)}
 
 # Source subdirectories. Modify to match your layout if needed
-C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
+C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/code
 LB_SRC=${EXM_SRC_ROOT}/lb/code
 TURBINE_SRC=${EXM_SRC_ROOT}/turbine/code
 STC_SRC=${EXM_SRC_ROOT}/stc/code
