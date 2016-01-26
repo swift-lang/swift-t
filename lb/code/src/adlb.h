@@ -99,19 +99,23 @@ adlb_code ADLB_Dput(const void* payload, int length, int target,
 /*
   Get a task from the global task queue.
   @param type_requested: the type of work requested
-  @param payload buffer to receive task data into.  Caller is responsible
-          for ensuring that it is big enough for any task added by user
-          code. (TODO: caller specifies size?) 
-  @param length output parameter for actual length of task data
-  @param answer output parameter for answer rank specified in ADLB_Put
-                for task
-  @param type_recvd output parameter for actual type of task
-  @param comm output parameter for MPI communicator to use for
+  @param payload IN/OUT Pointer into which to receive task
+                        May be changed if too small, in which case
+                        caller must free the new value
+                        Caller should compare payload before and after
+  @param length IN/OUT original initial/actual length of payload
+  @param length IN Limit for allocating new payload
+  @param answer OUT parameter for answer rank specified in ADLB_Put
+                    for task
+  @param type_recvd OUT parameter for actual type of task
+  @param comm   OUT parameter for MPI communicator to use for
                 executing parallel task
  */
-adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
+adlb_code ADLBP_Get(int type_requested, void** payload,
+                    int* length, int max_length,
                     int* answer, int* type_recvd, MPI_Comm* comm);
-adlb_code ADLB_Get(int type_requested, void* payload, int* length,
+adlb_code ADLB_Get(int type_requested, void** payload,
+                   int* length, int max_length,
                    int* answer, int* type_recvd, MPI_Comm* comm);
 
 /*

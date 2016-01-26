@@ -751,6 +751,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
   rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
   TCL_CHECK(rc);
 
+  // Note that ADLB_Get() can give us a bigger buffer
   int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
 
   if (objc >= 3)
@@ -766,15 +767,15 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
   void* buffer = malloc((size_t)buffer_size);
   TCL_CONDITION(buffer != NULL, "Out of memory");
 
-  turbine_code code = turbine_worker_loop(interp, buffer, buffer_size,
-                                          work_type);
-  free(buffer);
+  turbine_code code =
+      turbine_worker_loop(interp, buffer, buffer_size, work_type);
 
   if (code == TURBINE_ERROR_EXTERNAL)
     // turbine_worker_loop() has added the error info
     rc = TCL_ERROR;
   else
     TCL_CONDITION(code == TURBINE_SUCCESS, "Unknown worker error!");
+  free(buffer);
   return rc;
 }
 

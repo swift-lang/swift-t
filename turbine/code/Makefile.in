@@ -654,7 +654,7 @@ $(TEST_BINS): %.x: %.o install.txt $(TEST_STATIC_PREREQS)
 	$(E) mkdir -p tests/data
 #       Remove old result if present
 	$(E) rm -f $(@)
-#       Mark that we ran test for test result script
+#       Mark that we ran test for Jenkins test result script
 	$(E) touch $(*).lastrun
 #       Run test script: %.sh
 	$(E) LAUNCH=$(LAUNCHER) $(<) > $(*).tmp 2>&1

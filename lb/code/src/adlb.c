@@ -517,7 +517,8 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
 }
 
 adlb_code
-ADLBP_Get(int type_requested, void* payload, int* length,
+ADLBP_Get(int type_requested, void** payload,
+          int* length, int max_length,
           int* answer, int* type_recvd, MPI_Comm* comm)
 {
   adlb_code rc;
@@ -543,10 +544,25 @@ ADLBP_Get(int type_requested, void* payload, int* length,
     return ADLB_SHUTDOWN;
   }
 
-  DEBUG("ADLB_Get(): payload source: %i", g.payload_source);
-  RECV(payload, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
+  if (g.length > max_length)
+  {
+    DEBUG("ADLB_Get(): user-provided max length too small!");
+    return ADLB_ERROR;
+  }
+
+  void* buffer = *payload;
+  if (buffer == NULL || g.length > *length)
+  {
+    // User buffer is insufficient:
+    buffer = malloc(g.length);
+    valgrind_assert(buffer != NULL);
+    *payload = buffer;
+  }
+
+  TRACE("ADLB_Get(): payload source: %i", g.payload_source);
+  RECV(buffer, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
   xlb_mpi_recv_sanity(&status, MPI_BYTE, g.length);
-  // TRACE("ADLB_Get(): got: %s", (char*) payload);
+  DEBUG("ADLB_Get(): got: %s", (char*) buffer);
 
   if (g.parallelism > 1)
   {
@@ -556,8 +572,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   else
     *comm = MPI_COMM_SELF;
 
-  *length = g.length;
-  *answer = g.answer_rank;
+  *length     = g.length;
+  *answer     = g.answer_rank;
   *type_recvd = g.type;
 
   return ADLB_SUCCESS;
