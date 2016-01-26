@@ -165,7 +165,7 @@ mpe_log_user_state(int type)
 #endif
 
 adlb_code
-ADLB_Get(int type_requested, void* payload, int* length,
+ADLB_Get(int type_requested, void** payload, int* length, int max_length,
          int* answer, int* type_recvd, MPI_Comm* comm)
 {
 #ifdef ENABLE_MPE
@@ -173,8 +173,9 @@ ADLB_Get(int type_requested, void* payload, int* length,
 #endif
   MPE_LOG(xlb_mpe_wkr_get_start);
 
-  adlb_code rc = ADLBP_Get(type_requested, payload, length, answer,
-                     type_recvd, comm);
+  adlb_code rc = ADLBP_Get(type_requested, payload,
+                           length, max_length, answer,
+                           type_recvd, comm);
 
   MPE_LOG(xlb_mpe_wkr_get_end);
 #ifdef ENABLE_MPE

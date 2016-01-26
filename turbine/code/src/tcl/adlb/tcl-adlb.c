@@ -1042,15 +1042,12 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int work_type;
 
-  char* result = &xfer[0];
+  void* payload = NULL;
 #ifdef USE_ADLB
   int work_handle[ADLB_HANDLE_SIZE];
 #endif
-  int work_len;
+  int work_len = 1000*1000*1000; // 1 GB
   int answer_rank;
-  bool found_work = false;
-  int rc;
-
 #ifdef USE_ADLB
 
   int req_types[4];
@@ -1066,58 +1063,61 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (rc == ADLB_DONE_BY_EXHAUSTION)
   {
     DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
-    result[0] = '\0';
+    payload[0] = '\0';
   }
   else if (rc == ADLB_NO_MORE_WORK ) {
     DEBUG_ADLB("ADLB_NO_MORE_WORK!");
-    result[0] = '\0';
+    payload[0] = '\0';
   }
   else if (rc == ADLB_NO_CURRENT_WORK) {
     DEBUG_ADLB("ADLB_NO_CURRENT_WORK");
-    result[0] = '\0';
+    payload[0] = '\0';
   }
   else if (rc < 0) {
     DEBUG_ADLB("rc < 0");
-    result[0] = '\0';
+    payload[0] = '\0';
   }
   else
   {
     DEBUG_ADLB("work is reserved.");
-    rc = ADLB_Get_reserved(result, work_handle);
+    rc = ADLB_Get_reserved(payload, work_handle);
     if (rc == ADLB_NO_MORE_WORK)
     {
       puts("No more work on Get_reserved()!");
-      result[0] = '\0';
+      payload[0] = '\0';
     }
     else
       found_work = true;
   }
-  if (result[0] == '\0')
+  if (payload[0] == '\0')
     answer_rank = -1;
 #endif
 
 #ifdef USE_XLB
   MPI_Comm task_comm;
-  rc = ADLB_Get(req_type, result, &work_len,
-                &answer_rank, &work_type, &task_comm);
+  int rc = ADLB_Get(req_type, &payload, &work_len, work_len,
+                    &answer_rank, &work_type, &task_comm);
+  if (rc == ADLB_ERROR) TCL_RETURN_ERROR("Error getting work!");
   if (rc == ADLB_SHUTDOWN)
   {
-    result[0] = '\0';
+    Tcl_SetObjResult(interp, Tcl_NewStringObj("", 0));
     work_len = 1;
     answer_rank = ADLB_RANK_NULL;
   }
+  else // Good work unit
+  {
+    DEBUG_ADLB("adlb::get: %s\n", (char*) payload);
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(payload, work_len - 1));
+    free(payload);
+  }
   turbine_task_comm = task_comm;
 #endif
-
-  if (found_work)
-    DEBUG_ADLB("adlb::get: %s", (char*) result);
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
   Tcl_ObjSetVar2(interp, tcl_answer_rank_name, NULL, tcl_answer_rank,
                  EMPTY_FLAG);
 
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(result, work_len - 1));
   return TCL_OK;
 }
 

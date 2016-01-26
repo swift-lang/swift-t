@@ -24,9 +24,10 @@
 #include "adlb.h"
 
 // Work unit type
-#define CMDLINE 0
+const int CMDLINE = 0;
 
-char cmdbuffer[1024];
+#define GET_LENGTH 1024
+char cmdbuffer[GET_LENGTH];
 int quiet = 1;
 
 static void
@@ -61,31 +62,51 @@ put_commands(int argc, char** argv)
     }
   }
   printf("\nall commands submitted\n");
+  fclose(fp);
 }
 
 static void
 worker_loop(void)
 {
-  int work_type,work_len, answer_rank;
+  int work_type = CMDLINE;
+  int work_len  = GET_LENGTH;
+  int answer_rank;
+  MPI_Comm task_comm;
+  int short_buffer_length = 2;
+  void* buffer = malloc(short_buffer_length);
   while (true)
   {
+    // void* payload = NULL; // &cmdbuffer[0];
+    void* payload = buffer;
+    work_len = short_buffer_length;
+
     printf("Getting a command\n");
-    MPI_Comm task_comm;
-    int rc = ADLB_Get(CMDLINE,
-                      cmdbuffer, &work_len, &answer_rank, &work_type,
+    int rc = ADLB_Get(work_type,
+                      &payload, &work_len, GET_LENGTH,
+                      &answer_rank, &work_type,
                       &task_comm);
+
+    if (rc == ADLB_ERROR)
+    {
+      printf("ERROR!\n");
+      exit(0);
+    }
 
     if (rc == ADLB_SHUTDOWN)
     {
       printf("All jobs done\n");
       break;
     }
-    /* printf("executing command line :%s:\n", cmdbuffer); */
-    rc = system(cmdbuffer);
+
+    printf("executing command line :%s:\n", (char*) payload);
+    rc = system(payload);
+    if (payload != buffer)
+      free(payload);
     if (rc != 0)
       printf("WARNING: COMMAND: (%s) EXIT CODE: %i\n",
              cmdbuffer, rc);
   }
+  free(buffer);
 }
 
 int
