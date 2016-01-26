@@ -35,6 +35,7 @@
    Assert that the actual count in given status object
    equals the expected count
    Checking the error status does not work - it is commented
+   This is disabled by NDEBUG
  */
 void
 xlb_mpi_recv_sanity(MPI_Status* status, MPI_Datatype type, int expected)
