@@ -5200,7 +5200,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                   "Last argument missing value");
     Tcl_Obj *val = objv[argpos++];
 
-    DEBUG_ADLB("Packing entry #%i type %s @ byte %i", field,
+    DEBUG_ADLB("Packing entry #%i type %s @ byte %zi", field,
                   ADLB_Data_type_tostring(compound_type.types[0]), pos);
 
     // pack incrementally into buffer
@@ -5262,8 +5262,8 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error unpacking field %i "
             "from buffer", field);
 
-    DEBUG_ADLB("Unpacking entry #%i type %s @ byte %i from blob %p "
-                "[%i bytes] entry: offset %li [%i bytes]", field,
+    DEBUG_ADLB("Unpacking entry #%i type %s @ byte %zi from blob %p "
+                "[%zi bytes] entry: offset %li [%zi bytes]", field,
                 ADLB_Data_type_tostring(type), packed_pos, packed.value,
                 packed.length, entry - packed.value, entry_length);
 
