@@ -33,7 +33,6 @@
 
 #include "src/tcl/util.h"
 
-// From turbine
 #include "src/turbine/turbine.h"
 
 /*
@@ -90,7 +89,7 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
     Tcl_Obj* adlb_comm_ptr = Tcl_NewLongObj((long) comm_ptr);
     Tcl_ObjSetVar2(interp, TURBINE_ADLB_COMM, NULL, adlb_comm_ptr, 0);
   }
-  
+
   // Render argc/argv for Tcl
   turbine_tcl_set_integer(interp, "argc", argc);
   Tcl_Obj* argv_obj     = Tcl_NewStringObj("argv", -1);
@@ -119,7 +118,7 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
     printf("turbine_run(): Tcl error: %s\n", msg_string);
     return TURBINE_ERROR_UNKNOWN;
   }
-  
+
   if (created_interp)
   {
     // Clean up
