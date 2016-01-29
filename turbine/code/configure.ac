@@ -649,7 +649,7 @@ AC_ARG_WITH(python-lib,
       AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
                     [AC_MSG_ERROR([Could not find python!])])
       USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
-      USE_PYTHON_NAME=$( basename ${USE_PYTHON} )
+      USE_PYTHON_NAME=$( basename ${USE_PYTHON_LIB} )
       USE_PYTHON=${USE_PYTHON_LIB} # Copy
     ])
 
