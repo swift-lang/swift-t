@@ -283,13 +283,24 @@ static adlb_code expt(prio_mix prios, tgt_mix tgts, int init_qlen,
 
     int wu_idx = 0;
     int answer;
-    int len;
+    int len ;
+    int max_len = 1024;
     int type;
     MPI_Comm tmp_comm;
 
-    while ((ac = ADLB_Get(0, wus[wu_idx]->payload, &len, &answer, &type, &tmp_comm))
-            == ADLB_SUCCESS)
+    while (true)
     {
+      void* p = wus[wu_idx]->payload;
+      ac = ADLB_Get(0, &p, &len, max_len, &answer, &type, &tmp_comm);
+      if (ac != ADLB_SUCCESS)
+        break;
+
+      if (p != wus[wu_idx]->payload)
+      {
+        printf("work unit too big!\n");
+        ADLB_Abort(1);
+      }
+
       int counter;
       xlb_work_unit *wu = wus[wu_idx];
       memcpy(&counter, wu->payload, sizeof(counter));
