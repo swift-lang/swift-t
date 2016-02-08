@@ -11,7 +11,7 @@ echo "maint/jenkins.zsh ..."
 echo
 
 MPICH=/tmp/mpich-install
-MPICH=$HOME/sfw/mpich-master
+# MPICH=$HOME/sfw/mpich-master
 
 if [[ ! -d ${MPICH} ]]
 then
