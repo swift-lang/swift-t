@@ -80,6 +80,9 @@ double xlb_last_servers_idle_check;
 /** Cached recent timestamp */
 static double xlb_time_approx_now;
 
+/** When load falls at or below this level, shutdown */
+static double xlb_load_min = 0.0;
+
 double xlb_approx_time(void)
 {
   return xlb_time_approx_now;
@@ -116,6 +119,7 @@ static bool fail_code = -1;
 xlb_engine_work_array xlb_server_ready_work;
 
 static adlb_code setup_idle_time(void);
+static adlb_code setup_load_min(void);
 
 static inline int xlb_server_number(int rank);
 
@@ -159,6 +163,8 @@ xlb_server_init(const struct xlb_state *state)
   ADLB_CHECK(code);
   xlb_data_init(state->layout.servers, xlb_server_number(state->layout.rank));
   code = setup_idle_time();
+  ADLB_CHECK(code);
+  code = setup_load_min();
   ADLB_CHECK(code);
   // Set a default value for now:
   mm_set_max(mm_default, 10*MB);
@@ -510,20 +516,35 @@ adlb_code xlb_try_steal(void)
 adlb_code
 setup_idle_time()
 {
-   char *s = getenv("ADLB_EXHAUST_TIME");
-   if (s != NULL &&
-       strlen(s) > 0)
+  bool success = getenv_double("ADLB_EXHAUST_TIME",
+                                xlb_max_idle, &xlb_max_idle);
+   if (!success || xlb_max_idle <= 0)
    {
-     int c = sscanf(s, "%lf", &xlb_max_idle);
-     if (c != 1 || xlb_max_idle <= 0)
-     {
-       printf("Illegal value of ADLB_EXHAUST_TIME!\n");
-       return ADLB_ERROR;
-     }
+     printf("Illegal value of ADLB_EXHAUST_TIME!\n");
+     return ADLB_ERROR;
    }
+
    xlb_time_last_action = MPI_Wtime();
    xlb_idle_check_attempt = 0;
    return ADLB_SUCCESS;
+}
+
+/**
+    Allow user to trigger early exit on load dip
+ */
+adlb_code
+setup_load_min()
+{
+  bool success = getenv_double("ADLB_LOAD_MIN",
+                                xlb_load_min, &xlb_load_min);
+  if (!success || xlb_load_min < 0 || xlb_load_min >= 1)
+  {
+    printf("Illegal value of ADLB_LOAD_MIN!\n");
+    return ADLB_ERROR;
+  }
+  if (xlb_load_min > 0)
+    printf("ADLB_LOAD_MIN: %0.3f\n", xlb_load_min);
+  return ADLB_SUCCESS;
 }
 
 adlb_code
@@ -543,22 +564,35 @@ master_server()
   return (xlb_s.layout.rank == xlb_s.layout.workers);
 }
 
+/**
+   True iff all my workers are idle
+ */
 static inline bool
 workers_idle(void)
 {
   int blocked = xlb_requestqueue_nblocked();
   int shutdown = list_i_size(&workers_shutdown);
 
-  //TRACE("workers_idle(): workers blocked:   %i\n", blocked);
-  //TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
-
   assert(blocked <= xlb_s.layout.my_workers);
   assert(shutdown <= xlb_s.layout.my_workers);
   assert(blocked + shutdown <= xlb_s.layout.my_workers);
 
-  if (blocked + shutdown == xlb_s.layout.my_workers)
-    return true;
+  int w = xlb_s.layout.my_workers;
+  double busy = (double) (w - blocked - shutdown);
+  double load = busy/w;
 
+  TRACE("workers_idle(): workers blocked: %i shutdown: %i load %0.2f\n",
+         blocked, shutdown, load);
+
+  if (load == 0)
+    return true;
+  if (load <= xlb_load_min)
+  {
+    // No other way to interrupt running worker tasks!
+    printf("ADLB aborting: ADLB_LOAD_MIN=%0.3f current load=%0.3f\n",
+           xlb_load_min, load);
+    ADLB_Abort(1);
+  }
   return false;
 }
 
