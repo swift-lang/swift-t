@@ -48,6 +48,8 @@ main()
 
   int tasks_per_worker = 1;
 
+  int BUFFER_LENGTH = 128;
+
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -57,7 +59,7 @@ main()
   }
   else
   {
-    char buffer[128];
+    char buffer[BUFFER_LENGTH];
     for (int i = 0; i < tasks_per_worker; i++)
     {
       sprintf(buffer, "PARALLEL_STRING from: %i #%i", rank, i);
@@ -67,12 +69,14 @@ main()
     }
     while (true)
     {
-      int length;
+      int length = BUFFER_LENGTH;
       int answer;
       int type;
       MPI_Comm task_comm;
+      void*  b = &buffer[0];
+      void** p = &b;
       adlb_code rc =
-          ADLB_Get(0, buffer, &length, &answer, &type, &task_comm);
+          ADLB_Get(0, p, &length, length, &answer, &type, &task_comm);
       if (rc == ADLB_SHUTDOWN)
         break;
       if (task_comm == MPI_COMM_SELF)
