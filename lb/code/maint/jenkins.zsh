@@ -10,7 +10,10 @@ echo
 echo "maint/jenkins.zsh ..."
 echo
 
-if [[ ! -d /tmp/mpich-install ]]
+MPICH=/tmp/mpich-install
+MPICH=$HOME/sfw/mpich-master
+
+if [[ ! -d ${MPICH} ]]
 then
   print "MPICH disappeared!"
   print "You must manually run the MPICH Jenkins test to restore MPICH"
@@ -21,27 +24,31 @@ rm -rf autom4te.cache
 rm -rf /tmp/exm-install/lb
 
 set -x
-PATH=/tmp/mpich-install/bin:$PATH
+PATH=$MPICH/bin:$PATH
 
-echo MPICC:
-which mpicc
-mpicc -show
+MPICC=$(which mpicc)
+
+# Diagnostic:
+echo MPICC: $MPICC
+$MPICC -show
 echo
 
 ./bootstrap
 
 # Build once with trace logging on to see if it builds
-./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb \
+./configure CC=$MPICC --prefix=/tmp/exm-install/lb \
   --enable-log-debug --enable-log-trace --enable-log-trace-mpi
 echo
 make clean
 make
 
 # Now build for tests without logging
-./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb
+./configure CC=$MPICC --prefix=/tmp/exm-install/lb
 echo
 make clean
 make V=1 install
+
+# Diagostics:
 # ldd lib/libadlb.so
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
