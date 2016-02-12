@@ -86,10 +86,13 @@ TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
 
 # Valgrind-related checks:
-if grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
+if (( ${#VALGRIND} ))
 then
-  print "run-test: valgrind detected error: ${PROGRAM}"
-  exit 1
+  if grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
+  then
+    print "run-test: valgrind detected error: ${PROGRAM}"
+    exit 1
+  fi
 fi
 
 # All errors cause early exit
