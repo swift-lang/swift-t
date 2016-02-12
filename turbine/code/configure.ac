@@ -31,13 +31,13 @@ then
   AC_MSG_ERROR("You must provide --prefix")
 fi
 
-echo "PREFIX: ${prefix}"
+AC_MSG_RESULT([PREFIX: ${prefix}])
 SOFTWARE=$( cd $(dirname ${prefix}) && /bin/pwd )
 if [[ ${?} != 0 ]]
 then
   SOFTWARE=0
 fi
-echo "SOFTWARE: ${SOFTWARE}"
+AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 
 if [[ ${prefix} == ${PWD} ]]
 then
@@ -176,7 +176,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-echo "checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
+AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 fi
@@ -536,8 +536,7 @@ AC_ARG_ENABLE(checkpoint,
       then
         ENABLE_XPT=no
       else
-        echo "Invalid enable-checkpoint value: $enableval"
-        exit 1
+        AC_MSG_ERROR([Invalid enable-checkpoint value: $enableval])
       fi
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
@@ -600,7 +599,7 @@ AC_ARG_WITH(python-version-major,
                    [Use this version (Default: 2)]),
    [
      USE_PY_VERSION_MAJOR=${withval}
-   ],[ echo unset ])
+   ],[])
 AC_ARG_WITH(python-version-minor,
    AS_HELP_STRING([--with-python-version-minor],
                    [Use this version (Default: 7)]),
@@ -678,9 +677,9 @@ AC_SUBST(USE_PYTHON_NAME)
 
 if (( HAVE_PYTHON ))
 then
-    echo "Python enabled"
+    AC_MSG_RESULT([Python enabled])
 else
-    echo "Python disabled"
+    AC_MSG_RESULT([Python disabled])
 fi
 
 # R is optional
@@ -713,9 +712,9 @@ AC_SUBST(USE_R)
 
 if (( HAVE_R ))
 then
-    echo "R enabled"
+    AC_MSG_RESULT([R enabled])
 else
-    echo "R disabled"
+    AC_MSG_RESULT([R disabled])
 fi
 
 HAVE_JULIA=0
@@ -735,9 +734,9 @@ AC_SUBST(USE_JULIA)
 
 if (( HAVE_JULIA ))
 then
-    echo "Julia enabled"
+    AC_MSG_RESULT([Julia enabled])
 else
-    echo "Julia disabled"
+    AC_MSG_RESULT([Julia disabled])
 fi
 
 HAVE_COASTER=0
@@ -961,9 +960,9 @@ then
     AC_MSG_ERROR([could not find libtcl!])
 fi
 
-echo "using Tcl version: ${TCL_VERSION}"
-echo "Tcl shared library: ${USE_LIBTCL_SO}"
-echo "Tcl static library: ${USE_LIBTCL_A}"
+AC_MSG_RESULT([using Tcl version: ${TCL_VERSION}])
+AC_MSG_RESULT([Tcl shared library: ${USE_LIBTCL_SO}])
+AC_MSG_RESULT([Tcl static library: ${USE_LIBTCL_A}])
 AC_SUBST(TCL_VERSION)
 
 # Set USE_TCL_CFG_DIR: location of tclConfig.sh
@@ -1157,10 +1156,10 @@ m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 if [[ "${HAVE_HDF5}" == 1 ]]
 then
-    echo "HDF5 enabled"
+    AC_MSG_RESULT([HDF5 enabled])
 else
-    echo "HDF5 disabled"
-    echo "Note: HDF5 is only required if you need Turbine's HDF features."
+    AC_MSG_RESULT([HDF5 disabled])
+    AC_MSG_RESULT([Note: HDF5 is only required if you need Turbine's HDF features.])
 fi
 
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
@@ -1187,8 +1186,8 @@ AC_SUBST(LDFLAGS)
 
 m4_include([../../dev/m4/syslibs.m4])
 
-echo
-echo "Preparing config files: please wait..."
+AC_MSG_RESULT([])
+AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
