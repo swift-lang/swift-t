@@ -62,7 +62,7 @@ main(int argc, char* argv[])
   int rc = MPI_Group_incl(group_world, parallelism, ranks, &group_task);
   assert(rc == MPI_SUCCESS);
 
-  rc = MPIX_Comm_create_group(MPI_COMM_WORLD, group_task, 0, &comm_task);
+  rc = MPI_Comm_create_group(MPI_COMM_WORLD, group_task, 0, &comm_task);
   assert(rc == MPI_SUCCESS);
   MPI_Group_free(&group_task);
 

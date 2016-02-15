@@ -599,7 +599,7 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   int rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
   assert(rc == MPI_SUCCESS);
   // This is an MPI 3 function:
-  rc = MPIX_Comm_create_group(xlb_s.comm, group, 0, comm);
+  rc = MPI_Comm_create_group(xlb_s.comm, group, 0, comm);
   valgrind_assert(rc == MPI_SUCCESS);
   MPI_Group_free(&group);
   TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
