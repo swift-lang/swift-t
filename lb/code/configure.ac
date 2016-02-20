@@ -47,7 +47,8 @@ then
   exit 1
 fi
 
-echo "using CC=$( which ${CC} )"
+# Report location of CC
+AC_MSG_RESULT([using CC=$( which ${CC} )])
 
 echo "PREFIX: ${prefix}"
 SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
@@ -57,9 +58,6 @@ then
 else
   SOFTWARE=0
 fi
-
-# Report location of CC
-echo "using CC=$( which ${CC} )"
 
 # Checks for programs
 AC_PROG_CC
