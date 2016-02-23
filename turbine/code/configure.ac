@@ -656,8 +656,8 @@ if [[ ${HAVE_PYTHON} == 1 ]]
 then
     USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
     USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    echo "Using Python lib directory: ${USE_PYTHON_LIBDIR}"
-    echo "Using Python lib name:      ${USE_PYTHON_NAME}"
+    AC_MSG_RESULT([Using Python lib directory: ${USE_PYTHON_LIBDIR}])
+    AC_MSG_RESULT([Using Python lib name:      ${USE_PYTHON_NAME}])
 fi
 
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
