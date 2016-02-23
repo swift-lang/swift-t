@@ -50,4 +50,9 @@ app (file o) echo(string s)
   "echo" s @stdout=o;
 }
 
+app (void v) sleep(int i)
+{
+  "sleep" i;
+}
+
 #endif
