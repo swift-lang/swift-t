@@ -524,7 +524,7 @@ The way this feature is implemented depends on the Tcl version:
 
 8.5:: Implemented by calling system command +mktemp+.  The directory
 may be set with environment variable +TMPDIR+ which defaults to
-+/tmp+, or +SWIFT_PATH+.  The filename will contain +.turbine+ in the
++/tmp+, or +SWIFT_TMP+.  The filename will contain +.turbine+ in the
 middle or as a suffix, depending on +mktemp+ implementation.
 
 8.6:: Implemented with a Tcl builtin.  File always has suffix
