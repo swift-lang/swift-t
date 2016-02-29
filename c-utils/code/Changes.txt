@@ -1,4 +1,0 @@
-
-0.0.3:
-
-Initial use of branch structure and Swift/T release conventions

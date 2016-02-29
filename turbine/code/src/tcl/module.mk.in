@@ -1,8 +1,0 @@
-
-DIR := src/tcl
-
-TCL_LIB = @TCL_LIB_SPEC@
-
-TCL_LINK_FLAGS = -DUSE_TCL_STUBS -fPIC $(TCL_LIB)
-
-TCL_TURBINE_SRC += $(DIR)/util.c

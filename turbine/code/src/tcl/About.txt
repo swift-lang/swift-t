@@ -1,4 +1,0 @@
-
-These source files are Tcl extensions or utilities
-for making Tcl extensions.  The Tcl extensions follow
-some Tcl C source style conventions.
