@@ -1,0 +1,4615 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.8" />
+<title>Swift/T Guide</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+
+/* Swift/T guide customizations */
+
+a:visited {
+  color: gray;
+}
+h5 {
+  font-size: 0.8em;
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+</head>
+<body class="article" style="max-width:750px">
+<div id="header">
+<h1>Swift/T Guide</h1>
+<span id="author">December 2015</span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>The Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="support">1. Support</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>An overview of Swift/T may be found at the main Swift site:</p></div>
+<div class="paragraph"><p><a href="http://swift-lang.org/Swift-T">http://swift-lang.org/Swift-T</a></p></div>
+<div class="paragraph"><p>The Swift user discussion mailing lists are found here:</p></div>
+<div class="paragraph"><p><a href="http://swift-lang.org/support/index.php">http://swift-lang.org/support/index.php</a></p></div>
+<div class="paragraph"><p>The Swift/T issue tracker is here:</p></div>
+<div class="paragraph"><p><a href="http://github.com/swift-lang/swift-t/issues">http://github.com/swift-lang/swift-t/issues</a></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_installation">2. Installation</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Writing and running Swift/Turbine programs requires multiple packages.
+This section provides generic instructions for installing Swift/T
+on a range of systems.  We first cover locating and/or installing
+prerequisite software packages, then we cover building Swift/T
+from a source package.</p></div>
+<div class="paragraph"><p>The <a href="turbine-sites.html">Turbine Sites Guide</a>
+is a accompanying resource for configuration settings and preinstalled software
+for specific systems.</p></div>
+<div class="sect2">
+<h3 id="_installation_of_prerequisites">2.1. Installation of Prerequisites</h3>
+<div class="paragraph"><p>All Swift/T prerequisites can be installed using the appropriate
+package manager for your system.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Install or locate MPI implementation (MPICH, OpenMPI, etc.)
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+On maintained compute clusters, an MPI implementation
+   will almost certainly be pre-installed.
+</p>
+</li>
+<li>
+<p>
+Many operating systems provide packages with MPI implementations
+   that are usable, but often outdated.
+   E.g. the <code>mpich2</code> package on Debian/Ubuntu.
+</p>
+</li>
+<li>
+<p>
+See <a href="http://www.mpich.org">MPICH Guides</a> for information on installing the
+   latest version of MPICH.
+</p>
+</li>
+<li>
+<p>
+Installing MPICH from source is not difficult.
+</p>
+</li>
+<li>
+<p>
+Other MPI implementations are <a href="#Build_configuration">supported</a> as well.
+</p>
+<div class="paragraph"><p>Swift/T attempts to use MPI 3.0 functionality by default.  If you
+are using an MPI implementation that does not support the MPI 3.0 standard,
+you must set <code>MPI_VERSION=2</code> (if using the <code>exm-setup.zsh</code> build process),
+or provide the <code>--enable-mpi-2</code> configure option (if using
+the manual build process).</p></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Install or locate Tcl 8.6.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+You may need to install an additional Tcl development package
+  in addition to the standard Tcl package,
+  e.g., <code>tcl8.6</code> plus <code>tcl8.6-dev</code> on Debian/Ubuntu (APT) systems.
+</p>
+</li>
+<li>
+<p>
+Source distributions are available at the <a href="http://www.tcl.tk">Tcl web
+  site</a>
+</p>
+</li>
+<li>
+<p>
+Tcl 8.5 is also acceptable.  (Swift/T optionally uses Tcl 8.6
+  features to produce cleaner error messages.)
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Ensure you have these third-party software development tools (APT
+   packages are denoted in parentheses):
+   SWIG (<code>swig</code>), ZSH (<code>zsh</code>), Apache Ant (<code>ant</code>), a Java Development
+   Kit (<code>default-jdk</code>), Make (<code>make</code>), and GCC for C (<code>gcc</code>).
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>Swift/T is primarily tested with OpenJDK&#43;GCC and IBM Java&#43;XLC
+   (on the IBM Blue Gene).  If you have difficulties with other
+   compilers, please <a href="#support">contact us</a>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_installation_of_swift_t_from_source">2.2. Installation of Swift/T from Source</h3>
+<div class="paragraph"><p>Once you have found all prerequisites, we can continue with building
+Swift/T from source.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Obtain the Swift/T source package
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>wget http://www.swift-lang.org/Swift-T/downloads/exm-0.7.0.tar.gz</code></pre>
+</div></div>
+<div class="paragraph"><p>Cf. <a href="http://www.mcs.anl.gov/exm/local/downloads/downloads.html">Swift/T Downloads</a>
+for other packages</p></div>
+</li>
+<li>
+<p>
+Unpack and enter package directory
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>tar xfz exm-trunk.tar.gz
+cd exm-trunk</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Edit the settings file: <code>exm-settings.sh</code>
+</p>
+<div class="paragraph"><p>At a minimum, you must set the install directory with <code>EXM_PREFIX</code>.
+On a standard system, no further configuration may be needed.
+In many cases, however, you will need to modify additional
+configuration settings so that all prerequisites can
+be correctly located and configured (see Section
+<a href="#Build_configuration">Build configuration</a>).</p></div>
+<div class="paragraph"><p>A range of other settings are also available here:
+enabling/disabling features, debug or optimized builds, etc.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">Save your <code>exm-settings.sh</code> when you download a new package</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Run the setup script
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./exm-setup.zsh</code></pre>
+</div></div>
+<div class="paragraph"><p>If <code>exm-setup.zsh</code> does not succeed on your system, see Section
+<a href="#Build_configuration">Build configuration</a> below.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">if you want more control than <code>exm-setup.zsh</code> provides, you can
+    build Swift/T with the
+    <a href="#Manual_build_configuration">manual configure/make workflow</a>.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Add Turbine and STC to your paths
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>PATH=${PATH}:/path/to/exm-install/turbine/bin
+PATH=${PATH}:/path/to/exm-install/stc/bin</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usage">3. Usage</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift code is conventionally written in <code>*.swift</code> files.  Turbine
+code is stored in Tcl files with extension <code>*.tic</code> (for Turbine
+Intermediate Code).  After writing the Swift program
+<code>program.swift</code>, run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>This will compile the program to <code>program.tic</code>.  A second, optional
+argument may be given as an alternate output file name.</p></div>
+<div class="paragraph"><p>Then, to run the program, use Turbine:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine -n 4 program.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>You may compile and run in one step with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -n 4 program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>In this case, <code>program.tic</code> is created in a temporary file and then
+deleted after execution.</p></div>
+<div class="paragraph"><p><code>swift-t</code> accepts arguments for both STC and Turbine.
+Provide <code>-h</code> to any tool (<code>swift-t</code>, <code>stc</code>, <code>turbine</code>) to obtain help.</p></div>
+<div class="paragraph"><p>See the <a href="#Turbine">Turbine section</a> for more information about
+running the program.</p></div>
+<div class="paragraph" id="stc_arguments"><p>STC accepts the following arguments:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-A <em>name</em>=<em>value</em></code>
+</dt>
+<dd>
+<p>
+Set a command-line argument at
+compile-time. This may be found at runtime using the Swift
+<a href="#argv">argument processing</a> library. This option enables these
+arguments to be treated as compile-time constants for optimization.
+<a id="cpp_macro"></a> &nbsp;
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-D <em>macro</em>=<em>value</em></code>
+</dt>
+<dd>
+<p>
+Define a C preprocessor macro.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-E</code>
+</dt>
+<dd>
+<p>
+Just run the C preprocessor: do not compile the program.  The
+output goes into the STC output file (the second file name argument).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-I</code>
+</dt>
+<dd>
+<p>
+Add a directory to the import and include search path.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-O</code>
+</dt>
+<dd>
+<p>
+Set optimization level: 0, 1, 2, or 3.  See <a href="#Optimizations">[Optimizations]</a>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-j</code>
+</dt>
+<dd>
+<p>
+Set the location of the <code>java</code> executable.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-p</code>
+</dt>
+<dd>
+<p>
+Disable the C preprocessor.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-u</code>
+</dt>
+<dd>
+<p>
+Only compile if output file is not up-to-date.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-v</code>
+</dt>
+<dd>
+<p>
+Output version number and exit.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-V</code>
+</dt>
+<dd>
+<p>
+Verbose output.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>STC runs as a Java program.  You may use <code>-j</code> to set the Java VM
+executable.  This Java VM must be compatible with the <code>javac</code> used to
+compile STC.</p></div>
+<div class="paragraph" id="cpp"><p>By default, STC runs the user script through the C preprocessor
+(<code>cpp</code>), enabling arbitrary macro processing, etc.  The <code>-D</code>, <code>-E</code>,
+<code>-I</code>, and <code>-p</code> options are relevant to this feature.</p></div>
+<div class="paragraph"><p>Additional arguments for advanced users/developers:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-C</code>
+</dt>
+<dd>
+<p>
+Specify an output file for STC internal representation
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-l</code>
+</dt>
+<dd>
+<p>
+Specify log file for STC debug log
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-L</code>
+</dt>
+<dd>
+<p>
+Specify log file for more verbose STC debug log
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-f</code>
+</dt>
+<dd>
+<p>
+Enable a specific optimization.  See <a href="#Optimizations">[Optimizations]</a>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-F</code>
+</dt>
+<dd>
+<p>
+Disable a specific compiler optimization.  See <a href="#Optimizations">[Optimizations]</a>
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_program_structure">4. Program structure</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift is a language with C-like syntax. Hello world is written as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+
+printf("Hello world");</code></pre>
+</div></div>
+<div class="paragraph"><p>The newline is supplied by <code>printf()</code>.</p></div>
+<div class="paragraph"><p>Swift programs are composed of
+<em>composite</em> functions containing Swift code, <em>top-level</em> Swift code
+outside of composite functions, and <em>leaf</em> functions that wrap
+non-Swift code, for example native code functions or
+external application programs.</p></div>
+<div class="paragraph"><p>In typical Swift programs, leaf functions do the computational
+heavy-lifting, while Swift code provides the "glue" to compose
+leaf functions into a complete application.
+From the perspective of the Swift programmer, leaf functions
+atomic operations that wait for input variables and set output
+variables.</p></div>
+<div class="paragraph"><p>The definition of a function can come before or after the usage
+in the Swift source code.  E.g. a function defined on line 100
+of a Swift source file can be called at line 10.</p></div>
+<div class="paragraph"><p>STC input is preprocessed by <code>cpp</code>, the C preprocessor.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_comments">5. Comments</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift supports C/C++-style comments:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>// This is a comment
+/* This is a
+comment */
+/** Also a
+comment */</code></pre>
+</div></div>
+<div class="paragraph"><p>Additionally, if the preprocessor is disabled, single-line comments
+starting with # are supported:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># This will work if source file is not preprocessed</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="modules">6. Modules</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift has a module system that allows you to import function and variable
+definitions into your source file.  Importing a module will import all
+function and variable definitions from that module into your program.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+import mypackage.mymodule;</code></pre>
+</div></div>
+<div class="paragraph"><p>The mechanisms for locating source files is as follows:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC searches a list of directories in order to find a Swift source
+  file in the correct directory with the correct name.
+</p>
+</li>
+<li>
+<p>
+The standard library is always first on the search path,
+    and the current working directory is last.
+</p>
+</li>
+<li>
+<p>
+Additional directories can be added with the <code>-I</code> option to STC.
+</p>
+</li>
+<li>
+<p>
+Swift source files must have a <code>.swift</code> suffix.  E.g. <code>import io;</code>
+  looks for a file called <code>io.swift</code>.
+</p>
+</li>
+<li>
+<p>
+In the case of a multi-part import name, E.g. <code>import mypackage.mymodule</code>,
+  then, it looks for <code>mymodule.swift</code> in subdirectory <code>mypackage</code>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The alternative <code>#include</code> statement textually includes an entire
+file using the C preprocessor at the point of the statement.
+Note that <code>#include</code> will only work if the preprocessor is enabled
+on the current file.  In contrast to <code>import</code>, <code>#include</code> will run the
+C preprocessor on any included modules.  <code>import</code> is recommended over
+<code>#include</code> unless the imported module requires preprocessing.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>#include &lt;mypackage/mymodule.swift&gt;</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_variable_declarations">7. Variable declarations</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift is a statically and strongly typed language.  Thus, every variable
+in the program must have a fixed type at compile time and types are,
+with limited exceptions, not automatically converted.</p></div>
+<div class="paragraph"><p>To declare a variable in Swift code, you must declare it with
+one of following variations of the variable declaration syntax:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>&lt;type&gt; &lt;variable name&gt;;
+&lt;type&gt; &lt;variable name&gt; = &lt;expression&gt;;
+&lt;variable name&gt; = &lt;expression&gt;;</code></pre>
+</div></div>
+<div class="paragraph"><p>For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int x;
+int x = 1;
+x = 1;</code></pre>
+</div></div>
+<div class="paragraph"><p>In the last two cases, the variable is declared and assigned in the
+same statement.
+In the first two cases, the type of the variable is explicitly specified
+by the programmer.  In the last case, where the type of the variable is
+omitted and there was no prior declaration of the variable, then the
+type of the variable is automatically inferred based on the type of the
+expression on the right hand side of the assignment.</p></div>
+<div class="paragraph"><p>The scope of a variable is limited to the code block in which the declaration
+appears.  Two variables with the same name cannot be declared in the same
+block.  <strong>Shadowing</strong> of variables, where a variable has the same name as
+a variable in an outer scope, is also not allowed in Swift.  This language
+design decision is intended to eliminate some common programming errors.</p></div>
+<div class="paragraph"><p>This is shadowing and will result in a compile error:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int x;
+{
+  int x;
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>This is not shadowing, because the scopes of the two declarations of x do not
+overlap, and is allowed:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>{
+  int x;
+}
+{
+  int x;
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Variables, functions, and types share the same namespace so it is possible
+for a variable&#8217;s name to shadow a function&#8217;s name.  This is allowed in
+the specific case when a local variable has the same name as a global function
+(although it will not be possible to use the function within the scope
+where it has been shadowed).</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dataflow_evaluation">8. Dataflow evaluation</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift expressions are evaluated in <em>dataflow</em> order:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int z1,z2;
+int y;
+int x = f(y);
+y = g(2);
+z1 = h(x,y,1);
+z2 = h(x,y,2);
+int output = r(z1,z2);</code></pre>
+</div></div>
+<div class="paragraph"><p>This allows code to execute as concurrently as possible, limited
+only by data availability.  In this example, <code>g()</code> runs first, because it
+is dependent only on a literal.  When <code>y</code> is set, <code>f()</code> runs, setting
+<code>x</code>.  Then, two invocations of <code>h()</code> execute.  Finally, <code>z1</code> and <code>z2</code>
+are set, allowing <code>r()</code> to run.</p></div>
+<div class="paragraph"><p>Variables may be assigned only once.  Multiple assignment is often
+detected at compile time, and will always be detected at run time,
+resulting in a run time error.  If variable is not assigned,
+expressions that depend on the variable cannot execute.  If the variable
+is never assigned during the course of program execution, these
+expressions will never execute.  Upon program completion, Swift/T will
+report the error and print debug information about any unexecuted
+expressions and identifiers of corresponding unassigned variables.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_composite_functions">9. Composite functions</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Composite functions provide a way to organise and reuse Swift code.
+They have the form:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[(&lt;output list&gt;)] function_name [(&lt;input list&gt;)]
+{
+  statement;
+  statement;
+  ...
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>An empty input or output list may be omitted or written as <code>()</code>.</p></div>
+<div class="paragraph"><p>The output list may have more than one entry.  Thus, assignments
+may be written as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>x1, x2 = f(i1, i2);
+// or equivalently:
+(x1, x2) = f(i1, i2);</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>Note:</strong> If a composite function named <code>main</code> is provided, it is
+           automatically run at the start of the program.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_types">10. Types</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift provides a similar range of primitive types to many other
+programming languages.  Files are a primitive type in Swift, unlike
+in many other languages, and have a number of special characteristics
+that merit special mention.
+Two basic kinds of data structure are provided: arrays and structs.</p></div>
+<div class="sect2">
+<h3 id="_primitive_types">10.1. Primitive types</h3>
+<div class="paragraph"><p>Swift has the conventional types:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>string</code>
+</dt>
+<dd>
+<p>
+A complete string (not an array of characters).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>int</code>
+</dt>
+<dd>
+<p>
+A 64-bit integer.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>float</code>
+</dt>
+<dd>
+<p>
+A 64-bit (double-precision) floating point number.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>boolean</code>
+</dt>
+<dd>
+<p>
+A boolean (true/false).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>file</code>
+</dt>
+<dd>
+<p>
+A file (see Section Files).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob</code>
+</dt>
+<dd>
+<p>
+External byte data (see Section Blobs).
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Literals for these types use conventional syntax:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>int</code> literals are written as decimal numbers, e.g. <code>-1234</code>
+</p>
+</li>
+<li>
+<p>
+<code>float</code> literals are written as decimal numbers with a decimal point,
+    e.g <code>5493.352</code> or <code>1.0</code>.
+    Scientific notation may be used,
+    as in <code>2.3e-2</code> which is equivalent to <code>0.023</code>.
+    The literals <code>NaN</code> and <code>inf</code> may be used.  In some contexts <code>int</code>
+    literals are promoted automatically to <code>float</code>.
+</p>
+</li>
+<li>
+<p>
+<code>boolean</code> literals <code>true</code> and <code>false</code> may be used.
+</p>
+</li>
+<li>
+<p>
+<code>string</code> literals are enclosed in double quotes, with a range of escape
+    sequences supported:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>\\</code> for a single backslash
+</p>
+</li>
+<li>
+<p>
+<code>\"</code> for a quote
+</p>
+</li>
+<li>
+<p>
+<code>\n</code> for newline
+</p>
+</li>
+<li>
+<p>
+<code>\t</code> for tab
+</p>
+</li>
+<li>
+<p>
+<code>\a</code> (alarm)
+</p>
+</li>
+<li>
+<p>
+<code>\b</code> (backspace)
+</p>
+</li>
+<li>
+<p>
+<code>\f</code> (form feed)
+</p>
+</li>
+<li>
+<p>
+<code>\r</code> (carriage return)
+</p>
+</li>
+<li>
+<p>
+<code>\v</code> (vertical tab)
+</p>
+</li>
+<li>
+<p>
+octal escape codes, e.g. <code>\001</code>
+</p>
+</li>
+<li>
+<p>
+hexadecimal escape codes, e.g. <code>\xf2</code>
+</p>
+</li>
+<li>
+<p>
+For more information: <a href="http://en.wikipedia.org/wiki/US-ASCII#ASCII_control_code_chart">ASCII control codes</a>.
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Multi-line strings may be used in two syntaxes:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Python-style:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>string s =
+"""
+line data 1
+line data 2
+""";</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Asciidoc-style: like Python-style but use 4 dashes instead of 3 quotes.
+</p>
+</li>
+<li>
+<p>
+<strong>Note:</strong> Multi-line strings are somewhat incompatible with the C preprocessor:
+            if you try to compile a Swift program using multi-line strings with
+            the preprocessor enabled, you will likely see warnings or strange
+            behavior.  To disable the C preprocessor, use the <code>-p</code> option
+            to STC.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_files">10.2. Files</h3>
+<div class="paragraph"><p>A file is a first-class entity in Swift that in many ways can be treated
+as any other variable.  The main difference is that a file can be
+<strong>mapped</strong> to path in a filesystem.  Assigning to a mapped file variable
+results in a file being created in the file system at the specified path.
+File paths can be arbitrary Swift expressions of type <code>string</code>.  Absolute
+paths or relative paths are specified, with relative paths interpreted
+relative to the path in which turbine was run.
+File variables can also be initialized with data from a pre-existing
+file using the <code>input_file</code> function.  File paths are relative to the
+working directory for Turbine.</p></div>
+<div class="paragraph"><p>For example, if <code>/home/user/in.txt</code> is a file with some data in it,
+the following Swift program will copy the file to <code>/home/user/out.txt</code>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>file x = input_file("/home/user/in.txt");
+file y &lt;"/home/user/out.txt"&gt;; // Declare a mapped file
+y = x; // Do the copy</code></pre>
+</div></div>
+<div class="paragraph"><p>A range of functions to work with files are provided in the
+<code>files</code> library module.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>// Initialize an array of files from a range of files on disk with glob
+file f[] = glob("directory/*.txt");
+
+// Read the contents of a file with read
+string filename = "in.txt";
+string contents = read(input_file(filename));
+trace("Contents of " + filename + ":\n" + contents);
+
+// Write directly to a file with write
+file tmp = write("first line\nsecond line");
+
+// Find the name of a file with filename
+trace("Temporary filename is: " + filename(tmp));</code></pre>
+</div></div>
+<div class="paragraph"><p><a id="unmapped_files"></a>
+Temporary files are created as necessary if unmapped files are
+written to, for example, the file <code>tmp</code> in the code snippet above.
+This file is created in <code>/tmp</code> by default unless
+<a href="#env_swift_tmp">overridden by <code>SWIFT_TMP</code></a>.</p></div>
+<div class="paragraph"><p>The way this feature is implemented depends on the Tcl version:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+8.5
+</dt>
+<dd>
+<p>
+Implemented by calling system command <code>mktemp</code>.  The directory
+may be set with environment variable <code>TMPDIR</code> which defaults to
+<code>/tmp</code>, or <code>SWIFT_PATH</code>.  The filename will contain <code>.turbine</code> in the
+middle or as a suffix, depending on <code>mktemp</code> implementation.
+</p>
+</dd>
+<dt class="hdlist1">
+8.6
+</dt>
+<dd>
+<p>
+Implemented with a Tcl builtin.  File always has suffix
+<code>.turbine</code>.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Swift/T assumes that the file system is shared among all nodes.  Set
+<code>SWIFT_TMP</code> to a shared file system for best results when running
+across nodes.  (The directory <code>/tmp</code> is usually a fast local file
+system and cleared on system reboot.)</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+<div class="paragraph"><p>The syntax</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>file f&lt;"f.txt"&gt; = g();</code></pre>
+</div></div>
+<div class="paragraph"><p>is allowed but</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>file f&lt;"f.txt"&gt;=g();</code></pre>
+</div></div>
+<div class="paragraph"><p>results in a parse error: the <code>&gt;=</code> sequence is tokenized as
+<em>greater-than-or-equal-to</em>.</p></div>
+</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blobs">10.3. Blobs</h3>
+<div class="paragraph"><p>Blobs represent raw byte data.  They are primarily used to pass
+data to and from native code libraries callable from Swift.  They are
+like Swift strings but may contain arbitrary data.</p></div>
+<div class="paragraph"><p>Swift provides multiple builtin functions to create blobs, convert
+blobs to and from Swift types, and pass blobs to leaf functions.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_arrays">10.4. Arrays</h3>
+<div class="paragraph"><p>Arrays can be declared with empty square brackets:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int A[];</code></pre>
+</div></div>
+<div class="paragraph"><p>Arrays with empty square brackets have integer indices.  It is
+also possible to declare integers with other index types, such as
+strings:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>string dict[string];</code></pre>
+</div></div>
+<div class="paragraph"><p>They are dynamically sized, expanding each time an item is inserted at
+a new index.  Arrays are indexed using square brackets.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int A[string];
+int B[];
+B = function_returning_array();
+A["zero"] = B[0];
+A["one"] = B[1];</code></pre>
+</div></div>
+<div class="paragraph"><p>Each array index can only be assigned to once.</p></div>
+<div class="paragraph"><p>A given array variable must be assigned either <em>in toto</em> (as a whole)
+or <em>in partes</em> (piece by piece).  In this example, <code>B</code> is assigned in toto
+and <code>A</code> is assigned in partes.  Code that attempts to do both is in error.</p></div>
+<div class="paragraph"><p>Arrays may be used as inputs or outputs of functions.</p></div>
+<div class="paragraph"><p>Arrays are part of Swift dataflow semantics. An array is closed
+when all possible insertions to it are complete.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>(int B[]) f(int j)
+{
+  int A[];
+  A = subroutine_function(1);
+
+  // Error: A has already been assigned in toto:
+  A[3] = 4;
+
+  // OK: assigning to output variable
+  B = subroutine_function(2);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Array literals may be expressed using the range operator:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int start = 0;
+int stop = 10;
+int step = 2;
+// Array of length 10:
+int A[] = [start:stop-1];
+// Array of length 5, containing only even numbers:
+int B[] = [start:stop-1:step];</code></pre>
+</div></div>
+<div class="paragraph"><p>Array literals may also be expressed with list syntax:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int C[] = [4,5,6];</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_nested_arrays">10.5. Nested arrays</h3>
+<div class="paragraph"><p>Swift allows arrays of arrays: nested arrays.  They can be declared and
+assigned as follows:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>// An array of arrays of files with string keys
+file A[string][string];
+A["foo"]["bar"] = input_file("test.txt");
+A["foo"]["qux"] = input_file("test2.txt");</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>Note:</strong> there is currently a limitation in assignment of nested arrays
+that a given array can only be assigned at a single "index level".  If
+<code>A</code> is a 2D array, for example, then you cannot mix assignments specifying
+one index (e.g. <code>A[i] = &#8230;</code>) with assignments specifying three indices
+(e.g. <code>A[i][j] = &#8230;</code>).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_structs">10.6. Structs</h3>
+<div class="paragraph"><p>In Swift, structs are defined with the <code>type</code> keyword.  They define
+a new type.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>type person
+{
+  string name;
+  int age;
+  int events[];
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Structs are accessed with the <code>.</code> syntax:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>person p;
+p.name = "Abe";
+p.age = 90;</code></pre>
+</div></div>
+<div class="paragraph"><p>It is possible to have arrays of structs, with some restriction on
+how they can be assigned.  Each struct in the array must be assigned
+<em>in toto</em> (as a whole).  For example, the following code is valid:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>person people[], p1, p2;
+
+p1.name = "Thelma";
+p1.age = 31;
+
+p2.name = "Louise";
+p2.age = 29;
+
+people[0] = p1;
+people[1] = p2;</code></pre>
+</div></div>
+<div class="paragraph"><p>However, attempting to assign the structs in the following way is
+currently unsupported:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>people[2].name = "Abe";  // Not supported!
+people[2].age = 90;      // Not supported!</code></pre>
+</div></div>
+<div class="paragraph"><p>It is possible to construct a struct by invoking the type name
+as if it is a function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>person p3 = person("Nguyen", 42);</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_defining_new_types">10.7. Defining new types</h3>
+<div class="paragraph"><p>Swift has two ways to define new types based on existing types.</p></div>
+<div class="paragraph"><p>The first is <code>typedef</code>, which creates a new name for the type.
+The new type and the existing type will be completely interchangeable,
+since they are simply different names for the same underlying type.
+The new type name simply serves to improve readability or documentation.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>typedef newint int;
+
+// We can freely convert between int and newint
+newint x = 1;
+int y = x;
+newint z = y;</code></pre>
+</div></div>
+<div class="paragraph"><p>The second is with <code>type</code>, which creates a new type that is a
+specialization of an existing type.  That is, it is a distinct
+type that is not interchangeable.  A specialized type can be
+converted into the original type, but the reverse transformation is
+not possible.  This means that you can write functions that are more
+strictly typechecked, for example, only accepted particular types of
+file.</p></div>
+<div class="paragraph"><p><strong>Note:</strong> This feature is immature, so you will have a higher probability
+of encountering compiler bugs or limitations.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>typedef sorted_file file;
+app (sorted_file out) sort (file i) {
+  "/usr/bin/sort" "-o" out i
+}
+
+// uniq utility requires sorted input
+app (file o) unique (sorted_file i) {
+  "/usr/bin/uniq" i @stdout=o
+}
+
+file unsorted = input_file("input.txt");
+sorted_file sorted &lt;"sorted.txt"&gt; = sort(unsorted);
+file u &lt;"unique.txt"&gt; = unique(sorted);
+
+// Can convert from sorted_file to file
+file result2 = sort(unsorted);
+
+// This would cause a type error
+// sorted_file not_sorted = unsorted;</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_global_variables">10.8. Global Variables</h3>
+<div class="paragraph"><p>Variables defined at the top level of a Swift program are in
+global scope and can be used anywhere
+Swift supports a basic feature for defining globally visible constants.</p></div>
+<div class="paragraph"><p>You can use global variables to define program-wide constants: the
+single assignment semantics of Swift mean that they variables cannot
+be reassigned elsewhere in the program.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>string HELLO = "Hello World";
+float PI_APPROX = 3.142;
+int ONE = 1;
+
+trace(HELLO, PI_APPROX, ONE);</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>Note:</strong> You can also define global constants with the syntax
+          <code>global const &lt;name&gt; = &lt;value&gt;;</code>, e.g. <code>global const X = 1;</code>.
+          This syntax offers no advantages and is deprecated.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_control_structures">11. Control structures</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift provides control structures that may be placed as statements
+in Swift code.</p></div>
+<div class="sect2">
+<h3 id="_conditionals">11.1. Conditionals</h3>
+<div class="sect3">
+<h4 id="_if_statement">11.1.1. If statement</h4>
+<div class="paragraph"><p>If statements have the form:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>if (&lt;condition&gt;)
+{
+  statement;
+  ...
+}
+else
+{
+  statement;
+  ...
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>As required by dataflow processing, neither branch of the conditional can
+execute until the value of the condition expression is available.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_switch_statement">11.1.2. Switch statement</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>int a = 20;
+switch (a)
+{
+  case 1:
+    int c;
+    c = a + a;
+    b = a + 1;
+  case 20:
+    b = 1;
+  case 2000:
+    b = 2;
+  default:
+    b = 2102 + 2420;
+}
+printf("b: %i\n", b);</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>Note:</strong> there is no fall-through between cases in switch statements.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_iteration">11.2. Iteration</h3>
+<div class="paragraph"><p>Iteration is performed with the <code>foreach</code> and <code>for</code> statements.</p></div>
+<div class="sect3">
+<h4 id="_foreach_loop">11.2.1. Foreach loop</h4>
+<div class="paragraph"><p>The <code>foreach</code> loop allows for parallel iteration over an array:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>string A[];
+foreach value, index in A
+{
+  printf("A[%i] = %s\n", index, value);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>index</code> and <code>value</code> variables are automatically declared.  The
+<code>index</code> variable may be omitted from the syntax.</p></div>
+<div class="paragraph"><p>A special case of the foreach loop occurs when combined with the
+array range operator.  This is the idiomatic way to iterate over
+a range of integer values in Swift. The STC compiler has special
+handling for this case that avoids constructing an array.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>foreach i in [start:stop:step] {
+    ...
+}</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_for_loop">11.2.2. For loop</h4>
+<div class="paragraph"><p>The <code>for</code> loop allows for sequential iteration.  This example
+implements a counter based on the return values of a function that
+accepts integers:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int N = 100;
+int count = 0;
+for (int i = 0; i &lt; N; i = i+1, count = count+c)
+{
+  int c;
+  if (condition_function(i))
+  {
+    c = 1;
+  }
+  else
+  {
+    c = 0;
+  }
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>The general form is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>for ( &lt;initializer&gt; ; &lt;condition&gt; ; &lt;updates&gt; )
+{
+  statement;
+  ...
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>The initializer is executed first, once.  The initializer is a
+comma-separated list of statements.  The body statements are then
+executed.  Then, the assignments are performed, formatted as a
+comma-separated list.  Each is a special assignment in which the
+left-hand-side is the variable in the <em>next</em> iteration of the loop,
+while the right-hand-side is the variable in the <em>previous</em> loop
+iteration.  Then, the condition is checked for loop exit.  If the loop
+continues, the body is executed again, etc.</p></div>
+<div class="paragraph"><p><strong>Performance Tip:</strong> use the <code>foreach</code> loop instead of <code>for</code> if your
+loop iterations are independent and can be executed in parallel.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_explicit_data_dependent_execution">11.3. Explicit data-dependent execution</h3>
+<div class="paragraph"><p>In general, execution ordering in Swift/T is implicit and driven by
+data dependencies.  In some cases it is useful to add explicit data
+dependencies, for example if you want to print a message to indicate
+that variable was assigned.  It is possible for the programmer to
+express additional execution ordering using two constructs: the <code>wait</code>
+statement and the <code>=&gt;</code> chaining operator.</p></div>
+<div class="paragraph"><p>In a wait statement, a block of code is executed after
+one or more variables are closed.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>x = f();
+y = g();
+wait (x) {
+  trace("x is closed!");
+}
+wait(x, y) {
+  trace("x and y are closed!");
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>The chaining operator chains statements together so that a
+statement only executes after the previous statement&#8217;s output
+value is closed.  This is
+a more concise way to express dependencies than the <code>wait</code> statement.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>sleep(1) =&gt;
+  x = f() =&gt;
+  int y = g() =&gt;
+  trace("DONE!");</code></pre>
+</div></div>
+<div class="paragraph"><p>Chaining is based on the <strong>output values</strong>
+of a statement.  In the simple case of a function call <code>f() =&gt; &#8230;</code>,
+the output values are the output values of the function.  In the
+case of and assignment <code>x = f() =&gt; &#8230;</code> or a declaration,
+<code>int y = g() =&gt; &#8230;</code>, then the next statement is dependent on
+the assigned values, or the declared values.  Some functions such
+as <code>sleep</code> have <code>void</code> output values so that they can be used
+in this fashion.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_scoping_blocks">11.4. Scoping blocks</h3>
+<div class="paragraph"><p>Arbitrary scoping blocks may be used.  In this example, two different
+variables, both represented by <code>b</code>, are assigned different values.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>{
+  int b;
+  b = 1;
+}
+{
+  int b;
+  b = 2;
+}</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_operators">12. Operators</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_numeric_operators">12.1. Numeric operators</h3>
+<div class="paragraph"><p><code>&#43;</code> (plus), <code>-</code> (minus), <code>*</code> (times), <code>/</code> (divide),
+<code>%/</code> (integer divide), <code>%%</code> (modulus), <code>**</code> (power).</p></div>
+<div class="paragraph"><p><code>==</code> (equals), <code>!=</code> (not equals), <code>&gt;</code> (greater than), <code>&lt;</code> (less than),
+<code>&gt;=</code> (greater than or equal to), <code>&lt;=</code> (less than or equal to).</p></div>
+<div class="paragraph"><p><code>-</code> (negate).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_boolean_operators">12.2. Boolean operators</h3>
+<div class="paragraph"><p><code>&amp;&amp;</code> (boolean and), <code>||</code> (boolean or).</p></div>
+<div class="paragraph"><p><code>xor()</code> is a builtin function.</p></div>
+<div class="paragraph"><p>Swift boolean operators are not short-circuited (to allow maximal
+concurrency).  For conditional execution, use an <code>if</code> statement.</p></div>
+<div class="paragraph"><p>The following unary operators are defined:</p></div>
+<div class="paragraph"><p><code>!</code> (boolean not).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_string_operators">12.3. String operators</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+String concatenation is also performed with <code>&#43;</code> (plus).
+</p>
+</li>
+<li>
+<p>
+<code>==</code> and <code>!=</code> may also be used on strings.
+</p>
+</li>
+<li>
+<p>
+Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.
+</p>
+</li>
+<li>
+<p>
+The Python-style string format operator <code>format%(arg1,arg2,&#8230;)</code> is
+  equivalent to <code>sprintf(format, arg1, arg2,&#8230;)</code>.  The parentheses
+  may be omitted for single arguments.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_standard_library">13. Standard library</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Each category of function is shown with the required import
+statement, if necessary.</p></div>
+<div class="paragraph"><p>Functions that accept an input of any type are denoted <code>anything</code>.
+Functions that accept variable numbers of arguments (including zero)
+are denoted with ellipsis (<code>.<code>.</code>.</code>).</p></div>
+<div class="paragraph"><p>A function that accepts more than one type is denoted as <code>f(int|string)</code>.</p></div>
+<div class="paragraph"><p>If a function is described below an <strong>Import:</strong> label, be sure to
+<code>import</code> that package.</p></div>
+<div class="sect2">
+<h3 id="_general">13.1. General</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>xor(boolean,boolean) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Exclusive logical or
+</p>
+</dd>
+<dt class="hdlist1">
+<code>propagate(int|float|string|boolean|void|file&#8230;) &#8594; void</code>
+</dt>
+<dd>
+<p>
+Create a void value.<br />
+(<code>make_void()</code> and <code>makeVoid()</code> are deprecated
+aliases for this function.)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>size(A[]) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain the size of array <code>A</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>contains(A[], key) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Test that future <code>A[key]</code> exists.
+This function blocks until <code>A</code> is closed.  Consumers of <code>A[key]</code> may
+block again until <code>A[key]</code> is stored.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_type_conversion">13.2. Type conversion</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>fromint(int)     &#8594; string</code>
+</dt>
+<dd>
+<p>
+Convert integer to string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>toint(string)    &#8594; int</code>
+</dt>
+<dd>
+<p>
+Convert string to integer
+</p>
+</dd>
+<dt class="hdlist1">
+<code>fromfloat(float) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Convert float to string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>tofloat(string)  &#8594; float</code>
+</dt>
+<dd>
+<p>
+Convert string to float
+</p>
+</dd>
+<dt class="hdlist1">
+<code>itof(int)        &#8594; float</code>
+</dt>
+<dd>
+<p>
+Convert integer to float
+</p>
+</dd>
+<dt class="hdlist1">
+<code>repr(*)          &#8594; string</code>
+</dt>
+<dd>
+<p>
+Convert any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>array_repr(*[])  &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Convert array of any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_output">13.3. Output</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>trace(anything, anything, &#8230;)</code>
+</dt>
+<dd>
+<p>
+Report the value of any variable
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>io</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>printf(string format, int|float|string|boolean&#8230;)</code>
+</dt>
+<dd>
+<p>
+As <code>printf()</code> in C
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_string_functions">13.4. String functions</h3>
+<div class="paragraph"><p><code>strcat(string,string)</code>: Concatenation</p></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>string</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>substring(string s, int start, int end) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain substring of given string <code>s</code> starting from character <code>start</code>
+to character <code>end</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>find(string s, string substring, int start_index, int end_index) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Find the index of the first occurence of the string <code>substring</code> within
+the string <code>s</code> between the indices <code>start_index</code> and <code>end_index</code>. Here
+an index of <code>-1</code> passed to <code>end_index</code> results in <code>end_index</code> being
+treated as the length of the string <code>s</code>. <code>find</code> returns <code>-1</code> in case
+there is no occurence of <code>substring</code> in <code>s</code> in the specified range.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string_count(string s, string substring, int start_index, int end_index) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Counts the occurences of the string <code>substring</code> within the string <code>s</code>
+between the indices <code>start_index</code> and <code>end_index</code>. Here an index of
+<code>-1</code> passed to <code>end_index</code> results in <code>end_index</code> being treated as the
+length of the string <code>s</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>is_int(string s) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Returns true if string <code>s</code> is a number, else false.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>replace(string s, string substring, string rep_string, int start_index) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain the string created by replacing the first occurence of the
+string <code>substring</code> within string <code>s</code>, after the index <code>start_index</code>,
+with the string <code>rep_string</code>. In case there is no such occurence of
+the string <code>substring</code> in string <code>s</code>, the original string <code>s</code> is
+returned unmodified.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>replace_all(string s, string substring, string rep_string, int start_index) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain the string created by replacing all the occurences of the
+string <code>substring</code> within string <code>s</code>, after the index <code>start_index</code>,
+with the string <code>rep_string</code>. In case no such occurence of <code>substring</code>
+exists in <code>s</code>, the original string <code>s</code> is returned unmodified.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>split(string s, string delimiter) &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Tokenize string <code>s</code> with given delimiter
+</p>
+</dd>
+<dt class="hdlist1">
+<code>trim(string s) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Remove leading and trailing whitespace from <code>s</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>strlen(string) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain the length of the given string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hash(string) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Hash the string to a 32-bit integer
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sprintf(string format, int|float|string|boolean&#8230;)</code>
+</dt>
+<dd>
+<p>
+As <code>sprintf()</code> in C
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string_join(string A[], string separator) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Join strings in <code>A</code> with given separator.  The separator may be the
+empty string
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_math">13.5. Math</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>max|min_integer(int,int) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain maximum or minimum integer,
+respectively
+</p>
+</dd>
+<dt class="hdlist1">
+<code>max|min_float(float,float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Obtain maximum or minimum float,
+respectively
+</p>
+</dd>
+<dt class="hdlist1">
+<code>pow_integer(int b,int x)</code>
+</dt>
+<dd>
+<p>
+Obtain b<sup>x</sup>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>pow_float(float b,float x)</code>
+</dt>
+<dd>
+<p>
+Obtain b<sup>x</sup>
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>math</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>floor(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Round down
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ceil(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Round up
+</p>
+</dd>
+<dt class="hdlist1">
+<code>round(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Round nearest
+</p>
+</dd>
+<dt class="hdlist1">
+<code>log(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Natural logarithm
+</p>
+</dd>
+<dt class="hdlist1">
+<code>exp(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Natural exponentiation: e<sup>i</sup>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sqrt(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Square root
+</p>
+</dd>
+<dt class="hdlist1">
+<code>is_nan(float) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Check for NaN
+</p>
+</dd>
+<dt class="hdlist1">
+<code>abs_integer(int) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Absolute value
+</p>
+</dd>
+<dt class="hdlist1">
+<code>abs_float(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Absolute value
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>random</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>random() &#8594; float</code>
+</dt>
+<dd>
+<p>
+Obtain random number
+</p>
+</dd>
+<dt class="hdlist1">
+<code>randint(int start, int end)</code>
+</dt>
+<dd>
+<p>
+Obtain random integer from <code>start</code>, inclusive, to <code>end</code>, exclusive
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Import:</strong> stats</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>sum_integer(int[]) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Sum
+</p>
+</dd>
+<dt class="hdlist1">
+<code>avg(int|float[]) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Average
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_system">13.6. System</h3>
+<div class="paragraph"><p><strong>Import:</strong> <code>sys</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>getenv(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain an environment variable
+</p>
+</dd>
+</dl></div>
+<div class="sect3">
+<h4 id="argv">13.6.1. Command line</h4>
+<div class="paragraph"><p>Consider this command line:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>turbine -l -n 3 program.tcl -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt</code></pre>
+</div></div>
+<div class="paragraph"><p>The arguments to <code>program.tcl</code> are just the tokens after <code>program.tcl</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>args() &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain all arguments as single string
+</p>
+<div class="paragraph"><p>E.g., <code>"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"</code></p></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The remaining functions are convenience functions oriented around
+Swift conventions.  Under these conventions, the example command above
+has <em>flagged</em> arguments <code>v</code>, <code>a=file.txt</code>, <code>exec="prog thing1
+thing2"</code>, and <code>help</code>. The command has <em>unflagged</em> arguments
+<code>file2.txt</code> and <code>file4.txt</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>argc()</code>
+</dt>
+<dd>
+<p>
+Get count of unflagged arguments
+</p>
+</dd>
+<dt class="hdlist1">
+<code>argv(string, [default])</code>
+</dt>
+<dd>
+<p>
+<em>(argument-value)</em>
+Given a string, returns the flagged argument with that key:
+</p>
+<div class="paragraph"><p><code>argv("a") &#8594; file1.txt</code></p></div>
+<div class="paragraph"><p>In addition to regular run-time arguments, the STC <em>compile-time
+arguments</em> feature allows <code>argv()</code> arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the <code>-A
+<em>name</em>=<em>value</em></code> <a href="#stc_arguments">argument</a> to <code>stc</code>.  Note that if the
+argument is re-specified at run-time, an error will occur.</p></div>
+<div class="paragraph"><p>If argument <code>a</code> is not provided, the <code>default</code> value is used.  So:</p></div>
+<div class="paragraph"><p><code>argv("b", "f0.txt") &#8594; "f0.txt"</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>argp(int)</code>
+</dt>
+<dd>
+<p>
+<em>(argument-positional)</em>
+Given an integer, returns the unflagged argument at that index:
+</p>
+<div class="paragraph"><p><code>argp(2) &#8594; file4.txt</code></p></div>
+<div class="paragraph"><p>Given 0, returns the program name,</p></div>
+<div class="paragraph"><p><code>argp(0) &#8594; /path/to/program.tcl</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>argv_accept(string&#8230;)</code>
+</dt>
+<dd>
+<p>
+If program is given flagged command line arguments not contained in given
+list, abort.
+E.g., <code>argv_accept("x")</code> would cause program failure at run time
+</p>
+</dd>
+<dt class="hdlist1">
+<code>argv_contains(string) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Test if the command line contains the given flagged argument:
+</p>
+<div class="paragraph"><p><code>argv_contains("v") &#8594; true</code></p></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_debugging">13.6.2. Debugging</h4>
+<div class="paragraph"><p><strong>Import:</strong> <code>assert</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>assert(boolean condition, string message)</code>
+</dt>
+<dd>
+<p>
+If condition is false, report <code>message</code> and exit immediately.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="Turbine_information">13.6.3. Turbine information</h4>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>adlb_servers()    &#8594; int</code>
+</dt>
+<dd>
+<p>
+Number of ADLB servers
+</p>
+</dd>
+<dt class="hdlist1">
+<code>turbine_workers() &#8594; int</code>
+</dt>
+<dd>
+<p>
+Number of Turbine workers
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_files_2">13.7. Files</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>filename(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain the name of a file
+</p>
+</dd>
+<dt class="hdlist1">
+<code>input(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Obtain a <code>file</code>.  At run time, the
+filesystem is checked for the given file name
+</p>
+</dd>
+<dt class="hdlist1">
+<code>input_file(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Alias for <code>input()</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>input_url(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Obtain a <code>file</code>.  Some
+automatic operations and optimizations are disabled
+</p>
+</dd>
+<dt class="hdlist1">
+<code>urlname(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain the name of a file created with
+<code>input_url()</code>
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>files</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>read(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Read file as a string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>write(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Write string to file
+</p>
+</dd>
+<dt class="hdlist1">
+<code>glob(string) &#8594; file[]</code>
+</dt>
+<dd>
+<p>
+Perform glob operation, returning files
+that match.  Available glob symbols include:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>*</code>: any character sequence (including the zero-length sequence)
+</p>
+</li>
+<li>
+<p>
+<code>?</code>: any character
+</p>
+</li>
+<li>
+<p>
+<code>[chars]</code>: any of the given characters
+</p>
+</li>
+<li>
+<p>
+<code>\x</code>: character <code>x</code>
+</p>
+</li>
+<li>
+<p>
+<code>{a,b,c,&#8230;}</code> any of <code>a</code>, <code>b</code>, <code>c</code>, etc.
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+<code>file_exists(string) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Attempt to find a file with the given name in the filesystem: return
+<code>true</code> if found, else <code>false</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>file_lines(file) &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Reads the whole file, returning each line as a separate entry in the
+output array.  Comments with <code>#</code> are excised, leading and trailing
+whitespace is trimmed, and blank lines are omitted.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>file_mtime(string) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Attempt to find a file with the given name in the filesystem: return
+its POSIX modification time in seconds since the Unix epoch.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>file_type(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Returns a string giving the type of file, which will be one of
+<code>"file"</code>, <code>"directory"</code>, <code>"characterSpecial"</code>, <code>"blockSpecial"</code>,
+<code>"fifo"</code>, <code>"link"</code>, or <code>"socket"</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_blobs_2">13.8. Blobs</h3>
+<div class="paragraph"><p><strong>Import:</strong> <code>blob</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>blob_size(blob) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain the size of a blob in bytes.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_null() &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Obtain an empty blob of size 0.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_string(string) &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Convert a string into a blob.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string_from_blob(blob) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Convert a blob into a string.  If
+the blob is not NULL-terminated, this function appends the
+NULL-terminator.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_floats(float[]) &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Convert an array of Swift floats
+(implemented as doubles) to blob containing the C-formatted array of
+doubles .
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_floats(blob) &#8594; float[]</code>
+</dt>
+<dd>
+<p>
+Convert blob containing the
+C-formatted array of doubles to an array of Swift floats
+(implemented as doubles).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_ints(int i[]) &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Convert blob containing the
+C-formatted array of ints to an array of Swift ints (implemented
+as 64-bit integers).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_file(file) &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Reads whole file, returning it as a
+blob.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="library_location">13.9. Location</h3>
+<div class="paragraph"><p>See the section about <a href="#location">location</a>.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>locationFromRank(int) &#8594; location</code>
+</dt>
+<dd>
+<p>
+Convert the rank integer to a
+<code>location</code> variable compatible with <code>@location</code> with <code>HARD</code>, <code>RANK</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>randomWorker() &#8594; location</code>
+</dt>
+<dd>
+<p>
+Obtain a worker at random with <code>HARD</code>,
+<code>RANK</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>randomWorkerRank() &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain a random worker rank.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hostmapList() &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Obtain the whole hostmap as an array
+with integer keys and string hostname values.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hostmapOne(string) &#8594; location</code>
+</dt>
+<dd>
+<p>
+Lookup the string as a host in the
+hostmap and return one rank running on that host with <code>HARD</code>, <code>RANK</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hostmapOneWorkerRank(string) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Lookup the string as a host
+in the hostmap and return one of the worker ranks running on that host.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="leaf_functions">14. Defining leaf functions</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>In typical Swift applications, the computationally intensive parts of
+the application are not written in the Swift language.  Rather, the
+work is done by <em>leaf functions</em> that are <em>composed</em> together with
+Swift code.  Leaf functions may be extension or app functions.</p></div>
+<div class="paragraph"><p>The Swift runtime, Turbine, is built on Tcl, a language which intends
+to makes it easy to call C/C++/Fortran functions.  The builtin
+functions mentioned above are implemented as extension functions in
+Tcl, which may wrap C/C++/Fortran functions.</p></div>
+<div class="sect2">
+<h3 id="swift_extension_functions">14.1. Swift extension functions</h3>
+<div class="paragraph"><p>Currently we support Tcl extension functions, where a function is
+implemented as a Tcl function.  Tcl has good support for wrapping
+native C/C++ functions, so this provides an indirect way to call
+C/C++ functions from Swift.</p></div>
+<div class="paragraph"><p>Several components are required to implement a Swift native code function:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Tcl bindings to your function.
+</p>
+</li>
+<li>
+<p>
+The requisite files required to build a Tcl package
+   (e.g <code>pkgIndex.tcl</code>)
+</p>
+</li>
+<li>
+<p>
+Swift declarations for the function that specify the type of the
+   function and the Tcl implementation.
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_simple_tcl_fragment_example">14.1.1. Simple Tcl fragment example</h4>
+<div class="paragraph"><p>In this example, the Swift program will simply use Tcl to output a
+string:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>() my_output (string s) "turbine" "0.0" [
+  "puts &lt;&lt;s&gt;&gt;"
+];
+
+my_output("HELLO");</code></pre>
+</div></div>
+<div class="paragraph"><p><code>puts</code> is the Tcl builtin for screen output, like <code>puts()</code> in C.</p></div>
+<div class="paragraph"><p>The above definition has, from left to right, the output arguments
+(none), the name of the new Swift function, input arguments, the name
+of the Tcl package containing the file (here, none, so we use
+<code>turbine</code>), and the minimum version of that package (here, 0.0).</p></div>
+<div class="paragraph"><p>We tell the compiler how to call our Tcl function using inline
+Tcl code as a template with variable names surrounded by <code>&lt;&lt; &gt;&gt;</code>
+indicating where variables should be substituted.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_simple_tcl_package_example">14.1.2. Simple Tcl package example</h4>
+<div class="paragraph"><p>In this first example we will implement a trivial Tcl extension function
+that doubles an integer.  Here is the Tcl code that will go in
+<code>myextension.tcl</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>namespace eval myextension {
+  proc double { x } {
+    return [ expr $x * 2 ]
+  }
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Here is the Swift function definition that will go in <code>myextension.swift</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>@pure
+(int o) double (int i) "myextension" "0.0.1" [
+  "set &lt;&lt;o&gt;&gt; [ myextension::double &lt;&lt;i&gt;&gt; ]"
+];</code></pre>
+</div></div>
+<div class="paragraph"><p>We can also tell the Swift compiler a little about the function so
+that it can better optimize your programs.  For example, <code>double</code> has
+no side-effects and produces the same result each time for the same
+arguments (i.e. is deterministic), so we can annotate it as a <code>@pure</code>
+function.</p></div>
+<div class="paragraph"><p>If your function has a long running time and should be dispatched to a
+worker process for execution, then you need to label the function as a
+worker function, for example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set &lt;&lt;o&gt;&gt; [ pkg::process &lt;&lt;i&gt;&gt; ]"
+];</code></pre>
+</div></div>
+<div class="paragraph"><p>Tcl code is conventionally placed into <em>packages</em>.  In this example,
+<code>myextension.tcl</code> would be part of the package.</p></div>
+<div class="paragraph"><p>More information about building Tcl packages may be found
+<a href="http://www.tcl.tk/man/tcl8.5/TclCmd/pkgMkIndex.htm">here</a>.  Ultimately,
+you produce a <code>pkgIndex.tcl</code> file that contains necessary information
+about the package.</p></div>
+<div class="paragraph"><p>To ensure that Swift can find your package, use</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc -r &lt;package directory&gt; ...</code></pre>
+</div></div>
+<div class="paragraph"><p>or set <code>SWIFT_PATH</code> at run time.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>Tip:</strong> advanced users can also create <a href="#mkstatic">standalone executables</a>
+     with compiled code and Tcl code for the extension directly linked in.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_swift_tcl_data_type_mapping">14.1.3. Swift/Tcl data type mapping</h4>
+<div class="paragraph"><p>If you are defining Tcl functions in the way above with inline
+Tcl code, Swift types are mapped to Tcl types in the following way:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>int</code>/<code>float</code>/<code>string</code>/<code>bool</code> are converted to the standard
+  Tcl representations.
+</p>
+</li>
+<li>
+<p>
+blobs are represented as a Tcl list with first element a pointer
+  to the data, the second element the length of the data, and if
+  the blob was loaded from the ADLB data store, a third element
+  which is the ADLB ID of the blob.
+</p>
+</li>
+<li>
+<p>
+files are represented as a list, with the first element the
+  file path, and the second element a reference count
+</p>
+</li>
+<li>
+<p>
+arrays are represented by Tcl dictionaries with keys and values
+  represented according to their type.
+</p>
+</li>
+<li>
+<p>
+bags are represented by Tcl lists with elements in an arbitrary
+  order.
+</p>
+</li>
+<li>
+<p>
+output voids are set automatically.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_calling_native_libraries_from_swift">14.1.4. Calling native libraries from Swift</h4>
+<div class="paragraph"><p>The first step is to test that you can successfully call your
+C/C++/Fortran function from a test Tcl script.  If so, you will then
+be able to use the Swift&#8594;Tcl techniques to call it from Swift.</p></div>
+<div class="paragraph"><p>A popular tool to automate Tcl&#8594;C bindings is
+<a href="http://www.swig.org">SWIG</a>, which will wrap your C/C++ functions and
+help you produce a Tcl package suitable for use by Swift.</p></div>
+<div class="paragraph"><p>To call Fortran functions, first wrap your code with
+<a href="http://fortwrap.sourceforge.net">FortWrap</a>.  Then, use SWIG to produce
+Tcl bindings.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_writing_custom_tcl_interfaces">14.1.5. Writing custom Tcl interfaces</h4>
+<div class="paragraph"><p>It is possible to write a Tcl wrapper function that is
+directly passed references to data in Swift&#8217;s global data store.  In
+this case your function must manually retrieve/store data from/to the
+global distributed data store.  In this case, you do not use the STC
+Tcl argument substitution syntax (<code>&lt;&lt;<code>i</code>&gt;&gt;</code>).</p></div>
+<div class="paragraph"><p>Consider this custom Swift&#8594;Tcl binding:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>(int o) complex_function (int arr[]) "pkg" "0.0.1" "complex";</code></pre>
+</div></div>
+<div class="paragraph"><p>This function jumps into Tcl function <code>complex</code>, which must
+perform its own data dependency management.</p></div>
+<div class="paragraph"><p>See the <a href="leaf.html">Swift/T Leaf Function Guide</a> for more
+information about this process.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_dispatch_and_work_types">14.2. Dispatch and work types</h3>
+<div class="paragraph"><p>Each worker in Swift/T is devoted to executing a single type of work.
+There is a default work type that encompasses Swift/T script logic and
+CPU tasks.</p></div>
+<div class="paragraph"><p>There are two subtypes of the default work type that are treated
+differently by the Swift/T optimizer.  <code>CONTROL</code>, the default,
+is intended for functions that run for a short duration, for example
+builtin functions such as <code>strcat()</code>, arithmetic.
+<code>WORKER</code>, the second subtype,
+is intended for functions that perform more computation and I/O,
+which may keep a worker busy for a while.  Swift/T may bundle
+together multiple <code>CONTROL</code> tasks to reduce overhead, but will
+keep <code>WORKER</code> tasks separate to increase parallelism.</p></div>
+<div class="paragraph"><p>The work type is specified with a <code>@dispatch</code> annotation above
+leaf function definitions.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set &lt;&lt;o&gt;&gt; [ pkg::process &lt;&lt;i&gt;&gt; ]"
+];</code></pre>
+</div></div>
+<div class="paragraph"><p>Alternative work-types include custom user-defined work types,
+along with tasks for external executors such as Coasters or GeMTC
+for remote command-line and GPU tasks respectively.
+It is also possible to define custom types of CPU leaf functions.</p></div>
+<div class="sect3">
+<h4 id="_custom_work_types">14.2.1. Custom work types</h4>
+<div class="paragraph"><p>For some applications, it is useful to be able to divide up
+CPU workers into multiple categories that execute different
+kinds of work.  For these scenarios, Swift/T provides the
+ability to define custom work types.</p></div>
+<div class="paragraph"><p>This sample program illustrates how to define a custom work
+type <code>foo_work</code> and define a function, <code>hello1</code>, which executes
+on a <code>foo_work</code> worker.  For comparison, we also include <code>hello2</code>,
+which uses the default work type.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>pragma worktypedef foo_work;
+
+@dispatch=foo_work
+hello1 (string name) "turbine" "0.0" [
+  "puts [ format {Hello %s} &lt;&lt;msg&gt;&gt; ]"
+];
+
+hello2 (string name) "turbine" "0.0" [
+  "puts [ format {Hello %s} &lt;&lt;msg&gt;&gt; ]"
+]
+
+// Hello Foo will be printed on a foo_work worker
+hello1("Foo");
+
+// Hello Bar will be printed on a regular worker
+hello2("Bar");</code></pre>
+</div></div>
+<div class="paragraph"><p>In order to run the above script, we need to ensure that
+a worker is allocated to execute <code>foo_work</code> tasks.  This is
+achieved by setting the environment variable <code>TURBINE_FOO_WORK_WORKERS</code>
+to the desired number of workers.  The Swift/T workers are then divided
+between default workers and <code>foo_work</code> workers.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="app_functions">14.3. App functions</h3>
+<div class="paragraph"><p>App functions are functions that are implemented as command-line
+programs.  These command-line programs can be brought into a Swift
+program as functions with typed inputs and outputs.
+An app function definition comprises:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The standard components of a Swift function declaration: input and
+    output arguments and the function name.  Note that the output
+    variable types are restricted to individual <code>file</code>s.
+</p>
+</li>
+<li>
+<p>
+The command line, which comprises an initial string which is the
+    executable to run, and then a series of arguments which are
+    the command-line arguments to pass to the program.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>App arguments can be:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Literals such as numbers or strings.
+</p>
+</li>
+<li>
+<p>
+File variables (passed as file paths).
+</p>
+</li>
+<li>
+<p>
+Other variables, which are converted to string arguments.
+    Arrays (including multi-dimensional arrays) are expanded to
+    multiple arguments.
+</p>
+</li>
+<li>
+<p>
+Arbitrary expressions surrounded by parentheses.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Standard input, output and error can be redirected to files via
+<code>@stdin=</code>, <code>@stdout=</code>, and <code>@stderr=</code> expressions.  If used, these should point
+to a <code>file</code>.</p></div>
+<div class="paragraph"><p>Here is an example of an app function that joins multiple files
+with the <code>cat</code> utility:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import files;
+
+app (file out) cat (file inputs[]) {
+  "/bin/cat" inputs @stdout=out
+}
+
+file joined &lt;"joined.txt"&gt; = cat(glob("*.txt"));</code></pre>
+</div></div>
+<div class="paragraph"><p>Here is an example of an app function that sleeps for an arbitrary
+amount of time:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>app (void signal) sleep (int secs) {
+  "/bin/sleep" secs
+}
+
+foreach time in [1:5] {
+  void signal = sleep(time);
+  // Wait on output signal so that trace occurs after sleep
+  wait(signal) {
+    trace("Slept " + fromint(time));
+  }
+}</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_remote_job_execution_with_coasters">14.4. Remote job execution with Coasters</h3>
+<div class="paragraph"><p><strong>Note:</strong> Swift/T and Coasters integration is a work in progress
+and is currently best suited for advanced users.
+Planned future changes will make it easier to install and use.</p></div>
+<div class="paragraph"><p>Swift/T supports execution of command-line <code>app</code> functions on
+a wide range of clusters, clouds, and grids with the
+Coaster executor.  In order for an app function to be executed
+through coasters, the annotation <code>@dispatch=COASTER</code> must be
+added to the app function definition:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>@dispatch=COASTER
+app (file out) echo (string args[]) {
+  "echo" args @stdout=out
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Running a Swift/T script with Coasters function requires
+a few steps to set up all components:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Before starting, you must have Swift/T compiled with Coaster
+  support, and the coaster service from Swift/K installed.
+</p>
+</li>
+<li>
+<p>
+Before running your Swift/T script, start a Coaster service
+  from the shell, for example:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export WORKER_MODE=local
+export IPADDR=127.0.0.1
+export SERVICE_PORT=53363
+export JOBSPERNODE=4
+export LOGDIR=/home/user/swift-logs
+export WORKER_LOG_DIR=/home/user/swift-logs
+
+coaster-service -nosec -port ${SERVICE_PORT}</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Coaster configuration must be set in the the TURBINE_COASTER_CONFIG
+  environment variable, for example:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_COASTER_CONFIG="jobManager=local,maxParallelTasks=4,coasterServiceURL=${IPADDR}:${SERVICE_PORT}"</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Once the Coaster service is running and TURBINE_COASTER_CONFIG is set,
+  you can run your Swift/T program in the normal way, and any coaster app
+  tasks will be dispatched to the Coaster service for execution.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Configuration keys include:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>coasterServiceURL</code>
+</dt>
+<dd>
+<p>
+the url of the coaster service to submit tasks through,
+      e.g. <code>localhost:63001</code>.  Default is <code>127.0.0.1:53001</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>jobManager</code>
+</dt>
+<dd>
+<p>
+the Coaster job manager the service should use to submit tasks.
+      E.g. to execute jobs locally, the job manager can be set to <code>local</code>
+      and to execute jobs on resources managed through a batch scheduler such
+      as PBS or Slurm, the job manager should be set to <code>pbs</code>, <code>slurm</code>, or
+      the appropriate scheduler.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>maxParallelTasks</code>
+</dt>
+<dd>
+<p>
+the maximum number of concurrent tasks per Coaster
+      worker.  Default is 256.
+</p>
+</dd>
+<dt class="hdlist1">
+Other settings
+</dt>
+<dd>
+<p>
+additional configuration keys are passed through to the
+      Coaster service.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>For more information on configuring and using Coasters, please refer
+to the <a href="http://swift-lang.org/docs/">Swift/K documentation</a>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_custom_app_executors_advanced">14.5. Custom App Executors (Advanced)</h3>
+<div class="paragraph"><p>It is possible to extend Swift/T with additional app executors.
+To implement an executor, you need to write C code implementing the
+<code>turbine_executor</code> interface (defined in <code>turbine/executors/exec_interface.h</code>).
+Your <code>turbine_executor</code> implementation is registered at runtime by calling the
+<code>turbine_add_async_exec</code> function.  The details of the interface
+are documented in <code>exec_interface.h</code>.</p></div>
+<div class="paragraph"><p>You also need to register the
+executor with Swift by adding a <code>appexecdef</code> statement in your
+Swift source code, typically in a module that is imported to enable your
+executor.  The <code>appexecdef</code> statement provides a Tcl template that is
+used to start jobs in your executor.  You must implement this Tcl function
+as part of implementing the executor.  For example, the coaster executor is
+defined as follows:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>pragma appexecdef COASTER "turbine" "0.8.0"
+    "turbine::async_exec_coaster &lt;&lt;cmd&gt;&gt; &lt;&lt;args&gt;&gt; &lt;&lt;stage_in&gt;&gt; &lt;&lt;stage_out&gt;&gt; &lt;&lt;props&gt;&gt; &lt;&lt;success&gt;&gt; &lt;&lt;failure&gt;&gt;";</code></pre>
+</div></div>
+<div class="paragraph"><p>The arguments are:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>cmd</code>
+</dt>
+<dd>
+<p>
+a string with the executable to run
+</p>
+</dd>
+<dt class="hdlist1">
+<code>args</code>
+</dt>
+<dd>
+<p>
+a list of command-line arguments to pass to the executable
+</p>
+</dd>
+<dt class="hdlist1">
+<code>stage_in</code>
+</dt>
+<dd>
+<p>
+a list of files to stage in (currently unused)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>stage_out</code>
+</dt>
+<dd>
+<p>
+a list of files to stage out (currently unused)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>props</code>
+</dt>
+<dd>
+<p>
+a Tcl dictionary of properties to pass to the executor.
+          This includes <code>stdin</code>, <code>stdout</code>, <code>stderr</code> for input/output
+          redirects and any executor-specific options.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>success</code>/<code>failure</code>
+</dt>
+<dd>
+<p>
+Tcl code that is executed on success or failure.
+          Your executor implementation only needs to save these values
+          and return them once the app completes (this is documented
+          in <code>exec_interface.h</code>).
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_external_scripting_support">14.6. External scripting support</h3>
+<div class="sect3">
+<h4 id="_calling_python">14.6.1. Calling Python</h4>
+<div class="paragraph"><p>You can evaluate arbitrary Python code from within Swift/T.  For
+example, you can perform processing with a Python library.
+Once you have that working, you can use Swift/T to coordinate
+concurrent calls to that library.</p></div>
+<div class="paragraph"><p>Consider the following Swift script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+import python;
+
+i = python("print(\"python works\")\nrepr(2+2)");
+printf("i: %s", i);</code></pre>
+</div></div>
+<div class="paragraph"><p>This simply evaluates the Python code line by line. The last line must
+return a Python string to Swift, in this case, the Python string
+<code>&#39;4&#39;</code>.  The expected output is shown below:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>python works
+i: 4</code></pre>
+</div></div>
+<div class="paragraph"><p>Swift multi-line strings may be used to enter more complex Python code
+without the explicit use of <code>\n</code>.</p></div>
+<div class="paragraph"><p>Additionally, you can call Python libraries such as
+<a href="http://www.numpy.org">Numpy</a> if available on your system.  The
+following code adds matrices <em>I</em><sub>3</sub> + <em>I</em><sub>3</sub> using Numpy arrays.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+import python;
+import string;
+
+global const string numpy = "from numpy import *\n\n";
+
+typedef matrix string;
+
+(matrix A) eye(int n)
+{
+  string command = sprintf("repr(eye(%i))", n);
+  string code = numpy+command;
+  matrix t = python(code);
+  A = replace_all(t, "\n", "", 0);
+}
+
+(matrix R) add(matrix A1, matrix A2)
+{
+  string command = sprintf("repr(%s+%s)", A1, A2);
+  string code = numpy+command;
+  matrix t = python(code);
+  R = replace_all(t, "\n", "", 0);
+}
+
+matrix A1 = eye(3);
+matrix A2 = eye(3);
+matrix sum = add(A1, A2);
+printf("2*eye(3)=%s", sum);</code></pre>
+</div></div>
+<div class="paragraph"><p>An Python script template is created that imports Numpy and performs
+some simple calculations.  This code is represented in a Swift string.
+The template is filled in by the Swift call to <code>sprintf()</code>.  Then, the
+code is passed to Python for evaluation.  The output is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>2*eye(3)=array([[ 2.,  0.,  0.],
+                [ 0.,  2.,  0.],
+                [ 0.,  0.,  2.]])</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">To use this, Turbine must be configured with Python enabled
+ before compiling, by setting <code>ENABLE_PYTHON=1</code>
+ in <code>exm-settings.sh</code>, or by providing the <code>--enable-python</code> argument
+ to <code>configure</code>.  This feature is implemented by linking to Python
+ as a shared library, enabling better performance than calling the
+ <code>python</code> program (which may be done by using a normal Swift
+ <a href="#app_functions">app function</a>).  Error messages for minor coding
+ mistakes may be badly mangled and refer to missing Python symbols-
+ refer to the first error in the Python stack trace.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_calling_r">14.6.2. Calling R</h4>
+<div class="paragraph"><p>Consider the following Swift script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+import string;
+import R;
+
+global const string template =
+"""
+  x &lt;- %i
+  a &lt;- x+100
+  cat("the answer is: ", a, "\\n")
+  a
+""";
+
+code = sprintf(template, 4);
+s = R(code);
+printf("the answer was: %i", s);</code></pre>
+</div></div>
+<div class="paragraph"><p>An <a href="http://www.r-project.org">R language</a> script template is placed in a
+Swift string.  The template is filled in with the value 4 by the Swift
+call to <code>sprintf()</code> (note the <code>%i</code> conversion specifier).  Then, the
+code is passed to R for evaluation.  The output is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>the answer is:  104
+the answer was: 104</code></pre>
+</div></div>
+<div class="paragraph"><p>As coded here, both R and Swift report the value of <code>a</code>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">To use this, Turbine must be configured with R enabled
+ before compiling, by setting <code>ENABLE_R=1</code>
+ in <code>exm-settings.sh</code>, or by providing the <code>--enable-r</code> argument
+ to <code>configure</code>.  This feature is implemented by linking to R as a shared
+ library, enabling better performance than calling the <code>R</code> program
+ (which may be done by using a normal Swift <a href="#app_functions">app  function</a>).  When installing R, be sure to include the <code>devel</code>
+ package.  When installing R from source, configure with
+ <code>--enable-R-shlib</code>. You may need to set the environment variable
+ <code>R_HOME</code> to the directory containing the R installation.  For the APT
+ package, this is <code>/usr/lib/R</code>.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="julia">14.6.3. Calling Julia</h4>
+<div class="paragraph"><p>Consider the following Swift script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+import julia;
+import string;
+import sys;
+
+start = clock();
+f =
+"""
+begin
+ f(x) = begin
+          sleep(1)
+          x+1
+        end
+ f(%s)
+end
+""";
+s1 = julia(sprintf(f, 1));
+s2 = julia(sprintf(f, 2));
+s3 = julia(sprintf(f, 3));
+printf("julia results: %s %s %s", s1, s2, s3);
+wait (s1, s2, s3) {
+  printf("duration: %0.2f", clock()-start);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>In this example, a <a href="http://julialang.org">Julia</a> script is placed in
+string <code>f</code>.  It is parameterized three times by <code>sprintf()</code>.  Each
+Julia invocation runs concurrently (if enough processes are provided
+to Swift/T).</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">To use this, Turbine must be configured with Julia enabled
+ before compiling, by  providing the <code>--enable-julia</code> argument
+ to <code>configure</code>.  This feature is implemented by linking to Julia
+ as a shared library, enabling better performance than calling the
+ <code>julia</code> program (which may be done by using a normal Swift
+ <a href="#app_functions">app function</a>).</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_more_about_functions">15. More about functions</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>In this section we discuss more advanced features for defining and
+calling functions.</p></div>
+<div class="sect2">
+<h3 id="annotations">15.1. Function call annotations</h3>
+<div class="paragraph"><p>Swift/T supports many annotations to influence the behavior of function
+calls.</p></div>
+<div class="sect3">
+<h4 id="_priority">15.1.1. Priority</h4>
+<div class="paragraph"><p>Leaf tasks resulting from Swift dataflow may be prioritized by using
+the <code>@prio</code> annotation:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>foreach i in [0:n-1] {
+  @prio=i f(i);         // or
+  int j = @prio=i f(i);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>In this case, <code>f()</code> will operate on higher values of <code>i</code> first.
+Priority is best-effort; it is local to the ADLB server.  The values
+of <code>i</code> may be any Swift integer.</p></div>
+<div class="paragraph"><p>This annotation is applied to the leaf task call.</p></div>
+</div>
+<div class="sect3">
+<h4 id="location">15.1.2. Location</h4>
+<div class="paragraph"><p>Leaf tasks resulting from Swift dataflow may be assigned to a given
+processing location by using the <code>@location</code> annotation:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>foreach i in [0:n-1] {
+  location L = locationFromRank(i);
+  @location=L f(i);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>In this case, each <code>f(i)</code> will execute on a different worker.
+This annotation is applied to the leaf task call.</p></div>
+<div class="paragraph"><p>The <code>location</code> type may constructed by the <code>location()</code> builtin, which
+has the signature:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>location L = location(rank, HARD|SOFT, RANK|NODE);</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>rank</code> is the MPI rank.
+</p>
+</li>
+<li>
+<p>
+<code>HARD</code> indicates that the location specification must be met strictly.
+</p>
+</li>
+<li>
+<p>
+<code>SOFT</code> indicates that the location specification may be ignored if
+  there is otherwise no work available for a worker.  This is
+  noticeable during startup and shutdown, when there is typically
+  limited available work for workers.
+</p>
+</li>
+<li>
+<p>
+<code>RANK</code> indicates that the task must be run on the given <code>rank</code>.
+</p>
+</li>
+<li>
+<p>
+<code>NODE</code> indicates that the task may be run on any rank running on the
+  same node as the given <code>rank</code>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>See the <a href="#library_location">Location library</a> for usage for helper
+functions to work with locations.</p></div>
+<div class="sect4">
+<h5 id="_hostmap">Hostmap</h5>
+<div class="paragraph"><p>At startup, by default, Turbine obtains all hostnames used in the run
+and builds up a data structure called the hostmap to map hostnames to
+ranks.  You may combine the location features with the hostmap
+features to send work to assigned hostnames.  See the
+<a href="#library_location">Location library</a> for usage.  The hostmap may be
+<a href="#env_hostmap_debug">debugged</a> or <a href="#env_hostmap_disable">disabled</a>.</p></div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_advanced_function_topics">15.2. Advanced function topics</h3>
+<div class="paragraph"><p>Swift/T provides various facilities to define functions with flexible
+input and output types that can enable writing cleaner and more
+generic code.</p></div>
+<div class="sect3">
+<h4 id="_optional_and_keyword_arguments_to_functions">15.2.1. Optional and keyword arguments to functions</h4>
+<div class="paragraph"><p>Swift/T functions can have optional arguments to functions, where a
+default value is used if the caller does not provide that function argument.
+The default values are specified in the function definition and must be
+literal constant expressions.  For example, the following function has two
+optional arguments:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>(string o) msg(string a, int b=0, float c=0.0) {
+  o = "%s %i %f" % (a, b, c);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Optional arguments can be provided as <strong>positional arguments</strong> in the same way
+as non-optional arguments, e.g.:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>trace(msg("test"));
+trace(msg("test", 1));
+trace(msg("test", 1, 2.0));</code></pre>
+</div></div>
+<div class="paragraph"><p>Optional arguments, unlike non-optional arguments, can also be provided
+as <strong>keyword arguments</strong>.  For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>trace(msg("test", y=2.0));</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_variable_length_argument_lists">15.2.2. Variable-length argument lists</h4>
+<div class="paragraph"><p><a href="#swift_extension_functions">Swift extension functions</a> support variable
+length argument lists, where the final argument can be repeated 0 or
+more times.  The full list of arguments is passed into the extension
+function definition.  For example, it is possible to define a function
+that takes any number of integers as arguments and returns the sum.  Let us
+assume that a Tcl function <code>my_sum</code> is defined that computes the sum of
+its inputs.  Then the following Tcl extension function definition is possible:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>(int o) my_sum(int... vals) "my_pkg" "1.0" [
+  "set &lt;&lt;o&gt;&gt; [ my_pkg::my_sum &lt;&lt;vals&gt;&gt; ]"
+];</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_function_overloading">15.2.3. Function overloading</h4>
+<div class="paragraph"><p>Swift/T supports <em>overloading</em> of functions, where multiple function
+definitions with the same name coexist in the program.  If a function
+name is overloaded, Swift/T will decide which definition to use
+based on the argument types.  In order to overload a function, the
+input types of the two definitions must be different enough to
+allow Swift/T to reliably determine which definition is meant.  This
+means that you can only overload functions if:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+All input arguments have a single concrete type, e.g. <code>file</code> or <code>int[][]</code>.
+  Union argument types and type variables are not supported in overloaded
+  functions.
+</p>
+</li>
+<li>
+<p>
+No optional arguments are used (variable-length argument lists are supported)
+</p>
+</li>
+<li>
+<p>
+No list of input types could match multiple possible definitions, for example
+  <code>f(1)</code> could match both <code>f(int x)</code> and <code>f(int x, float y&#8230;)</code>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Swift/T will exit with a compile error if you break one of these rules.</p></div>
+<div class="paragraph"><p>For example, the following program will print <code>int: 1</code> and <code>float: 3.14</code>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import io;
+
+() print_num(int x) {
+  printf("int: %i", x);
+}
+
+() print_num(float x) {
+  printf("float: %0.2f", x);
+}
+
+print_num(1);
+print_num(3.14);</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_union_argument_types_and_type_variables">15.2.4. Union argument types and type variables</h4>
+<div class="paragraph"><p><a href="#swift_extension_functions">Swift extension functions</a> support
+additional argument types that can match multiple possible input types.</p></div>
+<div class="paragraph"><p>TODO</p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Optimizations">16. Optimizations</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>STC performs a range of compiler optimizations that can significantly
+speed up most Swift programs.  The optimization level can be controlled
+by the <code>-O</code> command line option.  The default optimization
+level <code>-O2</code>, or the increased optimization level <code>-O3</code> are usually
+the best choices.  Some applications benefit markedly from <code>-O3</code>,
+while others do not, and compile times can increase slightly.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># No optimizations at all (not recommended)
+stc -O0 example.swift example.tcl
+
+# Basic optimizations (not recommended)
+stc -O1 example.swift example.tcl
+
+# Standard optimizations (recommended)
+stc example.swift example.tcl
+# OR
+stc -O2 example.swift example.tcl
+
+# All optimizations (also recommended)
+stc -O3 example.swift example.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>Individual optimizations can be toggled on using <code>-f &lt;opt name&gt;</code>
+or off with <code>-F &lt;opt name&gt;</code>, but this typically is only useful for
+debugging.  You can find an up-to-date list of optimizations in
+the stc command-line help:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc -h</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Turbine">17. Running in Turbine</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following describes how to run Turbine programs.</p></div>
+<div class="sect2">
+<h3 id="_architecture">17.1. Architecture</h3>
+<div class="paragraph"><p>Turbine runs as an MPI program consisting of many processes.  Turbine
+programs are ADLB programs.  Thus, they produce and execute discrete
+tasks that are distributed and load balanced at run time.</p></div>
+<div class="paragraph"><p>Each process runs in a <em>mode</em>: <em>worker</em>, or <em>server</em>.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Workers
+</dt>
+<dd>
+<p>
+Evaluate the Swift logic. Produce tasks. Execute tasks.
+</p>
+</dd>
+<dt class="hdlist1">
+Servers
+</dt>
+<dd>
+<p>
+Distributes tasks. Manages data.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Typical Swift programs perform compute-intensive work in leaf
+functions that execute on workers.
+Execution of the Swift logic is split and distributed among workers.</p></div>
+<div class="paragraph"><p>Servers distribute tasks in a scalable, load balanced manner.  They
+also store Swift data (integers, strings, etc.).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_concurrency">17.2. Concurrency</h3>
+<div class="paragraph"><p>The available concurrency and efficiency in your Swift script is
+limited by the following factors:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The available concurrency in the Swift logic.  Sequential
+  dependencies will be evaluated sequentially.  <code>foreach</code> loops and
+  branching function calls may be evaluated concurrently
+</p>
+</li>
+<li>
+<p>
+The number of workers available to process leaf functions
+  concurrently
+</p>
+</li>
+<li>
+<p>
+The number of servers available to control the Turbine run.
+  Adding more servers can improve performance for applications with
+  small tasks or complex data dependencies but ties up processes
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_invocation">17.3. Invocation</h3>
+<div class="paragraph"><p>The form of a Turbine invocation for STC-generated
+<code>program.tcl</code> is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine &lt;turbine arguments&gt; &lt;program.tcl&gt; &lt;program arguments&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>The program arguments are available to Swift (<a href="#argv">[argv]</a>).</p></div>
+<div class="paragraph"><p>Turbine accepts the following arguments:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-f &lt;file&gt;</code>
+</dt>
+<dd>
+<p>
+Provide a machine file to <code>mpiexec</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-h</code>
+</dt>
+<dd>
+<p>
+Print a help message
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-l</code>
+</dt>
+<dd>
+<p>
+Enable <code>mpiexec -l</code> ranked output formatting
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-n &lt;procs&gt;</code>
+</dt>
+<dd>
+<p>
+The total number of Turbine MPI processes
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-v</code>
+</dt>
+<dd>
+<p>
+Report the Turbine version number
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-V</code>
+</dt>
+<dd>
+<p>
+Make the Turbine launch script verbose
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-x</code>
+</dt>
+<dd>
+<p>
+Use turbine_sh launcher with compiled-in libraries instead of tclsh
+       (reduces number of files that must be read from file system)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-X</code>
+</dt>
+<dd>
+<p>
+In place of of program.tcl, run standalone Turbine executable
+        (e.g. created by <a href="#mkstatic">mkstatic.tcl</a>)
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The user controls the Turbine run time configuration through
+environment variables:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ADLB_SERVERS</code>
+</dt>
+<dd>
+<p>
+Number of ADLB servers
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The remaining processes are workers.  These values are available to
+Swift (<a href="#Turbine_information">Turbine information</a>).</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_&lt;type&gt;_WORKERS</code>
+</dt>
+<dd>
+<p>
+Number of workers of specified type.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Any workers not allocated to specific types are general-purpose workers
+that execute Swift/T control code and CPU-based tasks.  There must
+be at least one leftover worker to serve as a general-purpose worker.</p></div>
+<div class="paragraph"><p>Valid work types include:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>TURBINE_COASTER_WORKERS</code>:: for Coaster workers.
+</p>
+</li>
+<li>
+<p>
+A work type defined with <code>pragma worktypedef</code> in Swift.
+  E.g. if you define <code>pragma worktypedef a_new_work_type;" in Swift,
+  the environment variable is +TURBINE_A_NEW_WORK_TYPE_WORKERS</code>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Generally you will need to allocate workers for any work type used in
+your Swift program.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_LOG=0</code>
+</dt>
+<dd>
+<p>
+Disable logging. <code>TURBINE_LOG=1</code> or unset enables
+logging, assuming logging was not disabled at configure time.  Logging
+goes to standard output by default.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>SWIFT_PATH</code>
+</dt>
+<dt class="hdlist1">
+<code>TURBINE_PATH</code>
+</dt>
+<dd>
+<p>
+Space-separated list of Swift/T extension (Tcl) package locations.
+Either variable name may be used.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><a id="env_swift_tmp"></a></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>SWIFT_TMP</code>
+</dt>
+<dt class="hdlist1">
+<code>TMP</code>
+</dt>
+<dd>
+<p>
+Directory location for <a href="#unmapped_files">unmapped files</a>.
+<code>SWIFT_PATH</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>SWIFT_TMP_AUTODELETE=0</code>
+</dt>
+<dd>
+<p>
+By default, Swift/T deletes
+<a href="#unmapped_files">unmapped files</a> when they are no longer used.
+Setting this to 0 logs these temporary files when created and prevents
+Swift/T from automatically deleting them.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_USER_LIB</code>
+</dt>
+<dd>
+<p>
+Alias for <code>SWIFT_PATH</code>.  Deprecated but retained for compatibility.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_LOG_FILE=&lt;file&gt;</code>
+</dt>
+<dd>
+<p>
+Set log file location.  Defaults to
+standard output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_LOG_RANKS=1</code>
+</dt>
+<dd>
+<p>
+Using <code>turbine -l</code> or equivalent prepends the
+MPI rank number to each output line.  This works with typical MPICH or
+OpenMPI systems, however, this is not available on some systems, so
+set this to emulate the rank output on such systems.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_PRINT_TIME=1</code>
+</dt>
+<dd>
+<p>
+Enable a short report of total elapsed time (via
+<code>MPI_Wtime()</code>)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_PERF_COUNTERS=1</code>
+</dt>
+<dd>
+<p>
+Enable performance counters (printed at end of execution).  The
+<a href="internals.html">Swift/T internals guide</a> has information
+about interpreting the output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_EXHAUST_TIME</code>
+</dt>
+<dd>
+<p>
+Time in seconds taken by ADLB task servers to shut down.  May include
+a decimal point.  Default 0.1 .  Setting this lower will reduce
+delay in detection exhaustion.  Setting this higher will reduce
+overhead due to failed exhaust checks.  The default setting is
+almost always adequate.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_REPORT_LEAKS=1</code>
+</dt>
+<dd>
+<p>
+Enable reporting of any unfreed data in ADLB data store at end of
+execution.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_TRACE=true</code>
+</dt>
+<dt class="hdlist1">
+<code>ADLB_DEBUG=true</code>
+</dt>
+<dd>
+<p>
+To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
+with it enabled)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_LAUNCH_OPTIONS</code>
+</dt>
+<dd>
+<p>
+Provide other arguments to <code>mpiexec</code>, such as a machine file, etc.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_SRAND</code>
+</dt>
+<dd>
+<p>
+If unset or empty, the random number generator seed will be set to the
+process rank for each process, giving reproducible results.  If set to
+an integer <code>seed</code>, the random number generator seed for each process
+will be set to <code>seed</code> + <code>rank</code>.
+</p>
+<div class="paragraph"><p>For non-reproducible random results, use the following shell commands:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_SRAND=$( date +%s )
+turbine ...</code></pre>
+</div></div>
+<div class="paragraph"><p>The seed is recorded in the log.</p></div>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_DEBUG_RANKS=1</code>
+</dt>
+<dd>
+<p>
+Enable a report showing the rank and hostname
+of each process.  This allows you to determine whether your process
+layout on a given machine is as intended.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><a id="env_hostmap_debug"></a></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ADLB_DEBUG_HOSTMAP=1</code>
+</dt>
+<dd>
+<p>
+Enable a report showing the hostmap, which
+maps hostnames to ranks for use with the location functionality.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><a id="env_hostmap_disable"></a></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ADLB_DISABLE_HOSTMAP=1</code>
+</dt>
+<dd>
+<p>
+Prevent the hostmap from being constructed
+(avoiding some communication overhead).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_PLACEMENT</code>
+</dt>
+<dd>
+<p>
+Change the placement policy.  Alternatives are:
+      random (place data on a random server - the default) and
+      local (place data on the local server).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>VALGRIND</code>
+</dt>
+<dd>
+<p>
+Enable valgrind debugging.  Cf. <a href="#valgrind">valgrind</a>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>GDB_RANK</code>
+</dt>
+<dd>
+<p>
+Enable GDB debugging.  Cf. <a href="#gdb">GDB</a>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="Build_configuration">17.4. Build configuration</h3>
+<div class="paragraph"><p>The following describes how to run Swift/T programs in Turbine
+on more complex systems.</p></div>
+<div class="sect3">
+<h4 id="_build_troubleshooting">17.4.1. Build troubleshooting</h4>
+<div class="paragraph"><p>If <code>exm-setup.zsh</code> does not succeed, you may need to change how it
+tries to configure and compile Swift/T.</p></div>
+<div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
+step is to determine why the build failed.  <code>exm-setup.zsh</code> will usually
+report the step at which configuration failed.  For example, if it was unable
+to locate a valid Tcl install, it will report this.  Then  you can try
+these steps to resolve the problem:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+If your system is covered by the <a href="turbine-sites.html">Sites Guide</a>,
+   check to see if the problem and solution are described there.
+</p>
+</li>
+<li>
+<p>
+Inspect <code>exm-settings.sh</code> settings related to the reported problem.
+  For example, if locating a Tcl install failed, setting
+  the <code>TCL_INSTALL</code> and <code>TCL_VERSION</code> variables to the correct location
+  and version may help.
+</p>
+</li>
+<li>
+<p>
+If the options in <code>exm-settings.sh</code> do not give sufficient control to
+  fix the problem, you may need to manually configure some components
+  of Swift/T, as described in the next section.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="Manual_build_configuration">17.4.2. Manual configuration</h4>
+<div class="paragraph"><p><code>exm-setup.zsh</code> and <code>exm-settings.sh</code> provide a convenient way to install
+Swift/T. However, this method does not allow full control over
+the configuration.  Swift/T is built with standard Ant (Java) and
+Autotools/Makefile (C,Tcl) techniques.  You can more directly control
+the configuration when building through the arguments to <code>ant</code> or
+<code>configure</code>.</p></div>
+<div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
+distribution package and do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd c-utils
+./configure ...
+make install
+
+cd ../lb
+./configure ...
+make install
+
+cd ../turbine
+./configure ...
+make install
+
+cd ../stc
+ant install -Ddist.dir=... -Dturbine.home=...</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+You may use <code>./configure --help</code> and the
+  <a href="turbine-sites.html">Sites Guide</a> for further options.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_non_standard_mpi_locations">17.4.3. Non-standard MPI locations</h4>
+<div class="paragraph"><p>Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.</p></div>
+<div class="paragraph"><p>You can modify these settings in <code>exm-settings.sh</code> to more precisely
+define locations of MPI resources:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a</code></pre>
+</div></div>
+<div class="paragraph"><p>If you are following the manual build process, configure Turbine with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> --enable-custom --with-mpi-include=/path/to/mpi.h/include
+                 --with-mpi-lib-dir=/path/to/mpi_lib/lib
+                 --with-mpi-lib-name=funny.mpi.a</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_performance_enhancements">17.5. Performance enhancements</h3>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Disable logging/debugging via environment
+</p>
+</li>
+<li>
+<p>
+Disable logging/debugging at configure/compile time
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure c-utils with <code>--disable-log</code>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Specify <code>EXM_OPT_BUILD=1</code> in <code>exm-settings.sh</code> or configure everything
+    with <code>--enable-fast</code>.  This disables assertions and other checks
+</p>
+</li>
+<li>
+<p>
+When making performance measurements, always subtract 0.1 seconds
+   (or the value of <code>ADLB_EXHAUST_TIME</code>) from the Turbine run time
+   due to the ADLB shutdown protocol, which does not start until the
+   system is idle for that amount of time.
+</p>
+</li>
+<li>
+<p>
+Reduce the number of program files that must be read off the
+   filesystem.  This is particularly useful for parallel file systems
+   and large scale applications.  In increasing order of effectiveness,
+   you can:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+use the turbine_sh launcher in place of tclsh in submit script,
+   or by specifying the <code>-x</code> argument to <code>turbine</code>
+</p>
+</li>
+<li>
+<p>
+Use <a href="#mkstatic">mkstatic.tcl</a> to create a standalone executable with
+   the Tcl main script and Tcl library code compiled in, and compiled
+   code statically linked.
+</p>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="mkstatic">17.6. Building standalone executables with mkstatic.tcl</h3>
+<div class="paragraph"><p>It is possible to build a fully self-contained executable, including
+all Tcl scripts and compiled code, provided that all dependencies support
+static linking.  If not, it is also possible to build an executable with
+a subset of Tcl scripts and code linked in, providing some performance
+benefits.</p></div>
+<div class="paragraph"><p>The provided <code>mkstatic.tcl</code> utility can produce a C source
+file with Tcl scripts bundled in, which can then be compiled and linked
+with a C compiler.  This is a multi-step process that can be automated
+as part of your build process.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Ensure that static versions of the <code>c-utils</code>, <code>lb</code>, and <code>turbine</code> libraries
+   were built, typically with a <code>.a</code> suffix, e.g. <code>libadlb.a</code>.  These
+   are created by default, unless you specified <code>DISABLE_STATIC=0</code> or
+   <code>--disable-static</code>.  To build a fully standalone
+   executable, you will also need to build a static version of Tcl
+   (with the <code>--disable-shared</code> configure option), and static versions
+   of any other libraries your own code needs to link with, such
+   as your MPI distribution or application code.</td>
+</tr></table>
+</div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Compile your Swift script
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc my.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>producing the Turbine Tcl script <code>my.tic</code>.</p></div>
+</li>
+<li>
+<p>
+Create a manifest file, e.g. <code>my.manifest</code>.  This file describes the
+   resources to be bundled, including the STC-generated code and any
+   user libraries.
+</p>
+<div class="paragraph"><p>To do this, make a copy of <code>scripts/mkstatic/example.manifest</code> from
+the Turbine installation directory.  This file contains examples and
+descriptions of all the the possible settings.
+Note that an empty
+manifest file corresponds to the <code>turbine_sh</code> utility, which is a
+replacement for <code>tclsh</code> with required Turbine libraries statically
+linked in.
+For a simple Swift program with no user Tcl libraries,
+you only need to set <code>main_script = my.tic</code>.</p></div>
+</li>
+<li>
+<p>
+Invoke <code>mkstatic.tcl</code> (found under <code>scripts/mkstatic/mkstatic.tcl</code> in
+   the Turbine installation) to translate your Tcl script to a C main
+   program (e.g., <code>my_main.c</code>) with Tcl source code included.
+   The minimal invocation is
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>mkstatic.tcl my.manifest -c my_main.c</code></pre>
+</div></div>
+<div class="paragraph"><p>You will likely wish to include Tcl system libraries with
+<code>--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6</code>.
+The Tcl system library directory can be identified by the fact that
+it contains the file <code>init.tcl</code>.  This directory must be specified
+with a special flag so that <code>mkstatic.tcl</code> can correctly replace
+the regular Tcl initialization process.</p></div>
+<div class="paragraph"><p>You can include additional libraries and packages with
+<code>--include-lib /home/example/tcl-lib/</code>.  Any <code>.tcl</code> or <code>.tm</code> source files
+in the directory will be included.  Source-only packages can
+generally be completely linked into the executable, but if a package
+loads shared libraries, only the <code>pkgIndex.tcl</code> file will be linked
+into the executable.  A package with compiled code can be converted to
+support static linking by specifying a package init function, plus
+static library or object files in the manifest file.</p></div>
+</li>
+<li>
+<p>
+Link together the compiled C main program with user libraries and
+  Swift/T libraries to produce a final executable.  The details of the
+  process vary depending on the compiler and system: we assume GCC.
+  You will need to provide the correct flags to link in all libraries
+  required by Swift/T or your own user code.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>User code:</strong> you must identify the libraries used by your application
+  and ensure link flags are provided.  If linking static libraries, ensure
+  that any indirect dependencies of these libraries are also linked.
+</p>
+</li>
+<li>
+<p>
+<strong>Swift/T system:</strong> The Turbine distribution includes a helper script,
+  <code>turbine-build-config.sh</code>, that can be sourced to obtain linker flags
+  for Swift/T dependencies.
+</p>
+</li>
+<li>
+<p>
+<strong>Link order:</strong> In the case of static linking, if <strong>libA</strong> depends on <strong>libB</strong>,
+  then the <code>-lA</code> flag must precede <code>-lB</code> on the command line.  To
+  actually do the linking, there are two further cases to consider:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+If building a fully static executable, you can
+  provide the <code>-static</code> flag, plus all object files, plus <code>-L</code>
+  and <code>-l</code> flags for all required library directories and libraries.
+  This requires that all libraries have static archives (<code>*.a</code>),
+  including Tcl (simply build Tcl with <code>--disable-shared</code>).
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+If you are building an executable that depends on one or more shared
+  libraries, you will need to provide the <code>-dynamic</code> flag, and then
+  ensure that static libraries are linked statically.  If a shared
+  version of a library is available, <code>gcc</code> will use that in preference
+  to a static version.  You can override this behaviour by specifying
+  <code>-Wl,-Bstatic</code> on the command line before the flags for the libraries
+  you wish to statically link, then <code>-Wl,-Bdynamic</code> to reset to
+  dynamic linking for any libraries after those.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+<div class="paragraph"><p>We have described the most commonly-used options.  A full list of options
+and descriptions can be obtained by invoking <code>mkstatic.tcl -h</code>.
+Additional options include:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>--main-script</code>
+</dt>
+<dd>
+<p>
+Specify Tcl main script (overrides manifest file)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-r</code>
+</dt>
+<dd>
+<p>
+Specify non-standard variable prefix for C code
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-v</code>
+</dt>
+<dd>
+<p>
+Print verbose messages
+</p>
+</dd>
+<dt class="hdlist1">
+<code>--deps</code>
+</dt>
+<dd>
+<p>
+Generate Makefile include for generating C file
+</p>
+</dd>
+<dt class="hdlist1">
+<code>--ignore-no-manifest</code>
+</dt>
+<dd>
+<p>
+Pretend empty manifest present
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="debugging">17.7. Debugging Swift/T runs</h3>
+<div class="paragraph"><p>Applying the debugger allows you to debug native code linked to Swift/T
+from a normal debugger.  This will allow you to step through your code
+(and the Swift/T run time libraries).</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+When using Swift/T dynamically with Tcl packages (the default), you
+  need to attach to the <code>tclsh</code> process.  This process loads your
+  native code and calls into it.
+</p>
+</li>
+<li>
+<p>
+When using <code>mkstatic</code>, you generate a complete executable.  You can
+  debug this in the normal method for debugging MPI programs.
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="valgrind">17.7.1. Valgrind</h4>
+<div class="paragraph"><p>The Swift/T launcher scripts support <a href="http://valgrind.org">valgrind</a>.
+Simply set the environment variable <code>VALGRIND</code> to the valgrind command
+you wish to use.  A suppressions file is distributed with Turbine to
+ignore known issues.  (Swift/T is valgrind-clean but there are some
+issues in Tcl.)</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
+turbine program.tcl</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="gdb">17.7.2. GDB</h4>
+<div class="paragraph"><p>The Turbine library provides a convenient attachment mechanism
+compatible with debuggers like GDB, Eclipse, etc.  You attach to a
+Turbine execution by using the <code>GDB_RANK</code> variable:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export GDB_RANK=0
+$ turbine program.tcl
+Waiting for gdb: rank: 0 pid: 23274
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>Rank 0, running in process <code>23274</code>, has blocked (in a loop) and is
+waiting for the debugger to attach.  When you attach, set the variable
+<code>t=1</code> to break out of the loop.  Then you can debug normally.</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2016-02-29 15:31:06 CST
+</div>
+</div>
+</body>
+</html>
