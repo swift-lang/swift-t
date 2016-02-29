@@ -1,10 +1,5 @@
-#!/bin/sh -e
-
-if ! readlink swift.css > /dev/null
-then
-  echo "Create a soft link to stc/.../docs/swift.css!"
-  exit 1
-fi
+#!/bin/sh
+set -e
 
 asciidoc --attribute stylesheet=${PWD}/swift.css internals.txt
 asciidoc --attribute stylesheet=${PWD}/swift.css sites.txt
