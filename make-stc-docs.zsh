@@ -85,7 +85,7 @@ snip 1 examples/6/prog-f90.f90
 snip 1 examples/6/prog-swift.swift
 snip 1 examples/8/f.c
 
-DOCS=( guide leaf )
+DOCS=( guide leaf sites )
 
 for NAME in ${DOCS}
 do
