@@ -1,0 +1,1382 @@
+
+:toc:
+
+Turbine Sites Guide
+===================
+Justin M. Wozniak <wozniak@mcs.anl.gov>
+Swift/T v0.8.0, August 2015
+
+////
+
+This file is on the web at:
+
+http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html
+
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+== How to use this guide
+
+This manual provides a reference on how to run Swift/Turbine
+programs on a variety of systems.  It also contains an index of sites
+maintained by the Swift/T team for use by Turbine.
+
+For each machine, a *public installation* and/or a *build procedure* will
+be provided.  The user need follow only one set of directions.
+
+[[login_node]]
+A *login node installation* may be available on certain systems.  This
+will run Swift/T on the login node of that system.  This only
+acceptable for short debugging runs of 1 minute or less.  If you do
+this, you should run +swift-t+ or +turbine+ under the +nice+ command.
+It will affect other users so please be cautious when using this mode
+for debugging.
+
+=== Public installations
+
+These are maintained by the Swift/T team.  Because they may become out
+of date after a release, the release version and a timestamp are
+recorded below.
+
+To request maintenance on a public installation, simply email
+exm-user@mcs.anl.gov .
+
+=== Build procedures
+
+The build procedure is based on the installation process
+described in the link:./swift.html[Swift/T Guide].  You
+should follow that build procedure, and use this
+guide for information on specific configuration
+settings for your system.
+
+The settings are generally implemented by modifying the
++exm-settings.sh+ configuration script.  In some cases,
+where the setting is not configurable through +exm-settings.sh+,
+it may be necessary to directly modify the +configure+ or +make+
+command lines by following the manual build process, or by modifying
+build scripts under the +build+ subdirectory
+(e.g. +turbine-build.sh+).
+
+=== Version numbers
+
+The component version numbers that correspond together to make up a
+Swift/T release may be found on the
+link:../downloads/downloads.html[Downloads] page.
+
+=== Freshness
+
+These instructions may become stale for various reasons.  For example,
+system administrators may update directory locations, breaking these
+instructions.  Thus, we mark *As of:* dates on the instructions for
+each system.
+
+To report a problem, simply email exm-user@mcs.anl.gov .
+
+=== For more information
+
+* See the link:./swift.html[Swift/T Guide] for more information about Swift/T.
+* Join the ExM (Swift/T project) http://lists.mcs.anl.gov/mailman/listinfo/exm-user[user mailing list].
+
+== Swift-Turbine compilation
+
+Swift/T usage starts with developing and testing a Swift/T script.
+See the main link:guide.html[Swift/T usage guide] for more
+information.
+
+In short, you use STC to compile the Swift script into a format that
+the runtime, Turbine, can run.  You may compile and run in one step
+with +swift-t+ or run +stc+ and +turbine+ separately.
+
+When running on a big HPC machine, it may be difficult to get STC
+(a Java-based program) running.  STC output (+program.tic+) is
+platform-independent.  You may run STC to develop and debug your
+script on your local workstation, then simply copy +program.tic+ to
+the big machine for execution.  Just make sure that the STC and
+Turbine versions are compatible (the same release number).
+
+== Turbine as MPI program
+
+Turbine is a moderately complex MPI program.  It is essentially a Tcl
+library that glues together multiple C-based systems, including MPI,
+ADLB, and the Turbine dataflow library.
+
+Running Turbine on a MPI-enabled system works as follows:
+
+* Compilation and installation: This builds the Turbine libraries and
+  links with the system-specific MPI library.  STC must also be
+  informed of the Turbine installation to access correct built-in
+  function information
+* Run-time configuration: The startup job submission script locates
+  the Turbine installation and reads configuration information
+* Process launch: The Tcl shell, +tclsh+, is launched in parallel and
+  configuration information is passed to it so it can find the
+  libraries. The Tcl program script is the STC-generated user program
+  file.  The MPI library enables communication among the +tclsh+
+  processes.
+
+Each of the systems below follows this basic outline.
+
+On simpler systems, use the +turbine+ program.  This is a small shell
+script wrapper that configures Turbine and essentially runs:
+----
+mpiexec tclsh program.tic
+----
+
+On more complex, scheduled systems, users do not invoke +mpiexec+
+directly.  Thus, sample scripts are provided below.
+
+[[scheduled_systems]]
+== Submitting Turbine jobs on scheduled systems
+
+On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
+with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
+on that system.  This produces a batch script if necessary and submits
+it with the job submission program (e.g., +qsub+).
+
+=== Turbine run scripts
+
+PBS:: +turbine-pbs-run.zsh+
+Cobalt:: +turbine-cobalt-run.zsh+
+Cray/APRUN:: +turbine-cray-run.zsh+ (PBS with Cray's +aprun+)
+SLURM:: +turbine-slurm-run.zsh+
+
+Each script accepts input via environment variables and command-line options.
+
+The +swift-t+ and +turbine+ programs have a +-m+ option that accepts
++pbs+, +cobalt+, +cray+, or +slurm+.
+
+A typical invocation is (one step compile-and-run):
+----
+swift-t -m pbs -n 96 -s settings.sh program.swift
+----
+
+or (just compile):
+----
+stc program.swift
+----
+
+or (just run):
+----
+turbine -m pbs -n 96 -s settings.sh program.tic
+----
+
+or (just run):
+----
+turbine-pbs-run.zsh -n 96 -s settings.sh program.tic
+----
+
+which are equivalent.
+
++program.tic+ is the output of STC and +settings.sh+ contains:
+----
+export QUEUE=bigqueue
+export PPN=8
+----
+
+which would run +program.tic+ in 96 MPI processes on 12 nodes (8
+processes per node), submitted by PBS to queue +bigqueue+.
+
+[[variables]]
+=== Turbine scheduler variables
+
+For scheduled systems, Turbine accepts a common set of environment
+variables.  These may be placed in +settings.sh+ or set by the user in
+any other way.
+
++PROCS+:: Number of processes to use
++PPN+:: Number of processes per node
++PROJECT+:: The project name to use with the system scheduler
++QUEUE+:: Name of queue in which to run
++TURBINE_OUTPUT+:: Directory in which to place Turbine output (if
+unset, a default value is automatically created)
++TURBINE_OUTPUT_ROOT+:: Directory under which Turbine will
+automatically create +TURBINE_OUTPUT+ if necessary
++TURBINE_OUTPUT_FORMAT+:: Allows customization of the automatic
+output directory creation.  See <<turbine_output,Turbine output>>
+
+[[options]]
+=== Turbine scheduler script options
+
+For scheduled systems, Turbine accepts a common set of command line options.
+
++-d <directory>+:: Set the Turbine output directory.  (Overrides
++TURBINE_OUTPUT+).
+
++-e <key>=<value>+:: Set an environment variable in the job
+environment.  This may be used multiple times
+
++-i <script>+:: Set a script to run before launching Turbine.  This
+script will have +TURBINE_OUTPUT+ in the environment, so you may
+perform additional configuration just before job launch.
+
++-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
+
++-o <directory>+:: Set the Turbine output directory root, in which
+default Turbine output directories are automatically created based on
+the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
+
++-s <script>+:: Source this file for environment variables.  These
+variables override any other <<variables,Turbine scheduler
+variables>>.  You may place arbitrary shell code in this script.
+
++-t <time>+:: Set scheduler walltime.  The argument format is passed
+through to the scheduler
+
++-V+:: Make script verbose.  This typically just applies +set -x+,
+allowing you to inspect variables and arguments as passed to the
+system scheduler (+qsub+).
+
++-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
+       (reduces number of files that must be read from file system).
+
++-X+:: Run standalone Turbine executable
+        (created by link:swift.html#mkstatic[mkstatic.tcl]) instead of
+        +program.tic+.
+
+[[turbine_output]]
+=== Turbine output directory
+
+The working directory (+PWD+) for the job is called +TURBINE_OUTPUT+.
+
+If the user does not set this variable, Turbine will select one based
+on the date and report it.  The automatically selected directory will
+be placed under +TURBINE_OUTPUT_ROOT+, which defaults to
++$HOME/turbine-output+.  The user program will be copied to
++TURBINE_OUTPUT+ before submission.  Standard output and error goes to
++TURBINE_OUTPUT/output.txt+.
+
+The automatically created Turbine output directory +TURBINE_OUTPUT+ is
+generated by passing +TURBINE_OUTPUT_FORMAT+ to the +date+ command.
+The default value is +%Y/%m/%d/%H/%M/%S+, that is,
++year/month/day/hour/minute/second+ (see +man date+ for more options).
+An additional option is provided by Turbine is +%Q+, which puts a
+unique number in that spot.  +TURBINE_OUTPUT_PAD+ sets the minimum
+field width of the integer put into the spot, defaulting to 3.
+
+For example, on a Wednesday, +TURBINE_OUTPUT_ROOT=/scratch+,
++TURBINE_OUTPUT_FORMAT=%A/%Q+, +TURBINE_OUTPUT_PAD=1+ would run
+subsequent Swift/T jobs in:
+
+----
+/scratch/Wednesday/1
+/scratch/Wednesday/2
+/scratch/Wednesday/3
+----
+
+== x86 clusters
+
+[[generic_clusters]]
+=== Generic clusters
+
+This is the simplest method to run Turbine.
+
+==== Build procedure
+
+The +exm-setup.zsh+ script should work without any special configuration.
+
+To run, simply build a MPI hosts file and pass that to Turbine, which
+will pass it to +mpiexec+.
+
+----
+turbine -l -n 3 -f hosts.txt program.tic
+----
+
+=== MCS compute servers
+
+Compute servers at MCS Division, ANL.
+Operates as a generic cluster (see above).
+
+----
+echo crush.mcs.anl.gov >  hosts.txt
+echo crank.mcs.anl.gov >> hosts.txt
+turbine -l -n 3 -f hosts.txt program.tic
+----
+
+==== Public installation
+
+*As of:* trunk, 8/13/2013
+
+MCS users are welcome to use this installation.
+
+* STC: +~wozniak/Public/stc/bin/stc+
+* Turbine: +~wozniak/Public/turbine/bin/turbine+
+
+=== Breadboard
+
+Cf. link:http://wiki.mcs.anl.gov/radix/index.php/Breadboard[Breadboard Wiki]
+
+Breadboard is a cloud-ish cluster for software development in
+MCS. This is a fragile resource used by many MCS developers. Do not
+overuse.
+
+Operates as a generic cluster (see above).  No scheduler.  Once you
+have the nodes, you can use them until you release them or time
+expires (12 hours by default).
+
+. Allocate nodes with +heckle+.  See Breadboard wiki
+. Wait for nodes to boot
+. Use +heckle allocate -w+ for better interaction
+. Create MPICH hosts file:
++
+----
+heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
+----
+. Run:
++
+----
+export TURBINE_LAUNCH_OPTIONS='-f hosts.txt'
+turbine -l -n 4 program.tic
+----
++
+. Run as many jobs as desired on the allocation
+. When done, release the allocation:
++
+----
+for h in $( cat hosts.txt )
+do
+  heckle free $h
+done
+----
+
+=== Midway
+
+Midway is a mid-sized SLURM cluster at the University of Chicago
+
+==== Public installation
+
+*As of:* master - 07/17/2015
+
+* STC: +~wozniak/Public/sfw/compute/gcc/stc/bin+
+* Turbine: +~wozniak/Public/sfw/compute/gcc/turbine/bin+
+
+To run:
+
+----
+swift-t -m slurm -n 2 program.swift
+----
+
+==== Build procedure
+
+* Midway uses OpenMPI.  We have tested with +/software/openmpi-1.6-el6-x86_64+
+* Put +mpicc+ in your +PATH+
+* Use these settings in +exm-settings.sh+:
++
+----
+export LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
+MPI_VERSION=2
+MPI_LIB_NAME=mpi
+----
+* Or if doing a manual build with +configure+ and make:
+** Configure ADLB with:
++
+----
+LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
+----
+** Configure Turbine with:
++
+----
+ --with-mpi-lib-name=mpi
+----
+
+=== Tukey
+
+https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+the Cobalt scheduler.
+
+*As of:* Trunk, 4/9/2014
+
+==== Public installation
+
+Add to +PATH+:
+
+* STC: +~wozniak/Public/sfw/x86/stc/bin+
+* Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
+
+To run:
+----
+export MODE=cluster
+export QUEUE=pubnet
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tic
+----
+
+==== Build procedure
+
+* Check that the system-provided MVAPICH +mpicc+ is in your +PATH+
+* Configure c-utils with +gcc+
+* Configure ADLB with +CC=mpicc --enable-mpi-2+
+* Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
+
+=== Blues
+
+http://www.lcrc.anl.gov/about/blues[Blues] is a 310-node x86
+cluster at ANL.  It uses PBS.
+
+*As of:* Master, 8/17/2015
+
+==== Public installation
+
+* +~wozniak/Public/sfw/blues/compute/stc/bin/swift-t+
+* +~wozniak/Public/sfw/blues/compute/turbine/bin/turbine+
+
+This installation has Python enabled.
+
+To run:
+----
+$ export QUEUE=batch # or other settings
+----
+
+See the <<variables,Turbine scheduler variables>> and
+<<options,Turbine run script options>> for additional settings.
+
+Use +swift-t+:
+----
+swift-t -m pbs -n 8 program.swift
+----
+or Turbine:
+----
+stc program.swift
+turbine -m pbs -n 8 program.tic
+----
+or the Turbine PBS run script:
+----
+stc program.swift
+turbine-pbs-run.zsh -n 8 program.tic
+----
+
+==== Build procedure
+
+Use GCC 4.8.2 and MVAPICH 2.0:
+----
+$ PATH=/soft/gcc/4.8.2/bin:$PATH
+$ which gcc
+/soft/gcc/4.8.2/bin/gcc
+$ PATH=/soft/mvapich2/2.0-gcc-4.7.2/bin:$PATH
+$ which mpicc
+/soft/mvapich2/2.0-gcc-4.7.2/bin/mpicc
+----
+
+////
+ Used to need this:
+ and set +LD_LIBRARY_PATH+:
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+////
+
+A public Tcl is in: +&#126;wozniak/Public/sfw/tcl-8.6.4+
+
+A public Python is in: +&#126;wozniak/Public/sfw/Python-2.7.8+
+
+=== Fusion
+
+http://www.lcrc.anl.gov/about/fusion[Fusion] is a 320-node x86
+cluster at ANL.  It uses PBS.
+
+==== Public installation
+
+* STC: +~wozniak/Public/compute/stc/bin/stc+
+
+To run:
+----
+export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
+$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
+----
+
+See the <<variables,Turbine scheduler variables>> and
+<<options,Turbine run script options>> for additional settings.
+
+==== Build procedure
+
+Use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
+----
+$ which gcc
+/software/gcc-4.7.2/bin/gcc
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+----
+
+== Blue Gene
+
+The Blue Gene systems at ANL are <<scheduled_systems,scheduled
+systems>> that use Cobalt.
+
+* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
+* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
+* The Cobalt log is placed in +TURBINE_OUTPUT+
+
+=== Blue Gene/P
+
+==== Surveyor/Intrepid/Challenger
+
+These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.
+
+===== Public installation
+
+* Based on trunk
+* STC: +~wozniak/Public/stc-trunk/bin/stc+
+
+To run:
+
+----
+~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic
+----
+
+===== Build procedure
+
+To run on the <<login_node,login node>>:
+
+* Install MPICH for the login nodes
+* Configure Tcl and c-utils with gcc
+* Configure ADLB with your MPICH
+* Configure Turbine with
++
+----
+--enable-bgp LDFLAGS=-shared-libgcc
+----
++
+This makes adjustments for some Blue Gene quirks.
+
+* Then, simply use the +bin/turbine+ program to run.  Be cautious in
+  your use of the login nodes to avoid affecting other users.
+
+_To run on the compute nodes under IBM CNK:_
+
+In this mode, you cannot use +app+ functions to launch external
+programs because CNK does not support this.  See ZeptoOS below.
+
+* Configure Tcl with mpixlc
+* Configure c-utils with gcc
+* Configure ADLB with:
++
+----
+--enable-xlc
+CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc
+----
+* Configure Turbine with:
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
+_To run on the compute nodes under ZeptoOS:_
+
+* Configure Tcl with zmpicc
+* Configure c-utils with gcc
+* Configure ADLB with
++
+----
+CC=zmpicc --enable-mpi-2
+----
+* Configure Turbine with
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
+=== Blue Gene/Q
+
+==== ALCF
+
+* Run with:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+swift-t -m cobalt -n 3 program.swift
+----
++
+or:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic
+----
+
+The normal Turbine environment variables are honored, plus the
+<<variables,Turbine scheduler variables>>.
+
+===== Public installation: Mira/Cetus
+
+*As of:* 0.8.0 - 5/26/2015
+
+* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
+* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
+* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
+* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+===== Public installation: Vesta
+
+*As of:* 0.7.0 - 12/16/2014
+
+* STC: +~wozniak/Public/sfw/stc/bin/stc+
+* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+==== Build procedure
+
+*As of:* 0.7.0 - 11/20/2014
+
+*Building Tcl:*
+
+The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with +bgxlc+.  You must modify the Makefile to use
++bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
++-qnostaticlink+.
+
+You may get errors that say +wrong digit+.  This is apparently a bgxlc
+bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
+the problem.
+
+*Building Swift/T:*
+
+* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
+* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
+* Configure Turbine with:
++
+----
+CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint
+----
+
+*External scripting:*
+
+* Python
+** Configure Python with BGXLC
+* R
+** Configure R with GCC as usual
+** Run with:
++
+----
+turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
+----
+
+== Cray
+
+=== Titan
+
+Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
+
+==== Public installation
+
+*As of:* 8/27/2014
+
+* Swift/T trunk - 8/27/2013
+* Turbine: +/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh+
+* STC: +/lustre/atlas2/mat049/proj-shared/sfw/compute/stc/bin/stc+
+* SWIG: +/lustre/atlas2/mat049/proj-shared/sfw/swig-3.0.2+
+* Tcl:  +/lustre/atlas2/mat049/proj-shared/sfw/tcl-8.6.2+
+
+==== Submitting jobs
+
+Titan requires that user output goes to a Lustre file system.  Set a
+soft link like this so that Turbine output goes to Lustre:
+
+----
+mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+cd ~
+ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+----
+
+Or, you may set +TURBINE_OUTPUT+ <<variables,manually>>.
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is:
+
+----
+#PBS -l nodes=32
+----
+
++PPN+ is handled by setting the +-n+ argument.
+
+The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
+it as follows (for a 2 nodes, 32 processes per node):
+----
+export PROJECT=MAT049
+export QUEUE=debug
+export TITAN=true
+export PPN=32
+turbine-aprun-run.zsh -n 64 helloworld.tcl
+----
+
+These environment variables may be placed in your +-s+
+<<options,settings file>>.
+
+==== Build procedure
+
+*As of:* 7/23/2015
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+----
+
+==== Submitting jobs
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is:
+
+----
+#PBS -l nodes=32
+----
+
++PPN+ is handled by setting the +-n+ argument.
+
+The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+export QUEUE=normal
+export TITAN=true
+export PPN=32
+turbine-aprun-run.zsh -n 32 helloworld.tcl
+----
+
+These environment variables may be placed in your
+<<settings_file,settings file>>.
+
+=== Blue Waters
+
+Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Build procedure
+
+*As of:*  11/05/2013
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+// TODO: check these and confirm that cc works #661
+
+* Use the following settings in +exm-settings.sh+
++
+----
+export CC=cc
+
+MPI_VERSION=2
+EXM_CUSTOM_MPI=1
+
+EXM_CRAY=1
+
+# Optionally, if you want to exclusively build static executables
+EXM_BUILD_STATIC=1
+----
+
+Or, if doing a manual build with +configure+/+make+:
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+----
+
+==== Submitting jobs
+
+Submitting jobs on Blue Waters is largely the same with with other Cray
+systems. One difference is that the size of the job is specified using a
+different notation.
+
+Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does *not* support the
+'mpp' directives: trying to use an 'mpp' directive may cause your job
+to be rejected or stuck in the queue. The correct directive is:
+----
+#PBS -l nodes=1:ppn=32
+----
+
+The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl
+----
+
+(The +BLUE_WATERS=true+ setting was renamed to +CRAY_PPN=true+ on
+April 29, 2015.)
+
+==== Installing from source
+
+===== Prerequisites
+
+* Tcl 8.5 is installed in: +/usr/bin/tclsh+
+* Swig 1.3.36 is installed in: +/usr/bin/swig+
+* The following steps ensure that the right compiler modules are loaded.
+* Switch your programming environment to use +gcc+.
+----
+module unload PrgEnv-cray
+module load PrgEnv-gnu
+----
+* Load module with latest Oracle Java JDK 7+
+----
+module load java
+----
+* Download and install the Apache Ant build tool (required to
+  build STC)
+----
+wget http://www.apache.org/dist/ant/binaries/apache-ant-1.9.2-bin.tar.bz2
+# Check archive is valid
+ant_xsum=$(shasum apache-ant-1.9.2-bin.tar.bz2 | awk '{ print $1 }')
+if [ ! "$ant_xsum" = "50cfaaeecee4f88a3ff9de5068fc98e4e9268daf" ]
+then
+  echo "Bad ant download checksum"
+fi
+
+# Extract ant install ant somewhere permanent
+tar xvjf apache-ant-1.9.2-bin.tar.bz2
+mkdir -p ~/soft
+mv apache-ant-1.9.2/ ~/soft/
+
+# Add ant to path (put this in .bashrc)
+export PATH="$PATH:$HOME/soft/apache-ant-1.9.2/bin"
+
+# Check ant version
+ant -version
+----
+
+===== Installation
+
+// TODO: Not sure what to do here. #661
+
+- Need to install to a lustre fs:
+  - +/scratch+ (not backed up, best performance)
+  - +/u+ home directory (backed up, good performance)
+  - +/projects+ (backed up, good performance)
+
+- I used a prepackaged distro built using +distro/construct.zsh -t+ to build
+  from trunk. The following instructions are to install from this distro to
+  trunk on Blue Waters.
+- First extract the tarball
+
+----
+tar xvzf exm-trunk.tar.gz
+cd exm-trunk
+----
+
+- exm-settings.sh needs some customization.  The changed settings were:
+----
+EXM_PREFIX=/u/sciteam/tarmstro/soft/exm-trunk-r8770
+
+# Use the latest GNU-compatible version of mpich
+EXM_MPI=/opt/cray/mpt/default/gni/mpich2-gnu/48
+# Need to use gcc (mpicc doesn't exist on Cray)
+EXM_MPICC=`which gcc`
+
+# Custom MPI
+EXM_CUSTOM_MPI=1
+
+# Since we're not using mpicc wrapper, add CC options for MPI libraries
+export CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/48/include/"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/48/lib/ -lmpich"
+
+# Currently MPI 3 not supported
+MPI_VERSION=2
+----
+
+=== Beagle
+
+Beagle is a Cray XE6 at the University of Chicago
+
+Remember that at run time, Beagle jobs can access only +/lustre+, not
+NFS (including home directories).  Thus, you must install Turbine and
+its libraries in +/lustre+.  Also, your data must be in +/lustre+.
+
+==== Public installation
+
+===== Login nodes
+
+This installation is for use on the <<login_node,login node>>.
+
+* Swift/T master - 8/3/2015
+* Turbine: +~wozniak/Public/sfw/x86_64/swift-t/turbine+
+* STC: +~wozniak/Public/sfw/x86_64/swift-t/stc+
+
+===== Compute nodes
+
+* Swift/T trunk - 8/3/2015
+* Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/turbine+
+* STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/stc+
+* This installation is configured with http://swift-lang.org/Swift-T/guide.html#_calling_python[Python]
+
+To run:
+
+1. Set environment variables.  The normal Turbine environment
+variables are honored, plus the <<variables,Turbine scheduler
+variables>> and <<options,Turbine scheduler
+options>>..
+2. Run Swift:
++
+----
+swift-t -m cray -n <numprocs> script.swift --arg1=value1 ...
+----
++
+or:
++
+Run Turbine:
++
+----
+turbine -m cray -n <numprocs> script.tic --arg1=value1 ...
+----
++
+or:
++
+Run the submit script directly (in +turbine/scripts/submit/cray+):
++
+----
+turbine-cray-run.zsh -n <numprocs> script.tic --arg1=value1 ...
+----
+
+==== Build procedure
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+$ export CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+$ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+$ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+----
+
+==== Build procedure with MPE
+
+Configure MPE 1.3.0 with:
+----
+export CFLAGS=-fPIC
+export MPI_CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include -fPIC"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+export F77=gfortran
+export MPI_F77=$F77
+export MPI_FFLAGS=$MPI_CFLAGS
+CC="gcc -fPIC" ./configure --prefix=... --disable-graphics
+----
+
+Configure ADLB with:
+----
+export CFLAGS=-mpilog
+export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
+./configure --prefix=... CC=mpecc --with-c-utils=/path/to/c-utils --with-mpe=/path/to/mpe --enable-mpi-2
+----
+
+Configure Turbine with:
+----
+./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe
+----
+
+=== Swan
+
+Swan is a Cray XC40 at Cray.
+
+*As of:* 4/29/2015
+
+==== Public installation
+
+A public installation may be run at: +~p01951/Public/sfw/swift-t/stc/bin/swift-t+
+
+Run with, e.g.:
+----
+export CRAY_PPN=true
+swift-t -m cray -n 4 program.swift
+----
+
+==== Supporting software
+
+* Tcl:  +/home/users/p01951/Public/sfw/tcl-8.6.2/bin/tclsh8.6+
+* SWIG: +/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig+
+
+==== Build procedure
+
+* Configure c-utils as usual with +gcc+.
+* Configure ADLB with:
++
+----
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/48/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/48/lib -lmpich"
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+----
+* Configure Turbine with:
++
+----
+./configure --prefix=/path/to/turbine CC=gcc
+--enable-custom-mpi
+--with-mpi-include=/opt/cray/mpt/default/gni/mpich2-gnu/48/include
+--with-mpi-lib-dir=/opt/cray/mpt/default/gni/mpich2-gnu/48/lib
+--with-tcl=/home/users/p01951/Public/sfw/tcl-8.6.2
+----
+* Compile STC as usual.
+
+=== Raven
+
+Raven is a Cray XE6/XK7 at Cray.
+
+==== Build procedure
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/46/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/46/lib -lmpich"
+--enable-mpi-2
+----
++
+* In the Turbine configure step, use:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/46
+----
+* Use this Java when compiling/running STC: +/opt/java/jdk1.7.0_07/bin/java+
+
+To run:
+
+1. Set environment variables.  The normal Turbine environment
+variables are honored, plus the <<variables,Turbine scheduler
+variables>>.
+2. Run submit script (in +turbine/scripts/submit/cray+):
++
+----
+turbine-aprun-run.zsh script.tcl --arg1=value1 ...
+----
+
+==== Advanced usage:
+
+Turbine uses a PBS template file called
++turbine/scripts/submit/cray/turbine-aprun.sh.m4+.  This file is
+simply filtered and submitted via +qsub+.  You can edit this file to
+add additional settings as necessary.
+
+==== Module:
+
+You may load Swift/T with:
+
+----
+module use /home/users/p01577/Public/modules
+module load swift-t
+----
+
+=== Edison
+
+Edison is a Cray XC30 system at NERSC.
+
+==== Public Installation
+
+A public installation may be run at: +/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t+
+
+Run with, e.g.:
+----
+swift-t -m cray -n 4 program.swift
+----
+
+
+==== Build Procedure
+
+Load (and unload) appropriate modules:
+
+----
+module unload PrgEnv-intel darshan cray-shmem
+module load PrgEnv-gnu java
+----
+
+Clone the latest exm code:
+
+----
+cd $SCRATCH
+git clone https://github.com/swift-lang/swift-t.git
+cd swift-t
+----
+
+Install c-utils:
+
+----
+cd $SCRATCH/swift-t/c-utils
+./configure --enable-shared --prefix=$SCRATCH/exm-install/c-utils
+make && make install
+----
+
+Install adlb:
+
+----
+cd $SCRATCH/swift-t/lb
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
+make && make install
+----
+
+Install turbine:
+
+----
+cd $SCRATCH/swift-t/turbine
+./configure --with-adlb=$SCRATCH/exm-install/lb --with-c-utils=$SCRATCH/exm-install/c-utils \
+--prefix=$SCRATCH/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+make && make install
+----
+
+Install stc:
+
+----
+cd $SCRATCH/swift-t/stc
+ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-install/turbine
+----
+
+
+==== Environment
+
+Set environment. Add the following to your .bashrc.ext (or equivalent)
+
+----
+export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:$SCRATCH/exm-install/turbine/scripts/submit/cray
+source ~/.bash.ext
+----
+
+
+Note that with Swift installed as a module, the above steps will disappear and the only step needed will be to load the module:
+
+----
+module load swift-t
+module load swift-k
+----
+
+
+==== A simple script
+
+To compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
+
+----
+/**
+   Example 1 - HELLO.SWIFT
+*/
+
+import io;
+
+main
+{
+  printf("Hello world!");
+}
+----
+
+Compile and run the above script using +swift-t+:
+
+----
+swift-t -m "cray" hello.swift
+----
+
+NOTE: The -m flag determines the machine type: "cray", "pbs", "cobalt", etc.
+
+
+A Turbine Intermediate Code (.tic) file will be generated on successful compilation.
+The +swift-t+ command builds a job specification script and submits it to the
+scheduler.
+
+Output from the above command will be similar to the following:
+
+----
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+`hello.tic' -> `/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/hello.tic'
+SCRIPT=hello.tic
+PPN=1
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/turbine-cray.sh
+JOB_ID=2816478.edique02
+----
+
+Inspect the results with:
+
+----
+cat $TURBINE_OUTPUT/output.txt.2816478.edique02.out
+----
+
+The following will be the contents:
+
+----
+   0.000 MODE: WORK
+   0.000 WORK TYPES: WORK
+   0.000 WORKERS: 1 RANKS: 0 - 0
+   0.000 SERVERS: 1 RANKS: 1 - 1
+   0.000 WORK WORKERS: 1 RANKS: 0 - 0
+   0.000 MODE: SERVER
+   0.062 function:swift:constants
+   0.062 enter function: __entry
+Hello world!
+   0.163 turbine finalizing
+   0.104 turbine finalizing
+Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50
+----
+
+==== A second example
+
+The following example joins multiple files (n times in parallel) using the Unix
++cat+ utility:
+
+----
+import files;
+import string;
+
+app (file out) cat (file input) {
+  "/bin/cat" input @stdout=out
+}
+
+foreach i in [0:9]{
+  file joined<sprintf("joined%i.txt", i)> = cat(input_file("data.txt"));
+}
+----
+
+Save the above script as +catsn.swift+.
+
+Prepare input file as:
+
+----
+echo "contents of data.txt">data.txt
+----
+
+Set TURBINE_OUTPUT to current directory:
+
+----
+export TURBINE_OUTPUT=$PWD
+----
+
+Run the script as:
+
+----
+swift-t -m "cray" catsn.swift
+----
+
+On successful compilation and job submission, output similar to the following will be produced:
+
+----
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+`./swift-t-catsn.hzS.tic' -> `/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/swift-t-catsn.hzS.tic'
+SCRIPT=./swift-t-catsn.hzS.tic
+PPN=1
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/turbine-cray.sh
+JOB_ID=2835290.edique02
+----
+
+Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT directory:
+
+----
+cat $TURBINE_OUTPUT/joined4.txt
+----
+
+
+== Cloud
+
+=== EC2
+
+==== Setup
+
+* Install http://instagram-engineering.tumblr.com/post/11399488246/simplifying-ec2-ssh-connections[+ec2-host+] on your local system
+* Launch EC2 instances.
+** Enable SSH among instances.
+** Firewall settings must allow all TCP/IP traffic for MPICH to run.
+** If necessary, install Swift/T
+** An AMI with Swift/T installed is available
+* Use the provided script +turbine/scripts/submit/ec2/turbine-setup-ec2.zsh+.
+** See the script header for usage notes
+** This will configure SSH settings and create a hosts file for MPICH
+   and install them on the EC2 instance
+
+Then:
+
+. Compile your Swift script with STC.
++
+----
+stc program.swift
+----
+. Run with:
++
+----
+turbine -f $HOME/hosts.txt program.tic
+----
+
+NOTE: It is best to have a shared file system such as NFS running on
+your nodes to maintain code and data (plenty of information is
+available on the WWW on how to configure this).  If not, you will need
+to +scp+ the STC-generated +*.tic+ code to each node before running
++turbine+, and you will have to be very careful about how you access
+data files (Swift/T does not stage data to worker nodes or forward I/O
+operations to another node).  Swift/T's
+http://swift-lang.org/Swift-T/guide.html#location[location syntax] may
+be useful.
+
+== Mac OS X
+
+Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
+other single system.
+
+* SWIG: You may use SWIG from source or the MacPorts +swig-tcl+ package
+* MPI: You may use any MPI implementation
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////

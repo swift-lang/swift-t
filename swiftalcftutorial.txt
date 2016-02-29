@@ -1,0 +1,89 @@
+
+:toc:
+
+Swift-ALCF Tutorial
+====================
+
+////
+
+This file is on the web at:
+
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+== Introduction
+
+This tutorial aims at 
+
+Two Flavors of Swift: K and T..
+
+Both are installed and available for use on ALCF systems..
+
+== Choosing between K and T
+
+Use Swift/T if:
+
+- your tasks are short (seconds to subseconds)
+- your workflow fits well into a single scheduler (e.g., PBS) job
+- you can optionally link your application code against the Swift/T framework.
+
+Use Swift/K if:
+
+- your apps are longer-running (minutes to hours)
+- your apps are complex executables that can not be readily linked into Swift/T
+- your workflows have time-varying resource demands
+- It is advantageous to break your resource requests into multiple smaller jobs
+
+== Example 1. Hello World
+Text here
+
+=== Hello World in K
+K text here
+
+=== Hello World in T
+T text here
+
+== Example 2. Parallel Execution
+Text here
+
+=== Mandelbrot in K
+K Mandelbrot here
+
+=== Mandelbrot in T
+T Mandelbrot here
+
+== Execution Modes in K
+Text here
+
+=== Cobalt script mode
+Simple Cobalt mode here.
+
+=== Cobalt sub-block mode
+sub-block mode here.
+
+=== Seamless execution between Mira and Cooley
+Text here
+
+== Execution Modes in T
+Text here
+
+=== Mainwrap: Wrap main and other functions
+Text here
+
+== Appendix 1. Troubleshoot and Debug
+Troubleshoot text here
+
+== Appendix 2. Swift Config
+Swift config details here
+
+
+////
+Local Variables:
+mode: doc
+eval: (auto-fill-mode 1)
+End:
+////
