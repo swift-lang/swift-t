@@ -48,7 +48,7 @@ exm-user@mcs.anl.gov .
 === Build procedures
 
 The build procedure is based on the installation process
-described in the link:./swift.html[Swift/T Guide].  You
+described in the link:./guide.html[Swift/T Guide].  You
 should follow that build procedure, and use this
 guide for information on specific configuration
 settings for your system.
@@ -78,7 +78,7 @@ To report a problem, simply email exm-user@mcs.anl.gov .
 
 === For more information
 
-* See the link:./swift.html[Swift/T Guide] for more information about Swift/T.
+* See the link:./guide.html[Swift/T Guide] for more information about Swift/T.
 * Join the http://lists.mcs.anl.gov/mailman/listinfo/exm-user[+swift-user+ mailing list].
 
 == Swift-Turbine compilation
@@ -234,7 +234,7 @@ system scheduler (+qsub+).
        (reduces number of files that must be read from file system).
 
 +-X+:: Run standalone Turbine executable
-        (created by link:swift.html#mkstatic[mkstatic.tcl]) instead of
+        (created by link:guide.html#mkstatic[mkstatic.tcl]) instead of
         +program.tic+.
 
 [[turbine_output]]
