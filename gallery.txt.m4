@@ -2,7 +2,9 @@
 ////
 
 Swift/T Gallery, asciidoc format
-http://swift-lang.org/Swift-T/gallery.html
+http://swift-lang.github.io/swift-t/gallery.html
+
+NOTE: Edit gallery.txt.m4, not gallery.txt (which is overwritten)
 
 ////
 
@@ -23,7 +25,7 @@ Links:
 
 * link:swift.html[General documentation for Swift/T]
 
-* Post to http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM
+* Post to https://lists.ci.uchicago.edu/cgi-bin/mailman/listinfo/swift-user[the Swift
   user list] with questions about these examples.
 
 * These example scripts may be link:downloads/gallery.tar.gz[downloaded
