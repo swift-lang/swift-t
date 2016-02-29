@@ -1,0 +1,2748 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.8" />
+<title>Swift/T Sites Guide</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+
+/* Swift/T guide customizations */
+
+a:visited {
+  color: gray;
+}
+h5 {
+  font-size: 0.8em;
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+</head>
+<body class="article" style="max-width:750px">
+<div id="header">
+<h1>Swift/T Sites Guide</h1>
+<span id="author">Justin M. Wozniak</span><br />
+<span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
+<span id="revnumber">version 0.8.0,</span>
+<span id="revdate">August 2015</span>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_how_to_use_this_guide">How to use this guide</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This manual provides a reference on how to run Swift/Turbine
+programs on a variety of systems.  It also contains an index of sites
+maintained by the Swift/T team for use by Turbine.</p></div>
+<div class="paragraph"><p>For each machine, a <strong>public installation</strong> and/or a <strong>build procedure</strong> will
+be provided.  The user need follow only one set of directions.</p></div>
+<div class="paragraph" id="login_node"><p>A <strong>login node installation</strong> may be available on certain systems.  This
+will run Swift/T on the login node of that system.  This only
+acceptable for short debugging runs of 1 minute or less.  If you do
+this, you should run <code>swift-t</code> or <code>turbine</code> under the <code>nice</code> command.
+It will affect other users so please be cautious when using this mode
+for debugging.</p></div>
+<div class="sect2">
+<h3 id="_public_installations">Public installations</h3>
+<div class="paragraph"><p>These are maintained by the Swift/T team.  Because they may become out
+of date after a release, the release version and a timestamp are
+recorded below.</p></div>
+<div class="paragraph"><p>To request maintenance on a public installation, simply email
+<a href="mailto:exm-user@mcs.anl.gov">exm-user@mcs.anl.gov</a> .</p></div>
+</div>
+<div class="sect2">
+<h3 id="_build_procedures">Build procedures</h3>
+<div class="paragraph"><p>The build procedure is based on the installation process
+described in the <a href="./swift.html">Swift/T Guide</a>.  You
+should follow that build procedure, and use this
+guide for information on specific configuration
+settings for your system.</p></div>
+<div class="paragraph"><p>The settings are generally implemented by modifying the
+<code>exm-settings.sh</code> configuration script.  In some cases,
+where the setting is not configurable through <code>exm-settings.sh</code>,
+it may be necessary to directly modify the <code>configure</code> or <code>make</code>
+command lines by following the manual build process, or by modifying
+build scripts under the <code>build</code> subdirectory
+(e.g. <code>turbine-build.sh</code>).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_version_numbers">Version numbers</h3>
+<div class="paragraph"><p>The component version numbers that correspond together to make up a
+Swift/T release may be found on the
+<a href="./downloads.html">Downloads</a> page.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_freshness">Freshness</h3>
+<div class="paragraph"><p>These instructions may become stale for various reasons.  For example,
+system administrators may update directory locations, breaking these
+instructions.  Thus, we mark <strong>As of:</strong> dates on the instructions for
+each system.</p></div>
+<div class="paragraph"><p>To report a problem, simply email <a href="mailto:exm-user@mcs.anl.gov">exm-user@mcs.anl.gov</a> .</p></div>
+</div>
+<div class="sect2">
+<h3 id="_for_more_information">For more information</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+See the <a href="./swift.html">Swift/T Guide</a> for more information about Swift/T.
+</p>
+</li>
+<li>
+<p>
+Join the <a href="http://lists.mcs.anl.gov/mailman/listinfo/exm-user"><code>swift-user</code> mailing list</a>.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_swift_turbine_compilation">Swift-Turbine compilation</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift/T usage starts with developing and testing a Swift/T script.
+See the main <a href="./guide.html">Swift/T usage guide</a> for more
+information.</p></div>
+<div class="paragraph"><p>In short, you use STC to compile the Swift script into a format that
+the runtime, Turbine, can run.  You may compile and run in one step
+with <code>swift-t</code> or run <code>stc</code> and <code>turbine</code> separately.</p></div>
+<div class="paragraph"><p>When running on a big HPC machine, it may be difficult to get STC
+(a Java-based program) running.  STC output (<code>program.tic</code>) is
+platform-independent.  You may run STC to develop and debug your
+script on your local workstation, then simply copy <code>program.tic</code> to
+the big machine for execution.  Just make sure that the STC and
+Turbine versions are compatible (the same release number).</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_turbine_as_mpi_program">Turbine as MPI program</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Turbine is a moderately complex MPI program.  It is essentially a Tcl
+library that glues together multiple C-based systems, including MPI,
+ADLB, and the Turbine dataflow library.</p></div>
+<div class="paragraph"><p>Running Turbine on a MPI-enabled system works as follows:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compilation and installation: This builds the Turbine libraries and
+  links with the system-specific MPI library.  STC must also be
+  informed of the Turbine installation to access correct built-in
+  function information
+</p>
+</li>
+<li>
+<p>
+Run-time configuration: The startup job submission script locates
+  the Turbine installation and reads configuration information
+</p>
+</li>
+<li>
+<p>
+Process launch: The Tcl shell, <code>tclsh</code>, is launched in parallel and
+  configuration information is passed to it so it can find the
+  libraries. The Tcl program script is the STC-generated user program
+  file.  The MPI library enables communication among the <code>tclsh</code>
+  processes.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Each of the systems below follows this basic outline.</p></div>
+<div class="paragraph"><p>On simpler systems, use the <code>turbine</code> program.  This is a small shell
+script wrapper that configures Turbine and essentially runs:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec tclsh program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>On more complex, scheduled systems, users do not invoke <code>mpiexec</code>
+directly.  Thus, sample scripts are provided below.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="scheduled_systems">Submitting Turbine jobs on scheduled systems</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
+with a customized <em>run script</em> (<code>turbine-&lt;name&gt;-run</code>) that launches Turbine
+on that system.  This produces a batch script if necessary and submits
+it with the job submission program (e.g., <code>qsub</code>).</p></div>
+<div class="sect2">
+<h3 id="_turbine_run_scripts">Turbine run scripts</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+PBS
+</dt>
+<dd>
+<p>
+<code>turbine-pbs-run.zsh</code>
+</p>
+</dd>
+<dt class="hdlist1">
+Cobalt
+</dt>
+<dd>
+<p>
+<code>turbine-cobalt-run.zsh</code>
+</p>
+</dd>
+<dt class="hdlist1">
+Cray/APRUN
+</dt>
+<dd>
+<p>
+<code>turbine-cray-run.zsh</code> (PBS with Cray&#8217;s <code>aprun</code>)
+</p>
+</dd>
+<dt class="hdlist1">
+SLURM
+</dt>
+<dd>
+<p>
+<code>turbine-slurm-run.zsh</code>
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Each script accepts input via environment variables and command-line options.</p></div>
+<div class="paragraph"><p>The <code>swift-t</code> and <code>turbine</code> programs have a <code>-m</code> option that accepts
+<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, or <code>slurm</code>.</p></div>
+<div class="paragraph"><p>A typical invocation is (one step compile-and-run):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m pbs -n 96 -s settings.sh program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or (just compile):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or (just run):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine -m pbs -n 96 -s settings.sh program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>or (just run):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-pbs-run.zsh -n 96 -s settings.sh program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>which are equivalent.</p></div>
+<div class="paragraph"><p><code>program.tic</code> is the output of STC and <code>settings.sh</code> contains:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export QUEUE=bigqueue
+export PPN=8</code></pre>
+</div></div>
+<div class="paragraph"><p>which would run <code>program.tic</code> in 96 MPI processes on 12 nodes (8
+processes per node), submitted by PBS to queue <code>bigqueue</code>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="variables">Turbine scheduler variables</h3>
+<div class="paragraph"><p>For scheduled systems, Turbine accepts a common set of environment
+variables.  These may be placed in <code>settings.sh</code> or set by the user in
+any other way.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>PROCS</code>
+</dt>
+<dd>
+<p>
+Number of processes to use
+</p>
+</dd>
+<dt class="hdlist1">
+<code>PPN</code>
+</dt>
+<dd>
+<p>
+Number of processes per node
+</p>
+</dd>
+<dt class="hdlist1">
+<code>PROJECT</code>
+</dt>
+<dd>
+<p>
+The project name to use with the system scheduler
+</p>
+</dd>
+<dt class="hdlist1">
+<code>QUEUE</code>
+</dt>
+<dd>
+<p>
+Name of queue in which to run
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_OUTPUT</code>
+</dt>
+<dd>
+<p>
+Directory in which to place Turbine output (if
+unset, a default value is automatically created)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_OUTPUT_ROOT</code>
+</dt>
+<dd>
+<p>
+Directory under which Turbine will
+automatically create <code>TURBINE_OUTPUT</code> if necessary
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_OUTPUT_FORMAT</code>
+</dt>
+<dd>
+<p>
+Allows customization of the automatic
+output directory creation.  See <a href="#turbine_output">Turbine output</a>
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="options">Turbine scheduler script options</h3>
+<div class="paragraph"><p>For scheduled systems, Turbine accepts a common set of command line options.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-d &lt;directory&gt;</code>
+</dt>
+<dd>
+<p>
+Set the Turbine output directory.  (Overrides
+<code>TURBINE_OUTPUT</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-e &lt;key&gt;=&lt;value&gt;</code>
+</dt>
+<dd>
+<p>
+Set an environment variable in the job
+environment.  This may be used multiple times
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-i &lt;script&gt;</code>
+</dt>
+<dd>
+<p>
+Set a script to run before launching Turbine.  This
+script will have <code>TURBINE_OUTPUT</code> in the environment, so you may
+perform additional configuration just before job launch.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-n &lt;procs&gt;</code>
+</dt>
+<dd>
+<p>
+Number of processes.  (Overrides <code>PROCS</code>.)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-o &lt;directory&gt;</code>
+</dt>
+<dd>
+<p>
+Set the Turbine output directory root, in which
+default Turbine output directories are automatically created based on
+the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-s &lt;script&gt;</code>
+</dt>
+<dd>
+<p>
+Source this file for environment variables.  These
+variables override any other <a href="#variables">Turbine scheduler variables</a>.  You may place arbitrary shell code in this script.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-t &lt;time&gt;</code>
+</dt>
+<dd>
+<p>
+Set scheduler walltime.  The argument format is passed
+through to the scheduler
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-V</code>
+</dt>
+<dd>
+<p>
+Make script verbose.  This typically just applies <code>set -x</code>,
+allowing you to inspect variables and arguments as passed to the
+system scheduler (<code>qsub</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-x</code>
+</dt>
+<dd>
+<p>
+Use <code>turbine_sh</code> launcher with compiled-in libraries instead of <code>tclsh</code>
+       (reduces number of files that must be read from file system).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-X</code>
+</dt>
+<dd>
+<p>
+Run standalone Turbine executable
+        (created by <a href="swift.html#mkstatic">mkstatic.tcl</a>) instead of
+        <code>program.tic</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="turbine_output">Turbine output directory</h3>
+<div class="paragraph"><p>The working directory (<code>PWD</code>) for the job is called <code>TURBINE_OUTPUT</code>.</p></div>
+<div class="paragraph"><p>If the user does not set this variable, Turbine will select one based
+on the date and report it.  The automatically selected directory will
+be placed under <code>TURBINE_OUTPUT_ROOT</code>, which defaults to
+<code>$HOME/turbine-output</code>.  The user program will be copied to
+<code>TURBINE_OUTPUT</code> before submission.  Standard output and error goes to
+<code>TURBINE_OUTPUT/output.txt</code>.</p></div>
+<div class="paragraph"><p>The automatically created Turbine output directory <code>TURBINE_OUTPUT</code> is
+generated by passing <code>TURBINE_OUTPUT_FORMAT</code> to the <code>date</code> command.
+The default value is <code>%Y/%m/%d/%H/%M/%S</code>, that is,
+<code>year/month/day/hour/minute/second</code> (see <code>man date</code> for more options).
+An additional option is provided by Turbine is <code>%Q</code>, which puts a
+unique number in that spot.  <code>TURBINE_OUTPUT_PAD</code> sets the minimum
+field width of the integer put into the spot, defaulting to 3.</p></div>
+<div class="paragraph"><p>For example, on a Wednesday, <code>TURBINE_OUTPUT_ROOT=/scratch</code>,
+<code>TURBINE_OUTPUT_FORMAT=%A/%Q</code>, <code>TURBINE_OUTPUT_PAD=1</code> would run
+subsequent Swift/T jobs in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/scratch/Wednesday/1
+/scratch/Wednesday/2
+/scratch/Wednesday/3</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_x86_clusters">x86 clusters</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="generic_clusters">Generic clusters</h3>
+<div class="paragraph"><p>This is the simplest method to run Turbine.</p></div>
+<div class="sect3">
+<h4 id="_build_procedure">Build procedure</h4>
+<div class="paragraph"><p>The <code>exm-setup.zsh</code> script should work without any special configuration.</p></div>
+<div class="paragraph"><p>To run, simply build a MPI hosts file and pass that to Turbine, which
+will pass it to <code>mpiexec</code>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine -l -n 3 -f hosts.txt program.tic</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_mcs_compute_servers">MCS compute servers</h3>
+<div class="paragraph"><p>Compute servers at MCS Division, ANL.
+Operates as a generic cluster (see above).</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>echo crush.mcs.anl.gov &gt;  hosts.txt
+echo crank.mcs.anl.gov &gt;&gt; hosts.txt
+turbine -l -n 3 -f hosts.txt program.tic</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_public_installation">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> trunk, 8/13/2013</p></div>
+<div class="paragraph"><p>MCS users are welcome to use this installation.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/stc/bin/stc</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/turbine/bin/turbine</code>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_breadboard">Breadboard</h3>
+<div class="paragraph"><p>Cf. <a href="http://wiki.mcs.anl.gov/radix/index.php/Breadboard">Breadboard Wiki</a></p></div>
+<div class="paragraph"><p>Breadboard is a cloud-ish cluster for software development in
+MCS. This is a fragile resource used by many MCS developers. Do not
+overuse.</p></div>
+<div class="paragraph"><p>Operates as a generic cluster (see above).  No scheduler.  Once you
+have the nodes, you can use them until you release them or time
+expires (12 hours by default).</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Allocate nodes with <code>heckle</code>.  See Breadboard wiki
+</p>
+</li>
+<li>
+<p>
+Wait for nodes to boot
+</p>
+</li>
+<li>
+<p>
+Use <code>heckle allocate -w</code> for better interaction
+</p>
+</li>
+<li>
+<p>
+Create MPICH hosts file:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>heckle stat | grep $USER | cut -f 1 -d ' ' &gt; hosts.txt</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Run:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_LAUNCH_OPTIONS='-f hosts.txt'
+turbine -l -n 4 program.tic</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Run as many jobs as desired on the allocation
+</p>
+</li>
+<li>
+<p>
+When done, release the allocation:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>for h in $( cat hosts.txt )
+do
+  heckle free $h
+done</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_midway">Midway</h3>
+<div class="paragraph"><p>Midway is a mid-sized SLURM cluster at the University of Chicago</p></div>
+<div class="sect3">
+<h4 id="_public_installation_2">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> master - 07/17/2015</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/compute/gcc/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/compute/gcc/turbine/bin</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m slurm -n 2 program.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_2">Build procedure</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Midway uses OpenMPI.  We have tested with <code>/software/openmpi-1.6-el6-x86_64</code>
+</p>
+</li>
+<li>
+<p>
+Put <code>mpicc</code> in your <code>PATH</code>
+</p>
+</li>
+<li>
+<p>
+Use these settings in <code>exm-settings.sh</code>:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
+MPI_VERSION=2
+MPI_LIB_NAME=mpi</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Or if doing a manual build with <code>configure</code> and make:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code> --with-mpi-lib-name=mpi</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tukey">Tukey</h3>
+<div class="paragraph"><p><a href="https://www.alcf.anl.gov/user-guides/tukey">Tukey</a> is a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+the Cobalt scheduler.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
+<div class="sect3">
+<h4 id="_public_installation_3">Public installation</h4>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/x86/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Turbine submit script: <code>~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=cluster
+export QUEUE=pubnet
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tic</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_3">Build procedure</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Check that the system-provided MVAPICH <code>mpicc</code> is in your <code>PATH</code>
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with <code>gcc</code>
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpicc --enable-mpi-2</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec</code>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blues">Blues</h3>
+<div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/blues">Blues</a> is a 310-node x86
+cluster at ANL.  It uses PBS.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> Master, 8/17/2015</p></div>
+<div class="sect3">
+<h4 id="_public_installation_4">Public installation</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>~wozniak/Public/sfw/blues/compute/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+<code>~wozniak/Public/sfw/blues/compute/turbine/bin/turbine</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>This installation has Python enabled.</p></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export QUEUE=batch # or other settings</code></pre>
+</div></div>
+<div class="paragraph"><p>See the <a href="#variables">Turbine scheduler variables</a> and
+<a href="#options">Turbine run script options</a> for additional settings.</p></div>
+<div class="paragraph"><p>Use <code>swift-t</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m pbs -n 8 program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or Turbine:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc program.swift
+turbine -m pbs -n 8 program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>or the Turbine PBS run script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc program.swift
+turbine-pbs-run.zsh -n 8 program.tic</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_4">Build procedure</h4>
+<div class="paragraph"><p>Use GCC 4.8.2 and MVAPICH 2.0:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ PATH=/soft/gcc/4.8.2/bin:$PATH
+$ which gcc
+/soft/gcc/4.8.2/bin/gcc
+$ PATH=/soft/mvapich2/2.0-gcc-4.7.2/bin:$PATH
+$ which mpicc
+/soft/mvapich2/2.0-gcc-4.7.2/bin/mpicc</code></pre>
+</div></div>
+<div class="paragraph"><p>A public Tcl is in: <code>&#126;wozniak/Public/sfw/tcl-8.6.4</code></p></div>
+<div class="paragraph"><p>A public Python is in: <code>&#126;wozniak/Public/sfw/Python-2.7.8</code></p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_fusion">Fusion</h3>
+<div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> is a 320-node x86
+cluster at ANL.  It uses PBS.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_5">Public installation</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/compute/stc/bin/stc</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
+$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>See the <a href="#variables">Turbine scheduler variables</a> and
+<a href="#options">Turbine run script options</a> for additional settings.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_5">Build procedure</h4>
+<div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ which gcc
+/software/gcc-4.7.2/bin/gcc
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_blue_gene">Blue Gene</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The Blue Gene systems at ANL are <a href="#scheduled_systems">scheduled systems</a> that use Cobalt.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The job ID is placed in <code>TURBINE_OUTPUT/jobid.txt</code>
+</p>
+</li>
+<li>
+<p>
+Job metadata is placed in <code>TURBINE_OUTPUT/turbine-cobalt.log</code>
+</p>
+</li>
+<li>
+<p>
+The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_blue_gene_p">Blue Gene/P</h3>
+<div class="sect3">
+<h4 id="_surveyor_intrepid_challenger">Surveyor/Intrepid/Challenger</h4>
+<div class="paragraph"><p>These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.</p></div>
+<div class="sect4">
+<h5 id="_public_installation_6">Public installation</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Based on trunk
+</p>
+</li>
+<li>
+<p>
+STC: <code>~wozniak/Public/stc-trunk/bin/stc</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_build_procedure_6">Build procedure</h5>
+<div class="paragraph"><p>To run on the <a href="#login_node">login node</a>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Install MPICH for the login nodes
+</p>
+</li>
+<li>
+<p>
+Configure Tcl and c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with your MPICH
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-bgp LDFLAGS=-shared-libgcc</code></pre>
+</div></div>
+<div class="paragraph"><p>This makes adjustments for some Blue Gene quirks.</p></div>
+</li>
+<li>
+<p>
+Then, simply use the <code>bin/turbine</code> program to run.  Be cautious in
+  your use of the login nodes to avoid affecting other users.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><em>To run on the compute nodes under IBM CNK:</em></p></div>
+<div class="paragraph"><p>In this mode, you cannot use <code>app</code> functions to launch external
+programs because CNK does not support this.  See ZeptoOS below.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Tcl with mpixlc
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-xlc
+CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
+See the script header for usage.</p></div>
+<div class="paragraph"><p><em>To run on the compute nodes under ZeptoOS:</em></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Tcl with zmpicc
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=zmpicc --enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
+See the script header for usage.</p></div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blue_gene_q">Blue Gene/Q</h3>
+<div class="sect3">
+<h4 id="_alcf">ALCF</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+swift-t -m cobalt -n 3 program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>The normal Turbine environment variables are honored, plus the
+<a href="#variables">Turbine scheduler variables</a>.</p></div>
+<div class="sect4">
+<h5 id="_public_installation_mira_cetus">Public installation: Mira/Cetus</h5>
+<div class="paragraph"><p><strong>As of:</strong> 0.8.0 - 5/26/2015</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>/soft/workflows/swift/T/turbine/bin/turbine</code>
+</p>
+</li>
+<li>
+<p>
+Turbine/Cobalt: <code>/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_public_installation_vesta">Public installation: Vesta</h5>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 12/16/2014</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/stc/bin/stc</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_7">Build procedure</h4>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
+<div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
+<div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with <code>bgxlc</code>.  You must modify the Makefile to use
+<code>bgxlc</code> arguments: <code>-qpic</code>, <code>-qmkshrobj</code>.  You must link with
+<code>-qnostaticlink</code>.</p></div>
+<div class="paragraph"><p>You may get errors that say <code>wrong digit</code>.  This is apparently a bgxlc
+bug when applied to Tcl&#8217;s <code>StrToD.c</code>.  Compiling this file with <code>-O3</code> fixes
+the problem.</p></div>
+<div class="paragraph"><p><strong>Building Swift/T:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compile c-utils with <code>CC=powerpc64-bgq-linux-gcc</code>
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p><strong>External scripting:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Python
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Python with BGXLC
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+R
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure R with GCC as usual
+</p>
+</li>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_cray">Cray</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_titan">Titan</h3>
+<div class="paragraph"><p>Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_7">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 8/27/2014</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T trunk - 8/27/2013
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>/lustre/atlas2/mat049/proj-shared/sfw/compute/stc/bin/stc</code>
+</p>
+</li>
+<li>
+<p>
+SWIG: <code>/lustre/atlas2/mat049/proj-shared/sfw/swig-3.0.2</code>
+</p>
+</li>
+<li>
+<p>
+Tcl:  <code>/lustre/atlas2/mat049/proj-shared/sfw/tcl-8.6.2</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_submitting_jobs">Submitting jobs</h4>
+<div class="paragraph"><p>Titan requires that user output goes to a Lustre file system.  Set a
+soft link like this so that Turbine output goes to Lustre:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+cd ~
+ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output</code></pre>
+</div></div>
+<div class="paragraph"><p>Or, you may set <code>TURBINE_OUTPUT</code> <a href="#variables">manually</a>.</p></div>
+<div class="paragraph"><p>Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the <code>#PBS -l ppn:</code>
+directive. The correct directive is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>#PBS -l nodes=32</code></pre>
+</div></div>
+<div class="paragraph"><p><code>PPN</code> is handled by setting the <code>-n</code> argument.</p></div>
+<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Titan.  You can invoke
+it as follows (for a 2 nodes, 32 processes per node):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export PROJECT=MAT049
+export QUEUE=debug
+export TITAN=true
+export PPN=32
+turbine-aprun-run.zsh -n 64 helloworld.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>These environment variables may be placed in your <code>-s</code>
+<a href="#options">settings file</a>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_8">Build procedure</h4>
+<div class="paragraph"><p><strong>As of:</strong> 7/23/2015</p></div>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
+flags to configure the MPI library.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+In the Turbine configure step, replace the <code>--with-mpi</code> option with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_submitting_jobs_2">Submitting jobs</h4>
+<div class="paragraph"><p>Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the <code>#PBS -l ppn:</code>
+directive. The correct directive is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>#PBS -l nodes=32</code></pre>
+</div></div>
+<div class="paragraph"><p><code>PPN</code> is handled by setting the <code>-n</code> argument.</p></div>
+<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Titan.  You can invoke
+it as follows (for a single node/32 processes per node):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export QUEUE=normal
+export TITAN=true
+export PPN=32
+turbine-aprun-run.zsh -n 32 helloworld.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>These environment variables may be placed in your
+<a href="#settings_file">settings file</a>.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blue_waters">Blue Waters</h3>
+<div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.</p></div>
+<div class="sect3">
+<h4 id="_build_procedure_9">Build procedure</h4>
+<div class="paragraph"><p><strong>As of:</strong>  11/05/2013</p></div>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
+flags to configure the MPI library.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Use the following settings in <code>exm-settings.sh</code>
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CC=cc
+
+MPI_VERSION=2
+EXM_CUSTOM_MPI=1
+
+EXM_CRAY=1
+
+# Optionally, if you want to exclusively build static executables
+EXM_BUILD_STATIC=1</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>Or, if doing a manual build with <code>configure</code>/<code>make</code>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+In the Turbine configure step, replace the <code>--with-mpi</code> option with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_submitting_jobs_3">Submitting jobs</h4>
+<div class="paragraph"><p>Submitting jobs on Blue Waters is largely the same with with other Cray
+systems. One difference is that the size of the job is specified using a
+different notation.</p></div>
+<div class="paragraph"><p>Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does <strong>not</strong> support the
+<em>mpp</em> directives: trying to use an <em>mpp</em> directive may cause your job
+to be rejected or stuck in the queue. The correct directive is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>#PBS -l nodes=1:ppn=32</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>(The <code>BLUE_WATERS=true</code> setting was renamed to <code>CRAY_PPN=true</code> on
+April 29, 2015.)</p></div>
+</div>
+<div class="sect3">
+<h4 id="_installing_from_source">Installing from source</h4>
+<div class="sect4">
+<h5 id="_prerequisites">Prerequisites</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Tcl 8.5 is installed in: <code>/usr/bin/tclsh</code>
+</p>
+</li>
+<li>
+<p>
+Swig 1.3.36 is installed in: <code>/usr/bin/swig</code>
+</p>
+</li>
+<li>
+<p>
+The following steps ensure that the right compiler modules are loaded.
+</p>
+</li>
+<li>
+<p>
+Switch your programming environment to use <code>gcc</code>.
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module unload PrgEnv-cray
+module load PrgEnv-gnu</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Load module with latest Oracle Java JDK 7+
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load java</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Download and install the Apache Ant build tool (required to
+  build STC)
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>wget http://www.apache.org/dist/ant/binaries/apache-ant-1.9.2-bin.tar.bz2
+# Check archive is valid
+ant_xsum=$(shasum apache-ant-1.9.2-bin.tar.bz2 | awk '{ print $1 }')
+if [ ! "$ant_xsum" = "50cfaaeecee4f88a3ff9de5068fc98e4e9268daf" ]
+then
+  echo "Bad ant download checksum"
+fi
+
+# Extract ant install ant somewhere permanent
+tar xvjf apache-ant-1.9.2-bin.tar.bz2
+mkdir -p ~/soft
+mv apache-ant-1.9.2/ ~/soft/
+
+# Add ant to path (put this in .bashrc)
+export PATH="$PATH:$HOME/soft/apache-ant-1.9.2/bin"
+
+# Check ant version
+ant -version</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_installation">Installation</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Need to install to a lustre fs:
+</p>
+</li>
+<li>
+<p>
+<code>/scratch</code> (not backed up, best performance)
+</p>
+</li>
+<li>
+<p>
+<code>/u</code> home directory (backed up, good performance)
+</p>
+</li>
+<li>
+<p>
+<code>/projects</code> (backed up, good performance)
+</p>
+</li>
+<li>
+<p>
+I used a prepackaged distro built using <code>distro/construct.zsh -t</code> to build
+  from trunk. The following instructions are to install from this distro to
+  trunk on Blue Waters.
+</p>
+</li>
+<li>
+<p>
+First extract the tarball
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>tar xvzf exm-trunk.tar.gz
+cd exm-trunk</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+exm-settings.sh needs some customization.  The changed settings were:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>EXM_PREFIX=/u/sciteam/tarmstro/soft/exm-trunk-r8770
+
+# Use the latest GNU-compatible version of mpich
+EXM_MPI=/opt/cray/mpt/default/gni/mpich2-gnu/48
+# Need to use gcc (mpicc doesn't exist on Cray)
+EXM_MPICC=`which gcc`
+
+# Custom MPI
+EXM_CUSTOM_MPI=1
+
+# Since we're not using mpicc wrapper, add CC options for MPI libraries
+export CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/48/include/"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/48/lib/ -lmpich"
+
+# Currently MPI 3 not supported
+MPI_VERSION=2</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_beagle">Beagle</h3>
+<div class="paragraph"><p>Beagle is a Cray XE6 at the University of Chicago</p></div>
+<div class="paragraph"><p>Remember that at run time, Beagle jobs can access only <code>/lustre</code>, not
+NFS (including home directories).  Thus, you must install Turbine and
+its libraries in <code>/lustre</code>.  Also, your data must be in <code>/lustre</code>.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_8">Public installation</h4>
+<div class="sect4">
+<h5 id="_login_nodes">Login nodes</h5>
+<div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T master - 8/3/2015
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/x86_64/swift-t/turbine</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/x86_64/swift-t/stc</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes">Compute nodes</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T trunk - 8/3/2015
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/turbine</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/stc</code>
+</p>
+</li>
+<li>
+<p>
+This installation is configured with <a href="http://swift-lang.org/Swift-T/guide.html#_calling_python">Python</a>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Set environment variables.  The normal Turbine environment
+variables are honored, plus the <a href="#variables">Turbine scheduler variables</a> and <a href="#options">Turbine scheduler options</a>..
+</p>
+</li>
+<li>
+<p>
+Run Swift:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m cray -n &lt;numprocs&gt; script.swift --arg1=value1 ...</code></pre>
+</div></div>
+<div class="paragraph"><p>or:</p></div>
+<div class="paragraph"><p>Run Turbine:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine -m cray -n &lt;numprocs&gt; script.tic --arg1=value1 ...</code></pre>
+</div></div>
+<div class="paragraph"><p>or:</p></div>
+<div class="paragraph"><p>Run the submit script directly (in <code>turbine/scripts/submit/cray</code>):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-cray-run.zsh -n &lt;numprocs&gt; script.tic --arg1=value1 ...</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_10">Build procedure</h4>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
+flags to configure the MPI library.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+$ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+$ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+In the Turbine configure step, replace the <code>--with-mpi</code> option with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_with_mpe">Build procedure with MPE</h4>
+<div class="paragraph"><p>Configure MPE 1.3.0 with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CFLAGS=-fPIC
+export MPI_CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include -fPIC"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+export F77=gfortran
+export MPI_F77=$F77
+export MPI_FFLAGS=$MPI_CFLAGS
+CC="gcc -fPIC" ./configure --prefix=... --disable-graphics</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure ADLB with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CFLAGS=-mpilog
+export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
+./configure --prefix=... CC=mpecc --with-c-utils=/path/to/c-utils --with-mpe=/path/to/mpe --enable-mpi-2</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure Turbine with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_swan">Swan</h3>
+<div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
+<div class="sect3">
+<h4 id="_public_installation_9">Public installation</h4>
+<div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
+<div class="paragraph"><p>Run with, e.g.:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CRAY_PPN=true
+swift-t -m cray -n 4 program.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_supporting_software">Supporting software</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Tcl:  <code>/home/users/p01951/Public/sfw/tcl-8.6.2/bin/tclsh8.6</code>
+</p>
+</li>
+<li>
+<p>
+SWIG: <code>/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_11">Build procedure</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure c-utils as usual with <code>gcc</code>.
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/48/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/48/lib -lmpich"
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/turbine CC=gcc
+--enable-custom-mpi
+--with-mpi-include=/opt/cray/mpt/default/gni/mpich2-gnu/48/include
+--with-mpi-lib-dir=/opt/cray/mpt/default/gni/mpich2-gnu/48/lib
+--with-tcl=/home/users/p01951/Public/sfw/tcl-8.6.2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Compile STC as usual.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_raven">Raven</h3>
+<div class="paragraph"><p>Raven is a Cray XE6/XK7 at Cray.</p></div>
+<div class="sect3">
+<h4 id="_build_procedure_12">Build procedure</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/46/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/46/lib -lmpich"
+--enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+In the Turbine configure step, use:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/46</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Use this Java when compiling/running STC: <code>/opt/java/jdk1.7.0_07/bin/java</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Set environment variables.  The normal Turbine environment
+variables are honored, plus the <a href="#variables">Turbine scheduler variables</a>.
+</p>
+</li>
+<li>
+<p>
+Run submit script (in <code>turbine/scripts/submit/cray</code>):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-aprun-run.zsh script.tcl --arg1=value1 ...</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="_advanced_usage">Advanced usage:</h4>
+<div class="paragraph"><p>Turbine uses a PBS template file called
+<code>turbine/scripts/submit/cray/turbine-aprun.sh.m4</code>.  This file is
+simply filtered and submitted via <code>qsub</code>.  You can edit this file to
+add additional settings as necessary.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_module">Module:</h4>
+<div class="paragraph"><p>You may load Swift/T with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module use /home/users/p01577/Public/modules
+module load swift-t</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_edison">Edison</h3>
+<div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_10">Public Installation</h4>
+<div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
+<div class="paragraph"><p>Run with, e.g.:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m cray -n 4 program.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_13">Build Procedure</h4>
+<div class="paragraph"><p>Load (and unload) appropriate modules:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module unload PrgEnv-intel darshan cray-shmem
+module load PrgEnv-gnu java</code></pre>
+</div></div>
+<div class="paragraph"><p>Clone the latest exm code:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd $SCRATCH
+git clone https://github.com/swift-lang/swift-t.git
+cd swift-t</code></pre>
+</div></div>
+<div class="paragraph"><p>Install c-utils:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd $SCRATCH/swift-t/c-utils
+./configure --enable-shared --prefix=$SCRATCH/exm-install/c-utils
+make &amp;&amp; make install</code></pre>
+</div></div>
+<div class="paragraph"><p>Install adlb:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd $SCRATCH/swift-t/lb
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
+make &amp;&amp; make install</code></pre>
+</div></div>
+<div class="paragraph"><p>Install turbine:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd $SCRATCH/swift-t/turbine
+./configure --with-adlb=$SCRATCH/exm-install/lb --with-c-utils=$SCRATCH/exm-install/c-utils \
+--prefix=$SCRATCH/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+make &amp;&amp; make install</code></pre>
+</div></div>
+<div class="paragraph"><p>Install stc:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd $SCRATCH/swift-t/stc
+ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-install/turbine</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_environment">Environment</h4>
+<div class="paragraph"><p>Set environment. Add the following to your .bashrc.ext (or equivalent)</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:$SCRATCH/exm-install/turbine/scripts/submit/cray
+source ~/.bash.ext</code></pre>
+</div></div>
+<div class="paragraph"><p>Note that with Swift installed as a module, the above steps will disappear and the only step needed will be to load the module:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load swift-t
+module load swift-k</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_a_simple_script">A simple script</h4>
+<div class="paragraph"><p>To compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/**
+   Example 1 - HELLO.SWIFT
+*/
+
+import io;
+
+main
+{
+  printf("Hello world!");
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Compile and run the above script using <code>swift-t</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m "cray" hello.swift</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The -m flag determines the machine type: "cray", "pbs", "cobalt", etc.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>A Turbine Intermediate Code (.tic) file will be generated on successful compilation.
+The <code>swift-t</code> command builds a job specification script and submits it to the
+scheduler.</p></div>
+<div class="paragraph"><p>Output from the above command will be similar to the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+`hello.tic' -&gt; `/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/hello.tic'
+SCRIPT=hello.tic
+PPN=1
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/turbine-cray.sh
+JOB_ID=2816478.edique02</code></pre>
+</div></div>
+<div class="paragraph"><p>Inspect the results with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cat $TURBINE_OUTPUT/output.txt.2816478.edique02.out</code></pre>
+</div></div>
+<div class="paragraph"><p>The following will be the contents:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>   0.000 MODE: WORK
+   0.000 WORK TYPES: WORK
+   0.000 WORKERS: 1 RANKS: 0 - 0
+   0.000 SERVERS: 1 RANKS: 1 - 1
+   0.000 WORK WORKERS: 1 RANKS: 0 - 0
+   0.000 MODE: SERVER
+   0.062 function:swift:constants
+   0.062 enter function: __entry
+Hello world!
+   0.163 turbine finalizing
+   0.104 turbine finalizing
+Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_a_second_example">A second example</h4>
+<div class="paragraph"><p>The following example joins multiple files (n times in parallel) using the Unix
+<code>cat</code> utility:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import files;
+import string;
+
+app (file out) cat (file input) {
+  "/bin/cat" input @stdout=out
+}
+
+foreach i in [0:9]{
+  file joined&lt;sprintf("joined%i.txt", i)&gt; = cat(input_file("data.txt"));
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Save the above script as <code>catsn.swift</code>.</p></div>
+<div class="paragraph"><p>Prepare input file as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>echo "contents of data.txt"&gt;data.txt</code></pre>
+</div></div>
+<div class="paragraph"><p>Set TURBINE_OUTPUT to current directory:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_OUTPUT=$PWD</code></pre>
+</div></div>
+<div class="paragraph"><p>Run the script as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -m "cray" catsn.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>On successful compilation and job submission, output similar to the following will be produced:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+`./swift-t-catsn.hzS.tic' -&gt; `/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/swift-t-catsn.hzS.tic'
+SCRIPT=./swift-t-catsn.hzS.tic
+PPN=1
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/turbine-cray.sh
+JOB_ID=2835290.edique02</code></pre>
+</div></div>
+<div class="paragraph"><p>Inspect one of the output files <code>joined&lt;n&gt;.txt</code> produced in the $TURBINE_OUTPUT directory:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cat $TURBINE_OUTPUT/joined4.txt</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_cloud">Cloud</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_ec2">EC2</h3>
+<div class="sect3">
+<h4 id="_setup">Setup</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Install <a href="http://instagram-engineering.tumblr.com/post/11399488246/simplifying-ec2-ssh-connections"><code>ec2-host</code></a> on your local system
+</p>
+</li>
+<li>
+<p>
+Launch EC2 instances.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Enable SSH among instances.
+</p>
+</li>
+<li>
+<p>
+Firewall settings must allow all TCP/IP traffic for MPICH to run.
+</p>
+</li>
+<li>
+<p>
+If necessary, install Swift/T
+</p>
+</li>
+<li>
+<p>
+An AMI with Swift/T installed is available
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Use the provided script <code>turbine/scripts/submit/ec2/turbine-setup-ec2.zsh</code>.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+See the script header for usage notes
+</p>
+</li>
+<li>
+<p>
+This will configure SSH settings and create a hosts file for MPICH
+   and install them on the EC2 instance
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>Then:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Compile your Swift script with STC.
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc program.swift</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine -f $HOME/hosts.txt program.tic</code></pre>
+</div></div>
+</li>
+</ol></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">It is best to have a shared file system such as NFS running on
+your nodes to maintain code and data (plenty of information is
+available on the WWW on how to configure this).  If not, you will need
+to <code>scp</code> the STC-generated <code>*.tic</code> code to each node before running
+<code>turbine</code>, and you will have to be very careful about how you access
+data files (Swift/T does not stage data to worker nodes or forward I/O
+operations to another node).  Swift/T&#8217;s
+<a href="http://swift-lang.org/Swift-T/guide.html#location">location syntax</a> may
+be useful.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_mac_os_x">Mac OS X</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
+other single system.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+SWIG: You may use SWIG from source or the MacPorts <code>swig-tcl</code> package
+</p>
+</li>
+<li>
+<p>
+MPI: You may use any MPI implementation
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Version 0.8.0<br />
+Last updated 2016-02-29 16:45:15 CST
+</div>
+</div>
+</body>
+</html>

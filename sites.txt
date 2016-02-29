@@ -1,7 +1,7 @@
 
 :toc:
 
-Turbine Sites Guide
+Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
 Swift/T v0.8.0, August 2015
@@ -65,7 +65,7 @@ build scripts under the +build+ subdirectory
 
 The component version numbers that correspond together to make up a
 Swift/T release may be found on the
-link:../downloads/downloads.html[Downloads] page.
+link:./downloads.html[Downloads] page.
 
 === Freshness
 
@@ -79,12 +79,12 @@ To report a problem, simply email exm-user@mcs.anl.gov .
 === For more information
 
 * See the link:./swift.html[Swift/T Guide] for more information about Swift/T.
-* Join the ExM (Swift/T project) http://lists.mcs.anl.gov/mailman/listinfo/exm-user[user mailing list].
+* Join the http://lists.mcs.anl.gov/mailman/listinfo/exm-user[+swift-user+ mailing list].
 
 == Swift-Turbine compilation
 
 Swift/T usage starts with developing and testing a Swift/T script.
-See the main link:guide.html[Swift/T usage guide] for more
+See the main link:./guide.html[Swift/T usage guide] for more
 information.
 
 In short, you use STC to compile the Swift script into a format that
