@@ -1,5 +1,0 @@
-
-SWIFT/T BENCHMARK UTILITIES
-
-Before running benchmarks, you must run ./make-package.sh
-in this directory to create pkgIndex.tcl

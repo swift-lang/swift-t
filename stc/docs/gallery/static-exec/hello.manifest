@@ -1,4 +1,0 @@
-pkg_name = hello
-pkg_version = 0.1
-
-main_script = hello.tic

@@ -1,6 +1,0 @@
-trace: string_bag,hello, world
-trace: string_bag,mayday, mayday
-trace: string_bag,eins, zwei, drei, vier, fünf
-trace: copy of string_bag,hello, world
-trace: copy of string_bag,mayday, mayday
-trace: copy of string_bag,eins, zwei, drei, vier, fünf

@@ -1,6 +1,0 @@
-copy_url http://example.com ftp://example.com
-copy_url http://example.com ftp://example.com/two
-copy_url3 http://three.com file://test3
-copy_url3 http://four.com file://test4
-copy_url5 http://five.com file://test5
-copy_url5 http://six.com file://test6
