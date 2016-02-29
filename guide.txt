@@ -1,7 +1,7 @@
 
 ////
 Swift/T guide, asciidoc format
-http://swift-lang.org/Swift-T/guide.html
+http://swift-lang.github.io/swift-t/guide.html
 ////
 
 :toc:
