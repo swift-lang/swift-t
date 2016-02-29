@@ -1,0 +1,4 @@
+machine1.some.edu
+machine2.some.edu
+machine3.some.edu
+machine4.some.edu

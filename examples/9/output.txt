@@ -1,0 +1,2 @@
+args: howdy ok bye
+controller: output: MY_OUTPUT
