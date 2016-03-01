@@ -853,13 +853,40 @@ HI</code></pre>
 However, Turbine also provides the <code>turbine</code> Tcl package, which
 contains the contents of the <code>lib/</code> directory: Tcl scripts and a
 shared object.  These provide all the TIC features nencessary for STC.</p></div>
+<div class="sect2">
+<h3 id="_builtins">4.1. Builtins</h3>
+<div class="paragraph"><p>Turbine implements the Swift/T standard library in <code>export</code>.  Some
+libraries (e.g., string) are implemented in pure Tcl.  Other TIC
+features are implemented in C code exposed to Tcl in <code>src/tcl</code>.  For
+example, <code>string.swift:sprintf()</code> refers to Tcl function <code>sprintf</code>
+which is implemented in <code>lib/string.tcl</code>, which simply uses the Tcl
+function <code>format</code>.  The <code>sprintf</code> function operates on Turbine data
+(TDs), which are integers that are the identifiers of data stored in
+ADLB.  A <code>rule</code> is used to trigger data-dependent execution, described
+next.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_turbine_data">4.2. Turbine data</h3>
+<div class="paragraph"><p>When Swift code declares, reads, or writes data, these are translated
+into ADLB data operations <code>_Create()</code>, <code>_Retrieve()</code>, and <code>_Store()</code>
+(see <code>adlb.h</code>).  These functions are exposed to TIC as Tcl functions
+<code>adlb::create</code>, <code>adlb::retrieve</code>, and <code>adlb::store</code>.  However,
+higher-level wrapper interfaces are targeted by STC, found in
+<code>lib/data.tcl</code>.  These handle the various types, provide logging, and
+so on.  They also support the Swift/T reference-counting-based garbage
+collection scheme (<code>_incr</code> and <code>_decr</code> generally refer to this count,
+when it reaches 0, the variable is garbage-collected by ADLB).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_the_turbine_rule_statement">4.3. The Turbine rule statement</h3>
+</div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 18:04:51 CST
+Last updated 2016-02-29 18:22:47 CST
 </div>
 </div>
 </body>

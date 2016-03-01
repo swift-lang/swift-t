@@ -98,6 +98,34 @@ However, Turbine also provides the +turbine+ Tcl package, which
 contains the contents of the +lib/+ directory: Tcl scripts and a
 shared object.  These provide all the TIC features nencessary for STC.
 
+=== Builtins
+
+Turbine implements the Swift/T standard library in +export+.  Some
+libraries (e.g., string) are implemented in pure Tcl.  Other TIC
+features are implemented in C code exposed to Tcl in +src/tcl+.  For
+example, +string.swift:sprintf()+ refers to Tcl function +sprintf+
+which is implemented in +lib/string.tcl+, which simply uses the Tcl
+function +format+.  The +sprintf+ function operates on Turbine data
+(TDs), which are integers that are the identifiers of data stored in
+ADLB.  A +rule+ is used to trigger data-dependent execution, described
+next.
+
+=== Turbine data
+
+When Swift code declares, reads, or writes data, these are translated
+into ADLB data operations +_Create()+, +_Retrieve()+, and +_Store()+
+(see +adlb.h+).  These functions are exposed to TIC as Tcl functions
++adlb::create+, +adlb::retrieve+, and +adlb::store+.  However,
+higher-level wrapper interfaces are targeted by STC, found in
++lib/data.tcl+.  These handle the various types, provide logging, and
+so on.  They also support the Swift/T reference-counting-based garbage
+collection scheme (+_incr+ and +_decr+ generally refer to this count,
+when it reaches 0, the variable is garbage-collected by ADLB).
+
+=== The Turbine rule statement
+
+
+
 
 ////
 Local Variables:
