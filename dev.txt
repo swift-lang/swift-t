@@ -42,10 +42,10 @@ shell scripts.  All use +getopt+.
 . +stc+ translates the `getopt's to Java properties, to be passed into
 the JVM via +java -D+.
 . STC starts in +exm/stc/ui/Main.java+.  All properties are registered
-in +exm/stc/common/Settings.java+.  STC emits a +*.tic+ file.
+in +exm/stc/common/Settings.java+.  STC emits a +&#42;.tic+ file.
 . Turbine starts as a parallel invocation of +tclsh+, each running the
-STC-generated +*.tic+ file.  The beginning of the program is thus the
-first commands in the +*.tic+ file, +turbine::defaults+ and so on.
+STC-generated +&#42;.tic+ file.  The beginning of the program is thus the
+first commands in the +&#42;.tic+ file, +turbine::defaults+ and so on.
 These are defined in the Turbine +lib/+ directory, which contains all
 the Tcl source and the Turbine shared object, which links to ADLB.
 . ADLB is initiated and controlled through calls to its Tcl interface,
