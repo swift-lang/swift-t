@@ -128,7 +128,7 @@ report_version()
     print " installed from: $( cat ${SOURCE_TXT} )"
   fi
   print " using Tcl: ${TCLSH}"
-  if [[ ${TURBINE_USE_PYTHON} != 0 ]]
+  if [[ ${TURBINE_USE_PYTHON} != "" ]]
   then
     print " using Python: ${TURBINE_USE_PYTHON}"
   fi
