@@ -8,6 +8,7 @@ ENABLE_STATIC_PKG = @ENABLE_STATIC_PKG@
 CC = @CC@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
+CPPFLAGS := @CPPFLAGS@
 
 # C++ is only used if R is enabled
 CXX = @CXX@
@@ -26,7 +27,7 @@ PACKAGE = lib/pkgIndex.tcl
 # Components of enabled Tcl packages (libraries, index files, etc)
 PACKAGE_ARTIFACTS :=
 
-BUILD_ALL_TARGETS = libs $(TURBINE_EXECUTABLES) 
+BUILD_ALL_TARGETS = libs $(TURBINE_EXECUTABLES)
 
 ifeq ($(ENABLE_SHARED),1)
   # Shared libraries are required for tcl package
@@ -271,11 +272,13 @@ endif
 ifeq ($(HAVE_PYTHON),1)
 	INCLUDES += -I $(USE_PYTHON_INCLUDE)
 endif
-ifeq ($(HAVE_R),1)
+ifeq  ($(HAVE_R),1)
+ifneq ($(USE_R),)
 	INCLUDES += -I $(USE_R)/include
         R_LIBRARY = $(USE_R)/library
         INCLUDES += -I $(R_LIBRARY)/RInside/include
         INCLUDES += -I $(R_LIBRARY)/Rcpp/include
+endif
 endif
 ifeq ($(HAVE_JULIA),1)
 	INCLUDES += -I $(USE_JULIA)/src
@@ -328,14 +331,16 @@ ifeq ($(HAVE_PYTHON),1)
   LIBS += -l$(USE_PYTHON_NAME)
 endif
 ifeq ($(HAVE_R),1)
+ifneq ($(USE_R),)
   R_LIB = $(USE_R)/lib
   ifeq ($(filter $(R_LIB),$(SYSTEM_LIBS)),)
     LIBS += -L$(R_LIB)
     RPATH_R = yes
   endif
   RINSIDE_LIB = $(USE_R)/library/RInside/lib
-  LIBS += -L$(RINSIDE_LIB) -lRInside
-  LIBS += -lR
+  LIBS += -L$(RINSIDE_LIB)
+endif
+LIBS += -lRInside -lR
 endif
 ifeq ($(HAVE_JULIA),1)
   JULIA_LIB = $(USE_JULIA)/usr/lib

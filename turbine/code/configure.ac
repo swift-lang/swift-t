@@ -690,7 +690,7 @@ AC_ARG_ENABLE(r,
                    [Enable calling R language]),
     [
       HAVE_R=1
-      USE_R=/usr/share/R
+      USE_R=""
     ])
 
 AC_ARG_WITH(r,
