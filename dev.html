@@ -781,8 +781,8 @@ shell scripts.  All use <code>getopt</code>.
 </li>
 <li>
 <p>
-<code>stc</code> translates the <code>getopt+s to Java properties, to be passed into
-the JVM via +java -D</code>.
+<code>stc</code> translates the `getopt&#8217;s to Java properties, to be passed into
+the JVM via <code>java -D</code>.
 </p>
 </li>
 <li>
@@ -817,14 +817,49 @@ Turbine, called Turbine Intermediate Code (TIC).  It parses the Swift
 code using ANTLR file <code>exm/stc/ast/ExM.g</code>.  When STC is built by Ant,
 this file is translated into Java source code (see Ant target
 <code>antlr.generate</code>).</p></div>
-<div class="paragraph"><p>When STC starts in <code>Main.java:main()</code>,</p></div>
+<div class="paragraph"><p>When STC starts in <code>Main.java:main()</code>, it does three key things:
+process options, preprocess the Swift code (via <code>cpp</code>), and call into
+the <code>STCompiler</code> class to perform translation.  This walks the
+ANTLR-generated AST in <code>exm/stc/frontend/ASTWalker</code>.</p></div>
+<div class="paragraph"><p>Once translation and optimization are finished, an AST of Tcl code is
+generated via the classes in <code>exm/stc/tclbackend/</code>.  This AST is then
+converted to a string via recursive calls to the various <code>appendTo()</code>
+methods in the <code>TclTree</code> class, then simply written to the TIC file.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_turbine_internals">4. Turbine internals</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Consider this Tcl script (<code>f.tcl</code>):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>puts "HI"</code></pre>
+</div></div>
+<div class="paragraph"><p>This can be run as an MPI program:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ mpiexec -n 2 f.tcl
+HI
+HI</code></pre>
+</div></div>
+<div class="paragraph"><p>Turbine simply runs the same thing:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ turbine f.tcl
+HI
+HI</code></pre>
+</div></div>
+<div class="paragraph"><p>At first glance, Turbine is simply a parallel Tcl interpreter.
+However, Turbine also provides the <code>turbine</code> Tcl package, which
+contains the contents of the <code>lib/</code> directory: Tcl scripts and a
+shared object.  These provide all the TIC features nencessary for STC.</p></div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 17:48:55 CST
+Last updated 2016-02-29 18:04:51 CST
 </div>
 </div>
 </body>

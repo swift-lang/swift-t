@@ -39,7 +39,7 @@ code.
 . Swift/T typically starts with a user invocation of +swift-t+, a
 simple shell script.  This invokes +stc+ and +turbine+, which are also
 shell scripts.  All use +getopt+.  
-. +stc+ translates the +getopt+s to Java properties, to be passed into
+. +stc+ translates the `getopt's to Java properties, to be passed into
 the JVM via +java -D+.
 . STC starts in +exm/stc/ui/Main.java+.  All properties are registered
 in +exm/stc/common/Settings.java+.  STC emits a +*.tic+ file.
@@ -59,7 +59,44 @@ code using ANTLR file +exm/stc/ast/ExM.g+.  When STC is built by Ant,
 this file is translated into Java source code (see Ant target
 +antlr.generate+).
 
-When STC starts in +Main.java:main()+, 
+When STC starts in +Main.java:main()+, it does three key things:
+process options, preprocess the Swift code (via +cpp+), and call into
+the +STCompiler+ class to perform translation.  This walks the
+ANTLR-generated AST in +exm/stc/frontend/ASTWalker+.
+
+Once translation and optimization are finished, an AST of Tcl code is
+generated via the classes in +exm/stc/tclbackend/+.  This AST is then
+converted to a string via recursive calls to the various +appendTo()+
+methods in the +TclTree+ class, then simply written to the TIC file.
+
+== Turbine internals
+
+Consider this Tcl script (+f.tcl+): 
+
+----
+puts "HI"
+----
+
+This can be run as an MPI program:
+
+----
+$ mpiexec -n 2 f.tcl
+HI
+HI
+----
+
+Turbine simply runs the same thing:
+
+----
+$ turbine f.tcl
+HI
+HI
+----
+
+At first glance, Turbine is simply a parallel Tcl interpreter.
+However, Turbine also provides the +turbine+ Tcl package, which
+contains the contents of the +lib/+ directory: Tcl scripts and a
+shared object.  These provide all the TIC features nencessary for STC.
 
 
 ////
