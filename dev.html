@@ -788,14 +788,14 @@ the JVM via <code>java -D</code>.
 <li>
 <p>
 STC starts in <code>exm/stc/ui/Main.java</code>.  All properties are registered
-in <code>exm/stc/common/Settings.java</code>.  STC emits a <code>*.tic</code> file.
+in <code>exm/stc/common/Settings.java</code>.  STC emits a <code>&#42;.tic</code> file.
 </p>
 </li>
 <li>
 <p>
 Turbine starts as a parallel invocation of <code>tclsh</code>, each running the
-STC-generated <code><strong>.tic</code> file.  The beginning of the program is thus the
-first commands in the <code></strong>.tic</code> file, <code>turbine::defaults</code> and so on.
+STC-generated <code>&#42;.tic</code> file.  The beginning of the program is thus the
+first commands in the <code>&#42;.tic</code> file, <code>turbine::defaults</code> and so on.
 These are defined in the Turbine <code>lib/</code> directory, which contains all
 the Tcl source and the Turbine shared object, which links to ADLB.
 </p>
@@ -886,7 +886,7 @@ when it reaches 0, the variable is garbage-collected by ADLB).</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 18:22:47 CST
+Last updated 2016-02-29 18:26:31 CST
 </div>
 </div>
 </body>
