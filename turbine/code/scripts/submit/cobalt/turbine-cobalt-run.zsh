@@ -124,7 +124,7 @@ else # Blue Gene
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \
-        ${COMMAND} | \
+        ${=COMMAND} | \
     read JOB_ID
 fi
 
