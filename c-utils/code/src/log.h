@@ -51,8 +51,8 @@ void log_normalize(void);
  */
 double log_time(void);
 
-void   log_finalize(void);
+void   log_printf(char* format, ...);
 
-void log_printf(char* format, ...);
+void   log_finalize(void);
 
 #endif
