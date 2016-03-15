@@ -30,6 +30,12 @@ void log_init(void);
 
 void log_enable(bool b);
 
+static inline bool
+log_enabled(void)
+{
+  return enabled;
+}
+
 /**
    Set log output file
    @return True on success, else false
