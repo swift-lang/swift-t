@@ -26,14 +26,16 @@
 
 #include <stdbool.h>
 
+extern bool log_enabled;
+
 void log_init(void);
 
 void log_enable(bool b);
 
 static inline bool
-log_enabled(void)
+log_is_enabled(void)
 {
-  return enabled;
+  return log_enabled;
 }
 
 /**
