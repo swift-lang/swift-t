@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+
+if [[ ${#*} != 1 ]]
+then
+  echo "usage: <PROGRAM>"
+  exit 1
+fi
+
+PROGRAM=$1
+
+echo "Running Swift..."
+swift-t -l -O0 $PROGRAM.swift > $PROGRAM.log
+echo "Building DAG..."
+./log2dag $PROGRAM.log $PROGRAM.dot
+echo "Running Graphviz..."
+dot -O -Tpng $PROGRAM.dot
+echo "Done."
