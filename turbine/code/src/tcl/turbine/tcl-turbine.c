@@ -331,12 +331,14 @@ static inline void rule_set_opts_default(struct rule_opts* opts,
                                          const char* action,
                                          char* buffer, int buffer_size);
 
-static inline int
-rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
-                    struct rule_opts* opts,
-                    Tcl_Obj *const objs[], int count,
-                    char *name_buffer, int name_buffer_size,
-                    const char *action);
+static inline int rule_opts_from_list(Tcl_Interp* interp,
+                                      Tcl_Obj *const objv[],
+                                      struct rule_opts* opts,
+                                      Tcl_Obj *const objs[],
+                                      int count,
+                                      char *name_buffer,
+                                      int name_buffer_size,
+                                      const char *action);
 
 /**
    usage:
@@ -1019,7 +1021,7 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
   for (int i = 1; i < cmd_argc; i++)
     cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
   cmd_argv[cmd_argc] = NULL; // Need to NULL-terminate for execvp()
-  
+
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
   if (child == 0)
