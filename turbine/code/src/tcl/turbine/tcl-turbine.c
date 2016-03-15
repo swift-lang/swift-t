@@ -327,6 +327,10 @@ struct rule_opts
   adlb_put_opts opts;
 };
 
+static inline void rule_log(int inputs,
+                            const adlb_datum_id input_list[],
+                            const char* action);
+
 static inline void rule_set_opts_default(struct rule_opts* opts,
                                          const char* action,
                                          char* buffer, int buffer_size);
@@ -398,6 +402,8 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   opts.opts.priority = ADLB_curr_priority;
 
+  rule_log(inputs, input_list, action);
+
   adlb_code ac = ADLB_Dput(action, action_len, opts.target,
         adlb_comm_rank, opts.work_type, opts.opts, opts.name,
         input_list, inputs, input_pair_list, input_pairs);
@@ -409,6 +415,21 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
     free((void*)input_pair_list[i].subscript.key);
   }
   return TCL_OK;
+}
+
+static inline void
+rule_log(int inputs, const adlb_datum_id input_list[],
+         const char* action)
+{
+  char log_string[1024];
+  if (log_is_enabled())
+  {
+    char* p = &log_string[0];
+    append(p, "rule: ");
+    for (int i = 0; i < inputs; i++)
+      append(p, "<%i> ", (int) input_list[i]);
+    log_printf("%s=> %s", log_string, action);
+  }
 }
 
 static inline void
