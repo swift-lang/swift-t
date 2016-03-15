@@ -44,6 +44,7 @@ void
 log_init()
 {
   output = stdout;
+  rank_enabled = false;
 }
 
 void
