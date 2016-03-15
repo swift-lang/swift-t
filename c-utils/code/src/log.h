@@ -28,7 +28,7 @@
 
 void log_init(void);
 
-void log_enabled(bool b);
+void log_enable(bool b);
 
 /**
    Set log output file

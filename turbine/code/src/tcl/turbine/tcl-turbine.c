@@ -256,7 +256,7 @@ log_setup(int rank)
       log_rank_set(rank);
   }
   else
-    log_enabled(false);
+    log_enable(false);
 
   return TCL_OK;
 }

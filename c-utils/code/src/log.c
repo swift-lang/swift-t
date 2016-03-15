@@ -47,7 +47,7 @@ log_init()
 }
 
 void
-log_enabled(bool b)
+log_enable(bool b)
 {
   enabled = b;
 }
