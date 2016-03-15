@@ -44,6 +44,7 @@ static int  rank;
 void
 log_init()
 {
+  log_enabled = true;
   output = stdout;
   rank_enabled = false;
 }
