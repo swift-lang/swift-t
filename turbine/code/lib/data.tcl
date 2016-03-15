@@ -604,6 +604,9 @@ namespace eval turbine {
       for { set i 0 } { $i < $n } { incr i } {
         set varname [ lindex $varnames $i ]
         set id [ lindex $ids $i ]
+        if { [adlb::rank] == 0 } {
+          log "global: $varname=<$id>"
+        }
         dict append global_vars $varname $id
       }
 
