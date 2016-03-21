@@ -949,7 +949,7 @@ This installation is for use on the <<login_node,login node>>.
 ===== Compute nodes
 
 * Swift/T master - 2016/03/21
-* STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/stc+
+* STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/py2r/stc+
 * Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/py2r/turbine+
 
 // * This installation is configured with http://swift-lang.org/swift-t/guide.html#_calling_python[Python]
