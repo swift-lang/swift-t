@@ -1,6 +1,11 @@
 
 :toc:
 
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
@@ -937,16 +942,17 @@ its libraries in +/lustre+.  Also, your data must be in +/lustre+.
 
 This installation is for use on the <<login_node,login node>>.
 
-* Swift/T master - 8/3/2015
+* Swift/T master - 2015/8/3
 * Turbine: +~wozniak/Public/sfw/x86_64/swift-t/turbine+
 * STC: +~wozniak/Public/sfw/x86_64/swift-t/stc+
 
 ===== Compute nodes
 
-* Swift/T trunk - 8/3/2015
-* Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/turbine+
+* Swift/T master - 2016/03/21
 * STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/stc+
-* This installation is configured with http://swift-lang.org/Swift-T/guide.html#_calling_python[Python]
+* Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/py2r/turbine+
+
+// * This installation is configured with http://swift-lang.org/swift-t/guide.html#_calling_python[Python]
 
 To run:
 
