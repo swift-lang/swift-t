@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Gallery</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -908,7 +910,7 @@ processes, just like <code>mpiexec</code>.</p></div>
 <div class="content">
 <pre><code>swift-t -m pbs -n 4 mtc1.swift</code></pre>
 </div></div>
-<div class="paragraph"><p>Many <a href="turbine-sites.html">other systems</a> are supported!</p></div>
+<div class="paragraph"><p>Many <a href="sites.html">other systems</a> are supported!</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1134,7 +1136,7 @@ mpicc -static  -o hello.x hello_main.o ${TURBINE_LIBS} ${TURBINE_RPATH}</code></
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 17:09:37 CST
+Last updated 2016-03-21 09:31:41 CDT
 </div>
 </div>
 </body>

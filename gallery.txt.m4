@@ -105,7 +105,7 @@ On a PBS system, run with:
 swift-t -m pbs -n 4 mtc1.swift
 ----
 
-Many link:turbine-sites.html[other systems] are supported!
+Many link:sites.html[other systems] are supported!
 
 == Swift/T for MapReduce users
 
