@@ -114,9 +114,10 @@ SETTINGS=0
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
 
-# Job environment
+# Job environment:
 typeset -T ENV env
 env=()
+export ENV env
 
 # Get options
 while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
