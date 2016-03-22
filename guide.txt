@@ -95,7 +95,7 @@ Swift/T from source.
 1. Obtain the Swift/T source package
 +
 ----
-wget http://swift-lang.github.io/swift-t/downloads/exm-0.7.0.tar.gz
+wget http://swift-lang.github.io/swift-t/downloads/exm-0.8.0.tar.gz
 ----
 +
 Cf. http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
