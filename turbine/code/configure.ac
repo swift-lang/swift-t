@@ -179,6 +179,9 @@ USE_LIBCUTILS_A=""
 AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
+  AC_MSG_RESULT([yes])
+else 
+  AC_MSG_RESULT([no])
 fi
 AC_SUBST(USE_LIBCUTILS_A)
 
@@ -932,7 +935,7 @@ do
       AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
       if [[ -r ${LIB_DIR}/${LIBTCL} ]]
       then
-        AC_MSG_RESULT([exists!])
+        AC_MSG_RESULT([yes])
         TCL_VERSION=${TCLVER}
         USE_TCL_LIB_DIR=${LIB_DIR}
 

@@ -50,11 +50,11 @@ fi
 # Report location of CC
 AC_MSG_RESULT([using CC=$( which ${CC} )])
 
-echo "PREFIX: ${prefix}"
+AC_MSG_RESULT([PREFIX: ${prefix}])
 SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
 if [[ ${?} == 0 ]]
 then
-  echo "SOFTWARE: ${SOFTWARE}"
+  AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 else
   SOFTWARE=0
 fi
