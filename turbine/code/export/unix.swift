@@ -55,4 +55,9 @@ app (void v) sleep(int i)
   "sleep" i;
 }
 
+app (void v) mkdir(string dirname)
+{
+  "mkdir" "-p" dirname;
+}
+
 #endif
