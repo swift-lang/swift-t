@@ -23,7 +23,7 @@ Available arguments:
 
 +-c+:: Continue after failure
 +-C+:: Compile only
-+-D+:: Run disabled tests 
++-D+:: Run disabled tests
 +-e+:: Show error outputs from tests
 +-f <OPTION>+:: Use +stc -f OPTION+
 +-F <OPTION>+:: Use +stc -F OPTION+
@@ -45,7 +45,7 @@ Some useful ones are:
 
 == Supporting files
 
-Supporting files are optional. 
+Supporting files are optional.
 
 * Setup script: TEST.setup.sh: Is run before STC and Turbine.  Can
   create input files, etc.  Must return exit code 0 or test fails.
@@ -67,7 +67,7 @@ NOTE: Tests that do not run should be linked to issues in exm-issues
 
 * SKIP-THIS-TEST: Skips test entirely.
 * COMPILE-ONLY-TEST: Skip running the test.
-* THIS-TEST-SHOULD-NOT-COMPILE: If TEST.swift compiles, test fails.  
+* THIS-TEST-SHOULD-NOT-COMPILE: If TEST.swift compiles, test fails.
   Used to test for Swift code that STC should reject.
 * THIS-TEST-SHOULD-NOT-RUN: If TEST.tcl runs in Turbine, test fails.
   Used to test for Swift logic that should crash Turbine.
@@ -80,19 +80,20 @@ The tests are numbered for lexical sorting by shell glob.
 100::       Basic function calls, errors
 200::       Conditionals, recursion, expressions
 300::       Arrays, structs
-400::       For 
+400::       For
 *        400: foreach
 *        410: if
 *        420: for
 *        450: Associative arrays
 *        480: Key functions on arrays
-500::       Types 
+500::       Types
 *        560: files
 *        580: foreach
 *        590: blobs
 600::    Various uses
 *        600: User builtins
-*        620: User includes (CPP)   
+*        610: Parallel tasks
+*        620: User includes (CPP)
 *        630: app functions
 *        640-679: Advanced type usage
 *        680: Advanced app function features
