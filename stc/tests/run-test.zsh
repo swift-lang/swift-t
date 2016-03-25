@@ -70,7 +70,7 @@ then
     exit 1
   fi
 fi
-  
+
 # Allow user to override these from environment
 export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
 WORKERS=${TEST_ADLB_WORKERS:-1}
@@ -86,6 +86,7 @@ TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
 
 # Valgrind-related checks:
+VALGRIND=${VALGRIND:-}
 if (( ${#VALGRIND} ))
 then
   if grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}
