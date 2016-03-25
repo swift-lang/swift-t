@@ -38,6 +38,17 @@ main()
   printf("\n");
   shuffle(A, n);
   print_longs(A, n);
+  printf("\n\n");
+
+  printf("ints:\n");
+  int B[n];
+  for (int i = 0; i < n; i++)
+    B[i] = A[i];
+  print_ints(B, n);
   printf("\n");
+  quicksort_ints(B, 0, 9);
+  print_ints(B, n);
+  printf("\n");
+
   printf("DONE\n");
 }

@@ -288,4 +288,8 @@ char* slurp(const char* filename);
 */
 int slurp_process(const char** argv);
 
+void print_ints(const int* A, int n);
+
+void quicksort_ints(int* A, int first, int last);
+
 #endif

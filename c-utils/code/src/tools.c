@@ -370,3 +370,51 @@ slurp(const char* filename)
   fclose(file);
   return result;
 }
+
+void
+print_ints(const int* A, int n)
+{
+  printf("[");
+  for (int i = 0; i < n; i++)
+  {
+    printf("%i", A[i]);
+    if (i < n-1) printf(",");
+  }
+  printf("]");
+}
+
+static inline void
+swap_ints(int* a, int* b)
+{
+  int t;
+  t  = *a;
+  *a = *b;
+  *b = t;
+}
+
+/** From: http://www.cquestions.com/2008/01/c-program-for-quick-sort.html */
+void
+quicksort_ints(int* A, int first, int last)
+{
+  if (first < last)
+  {
+    int pivot = first;
+    int i = first;
+    int j = last;
+
+    while (i < j)
+    {
+      while (A[i] <= A[pivot] && i<last)
+        i++;
+      while (A[j] > A[pivot])
+        j--;
+      printf("i: %i j: %i\n", i, j);
+      if (i < j)
+        swap_ints(&A[i], &A[j]);
+    }
+    swap_ints(&A[pivot], &A[j]);
+
+    quicksort_ints(A,first,j-1);
+    quicksort_ints(A,j+1,last);
+  }
+}
