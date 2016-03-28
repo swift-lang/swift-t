@@ -1123,7 +1123,7 @@ respectively
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
-*Import:* stats
+*Import:* +stats+
 
 +sum_integer(int[]) -> int+:: Sum
 +avg(int|float[]) -> float+:: Average
