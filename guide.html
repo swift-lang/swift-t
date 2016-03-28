@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:750px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">December 2015</span><br />
+<span id="author">March 2016</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1770,14 +1770,12 @@ int y = x;
 newint z = y;</code></pre>
 </div></div>
 <div class="paragraph"><p>The second is with <code>type</code>, which creates a new type that is a
-specialization of an existing type.  That is, it is a distinct
-type that is not interchangeable.  A specialized type can be
-converted into the original type, but the reverse transformation is
-not possible.  This means that you can write functions that are more
-strictly typechecked, for example, only accepted particular types of
-file.</p></div>
-<div class="paragraph"><p><strong>Note:</strong> This feature is immature, so you will have a higher probability
-of encountering compiler bugs or limitations.</p></div>
+specialization of an existing type.  That is, it is a distinct type
+that is not interchangeable.  A specialized type can be converted into
+the original type, but the reverse transformation is not possible.
+This means that you can write functions that are more strictly
+typechecked, for example, you can ensure that certain <code>app</code> functions
+will only receive particular types of files.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>typedef sorted_file file;
@@ -1785,12 +1783,12 @@ app (sorted_file out) sort (file i) {
   "/usr/bin/sort" "-o" out i
 }
 
-// uniq utility requires sorted input
+// The uniq utility requires sorted input
 app (file o) unique (sorted_file i) {
   "/usr/bin/uniq" i @stdout=o
 }
 
-file unsorted = input_file("input.txt");
+file unsorted = input("input.txt");
 sorted_file sorted &lt;"sorted.txt"&gt; = sort(unsorted);
 file u &lt;"unique.txt"&gt; = unique(sorted);
 
@@ -1802,7 +1800,7 @@ file result2 = sort(unsorted);
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_global_variables">10.8. Global Variables</h3>
+<h3 id="_global_variables">10.8. Global variables</h3>
 <div class="paragraph"><p>Variables defined at the top level of a Swift program are in
 global scope and can be used anywhere
 Swift supports a basic feature for defining globally visible constants.</p></div>
@@ -4616,7 +4614,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-22 13:45:38 CDT
+Last updated 2016-03-28 13:35:12 CDT
 </div>
 </div>
 </body>
