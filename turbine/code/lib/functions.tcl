@@ -507,13 +507,23 @@ namespace eval turbine {
 
     # create a void type (i.e. just set it)
     proc make_void { o i } {
-        # Do this in reverse order for faster propagation
-        # (Pretend to read inputs AFTER setting output!)
-        store_void $o
+        set inputs [ list ]
         foreach v $i {
             if { [ string first "file" $v ] != -1 } {
                 set v [ get_file_td $v ]
             }
+            lappend inputs $v
+        }
+
+        rule $inputs [ list make_void_body $o $inputs ] name make_void-$o
+    }
+
+    proc make_void_body { output inputs } {
+        # inputs: may be empty list
+        # Do this in reverse order for faster propagation
+        # (Pretend to read inputs AFTER setting output!)
+        store_void $output
+        foreach v $inputs {
             read_refcount_decr $v
         }
     }
