@@ -72,10 +72,13 @@ then
 fi
 
 # Allow user to override these from environment
-export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
-WORKERS=${TEST_ADLB_WORKERS:-1}
-
-PROCS=$(( ADLB_SERVERS + WORKERS ))
+export PROCS=${TEST_PROCS:-0}
+if [[ ${PROCS} == 0 ]]
+then
+  export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
+  WORKERS=${TEST_ADLB_WORKERS:-1}
+  PROCS=$(( ADLB_SERVERS + WORKERS ))
+fi
 
 # Setup environment variables to get info out of ADLB
 export ADLB_PERF_COUNTERS=${ADLB_PERF_COUNTERS:-true}
