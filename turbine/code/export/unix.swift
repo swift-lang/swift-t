@@ -19,6 +19,11 @@
 #ifndef UNIX_SWIFT
 #define UNIX_SWIFT
 
+app (file o) cp(file i)
+{
+  "cp" i o;
+}
+
 // cat-print (to stdout)
 app catp(file f[])
 {
