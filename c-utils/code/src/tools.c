@@ -408,7 +408,7 @@ quicksort_ints(int* A, int first, int last)
         i++;
       while (A[j] > A[pivot])
         j--;
-      printf("i: %i j: %i\n", i, j);
+      // printf("i: %i j: %i\n", i, j);
       if (i < j)
         swap_ints(&A[i], &A[j]);
     }
