@@ -511,6 +511,9 @@ namespace eval turbine {
         # (Pretend to read inputs AFTER setting output!)
         store_void $o
         foreach v $i {
+            if { [ string first "file" $v ] != -1 } {
+                set v [ get_file_td $v ]
+            }
             read_refcount_decr $v
         }
     }
