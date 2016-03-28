@@ -20,12 +20,15 @@ namespace eval funcs_610 {
   }
 
   proc f_body { outputs inputs } {
-    puts "$outputs _ $inputs"
 
-    set i_value [ retrieve_integer $inputs ]
+    set i_value [ retrieve_decr_integer $inputs ]
 
     set comm [ turbine::c::task_comm ]
+    set rank [ adlb::rank $comm ]
 
-    puts "r:[adlb::rank] i:$i_value"
+    if { $rank == 0 } {
+      puts "r:[adlb::rank] i:$i_value"
+      store_void $outputs
+    }
   }
 }
