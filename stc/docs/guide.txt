@@ -713,12 +713,12 @@ newint z = y;
 ----
 
 The second is with +type+, which creates a new type that is a
-specialization of an existing type.  That is, it is a distinct
-type that is not interchangeable.  A specialized type can be
-converted into the original type, but the reverse transformation is
-not possible.  This means that you can write functions that are more
-strictly typechecked, for example, only accepted particular types of
-file.
+specialization of an existing type.  That is, it is a distinct type
+that is not interchangeable.  A specialized type can be converted into
+the original type, but the reverse transformation is not possible.
+This means that you can write functions that are more strictly
+typechecked, for example, you can ensure that certain +app+ functions
+will only receive particular types of files.
 
 ////
 *Note:* This feature is immature, so you will have a higher probability
@@ -732,12 +732,12 @@ app (sorted_file out) sort (file i) {
   "/usr/bin/sort" "-o" out i
 }
 
-// uniq utility requires sorted input
+// The uniq utility requires sorted input
 app (file o) unique (sorted_file i) {
   "/usr/bin/uniq" i @stdout=o
 }
 
-file unsorted = input_file("input.txt");
+file unsorted = input("input.txt");
 sorted_file sorted <"sorted.txt"> = sort(unsorted);
 file u <"unique.txt"> = unique(sorted);
 
