@@ -720,8 +720,10 @@ not possible.  This means that you can write functions that are more
 strictly typechecked, for example, only accepted particular types of
 file.
 
+////
 *Note:* This feature is immature, so you will have a higher probability
 of encountering compiler bugs or limitations.
+////
 
 ----
 
