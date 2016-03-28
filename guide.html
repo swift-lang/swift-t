@@ -961,7 +961,7 @@ argument may be given as an alternate output file name.</p></div>
 <div class="paragraph"><p>Then, to run the program, use Turbine:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>turbine -n 4 program.tcl</code></pre>
+<pre><code>turbine -n 4 program.tic</code></pre>
 </div></div>
 <div class="paragraph"><p>You may compile and run in one step with:</p></div>
 <div class="listingblock">
@@ -2484,9 +2484,9 @@ Obtain an environment variable
 <div class="paragraph"><p>Consider this command line:</p></div>
 <div class="literalblock">
 <div class="content">
-<pre><code>turbine -l -n 3 program.tcl -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt</code></pre>
+<pre><code>turbine -l -n 3 program.tic -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt</code></pre>
 </div></div>
-<div class="paragraph"><p>The arguments to <code>program.tcl</code> are just the tokens after <code>program.tcl</code></p></div>
+<div class="paragraph"><p>The arguments to <code>program.tic</code> are just the tokens after <code>program.tic</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>args() &#8594; string</code>
@@ -2540,7 +2540,7 @@ Given an integer, returns the unflagged argument at that index:
 </p>
 <div class="paragraph"><p><code>argp(2) &#8594; file4.txt</code></p></div>
 <div class="paragraph"><p>Given 0, returns the program name,</p></div>
-<div class="paragraph"><p><code>argp(0) &#8594; /path/to/program.tcl</code></p></div>
+<div class="paragraph"><p><code>argp(0) &#8594; /path/to/program.tic</code></p></div>
 </dd>
 <dt class="hdlist1">
 <code>argv_accept(string&#8230;)</code>
@@ -3790,10 +3790,10 @@ while others do not, and compile times can increase slightly.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code># No optimizations at all (not recommended)
-stc -O0 example.swift example.tcl
+stc -O0 example.swift
 
 # Basic optimizations (not recommended)
-stc -O1 example.swift example.tcl
+stc -O1 example.swift
 
 # Standard optimizations (recommended)
 stc example.swift example.tcl
@@ -3877,10 +3877,10 @@ The number of servers available to control the Turbine run.
 <div class="sect2">
 <h3 id="_invocation">17.3. Invocation</h3>
 <div class="paragraph"><p>The form of a Turbine invocation for STC-generated
-<code>program.tcl</code> is:</p></div>
+<code>program.tic</code> is:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>turbine &lt;turbine arguments&gt; &lt;program.tcl&gt; &lt;program arguments&gt;</code></pre>
+<pre><code>turbine &lt;turbine arguments&gt; &lt;program.tic&gt; &lt;program arguments&gt;</code></pre>
 </div></div>
 <div class="paragraph"><p>The program arguments are available to Swift (<a href="#argv">[argv]</a>).</p></div>
 <div class="paragraph"><p>Turbine accepts the following arguments:</p></div>
@@ -3947,8 +3947,8 @@ Use turbine_sh launcher with compiled-in libraries instead of tclsh
 </dt>
 <dd>
 <p>
-In place of of program.tcl, run standalone Turbine executable
-        (e.g. created by <a href="#mkstatic">mkstatic.tcl</a>)
+In place of of program.tic, run standalone Turbine executable
+        (created by <a href="#mkstatic"><code>mkstatic.tcl</code></a>)
 </p>
 </dd>
 </dl></div>
@@ -4358,7 +4358,7 @@ use the turbine_sh launcher in place of tclsh in submit script,
 </li>
 <li>
 <p>
-Use <a href="#mkstatic">mkstatic.tcl</a> to create a standalone executable with
+Use <a href="#mkstatic"><code>mkstatic.tcl</code></a> to create a standalone executable with
    the Tcl main script and Tcl library code compiled in, and compiled
    code statically linked.
 </p>
@@ -4368,7 +4368,7 @@ Use <a href="#mkstatic">mkstatic.tcl</a> to create a standalone executable with
 </ol></div>
 </div>
 <div class="sect2">
-<h3 id="mkstatic">17.6. Building standalone executables with mkstatic.tcl</h3>
+<h3 id="mkstatic">17.6. Building standalone executables with <code>mkstatic.tcl</code></h3>
 <div class="paragraph"><p>It is possible to build a fully self-contained executable, including
 all Tcl scripts and compiled code, provided that all dependencies support
 static linking.  If not, it is also possible to build an executable with
@@ -4614,7 +4614,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-03-28 13:39:19 CDT
+Last updated 2016-03-28 13:44:19 CDT
 </div>
 </div>
 </body>
