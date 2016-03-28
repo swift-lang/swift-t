@@ -1,1 +1,1 @@
-export PROCS=6
+export TEST_PROCS=6
