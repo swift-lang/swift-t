@@ -748,7 +748,7 @@ file result2 = sort(unsorted);
 // sorted_file not_sorted = unsorted;
 ----
 
-=== Global Variables
+=== Global variables
 
 Variables defined at the top level of a Swift program are in
 global scope and can be used anywhere
