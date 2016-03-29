@@ -79,6 +79,11 @@ struct xlb_state {
 
   /** Default placement policy to use for new data */
   adlb_placement placement;
+
+  /** If not 1, use par_mod mode where parallel tasks start on
+      ranks r such that r % par_mod == 0
+   */
+  int par_mod;
 };
 
 /** Global system state */
