@@ -51,7 +51,8 @@ fi
 AC_MSG_RESULT([using CC=$( which ${CC} )])
 
 AC_MSG_RESULT([PREFIX: ${prefix}])
-SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
+SOFTWARE=$( dirname ${prefix} 2>&1 )
+SOFTWARE=$( test -d ${SOFTWARE} && cd ${SOFTWARE} 2>&1 && /bin/pwd )
 if [[ ${?} == 0 ]]
 then
   AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])

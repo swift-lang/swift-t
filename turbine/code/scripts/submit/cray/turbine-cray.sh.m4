@@ -100,10 +100,13 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 
 # Put environment variables from run-init into 'aprun -e' format
 ENVS=""
-for KV in ${ENV_PAIRS}
+for KV in ${ENV_PAIRS[@]}
 do
+    echo KV $KV
     ENVS+="-e ${KV} "
 done
+
+echo ENVS $ENVS
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
@@ -115,7 +118,8 @@ then
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    aprun -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
+    echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
+    aprun -n getenv(PROCS) -N getenv(PPN) ${ENVS} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

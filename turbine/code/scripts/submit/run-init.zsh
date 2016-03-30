@@ -137,7 +137,7 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
         # Look up unset environment variables
         KV="${KV}=${(P)KV}"
       fi
-      env+=${KV}
+      env+="${KV}"
       ;;
     i)
        INIT_SCRIPT=${OPTARG}
