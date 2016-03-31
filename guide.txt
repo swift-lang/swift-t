@@ -2388,7 +2388,7 @@ manifest file corresponds to the +turbine_sh+ utility, which is a
 replacement for +tclsh+ with required Turbine libraries statically
 linked in.
 For a simple Swift program with no user Tcl libraries,
-you only need to set +main_script = my.tic+.
+you only need to set +main_script&nbsp;=&nbsp;my.tic+.
 
 3. Invoke +mkstatic.tcl+ (found under +scripts/mkstatic/mkstatic.tcl+ in
    the Turbine installation) to translate your Tcl script to a C main
