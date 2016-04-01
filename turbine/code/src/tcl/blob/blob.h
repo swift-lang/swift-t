@@ -60,7 +60,19 @@ The functions are implemented in +blob.c+.
 
    This data type is represented by SWIG in Tcl as a regular pointer-
    you can pass it in and out of functions, display it, etc.
+')
+*/
 
+DOC_CODE(
+typedef struct
+{
+  void* pointer;
+  int length;
+} turbine_blob;
+)
+
+/**
+   DOCT(`
    Based on this struct, SWIG will generate the following
    Tcl functions, assuming +blob+ is a +blob*+:
  ')
@@ -76,13 +88,6 @@ The functions are implemented in +blob.c+.
    DOCD(turbine_blob_length_get blob,
         `Returns +blob->length+, an +int+.')
 */
-DOC_CODE(
-typedef struct
-{
-  void* pointer;
-  int length;
-} turbine_blob;
-)
 
 // DOCNN(== Functions)
 // DOCNN(=== Pointers and sizes)
@@ -300,6 +305,9 @@ void blobutils_turbine_run_output_blob(ptrdiff_t output,
    DOCD(blobutils_strdup s, Duplicate s.)
  */
 void* blobutils_strdup(char* s);
+
+// DOCNN(=== HDF utilities)
+// DOCNN(Functions for HDF operations.)
 
 /**
    DOCD(blobutils_hdf_write output dataset blob,
