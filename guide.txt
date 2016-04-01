@@ -1555,10 +1555,11 @@ $ swift-t -l -n 5 types.swift
 ----
 
 When logging is enabled, Swift/T reports the registered work types and
-their actual ranks.  As shown, ranks 0-1 are default workers.
-Ranks 2-3 are +foo_work+ workers.  (Rank 4 is the ADLB server.)  Thus,
-+"Hello Bar"+ is reported on rank 3 and +"Hello Foo"+ is reported on
-rank 0.
+their actual ranks.  In the example, Swift/T runs on 5 ranks (+-n 5+)
+with rank numbers on the output (+-l+).  As shown, ranks 0-1 are
+default workers.  Ranks 2-3 are +foo_work+ workers.  (Rank 4 is the
+ADLB server.)  Thus, +"Hello Bar"+ is reported on rank 3 and +"Hello
+Foo"+ is reported on rank 0.
 
 [[app_functions]]
 === App functions

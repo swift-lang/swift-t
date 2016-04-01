@@ -3147,10 +3147,11 @@ $ swift-t -l -n 5 types.swift
 [3] Hello Foo</code></pre>
 </div></div>
 <div class="paragraph"><p>When logging is enabled, Swift/T reports the registered work types and
-their actual ranks.  As shown, ranks 0-1 are default workers.
-Ranks 2-3 are <code>foo_work</code> workers.  (Rank 4 is the ADLB server.)  Thus,
-<code>"Hello Bar"</code> is reported on rank 3 and <code>"Hello Foo"</code> is reported on
-rank 0.</p></div>
+their actual ranks.  In the example, Swift/T runs on 5 ranks (<code>-n 5</code>)
+with rank numbers on the output (<code>-l</code>).  As shown, ranks 0-1 are
+default workers.  Ranks 2-3 are <code>foo_work</code> workers.  (Rank 4 is the
+ADLB server.)  Thus, <code>"Hello Bar"</code> is reported on rank 3 and <code>"Hello
+Foo"</code> is reported on rank 0.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -4635,7 +4636,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-04-01 12:37:54 CDT
+Last updated 2016-04-01 12:41:12 CDT
 </div>
 </div>
 </body>
