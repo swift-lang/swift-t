@@ -1501,27 +1501,28 @@ for remote command-line and GPU tasks respectively.
 It is also possible to define custom types of CPU leaf functions.
 
 ==== Custom work types
+
 For some applications, it is useful to be able to divide up
 CPU workers into multiple categories that execute different
 kinds of work.  For these scenarios, Swift/T provides the
 ability to define custom work types.
 
-This sample program illustrates how to define a custom work
-type +foo_work+ and define a function, +hello1+, which executes
-on a +foo_work+ worker.  For comparison, we also include +hello2+,
-which uses the default work type.
+This sample program illustrates how to define a custom work type
++foo_work+ and define a function, +hello1()+, which executes on a
++foo_work+ worker.  For comparison, we also include +hello2()+, which
+uses the default work type.
 
 ----
 pragma worktypedef foo_work;
 
 @dispatch=foo_work
-hello1 (string name) "turbine" "0.0" [
+hello1 (string msg) "turbine" "0.0" [
   "puts [ format {Hello %s} <<msg>> ]"
 ];
 
-hello2 (string name) "turbine" "0.0" [
+hello2 (string msg) "turbine" "0.0" [
   "puts [ format {Hello %s} <<msg>> ]"
-]
+];
 
 // Hello Foo will be printed on a foo_work worker
 hello1("Foo");
@@ -1530,12 +1531,34 @@ hello1("Foo");
 hello2("Bar");
 ----
 
-In order to run the above script, we need to ensure that
-a worker is allocated to execute +foo_work+ tasks.  This is
-achieved by setting the environment variable +TURBINE_FOO_WORK_WORKERS+
-to the desired number of workers.  The Swift/T workers are then divided
-between default workers and +foo_work+ workers.
+In order to run the above script, we need to ensure that a worker is
+allocated to execute +foo_work+ tasks.  This is achieved by setting
+the environment variable +TURBINE_FOO_WORK_WORKERS+ to the desired
+number of workers.  The Swift/T workers are then divided between
+default workers and +foo_work+ workers.
 
+An example run is as follows:
+
+----
+$ export TURBINE_LOG=1
+$ export TURBINE_FOO_WORK_WORKERS=2
+
+$ swift-t -l -n 5 types.swift
+[0]    0.000 WORK TYPES: WORK foo_work
+[0]    0.000 WORKERS: 4 RANKS: 0 - 3
+[0]    0.000 SERVERS: 1 RANKS: 4 - 4
+[0]    0.000 WORK WORKERS: 2 RANKS: 0 - 1
+[0]    0.000 foo_work WORKERS: 2 RANKS: 2 - 3
+...
+[0] Hello Bar
+[3] Hello Foo
+----
+
+When logging is enabled, Swift/T reports the registered work types and
+their actual ranks.  As shown, ranks 0-1 are default workers.
+Ranks 2-3 are +foo_work+ workers.  (Rank 4 is the ADLB server.)  Thus,
++"Hello Bar"+ is reported on rank 3 and +"Hello Foo"+ is reported on
+rank 0.
 
 [[app_functions]]
 === App functions
