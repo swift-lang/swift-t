@@ -24,6 +24,15 @@ Simple struct for variable-length data blob.
 
 This data type is represented by SWIG in Tcl as a regular pointer-
 you can pass it in and out of functions, display it, etc.
+ 
+[listing]
+typedef struct
+{
+  void* pointer;
+  int length;
+} turbine_blob;
+
+
 
 Based on this struct, SWIG will generate the following
 Tcl functions, assuming +blob+ is a +blob*+:
@@ -44,15 +53,6 @@ Tcl functions, assuming +blob+ is a +blob*+:
 
 
 +turbine_blob_length_get blob+:: Returns +blob->length+, an +int+.
-
-
-[listing]
-typedef struct
-{
-  void* pointer;
-  int length;
-} turbine_blob;
-
 
 == Functions 
 
@@ -113,6 +113,9 @@ In our naming scheme, if a type is not given, +void*+ is assumed.
 +blobutils_cast_to_ptrptr p+:: Integer to +void**+.
 
 
++blobutils_cast_to_string p+:: +void*+ to +char**+.
+
+
 +blobutils_cast_to_char_ptrptr p+:: Integer to +char**+.
 
 
@@ -141,6 +144,18 @@ In our naming scheme, if a type is not given, +void*+ is assumed.
 
 
 +blobutils_cast_int_to_const_dbl_ptr i+:: +int+ to +const double*+.
+
+
++blobutils_cast_long_to_int_ptr i+:: +long+ to +int*+.
+
+
++blobutils_cast_long_to_const_int_ptr i+:: +long+ to +const int*+.
+
+
++blobutils_cast_long_to_dbl_ptr i+:: +long+ to +double*+.
+
+
++blobutils_cast_long_to_const_dbl_ptr i+:: +long+ to +const double*+.
 
 
 +blobutils_cast_to_int_ptr p+:: +void*+ to +int*+.
@@ -207,4 +222,13 @@ Functions for string operations.
 
 
 +blobutils_strdup s+:: Duplicate s.
+
+=== HDF utilities 
+
+Functions for HDF operations. 
+
+
++blobutils_hdf_write output dataset blob+:: Write +blob+ to HDF file with name given in +output+
+         in dataset +dataset+.
+         Returns +true+ on success, else +false+.
 
