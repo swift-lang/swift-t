@@ -1,10 +1,11 @@
 #!/bin/bash -eu
 
 # DOC-BLOB.SH
-# Makes the blob documentation
+# Makes the blob documentation Asciidoc file blob.txt
+# Copy blob.txt into the gh-pages branch and build it into blob.html
 
-BLOB_SRC=$( cd $( dirname $0 ) ; /bin/pwd ) 
-MAINT=$( cd ${BLOB_SRC}/../../../maint ; /bin/pwd ) 
+BLOB_SRC=$( cd $( dirname $0 ) ; /bin/pwd )
+MAINT=$( cd ${BLOB_SRC}/../../../maint ; /bin/pwd )
 
 usage()
 {
@@ -14,8 +15,6 @@ usage()
 
 INPUT=${BLOB_SRC}/blob.h
 TXT=blob.txt
-OUTPUT=blob.html
 
 ${MAINT}/doc.sh ${INPUT} ${TXT}
-asciidoc ${TXT}
-echo "Generated: ${OUTPUT}"
+echo "Generated: ${TXT}"
