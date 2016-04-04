@@ -1,4 +1,6 @@
 
+// SKIP-THIS-TEST
+
 import io;
 
 @par @dispatch=WORKER (void v) f(int i) "funcs_610" "0.0" "f";
