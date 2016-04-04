@@ -46,7 +46,7 @@ make
 ./configure CC=$MPICC --prefix=/tmp/exm-install/lb
 echo
 make clean
-make V=1 install
+make install
 
 # Diagostics:
 # ldd lib/libadlb.so
