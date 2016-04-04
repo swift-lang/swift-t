@@ -5,4 +5,4 @@ THIS=$0
 EXEC=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
-mpiexec -n ${EXEC} > ${OUTPUT} 2>&1
+mpiexec -n 2 ${EXEC} > ${OUTPUT} 2>&1
