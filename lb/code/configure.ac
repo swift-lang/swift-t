@@ -37,7 +37,7 @@ AC_SUBST(USE_MAC)
 # Provide CC=mpicc by default
 if [[ "${CC}" == "" ]]
 then
-  echo "CC not set: setting CC=mpicc"
+  AC_MSG_RESULT([CC not set: setting CC=mpicc])
   export CC=mpicc
 fi
 which ${CC} >& /dev/null
