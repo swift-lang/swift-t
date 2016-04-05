@@ -23,7 +23,7 @@ changecom(`dnl')#!/bin/bash -e
 # This simply does environment variable substition when m4 runs
 define(`getenv', `esyscmd(printf -- "$`$1'")')
 
-#PBS -N Swift
+#PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
 #PBS -A getenv(PROJECT))
 ifelse(getenv(QUEUE), `',,
