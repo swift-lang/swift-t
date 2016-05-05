@@ -1257,6 +1257,22 @@ Returns a string giving the type of file, which will be one of
 +"file"+, +"directory"+, +"characterSpecial"+, +"blockSpecial"+,
 +"fifo"+, +"link"+, or +"socket"+.
 
++dirname_string(string) -> string+::
+
+Returns the directory part of the given string path.
+
++dirname(file) -> string+::
+
+Returns the directory part of the given file path.
+
++basename_string(string) -> string+::
+
+Returns the file part of the given string path.
+
++basename(file) -> string+::
+
+Returns the file part of the given file path.
+
 === Blobs
 
 *Import:* +blob+
