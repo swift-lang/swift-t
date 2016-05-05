@@ -57,4 +57,24 @@
     "turbine" "0.1" "file_lines"
   [ "set <<s>> [ turbine::file_lines_impl <<f>> ] " ];
 
+@pure
+(string d) dirname_string(string p)
+"turbine" "0.0"
+[ "set <<d>> [ file dirname <<p>> ]" ];
+
+@pure
+(string d) dirname(file p)
+"turbine" "0.0"
+[ "set <<d>> [ file dirname <<p>> ]" ];
+
+@pure
+(string f) basename_string(string p)
+"turbine" "0.0"
+[ "set <<f>> [ file tail <<p>> ]" ];
+
+@pure
+(string f) basename(file p)
+"turbine" "0.0"
+[ "set <<f>> [ file tail <<p>> ]" ];
+
 #endif // FILES_SWIFT
