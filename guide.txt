@@ -1018,6 +1018,7 @@ block again until +A[key]+ is stored.
 
 +fromint(int)     -> string+:: Convert integer to string
 +toint(string)    -> int+::    Convert string to integer
++toInt(float)     -> int+::    Convert float to integer
 +fromfloat(float) -> string+:: Convert float to string
 +tofloat(string)  -> float+::  Convert string to float
 +itof(int)        -> float+::  Convert integer to float
