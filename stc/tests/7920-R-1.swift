@@ -11,12 +11,11 @@ global const string template =
   x <- %i
   a <- x+100
   cat("the answer is: ", a, "\\n")
-  a
 """;
 
 main
 {
   code = sprintf(template, 4);
-  s = R(code);
+  s = R(code, "toString(a)");
   printf("the answer was: %i", s);
 }
