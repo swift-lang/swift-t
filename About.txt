@@ -1,16 +1,6 @@
 
 = STC Docs: About.txt
 
-First, make a soft link in this directory to swift.css, found at:
-https://svn.mcs.anl.gov/repos/exm/www/css
-
-To build and install everything, run:
-
-./install-stc-docs.zsh
-
-You may need to modify this file to include your user name.
-Currently, only Wozniak has permissions on this MCS directory.
-
 To just generate HTML, simply run:
 
 ./make-stc-docs.zsh

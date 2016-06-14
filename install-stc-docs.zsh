@@ -1,5 +1,7 @@
 #!/bin/zsh -e
 
+# DO NOT USE
+
 # INSTALL STC DOCS
 
 # Builds and installs STC docs.
