@@ -1264,7 +1264,17 @@ done</code></pre>
 <div class="paragraph"><p>Midway is a mid-sized SLURM cluster at the University of Chicago</p></div>
 <div class="sect3">
 <h4 id="_public_installation_2">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> master - 07/17/2015</p></div>
+<div class="paragraph"><p><strong>As of:</strong> master - 2016/06/14</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compute nodes:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+MVAPICH:
+</p>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1275,6 +1285,51 @@ STC: <code>~wozniak/Public/sfw/compute/gcc/stc/bin</code>
 <p>
 Turbine: <code>~wozniak/Public/sfw/compute/gcc/turbine/bin</code>
 </p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+OpenMPI:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin</code>
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Login node:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+MPICH:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/login/gcc/swift-t/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin</code>
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
 </li>
 </ul></div>
 <div class="paragraph"><p>To run:</p></div>
@@ -1288,7 +1343,7 @@ Turbine: <code>~wozniak/Public/sfw/compute/gcc/turbine/bin</code>
 <div class="ulist"><ul>
 <li>
 <p>
-Midway uses OpenMPI.  We have tested with <code>/software/openmpi-1.6-el6-x86_64</code>
+Midway uses OpenMPI or MVAPICH.  We have installed and tested with both.
 </p>
 </li>
 <li>
@@ -2745,7 +2800,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 0.8.0<br />
-Last updated 2016-06-14 11:24:00 CDT
+Last updated 2016-06-14 15:26:11 CDT
 </div>
 </div>
 </body>
