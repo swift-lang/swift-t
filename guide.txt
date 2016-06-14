@@ -2339,7 +2339,7 @@ ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
 * You may use +./configure --help+ and the
-  link:turbine-sites.html[Sites Guide] for further options.
+  link:sites.html[Sites Guide] for further options.
 
 ==== Non-standard MPI locations
 Sometimes simply specifying the MPI directory is not enough to
