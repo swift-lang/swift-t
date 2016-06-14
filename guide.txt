@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-March 2016
+June 2016
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -2299,7 +2299,7 @@ report the step at which configuration failed.  For example, if it was unable
 to locate a valid Tcl install, it will report this.  Then  you can try
 these steps to resolve the problem:
 
-1. If your system is covered by the link:turbine-sites.html[Sites Guide],
+1. If your system is covered by the link:sites.html[Sites Guide],
    check to see if the problem and solution are described there.
 2. Inspect +exm-settings.sh+ settings related to the reported problem.
   For example, if locating a Tcl install failed, setting
