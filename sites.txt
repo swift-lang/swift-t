@@ -359,9 +359,9 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 ** MVAPICH:
 *** STC: +~wozniak/Public/sfw/compute/gcc/stc/bin+
 *** Turbine: +~wozniak/Public/sfw/compute/gcc/turbine/bin+
-** OpenMPI:
-*** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin+
-*** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin+
+//// ** OpenMPI:
+//// *** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin+
+//// *** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin+
 * Login node:
 ** MPICH:
 *** STC: +~wozniak/Public/sfw/login/gcc/swift-t/stc/bin+
@@ -375,7 +375,7 @@ swift-t -m slurm -n 2 program.swift
 
 ==== Build procedure
 
-* Midway uses OpenMPI or MVAPICH.  We have installed and tested with both.
+* Midway uses MVAPICH or OpenMPI.  We have only had success with MVAPICH.
 * Put +mpicc+ in your +PATH+
 * Use these settings in +exm-settings.sh+:
 +
