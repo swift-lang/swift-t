@@ -13,8 +13,6 @@ export TCLSH=@USE_TCLSH@
 export ADLB=@USE_ADLB@
 
 export MPI_IMPL=@MPI_IMPL@
-# Only one of the following is used
-export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 export TURBINE_LINE_OUTPUT_FLAG=@MPI_LINE_OUTPUT_FLAG@
