@@ -9,7 +9,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-Swift/T v0.8.0, August 2015
+Swift/T v0.8.0, June 2016
 
 ////
 
@@ -949,10 +949,12 @@ This installation is for use on the <<login_node,login node>>.
 ===== Compute nodes
 
 * Swift/T master - 2016/03/21
-* STC: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/py2r/stc+
-* Turbine: +/lustre/beagle2/wozniak/Public/sfw/beagle/swift-t/py2r/turbine+
+* STC: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/stc+
+* Turbine: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/turbine+
 
-// * This installation is configured with http://swift-lang.org/swift-t/guide.html#_calling_python[Python]
+* This installation is configured with
+  http://swift-lang.github.io/swift-t/guide.html#_calling_python[Python] and
+  http://swift-lang.github.io/swift-t/guide.html#_calling_r[R]
 
 To run:
 
