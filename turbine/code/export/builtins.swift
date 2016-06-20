@@ -126,6 +126,8 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 (float o) toFloat(int i) "turbine"  "0.0.2" "itof";
 @pure @builtin_op=FLOATTOINT
 (int o) toInt(float i) "turbine" "0.0.2" "floattoint";
+@pure @builtin_op=FLOATTOINT
+(int o) ftoi(float i) "turbine" "0.0.2" "floattoint";
 
 // I/O
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
