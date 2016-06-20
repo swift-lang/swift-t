@@ -1020,12 +1020,32 @@ block again until +A[key]+ is stored.
 
 === Type conversion
 
+////
+DEPRECATED:
 +fromint(int)       -> string+:: Convert integer to string
 +parseInt(string)   -> int+::    Convert string to integer
 +fromfloat(float)   -> string+:: Convert float to string
 +parseFloat(string) -> float+::  Convert string to float
 +itof(int)          -> float+::  Convert integer to float
 +toInt(float)       -> int+::    Convert float to integer
++repr(*)            -> string+:: Convert any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
++array_repr(*[])  -> string[]+:: Convert array of any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
+////
+
++int2string(int)      -> string+:: Convert integer to string
++string2int(string)   -> int+::    Convert string to integer
++float2string(float)  -> string+:: Convert float to string
++string2float(string) -> float+::  Convert string to float
++int2float(int)       -> float+::  Convert integer to float
++float2int(float)     -> int+::    Convert float to integer
++boolean2string(boolean) -> string+:: Convert boolean to string
++string2boolean(string)  -> int+::    Convert string to boolean.  Case-insensitive.
+Accepts for +true+: +"true"+, +"yes"+, +"y"+, any non-zero number as a string.
+Accepts for +false+: +"false"+, +"no"+, +"n"+, +"0"+.
 +repr(*)            -> string+:: Convert any type to internal
           string representation (exact format not guaranteed
           to be consistent, even from call to call)
@@ -1096,7 +1116,7 @@ Hash the string to a 32-bit integer
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
-+string_join(string A[], string separator) -> string+::
++join(string A[], string separator) -> string+::
 Join strings in +A+ with given separator.  The separator may be the
 empty string
 
@@ -1286,34 +1306,37 @@ Returns the file part of the given file path.
 
 +blob_null() -> blob+:: Obtain an empty blob of size 0.
 
-+blob_from_string(string) -> blob+:: Convert a string into a blob.
++string2blob(string) -> blob+:: Convert a string into a blob.
 
-+string_from_blob(blob) -> string+:: Convert a blob into a string.  If
++blob2string(blob) -> string+:: Convert a blob into a string.  If
 the blob is not NULL-terminated, this function appends the
 NULL-terminator.
 
-+blob_from_floats(float[]) -> blob+:: Convert an array of Swift floats
++floats2blob(float[]) -> blob+:: Convert an array of Swift floats
 (implemented as doubles) to blob containing the C-formatted array of
 doubles .
 
-+blob_from_floats(blob) -> float[]+:: Convert blob containing the
++blob2floats(blob) -> float[]+:: Convert blob containing the
 C-formatted array of doubles to an array of Swift floats
 (implemented as doubles).
 
-+blob_from_ints(int i[]) -> blob+:: Convert blob containing the
++ints2blob(int i[]) -> blob+:: Convert blob containing the
 C-formatted array of ints to an array of Swift ints (implemented
 as 64-bit integers).
 
-+blob_from_file(file) -> blob+:: Reads whole file, returning it as a
++blob_read(file) -> blob+:: Reads whole file, returning it as a
 blob.
+
++blob_write(blob) -> blob+:: Writes whole file with given blob.
 
 [[library_location]]
 === Location
 
 See the section about <<location,location>>.
 
-+locationFromRank(int) -> location+:: Convert the rank integer to a
++rank2location(int) -> location+:: Convert the rank integer to a
 +location+ variable compatible with +@location+ with +HARD+, +RANK+.
+(Alias: +locationFromRank()+.)
 
 +randomWorker() -> location+:: Obtain a worker at random with +HARD+,
 +RANK+.

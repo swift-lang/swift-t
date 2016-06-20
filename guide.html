@@ -2112,7 +2112,7 @@ block again until <code>A[key]</code> is stored.
 <h3 id="_type_conversion">13.2. Type conversion</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<code>fromint(int)       &#8594; string</code>
+<code>int2string(int)      &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2120,7 +2120,7 @@ Convert integer to string
 </p>
 </dd>
 <dt class="hdlist1">
-<code>parseInt(string)   &#8594; int</code>
+<code>string2int(string)   &#8594; int</code>
 </dt>
 <dd>
 <p>
@@ -2128,7 +2128,7 @@ Convert string to integer
 </p>
 </dd>
 <dt class="hdlist1">
-<code>fromfloat(float)   &#8594; string</code>
+<code>float2string(float)  &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2136,7 +2136,7 @@ Convert float to string
 </p>
 </dd>
 <dt class="hdlist1">
-<code>parseFloat(string) &#8594; float</code>
+<code>string2float(string) &#8594; float</code>
 </dt>
 <dd>
 <p>
@@ -2144,7 +2144,7 @@ Convert string to float
 </p>
 </dd>
 <dt class="hdlist1">
-<code>itof(int)          &#8594; float</code>
+<code>int2float(int)       &#8594; float</code>
 </dt>
 <dd>
 <p>
@@ -2152,11 +2152,29 @@ Convert integer to float
 </p>
 </dd>
 <dt class="hdlist1">
-<code>toInt(float)       &#8594; int</code>
+<code>float2int(float)     &#8594; int</code>
 </dt>
 <dd>
 <p>
 Convert float to integer
+</p>
+</dd>
+<dt class="hdlist1">
+<code>boolean2string(boolean) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Convert boolean to string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string2boolean(string)  &#8594; int</code>
+</dt>
+<dd>
+<p>
+Convert string to boolean.  Case-insensitive.
+Accepts for <code>true</code>: <code>"true"</code>, <code>"yes"</code>, <code>"y"</code>, any non-zero number as a string.
+Accepts for <code>false</code>: <code>"false"</code>, <code>"no"</code>, <code>"n"</code>, <code>"0"</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2314,7 +2332,7 @@ As <code>sprintf()</code> in C
 </p>
 </dd>
 <dt class="hdlist1">
-<code>string_join(string A[], string separator) &#8594; string</code>
+<code>join(string A[], string separator) &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2803,7 +2821,7 @@ Obtain an empty blob of size 0.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_from_string(string) &#8594; blob</code>
+<code>string2blob(string) &#8594; blob</code>
 </dt>
 <dd>
 <p>
@@ -2811,7 +2829,7 @@ Convert a string into a blob.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>string_from_blob(blob) &#8594; string</code>
+<code>blob2string(blob) &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2821,7 +2839,7 @@ NULL-terminator.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_from_floats(float[]) &#8594; blob</code>
+<code>floats2blob(float[]) &#8594; blob</code>
 </dt>
 <dd>
 <p>
@@ -2831,7 +2849,7 @@ doubles .
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_from_floats(blob) &#8594; float[]</code>
+<code>blob2floats(blob) &#8594; float[]</code>
 </dt>
 <dd>
 <p>
@@ -2841,7 +2859,7 @@ C-formatted array of doubles to an array of Swift floats
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_from_ints(int i[]) &#8594; blob</code>
+<code>ints2blob(int i[]) &#8594; blob</code>
 </dt>
 <dd>
 <p>
@@ -2851,12 +2869,20 @@ as 64-bit integers).
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_from_file(file) &#8594; blob</code>
+<code>blob_read(file) &#8594; blob</code>
 </dt>
 <dd>
 <p>
 Reads whole file, returning it as a
 blob.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_write(blob) &#8594; blob</code>
+</dt>
+<dd>
+<p>
+Writes whole file with given blob.
 </p>
 </dd>
 </dl></div>
@@ -2866,12 +2892,13 @@ blob.
 <div class="paragraph"><p>See the section about <a href="#location">location</a>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<code>locationFromRank(int) &#8594; location</code>
+<code>rank2location(int) &#8594; location</code>
 </dt>
 <dd>
 <p>
 Convert the rank integer to a
 <code>location</code> variable compatible with <code>@location</code> with <code>HARD</code>, <code>RANK</code>.
+(Alias: <code>locationFromRank()</code>.)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4678,7 +4705,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-20 15:08:42 CDT
+Last updated 2016-06-20 15:51:31 CDT
 </div>
 </div>
 </body>
