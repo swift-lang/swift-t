@@ -3,6 +3,10 @@
  */
 
 @pure
+(location loc) rank2location(int rank) {
+  loc = location(rank, HARD, RANK);
+}
+@pure
 (location loc) locationFromRank(int rank) {
   loc = location(rank, HARD, RANK);
 }

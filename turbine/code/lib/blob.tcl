@@ -46,16 +46,16 @@ namespace eval turbine {
     store_blob_string $result $t
   }
 
-  proc string_from_blob { result input } {
-    rule $input "string_from_blob_body $input $result" \
+  proc blob2string { result input } {
+    rule $input "blob2string_body $input $result" \
         name "sfb-$input-$result"
   }
-  proc string_from_blob_body { input result } {
+  proc blob2string_body { input result } {
     set s [ retrieve_decr_blob_string $input ]
     store_string $result $s
   }
 
-  proc floats_from_blob_impl { blob } {
+  proc blob2floats_impl { blob } {
     set s       [ blobutils_sizeof_float ]
     set p      [ blobutils_cast_long_to_dbl_ptr [ lindex $blob 0 ] ]
     set length [ lindex $blob 1 ]
@@ -128,21 +128,21 @@ namespace eval turbine {
     return [ adlb::blob_from_float_list [ sorted_dict_values $kv_dict ] ]
   }
 
-  proc blob_from_ints { out in } {
+  proc ints2blob { out in } {
     set ints [ lindex $in 0 ]
     set blob [ lindex $out 0 ]
-    rule $ints "blob_from_ints_body $blob $ints"
+    rule $ints "ints2blob_body $blob $ints"
   }
 
-  proc blob_from_ints_body { blob ints } {
+  proc ints2blob_body { blob ints } {
     set ints_val [ adlb::retrieve $ints container ]
-    set blob_val [ blob_from_ints_impl $ints_val ]
+    set blob_val [ ints2blob_impl $ints_val ]
    
     store_blob $blob $blob_val
     adlb::local_blob_free $blob_val
   }
 
-  proc blob_from_ints_impl { kv_dict } {
+  proc ints2blob_impl { kv_dict } {
     return [ adlb::blob_from_int_list [ sorted_dict_values $kv_dict ] ]
   }
 
