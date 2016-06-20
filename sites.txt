@@ -48,7 +48,7 @@ of date after a release, the release version and a timestamp are
 recorded below.
 
 To request maintenance on a public installation, simply email
-exm-user@mcs.anl.gov .
+swift-t-user@googlegroups.com .
 
 === Build procedures
 
@@ -79,12 +79,12 @@ system administrators may update directory locations, breaking these
 instructions.  Thus, we mark *As of:* dates on the instructions for
 each system.
 
-To report a problem, simply email exm-user@mcs.anl.gov .
+To report a problem, simply email swift-t-user@googlegroups.com .
 
 === For more information
 
 * See the link:./guide.html[Swift/T Guide] for more information about Swift/T.
-* Join the http://lists.mcs.anl.gov/mailman/listinfo/exm-user[+swift-user+ mailing list].
+* Join the https://groups.google.com/forum/#!forum/swift-t-user[+swift-user+ mailing list].
 
 == Swift-Turbine compilation
 

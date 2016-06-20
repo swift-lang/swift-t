@@ -25,9 +25,13 @@ An overview of Swift/T may be found at the main Swift site:
 
 http://swift-lang.org/Swift-T
 
-The Swift user discussion mailing lists are found here:
+You can contact our Google Group at this email address:
 
-http://swift-lang.org/support/index.php
+swift-t-user@googlegroups.com
+
+You can subscribe to the Google Group here: 
+
+https://groups.google.com/forum/#!forum/swift-t-user
 
 The Swift/T issue tracker is here:
 

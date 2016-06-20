@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Leaf Function Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -770,7 +772,7 @@ leaf tasks that may be C, C++, or Fortran functions (native code).</p></div>
 </li>
 </ul></div>
 <div class="paragraph"><p>To report problems with these examples, post to
-<a href="http://lists.mcs.anl.gov/mailman/listinfo/exm-user">the ExM user list</a>.</p></div>
+<a href="https://groups.google.com/forum/#!forum/swift-t-user">the Swift/T user list</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -816,6 +818,7 @@ This guide will demonstrate how to do that.</p></div>
 <p>
 <a href="downloads/examples.tar.gz">examples.tar.gz</a>
 Timestamp:
+Feb. 29, 2016
 (12 KB)
 </p>
 </li>
@@ -1523,7 +1526,13 @@ arguments.</p></div>
 <div class="paragraph"><p>Consider the user code (<code>main_leaf.c</code>):</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code></code></pre>
+<pre><code>#include &lt;stdio.h&gt;
+#include "main.h"
+int main_leaf(int argc, char** argv) {
+  for (int i = 0; i &lt; argc; i++)
+    printf("arg[%i]: %s\n", i, argv[i]);
+  return 0;
+}</code></pre>
 </div></div>
 <div class="paragraph"><p>This is essentially the same program except that its <code>main()</code> function
 has been renamed to <code>swift_main()</code>.  Also, the header <code>swift-main.h</code>
@@ -1895,7 +1904,7 @@ controller: output: MY_OUTPUT</code></pre>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 15:31:06 CST
+Last updated 2016-06-20 11:22:58 CDT
 </div>
 </div>
 </body>

@@ -26,7 +26,7 @@ Links:
 * http://www.swig.or[SWIG]
 
 To report problems with these examples, post to
-http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM user list].
+https://groups.google.com/forum/#!forum/swift-t-user[the Swift/T user list].
 
 == Overview
 
