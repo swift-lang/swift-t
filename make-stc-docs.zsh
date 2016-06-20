@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 # MAKE-STC-DOCS
 # 1) Extracts snippets for code samples
