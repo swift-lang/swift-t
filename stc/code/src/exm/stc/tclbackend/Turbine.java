@@ -243,7 +243,7 @@ class Turbine {
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
   // Library function implementations
-  public static final Token TOFLOAT_IMPL = turbFn("tofloat_impl");
+  public static final Token TOFLOAT_IMPL = turbFn("string2float_impl");
   public static final Token PARSE_INT = turbFn("parse_int_impl");
   public static final Token SUBSTRING_IMPL = turbFn("substring_impl");
   public static final Token POW_INTEGER_IMPL = turbFn("pow_integer_impl");
