@@ -3732,10 +3732,10 @@ ADLB_Blob_From_Float_List_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_from_string <string value>
+   adlb::string2blob <string value> -> blob
  */
 static int
-ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_String2Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -3759,11 +3759,11 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_to_string <blob value>
+   adlb::blob2string <blob value> -> string
    Convert null-terminated blob to string
  */
 static int
-ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_Blob2String_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -6000,8 +6000,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("store_blob_ints", ADLB_Blob_store_ints_Cmd);
   COMMAND("blob_from_float_list", ADLB_Blob_From_Float_List_Cmd);
   COMMAND("blob_from_int_list", ADLB_Blob_From_Int_List_Cmd);
-  COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
-  COMMAND("blob_to_string", ADLB_Blob_To_String_Cmd);
+  COMMAND("string2blob", ADLB_String2Blob_Cmd);
+  COMMAND("blob2string", ADLB_Blob2String_Cmd);
   COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("read_refcount_incr", ADLB_Read_Refcount_Incr_Cmd);
