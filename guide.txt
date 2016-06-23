@@ -29,7 +29,7 @@ You can contact our Google Group at this email address:
 
 swift-t-user@googlegroups.com
 
-You can subscribe to the Google Group here: 
+You can subscribe to the Google Group here:
 
 https://groups.google.com/forum/#!forum/swift-t-user
 
@@ -1037,9 +1037,9 @@ DEPRECATED:
 ////
 
 +int2string(int)      -> string+:: Convert integer to string
-+string2int(string)   -> int+::    Convert string to integer
++string2int(string)   -> int+::    Convert string to integer (alias: +parseInt()+)
 +float2string(float)  -> string+:: Convert float to string
-+string2float(string) -> float+::  Convert string to float
++string2float(string) -> float+::  Convert string to float (alias: +parseFloat()+)
 +int2float(int)       -> float+::  Convert integer to float
 +float2int(float)     -> int+::    Convert float to integer
 +boolean2string(boolean) -> string+:: Convert boolean to string
