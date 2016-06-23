@@ -4882,7 +4882,7 @@ static int
 ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  int result; 
+  int result;
 #ifdef ENABLE_XPT
   result = 1;
 #else
@@ -4891,7 +4891,7 @@ ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
   return TCL_OK;
 }
-    
+
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
   filename: the filename of the checkpoint file.  If empty string,
