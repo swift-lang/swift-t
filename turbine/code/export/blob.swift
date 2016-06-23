@@ -36,9 +36,9 @@
 // blob2string
 @pure
 (string o) blob2string(blob b) "turbine" "0.0.2" "blob2string"
- [ "set <<o>> [ adlb::string2blob <<b>> ]" ];
+ [ "set <<o>> [ adlb::blob2string <<b>> ]" ];
 @pure
-(string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob"
+(string o) string_from_blob(blob b) "turbine" "0.0.2" "blob2string"
  [ "set <<o>> [ adlb::blob_to_string <<b>> ]" ];
 
 // floats2blob
