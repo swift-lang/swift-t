@@ -1,3 +1,4 @@
+dnl See doc.sh for usage
 m4_divert(`-1')
 m4_define(`DOCT', `m4_divert(0)m4_patsubst(`$1',`^ *',`') m4_divert(`-1')' )
 m4_define(`DOCN', `m4_divert(0)m4_patsubst(`$1',`^ *',`') 

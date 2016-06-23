@@ -13,12 +13,12 @@
 # DOCN():     Simple text output plus newline (doc-newline)
 # DOCNN():    Simple text output plus two newlines
 # DOCD():     Use Asciidoc's definition syntax (doc-definition)
-# DOC_CODE(): Code snippet
+# DOC_CODE(): Code snippet.  Use this in the C source: #define DOC_CODE(x) x
 
 # If your doc text contains comma, you should quote it: 
 # DOCT(`text, with comma')
 
-# We delete leading spaces from the asciidoc file 
+# We delete leading spaces from the asciidoc file
 # (outside of code snippets)
 
 MAINT=$( cd $( dirname $0 ) ; /bin/pwd ) 
