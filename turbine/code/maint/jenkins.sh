@@ -5,7 +5,7 @@ set -eu
 
 print JENKINS.ZSH
 
-source maint/jenkins-configure.zsh
+source maint/jenkins-configure.sh
 
 make V=1
 
