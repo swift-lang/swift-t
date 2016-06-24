@@ -37,11 +37,11 @@ namespace eval turbine {
       store_blob $result 0 0
   }
 
-  proc blob_from_string { result input } {
-    rule $input "blob_from_string_body $input $result" \
-        name "bfs-$input-$result"
+  proc string2blob { result input } {
+    rule $input "string2blob_body $input $result" \
+        name "string2blob-$input-$result"
   }
-  proc blob_from_string_body { input result } {
+  proc string2blob_body { input result } {
     set t [ retrieve_decr_string $input ]
     store_blob_string $result $t
   }

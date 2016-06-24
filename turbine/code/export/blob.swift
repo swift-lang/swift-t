@@ -30,7 +30,7 @@
 (blob o)   string2blob(string s) "turbine" "0.0.2" "string2blob"
  [ "set <<o>> [ adlb::string2blob <<s>> ]" ];
 @pure
-(blob o)   blob_from_string(string s) "turbine" "0.0.2" "blob_from_string"
+(blob o)   blob_from_string(string s) "turbine" "0.0.2" "string2blob"
  [ "set <<o>> [ adlb::string2blob <<s>> ]" ];
 
 // blob2string
