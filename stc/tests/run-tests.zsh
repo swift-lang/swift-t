@@ -1,10 +1,9 @@
 #!/bin/zsh -f
+set -eu
 
 # STC RUN-TESTS
 
 # See About.txt for notes
-
-set -eu
 
 # Test error codes
 TEST_OK=0
