@@ -2972,8 +2972,8 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   size_t length;
-  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
-                     &length);
+  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
+                               &type, xfer, &length);
   CHECK_ADLB_RETRIEVE(ac, handle);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
