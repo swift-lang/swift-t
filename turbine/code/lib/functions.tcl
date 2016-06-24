@@ -321,20 +321,6 @@ namespace eval turbine {
         return $result
     }
 
-    # User function
-
-    ## Old section? -Justin 2016/06/20
-    # proc string2int { result input } {
-    #     rule $input "string2int_body $input $result" \
-    #         name "string2int-$input"
-    # }
-    # proc string2int_body { input result } {
-    #     set t [ retrieve_decr $input ]
-    #     set i [ string2int_impl $t ]
-
-    #     store_integer $result $i
-    # }
-
     proc string2int { result inputs } {
         rule $inputs [ list string2int_body {*}$inputs $result ] \
             name "string2int-$inputs"

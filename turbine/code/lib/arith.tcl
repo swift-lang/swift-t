@@ -295,12 +295,25 @@ namespace eval turbine {
     proc int2float { c a } {
         rule "$a" "int2float_body $c $a"
     }
-
     proc int2float_body { c a } {
-        set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {int(floor($a_value))} ]
-        log "int2float: $a_value => $c_value"
-        store_integer $c $c_value
+        puts "int2float retreive a: $a"
+        set a_value [ retrieve_decr_integer $a ]
+        log "int2float: $a_value"
+        store_float $c $a_value
+    }
+
+    proc float2int { result input } {
+        rule $input "float2int_body $result $input " \
+            name "float2int-$input"
+    }
+    proc float2int_body { result input } {
+        puts "retrieve float $input"
+        set t [ retrieve_decr_float $input ]
+        set i [ float2int_impl $t ]
+        store_integer $result $i
+    }
+    proc float2int_impl { f } {
+        return [ expr int($f) ]
     }
 
     proc ceil { c a } {
