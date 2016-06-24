@@ -20,6 +20,3 @@ rm -rf autom4te.cache
             --disable-static-pkg     \
             --disable-static
 
-make clean
-
-grep string2blob **/*.tcl
