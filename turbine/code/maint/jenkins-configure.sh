@@ -1,14 +1,12 @@
-#!/bin/zsh
 
-# Jenkins - configure and generate makefile.  Should be source
+# Jenkins - configure and generate Makefile
+# Should be sourced by jenkins.sh
 
 MPICH=/tmp/mpich-install
 C_UTILS=/tmp/exm-install/c-utils
 ADLB=/tmp/exm-install/lb
 TURBINE=/tmp/exm-install/turbine
-path+=( $MPICH/bin $TURBINE/bin )
-
-set -eu
+PATH=${PATH}:$MPICH/bin
 
 rm -rf autom4te.cache
 ./bootstrap
@@ -19,6 +17,9 @@ rm -rf autom4te.cache
             --with-c-utils=$C_UTILS  \
             --with-adlb=$ADLB        \
             --with-hdf5=no           \
-            --disable-static-pkg
+            --disable-static-pkg     \
+            --disable-static
 
 make clean
+
+grep string2blob **/*.tcl

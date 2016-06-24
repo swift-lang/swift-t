@@ -2,81 +2,9 @@ Swift/T is an implicitly parallel programming language for composing functions
 and command-line executables into massively parallel applications.
 
 The Swift/T user guide and prepackaged distributions are available online at
-the Swift/T homepage: http://swift-lang.org/Swift-T/.  We recommend
+the Swift/T homepage: http://swift-lang.org/Swift-T .  We recommend
 that you start there if you are new to Swift or Swift/T.
 
-You can also find the user guide and other documentation for Swift/T
-in the stc sub-project under docs.  See Documentation section for
-instructions on building.
-
-Prerequisites
--------------
-Tcl8.6, including developer tools.  You need to have tclConfig.sh present
-in a lib or lib64 directory of your Tcl installation
-
-E.g. to install on Ubuntu:
-
-    sudo apt-get install tcl8.6 tcl8.6-dev
-
-An implementation of MPI compatible with MPI 2 or greater is required.
-MPI 3.0 or greater compatibility is recommended.  If you are installing on
-a cluster or other system, you can configure Swift/T to be built with that
-version of MPI.  If you are installing on another style of system without
-MPI preinstalled, the recommended way way to get an up-to-date version of
-MPI is to general way to to build MPICH from source, for which we provide
-an automated script, as described in a later section.  Your system may
-supply a prepackaged distribution, e.g. the `mpich2` and `libmpich2-dev`
-packages on Ubuntu.
-Swift/T will generally work fine with these, but many distributions are
-slow to update their MPI package.
-
-Swift/T Quick Build Instructions
---------------------------------
-These quick build instructions assume you have tcl8.6 or greater
-and an MPI distribution that supports the MPI 2 or MPI 3.0 standards.
-This section does not cover all supported systems: if you encounter
-a problem, refer to the Swift/T user guide.
-
-Checkout this project:
-
-    git clone https://github.com/swift-lang/swift-t.git swift-t
-    cd swift-t
-
-Create a build settings file:
-
-    ./dev/build/init-settings.sh
-
-Open dev/build/exm-settings.sh in a text editor to update any settings
-You should update these settings at a minimum to set install and source
-locations:
-
-    EXM_PREFIX=/path/to/install
-    EXM_SRC_ROOT="${SCRIPT_DIR}/../.."
-
-If you using an MPI 2.x but not MPI 3.0 compatible distribution, you will
-need to set:
-
-    MPI_VERSION=2
-
-You can build with this command:
-
-    ./dev/build/build-all.sh
-
-The build script is often able to locate all dependencies without
-further explicit configuration.  If you encounter an error while
-building, or want to ensure that a specific version is used, you can
-modify configuration, for example to explicitly set the location of
-Tcl or MPI.
-
-**Note**: You might need to install `zsh` for a successful build. Just type `sudo apt-get install zsh`.
-
-After this initial build, you can do a quick build and install of
-all components using the fast build script:
-
-    ./dev/build/fast-build-all.sh
-
-For more information on the build system, see the later section on
-build system details.
 
 MPICH3 Quick Build Instructions
 -------------------------------

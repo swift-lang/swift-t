@@ -1,10 +1,9 @@
 #!/bin/zsh
+set -eu
 
 # Jenkins script - build only
 
 print JENKINS.ZSH
-
-set -eu
 
 source maint/jenkins-configure.zsh
 
