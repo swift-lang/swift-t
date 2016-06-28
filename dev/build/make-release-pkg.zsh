@@ -1,7 +1,7 @@
 #!/bin/zsh -f
 set -eu
 
-# DISTRO CONSTRUCT.ZSH
+# MAKE-RELEASE-PKG.ZSH
 
 # Builds exm-<token>.tar.gz for distribution
 
