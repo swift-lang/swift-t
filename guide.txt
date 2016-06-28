@@ -2339,7 +2339,8 @@ these steps to resolve the problem:
 
 [[Manual_build_configuration]]
 ==== Manual configuration
-+exm-setup.zsh+ and +exm-settings.sh+ provide a convenient way to install
+
++build-all.zsh+ and +exm-settings.sh+ provide a convenient way to install
 Swift/T. However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
 Autotools/Makefile (C,Tcl) techniques.  You can more directly control
@@ -2366,10 +2367,15 @@ cd ../stc
 ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
+===== Makefile debugging
+
+Use +make V=1+ to get verbose output from our Makefiles.
+
 * You may use +./configure --help+ and the
   link:sites.html[Sites Guide] for further options.
 
 ==== Non-standard MPI locations
+
 Sometimes simply specifying the MPI directory is not enough to
 configure Swift/T.
 
@@ -2389,7 +2395,6 @@ If you are following the manual build process, configure Turbine with:
                  --with-mpi-lib-dir=/path/to/mpi_lib/lib
                  --with-mpi-lib-name=funny.mpi.a
 ----
-
 
 === Performance enhancements
 
@@ -2416,6 +2421,7 @@ If you are following the manual build process, configure Turbine with:
 
 [[mkstatic]]
 === Building standalone executables with +mkstatic.tcl+
+
 It is possible to build a fully self-contained executable, including
 all Tcl scripts and compiled code, provided that all dependencies support
 static linking.  If not, it is also possible to build an executable with
