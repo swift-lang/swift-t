@@ -1,5 +1,4 @@
 #!/bin/zsh
-
 set -eu
 
 C_UTILS=/tmp/exm-install/c-utils
@@ -17,8 +16,11 @@ which mpiexec
 # cat ${TURBINE}/scripts/turbine-build-config.sh
 print
 
+# BLAS Version
+BV=3.5.0
+
 # Build BLAS
-export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a
+export BLAS=/tmp/exm-blas-build/BLAS-${BV}/BLAS.a
 if [[ ! -f ${BLAS} ]]
 then
   print "Downloading BLAS..."
@@ -27,7 +29,7 @@ then
   rm -fv blas.tgz
   wget http://www.netlib.org/blas/blas.tgz
   tar xfz blas.tgz
-  cd BLAS
+  cd BLAS-${BV}
   for f in *.f
   do
     gfortran -fPIC -c ${f}
