@@ -4343,7 +4343,7 @@ If the options in <code>exm-settings.sh</code> do not give sufficient control to
 </div>
 <div class="sect3">
 <h4 id="Manual_build_configuration">17.4.2. Manual configuration</h4>
-<div class="paragraph"><p><code>exm-setup.zsh</code> and <code>exm-settings.sh</code> provide a convenient way to install
+<div class="paragraph"><p><code>build-all.zsh</code> and <code>exm-settings.sh</code> provide a convenient way to install
 Swift/T. However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
 Autotools/Makefile (C,Tcl) techniques.  You can more directly control
@@ -4368,6 +4368,9 @@ make install
 cd ../stc
 ant install -Ddist.dir=... -Dturbine.home=...</code></pre>
 </div></div>
+<div class="sect4">
+<h5 id="_makefile_debugging">Makefile debugging</h5>
+<div class="paragraph"><p>Use <code>make V=1</code> to get verbose output from our Makefiles.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4376,6 +4379,7 @@ You may use <code>./configure --help</code> and the
 </p>
 </li>
 </ul></div>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_non_standard_mpi_locations">17.4.3. Non-standard MPI locations</h4>
@@ -4705,7 +4709,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 12:15:48 CDT
+Last updated 2016-06-28 14:53:15 CDT
 </div>
 </div>
 </body>
