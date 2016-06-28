@@ -63,6 +63,7 @@ Swift/T is based on the following key technologies:
 Get involved!
 
 The list of current issues is hosted on the GitHub issue tracker:
+
 https://github.com/swift-lang/swift-t/issues
 
 You can suggest new issues or try to address one of the current ones.
