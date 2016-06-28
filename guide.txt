@@ -2573,7 +2573,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 
 == Developers' guide
 
-For more information, see the dev.html[Developers' Guide].
+For more information, see the link:dev.html[Developers' Guide].
 
 ////
 Local Variables:
