@@ -27,6 +27,9 @@ http://swift-lang.org/Swift-T/guide.html[general user guide] first.
 For further support, post to the
 https://groups.google.com/forum/#!forum/swift-t-user[Swift/T User Group].
 
+Please reports errors in this document at
+https://github.com/swift-lang/swift-t/issues .
+
 == Conceptual overview
 
 The premise of Swift/T is to 1) translate a Swift script into a
