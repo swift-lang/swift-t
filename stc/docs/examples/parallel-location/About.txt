@@ -1,3 +1,0 @@
-
-Case g works with Tcl 8.6
-Packages Turbine, g do not need "load -global"
