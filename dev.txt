@@ -171,7 +171,7 @@ descriptions of each package and each class and hopefully make it
 reasonably easy to explore the source tree.  To generate them from the
 STC source, run +ant javadoc+ in the code directory.  However, this page
 provides a general overview and introduction that may make it easier
-to get into the code base.  
+to get into the code base.
 
 === Architecture
 
@@ -193,10 +193,10 @@ The intermediate representation is described in more detail further
 down this page in the Swift-IR section.
 
 ----
-                  (analysis, 
+                  (analysis,
                   semantic checks)          (flatten)        (code generation)
 Swift source -----> AST -----> AST + analysis------> Swift-IR------> Tcl
-            (parse)                              ^             | 
+            (parse)                              ^             |
                                                  |             |
                                                  |             |
                                                  +-------------+
@@ -206,7 +206,7 @@ Swift source -----> AST -----> AST + analysis------> Swift-IR------> Tcl
 ==== Parsing
 ** Input: Swift file on disk
 ** Output: AST for Swift program
-** How: Using ANTLR grammar in ExM.g 
+** How: Using ANTLR grammar in ExM.g
 
 ==== Variable Analysis
 * Input: AST for Swift Program
@@ -218,7 +218,7 @@ Swift source -----> AST -----> AST + analysis------> Swift-IR------> Tcl
 * Input: AST, Variable Analysis Output
 * Output: Lots of calls to +STCMiddleEnd+ to build tree
 * How: +ASTWalker.java+, +ExprWalker.java+, +Context.java+,
-  +LocalContext.java+, 
+  +LocalContext.java+,
   +GlobalContext.java+, +TypeChecker.java+
 * Checks: type checks the whole program
 * Misc: some optimizations are implemented at this level, such as caching struct fields, just because it was easier to do that way
@@ -242,9 +242,9 @@ of code tree are assisted by methods of tree classes
 * How: Each construct in IR tree makes calls to +TurbineGenerator+.
   +TurbineGenerator.java+, +Turbine.java+, classes under
   +stc.tclbackend+ package are used to build and output the Tcl
-  output code. 
+  output code.
 
-=== Code organization 
+=== Code organization
 
 The best way to get an overview of the stc source code layout is to
 look at the Javadocs.  To construct the Javadoc run +ant javadoc+ in the
@@ -265,7 +265,7 @@ The ANTLR Tree is passed to and walked by class SwiftScript, which
 progresses down the tree and makes calls to +TurbineGenerator+.
 
 TIC statements correspond closely to the original SwiftScript so this
-is straightforward. 
+is straightforward.
 
 === Tcl generation
 
@@ -286,10 +286,10 @@ is fully built, the String representation is obtained via
 
 Multiple avenues were explored for generating Tcl:
 
-* String generation right in TurbineGenerator: 
+* String generation right in TurbineGenerator:
   This got messy quickly with multiple lines of string, spacing, and new
-  line issues mixed in with logic. 
-* A lightweight Tcl API to generate common string patterns: 
+  line issues mixed in with logic.
+* A lightweight Tcl API to generate common string patterns:
   This was not much better.
 * StringTemplate: Swift/K used this approach.  The library is produced
   by the ANTLR people. My opinion is that this is a moderately complex
@@ -297,7 +297,7 @@ Multiple avenues were explored for generating Tcl:
 
 === Settings
 
-In general, parser settings should be processed as follows: 
+In general, parser settings should be processed as follows:
 
 * Entered into the UI through the +stc+ script which converts
   command-line arguments or environment variables into Java properties
@@ -309,7 +309,7 @@ In general, parser settings should be processed as follows:
 
 === Debugging STC
 
-Tip: When debugging the compiler, it is convenient to do: 
+Tip: When debugging the compiler, it is convenient to do:
 ----
 stc -l /dev/stdout <input>.swift /dev/stdout
 ----
@@ -342,7 +342,7 @@ when it reaches 0, the variable is garbage-collected by ADLB).
 
 === The Turbine rule statement
 
-NOTE: This is the most important concept (the only concept) in Turbine.  
+NOTE: This is the most important concept (the only concept) in Turbine.
 
 Data-dependent progress is controlled by Turbine rules.
 
@@ -482,6 +482,11 @@ Tcl extensions.
 ** +src/tcl/blob+ allows for the use of +blob+&#8203;s, i.e., unformatted
    bytes.  See the link:blob.html[blob guide].
 
+===== External scripting interpreters
+
+The external scripting interpreters are called through their C APIs in
+each +tcl-LANG.c+ .
+
 == Turbine concepts
 
 Swift/T progress is managed by the following Turbine concepts:
@@ -511,7 +516,7 @@ Turbine rules.
 * Rule types are:
 ** +CONTROL+: put the action into ADLB for evaluation elsewhere
 ** +WORK+: put the action into ADLB for evaluation by a worker
-** +LOCAL+: send the task to local worker (deprecated) 
+** +LOCAL+: send the task to local worker (deprecated)
 * When rules are evaluated, they produce in-memory records called
   transforms (TRs).
 * When the transform is ready, it is released to the appropriate
@@ -742,7 +747,6 @@ literal x integer 3
 ----
 
 Now x is a closed TD of type integer with value 3.
-
 
 ==== Functions
 
@@ -1248,7 +1252,7 @@ ADLB is primarily tested in the Turbine test suite, but you can do
 
 Just do +make test_results+.
 
-=== STC 
+=== STC
 
 The test suite compiles a variety of SwiftScript cases and runs them
 under Turbine.  See +stc/tests/About.txt+ for usage, or just run
