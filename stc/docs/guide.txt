@@ -1,2 +1,0 @@
-
-The Swift/T guide was moved to the gh-pages branch!
