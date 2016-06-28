@@ -13,7 +13,19 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Developers' Guide
-February 2016
+Justin M. Wozniak
+June 2016
+
+This document is for developers interested in modifying or extending
+the Swift/T codebase.
+
+This document assumes you know everything in the
+http://swift-lang.org/Swift-T/guide.html[general user guide] first.
+
+== Questions
+
+For further support, post to the
+https://groups.google.com/forum/#!forum/swift-t-user[Swift/T User Group].
 
 == Conceptual overview
 
@@ -32,13 +44,13 @@ and allow them to communicate by calling into the ADLB library.  Thus,
 we provide a Tcl extension for ADLB.  The rest of Turbine is just glue
 code to 1) provide a more convenient compiler target and 2) provide
 Swift features, such as its string library and interfaces to external
-code. 
+code.
 
 == Basic execution
 
 . Swift/T typically starts with a user invocation of +swift-t+, a
 simple shell script.  This invokes +stc+ and +turbine+, which are also
-shell scripts.  All use +getopt+.  
+shell scripts.  All use +getopt+.
 . +stc+ translates the `getopt's to Java properties, to be passed into
 the JVM via +java -D+.
 . STC starts in +exm/stc/ui/Main.java+.  All properties are registered
@@ -51,7 +63,7 @@ the Tcl source and the Turbine shared object, which links to ADLB.
 . ADLB is initiated and controlled through calls to its Tcl interface,
 defined in +turbine/code/src/tcl/adlb+.
 
-== STC internals
+=== STC
 
 STC ingests a Swift file and emits a Tcl file for execution by
 Turbine, called Turbine Intermediate Code (TIC).  It parses the Swift
@@ -69,9 +81,9 @@ generated via the classes in +exm/stc/tclbackend/+.  This AST is then
 converted to a string via recursive calls to the various +appendTo()+
 methods in the +TclTree+ class, then simply written to the TIC file.
 
-== Turbine internals
+=== Turbine
 
-Consider this Tcl script (+f.tcl+): 
+Consider this Tcl script (+f.tcl+):
 
 ----
 puts "HI"
@@ -98,17 +110,220 @@ However, Turbine also provides the +turbine+ Tcl package, which
 contains the contents of the +lib/+ directory: Tcl scripts and a
 shared object.  These provide all the TIC features nencessary for STC.
 
+== Build systems
+
+=== Makefiles
+
+The build system for the three Makefile-based systems (c-utils, ADLB,
+Turbine) is based on the following paper "Recursive Make Considered
+Harmful":
+
+http://aegis.sourceforge.net/auug97.pdf
+
+The Autoconf-based configuration system primarily sets C preprocessor
+variables in +config.h+ via +AC_DEFINE()+ and Makefile variables via
++AC_SUBST()+.
+
+=== Ant
+
+The build system for STC is a relatively simple Ant build file.  The
+only complexity is running ANTLR, which generates Java source code,
+before compiling all the Java source into one big JAR file.
+
+== How to learn the code
+
+=== Prerequisites
+
+* Strong Unix programming: C, Make, shell.  (We use ZSH for convenience and
+  readability but strive to keep things close to the POSIX shell.)
+* Basic MPI knowledge is necessary.  Swift/T only uses a small portion
+  of MPI, the basic sends and receives.  You need to be able to write
+  and run toy MPI programs.
+* The main ADLB features are just blocking send/receive.  There are
+  some nonblocking calls that are only necessary for advanced internal
+  features (work stealing probes).
+* Moderate Tcl knowledge is necessary for Turbine.  We make pervasive
+  use of Tcl extensions to C, but rarely use advanced Tcl language
+  tricks.  SWIG is optional.
+* Moderate Java knowledge is necessary for STC.  You need to know
+  ANTLR.  STC does not use any other complex Java APIs.
+* Concurrency: We do not use threads.  All Swift/T concurrency comes
+  from ADLB/MPI and the Turbine +rule+ statement.  This makes things
+  mostly sequential and easier to debug.
+
+=== Things to do
+
+* Read the http://swift-lang.org/papers[papers]
+* Read the tests, particularly the Turbine tests.  There are fewer of
+  them but they demonstrate how Swift/T implements Swift semantics.
+  See the STC test guide (About.txt) for further notes.
+* Run the http://swift-lang.org/Swift-T/leaf.html[leaf guide examples]
+
+== STC internals
+
+The most complete and up-to-date reference for the STC compiler is the
+Javadocs generated from the source tree for high-level information and
+the source itself for low-level information.  The Javadocs contain
+descriptions of each package and each class and hopefully make it
+reasonably easy to explore the source tree.  To generate them from the
+STC source, run +ant javadoc+ in the code directory.  However, this page
+provides a general overview and introduction that may make it easier
+to get into the code base.  
+
+=== Architecture
+
+The compiler is basically a pipeline which takes the Swift program
+from the Swift source, into the compiler's intermediate
+representation, and then into executable Tcl code.
+
+We need a specialized intermediate representation in the compiler
+because neither the Swift code nor the Tcl code is well-suited to
+being analyzed or optimized.  Optimization is especially important for
+Turbine, because our experience with a simpler compiler that
+translated directly from Swift to Turbine generated very inefficient
+Turbine code, which performs many unnecessary runtime operations.  We
+could implement ad-hoc optimizations with this compiler organization,
+but it was challenging, required a lot of ad-hoc changes to the
+compiler and was not going to be maintainable in the long run.
+
+The intermediate representation is described in more detail further
+down this page in the Swift-IR section.
+
+----
+                  (analysis, 
+                  semantic checks)          (flatten)        (code generation)
+Swift source -----> AST -----> AST + analysis------> Swift-IR------> Tcl
+            (parse)                              ^             | 
+                                                 |             |
+                                                 |             |
+                                                 +-------------+
+                                                   (optimise)
+----
+
+==== Parsing
+** Input: Swift file on disk
+** Output: AST for Swift program
+** How: Using ANTLR grammar in ExM.g 
+
+==== Variable Analysis
+* Input: AST for Swift Program
+* Output: Information about how each variable is used in each block (i.e. whether it is read, written, etc)
+* Checks: Generates errors and warnings about dataflow violations (e.g. read-without-write)
+* How: +VariableUsageAnalyser.java+
+
+==== Tree Walking
+* Input: AST, Variable Analysis Output
+* Output: Lots of calls to +STCMiddleEnd+ to build tree
+* How: +ASTWalker.java+, +ExprWalker.java+, +Context.java+,
+  +LocalContext.java+, 
+  +GlobalContext.java+, +TypeChecker.java+
+* Checks: type checks the whole program
+* Misc: some optimizations are implemented at this level, such as caching struct fields, just because it was easier to do that way
+
+==== Intermediate Representation Construction
+* Input: sequence of calls to STCMiddleEnd which describe program
+* Output: IR tree for program
+* How: +STCMiddleEnd+ builds tree.  IC constructs are defined under +stc.ic.tree+
+* Checks: nothing formally, but lots of assertions to make sure the previous stages aren't misbehaving
+
+==== Optimization
+* Input: IR tree
+* Output: IR tree
+* How:
+* All optimiser passes are under +stc.ic.opt+.  Some transformations
+of code tree are assisted by methods of tree classes
+
+==== Tcl Generation
+* Input: sequence of calls to +TurbineGenerator+ (generated from IR tree)
+* Output: Tcl code as string
+* How: Each construct in IR tree makes calls to +TurbineGenerator+.
+  +TurbineGenerator.java+, +Turbine.java+, classes under
+  +stc.tclbackend+ package are used to build and output the Tcl
+  output code. 
+
+=== Code organization 
+
+The best way to get an overview of the stc source code layout is to
+look at the Javadocs.  To construct the Javadoc run +ant javadoc+ in the
++stc/code+ directory.  This will create html pages under the javadoc
+directory/ This is an overview of what is in the STC Java source code.
+
+=== ANTLR
+
+The SwiftScript parser is generated at build time by +build.xml+
+target +antlr.generate+ This generates the Java source in
++src/exm/stc/ast/antlr+.  At run time, this package is used by
++Main.runANTLR()+ to generate the SwiftScript AST in the ANTLR Tree
+object
+
+=== SwiftScript AST
+
+The ANTLR Tree is passed to and walked by class SwiftScript, which
+progresses down the tree and makes calls to +TurbineGenerator+.
+
+TIC statements correspond closely to the original SwiftScript so this
+is straightforward. 
+
+=== Tcl generation
+
+We construct an in-memory tree representing the Tcl output program
+(under +exm.stc.tclbackend.tree+) which is then written to the output.
+
+This package creates structured data in memory.  The Tcl program is
+represented as a big sequence of commands.  Other Tcl syntax features
+are also representable.  The package is big a class hierarchy; +TclTree+
+is the most abstract class.
+
+STC stores the working Tcl tree in +TurbineGenerator.tree+ .  When it
+is fully built, the String representation is obtained via
++TurbineGenerator.code()+ and is written to the output file
+(cf. +STCompiler.compile()+).
+
+==== Historical note
+
+Multiple avenues were explored for generating Tcl:
+
+* String generation right in TurbineGenerator: 
+  This got messy quickly with multiple lines of string, spacing, and new
+  line issues mixed in with logic. 
+* A lightweight Tcl API to generate common string patterns: 
+  This was not much better.
+* StringTemplate: Swift/K used this approach.  The library is produced
+  by the ANTLR people. My opinion is that this is a moderately complex
+  technology that does not give us enough control over the output
+
+=== Settings
+
+In general, parser settings should be processed as follows: 
+
+* Entered into the UI through the +stc+ script which converts
+  command-line arguments or environment variables into Java properties
+  (+-D+).
+* From there, general settings should go into class +Settings+
+
+* Exceptions: Logging, input SwiftScript and output Tcl locations are not in Settings.
+  The target Turbine version is set at compile time by editing Settings.
+
+=== Debugging STC
+
+Tip: When debugging the compiler, it is convenient to do: 
+----
+stc -l /dev/stdout <input>.swift /dev/stdout
+----
+
+== Turbine internals
+
 === Builtins
 
-Turbine implements the Swift/T standard library in +export+.  Some
-libraries (e.g., string) are implemented in pure Tcl.  Other TIC
-features are implemented in C code exposed to Tcl in +src/tcl+.  For
-example, +string.swift:sprintf()+ refers to Tcl function +sprintf+
-which is implemented in +lib/string.tcl+, which simply uses the Tcl
-function +format+.  The +sprintf+ function operates on Turbine data
-(TDs), which are integers that are the identifiers of data stored in
-ADLB.  A +rule+ is used to trigger data-dependent execution, described
-next.
+Turbine implements the Swift/T standard library in its +export/+
+directory.  Some libraries (e.g., string) are implemented in pure Tcl.
+Other TIC features are implemented in C code exposed to Tcl in
++src/tcl+.  For example, +string.swift:sprintf()+ refers to Tcl
+function +sprintf+ which is implemented in +lib/string.tcl+, which
+simply uses the Tcl function +format+.  The +sprintf+ function
+operates on Turbine data (TDs), which are integers that are the
+identifiers of data stored in ADLB.  A +rule+ is used to trigger
+data-dependent execution, described next.
 
 === Turbine data
 
@@ -124,8 +339,962 @@ when it reaches 0, the variable is garbage-collected by ADLB).
 
 === The Turbine rule statement
 
+NOTE: This is the most important concept (the only concept) in Turbine.  
+
+Data-dependent progress is controlled by Turbine rules.
+
+A Turbine rule statement contains:
+
+----
+rule input_list action options...
+----
+
++input_list+:: A space-separated list (Tcl list) of TDs.  When these
+are are closed, the action is +eval+'d.
+
++action+:: A string of Tcl code for execution once all inputs are
+closed. Essentially, when all the inputs are closed, Turbine will make
+the action ready for execution, based on the +type+.
+
+==== Options
+
+All options are optional
+
+----
+rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2
+----
+
++name+:: An arbitrary string name used for debugging and logging.
+Turbine will make up a default name
++type+:: +LOCAL+, +CONTROL+, or +WORK+.  Default is +CONTROL+
++parallelism+:: Number of processes to use for an MPI parallel task.  Default is 1.
++target+:: Send action to this MPI rank.  Default is any available process based on +type+ (+$adlb::RANK_ANY+)
+
+==== Semantics
+
+The rule statement semantics are as follows, with respect to the Tcl
+thread of execution.
+
+* I can pause here
+* I have an action I would like to perform at some point in the future
+* I can restart myself given the action string
+* Do not restart me until the given inputs are closed
+* When my action completes, my outputs will be closed
+* For +CONTROL+ or +WORK+, you can execute my action on a different node
+(I will be able to find my data (and call stack) in the global store)
+
+==== Naming
+
+The name "rule" was chosen because this is somewhat like a Makefile
+rule, and the analogy was intended to be helpful.
+
+==== Rationale
+
+A Turbine rule is not just a control structure, it is data- it has an
+identifier and debug token, is stored in data structures, is loggable,
+debuggable, etc.  The arbitrary action string provides a lot of
+flexibility in how the statement may be used (by the code generator)
 
 
+==== Further reading
+
+http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf[Turbine: A
+distributed-memory dataflow engine for high performance many-task
+applications]
+Wozniak, Armstrong, et al. Fundamenta Informaticae 28(3), 2013.]
+
+=== Code layout
+
+==== Tcl packaging
+
+Turbine consists of two key C libraries, ADLB and Turbine, packaged as
+Tcl extensions, and several Tcl script libraries.  All of this is
+packaged with Tcl conventions in +lib+.  Cf. +lib/make-package.tcl+
+and +lib/module.mk.in+.
+
+To bring these extensions and libraries into a Tcl script, we use:
+
+--------------------------------------------------------
+package require turbine 0.1
+--------------------------------------------------------
+
+This command refers to environment variable +TCLLIBPATH+, which we
+set in +bin/turbine+.
+
+Other C features are exposed to the Tcl layer as described below.
+
+==== MPI process modes
+
+A Turbine program is a TCL script launched as an SPMD program by
++mpiexec+.  In general, the idea is to do
+
+----
+mpiexec -l -n ${N} tclsh something.tcl
+----
+
+In our case, we provide a helper script.  So in the test cases, we run
+
+----
+bin/turbine -l -n ${N} test/something.tcl
+----
+
+The Turbine MPI environment is set by the +mpiexec -n+ number and the
+inputs to +turbine::init+.  As a result, each MPI process will become
+a Turbine Worker or ADLB Server.
+
+Turbine Worker::
+
+Runs on the lowest MPI ranks.  Rank 0 calls the user +rules+
+procedure, starting the program.  Work from this procedure may be
+distributed to other workers.
+
+ADLB Server::
+
+Performs ADLB services, including task queues, data storage, and
+data-dependent task release.  Enters +ADLB_Server()+ and does not exit
+until the run is complete.
+Cf. +src/tcl/adlb/tcl-adlb.c::ADLB_Server_Cmd()+.  Runs on the highest
+MPI ranks.
+
+In Tcl, the mode is stored in +turbine::mode+ and is either
++WORKER+ or +SERVER+.
+
+==== Software structure
+
+The Turbine API is a Tcl API.  Some of the features are defined in
+Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
+Tcl extensions.
+
+* All Tcl source is in +lib+
+* Turbine C code, e.g. for caches and the worker loop is in +src/turbine+
+* Tcl extensions are in +src/tcl+
+** +src/tcl/turbine+ wraps up Turbine C code for Tcl
+** +src/tcl/adlb+ is the Tcl extension for the ADLB code in the ADLB
+   package. This includes the ADLB data calls
+** +src/tcl/blob+ is a SWIG-generated module for advanced blob
+   functionality
+** +src/tcl/mpe+ is the MPE library for Turbine
+** +src/tcl/LANG+ are libraries for Python, R, Julia.  These are
+   optional.
+** +src/tcl/blob+ allows for the use of +blob+&#8203;s, i.e., unformatted
+   bytes.  See the link:blob.html[blob guide].
+
+== Turbine concepts
+
+Swift/T progress is managed by the following Turbine concepts:
+
+TD::
+
+A Turbine datum.  Represented in Tcl by a 64-bit TD number.  A TD may be
+open (unset) or closed (set).  TD IDs are represented in the log as
++<ID>+.  The types are:
+
+* void
+* integer
+* float
+* string
+* blob
+* container
+
+Rules::
+
+The ADLB/Turbine data dependency engine makes progress by evaluating
+Turbine rules.
+* A rule has a a input TD list, a TD/subscript list, a rule type,
+  and an action, and optional arguments.
+* The action is a simple Tcl string that is +eval+'d by a possibly
+  different Tcl process.  This allows actions to be load balanced by
+  ADLB.
+* Rule types are:
+** +CONTROL+: put the action into ADLB for evaluation elsewhere
+** +WORK+: put the action into ADLB for evaluation by a worker
+** +LOCAL+: send the task to local worker (deprecated) 
+* When rules are evaluated, they produce in-memory records called
+  transforms (TRs).
+* When the transform is ready, it is released to the appropriate
+  ADLB task queue to be retrieved by a worker.
+* The function body targeted by the action can contain arbitrary Tcl code,
+  lookup data from the given TDs, launch external processes via Tcl
+  +exec+, and store TDs, and issue more rule statements.
+
+TR IDs are represented in the log as +{ID}+.
+
+Container::
+
+Element from which Turbine data structures are created.  May be used
+to create associative arrays, structs, and other data structures.
+Represented by a TD.  A TD plus a subscript results in another TD.
++
+Container operations are represented in the log as, e.g.,
++<4>["k"]=<8>+, indicating that container TD 4 with subscript "k"
+resulted in TD 8.
+
+Subscribe::
+
+TRs are stored in the ADLB servers.  To make progress,
+the TRs are activated when their input data is ready.  Thus, the
+servers subscribe to data stored in ADLB and are notified when
+data is ready.
+
+=== Symbols
+
+This describes the symbols available to the Turbine programmer.  These
+features are required when writing STC or constructing Swift/T
+extensions.
+
+==== Turbine core
+
+The core Turbine features are as follows.
+
+===== Program structure
+
+Turbine code is Tcl code.  For example:
+
+----
+> cat hello.tcl
+puts HELLO
+> turbine -n 3 hello.tcl
+HELLO
+HELLO
+HELLO
+----
+
+The following code is found in nearly every Turbine program:
+
+----
+package require turbine 0.1
+turbine::defaults
+turbine::init $servers
+turbine::start rules
+turbine::finalize
+----
+
+It loads the Turbine Tcl package, loads defaults and environment
+settings, initializes Turbine, starts progress, and finalizes.
+
+The rules proc contains the initial calls to get the program
+running. It is only executed by the worker with rank 0.
+
+Other code may be placed in functions.
+
+===== Startup/shutdown
+
++defaults+::
+Sets variable servers in the caller's scope
++ADLB_SERVERS+ is stored in servers, defaults to 1
+
++init servers+::
+Initialize Turbine
+Initializes ADLB
+
++finalize+::
+Shuts down and reports unused rules
+
+==== ADLB layer
+
+Turbine uses ADLB to distribute tasks and locate data.
+
+All Turbine variables are stored in a customized data store built into
+ADLB.  This required the construction of additional ADLB API calls.
+
+The following ADLB features are available to Turbine.  Usually, they
+are used internally by the Turbine features, they are not called
+directly by the user script.
+
+*tcl-adlb.c*
+
++adlb::SUCCESS+::
+
+Variable represents +ADLB_SUCCESS+.
+
++adlb::ANY+::
+
+Variable represents "any", which is -1 in ADLB.
+
++adlb::init servers types+::
+
+Start ADLB with the given number of servers and work types.
+
++adlb::finalize+::
+
+Stop ADLB.
+
++adlb::put reserve_rank work type work_unit+::
+
+Submit a work unit as a string of given integer type.  Sent to given
+rank, which may be +adlb::ANY+.
+
++adlb::get req_type answer_rank+::
+
+Get a work unit as a string of given integer type, which may be
++adlb::ANY+.  ADLB answer rank stored in +answer_rank+.
+
++adlb::create id data+::
+
+Instantiate the given data but do not close it.  Data may be:
+
+* +string:+
+* +integer:+
+* +container:<type>+
+  where +type+ is the type of the container keys.
+* +file:<name>+
+  where +name+ is the file name.
+
++adlb::store id data+::
+
+Store the TD.
+
++adlb::retrieve id+::
+
+Retrieve the TD.
+
++adlb::insert id subscript member+::
+
+Store TD +member+ at the given +subscript+ in container +id+.
+
++adlb::lookup id subscript+::
+
+Obtain the TD for the given +subscript+ in container +id+.
+
++adlb::unique+::
+
+Return a unique TD.
+
+==== Internals
+
+*adlb.c*
+
++ADLB_Subscribe(id)+::
+
+Called only by Turbine rule processing.  Request that the calling rank
+be notified when TD +id+ is closed.
+
+==== Data
+
+===== Data allocation
+
+Data must be allocated before it may be used as the input to a rule.
+
+*data.tcl*
+
++allocate [<name>] <type> -> td+::
+
+Creates and returns a unique TD.  The TD is actually stored on some
+ADLB server, the user does not know which one. If +name+ is given,
+logs a message based on +name+.
+
++allocate_container [<name>] <subscript type> -> td+::
+
+Creates and returns a unique TD that is a container with the given
+subscript type: +"integer"+ or +"string"+
+
+===== Data storage/retrieval
+
+Data storage/retrieval allows you to store Tcl values in Turbine and
+retrieve Turbine TDs as Tcl values.
+
+*data.tcl*
+
+* +store_integer td value+
+* +retrieve_integer td -> value+
+* +store_string td value+
+* +retrieve_string td -> value+
+* +store_float td+
+* +retrieve_float td -> value+
+* +store_void td+
+* +store_blob td [ list pointer length]+
+* +retrieve_blob td -> [ list pointer length ]+
+
+Once you have the values in Tcl, you can perform arbitrary operations
+and store results back into Turbine.
+
+You can think of Turbine as a load/store architecture, where the
+Turbine data store is main memory and the local Tcl operations
+and values are the CPU and its registers.
+
++void+ type variables may be used to represent pure dataflow- e.g.,
+Swift external variables. Internally, these are just an integer.
+
++blob+ values in Turbine/Tcl are a +[ list pointer length ]+, where
+the pointer is stored as a Tcl integer and the length is the byte
+length.
+
+* Note that to pass these pointers to SWIG interfaces you have
+to cast them to +void*+, +double*+, etc.  Tools are provided by the
+Turbine +blobutils+ package to do this.
+* The pointer points to a locally allocated copy of the blob data.
+This must be freed with +adlb::blob_free+.  Auto-wrapped STC functions
+will automatically insert this instruction.
+
+===== Literals
+
+There is a convenience function to set up literal data.
+
+*functions.tcl*
+
+----
+set x [ literal integer 3 ]
+   or
+literal x integer 3
+----
+
+Now x is a closed TD of type integer with value 3.
+
+
+==== Functions
+
+A good way to manage progress is to define Tcl functions (procs) for
+use in the execution string.
+
+To implement a Swift function, we often have three Tcl
+functions. Consider Swift function +f()+:
+
+* The "rule" function: conventionally called +f+. This is called to
+register the function call with the ADLB/Turbine dataflow engine
+* The rule statement stores the action until the inputs are ready
+* The "body" function: conventionally called +f_body+. This is
+  called when the inputs are ready. The body function retrieves data,
+  computes, and stores data
+* The "impl" function: conventionally called +f_impl+.  The impl acts
+  on values, not addresses. This is convenient because sometimes STC
+  can optimize addresses and operate on values. This saves on calls
+  to the ADLB data API, which uses messaging and is expensive. Thus,
+  you do not need an impl function if you just want to perform the
+  computation in the body function
+
+----
+# x, y and z are string TDs. x and y may be unset
+proc f { stack z x y } {
+  rule f-$x-$y [ list $x $y ] $turbine::LOCAL "f_body no_stack $x $y $z"
+}
+
+# x, y and z are string TDs.  x and y are now set (closed)
+proc f_body { stack x y z } {
+  set s1 [ retrieve_string $x ]
+  set s2 [ retrieve_string $y ]
+  set s3 [ f_impl $s1 $s2 ]
+  store_string $z $s3 
+}
+
+# x and y are string values
+proc f_impl { x y } {
+  return compute_something $x $y
+}
+
+# Calling code:
+
+allocate x string
+allocate y string
+allocate z string
+
+store_string $x "sample1"
+store_string $y "sample2"
+
+f $z $x $y
+----
+
+The previous example could have used the literal function but it is an
+opportunity to show things in full detail.
+
+Implementation reference: the Turbine tests and any STC-generated code.
+
+=== Operations
+
+These are the operations available in Turbine.
+
+==== Arithmetic
+
+All arithmetic functions operate on TDs and are of the form:
+----
+op stack outputs inputs
+----
+The impl versions operate on values and are of the form:
+----
+op_impl inputs -> outputs
+----
+
+*arith.tcl*
+
+[width="50%",options="header"]
+|===================================
+| *Integer*          | *Float*
+| +plus_integer+     | +plus_float+
+| +minus_integer+    | +minus_float+
+| +multiply_integer+ | +multiply_float+
+| +divide_integer+   | +divide_float+
+| +negate_integer+   | +negate_float+
+| +mod_integer+      |
+| +copy_integer+     | +copy_float+
+| +max_integer+      | +max_float+
+| +min_integer+      | +min_float+
+|                    | +floor+
+|                    | +ceil+
+|                    | +round+
+|                    | +log_e+
+|                    | +exp+
+|                    | +sqrt+
+| +abs_integer+      | +abs_float+
+| +pow_integer+      | +pow_float+
+|                    | +is_nan+
+|===================================
+
+==== Statistics
+
+Statistics functions are in *stats.tcl*.  These make straightforward
+use of the Turbine API and Tcl arithmetic capabilities.
+
+==== String manipulation
+
+String functions are in *string.tcl*.  These make straightforward use
+of the Turbine API and Tcl string capabilities.
+
+=== Containers
+
+A container is a TD that is allows one to insert and retrieve TDs
+contained by it.  It is used to represent associative arrays, structs,
+and stack frames.
+
+Lookups are performed on "subscripts", which are serialized, hashable
+representations of the keys.  Each container has a subscript type that
+represents the type of the keys: this allows for Swift loop variables
+to be automatically defined. The values stored are "members" which are
+strings- they typically represent TDs.  Thus, arbitrary data may be
+stored in a container as an optimization
+
+Rules may wait on the whole container TD just like any other TD.  TDs
+that are members of a container are not special. They are simply
+linked into the container data structure.
+
+*tcl-adlb.c*
+
++allocate_container td type+::
+Initialize a TD as a container with the given subscript type, which
+may be integer or string. The members in the container may be of any
+type
+
++container_typeof td -> type+::
+Get the subscript type of the container as a Tcl string.
+Use +typeof+ to get the type of a member.
+
++adlb::enumerate td subscripts|members|dict|count count|all offset+::
+* +subscripts+:: Return list of subscript strings
+* +members+::    Return list of member TDs
+* +dict+::       Return Tcl dict mapping subscripts to TDs
+* +count+::      Return integer count of container elements
+* +count,all,offset+:: Return all entries or just +count+, starting
+from +offset+
+
++container_list td -> list+::
+Obtain all subscripts in the container as a big Tcl list
+(Convenience wrapper around enumerate)
+
++container_size td -> count+:: (Convenience wrapper around enumerate)
+
++container_reference c i r+::
+Make +r+ a reference for +c[i]+. Thus, when +c[i]+ is inserted, +r+ is
+closed by the system.  +r+ is a copy of +c[i]+,
+thus, +r+ must be of the same type as +c[i]+.
+
+*data.tcl*
+
++container_insert container_td subscript member+::
+Link member TD into the container at given subscript member is
+typically a TD, allowing for linked data.
+
++container_lookup container td subscript -> member+::
+Lookup the member corresponding to the subscript in the given container
+
+==== Advanced container operations
+
+These are used to support the full set of possible Swift/T array
+operations.
+
+Currently, these contain these +existing name+, the *proposed name*,
+and a proposed shorthand notation *(PSN)*.
+
++(A[i])+ is used to express a reference on +A[i]+.
+
+*container.tcl*
+
++container_create_nested container subscript type+::
+
+*c_v_create (CVC)*
++
+Creates subdatum when index is a value.
++
+Swift/T example: +(A[i])[j] = f();+
+
++struct_create_nested struct subscript type+::
+
+*struct_create (SC)*
++
+Creates subdatum in struct.
++
+Swift/T example: +s.f[i] = f();+
+
++f_container_create_nested container subscript type+::
+
+*c_f_create (CFC)*
++
+Creates subdatum when index is a future.
++
+Swift/T example: +(A[i])[j] = f();+
+
++container_f_insert container subscript td+::
+
+*c_f_insert (CFI)*
++
+When +subscript+ is set, insert +td+ at +container[subscript]+.
++
+Swift/T example: +A[i] = j;+
+
++container_deref_insert container subscript reference+::
+
+*c_v_insert_r (CVIR)*
++
+Swift/T example: +A[3] = (B[j]);+
+
++container_f_deref_insert container subscript reference+::
+
+*c_f_insert_r (CFIR)*
++
+When +subscript+ and +reference+ are closed, insert the TD stored in
++reference+ into +container[subscript]+.
++
+Swift/T example: +A[i] = (B[j]);+
+
++container_f_get_integer container subscript -> td+::
+
+*c_f_retrieve_integer (CFRI)*
++
+When +container[subscript]+ is inserted, store a copy of that integer
+result in +td+.
++
+Swift/T example: +j = A[i];+
+
++f_dereference_integer/float/string/blob reference td+::
+
+When +reference+ is closed, copy its value into +td+
++
+*dereference_retrieve_integer (DRI)*
++
+*dereference_retrieve_float (DRF)*
++
+Swift/T example: +j = (A[i]);+
+
++f_reference container subscript -> reference+::
+
+*c_f_lookup (CFL)*
++
+Swift/T example: +f(A[i]);+
+
++f_cref_create_nested container_reference subscript type -> reference+::
+
+*cr_v_create (CRVC)*
++
+Swift/T example: +A[i][3] = f();+
+
++cref_create_nested container_reference subscript type -> reference+::
+
+*cr_f_create (CRFC)*
++
+Swift/T example: +(A[i])[j] = f();+
+
++f_cref_lookup_literal container_reference integer td td_type+::
+
+*cr_v_lookup (CRVL)*
++
+Swift/T example: +j = (A[i])[3];+
+
++f_cref_lookup container_reference subscript td td_type+::
+
+*cr_f_lookup (CRFL)*
++
+Swift/T example: +k = (A[i])[j];+
+
++cref_insert container_reference subscript td+::
+
+*cr_v_insert (CRVI)*
++
+Swift/T example: +(A[i])[3] = k;+
+
++f_cref_insert container_reference subscript td+::
+
+*cr_f_insert (CRFI)*
++
+Swift/T example: +(A[i])[j] = k;+
+
++cref_deref_insert container_reference subscript td_reference outer_container+::
+
+When +container_reference+ and +td_reference+ are set, insert +td+ at
++container[subscript]+.
++
+*cr_f_insert_r (CRFIR)*
++
+Swift/T example: +(A[i])[j] = (B[k])+;
+
+*functions.tcl*
+
++range container start end+::
+Fill and close given container with integer subscripts that map to
+TDs that are integers from +start+ to +end+
+
+==== Blobs
+
+Blobs (Binary Large OBjects) may be used to represent byte data
+(pointer+length).  This is to allow Turbine data store to store
+native data from C/C++/Fortran.
+
+When blobs are retrieved from ADLB, they are stored in a local cache.
+These entries should be freed before returning control to Turbine.
+
+In Tcl, the blob is a +[ list pointer length ]+ where +pointer+ and
++length+ are integers.  +pointer+ is the real pointer to the blob's
+data- it may be passed into a C function as +void*+.  +length+ is the
+size in bytes.
+
+*blob.tcl*
+
++blob_from_string+::
+Convert a Tcl string into a blob. String will be NULL-terminated.
+
++string_from_blob+::
+Convert a blob into a string. String must be NULL-terminated
+
++blob_from_floats+::
+Convert a container of floats into a blob, which is actually a C
+array of doubles
+
++floats_from_blob+::
+Convert a blob into a container of floats
+
++blob_size_async+::
+Obtain the size of a blob in bytes
+
+*tcl-adlb.c*
+
++retrieve_blob td → [ list pointer length ]+::
+Retrieve a blob from ADLB and store in the local cache.
+The user must free this from cache.  Returns the pointer and length in
+a Tcl list.
+
++blob_free td+::
+Free the blob from the local cache.
+
++store_blob td pointer length+::
+Store blob in ADLB
+
+*blob.c*
+
+===== Usage
+
+This illustrates what can go in a typical Swift/T leaf function
+
+Assumes blobs id1, id2 have been created
+
+----
+# Retrieve input blob
+set L1 [ adlb::retrieve_blob $id1 ]
+set pointer1 [ lindex 0 $L1 ]
+set length1 [ lindex 1 $L1 ]
+
+# Call C function
+set L2 [ user::compute $pointer1 $length1 ]
+
+# C function returned pointer and length in L2
+set pointer2 [ lindex 0 $L2 ]
+set length2  [ lindex 1 $L2 ]
+
+# Store C function result
+turbine::store_blob $id2 [ list $pointer2 $length2 ]
+
+# Free from local cache
+adlb::blob_free $id1
+----
+
+==== I/O
+
+Turbine I/O capabilities.
+
+*functions.tcl*
+
++trace+::
+Simply outputs the values of the given TDs without formatting.
+
+*io.tcl*
+
++printf+::
+As +printf()+ in C.  The format string is handled with the Tcl
++format+ command.
+
+*files.tcl*
+
+*TODO: files.tcl*
+
+=== Void
+
+Operations for +void+ variables
+
+*functions.tcl*
+
++make_void+::
+Create and close a +void+ TD
+
++zero+::
+Convert a +void+ to the integer 0.
+
+=== Updateables
+
+*updateable.tcl*
+
+TODO: updateables
+
+=== Assertions
+
+*assert.tcl*
+
+Assertion functions are in *assert.tcl*.  These make straightforward
+use of the Turbine API and Tcl capabilities.  When they fail, they
+bring the whole Turbine execution down.
+
+=== Logging
+
+*tcl-turbine.c*
+
++log+::
+Simply report the given string to stdout with a timestamp.  This may
+be disabled by setting environment variable +TURBINE_LOG=0+.
+
+=== MPE
+
+MPE is the primary way to obtain profiling and debugging information
+from Turbine/ADLB.  CPU profiling information can also be obtained
+without recompilation as described in the CPU profiling section below.
+MPE log entries are automatically created by ADLB if enabled at configure
+time.  One additional MPE function is available from Turbine:
+
++metadata+::
+Simply insert the given string into the log.
+
+The MPE log will contain solo events with the "metadata" event type.
+
+It is safe to call this function even if MPE is not configured - it
+will simply be a noop.
+
+=== System
+
+System functions are in *sys.tcl*.  These make straightforward use of
+the Turbine API and Tcl capabilities.  See the Swift/T documentation
+for a sense of the purpose of these features.
+
+== CPU Profiling
+
+It is possible to obtain information about CPU usage in Turbine by using
+the Google perftools CPU profiler.  This profiler is non-intrusive: it
+doesn't require recompilation, only that the application is compiled with
+debugging symbols (the default).  The profiler is a sampling profiler,
+which means that it periodically snapshots the program's stack.  This is
+good for finding out where your program spends its time, but will not
+provide information on the number of times a function is called, or the
+duration of an individual function call.  The tools are available at
+http://code.google.com/p/gperftools/, and may be available as an operation
+system package (e.g. gperftools in Ubuntu).  Once installed, you can
+enable the profiler with the CPUPROFILE and LD_PRELOAD environment
+variables.  E.g. if using Mpich, which automatically passes environment
+variables to MPI processes, the following is sufficient:
+
+    export LD_PRELOAD=/usr/lib/libprofiler.so
+    export CPUPROFILE=./turbine.prof
+    turbine -n8 program.tcl
+
+This will output profiling information files with the ./turbine.prof prefix
+and the process ID appended.  Once you have the profiles, you can view the
+information in various formats, including text and graphical.
+
+    pprof --text `which tclsh8.5` turbine.prof_12345 > turbine.prof_12345.txt
+    pprof --pdf `which tclsh8.5` turbine.prof_12345 > turbine.prof_12345.pdf
+
+Note: on Ubuntu, +pprof+ is renamed to +google-pprof+.
+
+== Test suites
+
+Each component has a testing mechanism:
+
+=== Makefile-based tests
+
+For the three Makefile-based modules, the test conventions are:
+
+* You can compile the tests with +make tests+
+* You can run the tests with +make test_results+
+* When test +X+ runs, its output is directed to +X.tmp+
+* Each test +X+ has a wrapper script +X.sh+ that actually invokes the
+  test
+* The test output may be checked by +X.sh+
+* If the exit code is 0, the Makefile moves +X.tmp+ to +X.result+
+
+==== C-Utils
+
+Just do +make test_results+.
+
+==== ADLB
+
+ADLB is primarily tested in the Turbine test suite, but you can do
++make test_results+ here too.  See also +make apps/batcher.x+.
+
+==== Turbine
+
+Just do +make test_results+.
+
+=== STC 
+
+The test suite compiles a variety of SwiftScript cases and runs them
+under Turbine.  See +stc/tests/About.txt+ for usage, or just run
++tests/run-tests.zsh+.
+
+STC also has a JUnit test suite managed by +build.xml+.
+
+=== Automated testing: Jenkins
+
+Swift/T is tested nightly on an ANL/MCS-internal Jenkins server.  It
+is difficult to grant access to this system to external persons.  It
+builds Swift/T and runs the Turbine and STC test suites, and also the
+link:leaf.html[Swift/T leaf function examples].
+
+== Code conventions
+
+* Eclipse is highly recommended.
+* There should be no whitespace at end-of-line.  If you are fixing
+  whitespace, put that fix in its own commit.
+
+=== C code
+
+* Open brace after newline
+
+==== ADLB
+
+User-visible symbols are prefixed with +ADLB_+ and follow the MPI/ADLB
+capitalization conventions.
+
+Internal symbols are prefixed with +xlb_+ and use all lower case except
+for macros/constants.
+
+==== Turbine
+
+User-visible symbols are prefixed with +turbine_+.
+
+=== Java code
+
+Open brace before newline
+
+== Git
+
+Everything, including this document, is at:
+
+https://github.com/swift-lang/swift-t
+
+----
+git clone git@github.com:swift-lang/swift-t.git
+----
 
 ////
 Local Variables:

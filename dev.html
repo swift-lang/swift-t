@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Developers' Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -741,15 +743,30 @@ asciidoc.install(2);
 <body class="article" style="max-width:750px">
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
-<span id="author">February 2016</span><br />
+<span id="author">Justin M. Wozniak</span><br />
+<span id="revdate">June 2016</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>This document is for developers interested in modifying or extending
+the Swift/T codebase.</p></div>
+<div class="paragraph"><p>This document assumes you know everything in the
+<a href="http://swift-lang.org/Swift-T/guide.html">general user guide</a> first.</p></div>
+</div>
+</div>
 <div class="sect1">
-<h2 id="_conceptual_overview">1. Conceptual overview</h2>
+<h2 id="_questions">1. Questions</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>For further support, post to the <a href="https://groups.google.com/forum/#!forum/swift-t-user">Swift/T User Group</a>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_conceptual_overview">2. Conceptual overview</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The premise of Swift/T is to 1) translate a Swift script into a
 runnable format for execution at very large scale, on MPI, and 2) to
@@ -769,7 +786,7 @@ code.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_basic_execution">2. Basic execution</h2>
+<h2 id="_basic_execution">3. Basic execution</h2>
 <div class="sectionbody">
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -807,11 +824,8 @@ defined in <code>turbine/code/src/tcl/adlb</code>.
 </p>
 </li>
 </ol></div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_stc_internals">3. STC internals</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="_stc">3.1. STC</h3>
 <div class="paragraph"><p>STC ingests a Swift file and emits a Tcl file for execution by
 Turbine, called Turbine Intermediate Code (TIC).  It parses the Swift
 code using ANTLR file <code>exm/stc/ast/ExM.g</code>.  When STC is built by Ant,
@@ -826,10 +840,8 @@ generated via the classes in <code>exm/stc/tclbackend/</code>.  This AST is then
 converted to a string via recursive calls to the various <code>appendTo()</code>
 methods in the <code>TclTree</code> class, then simply written to the TIC file.</p></div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="_turbine_internals">4. Turbine internals</h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="_turbine">3.2. Turbine</h3>
 <div class="paragraph"><p>Consider this Tcl script (<code>f.tcl</code>):</p></div>
 <div class="listingblock">
 <div class="content">
@@ -853,20 +865,404 @@ HI</code></pre>
 However, Turbine also provides the <code>turbine</code> Tcl package, which
 contains the contents of the <code>lib/</code> directory: Tcl scripts and a
 shared object.  These provide all the TIC features nencessary for STC.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_build_systems">4. Build systems</h2>
+<div class="sectionbody">
 <div class="sect2">
-<h3 id="_builtins">4.1. Builtins</h3>
-<div class="paragraph"><p>Turbine implements the Swift/T standard library in <code>export</code>.  Some
-libraries (e.g., string) are implemented in pure Tcl.  Other TIC
-features are implemented in C code exposed to Tcl in <code>src/tcl</code>.  For
-example, <code>string.swift:sprintf()</code> refers to Tcl function <code>sprintf</code>
-which is implemented in <code>lib/string.tcl</code>, which simply uses the Tcl
-function <code>format</code>.  The <code>sprintf</code> function operates on Turbine data
-(TDs), which are integers that are the identifiers of data stored in
-ADLB.  A <code>rule</code> is used to trigger data-dependent execution, described
-next.</p></div>
+<h3 id="_makefiles">4.1. Makefiles</h3>
+<div class="paragraph"><p>The build system for the three Makefile-based systems (c-utils, ADLB,
+Turbine) is based on the following paper "Recursive Make Considered
+Harmful":</p></div>
+<div class="paragraph"><p><a href="http://aegis.sourceforge.net/auug97.pdf">http://aegis.sourceforge.net/auug97.pdf</a></p></div>
+<div class="paragraph"><p>The Autoconf-based configuration system primarily sets C preprocessor
+variables in <code>config.h</code> via <code>AC_DEFINE()</code> and Makefile variables via
+<code>AC_SUBST()</code>.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_turbine_data">4.2. Turbine data</h3>
+<h3 id="_ant">4.2. Ant</h3>
+<div class="paragraph"><p>The build system for STC is a relatively simple Ant build file.  The
+only complexity is running ANTLR, which generates Java source code,
+before compiling all the Java source into one big JAR file.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_to_learn_the_code">5. How to learn the code</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_prerequisites">5.1. Prerequisites</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Strong Unix programming: C, Make, shell.  (We use ZSH for convenience and
+  readability but strive to keep things close to the POSIX shell.)
+</p>
+</li>
+<li>
+<p>
+Basic MPI knowledge is necessary.  Swift/T only uses a small portion
+  of MPI, the basic sends and receives.  You need to be able to write
+  and run toy MPI programs.
+</p>
+</li>
+<li>
+<p>
+The main ADLB features are just blocking send/receive.  There are
+  some nonblocking calls that are only necessary for advanced internal
+  features (work stealing probes).
+</p>
+</li>
+<li>
+<p>
+Moderate Tcl knowledge is necessary for Turbine.  We make pervasive
+  use of Tcl extensions to C, but rarely use advanced Tcl language
+  tricks.  SWIG is optional.
+</p>
+</li>
+<li>
+<p>
+Moderate Java knowledge is necessary for STC.  You need to know
+  ANTLR.  STC does not use any other complex Java APIs.
+</p>
+</li>
+<li>
+<p>
+Concurrency: We do not use threads.  All Swift/T concurrency comes
+  from ADLB/MPI and the Turbine <code>rule</code> statement.  This makes things
+  mostly sequential and easier to debug.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_things_to_do">5.2. Things to do</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Read the <a href="http://swift-lang.org/papers">papers</a>
+</p>
+</li>
+<li>
+<p>
+Read the tests, particularly the Turbine tests.  There are fewer of
+  them but they demonstrate how Swift/T implements Swift semantics.
+  See the STC test guide (About.txt) for further notes.
+</p>
+</li>
+<li>
+<p>
+Run the <a href="http://swift-lang.org/Swift-T/leaf.html">leaf guide examples</a>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_stc_internals">6. STC internals</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The most complete and up-to-date reference for the STC compiler is the
+Javadocs generated from the source tree for high-level information and
+the source itself for low-level information.  The Javadocs contain
+descriptions of each package and each class and hopefully make it
+reasonably easy to explore the source tree.  To generate them from the
+STC source, run <code>ant javadoc</code> in the code directory.  However, this page
+provides a general overview and introduction that may make it easier
+to get into the code base.</p></div>
+<div class="sect2">
+<h3 id="_architecture">6.1. Architecture</h3>
+<div class="paragraph"><p>The compiler is basically a pipeline which takes the Swift program
+from the Swift source, into the compiler&#8217;s intermediate
+representation, and then into executable Tcl code.</p></div>
+<div class="paragraph"><p>We need a specialized intermediate representation in the compiler
+because neither the Swift code nor the Tcl code is well-suited to
+being analyzed or optimized.  Optimization is especially important for
+Turbine, because our experience with a simpler compiler that
+translated directly from Swift to Turbine generated very inefficient
+Turbine code, which performs many unnecessary runtime operations.  We
+could implement ad-hoc optimizations with this compiler organization,
+but it was challenging, required a lot of ad-hoc changes to the
+compiler and was not going to be maintainable in the long run.</p></div>
+<div class="paragraph"><p>The intermediate representation is described in more detail further
+down this page in the Swift-IR section.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>                  (analysis,
+                  semantic checks)          (flatten)        (code generation)
+Swift source -----&gt; AST -----&gt; AST + analysis------&gt; Swift-IR------&gt; Tcl
+            (parse)                              ^             |
+                                                 |             |
+                                                 |             |
+                                                 +-------------+
+                                                   (optimise)</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_parsing">6.1.1. Parsing</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: Swift file on disk
+</p>
+</li>
+<li>
+<p>
+Output: AST for Swift program
+</p>
+</li>
+<li>
+<p>
+How: Using ANTLR grammar in ExM.g
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_variable_analysis">6.1.2. Variable Analysis</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: AST for Swift Program
+</p>
+</li>
+<li>
+<p>
+Output: Information about how each variable is used in each block (i.e. whether it is read, written, etc)
+</p>
+</li>
+<li>
+<p>
+Checks: Generates errors and warnings about dataflow violations (e.g. read-without-write)
+</p>
+</li>
+<li>
+<p>
+How: <code>VariableUsageAnalyser.java</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_tree_walking">6.1.3. Tree Walking</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: AST, Variable Analysis Output
+</p>
+</li>
+<li>
+<p>
+Output: Lots of calls to <code>STCMiddleEnd</code> to build tree
+</p>
+</li>
+<li>
+<p>
+How: <code>ASTWalker.java</code>, <code>ExprWalker.java</code>, <code>Context.java</code>,
+  <code>LocalContext.java</code>,
+  <code>GlobalContext.java</code>, <code>TypeChecker.java</code>
+</p>
+</li>
+<li>
+<p>
+Checks: type checks the whole program
+</p>
+</li>
+<li>
+<p>
+Misc: some optimizations are implemented at this level, such as caching struct fields, just because it was easier to do that way
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_intermediate_representation_construction">6.1.4. Intermediate Representation Construction</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: sequence of calls to STCMiddleEnd which describe program
+</p>
+</li>
+<li>
+<p>
+Output: IR tree for program
+</p>
+</li>
+<li>
+<p>
+How: <code>STCMiddleEnd</code> builds tree.  IC constructs are defined under <code>stc.ic.tree</code>
+</p>
+</li>
+<li>
+<p>
+Checks: nothing formally, but lots of assertions to make sure the previous stages aren&#8217;t misbehaving
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_optimization">6.1.5. Optimization</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: IR tree
+</p>
+</li>
+<li>
+<p>
+Output: IR tree
+</p>
+</li>
+<li>
+<p>
+How:
+</p>
+</li>
+<li>
+<p>
+All optimiser passes are under <code>stc.ic.opt</code>.  Some transformations
+of code tree are assisted by methods of tree classes
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_tcl_generation">6.1.6. Tcl Generation</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Input: sequence of calls to <code>TurbineGenerator</code> (generated from IR tree)
+</p>
+</li>
+<li>
+<p>
+Output: Tcl code as string
+</p>
+</li>
+<li>
+<p>
+How: Each construct in IR tree makes calls to <code>TurbineGenerator</code>.
+  <code>TurbineGenerator.java</code>, <code>Turbine.java</code>, classes under
+  <code>stc.tclbackend</code> package are used to build and output the Tcl
+  output code.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_code_organization">6.2. Code organization</h3>
+<div class="paragraph"><p>The best way to get an overview of the stc source code layout is to
+look at the Javadocs.  To construct the Javadoc run <code>ant javadoc</code> in the
+<code>stc/code</code> directory.  This will create html pages under the javadoc
+directory/ This is an overview of what is in the STC Java source code.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_antlr">6.3. ANTLR</h3>
+<div class="paragraph"><p>The SwiftScript parser is generated at build time by <code>build.xml</code>
+target <code>antlr.generate</code> This generates the Java source in
+<code>src/exm/stc/ast/antlr</code>.  At run time, this package is used by
+<code>Main.runANTLR()</code> to generate the SwiftScript AST in the ANTLR Tree
+object</p></div>
+</div>
+<div class="sect2">
+<h3 id="_swiftscript_ast">6.4. SwiftScript AST</h3>
+<div class="paragraph"><p>The ANTLR Tree is passed to and walked by class SwiftScript, which
+progresses down the tree and makes calls to <code>TurbineGenerator</code>.</p></div>
+<div class="paragraph"><p>TIC statements correspond closely to the original SwiftScript so this
+is straightforward.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_tcl_generation_2">6.5. Tcl generation</h3>
+<div class="paragraph"><p>We construct an in-memory tree representing the Tcl output program
+(under <code>exm.stc.tclbackend.tree</code>) which is then written to the output.</p></div>
+<div class="paragraph"><p>This package creates structured data in memory.  The Tcl program is
+represented as a big sequence of commands.  Other Tcl syntax features
+are also representable.  The package is big a class hierarchy; <code>TclTree</code>
+is the most abstract class.</p></div>
+<div class="paragraph"><p>STC stores the working Tcl tree in <code>TurbineGenerator.tree</code> .  When it
+is fully built, the String representation is obtained via
+<code>TurbineGenerator.code()</code> and is written to the output file
+(cf. <code>STCompiler.compile()</code>).</p></div>
+<div class="sect3">
+<h4 id="_historical_note">6.5.1. Historical note</h4>
+<div class="paragraph"><p>Multiple avenues were explored for generating Tcl:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+String generation right in TurbineGenerator:
+  This got messy quickly with multiple lines of string, spacing, and new
+  line issues mixed in with logic.
+</p>
+</li>
+<li>
+<p>
+A lightweight Tcl API to generate common string patterns:
+  This was not much better.
+</p>
+</li>
+<li>
+<p>
+StringTemplate: Swift/K used this approach.  The library is produced
+  by the ANTLR people. My opinion is that this is a moderately complex
+  technology that does not give us enough control over the output
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_settings">6.6. Settings</h3>
+<div class="paragraph"><p>In general, parser settings should be processed as follows:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Entered into the UI through the <code>stc</code> script which converts
+  command-line arguments or environment variables into Java properties
+  (<code>-D</code>).
+</p>
+</li>
+<li>
+<p>
+From there, general settings should go into class <code>Settings</code>
+</p>
+</li>
+<li>
+<p>
+Exceptions: Logging, input SwiftScript and output Tcl locations are not in Settings.
+  The target Turbine version is set at compile time by editing Settings.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_debugging_stc">6.7. Debugging STC</h3>
+<div class="paragraph"><p>Tip: When debugging the compiler, it is convenient to do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>stc -l /dev/stdout &lt;input&gt;.swift /dev/stdout</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_turbine_internals">7. Turbine internals</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_builtins">7.1. Builtins</h3>
+<div class="paragraph"><p>Turbine implements the Swift/T standard library in its <code>export/</code>
+directory.  Some libraries (e.g., string) are implemented in pure Tcl.
+Other TIC features are implemented in C code exposed to Tcl in
+<code>src/tcl</code>.  For example, <code>string.swift:sprintf()</code> refers to Tcl
+function <code>sprintf</code> which is implemented in <code>lib/string.tcl</code>, which
+simply uses the Tcl function <code>format</code>.  The <code>sprintf</code> function
+operates on Turbine data (TDs), which are integers that are the
+identifiers of data stored in ADLB.  A <code>rule</code> is used to trigger
+data-dependent execution, described next.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_turbine_data">7.2. Turbine data</h3>
 <div class="paragraph"><p>When Swift code declares, reads, or writes data, these are translated
 into ADLB data operations <code>_Create()</code>, <code>_Retrieve()</code>, and <code>_Store()</code>
 (see <code>adlb.h</code>).  These functions are exposed to TIC as Tcl functions
@@ -878,15 +1274,1607 @@ collection scheme (<code>_incr</code> and <code>_decr</code> generally refer to 
 when it reaches 0, the variable is garbage-collected by ADLB).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_the_turbine_rule_statement">4.3. The Turbine rule statement</h3>
+<h3 id="_the_turbine_rule_statement">7.3. The Turbine rule statement</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">This is the most important concept (the only concept) in Turbine.</td>
+</tr></table>
 </div>
+<div class="paragraph"><p>Data-dependent progress is controlled by Turbine rules.</p></div>
+<div class="paragraph"><p>A Turbine rule statement contains:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>rule input_list action options...</code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>input_list</code>
+</dt>
+<dd>
+<p>
+A space-separated list (Tcl list) of TDs.  When these
+are are closed, the action is <code>eval</code>'d.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>action</code>
+</dt>
+<dd>
+<p>
+A string of Tcl code for execution once all inputs are
+closed. Essentially, when all the inputs are closed, Turbine will make
+the action ready for execution, based on the <code>type</code>.
+</p>
+</dd>
+</dl></div>
+<div class="sect3">
+<h4 id="_options">7.3.1. Options</h4>
+<div class="paragraph"><p>All options are optional</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2</code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>name</code>
+</dt>
+<dd>
+<p>
+An arbitrary string name used for debugging and logging.
+Turbine will make up a default name
+</p>
+</dd>
+<dt class="hdlist1">
+<code>type</code>
+</dt>
+<dd>
+<p>
+<code>LOCAL</code>, <code>CONTROL</code>, or <code>WORK</code>.  Default is <code>CONTROL</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>parallelism</code>
+</dt>
+<dd>
+<p>
+Number of processes to use for an MPI parallel task.  Default is 1.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>target</code>
+</dt>
+<dd>
+<p>
+Send action to this MPI rank.  Default is any available process based on <code>type</code> (<code>$adlb::RANK_ANY</code>)
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_semantics">7.3.2. Semantics</h4>
+<div class="paragraph"><p>The rule statement semantics are as follows, with respect to the Tcl
+thread of execution.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+I can pause here
+</p>
+</li>
+<li>
+<p>
+I have an action I would like to perform at some point in the future
+</p>
+</li>
+<li>
+<p>
+I can restart myself given the action string
+</p>
+</li>
+<li>
+<p>
+Do not restart me until the given inputs are closed
+</p>
+</li>
+<li>
+<p>
+When my action completes, my outputs will be closed
+</p>
+</li>
+<li>
+<p>
+For <code>CONTROL</code> or <code>WORK</code>, you can execute my action on a different node
+(I will be able to find my data (and call stack) in the global store)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_naming">7.3.3. Naming</h4>
+<div class="paragraph"><p>The name "rule" was chosen because this is somewhat like a Makefile
+rule, and the analogy was intended to be helpful.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_rationale">7.3.4. Rationale</h4>
+<div class="paragraph"><p>A Turbine rule is not just a control structure, it is data- it has an
+identifier and debug token, is stored in data structures, is loggable,
+debuggable, etc.  The arbitrary action string provides a lot of
+flexibility in how the statement may be used (by the code generator)</p></div>
+</div>
+<div class="sect3">
+<h4 id="_further_reading">7.3.5. Further reading</h4>
+<div class="paragraph"><p><a href="http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf">Turbine: A
+distributed-memory dataflow engine for high performance many-task
+applications</a>
+Wozniak, Armstrong, et al. Fundamenta Informaticae 28(3), 2013.]</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_code_layout">7.4. Code layout</h3>
+<div class="sect3">
+<h4 id="_tcl_packaging">7.4.1. Tcl packaging</h4>
+<div class="paragraph"><p>Turbine consists of two key C libraries, ADLB and Turbine, packaged as
+Tcl extensions, and several Tcl script libraries.  All of this is
+packaged with Tcl conventions in <code>lib</code>.  Cf. <code>lib/make-package.tcl</code>
+and <code>lib/module.mk.in</code>.</p></div>
+<div class="paragraph"><p>To bring these extensions and libraries into a Tcl script, we use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>package require turbine 0.1</code></pre>
+</div></div>
+<div class="paragraph"><p>This command refers to environment variable <code>TCLLIBPATH</code>, which we
+set in <code>bin/turbine</code>.</p></div>
+<div class="paragraph"><p>Other C features are exposed to the Tcl layer as described below.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_mpi_process_modes">7.4.2. MPI process modes</h4>
+<div class="paragraph"><p>A Turbine program is a TCL script launched as an SPMD program by
+<code>mpiexec</code>.  In general, the idea is to do</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec -l -n ${N} tclsh something.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>In our case, we provide a helper script.  So in the test cases, we run</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>bin/turbine -l -n ${N} test/something.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>The Turbine MPI environment is set by the <code>mpiexec -n</code> number and the
+inputs to <code>turbine::init</code>.  As a result, each MPI process will become
+a Turbine Worker or ADLB Server.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Turbine Worker
+</dt>
+<dd>
+<p>
+Runs on the lowest MPI ranks.  Rank 0 calls the user <code>rules</code>
+procedure, starting the program.  Work from this procedure may be
+distributed to other workers.
+</p>
+</dd>
+<dt class="hdlist1">
+ADLB Server
+</dt>
+<dd>
+<p>
+Performs ADLB services, including task queues, data storage, and
+data-dependent task release.  Enters <code>ADLB_Server()</code> and does not exit
+until the run is complete.
+Cf. <code>src/tcl/adlb/tcl-adlb.c::ADLB_Server_Cmd()</code>.  Runs on the highest
+MPI ranks.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>In Tcl, the mode is stored in <code>turbine::mode</code> and is either
+<code>WORKER</code> or <code>SERVER</code>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_software_structure">7.4.3. Software structure</h4>
+<div class="paragraph"><p>The Turbine API is a Tcl API.  Some of the features are defined in
+Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
+Tcl extensions.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+All Tcl source is in <code>lib</code>
+</p>
+</li>
+<li>
+<p>
+Turbine C code, e.g. for caches and the worker loop is in <code>src/turbine</code>
+</p>
+</li>
+<li>
+<p>
+Tcl extensions are in <code>src/tcl</code>
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>src/tcl/turbine</code> wraps up Turbine C code for Tcl
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/adlb</code> is the Tcl extension for the ADLB code in the ADLB
+   package. This includes the ADLB data calls
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/blob</code> is a SWIG-generated module for advanced blob
+   functionality
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/mpe</code> is the MPE library for Turbine
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/LANG</code> are libraries for Python, R, Julia.  These are
+   optional.
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/blob</code> allows for the use of <code>blob</code>&#8203;s, i.e., unformatted
+   bytes.  See the <a href="blob.html">blob guide</a>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_turbine_concepts">8. Turbine concepts</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift/T progress is managed by the following Turbine concepts:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+TD
+</dt>
+<dd>
+<p>
+A Turbine datum.  Represented in Tcl by a 64-bit TD number.  A TD may be
+open (unset) or closed (set).  TD IDs are represented in the log as
+<code>&lt;ID&gt;</code>.  The types are:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+void
+</p>
+</li>
+<li>
+<p>
+integer
+</p>
+</li>
+<li>
+<p>
+float
+</p>
+</li>
+<li>
+<p>
+string
+</p>
+</li>
+<li>
+<p>
+blob
+</p>
+</li>
+<li>
+<p>
+container
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+Rules
+</dt>
+<dd>
+<p>
+The ADLB/Turbine data dependency engine makes progress by evaluating
+Turbine rules.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+A rule has a a input TD list, a TD/subscript list, a rule type,
+  and an action, and optional arguments.
+</p>
+</li>
+<li>
+<p>
+The action is a simple Tcl string that is <code>eval</code>'d by a possibly
+  different Tcl process.  This allows actions to be load balanced by
+  ADLB.
+</p>
+</li>
+<li>
+<p>
+Rule types are:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>CONTROL</code>: put the action into ADLB for evaluation elsewhere
+</p>
+</li>
+<li>
+<p>
+<code>WORK</code>: put the action into ADLB for evaluation by a worker
+</p>
+</li>
+<li>
+<p>
+<code>LOCAL</code>: send the task to local worker (deprecated)
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+When rules are evaluated, they produce in-memory records called
+  transforms (TRs).
+</p>
+</li>
+<li>
+<p>
+When the transform is ready, it is released to the appropriate
+  ADLB task queue to be retrieved by a worker.
+</p>
+</li>
+<li>
+<p>
+The function body targeted by the action can contain arbitrary Tcl code,
+  lookup data from the given TDs, launch external processes via Tcl
+  <code>exec</code>, and store TDs, and issue more rule statements.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Container
+</dt>
+<dd>
+<p>
+Element from which Turbine data structures are created.  May be used
+to create associative arrays, structs, and other data structures.
+Represented by a TD.  A TD plus a subscript results in another TD.
+</p>
+<div class="paragraph"><p>Container operations are represented in the log as, e.g.,
+<code>&lt;4&gt;["k"]=&lt;8&gt;</code>, indicating that container TD 4 with subscript "k"
+resulted in TD 8.</p></div>
+</dd>
+<dt class="hdlist1">
+Subscribe
+</dt>
+<dd>
+<p>
+TRs are stored in the ADLB servers.  To make progress,
+the TRs are activated when their input data is ready.  Thus, the
+servers subscribe to data stored in ADLB and are notified when
+data is ready.
+</p>
+</dd>
+</dl></div>
+<div class="sect2">
+<h3 id="_symbols">8.1. Symbols</h3>
+<div class="paragraph"><p>This describes the symbols available to the Turbine programmer.  These
+features are required when writing STC or constructing Swift/T
+extensions.</p></div>
+<div class="sect3">
+<h4 id="_turbine_core">8.1.1. Turbine core</h4>
+<div class="paragraph"><p>The core Turbine features are as follows.</p></div>
+<div class="sect4">
+<h5 id="_program_structure">Program structure</h5>
+<div class="paragraph"><p>Turbine code is Tcl code.  For example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>&gt; cat hello.tcl
+puts HELLO
+&gt; turbine -n 3 hello.tcl
+HELLO
+HELLO
+HELLO</code></pre>
+</div></div>
+<div class="paragraph"><p>The following code is found in nearly every Turbine program:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>package require turbine 0.1
+turbine::defaults
+turbine::init $servers
+turbine::start rules
+turbine::finalize</code></pre>
+</div></div>
+<div class="paragraph"><p>It loads the Turbine Tcl package, loads defaults and environment
+settings, initializes Turbine, starts progress, and finalizes.</p></div>
+<div class="paragraph"><p>The rules proc contains the initial calls to get the program
+running. It is only executed by the worker with rank 0.</p></div>
+<div class="paragraph"><p>Other code may be placed in functions.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_startup_shutdown">Startup/shutdown</h5>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>defaults</code>
+</dt>
+<dd>
+<p>
+Sets variable servers in the caller&#8217;s scope
+<code>ADLB_SERVERS</code> is stored in servers, defaults to 1
+</p>
+</dd>
+<dt class="hdlist1">
+<code>init servers</code>
+</dt>
+<dd>
+<p>
+Initialize Turbine
+Initializes ADLB
+</p>
+</dd>
+<dt class="hdlist1">
+<code>finalize</code>
+</dt>
+<dd>
+<p>
+Shuts down and reports unused rules
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_adlb_layer">8.1.2. ADLB layer</h4>
+<div class="paragraph"><p>Turbine uses ADLB to distribute tasks and locate data.</p></div>
+<div class="paragraph"><p>All Turbine variables are stored in a customized data store built into
+ADLB.  This required the construction of additional ADLB API calls.</p></div>
+<div class="paragraph"><p>The following ADLB features are available to Turbine.  Usually, they
+are used internally by the Turbine features, they are not called
+directly by the user script.</p></div>
+<div class="paragraph"><p><strong>tcl-adlb.c</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>adlb::SUCCESS</code>
+</dt>
+<dd>
+<p>
+Variable represents <code>ADLB_SUCCESS</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::ANY</code>
+</dt>
+<dd>
+<p>
+Variable represents "any", which is -1 in ADLB.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::init servers types</code>
+</dt>
+<dd>
+<p>
+Start ADLB with the given number of servers and work types.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::finalize</code>
+</dt>
+<dd>
+<p>
+Stop ADLB.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::put reserve_rank work type work_unit</code>
+</dt>
+<dd>
+<p>
+Submit a work unit as a string of given integer type.  Sent to given
+rank, which may be <code>adlb::ANY</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::get req_type answer_rank</code>
+</dt>
+<dd>
+<p>
+Get a work unit as a string of given integer type, which may be
+<code>adlb::ANY</code>.  ADLB answer rank stored in <code>answer_rank</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::create id data</code>
+</dt>
+<dd>
+<p>
+Instantiate the given data but do not close it.  Data may be:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>string:</code>
+</p>
+</li>
+<li>
+<p>
+<code>integer:</code>
+</p>
+</li>
+<li>
+<p>
+<code>container:&lt;type&gt;</code>
+  where <code>type</code> is the type of the container keys.
+</p>
+</li>
+<li>
+<p>
+<code>file:&lt;name&gt;</code>
+  where <code>name</code> is the file name.
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+<code>adlb::store id data</code>
+</dt>
+<dd>
+<p>
+Store the TD.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::retrieve id</code>
+</dt>
+<dd>
+<p>
+Retrieve the TD.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::insert id subscript member</code>
+</dt>
+<dd>
+<p>
+Store TD <code>member</code> at the given <code>subscript</code> in container <code>id</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::lookup id subscript</code>
+</dt>
+<dd>
+<p>
+Obtain the TD for the given <code>subscript</code> in container <code>id</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::unique</code>
+</dt>
+<dd>
+<p>
+Return a unique TD.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_internals">8.1.3. Internals</h4>
+<div class="paragraph"><p><strong>adlb.c</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ADLB_Subscribe(id)</code>
+</dt>
+<dd>
+<p>
+Called only by Turbine rule processing.  Request that the calling rank
+be notified when TD <code>id</code> is closed.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_data">8.1.4. Data</h4>
+<div class="sect4">
+<h5 id="_data_allocation">Data allocation</h5>
+<div class="paragraph"><p>Data must be allocated before it may be used as the input to a rule.</p></div>
+<div class="paragraph"><p><strong>data.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>allocate [&lt;name&gt;] &lt;type&gt; &#8594; td</code>
+</dt>
+<dd>
+<p>
+Creates and returns a unique TD.  The TD is actually stored on some
+ADLB server, the user does not know which one. If <code>name</code> is given,
+logs a message based on <code>name</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>allocate_container [&lt;name&gt;] &lt;subscript type&gt; &#8594; td</code>
+</dt>
+<dd>
+<p>
+Creates and returns a unique TD that is a container with the given
+subscript type: <code>"integer"</code> or <code>"string"</code>
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect4">
+<h5 id="_data_storage_retrieval">Data storage/retrieval</h5>
+<div class="paragraph"><p>Data storage/retrieval allows you to store Tcl values in Turbine and
+retrieve Turbine TDs as Tcl values.</p></div>
+<div class="paragraph"><p><strong>data.tcl</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>store_integer td value</code>
+</p>
+</li>
+<li>
+<p>
+<code>retrieve_integer td &#8594; value</code>
+</p>
+</li>
+<li>
+<p>
+<code>store_string td value</code>
+</p>
+</li>
+<li>
+<p>
+<code>retrieve_string td &#8594; value</code>
+</p>
+</li>
+<li>
+<p>
+<code>store_float td</code>
+</p>
+</li>
+<li>
+<p>
+<code>retrieve_float td &#8594; value</code>
+</p>
+</li>
+<li>
+<p>
+<code>store_void td</code>
+</p>
+</li>
+<li>
+<p>
+<code>store_blob td [ list pointer length]</code>
+</p>
+</li>
+<li>
+<p>
+<code>retrieve_blob td &#8594; [ list pointer length ]</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Once you have the values in Tcl, you can perform arbitrary operations
+and store results back into Turbine.</p></div>
+<div class="paragraph"><p>You can think of Turbine as a load/store architecture, where the
+Turbine data store is main memory and the local Tcl operations
+and values are the CPU and its registers.</p></div>
+<div class="paragraph"><p><code>void</code> type variables may be used to represent pure dataflow- e.g.,
+Swift external variables. Internally, these are just an integer.</p></div>
+<div class="paragraph"><p><code>blob</code> values in Turbine/Tcl are a <code>[ list pointer length ]</code>, where
+the pointer is stored as a Tcl integer and the length is the byte
+length.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Note that to pass these pointers to SWIG interfaces you have
+to cast them to <code>void*</code>, <code>double*</code>, etc.  Tools are provided by the
+Turbine <code>blobutils</code> package to do this.
+</p>
+</li>
+<li>
+<p>
+The pointer points to a locally allocated copy of the blob data.
+This must be freed with <code>adlb::blob_free</code>.  Auto-wrapped STC functions
+will automatically insert this instruction.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_literals">Literals</h5>
+<div class="paragraph"><p>There is a convenience function to set up literal data.</p></div>
+<div class="paragraph"><p><strong>functions.tcl</strong></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>set x [ literal integer 3 ]
+   or
+literal x integer 3</code></pre>
+</div></div>
+<div class="paragraph"><p>Now x is a closed TD of type integer with value 3.</p></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_functions">8.1.5. Functions</h4>
+<div class="paragraph"><p>A good way to manage progress is to define Tcl functions (procs) for
+use in the execution string.</p></div>
+<div class="paragraph"><p>To implement a Swift function, we often have three Tcl
+functions. Consider Swift function <code>f()</code>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The "rule" function: conventionally called <code>f</code>. This is called to
+register the function call with the ADLB/Turbine dataflow engine
+</p>
+</li>
+<li>
+<p>
+The rule statement stores the action until the inputs are ready
+</p>
+</li>
+<li>
+<p>
+The "body" function: conventionally called <code>f_body</code>. This is
+  called when the inputs are ready. The body function retrieves data,
+  computes, and stores data
+</p>
+</li>
+<li>
+<p>
+The "impl" function: conventionally called <code>f_impl</code>.  The impl acts
+  on values, not addresses. This is convenient because sometimes STC
+  can optimize addresses and operate on values. This saves on calls
+  to the ADLB data API, which uses messaging and is expensive. Thus,
+  you do not need an impl function if you just want to perform the
+  computation in the body function
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># x, y and z are string TDs. x and y may be unset
+proc f { stack z x y } {
+  rule f-$x-$y [ list $x $y ] $turbine::LOCAL "f_body no_stack $x $y $z"
+}
+
+# x, y and z are string TDs.  x and y are now set (closed)
+proc f_body { stack x y z } {
+  set s1 [ retrieve_string $x ]
+  set s2 [ retrieve_string $y ]
+  set s3 [ f_impl $s1 $s2 ]
+  store_string $z $s3 
+}
+
+# x and y are string values
+proc f_impl { x y } {
+  return compute_something $x $y
+}
+
+# Calling code:
+
+allocate x string
+allocate y string
+allocate z string
+
+store_string $x "sample1"
+store_string $y "sample2"
+
+f $z $x $y</code></pre>
+</div></div>
+<div class="paragraph"><p>The previous example could have used the literal function but it is an
+opportunity to show things in full detail.</p></div>
+<div class="paragraph"><p>Implementation reference: the Turbine tests and any STC-generated code.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_operations">8.2. Operations</h3>
+<div class="paragraph"><p>These are the operations available in Turbine.</p></div>
+<div class="sect3">
+<h4 id="_arithmetic">8.2.1. Arithmetic</h4>
+<div class="paragraph"><p>All arithmetic functions operate on TDs and are of the form:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>op stack outputs inputs</code></pre>
+</div></div>
+<div class="paragraph"><p>The impl versions operate on values and are of the form:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>op_impl inputs -&gt; outputs</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>arith.tcl</strong></p></div>
+<div class="tableblock">
+<table rules="all"
+width="50%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<thead>
+<tr>
+<th align="left" valign="top"> <strong>Integer</strong>          </th>
+<th align="left" valign="top"> <strong>Float</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><code>plus_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>plus_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>minus_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>minus_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>multiply_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>multiply_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>divide_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>divide_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>negate_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>negate_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>mod_integer</code></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>copy_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>copy_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>max_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>max_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>min_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>min_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>floor</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>ceil</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>round</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>log_e</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>exp</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>sqrt</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>abs_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>abs_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><code>pow_integer</code></p></td>
+<td align="left" valign="top"><p class="table"><code>pow_float</code></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"><code>is_nan</code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_statistics">8.2.2. Statistics</h4>
+<div class="paragraph"><p>Statistics functions are in <strong>stats.tcl</strong>.  These make straightforward
+use of the Turbine API and Tcl arithmetic capabilities.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_string_manipulation">8.2.3. String manipulation</h4>
+<div class="paragraph"><p>String functions are in <strong>string.tcl</strong>.  These make straightforward use
+of the Turbine API and Tcl string capabilities.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_containers">8.3. Containers</h3>
+<div class="paragraph"><p>A container is a TD that is allows one to insert and retrieve TDs
+contained by it.  It is used to represent associative arrays, structs,
+and stack frames.</p></div>
+<div class="paragraph"><p>Lookups are performed on "subscripts", which are serialized, hashable
+representations of the keys.  Each container has a subscript type that
+represents the type of the keys: this allows for Swift loop variables
+to be automatically defined. The values stored are "members" which are
+strings- they typically represent TDs.  Thus, arbitrary data may be
+stored in a container as an optimization</p></div>
+<div class="paragraph"><p>Rules may wait on the whole container TD just like any other TD.  TDs
+that are members of a container are not special. They are simply
+linked into the container data structure.</p></div>
+<div class="paragraph"><p><strong>tcl-adlb.c</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>allocate_container td type</code>
+</dt>
+<dd>
+<p>
+Initialize a TD as a container with the given subscript type, which
+may be integer or string. The members in the container may be of any
+type
+</p>
+</dd>
+<dt class="hdlist1">
+<code>container_typeof td &#8594; type</code>
+</dt>
+<dd>
+<p>
+Get the subscript type of the container as a Tcl string.
+Use <code>typeof</code> to get the type of a member.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb::enumerate td subscripts|members|dict|count count|all offset</code>
+</dt>
+<dd>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>subscripts</code>:: Return list of subscript strings
+</p>
+</li>
+<li>
+<p>
+<code>members</code>::    Return list of member TDs
+</p>
+</li>
+<li>
+<p>
+<code>dict</code>::       Return Tcl dict mapping subscripts to TDs
+</p>
+</li>
+<li>
+<p>
+<code>count</code>::      Return integer count of container elements
+</p>
+</li>
+<li>
+<p>
+<code>count,all,offset</code>:: Return all entries or just <code>count</code>, starting
+from <code>offset</code>
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+<code>container_list td &#8594; list</code>
+</dt>
+<dd>
+<p>
+Obtain all subscripts in the container as a big Tcl list
+(Convenience wrapper around enumerate)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>container_size td &#8594; count</code>
+</dt>
+<dd>
+<p>
+(Convenience wrapper around enumerate)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>container_reference c i r</code>
+</dt>
+<dd>
+<p>
+Make <code>r</code> a reference for <code>c[i]</code>. Thus, when <code>c[i]</code> is inserted, <code>r</code> is
+closed by the system.  <code>r</code> is a copy of <code>c[i]</code>,
+thus, <code>r</code> must be of the same type as <code>c[i]</code>.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>data.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>container_insert container_td subscript member</code>
+</dt>
+<dd>
+<p>
+Link member TD into the container at given subscript member is
+typically a TD, allowing for linked data.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>container_lookup container td subscript &#8594; member</code>
+</dt>
+<dd>
+<p>
+Lookup the member corresponding to the subscript in the given container
+</p>
+</dd>
+</dl></div>
+<div class="sect3">
+<h4 id="_advanced_container_operations">8.3.1. Advanced container operations</h4>
+<div class="paragraph"><p>These are used to support the full set of possible Swift/T array
+operations.</p></div>
+<div class="paragraph"><p>Currently, these contain these <code>existing name</code>, the <strong>proposed name</strong>,
+and a proposed shorthand notation <strong>(PSN)</strong>.</p></div>
+<div class="paragraph"><p><code>(A[i])</code> is used to express a reference on <code>A[i]</code>.</p></div>
+<div class="paragraph"><p><strong>container.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>container_create_nested container subscript type</code>
+</dt>
+<dd>
+<p>
+<strong>c_v_create (CVC)</strong>
+</p>
+<div class="paragraph"><p>Creates subdatum when index is a value.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[j] = f();</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>struct_create_nested struct subscript type</code>
+</dt>
+<dd>
+<p>
+<strong>struct_create (SC)</strong>
+</p>
+<div class="paragraph"><p>Creates subdatum in struct.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>s.f[i] = f();</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_container_create_nested container subscript type</code>
+</dt>
+<dd>
+<p>
+<strong>c_f_create (CFC)</strong>
+</p>
+<div class="paragraph"><p>Creates subdatum when index is a future.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[j] = f();</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>container_f_insert container subscript td</code>
+</dt>
+<dd>
+<p>
+<strong>c_f_insert (CFI)</strong>
+</p>
+<div class="paragraph"><p>When <code>subscript</code> is set, insert <code>td</code> at <code>container[subscript]</code>.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>A[i] = j;</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>container_deref_insert container subscript reference</code>
+</dt>
+<dd>
+<p>
+<strong>c_v_insert_r (CVIR)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>A[3] = (B[j]);</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>container_f_deref_insert container subscript reference</code>
+</dt>
+<dd>
+<p>
+<strong>c_f_insert_r (CFIR)</strong>
+</p>
+<div class="paragraph"><p>When <code>subscript</code> and <code>reference</code> are closed, insert the TD stored in
+<code>reference</code> into <code>container[subscript]</code>.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>A[i] = (B[j]);</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>container_f_get_integer container subscript &#8594; td</code>
+</dt>
+<dd>
+<p>
+<strong>c_f_retrieve_integer (CFRI)</strong>
+</p>
+<div class="paragraph"><p>When <code>container[subscript]</code> is inserted, store a copy of that integer
+result in <code>td</code>.</p></div>
+<div class="paragraph"><p>Swift/T example: <code>j = A[i];</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_dereference_integer/float/string/blob reference td</code>
+</dt>
+<dd>
+<p>
+When <code>reference</code> is closed, copy its value into <code>td</code>
+</p>
+<div class="paragraph"><p><strong>dereference_retrieve_integer (DRI)</strong></p></div>
+<div class="paragraph"><p><strong>dereference_retrieve_float (DRF)</strong></p></div>
+<div class="paragraph"><p>Swift/T example: <code>j = (A[i]);</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_reference container subscript &#8594; reference</code>
+</dt>
+<dd>
+<p>
+<strong>c_f_lookup (CFL)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>f(A[i]);</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_cref_create_nested container_reference subscript type &#8594; reference</code>
+</dt>
+<dd>
+<p>
+<strong>cr_v_create (CRVC)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>A[i][3] = f();</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>cref_create_nested container_reference subscript type &#8594; reference</code>
+</dt>
+<dd>
+<p>
+<strong>cr_f_create (CRFC)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[j] = f();</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_cref_lookup_literal container_reference integer td td_type</code>
+</dt>
+<dd>
+<p>
+<strong>cr_v_lookup (CRVL)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>j = (A[i])[3];</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_cref_lookup container_reference subscript td td_type</code>
+</dt>
+<dd>
+<p>
+<strong>cr_f_lookup (CRFL)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>k = (A[i])[j];</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>cref_insert container_reference subscript td</code>
+</dt>
+<dd>
+<p>
+<strong>cr_v_insert (CRVI)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[3] = k;</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>f_cref_insert container_reference subscript td</code>
+</dt>
+<dd>
+<p>
+<strong>cr_f_insert (CRFI)</strong>
+</p>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[j] = k;</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>cref_deref_insert container_reference subscript td_reference outer_container</code>
+</dt>
+<dd>
+<p>
+When <code>container_reference</code> and <code>td_reference</code> are set, insert <code>td</code> at
+<code>container[subscript]</code>.
+</p>
+<div class="paragraph"><p><strong>cr_f_insert_r (CRFIR)</strong></p></div>
+<div class="paragraph"><p>Swift/T example: <code>(A[i])[j] = (B[k])</code>;</p></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>functions.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>range container start end</code>
+</dt>
+<dd>
+<p>
+Fill and close given container with integer subscripts that map to
+TDs that are integers from <code>start</code> to <code>end</code>
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_blobs">8.3.2. Blobs</h4>
+<div class="paragraph"><p>Blobs (Binary Large OBjects) may be used to represent byte data
+(pointer+length).  This is to allow Turbine data store to store
+native data from C/C++/Fortran.</p></div>
+<div class="paragraph"><p>When blobs are retrieved from ADLB, they are stored in a local cache.
+These entries should be freed before returning control to Turbine.</p></div>
+<div class="paragraph"><p>In Tcl, the blob is a <code>[ list pointer length ]</code> where <code>pointer</code> and
+<code>length</code> are integers.  <code>pointer</code> is the real pointer to the blob&#8217;s
+data- it may be passed into a C function as <code>void*</code>.  <code>length</code> is the
+size in bytes.</p></div>
+<div class="paragraph"><p><strong>blob.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>blob_from_string</code>
+</dt>
+<dd>
+<p>
+Convert a Tcl string into a blob. String will be NULL-terminated.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string_from_blob</code>
+</dt>
+<dd>
+<p>
+Convert a blob into a string. String must be NULL-terminated
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_from_floats</code>
+</dt>
+<dd>
+<p>
+Convert a container of floats into a blob, which is actually a C
+array of doubles
+</p>
+</dd>
+<dt class="hdlist1">
+<code>floats_from_blob</code>
+</dt>
+<dd>
+<p>
+Convert a blob into a container of floats
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_size_async</code>
+</dt>
+<dd>
+<p>
+Obtain the size of a blob in bytes
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>tcl-adlb.c</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>retrieve_blob td → [ list pointer length ]</code>
+</dt>
+<dd>
+<p>
+Retrieve a blob from ADLB and store in the local cache.
+The user must free this from cache.  Returns the pointer and length in
+a Tcl list.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_free td</code>
+</dt>
+<dd>
+<p>
+Free the blob from the local cache.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>store_blob td pointer length</code>
+</dt>
+<dd>
+<p>
+Store blob in ADLB
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>blob.c</strong></p></div>
+<div class="sect4">
+<h5 id="_usage">Usage</h5>
+<div class="paragraph"><p>This illustrates what can go in a typical Swift/T leaf function</p></div>
+<div class="paragraph"><p>Assumes blobs id1, id2 have been created</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Retrieve input blob
+set L1 [ adlb::retrieve_blob $id1 ]
+set pointer1 [ lindex 0 $L1 ]
+set length1 [ lindex 1 $L1 ]
+
+# Call C function
+set L2 [ user::compute $pointer1 $length1 ]
+
+# C function returned pointer and length in L2
+set pointer2 [ lindex 0 $L2 ]
+set length2  [ lindex 1 $L2 ]
+
+# Store C function result
+turbine::store_blob $id2 [ list $pointer2 $length2 ]
+
+# Free from local cache
+adlb::blob_free $id1</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_i_o">8.3.3. I/O</h4>
+<div class="paragraph"><p>Turbine I/O capabilities.</p></div>
+<div class="paragraph"><p><strong>functions.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>trace</code>
+</dt>
+<dd>
+<p>
+Simply outputs the values of the given TDs without formatting.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>io.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>printf</code>
+</dt>
+<dd>
+<p>
+As <code>printf()</code> in C.  The format string is handled with the Tcl
+<code>format</code> command.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>files.tcl</strong></p></div>
+<div class="paragraph"><p><strong>TODO: files.tcl</strong></p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_void">8.4. Void</h3>
+<div class="paragraph"><p>Operations for <code>void</code> variables</p></div>
+<div class="paragraph"><p><strong>functions.tcl</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>make_void</code>
+</dt>
+<dd>
+<p>
+Create and close a <code>void</code> TD
+</p>
+</dd>
+<dt class="hdlist1">
+<code>zero</code>
+</dt>
+<dd>
+<p>
+Convert a <code>void</code> to the integer 0.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_updateables">8.5. Updateables</h3>
+<div class="paragraph"><p><strong>updateable.tcl</strong></p></div>
+<div class="paragraph"><p>TODO: updateables</p></div>
+</div>
+<div class="sect2">
+<h3 id="_assertions">8.6. Assertions</h3>
+<div class="paragraph"><p><strong>assert.tcl</strong></p></div>
+<div class="paragraph"><p>Assertion functions are in <strong>assert.tcl</strong>.  These make straightforward
+use of the Turbine API and Tcl capabilities.  When they fail, they
+bring the whole Turbine execution down.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_logging">8.7. Logging</h3>
+<div class="paragraph"><p><strong>tcl-turbine.c</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>log</code>
+</dt>
+<dd>
+<p>
+Simply report the given string to stdout with a timestamp.  This may
+be disabled by setting environment variable <code>TURBINE_LOG=0</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_mpe">8.8. MPE</h3>
+<div class="paragraph"><p>MPE is the primary way to obtain profiling and debugging information
+from Turbine/ADLB.  CPU profiling information can also be obtained
+without recompilation as described in the CPU profiling section below.
+MPE log entries are automatically created by ADLB if enabled at configure
+time.  One additional MPE function is available from Turbine:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>metadata</code>
+</dt>
+<dd>
+<p>
+Simply insert the given string into the log.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The MPE log will contain solo events with the "metadata" event type.</p></div>
+<div class="paragraph"><p>It is safe to call this function even if MPE is not configured - it
+will simply be a noop.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_system">8.9. System</h3>
+<div class="paragraph"><p>System functions are in <strong>sys.tcl</strong>.  These make straightforward use of
+the Turbine API and Tcl capabilities.  See the Swift/T documentation
+for a sense of the purpose of these features.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_cpu_profiling">9. CPU Profiling</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>It is possible to obtain information about CPU usage in Turbine by using
+the Google perftools CPU profiler.  This profiler is non-intrusive: it
+doesn&#8217;t require recompilation, only that the application is compiled with
+debugging symbols (the default).  The profiler is a sampling profiler,
+which means that it periodically snapshots the program&#8217;s stack.  This is
+good for finding out where your program spends its time, but will not
+provide information on the number of times a function is called, or the
+duration of an individual function call.  The tools are available at
+<a href="http://code.google.com/p/gperftools/">http://code.google.com/p/gperftools/</a>, and may be available as an operation
+system package (e.g. gperftools in Ubuntu).  Once installed, you can
+enable the profiler with the CPUPROFILE and LD_PRELOAD environment
+variables.  E.g. if using Mpich, which automatically passes environment
+variables to MPI processes, the following is sufficient:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>export LD_PRELOAD=/usr/lib/libprofiler.so
+export CPUPROFILE=./turbine.prof
+turbine -n8 program.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>This will output profiling information files with the ./turbine.prof prefix
+and the process ID appended.  Once you have the profiles, you can view the
+information in various formats, including text and graphical.</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>pprof --text `which tclsh8.5` turbine.prof_12345 &gt; turbine.prof_12345.txt
+pprof --pdf `which tclsh8.5` turbine.prof_12345 &gt; turbine.prof_12345.pdf</code></pre>
+</div></div>
+<div class="paragraph"><p>Note: on Ubuntu, <code>pprof</code> is renamed to <code>google-pprof</code>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_test_suites">10. Test suites</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Each component has a testing mechanism:</p></div>
+<div class="sect2">
+<h3 id="_makefile_based_tests">10.1. Makefile-based tests</h3>
+<div class="paragraph"><p>For the three Makefile-based modules, the test conventions are:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+You can compile the tests with <code>make tests</code>
+</p>
+</li>
+<li>
+<p>
+You can run the tests with <code>make test_results</code>
+</p>
+</li>
+<li>
+<p>
+When test <code>X</code> runs, its output is directed to <code>X.tmp</code>
+</p>
+</li>
+<li>
+<p>
+Each test <code>X</code> has a wrapper script <code>X.sh</code> that actually invokes the
+  test
+</p>
+</li>
+<li>
+<p>
+The test output may be checked by <code>X.sh</code>
+</p>
+</li>
+<li>
+<p>
+If the exit code is 0, the Makefile moves <code>X.tmp</code> to <code>X.result</code>
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_c_utils">10.1.1. C-Utils</h4>
+<div class="paragraph"><p>Just do <code>make test_results</code>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_adlb">10.1.2. ADLB</h4>
+<div class="paragraph"><p>ADLB is primarily tested in the Turbine test suite, but you can do
+<code>make test_results</code> here too.  See also <code>make apps/batcher.x</code>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_turbine_2">10.1.3. Turbine</h4>
+<div class="paragraph"><p>Just do <code>make test_results</code>.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_stc_2">10.2. STC</h3>
+<div class="paragraph"><p>The test suite compiles a variety of SwiftScript cases and runs them
+under Turbine.  See <code>stc/tests/About.txt</code> for usage, or just run
+<code>tests/run-tests.zsh</code>.</p></div>
+<div class="paragraph"><p>STC also has a JUnit test suite managed by <code>build.xml</code>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_automated_testing_jenkins">10.3. Automated testing: Jenkins</h3>
+<div class="paragraph"><p>Swift/T is tested nightly on an ANL/MCS-internal Jenkins server.  It
+is difficult to grant access to this system to external persons.  It
+builds Swift/T and runs the Turbine and STC test suites, and also the
+<a href="leaf.html">Swift/T leaf function examples</a>.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_code_conventions">11. Code conventions</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+Eclipse is highly recommended.
+</p>
+</li>
+<li>
+<p>
+There should be no whitespace at end-of-line.  If you are fixing
+  whitespace, put that fix in its own commit.
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_c_code">11.1. C code</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Open brace after newline
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_adlb_2">11.1.1. ADLB</h4>
+<div class="paragraph"><p>User-visible symbols are prefixed with <code>ADLB_</code> and follow the MPI/ADLB
+capitalization conventions.</p></div>
+<div class="paragraph"><p>Internal symbols are prefixed with <code>xlb_</code> and use all lower case except
+for macros/constants.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_turbine_3">11.1.2. Turbine</h4>
+<div class="paragraph"><p>User-visible symbols are prefixed with <code>turbine_</code>.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_java_code">11.2. Java code</h3>
+<div class="paragraph"><p>Open brace before newline</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_git">12. Git</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Everything, including this document, is at:</p></div>
+<div class="paragraph"><p><a href="https://github.com/swift-lang/swift-t">https://github.com/swift-lang/swift-t</a></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>git clone git@github.com:swift-lang/swift-t.git</code></pre>
+</div></div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-02-29 18:26:31 CST
+Last updated 2016-06-28 12:03:40 CDT
 </div>
 </div>
 </body>
