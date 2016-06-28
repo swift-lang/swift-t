@@ -1277,281 +1277,7 @@ collection scheme (<code>_incr</code> and <code>_decr</code> generally refer to 
 when it reaches 0, the variable is garbage-collected by ADLB).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_the_turbine_rule_statement">7.3. The Turbine rule statement</h3>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">This is the most important concept (the only concept) in Turbine.</td>
-</tr></table>
-</div>
-<div class="paragraph"><p>Data-dependent progress is controlled by Turbine rules.</p></div>
-<div class="paragraph"><p>A Turbine rule statement contains:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>rule input_list action options...</code></pre>
-</div></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>input_list</code>
-</dt>
-<dd>
-<p>
-A space-separated list (Tcl list) of TDs.  When these
-are are closed, the action is <code>eval</code>'d.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>action</code>
-</dt>
-<dd>
-<p>
-A string of Tcl code for execution once all inputs are
-closed. Essentially, when all the inputs are closed, Turbine will make
-the action ready for execution, based on the <code>type</code>.
-</p>
-</dd>
-</dl></div>
-<div class="sect3">
-<h4 id="_options">7.3.1. Options</h4>
-<div class="paragraph"><p>All options are optional</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2</code></pre>
-</div></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>name</code>
-</dt>
-<dd>
-<p>
-An arbitrary string name used for debugging and logging.
-Turbine will make up a default name
-</p>
-</dd>
-<dt class="hdlist1">
-<code>type</code>
-</dt>
-<dd>
-<p>
-<code>LOCAL</code>, <code>CONTROL</code>, or <code>WORK</code>.  Default is <code>CONTROL</code>
-</p>
-</dd>
-<dt class="hdlist1">
-<code>parallelism</code>
-</dt>
-<dd>
-<p>
-Number of processes to use for an MPI parallel task.  Default is 1.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>target</code>
-</dt>
-<dd>
-<p>
-Send action to this MPI rank.  Default is any available process based on <code>type</code> (<code>$adlb::RANK_ANY</code>)
-</p>
-</dd>
-</dl></div>
-</div>
-<div class="sect3">
-<h4 id="_semantics">7.3.2. Semantics</h4>
-<div class="paragraph"><p>The rule statement semantics are as follows, with respect to the Tcl
-thread of execution.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-I can pause here
-</p>
-</li>
-<li>
-<p>
-I have an action I would like to perform at some point in the future
-</p>
-</li>
-<li>
-<p>
-I can restart myself given the action string
-</p>
-</li>
-<li>
-<p>
-Do not restart me until the given inputs are closed
-</p>
-</li>
-<li>
-<p>
-When my action completes, my outputs will be closed
-</p>
-</li>
-<li>
-<p>
-For <code>CONTROL</code> or <code>WORK</code>, you can execute my action on a different node
-(I will be able to find my data (and call stack) in the global store)
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect3">
-<h4 id="_naming">7.3.3. Naming</h4>
-<div class="paragraph"><p>The name "rule" was chosen because this is somewhat like a Makefile
-rule, and the analogy was intended to be helpful.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_rationale">7.3.4. Rationale</h4>
-<div class="paragraph"><p>A Turbine rule is not just a control structure, it is data- it has an
-identifier and debug token, is stored in data structures, is loggable,
-debuggable, etc.  The arbitrary action string provides a lot of
-flexibility in how the statement may be used (by the code generator)</p></div>
-</div>
-<div class="sect3">
-<h4 id="_further_reading">7.3.5. Further reading</h4>
-<div class="paragraph"><p><a href="http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf">Turbine: A
-distributed-memory dataflow engine for high performance many-task
-applications</a>
-Wozniak, Armstrong, et al. Fundamenta Informaticae 28(3), 2013.]</p></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_code_layout">7.4. Code layout</h3>
-<div class="sect3">
-<h4 id="_tcl_packaging">7.4.1. Tcl packaging</h4>
-<div class="paragraph"><p>Turbine consists of two key C libraries, ADLB and Turbine, packaged as
-Tcl extensions, and several Tcl script libraries.  All of this is
-packaged with Tcl conventions in <code>lib</code>.  Cf. <code>lib/make-package.tcl</code>
-and <code>lib/module.mk.in</code>.</p></div>
-<div class="paragraph"><p>To bring these extensions and libraries into a Tcl script, we use:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>package require turbine 0.1</code></pre>
-</div></div>
-<div class="paragraph"><p>This command refers to environment variable <code>TCLLIBPATH</code>, which we
-set in <code>bin/turbine</code>.</p></div>
-<div class="paragraph"><p>Other C features are exposed to the Tcl layer as described below.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_mpi_process_modes">7.4.2. MPI process modes</h4>
-<div class="paragraph"><p>A Turbine program is a TCL script launched as an SPMD program by
-<code>mpiexec</code>.  In general, the idea is to do</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>mpiexec -l -n ${N} tclsh something.tcl</code></pre>
-</div></div>
-<div class="paragraph"><p>In our case, we provide a helper script.  So in the test cases, we run</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>bin/turbine -l -n ${N} test/something.tcl</code></pre>
-</div></div>
-<div class="paragraph"><p>The Turbine MPI environment is set by the <code>mpiexec -n</code> number and the
-inputs to <code>turbine::init</code>.  As a result, each MPI process will become
-a Turbine Worker or ADLB Server.</p></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-Turbine Worker
-</dt>
-<dd>
-<p>
-Runs on the lowest MPI ranks.  Rank 0 calls the user <code>rules</code>
-procedure, starting the program.  Work from this procedure may be
-distributed to other workers.
-</p>
-</dd>
-<dt class="hdlist1">
-ADLB Server
-</dt>
-<dd>
-<p>
-Performs ADLB services, including task queues, data storage, and
-data-dependent task release.  Enters <code>ADLB_Server()</code> and does not exit
-until the run is complete.
-Cf. <code>src/tcl/adlb/tcl-adlb.c::ADLB_Server_Cmd()</code>.  Runs on the highest
-MPI ranks.
-</p>
-</dd>
-</dl></div>
-<div class="paragraph"><p>In Tcl, the mode is stored in <code>turbine::mode</code> and is either
-<code>WORKER</code> or <code>SERVER</code>.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_software_structure">7.4.3. Software structure</h4>
-<div class="paragraph"><p>The Turbine API is a Tcl API.  Some of the features are defined in
-Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
-Tcl extensions.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-All Tcl source is in <code>lib</code>
-</p>
-</li>
-<li>
-<p>
-Turbine C code, e.g. for caches and the worker loop is in <code>src/turbine</code>
-</p>
-</li>
-<li>
-<p>
-Tcl extensions are in <code>src/tcl</code>
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-<code>src/tcl/turbine</code> wraps up Turbine C code for Tcl
-</p>
-</li>
-<li>
-<p>
-<code>src/tcl/adlb</code> is the Tcl extension for the ADLB code in the ADLB
-   package. This includes the ADLB data calls
-</p>
-</li>
-<li>
-<p>
-<code>src/tcl/blob</code> is a SWIG-generated module for advanced blob
-   functionality
-</p>
-</li>
-<li>
-<p>
-<code>src/tcl/mpe</code> is the MPE library for Turbine
-</p>
-</li>
-<li>
-<p>
-<code>src/tcl/LANG</code> are libraries for Python, R, Julia.  These are
-   optional.
-</p>
-</li>
-<li>
-<p>
-<code>src/tcl/blob</code> allows for the use of <code>blob</code>&#8203;s, i.e., unformatted
-   bytes.  See the <a href="blob.html">blob guide</a>.
-</p>
-</li>
-</ul></div>
-</li>
-</ul></div>
-<div class="sect4">
-<h5 id="_external_scripting_interpreters">External scripting interpreters</h5>
-<div class="paragraph"><p>The external scripting interpreters are called through their C APIs in
-each <code>tcl-LANG.c</code> .  Each receives strings of code from the Tcl
-level and passes it to the interpreter for evaluation.  The result is
-then packaged as a string and returned to the Tcl level.</p></div>
-</div>
-<div class="sect4">
-<h5 id="_swift_t_code_app_code_functions">Swift/T <code>app</code> functions</h5>
-<div class="paragraph"><p>These are handled in <code>lib/app.tcl</code> .  We call <code>execvp()</code> in
-<code>tcl-turbine.c</code> to launch the program instead of Tcl&#8217;s <code>exec</code> due to
-issues with <code>exec</code> experienced on Cray systems.</p></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_turbine_concepts">8. Turbine concepts</h2>
-<div class="sectionbody">
+<h3 id="_turbine_concepts">7.3. Turbine concepts</h3>
 <div class="paragraph"><p>Swift/T progress is managed by the following Turbine concepts:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -1665,11 +1391,11 @@ The function body targeted by the action can contain arbitrary Tcl code,
 <div class="paragraph"><p></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-Container
+Containers
 </dt>
 <dd>
 <p>
-Element from which Turbine data structures are created.  May be used
+Elements from which Turbine data structures are created.  May be used
 to create associative arrays, structs, and other data structures.
 Represented by a TD.  A TD plus a subscript results in another TD.
 </p>
@@ -1685,17 +1411,289 @@ Subscribe
 TRs are stored in the ADLB servers.  To make progress,
 the TRs are activated when their input data is ready.  Thus, the
 servers subscribe to data stored in ADLB and are notified when
-data is ready.
+data is ready.  (Cf. ADLB <code>engine.h</code>.)
 </p>
 </dd>
 </dl></div>
+</div>
 <div class="sect2">
-<h3 id="_symbols">8.1. Symbols</h3>
+<h3 id="_the_turbine_rule_statement">7.4. The Turbine rule statement</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">This is the most important concept (the only concept) in Turbine.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>Data-dependent progress is controlled by Turbine rules.</p></div>
+<div class="paragraph"><p>A Turbine rule statement contains:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>rule input_list action options...</code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>input_list</code>
+</dt>
+<dd>
+<p>
+A space-separated list (Tcl list) of TDs.  When these
+are are closed, the action is <code>eval</code>'d.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>action</code>
+</dt>
+<dd>
+<p>
+A string of Tcl code for execution once all inputs are
+closed. Essentially, when all the inputs are closed, Turbine will make
+the action ready for execution, based on the <code>type</code>.
+</p>
+</dd>
+</dl></div>
+<div class="sect3">
+<h4 id="_options">7.4.1. Options</h4>
+<div class="paragraph"><p>All options are optional</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2</code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>name</code>
+</dt>
+<dd>
+<p>
+An arbitrary string name used for debugging and logging.
+Turbine will make up a default name
+</p>
+</dd>
+<dt class="hdlist1">
+<code>type</code>
+</dt>
+<dd>
+<p>
+<code>LOCAL</code>, <code>CONTROL</code>, or <code>WORK</code>.  Default is <code>CONTROL</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>parallelism</code>
+</dt>
+<dd>
+<p>
+Number of processes to use for an MPI parallel task.  Default is 1.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>target</code>
+</dt>
+<dd>
+<p>
+Send action to this MPI rank.  Default is any available process based on <code>type</code> (<code>$adlb::RANK_ANY</code>)
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_semantics">7.4.2. Semantics</h4>
+<div class="paragraph"><p>The rule statement semantics are as follows, with respect to the Tcl
+thread of execution.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+I can pause here
+</p>
+</li>
+<li>
+<p>
+I have an action I would like to perform at some point in the future
+</p>
+</li>
+<li>
+<p>
+I can restart myself given the action string
+</p>
+</li>
+<li>
+<p>
+Do not restart me until the given inputs are closed
+</p>
+</li>
+<li>
+<p>
+When my action completes, my outputs will be closed
+</p>
+</li>
+<li>
+<p>
+For <code>CONTROL</code> or <code>WORK</code>, you can execute my action on a different node
+(I will be able to find my data (and call stack) in the global store)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_naming">7.4.3. Naming</h4>
+<div class="paragraph"><p>The name "rule" was chosen because this is somewhat like a Makefile
+rule, and the analogy was intended to be helpful.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_rationale">7.4.4. Rationale</h4>
+<div class="paragraph"><p>A Turbine rule is not just a control structure, it is data- it has an
+identifier and debug token, is stored in data structures, is loggable,
+debuggable, etc.  The arbitrary action string provides a lot of
+flexibility in how the statement may be used (by the code generator)</p></div>
+</div>
+<div class="sect3">
+<h4 id="_further_reading">7.4.5. Further reading</h4>
+<div class="paragraph"><p><a href="http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf">Turbine: A
+distributed-memory dataflow engine for high performance many-task
+applications</a>
+Wozniak, Armstrong, et al. Fundamenta Informaticae 28(3), 2013.]</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_code_layout">7.5. Code layout</h3>
+<div class="sect3">
+<h4 id="_tcl_packaging">7.5.1. Tcl packaging</h4>
+<div class="paragraph"><p>Turbine consists of two key C libraries, ADLB and Turbine, packaged as
+Tcl extensions, and several Tcl script libraries.  All of this is
+packaged with Tcl conventions in <code>lib</code>.  Cf. <code>lib/make-package.tcl</code>
+and <code>lib/module.mk.in</code>.</p></div>
+<div class="paragraph"><p>To bring these extensions and libraries into a Tcl script, we use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>package require turbine 0.1</code></pre>
+</div></div>
+<div class="paragraph"><p>This command refers to environment variable <code>TCLLIBPATH</code>, which we
+set in <code>bin/turbine</code>.</p></div>
+<div class="paragraph"><p>Other C features are exposed to the Tcl layer as described below.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_mpi_process_modes">7.5.2. MPI process modes</h4>
+<div class="paragraph"><p>A Turbine program is a TCL script launched as an SPMD program by
+<code>mpiexec</code>.  In general, the idea is to do</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec -l -n ${N} tclsh something.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>In our case, we provide a helper script.  So in the test cases, we run</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>bin/turbine -l -n ${N} test/something.tcl</code></pre>
+</div></div>
+<div class="paragraph"><p>The Turbine MPI environment is set by the <code>mpiexec -n</code> number and the
+inputs to <code>turbine::init</code>.  As a result, each MPI process will become
+a Turbine Worker or ADLB Server.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+Turbine Worker
+</dt>
+<dd>
+<p>
+Runs on the lowest MPI ranks.  Rank 0 calls the user <code>rules</code>
+procedure, starting the program.  Work from this procedure may be
+distributed to other workers.
+</p>
+</dd>
+<dt class="hdlist1">
+ADLB Server
+</dt>
+<dd>
+<p>
+Performs ADLB services, including task queues, data storage, and
+data-dependent task release.  Enters <code>ADLB_Server()</code> and does not exit
+until the run is complete.
+Cf. <code>src/tcl/adlb/tcl-adlb.c::ADLB_Server_Cmd()</code>.  Runs on the highest
+MPI ranks.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>In Tcl, the mode is stored in <code>turbine::mode</code> and is either
+<code>WORKER</code> or <code>SERVER</code>.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_software_structure">7.6. Software structure</h3>
+<div class="paragraph"><p>The Turbine API is a Tcl API.  Some of the features are defined in
+Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
+Tcl extensions.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+All Tcl source is in <code>lib</code>
+</p>
+</li>
+<li>
+<p>
+Turbine C code, e.g. for caches and the worker loop is in <code>src/turbine</code>
+</p>
+</li>
+<li>
+<p>
+Tcl extensions are in <code>src/tcl</code>
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>src/tcl/turbine</code> wraps up Turbine C code for Tcl
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/adlb</code> is the Tcl extension for the ADLB code in the ADLB
+   package. This includes the ADLB data calls
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/blob</code> is a SWIG-generated module for advanced blob
+   functionality
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/mpe</code> is the MPE library for Turbine
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/LANG</code> are libraries for Python, R, Julia.  These are
+   optional.
+</p>
+</li>
+<li>
+<p>
+<code>src/tcl/blob</code> allows for the use of <code>blob</code>&#8203;s, i.e., unformatted
+   bytes.  See the <a href="blob.html">blob guide</a>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_external_scripting_interpreters">7.6.1. External scripting interpreters</h4>
+<div class="paragraph"><p>The external scripting interpreters are called through their C APIs in
+each <code>tcl-LANG.c</code> .  Each receives strings of code from the Tcl
+level and passes it to the interpreter for evaluation.  The result is
+then packaged as a string and returned to the Tcl level.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_swift_t_code_app_code_functions">7.6.2. Swift/T <code>app</code> functions</h4>
+<div class="paragraph"><p>These are handled in <code>lib/app.tcl</code> .  We call <code>execvp()</code> in
+<code>tcl-turbine.c</code> to launch the program instead of Tcl&#8217;s <code>exec</code> due to
+issues with <code>exec</code> experienced on Cray systems.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_features">7.7. Features</h3>
 <div class="paragraph"><p>This describes the symbols available to the Turbine programmer.  These
 features are required when writing STC or constructing Swift/T
 extensions.</p></div>
 <div class="sect3">
-<h4 id="_turbine_core">8.1.1. Turbine core</h4>
+<h4 id="_turbine_core">7.7.1. Turbine core</h4>
 <div class="paragraph"><p>The core Turbine features are as follows.</p></div>
 <div class="sect4">
 <h5 id="_program_structure">Program structure</h5>
@@ -1757,7 +1755,7 @@ Shuts down and reports unused rules
 </div>
 </div>
 <div class="sect3">
-<h4 id="_adlb_layer">8.1.2. ADLB layer</h4>
+<h4 id="_adlb_layer">7.7.2. ADLB layer</h4>
 <div class="paragraph"><p>Turbine uses ADLB to distribute tasks and locate data.</p></div>
 <div class="paragraph"><p>All Turbine variables are stored in a customized data store built into
 ADLB.  This required the construction of additional ADLB API calls.</p></div>
@@ -1891,22 +1889,22 @@ Return a unique TD.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_internals">8.1.3. Internals</h4>
+<h4 id="_data_dependent_progress">7.7.3. Data-dependent progress</h4>
 <div class="paragraph"><p><strong>adlb.c</strong></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<code>ADLB_Subscribe(id)</code>
+<code>ADLB_Dput(&#8230;)</code>
 </dt>
 <dd>
 <p>
-Called only by Turbine rule processing.  Request that the calling rank
-be notified when TD <code>id</code> is closed.
+Called only by Turbine rule processing.  Request that the given task
+execute be notified when the given TDs are closed.
 </p>
 </dd>
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_data">8.1.4. Data</h4>
+<h4 id="_data">7.7.4. Data</h4>
 <div class="sect4">
 <h5 id="_data_allocation">Data allocation</h5>
 <div class="paragraph"><p>Data must be allocated before it may be used as the input to a rule.</p></div>
@@ -2026,7 +2024,7 @@ literal x integer 3</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_functions">8.1.5. Functions</h4>
+<h4 id="_functions">7.7.5. Functions</h4>
 <div class="paragraph"><p>A good way to manage progress is to define Tcl functions (procs) for
 use in the execution string.</p></div>
 <div class="paragraph"><p>To implement a Swift function, we often have three Tcl
@@ -2064,12 +2062,12 @@ The "impl" function: conventionally called <code>f_impl</code>.  The impl acts
 <div class="listingblock">
 <div class="content">
 <pre><code># x, y and z are string TDs. x and y may be unset
-proc f { stack z x y } {
+proc f { z x y } {
   rule f-$x-$y [ list $x $y ] $turbine::LOCAL "f_body no_stack $x $y $z"
 }
 
 # x, y and z are string TDs.  x and y are now set (closed)
-proc f_body { stack x y z } {
+proc f_body { x y z } {
   set s1 [ retrieve_string $x ]
   set s2 [ retrieve_string $y ]
   set s3 [ f_impl $s1 $s2 ]
@@ -2095,17 +2093,13 @@ f $z $x $y</code></pre>
 <div class="paragraph"><p>The previous example could have used the literal function but it is an
 opportunity to show things in full detail.</p></div>
 <div class="paragraph"><p>Implementation reference: the Turbine tests and any STC-generated code.</p></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_operations">8.2. Operations</h3>
-<div class="paragraph"><p>These are the operations available in Turbine.</p></div>
-<div class="sect3">
-<h4 id="_arithmetic">8.2.1. Arithmetic</h4>
+<div class="sect4">
+<h5 id="_operators">Operators</h5>
+<div class="paragraph"><p>These are the arithmetic operations available in Turbine.</p></div>
 <div class="paragraph"><p>All arithmetic functions operate on TDs and are of the form:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>op stack outputs inputs</code></pre>
+<pre><code>op outputs inputs</code></pre>
 </div></div>
 <div class="paragraph"><p>The impl versions operate on values and are of the form:</p></div>
 <div class="listingblock">
@@ -2203,22 +2197,16 @@ cellspacing="0" cellpadding="4">
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_statistics">8.2.2. Statistics</h4>
-<div class="paragraph"><p>Statistics functions are in <strong>stats.tcl</strong>.  These make straightforward
-use of the Turbine API and Tcl arithmetic capabilities.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_string_manipulation">8.2.3. String manipulation</h4>
+<div class="sect4">
+<h5 id="_string_manipulation">String manipulation</h5>
 <div class="paragraph"><p>String functions are in <strong>string.tcl</strong>.  These make straightforward use
 of the Turbine API and Tcl string capabilities.</p></div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_containers">8.3. Containers</h3>
+<div class="sect4">
+<h5 id="_containers">Containers</h5>
 <div class="paragraph"><p>A container is a TD that is allows one to insert and retrieve TDs
-contained by it.  It is used to represent associative arrays, structs,
-and stack frames.</p></div>
+contained by it.  It is used to represent associative arrays and
+structs.</p></div>
 <div class="paragraph"><p>Lookups are performed on "subscripts", which are serialized, hashable
 representations of the keys.  Each container has a subscript type that
 represents the type of the keys: this allows for Swift loop variables
@@ -2330,8 +2318,9 @@ Lookup the member corresponding to the subscript in the given container
 </p>
 </dd>
 </dl></div>
-<div class="sect3">
-<h4 id="_advanced_container_operations">8.3.1. Advanced container operations</h4>
+</div>
+<div class="sect4">
+<h5 id="_advanced_container_operations">Advanced container operations</h5>
 <div class="paragraph"><p>These are used to support the full set of possible Swift/T array
 operations.</p></div>
 <div class="paragraph"><p>Currently, these contain these <code>existing name</code>, the <strong>proposed name</strong>,
@@ -2509,8 +2498,8 @@ TDs that are integers from <code>start</code> to <code>end</code>
 </dd>
 </dl></div>
 </div>
-<div class="sect3">
-<h4 id="_blobs">8.3.2. Blobs</h4>
+<div class="sect4">
+<h5 id="_blobs">Blobs</h5>
 <div class="paragraph"><p>Blobs (Binary Large OBjects) may be used to represent byte data
 (pointer+length).  This is to allow Turbine data store to store
 native data from C/C++/Fortran.</p></div>
@@ -2594,10 +2583,8 @@ Store blob in ADLB
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>blob.c</strong></p></div>
-<div class="sect4">
-<h5 id="_usage">Usage</h5>
-<div class="paragraph"><p>This illustrates what can go in a typical Swift/T leaf function</p></div>
-<div class="paragraph"><p>Assumes blobs id1, id2 have been created</p></div>
+<div class="paragraph"><p>The following example illustrates what can go in a typical Swift/T
+leaf function.  It assumes blobs <code>id1</code>, <code>id2</code> have been created.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code># Retrieve input blob
@@ -2619,9 +2606,8 @@ turbine::store_blob $id2 [ list $pointer2 $length2 ]
 adlb::blob_free $id1</code></pre>
 </div></div>
 </div>
-</div>
-<div class="sect3">
-<h4 id="_i_o">8.3.3. I/O</h4>
+<div class="sect4">
+<h5 id="_i_o">I/O</h5>
 <div class="paragraph"><p>Turbine I/O capabilities.</p></div>
 <div class="paragraph"><p><strong>functions.tcl</strong></p></div>
 <div class="dlist"><dl>
@@ -2647,16 +2633,18 @@ As <code>printf()</code> in C.  The format string is handled with the Tcl
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>files.tcl</strong></p></div>
+</div>
+<div class="sect4">
+<h5 id="_files">Files</h5>
 <div class="paragraph"><p><strong>TODO: files.tcl</strong></p></div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_void">8.4. Void</h3>
+<div class="sect4">
+<h5 id="_void">Void</h5>
 <div class="paragraph"><p>Operations for <code>void</code> variables</p></div>
 <div class="paragraph"><p><strong>functions.tcl</strong></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<code>make_void</code>
+<code>propagate</code>
 </dt>
 <dd>
 <p>
@@ -2673,20 +2661,20 @@ Convert a <code>void</code> to the integer 0.
 </dd>
 </dl></div>
 </div>
-<div class="sect2">
-<h3 id="_updateables">8.5. Updateables</h3>
+<div class="sect4">
+<h5 id="_updateables">Updateables</h5>
 <div class="paragraph"><p><strong>updateable.tcl</strong></p></div>
 <div class="paragraph"><p>TODO: updateables</p></div>
 </div>
-<div class="sect2">
-<h3 id="_assertions">8.6. Assertions</h3>
+<div class="sect4">
+<h5 id="_assertions">Assertions</h5>
 <div class="paragraph"><p><strong>assert.tcl</strong></p></div>
 <div class="paragraph"><p>Assertion functions are in <strong>assert.tcl</strong>.  These make straightforward
 use of the Turbine API and Tcl capabilities.  When they fail, they
 bring the whole Turbine execution down.</p></div>
 </div>
-<div class="sect2">
-<h3 id="_logging">8.7. Logging</h3>
+<div class="sect4">
+<h5 id="_logging">Logging</h5>
 <div class="paragraph"><p><strong>tcl-turbine.c</strong></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -2700,8 +2688,8 @@ be disabled by setting environment variable <code>TURBINE_LOG=0</code>.
 </dd>
 </dl></div>
 </div>
-<div class="sect2">
-<h3 id="_mpe">8.8. MPE</h3>
+<div class="sect4">
+<h5 id="_mpe">MPE</h5>
 <div class="paragraph"><p>MPE is the primary way to obtain profiling and debugging information
 from Turbine/ADLB.  CPU profiling information can also be obtained
 without recompilation as described in the CPU profiling section below.
@@ -2721,11 +2709,206 @@ Simply insert the given string into the log.
 <div class="paragraph"><p>It is safe to call this function even if MPE is not configured - it
 will simply be a noop.</p></div>
 </div>
-<div class="sect2">
-<h3 id="_system">8.9. System</h3>
+<div class="sect4">
+<h5 id="_system">System</h5>
 <div class="paragraph"><p>System functions are in <strong>sys.tcl</strong>.  These make straightforward use of
 the Turbine API and Tcl capabilities.  See the Swift/T documentation
 for a sense of the purpose of these features.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_statistics">Statistics</h5>
+<div class="paragraph"><p>Statistics functions are in <strong>stats.tcl</strong>.  These make straightforward
+use of the Turbine API and Tcl arithmetic capabilities.</p></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_adlb_x">8. ADLB/X</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>ADLB/X is an
+<a href="http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer">ADLB</a>
+implementation that additionally offers:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+work stealing;
+</p>
+</li>
+<li>
+<p>
+data operations; and
+</p>
+</li>
+<li>
+<p>
+parallel tasks.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Tcl bindings for ADLB/X are supported, see the ExM Swift/Turbine
+project.</p></div>
+<div class="paragraph"><p>ADLB/X is internally called XLB.  External C symbols are prefixed with
+<code>xlb_</code>.</p></div>
+<div class="sect2">
+<h3 id="_user_interface">8.1. User interface</h3>
+<div class="paragraph"><p>The ADLB user interface is entirely contained in <code>adlb.h</code>.  This is
+only file that is installed by <code>make install</code>.  See the ADLB papers
+and the example apps for use scenarios.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_workers_and_servers">8.2. Workers and servers</h3>
+<div class="paragraph"><p>The number of servers is specified by the call to <code>ADLB_Init()</code>.  Each
+worker is associated with one server (cf. <code>xlb_map_to_server(int
+rank)</code>).  Task operations always go to that server, unless the task is
+targeted to a worker associated with another server.  Data operations
+go to the server on which the data resides (cf. <code>ADLB_Locate(long id)</code>).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_code_conventions">8.3. Code conventions</h3>
+<div class="sect3">
+<h4 id="Checks">8.3.1. Error checks</h4>
+<div class="paragraph"><p>There are 3 main error code types:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+MPI error codes (<code>int</code>);
+</p>
+</li>
+<li>
+<p>
+ADLB error codes (<code>adlb_code</code>); and
+</p>
+</li>
+<li>
+<p>
+ADLB data error codes (<code>adlb_data_code</code>).
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>These are all converted to <code>adlb_code</code>.  We have a system for checking
+these and propagating errors up the call stack, see <code>checks.h</code>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_mpi_macros">8.3.2. MPI macros</h4>
+<div class="paragraph"><p>To simplify calls to MPI, we have wrapper macros that use XLB code
+conventions, error handling techniques, and debug logging.  In many
+cases, these turn 5-line expressions into 1-line expressions.  Macros
+<code>SEND()</code>, <code>RECV()</code>, <code>IRECV()</code> correspond to <code>MPI_Send()</code>, <code>MPI_Recv()</code>,
+<code>MPI_Irecv()</code>, etc.  Cf.  <code>messaging.h</code>.</p></div>
+</div>
+<div class="sect3">
+<h4 id="Debugging">8.3.3. Debugging modes</h4>
+<div class="paragraph"><p>Multiple levels of logging verbosity may be enabled at configure
+time.  These are primarily controlled through the macros <code>DEBUG()</code> and
+<code>TRACE()</code>.</p></div>
+<div class="paragraph"><p>Configure options:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>--enable-log-debug</code>
+</dt>
+<dd>
+<p>
+Enable <code>DEBUG()</code> logging (moderately verbose)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>--enable-log-trace</code>
+</dt>
+<dd>
+<p>
+Enable <code>TRACE()</code> logging (very verbose)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>--enable-log-trace-mpi</code>
+</dt>
+<dd>
+<p>
+Trace every MPI macro call (extremely verbose)
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_code_comments">8.3.4. Code comments</h4>
+<div class="paragraph"><p><code>extern</code> functions are primarily documented in their <code>*.h</code> file.
+Implementation notes may be given in the <code>*.c</code> file.  For <code>static</code>
+functions, the primary documentation is at the function definition;
+prototypes may be anywhere in the file.</p></div>
+<div class="paragraph"><p>We use Doxygen (JavaDoc) comments (<code>/** */</code>) for things that ought to
+appear in generated documentation (although we currently do not use
+such systems).</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_rpc_system">8.4. RPC system</h3>
+<div class="paragraph"><p>ADLB is primarily a worker-server system.  The workers execute ADLB in
+<code>adlb.c</code>.  These issue calls in a typical <code>IRECV()</code>, <code>SEND()</code>,
+<code>WAIT()</code> pattern.  This allows the server to send the initial response
+with <code>RSEND</code>.</p></div>
+<div class="paragraph"><p>The server uses <code>PROBE</code> and dispatches to the appropriate handler.
+The handler functions are registered with the RPC system
+(cf. <code>handlers.c</code>).  Each is a mapping from an MPI tag to a function.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_work_queue">8.5. Work queue</h3>
+<div class="paragraph"><p>When work submitted by <code>ADLB_Put()</code> is stored by the server, it is
+stored in the work queue (workqueue.h).  The work queue data
+structures store work units.  They allow fast lookups for work units
+based on the task type, priority, and target.  Parallel tasks are
+treated separately.</p></div>
+<div class="paragraph"><p>Note that if a process that matches the work unit is in the request
+queue, the work unit is not stored, it is redirected to the worker
+process.  This allows for worker-worker communication.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_request_queue">8.6. Request queue</h3>
+<div class="paragraph"><p>When a worker issues an <code>ADLB_Get()</code>, if work is not immediately
+available, the worker rank is stored in the request queue
+(<code>requestqueue.h</code>).  Requests are stored in data structures that allow
+for fast lookup by rank and work unit type.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_data_operations">8.7. Data operations</h3>
+<div class="paragraph"><p>Data operations all return immediately and do not face the same
+complexity as the queued task operations.  The implementation of all
+data operations is in <code>data.c</code>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_work_stealing">8.8. Work stealing</h3>
+<div class="paragraph"><p>Work stealing is triggered when:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+a worker does an <code>ADLB_Get()</code> and the work queue cannot find a
+match; or
+</p>
+</li>
+<li>
+<p>
+the server is out of work and has not attempted a steal recently
+(daemon steal).
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>The stealing server syncs and issues the STEAL RPC on a random
+server.  Half of the tasks, round up, are stolen.</p></div>
+</div>
+<div class="sect2">
+<h3 id="Sync">8.9. Server-server sync</h3>
+<div class="paragraph"><p>Server-server syncs are required to avoid a deadlock when two servers
+attempt to perform RPCs on each other simultaneously.  See <code>sync.h</code>
+for information about this protocol.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_parallel_tasks">8.10. Parallel tasks</h3>
+<div class="paragraph"><p>TODO</p></div>
+</div>
+<div class="sect2">
+<h3 id="_mpe_2">8.11. MPE</h3>
+<div class="paragraph"><p>TODO</p></div>
 </div>
 </div>
 </div>
@@ -2833,7 +3016,7 @@ builds Swift/T and runs the Turbine and STC test suites, and also the
 </div>
 </div>
 <div class="sect1">
-<h2 id="_code_conventions">11. Code conventions</h2>
+<h2 id="_code_conventions_2">11. Code conventions</h2>
 <div class="sectionbody">
 <div class="ulist"><ul>
 <li>
@@ -2890,7 +3073,7 @@ for macros/constants.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 12:14:31 CDT
+Last updated 2016-06-28 15:05:48 CDT
 </div>
 </div>
 </body>

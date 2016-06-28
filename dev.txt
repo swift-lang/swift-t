@@ -340,6 +340,63 @@ so on.  They also support the Swift/T reference-counting-based garbage
 collection scheme (+_incr+ and +_decr+ generally refer to this count,
 when it reaches 0, the variable is garbage-collected by ADLB).
 
+=== Turbine concepts
+
+Swift/T progress is managed by the following Turbine concepts:
+
+TD::
+
+A Turbine datum.  Represented in Tcl by a 64-bit TD number.  A TD may be
+open (unset) or closed (set).  TD IDs are represented in the log as
++<ID>+.  The types are:
+
+* void
+* integer
+* float
+* string
+* blob
+* container
+
+Rules::
+
+The ADLB/Turbine data dependency engine makes progress by evaluating
+Turbine rules.
+* A rule has a a input TD list, a TD/subscript list, a rule type,
+  and an action, and optional arguments.
+* The action is a simple Tcl string that is +eval+'d by a possibly
+  different Tcl process.  This allows actions to be load balanced by
+  ADLB.
+* Rule types are:
+** +CONTROL+: put the action into ADLB for evaluation elsewhere
+** +WORK+: put the action into ADLB for evaluation by a worker
+** +LOCAL+: send the task to local worker (deprecated)
+* When rules are evaluated, they produce in-memory records called
+  transforms (TRs).
+* When the transform is ready, it is released to the appropriate
+  ADLB task queue to be retrieved by a worker.
+* The function body targeted by the action can contain arbitrary Tcl code,
+  lookup data from the given TDs, launch external processes via Tcl
+  +exec+, and store TDs, and issue more rule statements.
+
+TR IDs are represented in the log as +{ID}+.
+
+Containers::
+
+Elements from which Turbine data structures are created.  May be used
+to create associative arrays, structs, and other data structures.
+Represented by a TD.  A TD plus a subscript results in another TD.
++
+Container operations are represented in the log as, e.g.,
++<4>["k"]=<8>+, indicating that container TD 4 with subscript "k"
+resulted in TD 8.
+
+Subscribe::
+
+TRs are stored in the ADLB servers.  To make progress,
+the TRs are activated when their input data is ready.  Thus, the
+servers subscribe to data stored in ADLB and are notified when
+data is ready.  (Cf. ADLB +engine.h+.)
+
 === The Turbine rule statement
 
 NOTE: This is the most important concept (the only concept) in Turbine.
@@ -397,7 +454,6 @@ A Turbine rule is not just a control structure, it is data- it has an
 identifier and debug token, is stored in data structures, is loggable,
 debuggable, etc.  The arbitrary action string provides a lot of
 flexibility in how the statement may be used (by the code generator)
-
 
 ==== Further reading
 
@@ -462,7 +518,7 @@ MPI ranks.
 In Tcl, the mode is stored in +turbine::mode+ and is either
 +WORKER+ or +SERVER+.
 
-==== Software structure
+=== Software structure
 
 The Turbine API is a Tcl API.  Some of the features are defined in
 Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
@@ -482,77 +538,20 @@ Tcl extensions.
 ** +src/tcl/blob+ allows for the use of +blob+&#8203;s, i.e., unformatted
    bytes.  See the link:blob.html[blob guide].
 
-===== External scripting interpreters
+==== External scripting interpreters
 
 The external scripting interpreters are called through their C APIs in
 each +tcl-LANG.c+ .  Each receives strings of code from the Tcl
 level and passes it to the interpreter for evaluation.  The result is
 then packaged as a string and returned to the Tcl level.
 
-===== Swift/T +app+ functions
+==== Swift/T +app+ functions
 
 These are handled in +lib/app.tcl+ .  We call +execvp()+ in
 +tcl-turbine.c+ to launch the program instead of Tcl's +exec+ due to
 issues with +exec+ experienced on Cray systems.
 
-== Turbine concepts
-
-Swift/T progress is managed by the following Turbine concepts:
-
-TD::
-
-A Turbine datum.  Represented in Tcl by a 64-bit TD number.  A TD may be
-open (unset) or closed (set).  TD IDs are represented in the log as
-+<ID>+.  The types are:
-
-* void
-* integer
-* float
-* string
-* blob
-* container
-
-Rules::
-
-The ADLB/Turbine data dependency engine makes progress by evaluating
-Turbine rules.
-* A rule has a a input TD list, a TD/subscript list, a rule type,
-  and an action, and optional arguments.
-* The action is a simple Tcl string that is +eval+'d by a possibly
-  different Tcl process.  This allows actions to be load balanced by
-  ADLB.
-* Rule types are:
-** +CONTROL+: put the action into ADLB for evaluation elsewhere
-** +WORK+: put the action into ADLB for evaluation by a worker
-** +LOCAL+: send the task to local worker (deprecated)
-* When rules are evaluated, they produce in-memory records called
-  transforms (TRs).
-* When the transform is ready, it is released to the appropriate
-  ADLB task queue to be retrieved by a worker.
-* The function body targeted by the action can contain arbitrary Tcl code,
-  lookup data from the given TDs, launch external processes via Tcl
-  +exec+, and store TDs, and issue more rule statements.
-
-TR IDs are represented in the log as +{ID}+.
-
-Container::
-
-Element from which Turbine data structures are created.  May be used
-to create associative arrays, structs, and other data structures.
-Represented by a TD.  A TD plus a subscript results in another TD.
-+
-Container operations are represented in the log as, e.g.,
-+<4>["k"]=<8>+, indicating that container TD 4 with subscript "k"
-resulted in TD 8.
-
-Subscribe::
-
-TRs are stored in the ADLB servers.  To make progress,
-the TRs are activated when their input data is ready.  Thus, the
-servers subscribe to data stored in ADLB and are notified when
-data is ready.
-
-=== Symbols
+=== Features
 
 This describes the symbols available to the Turbine programmer.  These
 features are required when writing STC or constructing Swift/T
@@ -676,14 +675,14 @@ Obtain the TD for the given +subscript+ in container +id+.
 
 Return a unique TD.
 
-==== Internals
+==== Data-dependent progress
 
 *adlb.c*
 
-+ADLB_Subscribe(id)+::
++ADLB_Dput(...)+::
 
-Called only by Turbine rule processing.  Request that the calling rank
-be notified when TD +id+ is closed.
+Called only by Turbine rule processing.  Request that the given task
+execute be notified when the given TDs are closed.
 
 ==== Data
 
@@ -779,12 +778,12 @@ register the function call with the ADLB/Turbine dataflow engine
 
 ----
 # x, y and z are string TDs. x and y may be unset
-proc f { stack z x y } {
+proc f { z x y } {
   rule f-$x-$y [ list $x $y ] $turbine::LOCAL "f_body no_stack $x $y $z"
 }
 
 # x, y and z are string TDs.  x and y are now set (closed)
-proc f_body { stack x y z } {
+proc f_body { x y z } {
   set s1 [ retrieve_string $x ]
   set s2 [ retrieve_string $y ]
   set s3 [ f_impl $s1 $s2 ]
@@ -813,15 +812,13 @@ opportunity to show things in full detail.
 
 Implementation reference: the Turbine tests and any STC-generated code.
 
-=== Operations
+===== Operators
 
-These are the operations available in Turbine.
-
-==== Arithmetic
+These are the arithmetic operations available in Turbine.
 
 All arithmetic functions operate on TDs and are of the form:
 ----
-op stack outputs inputs
+op outputs inputs
 ----
 The impl versions operate on values and are of the form:
 ----
@@ -853,21 +850,16 @@ op_impl inputs -> outputs
 |                    | +is_nan+
 |===================================
 
-==== Statistics
-
-Statistics functions are in *stats.tcl*.  These make straightforward
-use of the Turbine API and Tcl arithmetic capabilities.
-
-==== String manipulation
+===== String manipulation
 
 String functions are in *string.tcl*.  These make straightforward use
 of the Turbine API and Tcl string capabilities.
 
-=== Containers
+===== Containers
 
 A container is a TD that is allows one to insert and retrieve TDs
-contained by it.  It is used to represent associative arrays, structs,
-and stack frames.
+contained by it.  It is used to represent associative arrays and
+structs.
 
 Lookups are performed on "subscripts", which are serialized, hashable
 representations of the keys.  Each container has a subscript type that
@@ -919,7 +911,7 @@ typically a TD, allowing for linked data.
 +container_lookup container td subscript -> member+::
 Lookup the member corresponding to the subscript in the given container
 
-==== Advanced container operations
+===== Advanced container operations
 
 These are used to support the full set of possible Swift/T array
 operations.
@@ -1054,7 +1046,7 @@ Swift/T example: +(A[i])[j] = (B[k])+;
 Fill and close given container with integer subscripts that map to
 TDs that are integers from +start+ to +end+
 
-==== Blobs
+===== Blobs
 
 Blobs (Binary Large OBjects) may be used to represent byte data
 (pointer+length).  This is to allow Turbine data store to store
@@ -1101,11 +1093,8 @@ Store blob in ADLB
 
 *blob.c*
 
-===== Usage
-
-This illustrates what can go in a typical Swift/T leaf function
-
-Assumes blobs id1, id2 have been created
+The following example illustrates what can go in a typical Swift/T
+leaf function.  It assumes blobs +id1+, +id2+ have been created.
 
 ----
 # Retrieve input blob
@@ -1127,7 +1116,7 @@ turbine::store_blob $id2 [ list $pointer2 $length2 ]
 adlb::blob_free $id1
 ----
 
-==== I/O
+===== I/O
 
 Turbine I/O capabilities.
 
@@ -1144,27 +1133,29 @@ As +printf()+ in C.  The format string is handled with the Tcl
 
 *files.tcl*
 
+===== Files
+
 *TODO: files.tcl*
 
-=== Void
+===== Void
 
 Operations for +void+ variables
 
 *functions.tcl*
 
-+make_void+::
++propagate+::
 Create and close a +void+ TD
 
 +zero+::
 Convert a +void+ to the integer 0.
 
-=== Updateables
+===== Updateables
 
 *updateable.tcl*
 
 TODO: updateables
 
-=== Assertions
+===== Assertions
 
 *assert.tcl*
 
@@ -1172,7 +1163,7 @@ Assertion functions are in *assert.tcl*.  These make straightforward
 use of the Turbine API and Tcl capabilities.  When they fail, they
 bring the whole Turbine execution down.
 
-=== Logging
+===== Logging
 
 *tcl-turbine.c*
 
@@ -1180,7 +1171,7 @@ bring the whole Turbine execution down.
 Simply report the given string to stdout with a timestamp.  This may
 be disabled by setting environment variable +TURBINE_LOG=0+.
 
-=== MPE
+===== MPE
 
 MPE is the primary way to obtain profiling and debugging information
 from Turbine/ADLB.  CPU profiling information can also be obtained
@@ -1196,11 +1187,155 @@ The MPE log will contain solo events with the "metadata" event type.
 It is safe to call this function even if MPE is not configured - it
 will simply be a noop.
 
-=== System
+===== System
 
 System functions are in *sys.tcl*.  These make straightforward use of
 the Turbine API and Tcl capabilities.  See the Swift/T documentation
 for a sense of the purpose of these features.
+
+===== Statistics
+
+Statistics functions are in *stats.tcl*.  These make straightforward
+use of the Turbine API and Tcl arithmetic capabilities.
+
+== ADLB/X
+
+ADLB/X is an
+http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer[ADLB]
+implementation that additionally offers:
+
+* work stealing;
+* data operations; and
+* parallel tasks.
+
+Tcl bindings for ADLB/X are supported, see the ExM Swift/Turbine
+project.
+
+ADLB/X is internally called XLB.  External C symbols are prefixed with
++xlb_+.
+
+=== User interface
+
+The ADLB user interface is entirely contained in +adlb.h+.  This is
+only file that is installed by +make install+.  See the ADLB papers
+and the example apps for use scenarios.
+
+=== Workers and servers
+
+The number of servers is specified by the call to +ADLB_Init()+.  Each
+worker is associated with one server (cf. +xlb_map_to_server(int
+rank)+).  Task operations always go to that server, unless the task is
+targeted to a worker associated with another server.  Data operations
+go to the server on which the data resides (cf. +ADLB_Locate(long id)+).
+
+=== Code conventions
+
+[[Checks]]
+==== Error checks
+
+There are 3 main error code types:
+
+* MPI error codes (+int+);
+* ADLB error codes (+adlb_code+); and
+* ADLB data error codes (+adlb_data_code+).
+
+These are all converted to +adlb_code+.  We have a system for checking
+these and propagating errors up the call stack, see +checks.h+.
+
+==== MPI macros
+
+To simplify calls to MPI, we have wrapper macros that use XLB code
+conventions, error handling techniques, and debug logging.  In many
+cases, these turn 5-line expressions into 1-line expressions.  Macros
++SEND()+, +RECV()+, +IRECV()+ correspond to +MPI_Send()+, +MPI_Recv()+,
++MPI_Irecv()+, etc.  Cf.  +messaging.h+.
+
+[[Debugging]]
+==== Debugging modes
+
+Multiple levels of logging verbosity may be enabled at configure
+time.  These are primarily controlled through the macros +DEBUG()+ and
++TRACE()+.
+
+Configure options:
+
++--enable-log-debug+:: Enable +DEBUG()+ logging (moderately verbose)
++--enable-log-trace+:: Enable +TRACE()+ logging (very verbose)
++--enable-log-trace-mpi+:: Trace every MPI macro call (extremely verbose)
+
+==== Code comments
+
++extern+ functions are primarily documented in their +\*.h+ file.
+Implementation notes may be given in the +*.c+ file.  For +static+
+functions, the primary documentation is at the function definition;
+prototypes may be anywhere in the file.
+
+We use Doxygen (JavaDoc) comments (+/** */+) for things that ought to
+appear in generated documentation (although we currently do not use
+such systems).
+
+=== RPC system
+
+ADLB is primarily a worker-server system.  The workers execute ADLB in
++adlb.c+.  These issue calls in a typical +IRECV()+, +SEND()+,
++WAIT()+ pattern.  This allows the server to send the initial response
+with +RSEND+.
+
+The server uses +PROBE+ and dispatches to the appropriate handler.
+The handler functions are registered with the RPC system
+(cf. +handlers.c+).  Each is a mapping from an MPI tag to a function.
+
+=== Work queue
+
+When work submitted by +ADLB_Put()+ is stored by the server, it is
+stored in the work queue (workqueue.h).  The work queue data
+structures store work units.  They allow fast lookups for work units
+based on the task type, priority, and target.  Parallel tasks are
+treated separately.
+
+Note that if a process that matches the work unit is in the request
+queue, the work unit is not stored, it is redirected to the worker
+process.  This allows for worker-worker communication.
+
+=== Request queue
+
+When a worker issues an +ADLB_Get()+, if work is not immediately
+available, the worker rank is stored in the request queue
+(+requestqueue.h+).  Requests are stored in data structures that allow
+for fast lookup by rank and work unit type.
+
+=== Data operations
+
+Data operations all return immediately and do not face the same
+complexity as the queued task operations.  The implementation of all
+data operations is in +data.c+.
+
+=== Work stealing
+
+Work stealing is triggered when:
+
+1. a worker does an +ADLB_Get()+ and the work queue cannot find a
+match; or
+2. the server is out of work and has not attempted a steal recently
+(daemon steal).
+
+The stealing server syncs and issues the STEAL RPC on a random
+server.  Half of the tasks, round up, are stolen.
+
+[[Sync]]
+=== Server-server sync
+
+Server-server syncs are required to avoid a deadlock when two servers
+attempt to perform RPCs on each other simultaneously.  See +sync.h+
+for information about this protocol.
+
+=== Parallel tasks
+
+TODO
+
+=== MPE
+
+TODO
 
 == CPU Profiling
 
