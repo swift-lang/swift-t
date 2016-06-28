@@ -485,7 +485,15 @@ Tcl extensions.
 ===== External scripting interpreters
 
 The external scripting interpreters are called through their C APIs in
-each +tcl-LANG.c+ .
+each +tcl-LANG.c+ .  Each receives strings of code from the Tcl
+level and passes it to the interpreter for evaluation.  The result is
+then packaged as a string and returned to the Tcl level.
+
+===== Swift/T +app+ functions
+
+These are handled in +lib/app.tcl+ .  We call +execvp()+ in
++tcl-turbine.c+ to launch the program instead of Tcl's +exec+ due to
+issues with +exec+ experienced on Cray systems.
 
 == Turbine concepts
 

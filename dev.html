@@ -1532,6 +1532,19 @@ Tcl extensions are in <code>src/tcl</code>
 </ul></div>
 </li>
 </ul></div>
+<div class="sect4">
+<h5 id="_external_scripting_interpreters">External scripting interpreters</h5>
+<div class="paragraph"><p>The external scripting interpreters are called through their C APIs in
+each <code>tcl-LANG.c</code> .  Each receives strings of code from the Tcl
+level and passes it to the interpreter for evaluation.  The result is
+then packaged as a string and returned to the Tcl level.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_swift_t_code_app_code_functions">Swift/T <code>app</code> functions</h5>
+<div class="paragraph"><p>These are handled in <code>lib/app.tcl</code> .  We call <code>execvp()</code> in
+<code>tcl-turbine.c</code> to launch the program instead of Tcl&#8217;s <code>exec</code> due to
+issues with <code>exec</code> experienced on Cray systems.</p></div>
+</div>
 </div>
 </div>
 </div>
@@ -2877,7 +2890,7 @@ for macros/constants.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 12:07:23 CDT
+Last updated 2016-06-28 12:14:31 CDT
 </div>
 </div>
 </body>
