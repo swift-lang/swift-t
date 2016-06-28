@@ -1,13 +1,6 @@
 
 = Swift/T Downloads
 
-////
-Post to:
-/nfs/www.mcs.anl.gov/content/research/projects/exm/local/downloads
-Which is:
-http://www.mcs.anl.gov/exm/local/downloads/downloads.html
-////
-
 == Overview
 
 This page has information regarding the current and historical Swift/T
@@ -19,12 +12,26 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
-Downloadable packages based on SVN +trunk+ and/or SVN access may be
-made available to certain users as necessary.
+== Current/stable: Series 0.9
+
+=== 0.9.0
+
+* Release 0.9.0 [link:downloads/swift-t-0.9.0.tar.gz[swift-t-0.9.0.tar.gz]]
+  (9 MB)
+* 2016/06/28
+
+*Changes:*
+
+* New, consistent type conversion function names
+* New +ADLB_LOAD_MIN+ feature
+* Support for Python 3
+* New support for R via http://dirk.eddelbuettel.com/code/rinside.html[RInside]
+* Many bug fixes and documentation improvements
+* Migration to GitHub (from Google Code Subversion)
 
 == Series 0.8
 
-=== Current/stable: 0.8.0
+=== 0.8.0
 
 * Release 0.8.0 [link:downloads/exm-0.8.0.tar.gz[exm-0.8.0.tar.gz]] (11 MB)
 * 4/6/2015
@@ -34,7 +41,7 @@ made available to certain users as necessary.
 * Open code syntax in Swift: +main{}+ function is no longer required
 * Advanced targeting modes for data-intensive applications
 * New string format operator
-* Initial support for Swift/* standard library 
+* Initial support for Swift/* standard library
   (language convergence with Swift/K)
 
 == Series 0.7
@@ -46,7 +53,7 @@ made available to certain users as necessary.
 
 *Changes:*
 
-* Support for remote execution via Coasters 
+* Support for remote execution via Coasters
 * New +swift-t+ tool combines +stc+ and +turbine+
 * New soft targeting feature for data-intensive computing
 * Ability to retry +app+ functions
@@ -56,14 +63,14 @@ made available to certain users as necessary.
 * Renamed +setup.sh+ to +bootstrap+
 * STC output is now in a +*.tic+ file by default
 
-== Series 0.6 
+== Series 0.6
 
 === 0.6.1
 
 * Release 0.6.1 [link:downloads/exm-0.6.1.tar.gz[exm-0.6.1.tar.gz]] (6.5 MB)
 * 7/15/2014
 
-*Changes:* 
+*Changes:*
 
 * Checkpointing
 * New container features - faster arrays, etc.
@@ -71,7 +78,7 @@ made available to certain users as necessary.
   Reduces process overhead of Turbine engines
 * Support for Julia
 
-=== 0.6.0 
+=== 0.6.0
 
 Swift/T 0.6.0 was a limited preview package.
 
@@ -82,7 +89,7 @@ Swift/T 0.6.0 was a limited preview package.
 * Release 0.5.1 [link:downloads/exm-0.5.1.tar.gz[exm-0.5.1.tar.gz]] (6.5 MB)
 * 7/15/2014
 
-*Changes:* 
+*Changes:*
 
 * Minor output fix
 
@@ -97,9 +104,9 @@ Swift/T 0.6.0 was a limited preview package.
 * Improved Cobalt support
 * Improved Python, R support
 * Support for additional array key types (string, float, boolean, etc)
-* New Turbine worker service feature- 
+* New Turbine worker service feature-
   allows launching a user-specified service on a Swift worker node
-* Full support for +@location+ feature- 
+* Full support for +@location+ feature-
   allows sending a Swift task to a specific rank or hostname
 * New miscellaneous builtin functions
 
