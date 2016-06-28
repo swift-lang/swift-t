@@ -769,7 +769,124 @@ the Swift/T codebase.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_conceptual_overview">2. Conceptual overview</h2>
+<h2 id="_how_to_contribute_to_swift_t">2. How to contribute to Swift/T</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Swift/T is an interesting project to work on if you are interested in
+any of the following areas:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compilers
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Language-language translators
+</p>
+</li>
+<li>
+<p>
+Parser generators (ANTLR)
+</p>
+</li>
+<li>
+<p>
+Data flow languages and run time technologies
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Languages for large-scale computer systems:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+High performance computing
+</p>
+</li>
+<li>
+<p>
+Cloud computing
+</p>
+</li>
+<li>
+<p>
+Distributed computing
+</p>
+</li>
+<li>
+<p>
+MPI
+</p>
+</li>
+<li>
+<p>
+Master-worker systems
+</p>
+</li>
+<li>
+<p>
+Alternatives to MapReduce
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Libraries, frameworks, and abstractions
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Dataflow libraries for common tasks
+</p>
+</li>
+<li>
+<p>
+Environments for rapid prototyping
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>Swift/T is based on the following key technologies:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+ANTLR for parsing, with a Java-based compiler
+</p>
+</li>
+<li>
+<p>
+Tcl as a run time implementation language
+</p>
+</li>
+<li>
+<p>
+MPI for communication
+</p>
+</li>
+<li>
+<p>
+ADLB for master-worker task distribution
+</p>
+</li>
+<li>
+<p>
+SWIG to connect user libraries to Swift
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Get involved!</p></div>
+<div class="paragraph"><p>The list of current issues is hosted on the GitHub issue tracker:
+<a href="https://github.com/swift-lang/swift-t/issues">https://github.com/swift-lang/swift-t/issues</a></p></div>
+<div class="paragraph"><p>You can suggest new issues or try to address one of the current ones.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_conceptual_overview">3. Conceptual overview</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The premise of Swift/T is to 1) translate a Swift script into a
 runnable format for execution at very large scale, on MPI, and 2) to
@@ -789,7 +906,7 @@ code.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_basic_execution">3. Basic execution</h2>
+<h2 id="_basic_execution">4. Basic execution</h2>
 <div class="sectionbody">
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -828,7 +945,7 @@ defined in <code>turbine/code/src/tcl/adlb</code>.
 </li>
 </ol></div>
 <div class="sect2">
-<h3 id="_stc">3.1. STC</h3>
+<h3 id="_stc">4.1. STC</h3>
 <div class="paragraph"><p>STC ingests a Swift file and emits a Tcl file for execution by
 Turbine, called Turbine Intermediate Code (TIC).  It parses the Swift
 code using ANTLR file <code>exm/stc/ast/ExM.g</code>.  When STC is built by Ant,
@@ -844,7 +961,7 @@ converted to a string via recursive calls to the various <code>appendTo()</code>
 methods in the <code>TclTree</code> class, then simply written to the TIC file.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_turbine">3.2. Turbine</h3>
+<h3 id="_turbine">4.2. Turbine</h3>
 <div class="paragraph"><p>Consider this Tcl script (<code>f.tcl</code>):</p></div>
 <div class="listingblock">
 <div class="content">
@@ -872,10 +989,10 @@ shared object.  These provide all the TIC features nencessary for STC.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_build_systems">4. Build systems</h2>
+<h2 id="_build_systems">5. Build systems</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_makefiles">4.1. Makefiles</h3>
+<h3 id="_makefiles">5.1. Makefiles</h3>
 <div class="paragraph"><p>The build system for the three Makefile-based systems (c-utils, ADLB,
 Turbine) is based on the following paper "Recursive Make Considered
 Harmful":</p></div>
@@ -885,7 +1002,7 @@ variables in <code>config.h</code> via <code>AC_DEFINE()</code> and Makefile var
 <code>AC_SUBST()</code>.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_ant">4.2. Ant</h3>
+<h3 id="_ant">5.2. Ant</h3>
 <div class="paragraph"><p>The build system for STC is a relatively simple Ant build file.  The
 only complexity is running ANTLR, which generates Java source code,
 before compiling all the Java source into one big JAR file.</p></div>
@@ -893,10 +1010,10 @@ before compiling all the Java source into one big JAR file.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_how_to_learn_the_code">5. How to learn the code</h2>
+<h2 id="_how_to_learn_the_code">6. How to learn the code</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_prerequisites">5.1. Prerequisites</h3>
+<h3 id="_prerequisites">6.1. Prerequisites</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -941,7 +1058,7 @@ Concurrency: We do not use threads.  All Swift/T concurrency comes
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_things_to_do">5.2. Things to do</h3>
+<h3 id="_things_to_do">6.2. Things to do</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -965,7 +1082,7 @@ Run the <a href="http://swift-lang.org/Swift-T/leaf.html">leaf guide examples</a
 </div>
 </div>
 <div class="sect1">
-<h2 id="_stc_internals">6. STC internals</h2>
+<h2 id="_stc_internals">7. STC internals</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The most complete and up-to-date reference for the STC compiler is the
 Javadocs generated from the source tree for high-level information and
@@ -976,7 +1093,7 @@ STC source, run <code>ant javadoc</code> in the code directory.  However, this p
 provides a general overview and introduction that may make it easier
 to get into the code base.</p></div>
 <div class="sect2">
-<h3 id="_architecture">6.1. Architecture</h3>
+<h3 id="_architecture">7.1. Architecture</h3>
 <div class="paragraph"><p>The compiler is basically a pipeline which takes the Swift program
 from the Swift source, into the compiler&#8217;s intermediate
 representation, and then into executable Tcl code.</p></div>
@@ -1003,7 +1120,7 @@ Swift source -----&gt; AST -----&gt; AST + analysis------&gt; Swift-IR------&gt;
                                                    (optimise)</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_parsing">6.1.1. Parsing</h4>
+<h4 id="_parsing">7.1.1. Parsing</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1023,7 +1140,7 @@ How: Using ANTLR grammar in ExM.g
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_variable_analysis">6.1.2. Variable Analysis</h4>
+<h4 id="_variable_analysis">7.1.2. Variable Analysis</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1048,7 +1165,7 @@ How: <code>VariableUsageAnalyser.java</code>
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_tree_walking">6.1.3. Tree Walking</h4>
+<h4 id="_tree_walking">7.1.3. Tree Walking</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1080,7 +1197,7 @@ Misc: some optimizations are implemented at this level, such as caching struct f
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_intermediate_representation_construction">6.1.4. Intermediate Representation Construction</h4>
+<h4 id="_intermediate_representation_construction">7.1.4. Intermediate Representation Construction</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1105,7 +1222,7 @@ Checks: nothing formally, but lots of assertions to make sure the previous stage
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_optimization">6.1.5. Optimization</h4>
+<h4 id="_optimization">7.1.5. Optimization</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1131,7 +1248,7 @@ of code tree are assisted by methods of tree classes
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_tcl_generation">6.1.6. Tcl Generation</h4>
+<h4 id="_tcl_generation">7.1.6. Tcl Generation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1155,14 +1272,14 @@ How: Each construct in IR tree makes calls to <code>TurbineGenerator</code>.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_code_organization">6.2. Code organization</h3>
+<h3 id="_code_organization">7.2. Code organization</h3>
 <div class="paragraph"><p>The best way to get an overview of the stc source code layout is to
 look at the Javadocs.  To construct the Javadoc run <code>ant javadoc</code> in the
 <code>stc/code</code> directory.  This will create html pages under the javadoc
 directory/ This is an overview of what is in the STC Java source code.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_antlr">6.3. ANTLR</h3>
+<h3 id="_antlr">7.3. ANTLR</h3>
 <div class="paragraph"><p>The SwiftScript parser is generated at build time by <code>build.xml</code>
 target <code>antlr.generate</code> This generates the Java source in
 <code>src/exm/stc/ast/antlr</code>.  At run time, this package is used by
@@ -1170,14 +1287,14 @@ target <code>antlr.generate</code> This generates the Java source in
 object</p></div>
 </div>
 <div class="sect2">
-<h3 id="_swiftscript_ast">6.4. SwiftScript AST</h3>
+<h3 id="_swiftscript_ast">7.4. SwiftScript AST</h3>
 <div class="paragraph"><p>The ANTLR Tree is passed to and walked by class SwiftScript, which
 progresses down the tree and makes calls to <code>TurbineGenerator</code>.</p></div>
 <div class="paragraph"><p>TIC statements correspond closely to the original SwiftScript so this
 is straightforward.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_tcl_generation_2">6.5. Tcl generation</h3>
+<h3 id="_tcl_generation_2">7.5. Tcl generation</h3>
 <div class="paragraph"><p>We construct an in-memory tree representing the Tcl output program
 (under <code>exm.stc.tclbackend.tree</code>) which is then written to the output.</p></div>
 <div class="paragraph"><p>This package creates structured data in memory.  The Tcl program is
@@ -1189,7 +1306,7 @@ is fully built, the String representation is obtained via
 <code>TurbineGenerator.code()</code> and is written to the output file
 (cf. <code>STCompiler.compile()</code>).</p></div>
 <div class="sect3">
-<h4 id="_historical_note">6.5.1. Historical note</h4>
+<h4 id="_historical_note">7.5.1. Historical note</h4>
 <div class="paragraph"><p>Multiple avenues were explored for generating Tcl:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1216,7 +1333,7 @@ StringTemplate: Swift/K used this approach.  The library is produced
 </div>
 </div>
 <div class="sect2">
-<h3 id="_settings">6.6. Settings</h3>
+<h3 id="_settings">7.6. Settings</h3>
 <div class="paragraph"><p>In general, parser settings should be processed as follows:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -1240,7 +1357,7 @@ Exceptions: Logging, input SwiftScript and output Tcl locations are not in Setti
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_debugging_stc">6.7. Debugging STC</h3>
+<h3 id="_debugging_stc">7.7. Debugging STC</h3>
 <div class="paragraph"><p>Tip: When debugging the compiler, it is convenient to do:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1250,10 +1367,10 @@ Exceptions: Logging, input SwiftScript and output Tcl locations are not in Setti
 </div>
 </div>
 <div class="sect1">
-<h2 id="_turbine_internals">7. Turbine internals</h2>
+<h2 id="_turbine_internals">8. Turbine internals</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_builtins">7.1. Builtins</h3>
+<h3 id="_builtins">8.1. Builtins</h3>
 <div class="paragraph"><p>Turbine implements the Swift/T standard library in its <code>export/</code>
 directory.  Some libraries (e.g., string) are implemented in pure Tcl.
 Other TIC features are implemented in C code exposed to Tcl in
@@ -1265,7 +1382,7 @@ identifiers of data stored in ADLB.  A <code>rule</code> is used to trigger
 data-dependent execution, described next.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_turbine_data">7.2. Turbine data</h3>
+<h3 id="_turbine_data">8.2. Turbine data</h3>
 <div class="paragraph"><p>When Swift code declares, reads, or writes data, these are translated
 into ADLB data operations <code>_Create()</code>, <code>_Retrieve()</code>, and <code>_Store()</code>
 (see <code>adlb.h</code>).  These functions are exposed to TIC as Tcl functions
@@ -1277,7 +1394,7 @@ collection scheme (<code>_incr</code> and <code>_decr</code> generally refer to 
 when it reaches 0, the variable is garbage-collected by ADLB).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_turbine_concepts">7.3. Turbine concepts</h3>
+<h3 id="_turbine_concepts">8.3. Turbine concepts</h3>
 <div class="paragraph"><p>Swift/T progress is managed by the following Turbine concepts:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -1417,7 +1534,7 @@ data is ready.  (Cf. ADLB <code>engine.h</code>.)
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_the_turbine_rule_statement">7.4. The Turbine rule statement</h3>
+<h3 id="_the_turbine_rule_statement">8.4. The Turbine rule statement</h3>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1454,7 +1571,7 @@ the action ready for execution, based on the <code>type</code>.
 </dd>
 </dl></div>
 <div class="sect3">
-<h4 id="_options">7.4.1. Options</h4>
+<h4 id="_options">8.4.1. Options</h4>
 <div class="paragraph"><p>All options are optional</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1497,7 +1614,7 @@ Send action to this MPI rank.  Default is any available process based on <code>t
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_semantics">7.4.2. Semantics</h4>
+<h4 id="_semantics">8.4.2. Semantics</h4>
 <div class="paragraph"><p>The rule statement semantics are as follows, with respect to the Tcl
 thread of execution.</p></div>
 <div class="ulist"><ul>
@@ -1535,19 +1652,19 @@ For <code>CONTROL</code> or <code>WORK</code>, you can execute my action on a di
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_naming">7.4.3. Naming</h4>
+<h4 id="_naming">8.4.3. Naming</h4>
 <div class="paragraph"><p>The name "rule" was chosen because this is somewhat like a Makefile
 rule, and the analogy was intended to be helpful.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_rationale">7.4.4. Rationale</h4>
+<h4 id="_rationale">8.4.4. Rationale</h4>
 <div class="paragraph"><p>A Turbine rule is not just a control structure, it is data- it has an
 identifier and debug token, is stored in data structures, is loggable,
 debuggable, etc.  The arbitrary action string provides a lot of
 flexibility in how the statement may be used (by the code generator)</p></div>
 </div>
 <div class="sect3">
-<h4 id="_further_reading">7.4.5. Further reading</h4>
+<h4 id="_further_reading">8.4.5. Further reading</h4>
 <div class="paragraph"><p><a href="http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf">Turbine: A
 distributed-memory dataflow engine for high performance many-task
 applications</a>
@@ -1555,9 +1672,9 @@ Wozniak, Armstrong, et al. Fundamenta Informaticae 28(3), 2013.]</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_code_layout">7.5. Code layout</h3>
+<h3 id="_code_layout">8.5. Code layout</h3>
 <div class="sect3">
-<h4 id="_tcl_packaging">7.5.1. Tcl packaging</h4>
+<h4 id="_tcl_packaging">8.5.1. Tcl packaging</h4>
 <div class="paragraph"><p>Turbine consists of two key C libraries, ADLB and Turbine, packaged as
 Tcl extensions, and several Tcl script libraries.  All of this is
 packaged with Tcl conventions in <code>lib</code>.  Cf. <code>lib/make-package.tcl</code>
@@ -1572,7 +1689,7 @@ set in <code>bin/turbine</code>.</p></div>
 <div class="paragraph"><p>Other C features are exposed to the Tcl layer as described below.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_mpi_process_modes">7.5.2. MPI process modes</h4>
+<h4 id="_mpi_process_modes">8.5.2. MPI process modes</h4>
 <div class="paragraph"><p>A Turbine program is a TCL script launched as an SPMD program by
 <code>mpiexec</code>.  In general, the idea is to do</p></div>
 <div class="listingblock">
@@ -1616,7 +1733,7 @@ MPI ranks.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_software_structure">7.6. Software structure</h3>
+<h3 id="_software_structure">8.6. Software structure</h3>
 <div class="paragraph"><p>The Turbine API is a Tcl API.  Some of the features are defined in
 Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
 Tcl extensions.</p></div>
@@ -1674,26 +1791,26 @@ Tcl extensions are in <code>src/tcl</code>
 </li>
 </ul></div>
 <div class="sect3">
-<h4 id="_external_scripting_interpreters">7.6.1. External scripting interpreters</h4>
+<h4 id="_external_scripting_interpreters">8.6.1. External scripting interpreters</h4>
 <div class="paragraph"><p>The external scripting interpreters are called through their C APIs in
 each <code>tcl-LANG.c</code> .  Each receives strings of code from the Tcl
 level and passes it to the interpreter for evaluation.  The result is
 then packaged as a string and returned to the Tcl level.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_swift_t_code_app_code_functions">7.6.2. Swift/T <code>app</code> functions</h4>
+<h4 id="_swift_t_code_app_code_functions">8.6.2. Swift/T <code>app</code> functions</h4>
 <div class="paragraph"><p>These are handled in <code>lib/app.tcl</code> .  We call <code>execvp()</code> in
 <code>tcl-turbine.c</code> to launch the program instead of Tcl&#8217;s <code>exec</code> due to
 issues with <code>exec</code> experienced on Cray systems.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_features">7.7. Features</h3>
+<h3 id="_features">8.7. Features</h3>
 <div class="paragraph"><p>This describes the symbols available to the Turbine programmer.  These
 features are required when writing STC or constructing Swift/T
 extensions.</p></div>
 <div class="sect3">
-<h4 id="_turbine_core">7.7.1. Turbine core</h4>
+<h4 id="_turbine_core">8.7.1. Turbine core</h4>
 <div class="paragraph"><p>The core Turbine features are as follows.</p></div>
 <div class="sect4">
 <h5 id="_program_structure">Program structure</h5>
@@ -1755,7 +1872,7 @@ Shuts down and reports unused rules
 </div>
 </div>
 <div class="sect3">
-<h4 id="_adlb_layer">7.7.2. ADLB layer</h4>
+<h4 id="_adlb_layer">8.7.2. ADLB layer</h4>
 <div class="paragraph"><p>Turbine uses ADLB to distribute tasks and locate data.</p></div>
 <div class="paragraph"><p>All Turbine variables are stored in a customized data store built into
 ADLB.  This required the construction of additional ADLB API calls.</p></div>
@@ -1889,7 +2006,7 @@ Return a unique TD.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_data_dependent_progress">7.7.3. Data-dependent progress</h4>
+<h4 id="_data_dependent_progress">8.7.3. Data-dependent progress</h4>
 <div class="paragraph"><p><strong>adlb.c</strong></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -1904,7 +2021,7 @@ execute be notified when the given TDs are closed.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_data">7.7.4. Data</h4>
+<h4 id="_data">8.7.4. Data</h4>
 <div class="sect4">
 <h5 id="_data_allocation">Data allocation</h5>
 <div class="paragraph"><p>Data must be allocated before it may be used as the input to a rule.</p></div>
@@ -2024,7 +2141,7 @@ literal x integer 3</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_functions">7.7.5. Functions</h4>
+<h4 id="_functions">8.7.5. Functions</h4>
 <div class="paragraph"><p>A good way to manage progress is to define Tcl functions (procs) for
 use in the execution string.</p></div>
 <div class="paragraph"><p>To implement a Swift function, we often have three Tcl
@@ -2725,7 +2842,7 @@ use of the Turbine API and Tcl arithmetic capabilities.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_adlb_x">8. ADLB/X</h2>
+<h2 id="_adlb_x">9. ADLB/X</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ADLB/X is an
 <a href="http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer">ADLB</a>
@@ -2752,13 +2869,13 @@ project.</p></div>
 <div class="paragraph"><p>ADLB/X is internally called XLB.  External C symbols are prefixed with
 <code>xlb_</code>.</p></div>
 <div class="sect2">
-<h3 id="_user_interface">8.1. User interface</h3>
+<h3 id="_user_interface">9.1. User interface</h3>
 <div class="paragraph"><p>The ADLB user interface is entirely contained in <code>adlb.h</code>.  This is
 only file that is installed by <code>make install</code>.  See the ADLB papers
 and the example apps for use scenarios.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_workers_and_servers">8.2. Workers and servers</h3>
+<h3 id="_workers_and_servers">9.2. Workers and servers</h3>
 <div class="paragraph"><p>The number of servers is specified by the call to <code>ADLB_Init()</code>.  Each
 worker is associated with one server (cf. <code>xlb_map_to_server(int
 rank)</code>).  Task operations always go to that server, unless the task is
@@ -2766,9 +2883,9 @@ targeted to a worker associated with another server.  Data operations
 go to the server on which the data resides (cf. <code>ADLB_Locate(long id)</code>).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_code_conventions">8.3. Code conventions</h3>
+<h3 id="_code_conventions">9.3. Code conventions</h3>
 <div class="sect3">
-<h4 id="Checks">8.3.1. Error checks</h4>
+<h4 id="Checks">9.3.1. Error checks</h4>
 <div class="paragraph"><p>There are 3 main error code types:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2791,7 +2908,7 @@ ADLB data error codes (<code>adlb_data_code</code>).
 these and propagating errors up the call stack, see <code>checks.h</code>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_mpi_macros">8.3.2. MPI macros</h4>
+<h4 id="_mpi_macros">9.3.2. MPI macros</h4>
 <div class="paragraph"><p>To simplify calls to MPI, we have wrapper macros that use XLB code
 conventions, error handling techniques, and debug logging.  In many
 cases, these turn 5-line expressions into 1-line expressions.  Macros
@@ -2799,7 +2916,7 @@ cases, these turn 5-line expressions into 1-line expressions.  Macros
 <code>MPI_Irecv()</code>, etc.  Cf.  <code>messaging.h</code>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="Debugging">8.3.3. Debugging modes</h4>
+<h4 id="Debugging">9.3.3. Debugging modes</h4>
 <div class="paragraph"><p>Multiple levels of logging verbosity may be enabled at configure
 time.  These are primarily controlled through the macros <code>DEBUG()</code> and
 <code>TRACE()</code>.</p></div>
@@ -2832,7 +2949,7 @@ Trace every MPI macro call (extremely verbose)
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_code_comments">8.3.4. Code comments</h4>
+<h4 id="_code_comments">9.3.4. Code comments</h4>
 <div class="paragraph"><p><code>extern</code> functions are primarily documented in their <code>*.h</code> file.
 Implementation notes may be given in the <code>*.c</code> file.  For <code>static</code>
 functions, the primary documentation is at the function definition;
@@ -2843,7 +2960,7 @@ such systems).</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_rpc_system">8.4. RPC system</h3>
+<h3 id="_rpc_system">9.4. RPC system</h3>
 <div class="paragraph"><p>ADLB is primarily a worker-server system.  The workers execute ADLB in
 <code>adlb.c</code>.  These issue calls in a typical <code>IRECV()</code>, <code>SEND()</code>,
 <code>WAIT()</code> pattern.  This allows the server to send the initial response
@@ -2853,7 +2970,7 @@ The handler functions are registered with the RPC system
 (cf. <code>handlers.c</code>).  Each is a mapping from an MPI tag to a function.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_work_queue">8.5. Work queue</h3>
+<h3 id="_work_queue">9.5. Work queue</h3>
 <div class="paragraph"><p>When work submitted by <code>ADLB_Put()</code> is stored by the server, it is
 stored in the work queue (workqueue.h).  The work queue data
 structures store work units.  They allow fast lookups for work units
@@ -2864,20 +2981,20 @@ queue, the work unit is not stored, it is redirected to the worker
 process.  This allows for worker-worker communication.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_request_queue">8.6. Request queue</h3>
+<h3 id="_request_queue">9.6. Request queue</h3>
 <div class="paragraph"><p>When a worker issues an <code>ADLB_Get()</code>, if work is not immediately
 available, the worker rank is stored in the request queue
 (<code>requestqueue.h</code>).  Requests are stored in data structures that allow
 for fast lookup by rank and work unit type.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_data_operations">8.7. Data operations</h3>
+<h3 id="_data_operations">9.7. Data operations</h3>
 <div class="paragraph"><p>Data operations all return immediately and do not face the same
 complexity as the queued task operations.  The implementation of all
 data operations is in <code>data.c</code>.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_work_stealing">8.8. Work stealing</h3>
+<h3 id="_work_stealing">9.8. Work stealing</h3>
 <div class="paragraph"><p>Work stealing is triggered when:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2897,23 +3014,23 @@ the server is out of work and has not attempted a steal recently
 server.  Half of the tasks, round up, are stolen.</p></div>
 </div>
 <div class="sect2">
-<h3 id="Sync">8.9. Server-server sync</h3>
+<h3 id="Sync">9.9. Server-server sync</h3>
 <div class="paragraph"><p>Server-server syncs are required to avoid a deadlock when two servers
 attempt to perform RPCs on each other simultaneously.  See <code>sync.h</code>
 for information about this protocol.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_parallel_tasks">8.10. Parallel tasks</h3>
+<h3 id="_parallel_tasks">9.10. Parallel tasks</h3>
 <div class="paragraph"><p>TODO</p></div>
 </div>
 <div class="sect2">
-<h3 id="_mpe_2">8.11. MPE</h3>
+<h3 id="_mpe_2">9.11. MPE</h3>
 <div class="paragraph"><p>TODO</p></div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_cpu_profiling">9. CPU Profiling</h2>
+<h2 id="_cpu_profiling">10. CPU Profiling</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>It is possible to obtain information about CPU usage in Turbine by using
 the Google perftools CPU profiler.  This profiler is non-intrusive: it
@@ -2946,11 +3063,11 @@ pprof --pdf `which tclsh8.5` turbine.prof_12345 &gt; turbine.prof_12345.pdf</cod
 </div>
 </div>
 <div class="sect1">
-<h2 id="_test_suites">10. Test suites</h2>
+<h2 id="_test_suites">11. Test suites</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Each component has a testing mechanism:</p></div>
 <div class="sect2">
-<h3 id="_makefile_based_tests">10.1. Makefile-based tests</h3>
+<h3 id="_makefile_based_tests">11.1. Makefile-based tests</h3>
 <div class="paragraph"><p>For the three Makefile-based modules, the test conventions are:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2986,28 +3103,28 @@ If the exit code is 0, the Makefile moves <code>X.tmp</code> to <code>X.result</
 </li>
 </ul></div>
 <div class="sect3">
-<h4 id="_c_utils">10.1.1. C-Utils</h4>
+<h4 id="_c_utils">11.1.1. C-Utils</h4>
 <div class="paragraph"><p>Just do <code>make test_results</code>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_adlb">10.1.2. ADLB</h4>
+<h4 id="_adlb">11.1.2. ADLB</h4>
 <div class="paragraph"><p>ADLB is primarily tested in the Turbine test suite, but you can do
 <code>make test_results</code> here too.  See also <code>make apps/batcher.x</code>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_turbine_2">10.1.3. Turbine</h4>
+<h4 id="_turbine_2">11.1.3. Turbine</h4>
 <div class="paragraph"><p>Just do <code>make test_results</code>.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_stc_2">10.2. STC</h3>
+<h3 id="_stc_2">11.2. STC</h3>
 <div class="paragraph"><p>The test suite compiles a variety of SwiftScript cases and runs them
 under Turbine.  See <code>stc/tests/About.txt</code> for usage, or just run
 <code>tests/run-tests.zsh</code>.</p></div>
 <div class="paragraph"><p>STC also has a JUnit test suite managed by <code>build.xml</code>.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_automated_testing_jenkins">10.3. Automated testing: Jenkins</h3>
+<h3 id="_automated_testing_jenkins">11.3. Automated testing: Jenkins</h3>
 <div class="paragraph"><p>Swift/T is tested nightly on an ANL/MCS-internal Jenkins server.  It
 is difficult to grant access to this system to external persons.  It
 builds Swift/T and runs the Turbine and STC test suites, and also the
@@ -3016,7 +3133,7 @@ builds Swift/T and runs the Turbine and STC test suites, and also the
 </div>
 </div>
 <div class="sect1">
-<h2 id="_code_conventions_2">11. Code conventions</h2>
+<h2 id="_code_conventions_2">12. Code conventions</h2>
 <div class="sectionbody">
 <div class="ulist"><ul>
 <li>
@@ -3032,7 +3149,7 @@ There should be no whitespace at end-of-line.  If you are fixing
 </li>
 </ul></div>
 <div class="sect2">
-<h3 id="_c_code">11.1. C code</h3>
+<h3 id="_c_code">12.1. C code</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3041,25 +3158,25 @@ Open brace after newline
 </li>
 </ul></div>
 <div class="sect3">
-<h4 id="_adlb_2">11.1.1. ADLB</h4>
+<h4 id="_adlb_2">12.1.1. ADLB</h4>
 <div class="paragraph"><p>User-visible symbols are prefixed with <code>ADLB_</code> and follow the MPI/ADLB
 capitalization conventions.</p></div>
 <div class="paragraph"><p>Internal symbols are prefixed with <code>xlb_</code> and use all lower case except
 for macros/constants.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_turbine_3">11.1.2. Turbine</h4>
+<h4 id="_turbine_3">12.1.2. Turbine</h4>
 <div class="paragraph"><p>User-visible symbols are prefixed with <code>turbine_</code>.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_java_code">11.2. Java code</h3>
+<h3 id="_java_code">12.2. Java code</h3>
 <div class="paragraph"><p>Open brace before newline</p></div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_git">12. Git</h2>
+<h2 id="_git">13. Git</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Everything, including this document, is at:</p></div>
 <div class="paragraph"><p><a href="https://github.com/swift-lang/swift-t">https://github.com/swift-lang/swift-t</a></p></div>
@@ -3073,7 +3190,7 @@ for macros/constants.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 15:05:48 CDT
+Last updated 2016-06-28 15:28:25 CDT
 </div>
 </div>
 </body>

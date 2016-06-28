@@ -30,6 +30,43 @@ https://groups.google.com/forum/#!forum/swift-t-user[Swift/T User Group].
 Please reports errors in this document at
 https://github.com/swift-lang/swift-t/issues .
 
+== How to contribute to Swift/T
+
+Swift/T is an interesting project to work on if you are interested in
+any of the following areas:
+
+* Compilers
+** Language-language translators
+** Parser generators (ANTLR)
+** Data flow languages and run time technologies
+
+* Languages for large-scale computer systems:
+** High performance computing
+** Cloud computing
+** Distributed computing
+** MPI
+** Master-worker systems
+** Alternatives to MapReduce
+
+* Libraries, frameworks, and abstractions
+** Dataflow libraries for common tasks
+** Environments for rapid prototyping
+
+Swift/T is based on the following key technologies:
+
+* ANTLR for parsing, with a Java-based compiler
+* Tcl as a run time implementation language
+* MPI for communication
+* ADLB for master-worker task distribution
+* SWIG to connect user libraries to Swift
+
+Get involved!
+
+The list of current issues is hosted on the GitHub issue tracker:
+https://github.com/swift-lang/swift-t/issues
+
+You can suggest new issues or try to address one of the current ones.
+
 == Conceptual overview
 
 The premise of Swift/T is to 1) translate a Swift script into a
