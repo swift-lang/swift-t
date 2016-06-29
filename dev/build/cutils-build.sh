@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-THISDIR=`dirname $0`
-source ${THISDIR}/exm-settings.sh
+set -x
+
+THIS=$( dirname $0 )
+source ${THIS}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
@@ -10,10 +12,6 @@ if (( MAKE_CLEAN )); then
     #make clean
     :
   fi
-fi
-
-if (( SVN_UPDATE )); then
-  svn update
 fi
 
 EXTRA_ARGS=
@@ -41,6 +39,7 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
+set -x
 if (( CONFIGURE )); then
   ./configure --enable-shared --prefix=${C_UTILS_INSTALL} ${EXTRA_ARGS}
 fi

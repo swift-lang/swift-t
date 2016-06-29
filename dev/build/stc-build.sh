@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -e
 THISDIR=`dirname $0`
-source ${THISDIR}/exm-settings.sh
+source ${THISDIR}/swift-t-settings.sh
 
-if (( SVN_UPDATE )); then
-  svn update
-fi
 if (( MAKE_CLEAN )); then
   ${ANT} clean
 fi

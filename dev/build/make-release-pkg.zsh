@@ -231,6 +231,7 @@ export_copy scripts/submit/cobalt/*turbine*.*sh*
 export_copy scripts/submit/ec2/turbine-setup-ec2.zsh
 export_copy scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
 export_copy scripts/submit/slurm/*turbine*.*sh*
+export_copy scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
 export_copy src/turbine/turbine-version.h.in
 export_copy etc/help*.txt
 popd
@@ -267,10 +268,9 @@ print "Copying build scripts..."
 TARGET=${EXPORT}/dev/build
 mkdir -pv ${TARGET}
 pushd dev/build
-export_copy *.sh *.txt
 # Create swift-t-settings.sh from template
-cp -uv swift-t-settings.sh.template ${EXPORT}/swift-t-settings.sh
-export_copy swift-t-settings.sh{,.template} locate-src-root.sh
+cp -uv swift-t-settings.sh.template swift-t-settings.sh
+export_copy *.sh *.txt *.template
 popd
 printf "OK\n\n"
 

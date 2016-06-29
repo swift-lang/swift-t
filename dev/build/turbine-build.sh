@@ -2,7 +2,7 @@
 set -e
 
 THISDIR=`dirname $0`
-source ${THISDIR}/exm-settings.sh
+source ${THISDIR}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
@@ -10,10 +10,6 @@ if (( MAKE_CLEAN )); then
       #make clean
       :
   fi
-fi
-
-if (( SVN_UPDATE )); then
-  svn update
 fi
 
 if (( RUN_AUTOTOOLS )); then

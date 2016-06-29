@@ -6,7 +6,7 @@
 # Please fill in all of these variables
 
 # Install root: change to your install location
-EXM_PREFIX=/tmp/exm-install
+export SWIFT_T_PREFIX=/tmp/exm-install
 
 #+====================================+
 #|| Optional configuration variables ||
@@ -145,10 +145,10 @@ STC_SRC=${EXM_SRC_ROOT}/stc/code
 #COASTER_SRC=
 
 # Install subdirectories. Modify to match your layout if needed
-LB_INSTALL=${EXM_PREFIX}/lb
-C_UTILS_INSTALL=${EXM_PREFIX}/c-utils
-TURBINE_INSTALL=${EXM_PREFIX}/turbine
-STC_INSTALL=${EXM_PREFIX}/stc
+LB_INSTALL=${SWIFT_T_PREFIX}/lb
+C_UTILS_INSTALL=${SWIFT_T_PREFIX}/c-utils
+TURBINE_INSTALL=${SWIFT_T_PREFIX}/turbine
+STC_INSTALL=${SWIFT_T_PREFIX}/stc
 
 #+======================================+
 #|| Developer options (debugging, etc) ||
