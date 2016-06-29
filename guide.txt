@@ -68,7 +68,7 @@ package manager for your system.
 +
 Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set +MPI_VERSION=2+ (if using the +exm-setup.zsh+ build process),
+you must set +MPI_VERSION=2+ (if using the +build-all.sh+ build process),
 or provide the +--enable-mpi-2+ configure option (if using
 the manual build process).
 +
@@ -99,7 +99,7 @@ Swift/T from source.
 1. Obtain the Swift/T source package
 +
 ----
-wget http://swift-lang.github.io/swift-t/downloads/exm-0.8.0.tar.gz
+wget http://swift-lang.github.io/swift-t/downloads/swift-t-0.9.0.tar.gz
 ----
 +
 Cf. http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
@@ -108,13 +108,14 @@ for other packages
 2. Unpack and enter package directory
 +
 ----
-tar xfz exm-trunk.tar.gz
-cd exm-trunk
+tar xfz swift-t-0.9.0.tar.gz
+cd swift-t-0.9.0
 ----
 +
-3. Edit the settings file: +exm-settings.sh+
+3. Edit the settings file: +dev/build/swift-t-settings.sh+
 +
-At a minimum, you must set the install directory with +EXM_PREFIX+.
+At a minimum, you must set the install directory with +SWIFT_T_PREFIX+
+(the default will install to +/tmp+).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
 configuration settings so that all prerequisites can
@@ -124,26 +125,26 @@ be correctly located and configured (see Section
 A range of other settings are also available here:
 enabling/disabling features, debug or optimized builds, etc.
 +
-TIP: Save your +exm-settings.sh+ when you download a new package
+TIP: Save your +swift-t-settings.sh+ when you download a new package
 +
 4. Run the setup script
 +
 ----
-./exm-setup.zsh
+dev/build/build-all.sh
 ----
 +
-If +exm-setup.zsh+ does not succeed on your system, see Section
+If +build-all.sh+ does not succeed on your system, see Section
 <<Build_configuration, Build configuration>> below.
 +
-TIP: if you want more control than +exm-setup.zsh+ provides, you can
+TIP: if you want more control than +build-all.sh+ provides, you can
     build Swift/T with the
     <<Manual_build_configuration, manual configure/make workflow>>.
 +
 5. Add Turbine and STC to your paths
 +
 ----
-PATH=${PATH}:/path/to/exm-install/turbine/bin
-PATH=${PATH}:/path/to/exm-install/stc/bin
+PATH=${PATH}:/path/to/swift-t-install/turbine/bin
+PATH=${PATH}:/path/to/swift-t-install/stc/bin
 ----
 
 == Usage
@@ -228,24 +229,23 @@ printf("Hello world");
 
 The newline is supplied by +printf()+.
 
-Swift programs are composed of
-_composite_ functions containing Swift code, _top-level_ Swift code
-outside of composite functions, and _leaf_ functions that wrap
-non-Swift code, for example native code functions or
-external application programs.
+Swift programs are composed of _composite_ functions containing Swift
+code, _top-level_ Swift code outside of composite functions, and
+_leaf_ functions that wrap non-Swift code, for example native code
+library functions or external application programs.
 
-In typical Swift programs, leaf functions do the computational
-heavy-lifting, while Swift code provides the "glue" to compose
-leaf functions into a complete application.
-From the perspective of the Swift programmer, leaf functions
-atomic operations that wait for input variables and set output
-variables.
+In typical Swift programs, <<leaf_functions,leaf functions>> do the
+computational heavy lifting, while Swift code provides the "glue" to
+compose leaf functions into a complete workflow.  From the perspective
+of the Swift programmer, leaf functions are atomic operations that
+wait for input variables and set output variables.
 
 The definition of a function can come before or after the usage
 in the Swift source code.  E.g. a function defined on line 100
 of a Swift source file can be called at line 10.
 
-STC input is preprocessed by +cpp+, the C preprocessor.
+STC input is preprocessed by
+https://gcc.gnu.org/onlinedocs/cpp[+cpp+], the C preprocessor.
 
 == Comments
 
@@ -992,6 +992,7 @@ The following unary operators are defined:
   equivalent to +sprintf(format, arg1, arg2,...)+.  The parentheses
   may be omitted for single arguments.
 
+[[standard_library]]
 == Standard library
 
 Each category of function is shown with the required import
@@ -1358,20 +1359,36 @@ in the hostmap and return one of the worker ranks running on that host.
 In typical Swift applications, the computationally intensive parts of
 the application are not written in the Swift language.  Rather, the
 work is done by _leaf functions_ that are _composed_ together with
-Swift code.  Leaf functions may be extension or app functions.
+Swift code.  The three key leaf function types are:
 
-The Swift runtime, Turbine, is built on Tcl, a language which intends
-to makes it easy to call C/C\+\+/Fortran functions.  The builtin
-functions mentioned above are implemented as extension functions in
-Tcl, which may wrap C/C++/Fortran functions.
+<<swift_extension_functions,Extension functions>>:
+Functions that call to Tcl and/or native code.  These functions
+primarily operate on in-memory data, and are appropriate for
+high-performance computing.
+
+<<app_functions,+app+ functions>>: Functions that call to a
+command-line program (the shell).  These functions primarily operate
+on files, and are appropriate for ordinary workflows.
+
+<<external_scripting,External scripting functions>>: Functions that
+call into an in-memory interpreter in another scripting language, such
+as Python, R, or Julia.  These functions allow you to integrate code
+from these other languages and run them without forking an
+interpreter, allowing you to run these languages on high-performance
+computers (including the Blue Gene and Cray).
+
+The Swift runtime, Turbine, is built on Tcl, a language which was
+designed to to make it easy to call C/C++/Fortran functions.  The
+Swift/T <<standard_library,standard library>> is implemented as
+extension functions in Tcl, some of which wrap C functions.
 
 [[swift_extension_functions]]
 === Swift extension functions
 
-Currently we support Tcl extension functions, where a function is
-implemented as a Tcl function.  Tcl has good support for wrapping
-native C/C\++ functions, so this provides an indirect way to call
-C/C++ functions from Swift.
+Swift/T extension functions connect Swift semantics to a Tcl function.
+Tcl has http://www.swig.org/papers/Tcl98/TclChap.html[excellent
+support] for wrapping native C/C\++ functions, so this provides an
+excellent way to call C/C++ functions from Swift.
 
 Several components are required to implement a Swift native code function:
 
@@ -1759,6 +1776,7 @@ The arguments are:
           and return them once the app completes (this is documented
           in +exec_interface.h+).
 
+[[external_scripting]]
 === External scripting support
 
 ==== Calling Python
@@ -1838,7 +1856,7 @@ code is passed to Python for evaluation.  The output is:
 
 NOTE: To use this, Turbine must be configured with Python enabled
  before compiling, by setting +ENABLE_PYTHON=1+
- in +exm-settings.sh+, or by providing the +--enable-python+ argument
+ in +swift-t-settings.sh+, or by providing the +--enable-python+ argument
  to +configure+.  This feature is implemented by linking to Python
  as a shared library, enabling better performance than calling the
  +python+ program (which may be done by using a normal Swift
@@ -1881,7 +1899,7 @@ As coded here, both R and Swift report the value of +a+.
 
 NOTE: To use this, Turbine must be configured with R enabled
  before compiling, by setting +ENABLE_R=1+
- in +exm-settings.sh+, or by providing the +--enable-r+ argument
+ in +swift-t-settings.sh+, or by providing the +--enable-r+ argument
  to +configure+.  This feature is implemented by linking to R as a shared
  library, enabling better performance than calling the +R+ program
  (which may be done by using a normal Swift <<app_functions,app
@@ -2318,30 +2336,30 @@ on more complex systems.
 
 ==== Build troubleshooting
 
-If +exm-setup.zsh+ does not succeed, you may need to change how it
+If +build-all.sh+ does not succeed, you may need to change how it
 tries to configure and compile Swift/T.
 
 Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  +exm-setup.zsh+ will usually
+step is to determine why the build failed.  +build-all.sh+ will usually
 report the step at which configuration failed.  For example, if it was unable
 to locate a valid Tcl install, it will report this.  Then  you can try
 these steps to resolve the problem:
 
 1. If your system is covered by the link:sites.html[Sites Guide],
    check to see if the problem and solution are described there.
-2. Inspect +exm-settings.sh+ settings related to the reported problem.
+2. Inspect +swift-t-settings.sh+ settings related to the reported problem.
   For example, if locating a Tcl install failed, setting
   the +TCL_INSTALL+ and +TCL_VERSION+ variables to the correct location
   and version may help.
-3. If the options in +exm-settings.sh+ do not give sufficient control to
+3. If the options in +swift-t-settings.sh+ do not give sufficient control to
   fix the problem, you may need to manually configure some components
   of Swift/T, as described in the next section.
 
 [[Manual_build_configuration]]
 ==== Manual configuration
 
-+build-all.zsh+ and +exm-settings.sh+ provide a convenient way to install
-Swift/T. However, this method does not allow full control over
++build-all.zsh+ and +swift-t-settings.sh+ provide a convenient way to
+install Swift/T. However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
 Autotools/Makefile (C,Tcl) techniques.  You can more directly control
 the configuration when building through the arguments to +ant+ or
@@ -2379,8 +2397,8 @@ Use +make V=1+ to get verbose output from our Makefiles.
 Sometimes simply specifying the MPI directory is not enough to
 configure Swift/T.
 
-You can modify these settings in +exm-settings.sh+ to more precisely
-define locations of MPI resources:
+You can modify these settings in +swift-t-settings.sh+ to more
+precisely define locations of MPI resources:
 
 ----
 EXM_CUSTOM_MPI=1
@@ -2391,9 +2409,10 @@ MPI_LIB_NAME=funny.mpi.a
 
 If you are following the manual build process, configure Turbine with:
 ----
- --enable-custom --with-mpi-include=/path/to/mpi.h/include
-                 --with-mpi-lib-dir=/path/to/mpi_lib/lib
-                 --with-mpi-lib-name=funny.mpi.a
+ --enable-custom-mpi
+ --with-mpi-include=/path/to/mpi.h/include
+ --with-mpi-lib-dir=/path/to/mpi_lib/lib
+ --with-mpi-lib-name=funny.mpi.a
 ----
 
 === Performance enhancements
@@ -2403,8 +2422,9 @@ If you are following the manual build process, configure Turbine with:
 +
 ** Configure c-utils with +--disable-log+
 +
-3. Specify +EXM_OPT_BUILD=1+ in +exm-settings.sh+ or configure everything
-    with +--enable-fast+.  This disables assertions and other checks
+3. Specify +EXM_OPT_BUILD=1+ in +swift-t-settings.sh+ or configure
+   everything with +--enable-fast+.
+   This disables assertions and other checks.
 4. When making performance measurements, always subtract 0.1 seconds
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
@@ -2433,14 +2453,14 @@ file with Tcl scripts bundled in, which can then be compiled and linked
 with a C compiler.  This is a multi-step process that can be automated
 as part of your build process.
 
-NOTE: Ensure that static versions of the +c-utils+, +lb+, and +turbine+ libraries
-   were built, typically with a +.a+ suffix, e.g. +libadlb.a+.  These
-   are created by default, unless you specified +DISABLE_STATIC=0+ or
-   +--disable-static+.  To build a fully standalone
-   executable, you will also need to build a static version of Tcl
-   (with the +--disable-shared+ configure option), and static versions
-   of any other libraries your own code needs to link with, such
-   as your MPI distribution or application code.
+NOTE: Ensure that static versions of the +c-utils+, +lb+, and
+   +turbine+ libraries were built, typically with a +.a+ suffix,
+   e.g. +libadlb.a+.  These are created by default, unless you
+   specified +DISABLE_STATIC=0+ or +--disable-static+.  To build a
+   fully standalone executable, you will also need to build a static
+   version of Tcl (with the +--disable-shared+ configure option), and
+   static versions of any other libraries your own code needs to link
+   with, such as your MPI distribution or application code.
 
 1. Compile your Swift script
 +

@@ -820,7 +820,7 @@ Other MPI implementations are <a href="#Build_configuration">supported</a> as we
 </p>
 <div class="paragraph"><p>Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set <code>MPI_VERSION=2</code> (if using the <code>exm-setup.zsh</code> build process),
+you must set <code>MPI_VERSION=2</code> (if using the <code>build-all.sh</code> build process),
 or provide the <code>--enable-mpi-2</code> configure option (if using
 the manual build process).</p></div>
 </li>
@@ -876,7 +876,7 @@ Obtain the Swift/T source package
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t/downloads/exm-0.8.0.tar.gz</code></pre>
+<pre><code>wget http://swift-lang.github.io/swift-t/downloads/swift-t-0.9.0.tar.gz</code></pre>
 </div></div>
 <div class="paragraph"><p>Cf. <a href="http://swift-lang.github.io/swift-t/downloads.html">Swift/T Downloads</a>
 for other packages</p></div>
@@ -887,15 +887,16 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz exm-trunk.tar.gz
-cd exm-trunk</code></pre>
+<pre><code>tar xfz swift-t-0.9.0.tar.gz
+cd swift-t-0.9.0</code></pre>
 </div></div>
 </li>
 <li>
 <p>
-Edit the settings file: <code>exm-settings.sh</code>
+Edit the settings file: <code>dev/build/swift-t-settings.sh</code>
 </p>
-<div class="paragraph"><p>At a minimum, you must set the install directory with <code>EXM_PREFIX</code>.
+<div class="paragraph"><p>At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
+(the default will install to <code>/tmp</code>).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
 configuration settings so that all prerequisites can
@@ -908,7 +909,7 @@ enabling/disabling features, debug or optimized builds, etc.</p></div>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
-<td class="content">Save your <code>exm-settings.sh</code> when you download a new package</td>
+<td class="content">Save your <code>swift-t-settings.sh</code> when you download a new package</td>
 </tr></table>
 </div>
 </li>
@@ -918,16 +919,16 @@ Run the setup script
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>./exm-setup.zsh</code></pre>
+<pre><code>dev/build/build-all.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>If <code>exm-setup.zsh</code> does not succeed on your system, see Section
+<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed on your system, see Section
 <a href="#Build_configuration">Build configuration</a> below.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
-<td class="content">if you want more control than <code>exm-setup.zsh</code> provides, you can
+<td class="content">if you want more control than <code>build-all.sh</code> provides, you can
     build Swift/T with the
     <a href="#Manual_build_configuration">manual configure/make workflow</a>.</td>
 </tr></table>
@@ -939,8 +940,8 @@ Add Turbine and STC to your paths
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>PATH=${PATH}:/path/to/exm-install/turbine/bin
-PATH=${PATH}:/path/to/exm-install/stc/bin</code></pre>
+<pre><code>PATH=${PATH}:/path/to/swift-t-install/turbine/bin
+PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
 </div></div>
 </li>
 </ol></div>
@@ -1126,21 +1127,20 @@ Disable a specific compiler optimization.  See <a href="#Optimizations">[Optimiz
 printf("Hello world");</code></pre>
 </div></div>
 <div class="paragraph"><p>The newline is supplied by <code>printf()</code>.</p></div>
-<div class="paragraph"><p>Swift programs are composed of
-<em>composite</em> functions containing Swift code, <em>top-level</em> Swift code
-outside of composite functions, and <em>leaf</em> functions that wrap
-non-Swift code, for example native code functions or
-external application programs.</p></div>
-<div class="paragraph"><p>In typical Swift programs, leaf functions do the computational
-heavy-lifting, while Swift code provides the "glue" to compose
-leaf functions into a complete application.
-From the perspective of the Swift programmer, leaf functions
-atomic operations that wait for input variables and set output
-variables.</p></div>
+<div class="paragraph"><p>Swift programs are composed of <em>composite</em> functions containing Swift
+code, <em>top-level</em> Swift code outside of composite functions, and
+<em>leaf</em> functions that wrap non-Swift code, for example native code
+library functions or external application programs.</p></div>
+<div class="paragraph"><p>In typical Swift programs, <a href="#leaf_functions">leaf functions</a> do the
+computational heavy lifting, while Swift code provides the "glue" to
+compose leaf functions into a complete workflow.  From the perspective
+of the Swift programmer, leaf functions are atomic operations that
+wait for input variables and set output variables.</p></div>
 <div class="paragraph"><p>The definition of a function can come before or after the usage
 in the Swift source code.  E.g. a function defined on line 100
 of a Swift source file can be called at line 10.</p></div>
-<div class="paragraph"><p>STC input is preprocessed by <code>cpp</code>, the C preprocessor.</p></div>
+<div class="paragraph"><p>STC input is preprocessed by
+<a href="https://gcc.gnu.org/onlinedocs/cpp"><code>cpp</code></a>, the C preprocessor.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -2057,7 +2057,7 @@ The Python-style string format operator <code>format%(arg1,arg2,&#8230;)</code> 
 </div>
 </div>
 <div class="sect1">
-<h2 id="_standard_library">13. Standard library</h2>
+<h2 id="standard_library">13. Standard library</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Each category of function is shown with the required import
 statement, if necessary.</p></div>
@@ -2955,17 +2955,30 @@ in the hostmap and return one of the worker ranks running on that host.
 <div class="paragraph"><p>In typical Swift applications, the computationally intensive parts of
 the application are not written in the Swift language.  Rather, the
 work is done by <em>leaf functions</em> that are <em>composed</em> together with
-Swift code.  Leaf functions may be extension or app functions.</p></div>
-<div class="paragraph"><p>The Swift runtime, Turbine, is built on Tcl, a language which intends
-to makes it easy to call C/C++/Fortran functions.  The builtin
-functions mentioned above are implemented as extension functions in
-Tcl, which may wrap C/C++/Fortran functions.</p></div>
+Swift code.  The three key leaf function types are:</p></div>
+<div class="paragraph"><p><a href="#swift_extension_functions">Extension functions</a>:
+Functions that call to Tcl and/or native code.  These functions
+primarily operate on in-memory data, and are appropriate for
+high-performance computing.</p></div>
+<div class="paragraph"><p><a href="#app_functions"><code>app</code> functions</a>: Functions that call to a
+command-line program (the shell).  These functions primarily operate
+on files, and are appropriate for ordinary workflows.</p></div>
+<div class="paragraph"><p><a href="#external_scripting">External scripting functions</a>: Functions that
+call into an in-memory interpreter in another scripting language, such
+as Python, R, or Julia.  These functions allow you to integrate code
+from these other languages and run them without forking an
+interpreter, allowing you to run these languages on high-performance
+computers (including the Blue Gene and Cray).</p></div>
+<div class="paragraph"><p>The Swift runtime, Turbine, is built on Tcl, a language which was
+designed to to make it easy to call C/C++/Fortran functions.  The
+Swift/T <a href="#standard_library">standard library</a> is implemented as
+extension functions in Tcl, some of which wrap C functions.</p></div>
 <div class="sect2">
 <h3 id="swift_extension_functions">14.1. Swift extension functions</h3>
-<div class="paragraph"><p>Currently we support Tcl extension functions, where a function is
-implemented as a Tcl function.  Tcl has good support for wrapping
-native C/C++ functions, so this provides an indirect way to call
-C/C++ functions from Swift.</p></div>
+<div class="paragraph"><p>Swift/T extension functions connect Swift semantics to a Tcl function.
+Tcl has <a href="http://www.swig.org/papers/Tcl98/TclChap.html">excellent
+support</a> for wrapping native C/C++ functions, so this provides an
+excellent way to call C/C++ functions from Swift.</p></div>
 <div class="paragraph"><p>Several components are required to implement a Swift native code function:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3490,7 +3503,7 @@ Tcl code that is executed on success or failure.
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_external_scripting_support">14.6. External scripting support</h3>
+<h3 id="external_scripting">14.6. External scripting support</h3>
 <div class="sect3">
 <h4 id="_calling_python">14.6.1. Calling Python</h4>
 <div class="paragraph"><p>You can evaluate arbitrary Python code from within Swift/T.  For
@@ -3567,7 +3580,7 @@ code is passed to Python for evaluation.  The output is:</p></div>
 </td>
 <td class="content">To use this, Turbine must be configured with Python enabled
  before compiling, by setting <code>ENABLE_PYTHON=1</code>
- in <code>exm-settings.sh</code>, or by providing the <code>--enable-python</code> argument
+ in <code>swift-t-settings.sh</code>, or by providing the <code>--enable-python</code> argument
  to <code>configure</code>.  This feature is implemented by linking to Python
  as a shared library, enabling better performance than calling the
  <code>python</code> program (which may be done by using a normal Swift
@@ -3615,7 +3628,7 @@ the answer was: 104</code></pre>
 </td>
 <td class="content">To use this, Turbine must be configured with R enabled
  before compiling, by setting <code>ENABLE_R=1</code>
- in <code>exm-settings.sh</code>, or by providing the <code>--enable-r</code> argument
+ in <code>swift-t-settings.sh</code>, or by providing the <code>--enable-r</code> argument
  to <code>configure</code>.  This feature is implemented by linking to R as a shared
  library, enabling better performance than calling the <code>R</code> program
  (which may be done by using a normal Swift <a href="#app_functions">app  function</a>).  When installing R, be sure to include the <code>devel</code>
@@ -4310,10 +4323,10 @@ Enable GDB debugging.  Cf. <a href="#gdb">GDB</a>.
 on more complex systems.</p></div>
 <div class="sect3">
 <h4 id="_build_troubleshooting">17.4.1. Build troubleshooting</h4>
-<div class="paragraph"><p>If <code>exm-setup.zsh</code> does not succeed, you may need to change how it
+<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed, you may need to change how it
 tries to configure and compile Swift/T.</p></div>
 <div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  <code>exm-setup.zsh</code> will usually
+step is to determine why the build failed.  <code>build-all.sh</code> will usually
 report the step at which configuration failed.  For example, if it was unable
 to locate a valid Tcl install, it will report this.  Then  you can try
 these steps to resolve the problem:</p></div>
@@ -4326,7 +4339,7 @@ If your system is covered by the <a href="sites.html">Sites Guide</a>,
 </li>
 <li>
 <p>
-Inspect <code>exm-settings.sh</code> settings related to the reported problem.
+Inspect <code>swift-t-settings.sh</code> settings related to the reported problem.
   For example, if locating a Tcl install failed, setting
   the <code>TCL_INSTALL</code> and <code>TCL_VERSION</code> variables to the correct location
   and version may help.
@@ -4334,7 +4347,7 @@ Inspect <code>exm-settings.sh</code> settings related to the reported problem.
 </li>
 <li>
 <p>
-If the options in <code>exm-settings.sh</code> do not give sufficient control to
+If the options in <code>swift-t-settings.sh</code> do not give sufficient control to
   fix the problem, you may need to manually configure some components
   of Swift/T, as described in the next section.
 </p>
@@ -4343,8 +4356,8 @@ If the options in <code>exm-settings.sh</code> do not give sufficient control to
 </div>
 <div class="sect3">
 <h4 id="Manual_build_configuration">17.4.2. Manual configuration</h4>
-<div class="paragraph"><p><code>build-all.zsh</code> and <code>exm-settings.sh</code> provide a convenient way to install
-Swift/T. However, this method does not allow full control over
+<div class="paragraph"><p><code>build-all.zsh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
+install Swift/T. However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
 Autotools/Makefile (C,Tcl) techniques.  You can more directly control
 the configuration when building through the arguments to <code>ant</code> or
@@ -4385,8 +4398,8 @@ You may use <code>./configure --help</code> and the
 <h4 id="_non_standard_mpi_locations">17.4.3. Non-standard MPI locations</h4>
 <div class="paragraph"><p>Sometimes simply specifying the MPI directory is not enough to
 configure Swift/T.</p></div>
-<div class="paragraph"><p>You can modify these settings in <code>exm-settings.sh</code> to more precisely
-define locations of MPI resources:</p></div>
+<div class="paragraph"><p>You can modify these settings in <code>swift-t-settings.sh</code> to more
+precisely define locations of MPI resources:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>EXM_CUSTOM_MPI=1
@@ -4397,9 +4410,10 @@ MPI_LIB_NAME=funny.mpi.a</code></pre>
 <div class="paragraph"><p>If you are following the manual build process, configure Turbine with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code> --enable-custom --with-mpi-include=/path/to/mpi.h/include
-                 --with-mpi-lib-dir=/path/to/mpi_lib/lib
-                 --with-mpi-lib-name=funny.mpi.a</code></pre>
+<pre><code> --enable-custom-mpi
+ --with-mpi-include=/path/to/mpi.h/include
+ --with-mpi-lib-dir=/path/to/mpi_lib/lib
+ --with-mpi-lib-name=funny.mpi.a</code></pre>
 </div></div>
 </div>
 </div>
@@ -4425,8 +4439,9 @@ Configure c-utils with <code>--disable-log</code>
 </li>
 <li>
 <p>
-Specify <code>EXM_OPT_BUILD=1</code> in <code>exm-settings.sh</code> or configure everything
-    with <code>--enable-fast</code>.  This disables assertions and other checks
+Specify <code>EXM_OPT_BUILD=1</code> in <code>swift-t-settings.sh</code> or configure
+   everything with <code>--enable-fast</code>.
+   This disables assertions and other checks.
 </p>
 </li>
 <li>
@@ -4478,14 +4493,14 @@ as part of your build process.</p></div>
 <td class="icon">
 <div class="title">Note</div>
 </td>
-<td class="content">Ensure that static versions of the <code>c-utils</code>, <code>lb</code>, and <code>turbine</code> libraries
-   were built, typically with a <code>.a</code> suffix, e.g. <code>libadlb.a</code>.  These
-   are created by default, unless you specified <code>DISABLE_STATIC=0</code> or
-   <code>--disable-static</code>.  To build a fully standalone
-   executable, you will also need to build a static version of Tcl
-   (with the <code>--disable-shared</code> configure option), and static versions
-   of any other libraries your own code needs to link with, such
-   as your MPI distribution or application code.</td>
+<td class="content">Ensure that static versions of the <code>c-utils</code>, <code>lb</code>, and
+   <code>turbine</code> libraries were built, typically with a <code>.a</code> suffix,
+   e.g. <code>libadlb.a</code>.  These are created by default, unless you
+   specified <code>DISABLE_STATIC=0</code> or <code>--disable-static</code>.  To build a
+   fully standalone executable, you will also need to build a static
+   version of Tcl (with the <code>--disable-shared</code> configure option), and
+   static versions of any other libraries your own code needs to link
+   with, such as your MPI distribution or application code.</td>
 </tr></table>
 </div>
 <div class="olist arabic"><ol class="arabic">
@@ -4709,7 +4724,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 14:53:15 CDT
+Last updated 2016-06-29 11:31:33 CDT
 </div>
 </div>
 </body>
