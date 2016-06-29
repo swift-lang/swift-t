@@ -687,7 +687,9 @@ fi
 
 # R is optional
 HAVE_R=0
-USE_R=0
+USE_R=
+RCPP_PATH=0
+RINSIDE_PATH=0
 AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
@@ -695,6 +697,22 @@ AC_ARG_ENABLE(r,
       HAVE_R=1
       USE_R=""
     ])
+    
+AC_ARG_WITH(rinside,
+   AS_HELP_STRING([--with-rinside],
+                   [Use this RInside directory]),
+   [
+      HAVE_R=1
+      RINSIDE_PATH=${withval}
+   ])
+
+AC_ARG_WITH(rcpp,
+   AS_HELP_STRING([--with-rcpp],
+                   [Use this Rcpp directory]),
+   [
+      HAVE_R=1
+      RCPP_PATH=${withval}
+   ])
 
 AC_ARG_WITH(r,
    AS_HELP_STRING([--with-r],
@@ -702,45 +720,60 @@ AC_ARG_WITH(r,
   [
       HAVE_R=1
       USE_R=${withval}
-      AC_CHECK_FILE(${USE_R}/include/R.h, [],
-                    [AC_MSG_ERROR([Could not find R header!])])
-      # C++ is only required if we enable R
-      AC_PROG_CXX
-      LD=${CXX}
   ])
+
+if [[ ${HAVE_R} == 1 ]]
+then
+  AC_CHECK_FILE(${USE_R}/include/R.h, [],
+        [AC_MSG_ERROR([Could not find R header!])])
+  if [[ ${RINSIDE_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS="$(Rscript -e 'cat(.libPaths())')"
+      R_LIB_PATHS+=" ${USE_R}"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
+      done
+     else
+      RINSIDE_PATH=${USE_R}/RInside
+     fi
+  fi
+  
+  if [[ ${RCPP_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS="$(Rscript -e 'cat(.libPaths())')"
+      R_LIB_PATHS+=" ${USE_R}"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
+      done
+     else
+      RCPP_PATH=${USE_R}/Rcpp
+     fi
+  fi
+  
+  AC_CHECK_FILE(${RINSIDE_PATH}/include/RInside.h, [], 
+                 [AC_MSG_ERROR([Could not find RInside header!])])
+  AC_CHECK_FILE(${RCPP_PATH}/include/Rcpp.h, [], 
+                 [AC_MSG_ERROR([Could not find Rcpp header!])])
+
+  # C++ is only required if we enable R
+  AC_PROG_CXX
+  LD=${CXX}
+      
+fi
 
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)
-
-if (( HAVE_R ))
-then
-    AC_MSG_RESULT([R enabled])
-else
-    AC_MSG_RESULT([R disabled])
-fi
-
-HAVE_JULIA=0
-USE_JULIA=0
-AC_ARG_WITH(julia,
-   AS_HELP_STRING([--with-julia],
-                   [Use this julia source directory]),
-  [
-      HAVE_JULIA=1
-      USE_JULIA=${withval}
-      AC_CHECK_FILE(${USE_JULIA}/src/julia.h, [],
-                    [AC_MSG_ERROR([Could not find julia header!])])
-  ])
-AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])
-AC_SUBST(HAVE_JULIA)
-AC_SUBST(USE_JULIA)
-
-if (( HAVE_JULIA ))
-then
-    AC_MSG_RESULT([Julia enabled])
-else
-    AC_MSG_RESULT([Julia disabled])
-fi
+AC_SUBST(RINSIDE_PATH)
+AC_SUBST(RCPP_PATH)
 
 HAVE_COASTER=0
 USE_COASTER=0
