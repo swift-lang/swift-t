@@ -3,7 +3,7 @@
 # Use build.sh
 
 ASCIIDOC = asciidoc --attribute stylesheet=$(PWD)/swift.css \
-                    -a max-width=750px -a textwidth=80
+                    -a max-width=800px
 
 # Must compile leaf.txt with make-stc-docs.zsh (snippets, etc.)
 all: guide.html gallery.html dev.html sites.html
