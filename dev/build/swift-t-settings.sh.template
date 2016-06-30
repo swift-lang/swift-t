@@ -17,6 +17,7 @@ export SWIFT_T_PREFIX=/tmp/exm-install
 
 # C compiler and flags
 export CC=mpicc
+export CXX=mpicxx
 # export CFLAGS=
 # export LDFLAGS=
 
@@ -58,10 +59,15 @@ MPI_VERSION=3
 # Enable Python integration
 # ENABLE_PYTHON=1
 # PYTHON_INSTALL=/usr/
+# PYTHON_VERSION_MAJOR=2
+# PYTHON_VERSION_MINOR=7
+# PYTHON_VERSION_SUFFIX=m
 
 # Enable R integration
 # ENABLE_R=1
 # R_INSTALL=/usr/
+# RCPP_INSTALL=/usr/
+# RINSIDE_INSTALL=/usr/
 
 # Enable Julia integration
 # ENABLE_JULIA=1
