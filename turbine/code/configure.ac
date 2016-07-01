@@ -180,7 +180,7 @@ AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
-else 
+else
   AC_MSG_RESULT([no])
 fi
 AC_SUBST(USE_LIBCUTILS_A)
@@ -697,7 +697,7 @@ AC_ARG_ENABLE(r,
       HAVE_R=1
       USE_R=""
     ])
-    
+
 AC_ARG_WITH(rinside,
    AS_HELP_STRING([--with-rinside],
                    [Use this RInside directory]),
@@ -731,42 +731,46 @@ then
     AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
-      R_LIB_PATHS="$(Rscript -e 'cat(.libPaths())')"
-      R_LIB_PATHS+=" ${USE_R}"
+      R_LIB_PATHS=" ${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
       done
-     else
+    else
       RINSIDE_PATH=${USE_R}/RInside
-     fi
+    fi
   fi
-  
+
   if [[ ${RCPP_PATH} == 0 ]]
   then
     AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
-      R_LIB_PATHS="$(Rscript -e 'cat(.libPaths())')"
-      R_LIB_PATHS+=" ${USE_R}"
+      R_LIB_PATHS="${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
       done
-     else
+    else
       RCPP_PATH=${USE_R}/Rcpp
-     fi
+    fi
   fi
-  
-  AC_CHECK_FILE(${RINSIDE_PATH}/include/RInside.h, [], 
+
+  AC_CHECK_FILE(${RINSIDE_PATH}/include/RInside.h, [],
                  [AC_MSG_ERROR([Could not find RInside header!])])
-  AC_CHECK_FILE(${RCPP_PATH}/include/Rcpp.h, [], 
+  AC_CHECK_FILE(${RCPP_PATH}/include/Rcpp.h, [],
                  [AC_MSG_ERROR([Could not find Rcpp header!])])
 
   # C++ is only required if we enable R
   AC_PROG_CXX
   LD=${CXX}
-      
+
 fi
 
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
