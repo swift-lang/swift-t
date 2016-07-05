@@ -27,7 +27,7 @@ then
   rm -fv blas.tgz
   wget http://www.netlib.org/blas/blas.tgz
   tar xfz blas.tgz
-  cd BLAS
+  cd BLAS-3.5.0
   for f in *.f
   do
     gfortran -fPIC -c ${f}
