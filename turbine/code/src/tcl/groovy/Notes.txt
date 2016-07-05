@@ -1,8 +1,1 @@
 
-Linking notes for Python:
-
-Used Python 2.7 on MCS system 'crush' with Numpy.
-
-Error messages are bad- read them in order carefully.
-
-Check location of python in PATH and PYTHONPATH- these must agree.

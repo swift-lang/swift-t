@@ -720,6 +720,52 @@ else
     AC_MSG_RESULT([R disabled])
 fi
 
+
+#######################################################################################
+#######################################################################################
+#######################################################################################
+################################JVM scripting is optional##############################
+#######################################################################################
+#######################################################################################
+#######################################################################################
+HAVE_JVM_SCRIPT=0
+USE_JVM_SCRIPT_HOME=0
+AC_ARG_ENABLE(r,
+    AS_HELP_STRING([--enable-jvm-scripting],
+                   [Enable calling JVM scripting languages]),
+    [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=""
+    ])
+
+AC_ARG_WITH(r,
+   AS_HELP_STRING([--with-jvm-scripting-plugin-home],
+                   [Use this JVM scripting plugin home directory]),
+  [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=${withval}
+      AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
+                    [AC_MSG_ERROR([Could not find JVM scripting header!])])
+  ])
+
+AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
+AC_SUBST(HAVE_JVM_SCRIPT)
+AC_SUBST(USE_JVM_SCRIPT_HOME)
+
+if (( HAVE_JVM_SCRIPT ))
+then
+    AC_MSG_RESULT([JVM scripting enabled])
+else
+    AC_MSG_RESULT([JVM scripting disabled])
+fi
+#######################################################################################
+#######################################################################################
+#######################################################################################
+#######################################################################################
+#######################################################################################
+#######################################################################################
+
+
 HAVE_JULIA=0
 USE_JULIA=0
 AC_ARG_WITH(julia,
