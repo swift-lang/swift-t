@@ -18,7 +18,8 @@ which mpiexec
 print
 
 # Build BLAS
-export BLAS=/tmp/exm-blas-build/BLAS/BLAS.a
+BV=3.5.0
+export BLAS=/tmp/exm-blas-build/BLAS-$BV/BLAS.a
 if [[ ! -f ${BLAS} ]]
 then
   print "Downloading BLAS..."
@@ -27,7 +28,7 @@ then
   rm -fv blas.tgz
   wget http://www.netlib.org/blas/blas.tgz
   tar xfz blas.tgz
-  cd BLAS-3.5.0
+  cd BLAS-$BV
   for f in *.f
   do
     gfortran -fPIC -c ${f}
