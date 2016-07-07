@@ -28,18 +28,16 @@
 #if HAVE_JVM_SCRIPT==1
 // This file includes the Python header
 // It is auto-generated at configure time
-#include "src/tcl/swift-lang-swift-t-jvm-engine-master/swift-jvm.h"
+#include "src/tcl/swift-lang-swift-t-jvm-engine/src/swift-jvm.h"
 #endif
 
 // #define _GNU_SOURCE // for asprintf()
 #include <stdio.h>
-
 #include <tcl.h>
-
+#include <string.h>
 #include <list.h>
 #include "src/util/debug.h"
 #include "src/tcl/util.h"
-
 #include "tcl-groovy.h"
 
 #if HAVE_JVM_SCRIPT==1
@@ -51,18 +49,12 @@ Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
   // A chunk of Groovy code that does not return anything:
   char* code = Tcl_GetString(objv[1]);
-  // A chunk of Groovy code that returns a string to Swift:
-  char* return_expression = Tcl_GetString(objv[2]);
 
   // The string result from Groovy: Default is empty string
   char* s = "";
-  int   length = 0;
-  bool  empty = true;
-
   s = groovy(code);
-
-  Tcl_Obj* result = Tcl_NewStringObj(s, length);
-  if (!empty)
+  Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
+  if (strlen(s)>0)
     free(s);
  
   Tcl_SetObjResult(interp, result);

@@ -729,8 +729,8 @@ fi
 #######################################################################################
 #######################################################################################
 HAVE_JVM_SCRIPT=0
-USE_JVM_SCRIPT_HOME=0
-AC_ARG_ENABLE(r,
+USE_JVM_SCRIPT_HOME=swift-lang-swift-t-jvm-engine-master
+AC_ARG_ENABLE(jvm-scripting,
     AS_HELP_STRING([--enable-jvm-scripting],
                    [Enable calling JVM scripting languages]),
     [
@@ -738,8 +738,8 @@ AC_ARG_ENABLE(r,
       USE_JVM_SCRIPT_HOME=""
     ])
 
-AC_ARG_WITH(r,
-   AS_HELP_STRING([--with-jvm-scripting-plugin-home],
+AC_ARG_WITH(jvm-scripting,
+   AS_HELP_STRING([--with-jvm-scripting],
                    [Use this JVM scripting plugin home directory]),
   [
       HAVE_JVM_SCRIPT=1
@@ -758,6 +758,23 @@ then
 else
     AC_MSG_RESULT([JVM scripting disabled])
 fi
+
+
+#JVM HOME
+AC_SUBST(JVMHOME,"/usr/lib/jvm/java-8-oracle")
+AC_ARG_WITH([jvm-home],
+            [AS_HELP_STRING([--with-jvm-home],
+               [Set up the jvm home directory (default: /usr/lib/jvm/java-8-oracle)])],
+            [AC_SUBST(JVMHOME,$withval)],
+            )
+
+#JVM SWIFT-T LIBs
+AC_SUBST(JVMLIB,$(pwd)"/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes")
+AC_ARG_WITH([swift-jvm-engine-lib],
+            [AS_HELP_STRING([--with-swift-jvm-engine-lib],
+               [Set up the swift jvm engine lib (default: classes)])],
+            [AC_SUBST(JVMLIB,$withval)],
+            )
 #######################################################################################
 #######################################################################################
 #######################################################################################
@@ -1251,6 +1268,8 @@ AC_CONFIG_FILES(
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
+        src/tcl/groovy/module.mk
+        $USE_JVM_SCRIPT_HOME/src/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
         src/executables/module.mk
