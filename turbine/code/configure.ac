@@ -1268,8 +1268,8 @@ AC_CONFIG_FILES(
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
-        src/tcl/groovy/module.mk
         $USE_JVM_SCRIPT_HOME/src/module.mk
+        src/tcl/groovy/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
         src/executables/module.mk

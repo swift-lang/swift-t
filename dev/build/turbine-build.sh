@@ -146,7 +146,7 @@ if (( CONFIGURE )); then
   echo ${USE_JVM_SCRIPT_HOME}
   if (( ENABLE_JVM_SCRIPTING )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
-    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package
+    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
   ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \

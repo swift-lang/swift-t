@@ -26,9 +26,9 @@
 #include "config.h"
 
 #if HAVE_JVM_SCRIPT==1
-// This file includes the Python header
+// This file includes the JVM script header
 // It is auto-generated at configure time
-#include "src/tcl/swift-lang-swift-t-jvm-engine/src/swift-jvm.h"
+#include USE_JVM_SCRIPT_HOME "/src/swift-jvm.h"
 #endif
 
 // #define _GNU_SOURCE // for asprintf()
