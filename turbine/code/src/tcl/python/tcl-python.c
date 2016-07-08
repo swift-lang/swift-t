@@ -121,7 +121,8 @@ python_eval(bool persist, const char* code, Tcl_Obj** output)
     }
     char* command = item->data;
     DEBUG_TCL_TURBINE("python: command: %s", command);
-    rc = PyRun_SimpleString(command);
+    // rc = PyRun_SimpleString(command);
+    PyRun_String(command, 0, NULL, NULL);
     if (rc != 0) return handle_python_exception();
     DEBUG_TCL_TURBINE("python: command done.");
   }
