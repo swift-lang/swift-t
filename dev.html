@@ -740,7 +740,7 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:750px">
+<body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
@@ -1051,7 +1051,7 @@ Moderate Java knowledge is necessary for STC.  You need to know
 <li>
 <p>
 Concurrency: We do not use threads.  All Swift/T concurrency comes
-  from ADLB/MPI and the Turbine <code>rule</code> statement.  This makes things
+  from ADLB/MPI and the <a href="#rule">Turbine <code>rule</code></a> statement.  This makes things
   mostly sequential and easier to debug.
 </p>
 </li>
@@ -1378,7 +1378,7 @@ Other TIC features are implemented in C code exposed to Tcl in
 function <code>sprintf</code> which is implemented in <code>lib/string.tcl</code>, which
 simply uses the Tcl function <code>format</code>.  The <code>sprintf</code> function
 operates on Turbine data (TDs), which are integers that are the
-identifiers of data stored in ADLB.  A <code>rule</code> is used to trigger
+identifiers of data stored in ADLB.  A <a href="#rule"><code>rule</code></a> is used to trigger
 data-dependent execution, described next.</p></div>
 </div>
 <div class="sect2">
@@ -1445,7 +1445,7 @@ Rules
 <dd>
 <p>
 The ADLB/Turbine data dependency engine makes progress by evaluating
-Turbine rules.
+Turbine <a href="#rule">rules</a>.
 </p>
 <div class="ulist"><ul>
 <li>
@@ -1534,7 +1534,7 @@ data is ready.  (Cf. ADLB <code>engine.h</code>.)
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_the_turbine_rule_statement">8.4. The Turbine rule statement</h3>
+<h3 id="rule">8.4. The Turbine rule statement</h3>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3190,7 +3190,7 @@ for macros/constants.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-28 15:31:00 CDT
+Last updated 2016-07-13 12:18:41 CDT
 </div>
 </div>
 </body>

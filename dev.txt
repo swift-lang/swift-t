@@ -189,7 +189,7 @@ before compiling all the Java source into one big JAR file.
 * Moderate Java knowledge is necessary for STC.  You need to know
   ANTLR.  STC does not use any other complex Java APIs.
 * Concurrency: We do not use threads.  All Swift/T concurrency comes
-  from ADLB/MPI and the Turbine +rule+ statement.  This makes things
+  from ADLB/MPI and the <<rule,Turbine +rule+>> statement.  This makes things
   mostly sequential and easier to debug.
 
 === Things to do
@@ -363,7 +363,7 @@ Other TIC features are implemented in C code exposed to Tcl in
 function +sprintf+ which is implemented in +lib/string.tcl+, which
 simply uses the Tcl function +format+.  The +sprintf+ function
 operates on Turbine data (TDs), which are integers that are the
-identifiers of data stored in ADLB.  A +rule+ is used to trigger
+identifiers of data stored in ADLB.  A <<rule,+rule+>> is used to trigger
 data-dependent execution, described next.
 
 === Turbine data
@@ -398,7 +398,7 @@ open (unset) or closed (set).  TD IDs are represented in the log as
 Rules::
 
 The ADLB/Turbine data dependency engine makes progress by evaluating
-Turbine rules.
+Turbine <<rule,rules>>.
 * A rule has a a input TD list, a TD/subscript list, a rule type,
   and an action, and optional arguments.
 * The action is a simple Tcl string that is +eval+'d by a possibly
@@ -435,6 +435,7 @@ the TRs are activated when their input data is ready.  Thus, the
 servers subscribe to data stored in ADLB and are notified when
 data is ready.  (Cf. ADLB +engine.h+.)
 
+[[rule]]
 === The Turbine rule statement
 
 NOTE: This is the most important concept (the only concept) in Turbine.
