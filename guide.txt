@@ -1792,13 +1792,14 @@ Consider the following Swift script:
 import io;
 import python;
 
-i = python("print(\"python works\")\nrepr(2+2)");
+i = python("print(\"python works\")", "repr(2+2)");
 printf("i: %s", i);
 ----
 
-This simply evaluates the Python code line by line. The last line must
-return a Python string to Swift, in this case, the Python string
-+&#39;4&#39;+.  The expected output is shown below:
+The +python()+ function takes two string arguments, _code_ and an
+_expression_.  This simply executes the Python code, then returns the
+expression as a Swift string.  The expression must evaluate to a
+Python string.  The expected output is shown below:
 
 ----
 python works
@@ -1824,16 +1825,14 @@ typedef matrix string;
 (matrix A) eye(int n)
 {
   string command = sprintf("repr(eye(%i))", n);
-  string code = numpy+command;
-  matrix t = python(code);
+  matrix t = python(numpy, command);
   A = replace_all(t, "\n", "", 0);
 }
 
 (matrix R) add(matrix A1, matrix A2)
 {
   string command = sprintf("repr(%s+%s)", A1, A2);
-  string code = numpy+command;
-  matrix t = python(code);
+  matrix t = python(numpy, command);
   R = replace_all(t, "\n", "", 0);
 }
 
@@ -1875,11 +1874,10 @@ global const string template =
   x <- %i
   a <- x+100
   cat("the answer is: ", a, "\\n")
-  a
 """;
 
 code = sprintf(template, 4);
-s = R(code);
+s = R(code, "toString(a)");
 printf("the answer was: %i", s);
 ----
 
@@ -1894,6 +1892,11 @@ the answer was: 104
 ----
 
 As coded here, both R and Swift report the value of +a+.
+
+The +R()+ function takes two string arguments, _code_ and an
+_expression_.  This simply executes the R code, then returns the
+expression as a Swift string.  The expression must evaluate to a R
+string.
 
 NOTE: To use this, Turbine must be <<build_r,configured and compiled
 with R enabled>>.  This feature is implemented by linking to R as a
