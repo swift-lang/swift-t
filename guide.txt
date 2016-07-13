@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-June 2016
+July 2016
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -70,7 +70,7 @@ Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
 you must set +MPI_VERSION=2+ (if using the +build-all.sh+ build process),
 or provide the +--enable-mpi-2+ configure option (if using
-the manual build process).
+the <<build_manual,manual build process>>).
 +
 2. Install or locate Tcl 8.6.
 +
@@ -138,7 +138,7 @@ If +build-all.sh+ does not succeed on your system, see Section
 +
 TIP: if you want more control than +build-all.sh+ provides, you can
     build Swift/T with the
-    <<Manual_build_configuration, manual configure/make workflow>>.
+    <<build_manual,manual configure/make workflow>>.
 +
 5. Add Turbine and STC to your paths
 +
@@ -1854,15 +1854,13 @@ code is passed to Python for evaluation.  The output is:
                 [ 0.,  0.,  2.]])
 ----
 
-NOTE: To use this, Turbine must be configured with Python enabled
- before compiling, by setting +ENABLE_PYTHON=1+
- in +swift-t-settings.sh+, or by providing the +--enable-python+ argument
- to +configure+.  This feature is implemented by linking to Python
- as a shared library, enabling better performance than calling the
- +python+ program (which may be done by using a normal Swift
- <<app_functions,app function>>).  Error messages for minor coding
- mistakes may be badly mangled and refer to missing Python symbols-
- refer to the first error in the Python stack trace.
+NOTE: To use this, Turbine must be <<build_python,configured and
+compiled with Python enabled>>.  This feature is implemented by
+linking to Python as a shared library, enabling better performance
+than calling the +python+ program (which may be done by using a normal
+Swift <<app_functions,app function>>).  Error messages for minor
+Python coding mistakes may be badly mangled and refer to missing
+Python symbols- refer to the first error in the Python stack trace.
 
 ==== Calling R
 
@@ -1897,17 +1895,11 @@ the answer was: 104
 
 As coded here, both R and Swift report the value of +a+.
 
-NOTE: To use this, Turbine must be configured with R enabled
- before compiling, by setting +ENABLE_R=1+
- in +swift-t-settings.sh+, or by providing the +--enable-r+ argument
- to +configure+.  This feature is implemented by linking to R as a shared
- library, enabling better performance than calling the +R+ program
- (which may be done by using a normal Swift <<app_functions,app
- function>>).  When installing R, be sure to include the +devel+
- package.  When installing R from source, configure with
- +--enable-R-shlib+. You may need to set the environment variable
- +R_HOME+ to the directory containing the R installation.  For the APT
- package, this is +/usr/lib/R+.
+NOTE: To use this, Turbine must be <<build_r,configured and compiled
+with R enabled>>.  This feature is implemented by linking to R as a
+shared library, enabling better performance than calling the +R+
+program (which may be done by using a normal Swift <<app_functions,app
+function>>).
 
 [[julia]]
 ==== Calling Julia
@@ -1944,12 +1936,11 @@ string +f+.  It is parameterized three times by +sprintf()+.  Each
 Julia invocation runs concurrently (if enough processes are provided
 to Swift/T).
 
-NOTE: To use this, Turbine must be configured with Julia enabled
- before compiling, by  providing the +--enable-julia+ argument
- to +configure+.  This feature is implemented by linking to Julia
- as a shared library, enabling better performance than calling the
- +julia+ program (which may be done by using a normal Swift
- <<app_functions,app function>>).
+NOTE: To use this, Turbine must be <<build_julia,configured and
+compiled with Julia enabled>>.  This feature is implemented by linking
+to Julia as a shared library, enabling better performance than calling
+the +julia+ program (which may be done by using a normal Swift
+<<app_functions,app function>>).
 
 == More about functions
 In this section we discuss more advanced features for defining and
@@ -2355,10 +2346,10 @@ these steps to resolve the problem:
   fix the problem, you may need to manually configure some components
   of Swift/T, as described in the next section.
 
-[[Manual_build_configuration]]
+[[build_manual]]
 ==== Manual configuration
 
-+build-all.zsh+ and +swift-t-settings.sh+ provide a convenient way to
++build-all.sh+ and +swift-t-settings.sh+ provide a convenient way to
 install Swift/T. However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
 Autotools/Makefile (C,Tcl) techniques.  You can more directly control
@@ -2366,7 +2357,8 @@ the configuration when building through the arguments to +ant+ or
 +configure+.
 
 To perform the installation using +configure+/+make+, simply untar the
-distribution package and do:
+distribution package or clone from
+https://github.com/swift-lang/swift-t[GitHub] and do:
 
 ----
 cd c-utils
@@ -2385,12 +2377,12 @@ cd ../stc
 ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
+NOTE: Use +./configure --help+ and the link:sites.html[Sites Guide]
+for further options.
+
 ===== Makefile debugging
 
 Use +make V=1+ to get verbose output from our Makefiles.
-
-* You may use +./configure --help+ and the
-  link:sites.html[Sites Guide] for further options.
 
 ==== Non-standard MPI locations
 
@@ -2414,6 +2406,60 @@ If you are following the manual build process, configure Turbine with:
  --with-mpi-lib-dir=/path/to/mpi_lib/lib
  --with-mpi-lib-name=funny.mpi.a
 ----
+
+==== External scripting
+
+[[build_python]]
+===== Python
+
+To build Swift/T with Python, either:
+
+* When using +build-all.sh+: Set +ENABLE_PYTHON=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the
+ +--enable-python+ argument to +configure+.
+ See +./configure --help+ for further options.
+
+* When running, you may need to set +PYTHONPATH+ to the installation
+  directory.  For example:
++
+----
+export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7
+----
+
+[[build_r]]
+===== R
+
+To build Swift/T with R, either:
+
+* When using +build-all.sh+: set +ENABLE_R=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the +--enable-r+
+ argument to +configure+.  See +./configure&nbsp;--help+ for further
+ options.
+
+* When installing R from a binary package, be sure to include the
+  +devel+ package.
+
+* When installing R from source, configure R with +--enable-R-shlib+.
+
+* When running, you may need to set the environment variable +R_HOME+
+ to the directory containing the R installation.  For the APT package,
+ this is +/usr/lib/R+.
+
+[[build_julia]]
+===== Julia
+
+To build Swift/T with Julia, either:
+
+* When using +build-all.sh+: set +ENABLE_JULIA=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the
+ +--enable-julia+ argument to +configure+.  See +./configure --help+
+ for further options.
 
 === Performance enhancements
 
