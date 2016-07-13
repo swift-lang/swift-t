@@ -17,9 +17,9 @@
 
 namespace eval turbine {
 
-    proc python { persist code } {
+    proc python { persist code expression } {
         if { [ catch {
-            set result [ python::eval $persist $code ]
+            set result [ python::eval $persist $code $expression ]
         } e ] } {
             puts $e
             turbine_error "Error in Python code!"

@@ -21,9 +21,9 @@
 */
 
 @dispatch=WORKER
-(string output) python(string code) "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 0 <<code>> ]" ];
+(string output) python(string code, string expr) "turbine" "0.1.0"
+    [ "set <<output>> [ turbine::python 0 <<code>> <<expr>> ]" ];
 
 @dispatch=WORKER
-(string output) python_persist(string code) "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 1 <<code>> ]" ];
+(string output) python_persist(string code, string expr) "turbine" "0.1.0"
+    [ "set <<output>> [ turbine::python 1 <<code>> <<expr>> ]" ];
