@@ -3522,7 +3522,9 @@ printf("i: %s", i);</code></pre>
 <div class="paragraph"><p>The <code>python()</code> function takes two string arguments, <em>code</em> and an
 <em>expression</em>.  This simply executes the Python code, then returns the
 expression as a Swift string.  The expression must evaluate to a
-Python string.  The expected output is shown below:</p></div>
+Python string.  The expression argument may be omitted if desired, in
+which case the return value is always the empty string.  The expected
+output is shown below:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>python works
@@ -3582,7 +3584,9 @@ linking to Python as a shared library, enabling better performance
 than calling the <code>python</code> program (which may be done by using a normal
 Swift <a href="#app_functions">app function</a>).  Error messages for minor
 Python coding mistakes may be badly mangled and refer to missing
-Python symbols- refer to the first error in the Python stack trace.</td>
+Python symbols- refer to the first error in the Python stack trace.
+Due to the Python C API, error reports may be slightly better for the
+code argument and worse in the expression argument.</td>
 </tr></table>
 </div>
 </div>
@@ -3604,7 +3608,7 @@ global const string template =
 
 code = sprintf(template, 4);
 s = R(code, "toString(a)");
-printf("the answer was: %i", s);</code></pre>
+printf("the answer was: %s", s);</code></pre>
 </div></div>
 <div class="paragraph"><p>An <a href="http://www.r-project.org">R language</a> script template is placed in a
 Swift string.  The template is filled in with the value 4 by the Swift
@@ -3619,7 +3623,8 @@ the answer was: 104</code></pre>
 <div class="paragraph"><p>The <code>R()</code> function takes two string arguments, <em>code</em> and an
 <em>expression</em>.  This simply executes the R code, then returns the
 expression as a Swift string.  The expression must evaluate to a R
-string.</p></div>
+string.  The expression argument may be omitted if desired, in which
+case the return value is always the empty string.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -4804,7 +4809,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-13 14:42:56 CDT
+Last updated 2016-07-13 14:58:39 CDT
 </div>
 </div>
 </body>

@@ -1799,7 +1799,9 @@ printf("i: %s", i);
 The +python()+ function takes two string arguments, _code_ and an
 _expression_.  This simply executes the Python code, then returns the
 expression as a Swift string.  The expression must evaluate to a
-Python string.  The expected output is shown below:
+Python string.  The expression argument may be omitted if desired, in
+which case the return value is always the empty string.  The expected
+output is shown below:
 
 ----
 python works
@@ -1860,6 +1862,8 @@ than calling the +python+ program (which may be done by using a normal
 Swift <<app_functions,app function>>).  Error messages for minor
 Python coding mistakes may be badly mangled and refer to missing
 Python symbols- refer to the first error in the Python stack trace.
+Due to the Python C API, error reports may be slightly better for the
+code argument and worse in the expression argument.
 
 ==== Calling R
 
@@ -1878,7 +1882,7 @@ global const string template =
 
 code = sprintf(template, 4);
 s = R(code, "toString(a)");
-printf("the answer was: %i", s);
+printf("the answer was: %s", s);
 ----
 
 An http://www.r-project.org[R language] script template is placed in a
@@ -1896,7 +1900,8 @@ As coded here, both R and Swift report the value of +a+.
 The +R()+ function takes two string arguments, _code_ and an
 _expression_.  This simply executes the R code, then returns the
 expression as a Swift string.  The expression must evaluate to a R
-string.
+string.  The expression argument may be omitted if desired, in which
+case the return value is always the empty string.
 
 NOTE: To use this, Turbine must be <<build_r,configured and compiled
 with R enabled>>.  This feature is implemented by linking to R as a
