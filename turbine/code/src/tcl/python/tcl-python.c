@@ -68,6 +68,16 @@ handle_python_exception(void)
   return TCL_ERROR;
 }
 
+static int
+handle_python_non_string(PyObject* o)
+{
+  printf("python: expression did not return a string!\n");
+  fflush(stdout);
+  printf("python: expression evaluated to: ");
+  PyObject_Print(o, stdout, 0);
+  return TCL_ERROR;
+}
+
 static PyObject* main_module = NULL;
 static PyObject* main_dict   = NULL;
 
@@ -122,6 +132,7 @@ python_eval(bool persist, const char* code, const char* expression,
 
   // Convert Python result to C string, then to Tcl string:
   rc = PyArg_Parse(o, "s", &result);
+  if (rc != 1) return handle_python_non_string(o);
   DEBUG_TCL_TURBINE("python: result: %s\n", result);
   *output = Tcl_NewStringObj(result, -1);
 
