@@ -45,7 +45,7 @@
 #if HAVE_PYTHON==1
 
 static int
-handle_python_exception()
+handle_python_exception(void)
 {
   printf("\n");
   printf("PYTHON EXCEPTION:\n");
