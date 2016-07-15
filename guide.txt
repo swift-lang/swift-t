@@ -1372,10 +1372,11 @@ on files, and are appropriate for ordinary workflows.
 
 <<external_scripting,External scripting functions>>: Functions that
 call into an in-memory interpreter in another scripting language, such
-as Python, R, or Julia.  These functions allow you to integrate code
-from these other languages and run them without forking an
-interpreter, allowing you to run these languages on high-performance
-computers (including the Blue Gene and Cray).
+as <<leaf_python,Python>>, <<leaf_r,R>>, or <<leaf_julia,Julia>>.
+These functions allow you to integrate code from these other languages
+and run them without forking an interpreter, allowing you to run these
+languages on high-performance computers (including the Blue Gene and
+Cray).
 
 The Swift runtime, Turbine, is built on Tcl, a language which was
 designed to to make it easy to call C/C++/Fortran functions.  The
@@ -1779,6 +1780,7 @@ The arguments are:
 [[external_scripting]]
 === External scripting support
 
+[[leaf_python]]
 ==== Calling Python
 
 You can evaluate arbitrary Python code from within Swift/T.  For
@@ -1865,6 +1867,7 @@ Python symbols- refer to the first error in the Python stack trace.
 Due to the Python C API, error reports may be slightly better for the
 code argument and worse in the expression argument.
 
+[[leaf_r]]
 ==== Calling R
 
 Consider the following Swift script:
@@ -1909,7 +1912,7 @@ shared library, enabling better performance than calling the +R+
 program (which may be done by using a normal Swift <<app_functions,app
 function>>).
 
-[[julia]]
+[[leaf_julia]]
 ==== Calling Julia
 
 Consider the following Swift script:

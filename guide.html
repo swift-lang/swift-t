@@ -2965,10 +2965,11 @@ command-line program (the shell).  These functions primarily operate
 on files, and are appropriate for ordinary workflows.</p></div>
 <div class="paragraph"><p><a href="#external_scripting">External scripting functions</a>: Functions that
 call into an in-memory interpreter in another scripting language, such
-as Python, R, or Julia.  These functions allow you to integrate code
-from these other languages and run them without forking an
-interpreter, allowing you to run these languages on high-performance
-computers (including the Blue Gene and Cray).</p></div>
+as <a href="#leaf_python">Python</a>, <a href="#leaf_r">R</a>, or <a href="#leaf_julia">Julia</a>.
+These functions allow you to integrate code from these other languages
+and run them without forking an interpreter, allowing you to run these
+languages on high-performance computers (including the Blue Gene and
+Cray).</p></div>
 <div class="paragraph"><p>The Swift runtime, Turbine, is built on Tcl, a language which was
 designed to to make it easy to call C/C++/Fortran functions.  The
 Swift/T <a href="#standard_library">standard library</a> is implemented as
@@ -3505,7 +3506,7 @@ Tcl code that is executed on success or failure.
 <div class="sect2">
 <h3 id="external_scripting">14.6. External scripting support</h3>
 <div class="sect3">
-<h4 id="_calling_python">14.6.1. Calling Python</h4>
+<h4 id="leaf_python">14.6.1. Calling Python</h4>
 <div class="paragraph"><p>You can evaluate arbitrary Python code from within Swift/T.  For
 example, you can perform processing with a Python library.
 Once you have that working, you can use Swift/T to coordinate
@@ -3591,7 +3592,7 @@ code argument and worse in the expression argument.</td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_calling_r">14.6.2. Calling R</h4>
+<h4 id="leaf_r">14.6.2. Calling R</h4>
 <div class="paragraph"><p>Consider the following Swift script:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3637,7 +3638,7 @@ program (which may be done by using a normal Swift <a href="#app_functions">app 
 </div>
 </div>
 <div class="sect3">
-<h4 id="julia">14.6.3. Calling Julia</h4>
+<h4 id="leaf_julia">14.6.3. Calling Julia</h4>
 <div class="paragraph"><p>Consider the following Swift script:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4809,7 +4810,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-13 14:58:39 CDT
+Last updated 2016-07-15 10:58:13 CDT
 </div>
 </div>
 </body>
