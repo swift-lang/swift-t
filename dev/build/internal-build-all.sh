@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-set -x
-
 THIS=$( cd $(dirname $0) && pwd )
 
 pushd ${C_UTILS_SRC}

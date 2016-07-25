@@ -6,9 +6,7 @@ source ${THISDIR}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
-      # Disabled due to Turbine configure check
-      #make clean
-      :
+      make clean
   fi
 fi
 
