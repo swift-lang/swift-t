@@ -1,4 +1,14 @@
 
+////
+Swift/T downloads, AsciiDoc format
+http://swift-lang.github.io/swift-t/downloads.html
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
 = Swift/T Downloads
 
 == Overview
