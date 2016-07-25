@@ -23,7 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-EXM_VERSION=0.9.0
+EXM_VERSION=0.9.1
 STC_VERSION=0.7.0
 TURBINE_VERSION=0.8.0
 ADLB_VERSION=0.7.0
