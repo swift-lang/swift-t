@@ -740,7 +740,7 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:750px">
+<body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
@@ -1051,10 +1051,18 @@ environment.  This may be used multiple times
 </dt>
 <dd>
 <p>
-Set a script to run before launching Turbine.  This
-script will have <code>TURBINE_OUTPUT</code> in the environment, so you may
-perform additional configuration just before job launch.
+Set an initialization script to run before launching
+Turbine.  This script will have <code>TURBINE_OUTPUT</code> in the environment,
+so you may perform additional configuration just before job launch.
 </p>
+<div class="paragraph"><p>Other available environment variables include
+<code>PROCS</code> (the total number of MPI processes),
+<code>TURBINE_WORKERS</code> (the number of Turbine worker processes),
+<code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
+<code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.
+See <code>run-init.zsh</code> for other variables.
+Also, all environment variables from <code>turbine-config.sh</code>
+(i.e., Turbine installation information) are available.</p></div>
 </dd>
 <dt class="hdlist1">
 <code>-n &lt;procs&gt;</code>
@@ -1099,7 +1107,7 @@ through to the scheduler
 <p>
 Make script verbose.  This typically just applies <code>set -x</code>,
 allowing you to inspect variables and arguments as passed to the
-system scheduler (<code>qsub</code>).
+system scheduler (e.g., <code>qsub</code>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2783,7 +2791,8 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 0.8.0<br />
-Last updated 2016-06-20 11:22:19 CDT
+Last updated
+ 2016-07-27 10:41:05 CDT
 </div>
 </div>
 </body>

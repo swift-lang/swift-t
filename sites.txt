@@ -214,9 +214,18 @@ For scheduled systems, Turbine accepts a common set of command line options.
 +-e <key>=<value>+:: Set an environment variable in the job
 environment.  This may be used multiple times
 
-+-i <script>+:: Set a script to run before launching Turbine.  This
-script will have +TURBINE_OUTPUT+ in the environment, so you may
-perform additional configuration just before job launch.
++-i <script>+:: Set an initialization script to run before launching
+Turbine.  This script will have +TURBINE_OUTPUT+ in the environment,
+so you may perform additional configuration just before job launch.
++
+Other available environment variables include
++PROCS+ (the total number of MPI processes),
++TURBINE_WORKERS+ (the number of Turbine worker processes),
++SCRIPT+ and +ARGS+ (the Swift/Turbine command),
++WALLTIME+, +NODES+, +PPN+, etc.
+See +run-init.zsh+ for other variables.
+Also, all environment variables from +turbine-config.sh+
+(i.e., Turbine installation information) are available.
 
 +-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
 
@@ -233,7 +242,7 @@ through to the scheduler
 
 +-V+:: Make script verbose.  This typically just applies +set -x+,
 allowing you to inspect variables and arguments as passed to the
-system scheduler (+qsub+).
+system scheduler (e.g., +qsub+).
 
 +-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
        (reduces number of files that must be read from file system).
