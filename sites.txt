@@ -9,7 +9,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-Swift/T v0.8.0, June 2016
+Swift/T v0.9.1, July 2016
 
 ////
 
