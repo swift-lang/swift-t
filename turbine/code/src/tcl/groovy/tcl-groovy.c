@@ -28,7 +28,8 @@
 #if HAVE_JVM_SCRIPT==1
 // This file includes the JVM script header
 // It is auto-generated at configure time
-#include USE_JVM_SCRIPT_HOME "/src/swift-jvm.h"
+// TODO: Make this directory location configurable
+#include "swift-t-jvm/src/swift-jvm.h"
 #endif
 
 // #define _GNU_SOURCE // for asprintf()
