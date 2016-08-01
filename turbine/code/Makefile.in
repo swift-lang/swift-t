@@ -345,6 +345,10 @@ ifneq ($(USE_R),)
 endif
 LIBS += -lRInside -lR
 endif
+ifeq ($(HAVE_JVM_SCRIPT),1)
+  SWIFTTJVM_LIB = $(USE_JVM_SCRIPT_HOME)/src
+  LIBS += -L$(SWIFTTJVM_LIB)/.libs -lswifttjvm
+endif
 ifeq ($(HAVE_JULIA),1)
   JULIA_LIB = $(USE_JULIA)/usr/lib
   ifeq ($(filter $(JULIA_LIB),$(SYSTEM_LIBS)),)
@@ -423,7 +427,7 @@ include src/tcl/mpe/module.mk
 include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
-include $(USE_JVM_SCRIPT_HOME)/src/module.mk
+# include $(USE_JVM_SCRIPT_HOME)/src/module.mk
 include src/tcl/groovy/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk

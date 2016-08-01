@@ -722,36 +722,33 @@ fi
 
 # JVM scripting support: Disabled by default
 HAVE_JVM_SCRIPT=0
-USE_JVM_SCRIPT_HOME=swift-t-jvm
+USE_JVM_SCRIPT_HOME=0
 AC_ARG_ENABLE(jvm-scripting,
     AS_HELP_STRING([--enable-jvm-scripting],
                    [Enable calling JVM scripting languages]),
     [
       HAVE_JVM_SCRIPT=1
-      USE_JVM_SCRIPT_HOME=""
+      USE_JVM_SCRIPT_HOME=swift-t-jvm
     ])
-
 AC_ARG_WITH(jvm-scripting,
    AS_HELP_STRING([--with-jvm-scripting],
                    [Use this JVM scripting plugin home directory]),
   [
       HAVE_JVM_SCRIPT=1
       USE_JVM_SCRIPT_HOME=${withval}
-      AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
-                    [AC_MSG_ERROR([Could not find JVM scripting header!])])
   ])
-
-AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
-AC_SUBST(HAVE_JVM_SCRIPT)
-AC_SUBST(USE_JVM_SCRIPT_HOME)
-
-if (( HAVE_JVM_SCRIPT ))
+if (( ${HAVE_JVM_SCRIPT} ))
 then
+    AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
+                  [AC_MSG_ERROR([Could not find JVM scripting header!])])
     AC_MSG_RESULT([JVM scripting enabled])
 else
     AC_MSG_RESULT([JVM scripting disabled])
 fi
 
+AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
+AC_SUBST(HAVE_JVM_SCRIPT)
+AC_SUBST(USE_JVM_SCRIPT_HOME)
 
 #JVM HOME
 AC_SUBST(JVMHOME,"/usr/lib/jvm/java-8-oracle")
@@ -1256,7 +1253,6 @@ AC_CONFIG_FILES(
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
-        $USE_JVM_SCRIPT_HOME/src/module.mk
         src/tcl/groovy/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
@@ -1276,5 +1272,8 @@ AC_CONFIG_FILES(
         tests/runbin.zsh
 	Makefile
 )
+
+        #         $USE_JVM_SCRIPT_HOME/src/module.mk
+
 
 AC_OUTPUT
