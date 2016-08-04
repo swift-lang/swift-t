@@ -377,8 +377,6 @@ ifeq ($(strip $(TCL_LIB_SO)),)
   LIBS += $(TCL_LIB_DEPS)
 endif
 
-dirname = $(patsubst %/,%,$(dir $(1)))
-
 # Build RPath to link to libraries at runtime.
 # Avoid adding system directories to RPATH - this often causes the wrong
 # version of the library to be linked from the system path.
@@ -494,6 +492,8 @@ DEPCC = gcc
 ifeq ($(MPI_INCLUDE),0)
 	DEP_DROP = -d mpi.h
 endif
+
+dirname = $(patsubst %/,%,$(dir $(1)))
 
 %.d: %.c
 	$(Q) "  DEP		$(@)"
