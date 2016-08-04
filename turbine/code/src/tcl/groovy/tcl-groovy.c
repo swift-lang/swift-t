@@ -50,10 +50,17 @@ Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
   // A chunk of Groovy code that does not return anything:
   char* code = Tcl_GetString(objv[1]);
+    // A chunk of Groovy code that returns a string:
+  char* expr = Tcl_GetString(objv[2]);
+
+  printf("calling groovy...\n");
+  groovy(code);
 
   // The string result from Groovy: Default is empty string
-  char* s = "";
-  s = groovy(code);
+
+  char* s = groovy(expr);
+  TCL_CONDITION(s != NULL, "groovy code failed: %s", code);
+
   Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
   if (strlen(s)>0)
     free(s);
