@@ -716,8 +716,8 @@ ifeq ($(ENABLE_STATIC_PKG),1)
 endif
 
 BINS := $(shell ls bin/turbine \
-                     bin/turbine-write-doubles \
-                     bin/turbine-read-doubles )
+                   bin/turbine-write-doubles \
+                   bin/turbine-read-doubles )
 ifeq ($(ENABLE_STATIC_PKG),1)
 	BINS += $(TURBINE_EXECUTABLES)
 endif
