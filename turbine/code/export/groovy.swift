@@ -15,6 +15,6 @@
  */
 
 @dispatch=WORKER
-  (string output) groovy(string code)
+  (string output) groovy(string code, string expr)
     "turbine" "0.1.0"
-    [ "set <<output>> [ groovy::eval <<code>> ]" ];
+    [ "set <<output>> [ groovy::eval <<code>> <<expr>> ]" ];
