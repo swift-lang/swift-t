@@ -21,8 +21,8 @@
  *      Author: spagnuolo
  */
 
-#ifndef HAVE_JVM_SCRIPT
-#define HAVE_JVM_SCRIPT
+#ifndef TCL_GROOVY_H
+#define TCL_GROOVY_H
 
 void tcl_groovy_init(Tcl_Interp* interp);
 
