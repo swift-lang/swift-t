@@ -20,7 +20,7 @@ package require turbine 0.0.1
 # No rules
 proc rules { } {
   set s [ groovy::eval "println \"HOWDY1\"" "println \"HOWDY2\"" ]
-  puts $s
+  puts "The Tcl value is: $s"
 }
 
 turbine::defaults
