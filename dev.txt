@@ -14,7 +14,7 @@ Settings:
 
 = Swift/T Developers' Guide
 Justin M. Wozniak
-June 2016
+August 2016
 
 This document is for developers interested in modifying or extending
 the Swift/T codebase.
@@ -164,6 +164,22 @@ http://aegis.sourceforge.net/auug97.pdf
 The Autoconf-based configuration system primarily sets C preprocessor
 variables in +config.h+ via +AC_DEFINE()+ and Makefile variables via
 +AC_SUBST()+.
+
+Much of the complexity in the build system is due to attempts to run
+on various exotic systems.
+
+C-utils and ADLB have relatively simple builds.
+Turbine is the most complex- that is where everything is linked
+together.
+
+One common error mode is a silent +make+ failure due to a missing
+header file.  Use +make check_includes+ to detect these errors.
+
+Other useful Makefile features:
+
+* +make V=1+ or +make V=2+ for verbose builds
+* +make deps+ to make the dependency files
+* +make tags+ to make an +etags+ +TAGS+ file
 
 === Ant
 
