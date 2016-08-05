@@ -720,6 +720,54 @@ else
     AC_MSG_RESULT([R disabled])
 fi
 
+# JVM scripting support: Disabled by default
+HAVE_JVM_SCRIPT=0
+USE_JVM_SCRIPT_HOME=0
+AC_ARG_ENABLE(jvm-scripting,
+    AS_HELP_STRING([--enable-jvm-scripting],
+                   [Enable calling JVM scripting languages]),
+    [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=swift-t-jvm
+    ])
+AC_ARG_WITH(jvm-scripting,
+   AS_HELP_STRING([--with-jvm-scripting],
+                   [Use this JVM scripting plugin home directory]),
+  [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=${withval}
+  ])
+if (( ${HAVE_JVM_SCRIPT} ))
+then
+    AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
+                  [AC_MSG_ERROR([Could not find JVM scripting header!])])
+    AC_MSG_RESULT([JVM scripting enabled])
+else
+    AC_MSG_RESULT([JVM scripting disabled])
+fi
+
+AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
+AC_SUBST(HAVE_JVM_SCRIPT)
+AC_SUBST(USE_JVM_SCRIPT_HOME)
+
+#JVM HOME
+AC_SUBST(JVMHOME,"/usr/lib/jvm/java-8-oracle")
+AC_ARG_WITH([jvm-home],
+            [AS_HELP_STRING([--with-jvm-home],
+               [Set up the jvm home directory (default: /usr/lib/jvm/java-8-oracle)])],
+            [AC_SUBST(JVMHOME,$withval)],
+            )
+
+#JVM SWIFT-T LIBs
+AC_SUBST(JVMLIB,$(pwd)"/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes")
+AC_ARG_WITH([swift-jvm-engine-lib],
+            [AS_HELP_STRING([--with-swift-jvm-engine-lib],
+               [Set up the swift jvm engine lib (default: classes)])],
+            [AC_SUBST(JVMLIB,$withval)],
+            )
+# End of JVM scripting configuration
+
+# Julia: optional
 HAVE_JULIA=0
 USE_JULIA=0
 AC_ARG_WITH(julia,
@@ -1205,6 +1253,7 @@ AC_CONFIG_FILES(
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
+        src/tcl/groovy/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
         src/executables/module.mk
@@ -1223,5 +1272,8 @@ AC_CONFIG_FILES(
         tests/runbin.zsh
 	Makefile
 )
+
+        #         $USE_JVM_SCRIPT_HOME/src/module.mk
+
 
 AC_OUTPUT

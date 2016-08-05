@@ -29,6 +29,15 @@ if (( EXM_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
+if (( ENABLE_JVM_SCRIPTING )); then
+  echo "JVM Scripting enabled"
+  EXTRA_ARGS+=" --enable-jvm-scripting"
+fi
+
+if [ ! -z "$USE_JVM_SCRIPT_HOME" ]; then
+  EXTRA_ARGS+=" --with-jvm-scripting=${USE_JVM_SCRIPT_HOME}"
+fi
+
 if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
 fi
@@ -132,6 +141,11 @@ else
 fi
 
 if (( CONFIGURE )); then
+  echo ${USE_JVM_SCRIPT_HOME}
+  if (( ENABLE_JVM_SCRIPTING )); then
+    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
+    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
+  fi
   ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
               --with-c-utils=${C_UTILS_INSTALL} \
