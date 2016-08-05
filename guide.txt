@@ -1328,7 +1328,7 @@ as 64-bit integers).
 +blob_read(file) -> blob+:: Reads whole file, returning it as a
 blob.
 
-+blob_write(blob) -> blob+:: Writes whole file with given blob.
++blob_write(blob) -> file+:: Writes whole file with given blob.
 
 [[library_location]]
 === Location
