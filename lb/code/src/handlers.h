@@ -71,15 +71,26 @@ typedef adlb_code (*xlb_handler)(int caller);
 extern xlb_handler xlb_handlers[];
 extern int64_t xlb_handler_counters[];
 
+#ifdef __clang__
+#define STR(x) #x
+#define PRAGMA(x) _Pragma(STR(x))
+#define IGNORE_TAUTOLOGICAL_COMPARE                             \
+  PRAGMA(clang diagnostic push)                                 \
+  PRAGMA(clang diagnostic ignored "-Wtautological-compare")
+#define END_IGNORE PRAGMA(clang diagnostic pop)
+#else // Not clang
+#define IGNORE_TAUTOLOGICAL_COMPARE // noop
+#define END_IGNORE                  // noop
+#endif
+
 static inline bool
 xlb_handler_valid(adlb_tag tag)
 {
-// These comparisons should always be true:  
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wtautological-compare"
-  return (tag < XLB_MAX_HANDLERS) &&
-         (xlb_handlers[tag] != NULL);
-#pragma clang diagnostic pop
+  // This comparison should always be true:
+  IGNORE_TAUTOLOGICAL_COMPARE;
+  bool result = (tag < XLB_MAX_HANDLERS) && (xlb_handlers[tag] != NULL);
+  END_IGNORE;
+  return result;
 }
 
 static inline adlb_code
