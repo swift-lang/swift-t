@@ -93,7 +93,7 @@ noop_executor_register(void)
   tc = turbine_add_async_exec(exec);
   turbine_check(tc);
 
-  return TURBINE_EXEC_SUCCESS;
+  return TURBINE_SUCCESS;
 }
 
 static turbine_exec_code

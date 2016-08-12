@@ -44,7 +44,7 @@ static bool initialized = false;
 static long counter = 0;
 
 /** Memory remaining */
-static unsigned long memory;
+static long memory;
 
 /**
    Cache entries

@@ -74,8 +74,12 @@ extern int64_t xlb_handler_counters[];
 static inline bool
 xlb_handler_valid(adlb_tag tag)
 {
-  return (tag >= 0) && (tag < XLB_MAX_HANDLERS) &&
+// These comparisons should always be true:  
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-compare"
+  return (tag < XLB_MAX_HANDLERS) &&
          (xlb_handlers[tag] != NULL);
+#pragma clang diagnostic pop
 }
 
 static inline adlb_code
