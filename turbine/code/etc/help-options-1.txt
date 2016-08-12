@@ -1,4 +1,4 @@
-   -e <variable>:<value> 
+   -e <variable>=<value>
           Set an environment variable 
    -i <init.sh> 
           Provide a initialization script
