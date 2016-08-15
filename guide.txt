@@ -1953,6 +1953,63 @@ to Julia as a shared library, enabling better performance than calling
 the +julia+ program (which may be done by using a normal Swift
 <<app_functions,app function>>).
 
+[[leaf_jvm]]
+==== Calling JVM languages
+
+Many languages based on the Java Virtual Machine may be accessed directly
+from Swift/T, including Groovy, JavaScript, Scala, and Clojure.
+
+===== Groovy
+
+The +groovy()+ function accepts one string argument,
+a fragment of Groovy code.  The value returned to Swift/T is
+whatever was put on +stdout+:
+----
+s1 = groovy("println \"GROOVY WORKS\"");
+trace(s1);
+----
+thus, +s1="GROOVY WORKS"+.
+
+===== JavaScript
+
+The +javascript()+ function accepts one string argument,
+a fragment of JavaScript code.  The value returned to Swift/T is
+whatever was put on +stdout+:
+----
+s2 = javascript("print(\"JAVASCRIPT WORKS\");");
+trace(s2);
+----
+thus, +s2="JAVASCRIPT WORKS"+.
+
+===== Scala
+
+The +scala()+ function accepts one string argument,
+a fragment of Scala code.  The value returned to Swift/T is
+whatever was put on +stdout+:
+----
+s3 = scala("println(\"SCALA WORKS\")");
+trace(s3);
+----
+
+===== Clojure
+
+The +clojure()+ function accepts two string arguments,
+a fragment of Clojure code that returns nothing and a
+fragment of Clojure code that returns a string value.
+The string value is returned to Swift/T:
+----
+s4 = clojure("\"CLOJURE SETUP\"", "\"CLOJURE WORKS\"");
+trace(s4);
+----
+thus, the value +"CLOJURE SETUP"+ is discarded by the interpreter and
++s4="CLOJURE WORKS"+.
+
+NOTE: To use the JVM, Turbine must be <<build_jvm,configured and
+compiled with the JVM languages module>>.  This feature is implemented by linking
+to the JVM as a shared library, enabling better performance than calling
+the +java+ program (which may be done by using a normal Swift
+<<app_functions,app function>>).
+
 == More about functions
 In this section we discuss more advanced features for defining and
 calling functions.
@@ -2485,8 +2542,13 @@ To build Swift/T with Julia, either:
 +
 ----
 cd turbine/code
-git clone https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git swift-t-jvm
+git clone                                                            \
+  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
+  swift-t-jvm
 ----
+////
+We use the character backslash to wrap the clone command across lines readably
+////
 
 * Build the Swift/T JVM Engine with:
 +
