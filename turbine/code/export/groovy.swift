@@ -14,7 +14,3 @@
  * limitations under the License
  */
 
-@dispatch=WORKER
-  (string output) groovy(string code, string expr)
-    "turbine" "0.1.0"
-    [ "set <<output>> [ groovy::eval <<code>> <<expr>> ]" ];
