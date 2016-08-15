@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-July 2016
+August 2016
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -2447,7 +2447,7 @@ To build Swift/T with R, either:
 * When using +build-all.sh+: set +ENABLE_R=1+ in
  +swift-t-settings.sh+.
 
-* When doing a <<build_manual,manual build>> provide the +--enable-r+
+* When doing a <<build_manual,manual build>> provide the +--with-r+
  argument to +configure+.  See +./configure&nbsp;--help+ for further
  options.
 
@@ -2459,6 +2459,10 @@ To build Swift/T with R, either:
 * When running, you may need to set the environment variable +R_HOME+
  to the directory containing the R installation.  For the APT package,
  this is +/usr/lib/R+.
+
+* When running, you may need to set the environment variable +LD_LIBRARY_PATH+
+ to include the directory containing the R shared library.  For a
+ source R build on Linux, this is +R_HOME/lib/R/lib+.
 
 [[build_julia]]
 ===== Julia
