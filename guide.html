@@ -3682,6 +3682,71 @@ the <code>julia</code> program (which may be done by using a normal Swift
 </tr></table>
 </div>
 </div>
+<div class="sect3">
+<h4 id="leaf_jvm">14.6.4. Calling JVM languages</h4>
+<div class="paragraph"><p>Many languages based on the Java Virtual Machine may be accessed directly
+from Swift/T, including Groovy, JavaScript, Scala, and Clojure.</p></div>
+<div class="sect4">
+<h5 id="_groovy">Groovy</h5>
+<div class="paragraph"><p>The <code>groovy()</code> function accepts one string argument,
+a fragment of Groovy code.  The value returned to Swift/T is
+whatever was put on <code>stdout</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>s1 = groovy("println \"GROOVY WORKS\"");
+trace(s1);</code></pre>
+</div></div>
+<div class="paragraph"><p>thus, <code>s1="GROOVY WORKS"</code>.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_javascript">JavaScript</h5>
+<div class="paragraph"><p>The <code>javascript()</code> function accepts one string argument,
+a fragment of JavaScript code.  The value returned to Swift/T is
+whatever was put on <code>stdout</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>s2 = javascript("print(\"JAVASCRIPT WORKS\");");
+trace(s2);</code></pre>
+</div></div>
+<div class="paragraph"><p>thus, <code>s2="JAVASCRIPT WORKS"</code>.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_scala">Scala</h5>
+<div class="paragraph"><p>The <code>scala()</code> function accepts one string argument,
+a fragment of Scala code.  The value returned to Swift/T is
+whatever was put on <code>stdout</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>s3 = scala("println(\"SCALA WORKS\")");
+trace(s3);</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_clojure">Clojure</h5>
+<div class="paragraph"><p>The <code>clojure()</code> function accepts two string arguments,
+a fragment of Clojure code that returns nothing and a
+fragment of Clojure code that returns a string value.
+The string value is returned to Swift/T:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>s4 = clojure("\"CLOJURE SETUP\"", "\"CLOJURE WORKS\"");
+trace(s4);</code></pre>
+</div></div>
+<div class="paragraph"><p>thus, the value <code>"CLOJURE SETUP"</code> is discarded by the interpreter and
+<code>s4="CLOJURE WORKS"</code>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">To use the JVM, Turbine must be <a href="#build_jvm">configured and compiled with the JVM languages module</a>.  This feature is implemented by linking
+to the JVM as a shared library, enabling better performance than calling
+the <code>java</code> program (which may be done by using a normal Swift
+<a href="#app_functions">app function</a>).</td>
+</tr></table>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -4523,9 +4588,14 @@ Clone the Swift/T JVM Engine with:
 <div class="listingblock">
 <div class="content">
 <pre><code>cd turbine/code
-git clone https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git swift-t-jvm</code></pre>
+git clone                                                            \
+  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
+  swift-t-jvm</code></pre>
 </div></div>
 </li>
+</ul></div>
+<div class="paragraph"><p>//// We use the character backslash to wrap the clone command across lines readably</p></div>
+<div class="ulist"><ul>
 <li>
 <p>
 Build the Swift/T JVM Engine with:
@@ -4884,7 +4954,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-15 10:11:36 CDT
+ 2016-08-15 16:33:00 CDT
 </div>
 </div>
 </body>
