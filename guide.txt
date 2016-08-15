@@ -2725,8 +2725,8 @@ Additional options include:
 === Debugging Swift/T runs
 
 Applying the debugger allows you to debug native code linked to Swift/T
-from a normal debugger.  This will allow you to step through your code
-(and the Swift/T run time libraries).
+from a normal debugger.  This allows you to step through your leaf
+function code (and the Swift/T run time libraries).
 
 * When using Swift/T dynamically with Tcl packages (the default), you
   need to attach to the +tclsh+ process.  This process loads your
@@ -2741,11 +2741,11 @@ The Swift/T launcher scripts support http://valgrind.org[valgrind].
 Simply set the environment variable +VALGRIND+ to the valgrind command
 you wish to use.  A suppressions file is distributed with Turbine to
 ignore known issues.  (Swift/T is valgrind-clean but there are some
-issues in Tcl.)
+issues in the libraries we use.)
 
 ----
-export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
-turbine program.tcl
+export VALGRIND="valgrind --suppressions=SWIFT_T/turbine/code/turbine.supp"
+swift-t program.swift
 ----
 
 [[gdb]]
@@ -2757,7 +2757,7 @@ Turbine execution by using the +GDB_RANK+ variable:
 
 ----
 $ export GDB_RANK=0
-$ turbine program.tcl
+$ swift-t program.swift
 Waiting for gdb: rank: 0 pid: 23274
 ...
 ----
