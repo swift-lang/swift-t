@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">July 2016</span><br />
+<span id="author">August 2016</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2878,7 +2878,7 @@ blob.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blob_write(blob) &#8594; blob</code>
+<code>blob_write(blob) &#8594; file</code>
 </dt>
 <dd>
 <p>
@@ -4457,7 +4457,7 @@ When using <code>build-all.sh</code>: set <code>ENABLE_R=1</code> in
 </li>
 <li>
 <p>
-When doing a <a href="#build_manual">manual build</a> provide the <code>--enable-r</code>
+When doing a <a href="#build_manual">manual build</a> provide the <code>--with-r</code>
  argument to <code>configure</code>.  See <code>./configure&nbsp;--help</code> for further
  options.
 </p>
@@ -4478,6 +4478,13 @@ When installing R from source, configure R with <code>--enable-R-shlib</code>.
 When running, you may need to set the environment variable <code>R_HOME</code>
  to the directory containing the R installation.  For the APT package,
  this is <code>/usr/lib/R</code>.
+</p>
+</li>
+<li>
+<p>
+When running, you may need to set the environment variable <code>LD_LIBRARY_PATH</code>
+ to include the directory containing the R shared library.  For a
+ source R build on Linux, this is <code>R_HOME/lib/R/lib</code>.
 </p>
 </li>
 </ul></div>
@@ -4810,7 +4817,8 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-15 10:58:13 CDT
+Last updated
+ 2016-08-15 09:53:36 CDT
 </div>
 </div>
 </body>
