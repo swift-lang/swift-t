@@ -4,14 +4,14 @@
 
 import jvm;
 
-s1 = groovy("\"HOWDY1\"", "println \"HOWDY2\"");
+s1 = groovy("println \"GROOVY WORKS\"");
 trace(s1);
 
-s2 = javascript("\"HOWDY1\"", "print(\"HOWDY2\");");
+s2 = javascript("print(\"JAVASCRIPT WORKS\");");
 trace(s2);
 
-s3 = scala("\"HOWDY1\"", "println(\"SCALA HOWDY2\")");
+s3 = scala("println(\"SCALA WORKS\")");
 trace(s3);
 
-s4 = clojure("\"HOWDY1\"", "\"CLOJURE HOWDY2\"");
+s4 = clojure("\"CLOJURE SETUP\"", "\"CLOJURE WORKS\"");
 trace(s4);

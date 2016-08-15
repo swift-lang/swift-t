@@ -20,15 +20,15 @@
     [ "set <<output>> [ jvm::clojure <<code>> <<expr>> ]" ];
 
 @dispatch=WORKER
-  (string output) groovy(string code, string expr)
+  (string output) groovy(string code)
     "turbine" "0.1.0"
-    [ "set <<output>> [ jvm::groovy <<code>> <<expr>> ]" ];
+    [ "set <<output>> [ jvm::groovy <<code>> ]" ];
 
 @dispatch=WORKER
-(string output) javascript(string code, string expr) "turbine" "0.1.0"
-    [ "set <<output>> [ jvm::javascript <<code>> <<expr>> ]" ];
+(string output) javascript(string code) "turbine" "0.1.0"
+    [ "set <<output>> [ jvm::javascript <<code>> ]" ];
 
 @dispatch=WORKER
-  (string output) scala(string code, string expr)
+  (string output) scala(string code)
     "turbine" "0.1.0"
-    [ "set <<output>> [ jvm::scala <<code>> <<expr>> ]" ];
+    [ "set <<output>> [ jvm::scala <<code>> ]" ];

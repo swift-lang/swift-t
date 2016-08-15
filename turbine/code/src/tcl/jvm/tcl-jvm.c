@@ -48,15 +48,14 @@ Clojure_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj* const objv[])
 {
   TCL_ARGS(3);
-  // A chunk of Clojure code that does not return anything:
+  // A chunk of Clojure code
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of Clojure code that returns a string:
+  // A chunk of Clojure code that returns a value
   char* expr = Tcl_GetString(objv[2]);
 
   clojure(code);
 
   // The string result from Clojure: Default is empty string
-
   char* s = clojure(expr);
   TCL_CONDITION(s != NULL, "clojure code failed: %s", code);
 
@@ -72,20 +71,14 @@ static int
 Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(3);
-  // A chunk of Groovy code that does not return anything:
+  TCL_ARGS(2);
+  // A chunk of Groovy code:
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of Groovy code that returns a string:
-  char* expr = Tcl_GetString(objv[2]);
-
-  printf("calling groovy...\n");
-  groovy(code);
 
   // The string result from Groovy: Default is empty string
+  char* s = groovy(code);
 
-  char* s = groovy(expr);
   TCL_CONDITION(s != NULL, "groovy code failed: %s", code);
-
   Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
   if (strlen(s)>0)
     free(s);
@@ -98,19 +91,14 @@ static int
 JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(3);
-  // A chunk of JavaScript code that does not return anything:
+  TCL_ARGS(2);
+  // A chunk of JavaScript code:
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of JavaScript code that returns a string:
-  char* expr = Tcl_GetString(objv[2]);
-
-  javascript(code);
 
   // The string result from JavaScript: Default is empty string
+  char* s = javascript(code);
 
-  char* s = javascript(expr);
   TCL_CONDITION(s != NULL, "javascript code failed: %s", code);
-
   Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
   if (strlen(s)>0)
     free(s);
@@ -123,19 +111,14 @@ static int
 Scala_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(3);
-  // A chunk of Scala code that does not return anything:
+  TCL_ARGS(2);
+  // A chunk of Scala code:
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of Scala code that returns a string:
-  char* expr = Tcl_GetString(objv[2]);
-
-  scala(code);
 
   // The string result from Scala: Default is empty string
+  char* s = scala(code);
 
-  char* s = scala(expr);
   TCL_CONDITION(s != NULL, "scala code failed: %s", code);
-
   Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
   if (strlen(s)>0)
     free(s);
