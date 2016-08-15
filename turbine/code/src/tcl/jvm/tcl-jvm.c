@@ -76,7 +76,7 @@ JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
   // A chunk of JavaScript code that does not return anything:
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of Groovy code that returns a string:
+    // A chunk of JavaScript code that returns a string:
   char* expr = Tcl_GetString(objv[2]);
 
   javascript(code);
@@ -101,7 +101,7 @@ Scala_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(3);
   // A chunk of Scala code that does not return anything:
   char* code = Tcl_GetString(objv[1]);
-    // A chunk of Groovy code that returns a string:
+    // A chunk of Scala code that returns a string:
   char* expr = Tcl_GetString(objv[2]);
 
   scala(code);
