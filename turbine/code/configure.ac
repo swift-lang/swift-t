@@ -180,7 +180,7 @@ AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
-else 
+else
   AC_MSG_RESULT([no])
 fi
 AC_SUBST(USE_LIBCUTILS_A)
@@ -1250,10 +1250,10 @@ AC_CONFIG_FILES(
         src/tcl/blob/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
-        src/tcl/groovy/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
         src/executables/module.mk

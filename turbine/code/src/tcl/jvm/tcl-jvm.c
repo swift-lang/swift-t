@@ -119,10 +119,10 @@ JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 /**
-   Shorten object creation lines.  r:: namespace is prepended
+   Shorten object creation lines.  jvm:: namespace is prepended
  */
 #define COMMAND(tcl_function, c_function) \
-    Tcl_CreateObjCommand(interp, "groovy::" tcl_function, c_function, \
+    Tcl_CreateObjCommand(interp, "jvm::" tcl_function, c_function, \
                          NULL, NULL);
 /**
    Called when Tcl loads this extension
@@ -140,8 +140,8 @@ Tcljvm_Init(Tcl_Interp *interp)
 }
 
 void
-tcl_groovy_init(Tcl_Interp* interp)
+tcl_jvm_init(Tcl_Interp* interp)
 {
-  COMMAND("groovy", Groovy_Eval_Cmd);
-  COMMAND("javascript", Groovy_Eval_Cmd);
+  COMMAND("groovy",     Groovy_Eval_Cmd);
+  COMMAND("javascript", JavaScript_Eval_Cmd);
 }

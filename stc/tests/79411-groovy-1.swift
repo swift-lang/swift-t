@@ -7,5 +7,5 @@ import jvm;
 s1 = groovy("\"HOWDY1\"", "println \"HOWDY2\"");
 trace(s1);
 
-s2 = javascript("\"HOWDY1\"", "\"HOWDY2\"");
+s2 = javascript("\"HOWDY1\"", "print(\"HOWDY2\");");
 trace(s2);
