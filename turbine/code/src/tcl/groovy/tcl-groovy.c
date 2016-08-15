@@ -39,7 +39,7 @@
 #include <list.h>
 #include "src/util/debug.h"
 #include "src/tcl/util.h"
-#include "tcl-groovy.h"
+#include "tcl-jvm.h"
 
 #if HAVE_JVM_SCRIPT==1
 
