@@ -15,15 +15,15 @@
  */
 
 /*
- * tcl-groovy.h
+ * tcl-jvm.h
  *
  *  Created on: July 07, 2016
  *      Author: spagnuolo
  */
 
-#ifndef TCL_GROOVY_H
-#define TCL_GROOVY_H
+#ifndef TCL_JVM_H
+#define TCL_JVM_H
 
-void tcl_groovy_init(Tcl_Interp* interp);
+void tcl_jvm_init(Tcl_Interp* interp);
 
 #endif

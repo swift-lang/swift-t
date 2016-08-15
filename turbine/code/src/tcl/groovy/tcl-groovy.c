@@ -15,12 +15,12 @@
  */
 
 /*
- * tcl-groovy.c
+ * tcl-jvm.c
  *
  *  Created on: July 7, 2016
  *      Author: spagnuolo
  *
- *  Tcl extension calling into Groovy interpreter from a JVM instance
+ *  Tcl extension calling into JVM-based language interpreters
  */
 
 #include "config.h"
@@ -64,7 +64,32 @@ Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
   if (strlen(s)>0)
     free(s);
- 
+
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj* const objv[])
+{
+  TCL_ARGS(3);
+  // A chunk of JavaScript code that does not return anything:
+  char* code = Tcl_GetString(objv[1]);
+    // A chunk of Groovy code that returns a string:
+  char* expr = Tcl_GetString(objv[2]);
+
+  javascript(code);
+
+  // The string result from Groovy: Default is empty string
+
+  char* s = javascript(expr);
+  TCL_CONDITION(s != NULL, "javascript code failed: %s", code);
+
+  Tcl_Obj* result = Tcl_NewStringObj(s, strlen(s));
+  if (strlen(s)>0)
+    free(s);
+
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -73,6 +98,16 @@ Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+           int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  turbine_tcl_condition_failed(interp, objv[0],
+                       "Turbine not compiled with JVM scripting support");
+  return TCL_ERROR;
+}
+
+static int
+JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -93,12 +128,12 @@ Groovy_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
    Called when Tcl loads this extension
  */
 int DLLEXPORT
-Tclgroovy_Init(Tcl_Interp *interp)
+Tcljvm_Init(Tcl_Interp *interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
 
-  if (Tcl_PkgProvide(interp, "groovy", "0.1") == TCL_ERROR)
+  if (Tcl_PkgProvide(interp, "jvm", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
   return TCL_OK;
@@ -107,5 +142,6 @@ Tclgroovy_Init(Tcl_Interp *interp)
 void
 tcl_groovy_init(Tcl_Interp* interp)
 {
-  COMMAND("eval", Groovy_Eval_Cmd);
+  COMMAND("groovy", Groovy_Eval_Cmd);
+  COMMAND("javascript", Groovy_Eval_Cmd);
 }
