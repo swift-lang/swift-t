@@ -248,6 +248,8 @@ USE_PYTHON_NAME    = @USE_PYTHON_NAME@
 
 HAVE_R = @HAVE_R@
 USE_R  = @USE_R@
+RCPP_PATH = @RCPP_PATH@
+RINSIDE_PATH = @RINSIDE_PATH@
 
 HAVE_JULIA = @HAVE_JULIA@
 USE_JULIA  = @USE_JULIA@
@@ -277,10 +279,18 @@ ifeq ($(HAVE_PYTHON),1)
 endif
 ifeq  ($(HAVE_R),1)
 ifneq ($(USE_R),)
-	INCLUDES += -I $(USE_R)/include
-        R_LIBRARY = $(USE_R)/library
-        INCLUDES += -I $(R_LIBRARY)/RInside/include
-        INCLUDES += -I $(R_LIBRARY)/Rcpp/include
+  INCLUDES += -I $(USE_R)/include
+  R_LIBRARY = $(USE_R)/library
+  ifneq ($(RINSIDE_PATH),)
+   INCLUDES += -I $(RINSIDE_PATH)/include
+  else
+   INCLUDES += -I $(R_LIBRARY)/RInside/include
+  endif
+  ifneq ($(RCPP_PATH),)
+   INCLUDES += -I $(RCPP_PATH)/include
+  else
+   INCLUDES += -I $(R_LIBRARY)/Rcpp/include
+  endif
 endif
 endif
 ifeq ($(HAVE_JULIA),1)
@@ -336,14 +346,33 @@ endif
 ifeq ($(HAVE_R),1)
 ifneq ($(USE_R),)
   R_LIB = $(USE_R)/lib
-  ifeq ($(filter $(R_LIB),$(SYSTEM_LIBS)),)
-    LIBS += -L$(R_LIB)
-    RPATH_R = yes
+  LIBS += -L$(R_LIB)
+  RPATH_R = yes
+  ifneq ($(RINSIDE_PATH),)
+    RINSIDE_LIB = $(RINSIDE_PATH)/lib
+  else
+    RINSIDE_LIB = $(USE_R)/library/RInside/lib
   endif
-  RINSIDE_LIB = $(USE_R)/library/RInside/lib
   LIBS += -L$(RINSIDE_LIB)
 endif
 LIBS += -lRInside -lR
+
+ifeq ($(USE_MAC),yes)
+# if mac, the RInside library and python install name can be incorrect
+# when installed locally. This will fix that in tclturbine
+  RINSIDE_INSTALL_NAME=$(shell otool -D $(RINSIDE_PATH)/lib/libRInside.dylib | sed -n 2p)
+  FIX_RINSIDE_INSTALL_NAME = install_name_tool -change $(RINSIDE_INSTALL_NAME) $(RINSIDE_LIB)/libRInside.dylib $(TCL_TURBINE_SO)
+
+  ifneq ($(USE_PYTHON_LIBDIR),)
+    PYTHON_LIB_NAME =  $(USE_PYTHON_LIBDIR)/lib$(USE_PYTHON_NAME).dylib
+    PYTHON_INSTALL_NAME = $(shell otool -D $(PYTHON_LIB_NAME) | sed -n 2p)
+    FIX_PYTHON_INSTALL_NAME = install_name_tool -change $(PYTHON_INSTALL_NAME) $(PYTHON_LIB_NAME) $(TCL_TURBINE_SO)
+  endif
+else
+   FIX_RINSIDE_INSTALL_NAME =
+   FIX_PYTHON_INSTALL_NAME =
+endif
+
 endif
 ifeq ($(HAVE_JVM_SCRIPT),1)
   SWIFTTJVM_LIB = $(USE_JVM_SCRIPT_HOME)/src
@@ -562,6 +591,8 @@ endif
              $(LIBS) \
              $(RPATHS) \
              $(MAC_NAME)
+	$(FIX_RINSIDE_INSTALL_NAME)
+	$(FIX_PYTHON_INSTALL_NAME)
 
 $(STATIC_PKG_A): $(STATIC_PKG_OBJS) $(STATIC_PKG_RESOURCE_O)
 	$(Q) "  AR		$(@)"

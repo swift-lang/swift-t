@@ -46,11 +46,31 @@ if [ ! -z "$PYTHON_INSTALL" ]; then
   EXTRA_ARGS+=" --with-python=${PYTHON_INSTALL}"
 fi
 
+if [ ! -z "$PYTHON_VERSION_MAJOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-major=${PYTHON_VERSION_MAJOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_MINOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-minor=${PYTHON_VERSION_MINOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_SUFFIX" ]; then
+  EXTRA_ARGS+=" --with-python-version-suffix=${PYTHON_VERSION_SUFFIX}"
+fi
+
 if (( ENABLE_R )); then
   EXTRA_ARGS+=" --enable-r"
 fi
 if [ ! -z "$R_INSTALL" ]; then
   EXTRA_ARGS+=" --with-r=${R_INSTALL}"
+fi
+
+if [ ! -z "$RINSIDE_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-rinside=${RINSIDE_INSTALL}"
+fi
+
+if [ ! -z "$RCPP_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-rcpp=${RCPP_INSTALL}"
 fi
 
 if (( ENABLE_JULIA )); then
