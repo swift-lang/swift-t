@@ -4508,6 +4508,72 @@ When doing a <a href="#build_manual">manual build</a> provide the
 </li>
 </ul></div>
 </div>
+<div class="sect4">
+<h5 id="build_jvm">JVM languages module</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Using the JVM languages currently requires a <a href="#build_manual">manual build</a>.
+</p>
+</li>
+<li>
+<p>
+Clone the Swift/T JVM Engine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd turbine/code
+git clone https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git swift-t-jvm</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Build the Swift/T JVM Engine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd swift-t-jvm
+./bootstrap
+./configure
+make</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Build Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd turbine/code
+./configure --enable-jvm-scripting
+make install</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At runtime, set environment variable <code>LD_LIBRARY_PATH</code> to contain
+the JVM lib and the Swift/T JVM Engine lib (where <code>SWIFT_T</code> is your
+Swift/T source directory):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export LD_LIBRARY_PATH=
+LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
+LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At runtime, set environment variable <code>SWIFT_JVM_USER_LIB</code> to contain
+Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source directory):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -4818,7 +4884,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-15 09:53:36 CDT
+ 2016-08-15 10:11:36 CDT
 </div>
 </div>
 </body>
