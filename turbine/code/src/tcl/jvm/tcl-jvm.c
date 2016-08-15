@@ -81,7 +81,7 @@ JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   javascript(code);
 
-  // The string result from Groovy: Default is empty string
+  // The string result from JavaScript: Default is empty string
 
   char* s = javascript(expr);
   TCL_CONDITION(s != NULL, "javascript code failed: %s", code);
@@ -96,7 +96,7 @@ JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 Scala_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj* const objv[])
+               int objc, Tcl_Obj* const objv[])
 {
   TCL_ARGS(3);
   // A chunk of Scala code that does not return anything:
@@ -106,7 +106,7 @@ Scala_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   scala(code);
 
-  // The string result from Groovy: Default is empty string
+  // The string result from Scala: Default is empty string
 
   char* s = scala(expr);
   TCL_CONDITION(s != NULL, "scala code failed: %s", code);
