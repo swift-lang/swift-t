@@ -128,7 +128,7 @@ turbine_async_exec_initialize(void)
                     "Executors already init");
 
   executors_init = true;
-  return TURBINE_EXEC_SUCCESS;
+  return TURBINE_SUCCESS;
 }
 
 static turbine_code
@@ -542,7 +542,8 @@ check_tasks(turbine_context tcx, turbine_executor *executor, bool poll,
     cb = (completed[i].success) ? succ_cb : fail_cb;
 
     tc = run_callback(tcx, executor, &completed[i], cb);
-    turbine_check(tc);
+    if (tc != TURBINE_SUCCESS)
+      return TURBINE_EXEC_TASK;
 
     if (succ_cb != NULL)
     {
@@ -590,7 +591,6 @@ run_callback(turbine_context tcx, turbine_executor *executor,
       tc = TURBINE_ERROR_EXTERNAL;
       goto cleanup;
     }
-
   }
 
   tc = TURBINE_SUCCESS;

@@ -1608,21 +1608,23 @@ handle_typeof(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
-
+  long long i;
+  RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
+  id = i;
+  
   adlb_data_type type;
-  int resp;
+  int t;
   adlb_data_code dc = xlb_data_typeof(id, &type);
   if (dc == ADLB_DATA_SUCCESS)
   {
-    resp = (int)type;
+    t = (int) type;
   }
   else
   {
-    resp = -1;
+    t = -1;
   }
 
-  RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  RSEND(&t, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
@@ -1631,23 +1633,25 @@ handle_container_typeof(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
-
+  long long i;
+  RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
+  id = i;
+  
   adlb_data_type types[2];
-  int resp[2];
-  adlb_data_code dc;
-  dc = xlb_data_container_typeof(id, &types[0], &types[1]);
+  int t[2];
+  adlb_data_code dc =
+    xlb_data_container_typeof(id, &types[0], &types[1]);
   if (dc == ADLB_DATA_SUCCESS) {
-    resp[0] = (int)types[0];
-    resp[1] = (int)types[1];
+    t[0] = (int) types[0];
+    t[1] = (int) types[1];
   }
   else
   {
-   resp[0] = -1;
-   resp[1] = -1;
+    t[0] = -1;
+    t[1] = -1;
   }
 
-  RSEND(resp, 2, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  RSEND(t, 2, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
@@ -1754,7 +1758,9 @@ handle_lock(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_LOCK);
+  long long i;
+  RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_LOCK);
+  id = i;
 
   DEBUG("Lock: "ADLB_PRID" by rank: %i",
         ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), caller);
@@ -1780,7 +1786,9 @@ handle_unlock(int caller)
 {
   adlb_datum_id id;
   MPI_Status status;
-  RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_UNLOCK);
+  long long i;
+  RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_UNLOCK);
+  id = i;
 
   DEBUG("Unlock: "ADLB_PRID" by rank: %i ",
         ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), caller);

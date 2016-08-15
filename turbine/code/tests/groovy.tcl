@@ -12,18 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# LANGS.TCL
-# Tcl helpers for use of external scripting languages (Python, R, ...)
+# Does nothing
+# Nice to have for quick experiments
 
-namespace eval turbine {
+package require turbine 0.0.1
 
-    proc python { persist code expression } {
-        if { [ catch {
-            set result [ python::eval $persist $code $expression ]
-        } e ] } {
-            puts $e
-            turbine_error "Error in Python code!"
-        }
-        return $result
-    }
+# No rules
+proc rules { } {
+  set s [ groovy::eval "println \"HOWDY1\"" "println \"HOWDY2\"" ]
+  puts "The Tcl value is: $s"
 }
+
+turbine::defaults
+turbine::init $servers "Swift"
+turbine::start rules
+
+
+turbine::finalize
+
+puts OK
+
+proc exit args {}

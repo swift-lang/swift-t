@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 University of Chicago and Argonne National Laboratory
+ * Copyright 2016 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,16 @@
  * limitations under the License
  */
 
-@dispatch=WORKER
-  (string output) R(string code, string return_expression="\"\"")
-    "turbine" "0.1.0"
-    [ "set <<output>> [ r::eval <<code>> <<return_expression>> ]" ];
+/*
+ * tcl-groovy.h
+ *
+ *  Created on: July 07, 2016
+ *      Author: spagnuolo
+ */
+
+#ifndef TCL_GROOVY_H
+#define TCL_GROOVY_H
+
+void tcl_groovy_init(Tcl_Interp* interp);
+
+#endif

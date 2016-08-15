@@ -62,6 +62,7 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
+set -x
 if (( CONFIGURE )); then
   ./configure --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${LB_INSTALL} ${EXTRA_ARGS}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 University of Chicago and Argonne National Laboratory
+ * Copyright 2016 University of Chicago and Argonne National Laboratory
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,6 @@
  */
 
 @dispatch=WORKER
-  (string output) R(string code, string return_expression="\"\"")
+  (string output) groovy(string code, string expr)
     "turbine" "0.1.0"
-    [ "set <<output>> [ r::eval <<code>> <<return_expression>> ]" ];
+    [ "set <<output>> [ groovy::eval <<code>> <<expr>> ]" ];

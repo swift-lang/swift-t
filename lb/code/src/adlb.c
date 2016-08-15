@@ -1822,40 +1822,43 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
   MPI_Request request;
 
   int to_server_rank = ADLB_Locate(id);
-  IRECV(type, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  int t;
+  IRECV(&t, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Typeof "ADLB_PRID"=>%i",
-        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *type);
+  DEBUG("ADLB_Typeof "ADLB_PRID" => %i",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), t);
 
-  if (*type == -1)
+  if (t == -1)
     return ADLB_ERROR;
+  *type = t;
   return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
-                                 adlb_data_type* val_type)
+                                         adlb_data_type* val_type)
 {
   MPI_Status status;
   MPI_Request request;
   // DEBUG("ADLB_Container_typeof: %li", id);
 
   int to_server_rank = ADLB_Locate(id);
-  adlb_data_type types[2];
-  IRECV(types, 2, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+
+  int t[2];
+  IRECV(t, 2, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_CONTAINER_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_typeof "ADLB_PRID"=>(%i,%i)",
-        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), types[0], types[1]);
+  DEBUG("ADLB_Container_typeof "ADLB_PRID" => (%i,%i)",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), t[0], t[1]);
 
-  if (types[0] == -1 || types[1] == -1)
+  if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
-
-  *key_type = types[0];
-  *val_type = types[1];
+  
+  *key_type = t[0];
+  *val_type = t[1];
   return ADLB_SUCCESS;
 }
 

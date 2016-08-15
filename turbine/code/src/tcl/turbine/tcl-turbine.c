@@ -72,6 +72,7 @@
 
 #include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
+#include "src/tcl/groovy/tcl-groovy.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 #include "src/tcl/julia/tcl-julia.h"
 #include "src/tcl/python/tcl-python.h"
@@ -1760,6 +1761,7 @@ Tclturbine_Init(Tcl_Interp* interp)
 
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
+  tcl_groovy_init(interp);
   tcl_mpe_init(interp);
   tcl_julia_init(interp);
   tcl_python_init(interp);
