@@ -141,6 +141,16 @@ JavaScript_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_ERROR;
 }
 
+static int
+Scala_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+           int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  turbine_tcl_condition_failed(interp, objv[0],
+                       "Turbine not compiled with JVM scripting support");
+  return TCL_ERROR;
+}
+
 #endif
 
 /**
