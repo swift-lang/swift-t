@@ -1300,10 +1300,10 @@ AC_CONFIG_FILES(
         src/tcl/blob/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
-        src/tcl/groovy/module.mk
         src/tcl/static-pkg/module.mk
         src/tcl/turbine/module.mk
         src/executables/module.mk

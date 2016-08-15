@@ -1,6 +1,0 @@
-
-# MODULE TCL-GROOVY
-
-DIR := src/tcl/groovy
-
-TCL_GROOVY_SRC := $(DIR)/tcl-groovy.c

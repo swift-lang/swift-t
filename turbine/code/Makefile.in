@@ -454,8 +454,7 @@ include src/tcl/mpe/module.mk
 include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
-# include $(USE_JVM_SCRIPT_HOME)/src/module.mk
-include src/tcl/groovy/module.mk
+include src/tcl/jvm/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
@@ -471,7 +470,7 @@ TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(JVM_SCRIPT_SRC)
-TURBINE_SRC += $(TCL_GROOVY_SRC)
+TURBINE_SRC += $(TCL_JVM_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS := $(patsubst %.c, %.o, $(TURBINE_SRC)) $(TCL_R_OBJS)
 

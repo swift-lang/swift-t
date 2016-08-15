@@ -14,7 +14,16 @@
  * limitations under the License
  */
 
-@dispatch=WORKER
-  (string output) groovy(string code, string expr)
-    "turbine" "0.1.0"
-    [ "set <<output>> [ groovy::eval <<code>> <<expr>> ]" ];
+/*
+ * tcl-jvm.h
+ *
+ *  Created on: July 07, 2016
+ *      Author: spagnuolo
+ */
+
+#ifndef TCL_JVM_H
+#define TCL_JVM_H
+
+void tcl_jvm_init(Tcl_Interp* interp);
+
+#endif

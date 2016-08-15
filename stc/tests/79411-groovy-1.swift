@@ -2,7 +2,10 @@
 // SKIP-THIS-TEST
 // this should work but we do not assume everyone has Swift/T/JVM installed
 
-import groovy;
+import jvm;
 
-s = groovy("\"HOWDY1\"", "println \"HOWDY2\"");
-trace(s);
+s1 = groovy("\"HOWDY1\"", "println \"HOWDY2\"");
+trace(s1);
+
+s2 = javascript("\"HOWDY1\"", "print(\"HOWDY2\");");
+trace(s2);
