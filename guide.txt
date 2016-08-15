@@ -2476,6 +2476,52 @@ To build Swift/T with Julia, either:
  +--enable-julia+ argument to +configure+.  See +./configure --help+
  for further options.
 
+[[build_jvm]]
+===== JVM languages module
+
+* Using the JVM languages currently requires a <<build_manual,manual build>>.
+
+* Clone the Swift/T JVM Engine with:
++
+----
+cd turbine/code
+git clone https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git swift-t-jvm
+----
+
+* Build the Swift/T JVM Engine with:
++
+----
+cd swift-t-jvm
+./bootstrap
+./configure
+make
+----
+
+* Build Turbine with:
++
+----
+cd turbine/code
+./configure --enable-jvm-scripting
+make install
+----
+
+* At runtime, set environment variable +LD_LIBRARY_PATH+ to contain
+the JVM lib and the Swift/T JVM Engine lib (where +SWIFT_T+ is your
+Swift/T source directory):
++
+----
+export LD_LIBRARY_PATH=
+LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
+LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs
+----
+
+* At runtime, set environment variable +SWIFT_JVM_USER_LIB+ to contain
+Swift/T JVM Engine classes (where +SWIFT_T+ is your Swift/T source directory):
++
+----
+export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes
+----
+
 === Performance enhancements
 
 1. Disable logging/debugging via environment
