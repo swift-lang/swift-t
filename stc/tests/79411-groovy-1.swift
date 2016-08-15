@@ -9,3 +9,6 @@ trace(s1);
 
 s2 = javascript("\"HOWDY1\"", "print(\"HOWDY2\");");
 trace(s2);
+
+s3 = scala("\"HOWDY1\"", "println(\"SCALA HOWDY2\")");
+trace(s3);

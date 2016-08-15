@@ -15,10 +15,15 @@
  */
 
 @dispatch=WORKER
+  (string output) groovy(string code, string expr)
+    "turbine" "0.1.0"
+    [ "set <<output>> [ jvm::groovy <<code>> <<expr>> ]" ];
+
+@dispatch=WORKER
 (string output) javascript(string code, string expr) "turbine" "0.1.0"
     [ "set <<output>> [ jvm::javascript <<code>> <<expr>> ]" ];
 
 @dispatch=WORKER
-  (string output) groovy(string code, string expr)
+  (string output) scala(string code, string expr)
     "turbine" "0.1.0"
-    [ "set <<output>> [ jvm::groovy <<code>> <<expr>> ]" ];
+    [ "set <<output>> [ jvm::scala <<code>> <<expr>> ]" ];
