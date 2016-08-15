@@ -4594,7 +4594,6 @@ git clone                                                            \
 </div></div>
 </li>
 </ul></div>
-<div class="paragraph"><p>//// We use the character backslash to wrap the clone command across lines readably</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4894,8 +4893,8 @@ Pretend empty manifest present
 <div class="sect2">
 <h3 id="debugging">17.7. Debugging Swift/T runs</h3>
 <div class="paragraph"><p>Applying the debugger allows you to debug native code linked to Swift/T
-from a normal debugger.  This will allow you to step through your code
-(and the Swift/T run time libraries).</p></div>
+from a normal debugger.  This allows you to step through your leaf
+function code (and the Swift/T run time libraries).</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4917,11 +4916,11 @@ When using <code>mkstatic</code>, you generate a complete executable.  You can
 Simply set the environment variable <code>VALGRIND</code> to the valgrind command
 you wish to use.  A suppressions file is distributed with Turbine to
 ignore known issues.  (Swift/T is valgrind-clean but there are some
-issues in Tcl.)</p></div>
+issues in the libraries we use.)</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
-turbine program.tcl</code></pre>
+<pre><code>export VALGRIND="valgrind --suppressions=SWIFT_T/turbine/code/turbine.supp"
+swift-t program.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
@@ -4932,7 +4931,7 @@ Turbine execution by using the <code>GDB_RANK</code> variable:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>$ export GDB_RANK=0
-$ turbine program.tcl
+$ swift-t program.swift
 Waiting for gdb: rank: 0 pid: 23274
 ...</code></pre>
 </div></div>
@@ -4954,7 +4953,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-15 16:33:00 CDT
+ 2016-08-15 16:38:14 CDT
 </div>
 </div>
 </body>
