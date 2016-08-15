@@ -15,6 +15,11 @@
  */
 
 @dispatch=WORKER
+  (string output) clojure(string code, string expr)
+    "turbine" "0.1.0"
+    [ "set <<output>> [ jvm::clojure <<code>> <<expr>> ]" ];
+
+@dispatch=WORKER
   (string output) groovy(string code, string expr)
     "turbine" "0.1.0"
     [ "set <<output>> [ jvm::groovy <<code>> <<expr>> ]" ];

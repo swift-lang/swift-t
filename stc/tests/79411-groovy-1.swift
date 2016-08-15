@@ -12,3 +12,6 @@ trace(s2);
 
 s3 = scala("\"HOWDY1\"", "println(\"SCALA HOWDY2\")");
 trace(s3);
+
+s4 = clojure("\"HOWDY1\"", "\"CLOJURE HOWDY2\"");
+trace(s4);
