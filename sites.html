@@ -1272,26 +1272,68 @@ done</code></pre>
 <div class="paragraph"><p>Midway is a mid-sized SLURM cluster at the University of Chicago</p></div>
 <div class="sect3">
 <h4 id="_public_installation_2">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> master - 2016/06/14</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-Compute nodes:
+Compute nodes: <strong>As of:</strong> master - 2016/06/14
 </p>
 <div class="ulist"><ul>
 <li>
 <p>
-MVAPICH:
+System OpenMPI:
 </p>
 <div class="ulist"><ul>
 <li>
 <p>
-STC: <code>~wozniak/Public/sfw/compute/gcc/stc/bin</code>
+STC:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin</code>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Turbine:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin</code>
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Compute nodes with Python 2.7.10: <strong>As of:</strong> master - 2016/08/19
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Vanilla MPICH:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin</code>
 </p>
 </li>
 <li>
 <p>
-Turbine: <code>~wozniak/Public/sfw/compute/gcc/turbine/bin</code>
+Turbine: *<code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Python: *<code>~wozniak/Public/sfw/Python-2.7.10/bin</code>
 </p>
 </li>
 </ul></div>
@@ -1300,12 +1342,12 @@ Turbine: <code>~wozniak/Public/sfw/compute/gcc/turbine/bin</code>
 </li>
 <li>
 <p>
-Login node:
+Login node: <strong>As of:</strong> master - 2016/06/14
 </p>
 <div class="ulist"><ul>
 <li>
 <p>
-MPICH:
+Vanilla MPICH:
 </p>
 <div class="ulist"><ul>
 <li>
@@ -2792,7 +2834,7 @@ MPI: You may use any MPI implementation
 <div id="footer-text">
 Version 0.9.1<br />
 Last updated
- 2016-07-27 10:57:08 CDT
+ 2016-08-19 15:11:22 CDT
 </div>
 </div>
 </body>
