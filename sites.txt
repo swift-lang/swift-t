@@ -372,8 +372,8 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 * Compute nodes with Python 2.7.10: *As of:* master - 2016/08/19
 ** Vanilla MPICH:
 *** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
-*** Turbine: *+~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
-*** Python: *+~wozniak/Public/sfw/Python-2.7.10/bin+
+*** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
+*** Python: +~wozniak/Public/sfw/Python-2.7.10/bin+
 
 * Login node: *As of:* master - 2016/06/14
 ** Vanilla MPICH:
