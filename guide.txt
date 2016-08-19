@@ -1335,6 +1335,8 @@ blob.
 
 See the section about <<location,location>>.
 
+*Import:* +location+
+
 +rank2location(int) -> location+:: Convert the rank integer to a
 +location+ variable compatible with +@location+ with +HARD+, +RANK+.
 (Alias: +locationFromRank()+.)
