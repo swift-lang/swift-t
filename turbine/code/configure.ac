@@ -939,7 +939,7 @@ AC_ARG_WITH(tcl,
       for TCLVER in ${TCL_VERSION_PREFS}
       do
         AC_MSG_CHECKING([for tclsh${TCLVER} on path])
-        program=$( which tclsh${TCLVER} )
+        program=$( which tclsh${TCLVER} 2>&1 )
         if [[ ${?} == 0 ]]
         then
           AC_MSG_RESULT([yes: ${program}])
