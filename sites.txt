@@ -362,33 +362,45 @@ Midway is a mid-sized SLURM cluster at the University of Chicago
 
 ==== Public installation
 
-* Compute nodes: *As of:* master - 2016/06/14
-** System OpenMPI:
-*** STC:
-**** +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin+
-*** Turbine:
-**** +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin+
+* Compute nodes
++
+Run with:
++
+----
+export PPN=16 # or desired number of Processes Per Node
+swift-t -m slurm ... # or
+turbine -m slurm ...
+----
+** Compute nodes: *As of:* master - 2016/06/14
+*** System OpenMPI:
+**** STC:
+***** +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/stc/bin+
+**** Turbine:
+***** +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi/turbine/bin+
 
-* Compute nodes with Python 2.7.10: *As of:* master - 2016/08/19
-** Vanilla MPICH:
-*** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
-*** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
-*** Python: +~wozniak/Public/sfw/Python-2.7.10/bin+
+** Compute nodes with Python 2.7.10: *As of:* master - 2016/08/19
+*** Vanilla MPICH:
+**** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
+**** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
+**** Python: +~wozniak/Public/sfw/Python-2.7.10/bin+
 
 * Login node: *As of:* master - 2016/06/14
++
+Run with:
++
+----
+nice swift-t -n 2 program.swift
+----
 ** Vanilla MPICH:
 *** STC: +~wozniak/Public/sfw/login/gcc/swift-t/stc/bin+
 *** Turbine: +~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin+
 
 To run:
 
-----
-swift-t -m slurm -n 2 program.swift
-----
 
 ==== Build procedure
 
-* Midway uses MVAPICH or OpenMPI.  We have only had success with MVAPICH.
+* Midway uses MVAPICH or OpenMPI.
 * Put +mpicc+ in your +PATH+
 * Use these settings in +exm-settings.sh+:
 +
