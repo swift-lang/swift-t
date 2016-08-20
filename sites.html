@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.8" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,9 +94,7 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-pre {
-  white-space: pre-wrap;
-}
+
 
 #author {
   color: #527bbd;
@@ -225,7 +223,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; vertical-align: text-bottom; }
+span.image img { border-style: none; }
 a.image:visited { color: white; }
 
 dl {
@@ -1275,6 +1273,18 @@ done</code></pre>
 <div class="ulist"><ul>
 <li>
 <p>
+Compute nodes
+</p>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export PPN=16 # or desired number of Processes Per Node
+swift-t -m slurm ... # or
+turbine -m slurm ...</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
 Compute nodes: <strong>As of:</strong> master - 2016/06/14
 </p>
 <div class="ulist"><ul>
@@ -1340,10 +1350,17 @@ Python: <code>~wozniak/Public/sfw/Python-2.7.10/bin</code>
 </li>
 </ul></div>
 </li>
+</ul></div>
+</li>
 <li>
 <p>
 Login node: <strong>As of:</strong> master - 2016/06/14
 </p>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>nice swift-t -n 2 program.swift</code></pre>
+</div></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1366,17 +1383,13 @@ Turbine: <code>~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin</code>
 </li>
 </ul></div>
 <div class="paragraph"><p>To run:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>swift-t -m slurm -n 2 program.swift</code></pre>
-</div></div>
 </div>
 <div class="sect3">
 <h4 id="_build_procedure_2">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
-Midway uses MVAPICH or OpenMPI.  We have only had success with MVAPICH.
+Midway uses MVAPICH or OpenMPI.
 </p>
 </li>
 <li>
@@ -2833,8 +2846,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 0.9.1<br />
-Last updated
- 2016-08-19 15:14:57 CDT
+Last updated 2016-08-20 10:10:24 CDT
 </div>
 </div>
 </body>
