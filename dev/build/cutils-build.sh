@@ -11,7 +11,7 @@ if (( MAKE_CLEAN )); then
 fi
 
 EXTRA_ARGS=
-if (( EXM_OPT_BUILD )); then
+if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
 fi
 
@@ -23,11 +23,11 @@ elif [ ! -f configure ]; then
   ./bootstrap
 fi
 
-if (( EXM_DEBUG_BUILD )); then
+if (( SWIFT_T_DEBUG_BUILD )); then
    export CFLAGS="-g -O0"
 fi
 
-if (( EXM_STATIC_BUILD )); then
+if (( SWIFT_T_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
