@@ -861,9 +861,10 @@ Ensure you have these third-party software development tools (APT
 </p>
 </li>
 </ol></div>
-<div class="paragraph"><p>Swift/T is primarily tested with OpenJDK&#43;GCC and IBM Java&#43;XLC
-   (on the IBM Blue Gene).  If you have difficulties with other
-   compilers, please <a href="#support">contact us</a>.</p></div>
+<div class="paragraph"><p>STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
+Turbine is compatible with GCC, ICC, Clang, and XLC.
+If you have difficulties with compiler compatibility,
+please <a href="#support">contact us</a>.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_installation_of_swift_t_from_source">2.2. Installation of Swift/T from Source</h3>
@@ -876,7 +877,7 @@ Obtain the Swift/T source package
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t/downloads/swift-t-0.9.0.tar.gz</code></pre>
+<pre><code>wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.0.tar.gz</code></pre>
 </div></div>
 <div class="paragraph"><p>Cf. <a href="http://swift-lang.github.io/swift-t/downloads.html">Swift/T Downloads</a>
 for other packages</p></div>
@@ -887,8 +888,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-0.9.0.tar.gz
-cd swift-t-0.9.0</code></pre>
+<pre><code>tar xfz swift-t-1.0.tar.gz
+cd swift-t-1.0</code></pre>
 </div></div>
 </li>
 <li>
@@ -4419,9 +4420,10 @@ If the options in <code>swift-t-settings.sh</code> do not give sufficient contro
 <div class="sect3">
 <h4 id="build_manual">17.4.2. Manual configuration</h4>
 <div class="paragraph"><p><code>build-all.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
-install Swift/T. However, this method does not allow full control over
+install Swift/T from the downloadable package or from a Git clone.
+However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C,Tcl) techniques.  You can more directly control
+Autotools/Makefile (C, Tcl) techniques.  You can more directly control
 the configuration when building through the arguments to <code>ant</code> or
 <code>configure</code>.</p></div>
 <div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
@@ -4429,19 +4431,22 @@ distribution package or clone from
 <a href="https://github.com/swift-lang/swift-t">GitHub</a> and do:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>cd c-utils
+<pre><code>git clone https://github.com/swift-lang/swift-t.git
+cd swift-t
+
+cd c-utils/code
 ./configure ...
 make install
 
-cd ../lb
+cd ../../lb/code
 ./configure ...
 make install
 
-cd ../turbine
+cd ../../turbine/code
 ./configure ...
 make install
 
-cd ../stc
+cd ../../stc/code
 ant install -Ddist.dir=... -Dturbine.home=...</code></pre>
 </div></div>
 <div class="admonitionblock">
@@ -4954,7 +4959,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-19 10:58:06 CDT
+ 2016-08-22 13:58:02 CDT
 </div>
 </div>
 </body>
