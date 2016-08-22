@@ -1,8 +1,8 @@
 
 # EXM C-UTILS
 # configure.ac
-# Compile this with: ./setup.sh
-# After compiling this, get help with: ./configure --help
+# Compile this with: ./bootstrap
+# Then, get help with: ./configure --help
 
 define([c_utils_version],
        regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
