@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -1333,12 +1335,12 @@ Vanilla MPICH:
 <div class="ulist"><ul>
 <li>
 <p>
-STC: <code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin</code>
+STC: <code>~wozniak/Public/sfw/compute/gcc/swift-t-mpich-py/stc/bin</code>
 </p>
 </li>
 <li>
 <p>
-Turbine: <code>~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin</code>
+Turbine: <code>~wozniak/Public/sfw/compute/gcc/swift-t-mpich-py/stc/bin</code>
 </p>
 </li>
 <li>
@@ -1382,7 +1384,6 @@ Turbine: <code>~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin</code>
 </ul></div>
 </li>
 </ul></div>
-<div class="paragraph"><p>To run:</p></div>
 </div>
 <div class="sect3">
 <h4 id="_build_procedure_2">Build procedure</h4>
@@ -1399,7 +1400,7 @@ Put <code>mpicc</code> in your <code>PATH</code>
 </li>
 <li>
 <p>
-Use these settings in <code>exm-settings.sh</code>:
+Use these settings in <code>swift-t-settings.sh</code>:
 </p>
 <div class="listingblock">
 <div class="content">
@@ -2846,7 +2847,8 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 0.9.1<br />
-Last updated 2016-08-20 10:10:24 CDT
+Last updated
+ 2016-08-22 11:16:04 CDT
 </div>
 </div>
 </body>
