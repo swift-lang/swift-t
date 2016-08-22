@@ -1501,6 +1501,36 @@ https://github.com/swift-lang/swift-t
 git clone git@github.com:swift-lang/swift-t.git
 ----
 
+== Release procedure
+
+* For each component:
+** Test branch +master+
+** Run +autoscan+
+** Update version numbers and dependencies
+*** c-utils:
+**** Increment +version.txt+
+*** ADLB/X:
+**** Increment +version.txt+
+**** Edit +adlb-version.h.in+: update required c-utils version
+*** Turbine:
+**** Increment +version.txt+
+**** Edit +turbine-version.h.in+: update required c-utils, ADLB versions
+*** STC:
+**** Increment +etc/version.txt+
+**** Edit +turbine-version.txt+: update required Turbine version
+**** Edit +guide.txt+: update version number and date
+** After updating version numbers, in each of c-utils, ADLB, and
+*Turbine, run:
++
+----
+rm -r autom4te.cache configure
+./bootstrap
+----
+** Use +dev/build/make-release-pkg.zsh+ to make the release package
+** Copy the package to the +gh-pages+ branch
+** Test package on Linux and Mac
+* +git push+ package to GitHub
+
 ////
 Local Variables:
 mode: doc
