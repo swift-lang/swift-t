@@ -2433,10 +2433,6 @@ distribution package or clone from
 https://github.com/swift-lang/swift-t[GitHub] and do:
 
 ----
-
-git clone https://github.com/swift-lang/swift-t.git
-cd swift-t
-
 cd c-utils/code
 ./configure ...
 make install
@@ -2455,6 +2451,11 @@ ant install -Ddist.dir=... -Dturbine.home=...
 
 NOTE: Use +./configure --help+ and the link:sites.html[Sites Guide]
 for further options.
+
+To obtain the latest source from GitHub, do:
+----
+git clone https://github.com/swift-lang/swift-t.git
+----
 
 ===== Makefile debugging
 
