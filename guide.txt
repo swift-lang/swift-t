@@ -87,9 +87,10 @@ the <<build_manual,manual build process>>).
    SWIG (+swig+), ZSH (+zsh+), Apache Ant (+ant+), a Java Development
    Kit (+default-jdk+), Make (+make+), and GCC for C (+gcc+).
 
-Swift/T is primarily tested with OpenJDK&#43;GCC and IBM Java&#43;XLC
-   (on the IBM Blue Gene).  If you have difficulties with other
-   compilers, please <<support,contact us>>.
+STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
+Turbine is compatible with GCC, ICC, Clang, and XLC.
+If you have difficulties with compiler compatibility,
+please <<support,contact us>>.
 
 === Installation of Swift/T from Source
 
@@ -99,7 +100,7 @@ Swift/T from source.
 1. Obtain the Swift/T source package
 +
 ----
-wget http://swift-lang.github.io/swift-t/downloads/swift-t-0.9.0.tar.gz
+wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.0.tar.gz
 ----
 +
 Cf. http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
@@ -108,8 +109,8 @@ for other packages
 2. Unpack and enter package directory
 +
 ----
-tar xfz swift-t-0.9.0.tar.gz
-cd swift-t-0.9.0
+tar xfz swift-t-1.0.tar.gz
+cd swift-t-1.0
 ----
 +
 3. Edit the settings file: +dev/build/swift-t-settings.sh+
@@ -2420,9 +2421,10 @@ these steps to resolve the problem:
 ==== Manual configuration
 
 +build-all.sh+ and +swift-t-settings.sh+ provide a convenient way to
-install Swift/T. However, this method does not allow full control over
+install Swift/T from the downloadable package or from a Git clone.
+However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C,Tcl) techniques.  You can more directly control
+Autotools/Makefile (C, Tcl) techniques.  You can more directly control
 the configuration when building through the arguments to +ant+ or
 +configure+.
 
@@ -2431,19 +2433,23 @@ distribution package or clone from
 https://github.com/swift-lang/swift-t[GitHub] and do:
 
 ----
-cd c-utils
+
+git clone https://github.com/swift-lang/swift-t.git
+cd swift-t
+
+cd c-utils/code
 ./configure ...
 make install
 
-cd ../lb
+cd ../../lb/code
 ./configure ...
 make install
 
-cd ../turbine
+cd ../../turbine/code
 ./configure ...
 make install
 
-cd ../stc
+cd ../../stc/code
 ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
