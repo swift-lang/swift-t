@@ -744,7 +744,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
-<span id="revdate">June 2016</span>
+<span id="revdate">August 2016</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1000,6 +1000,31 @@ Harmful":</p></div>
 <div class="paragraph"><p>The Autoconf-based configuration system primarily sets C preprocessor
 variables in <code>config.h</code> via <code>AC_DEFINE()</code> and Makefile variables via
 <code>AC_SUBST()</code>.</p></div>
+<div class="paragraph"><p>Much of the complexity in the build system is due to attempts to run
+on various exotic systems.</p></div>
+<div class="paragraph"><p>C-utils and ADLB have relatively simple builds.
+Turbine is the most complex- that is where everything is linked
+together.</p></div>
+<div class="paragraph"><p>One common error mode is a silent <code>make</code> failure due to a missing
+header file.  Use <code>make check_includes</code> to detect these errors.</p></div>
+<div class="paragraph"><p>Other useful Makefile features:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>make V=1</code> or <code>make V=2</code> for verbose builds
+</p>
+</li>
+<li>
+<p>
+<code>make deps</code> to make the dependency files
+</p>
+</li>
+<li>
+<p>
+<code>make tags</code> to make an <code>etags</code> <code>TAGS</code> file
+</p>
+</li>
+</ul></div>
 </div>
 <div class="sect2">
 <h3 id="_ant">5.2. Ant</h3>
@@ -3186,11 +3211,142 @@ for macros/constants.</p></div>
 </div></div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_release_procedure">14. Release procedure</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+For each component:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Test branch <code>master</code>
+</p>
+</li>
+<li>
+<p>
+Run <code>autoscan</code>
+</p>
+</li>
+<li>
+<p>
+Update version numbers and dependencies
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+c-utils:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Increment <code>version.txt</code>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+ADLB/X:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Increment <code>version.txt</code>
+</p>
+</li>
+<li>
+<p>
+Edit <code>adlb-version.h.in</code>: update required c-utils version
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Turbine:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Increment <code>version.txt</code>
+</p>
+</li>
+<li>
+<p>
+Edit <code>turbine-version.h.in</code>: update required c-utils, ADLB versions
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+STC:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Increment <code>etc/version.txt</code>
+</p>
+</li>
+<li>
+<p>
+Edit <code>turbine-version.txt</code>: update required Turbine version
+</p>
+</li>
+<li>
+<p>
+Edit <code>guide.txt</code>: update version number and date
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+After updating version numbers, in each of c-utils, ADLB, and
+*Turbine, run:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>rm -r autom4te.cache configure
+./bootstrap</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Use <code>dev/build/make-release-pkg.zsh</code> to make the release package
+</p>
+</li>
+<li>
+<p>
+Copy the package to the <code>gh-pages</code> branch
+</p>
+</li>
+<li>
+<p>
+Test package on Linux and Mac
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<code>git push</code> package to GitHub
+</p>
+</li>
+</ul></div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-07-13 12:18:41 CDT
+Last updated
+ 2016-08-22 12:53:21 CDT
 </div>
 </div>
 </body>
