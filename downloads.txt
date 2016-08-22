@@ -22,7 +22,18 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
-== Current/stable: Series 0.9
+== Current/stable: Series 1.0
+
+* Release 1.0 [link:downloads/swift-t-1.0.tar.gz[swift-t-1.0.tar.gz]]
+  (9 MB)
+* 2016/08/22
+
+*Changes:*
+
+* New support for link:./guide.html#external_scripting[JVM-based leaf functions]
+* Better support for R
+
+== Series 0.9
 
 === 0.9.1
 
