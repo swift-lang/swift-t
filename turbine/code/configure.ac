@@ -73,6 +73,7 @@ fi
 
 # Checks for programs
 AC_PROG_CC
+AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])

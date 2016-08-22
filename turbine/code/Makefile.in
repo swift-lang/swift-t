@@ -831,6 +831,7 @@ distclean:: clean
 	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
+# This line causes a false autoscan warning on token 'install'
 .PHONY: clean install package package_static libs test_results
 
 ### DEBUG BUILD SYSTEM

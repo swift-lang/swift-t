@@ -66,13 +66,14 @@ AC_PROG_CC
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SSIZE_T
 
 # Checks for functions
-AC_CHECK_FUNCS([memchr memmove memset pow stpcpy strdup strtol uname])
-AC_CHECK_FUNCS([strerror])
+AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
+AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
