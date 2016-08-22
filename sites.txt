@@ -380,8 +380,8 @@ turbine -m slurm ...
 
 ** Compute nodes with Python 2.7.10: *As of:* master - 2016/08/19
 *** Vanilla MPICH:
-**** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
-**** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-openmpi-py/stc/bin+
+**** STC: +~wozniak/Public/sfw/compute/gcc/swift-t-mpich-py/stc/bin+
+**** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-mpich-py/stc/bin+
 **** Python: +~wozniak/Public/sfw/Python-2.7.10/bin+
 
 * Login node: *As of:* master - 2016/06/14
@@ -395,14 +395,11 @@ nice swift-t -n 2 program.swift
 *** STC: +~wozniak/Public/sfw/login/gcc/swift-t/stc/bin+
 *** Turbine: +~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin+
 
-To run:
-
-
 ==== Build procedure
 
 * Midway uses MVAPICH or OpenMPI.
 * Put +mpicc+ in your +PATH+
-* Use these settings in +exm-settings.sh+:
+* Use these settings in +swift-t-settings.sh+:
 +
 ----
 export LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
