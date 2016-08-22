@@ -1518,7 +1518,7 @@ git clone git@github.com:swift-lang/swift-t.git
 *** STC:
 **** Increment +etc/version.txt+
 **** Edit +turbine-version.txt+: update required Turbine version
-**** Edit +guide.txt+: update version number and date
+**** Edit +guide.txt+: update version number for download and date
 ** After updating version numbers, in each of c-utils, ADLB, and
 *Turbine, run:
 +
