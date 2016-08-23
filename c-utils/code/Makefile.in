@@ -206,9 +206,11 @@ $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS) $(HEADERS)
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
-#       Install the headers and library
+#       Install the headers (if not a binary package) and library
+ifeq ($(DEBIAN_BIN_PKG),)
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
+endif
 	$(E) cp $(CP_ARGS) $(EXM_CUTILS_LIBS) $(INSTALL_LIB)
 #       Finally, copy in the token install.txt file
 #       (if not making a Debian package)
