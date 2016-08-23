@@ -109,6 +109,7 @@ DEPS :=
 OBJS :=
 include src/module.mk
 include tests/module.mk
+include maint/debian.mk
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -205,14 +206,17 @@ $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS) $(HEADERS)
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
-	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
 #       Install the headers and library
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) $(EXM_CUTILS_LIBS) $(INSTALL_LIB)
 #       Finally, copy in the token install.txt file
+#       (if not making a Debian package)
+ifeq ($(DEBIAN_PKG),)
 	$(E) cp $(CP_ARGS) install.txt $(@)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
+endif
 
 # Maintaining the install.txt file is a simple way to
 # create a dependency on the installation

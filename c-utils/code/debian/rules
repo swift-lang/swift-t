@@ -10,7 +10,7 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ 
+	dh $@
 
 override_dh_auto_configure:
 	dh_auto_configure -- --enable-shared
@@ -18,4 +18,4 @@ override_dh_auto_configure:
 #	dh_auto_configure -- --prefix=$$(pwd)/debian/c-utils --enable-shared
 
 override_dh_auto_install:
-	$(MAKE) DESTDIR=$$(pwd)/debian/c-utils/usr/sbin/exm/c-utils install
+	$(MAKE) -j 4 DESTDIR=$$(pwd)/debian/exmcutils/usr DEBIAN_PKG=1 install

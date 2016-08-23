@@ -119,6 +119,11 @@ AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
+# Debian stuff
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
+
 AC_CONFIG_FILES(
 	Makefile
         src/module.mk

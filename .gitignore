@@ -19,6 +19,10 @@ config.log
 Makefile
 *.mk
 
+# Debian stuff
+*.orig.tar.gz
+*.deb
+
 # STC output
 *.tic
 

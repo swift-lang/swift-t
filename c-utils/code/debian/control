@@ -1,15 +1,14 @@
-Source: c-utils
+Source: exmcutils
 Section: unknown
 Priority: extra
-Maintainer: Yadu Nand <yadunand@uchicago.edu>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Maintainer: Justin M Wozniak <wozniak@mcs.anl.gov>
+Build-Depends:
 Standards-Version: 3.9.4
-Homepage: http://sites.google.com/site/exmcomputing
-#Vcs-Git: git://git.debian.org/collab-maint/c-utils.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/c-utils.git;a=summary
+Homepage: http://swift-lang.org
+#Vcs-Git: git@github.com:swift-lang/swift-t.git
 
-Package: c-utils
+Package: exmcutils
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mpich2 (>= 1.4.1)
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Misc. C utilities for ExM software
  Misc. C utilities for ExM software

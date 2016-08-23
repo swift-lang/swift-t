@@ -174,14 +174,7 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd c-utils/code
-export_copy c-utils-config.h.in configure configure.ac
-export_copy bootstrap Makefile.in src/module.mk.in
-export_copy maint/*.sh
-export_copy src/*.[ch]
-export_copy c-utils-config.h.in src/c-utils.h.in
-export_copy tests/module.mk.in
-export_copy tests/*.[ch]
-export_copy version.txt NOTICE debian/control
+FILE_LIST=$( c-utils/code/maint/file-list.zsh )
 popd
 printf "OK\n\n"
 
