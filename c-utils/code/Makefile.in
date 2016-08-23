@@ -108,6 +108,7 @@ SRCS :=
 DEPS :=
 OBJS :=
 include src/module.mk
+include tests/module.mk
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
@@ -132,7 +133,7 @@ RANLIB  = @RANLIB@
 
 deps: $(DEPS)
 
-# default rule for generating dependency files (deps)
+# Default rule for generating dependency files (deps)
 %.d: %.c
 	$(Q) "  DEP		$@"
 	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
@@ -143,7 +144,7 @@ ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
 endif
 
 # Check existing *.d files for files that do not exist
-# Useful when dependency file generation is failing
+# Useful when dependency file generation fails
 # Must "make clean" to re-check correctly
 EXISTING_D = $(shell find . -name *.d)
 
@@ -180,37 +181,6 @@ $(EXM_CUTILS_A): $(OBJS)
 
 ### TEST
 
-TEST_SRC :=
-include tests/module.mk
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
-TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
-TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
-# Test case results
-TEST_SCRIPTS = $(patsubst %.c,  %.sh, $(TEST_SRC))
-# Test case outputs
-TEST_OUTPUT  = $(patsubst %.c, %.out, $(TEST_SRC))
-# Test case results
-TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC))
-
-# Target to just build all C tests
-tests: $(TESTS)
-
-# Run all tests
-test_results: $(TEST_RESULTS)
-
-# Test result rule for C tests
-%.result: %.sh %.x install.txt
-	$(Q) "  SH		$(@)"
-	$(E) rm -f $(@)
-	$(E) $(<) > $(*).tmp 2>&1
-	$(E) mv $(*).tmp $(@) 2>&1
-
-$(TESTS): %.x: %.o $(EXM_CUTILS_LIBS) install.txt
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
-                   -L$(INSTALL_LIB) -lexmcutils \
-                   -o $(@) \
-                   $(RPATH)
 
 ### INSTALL
 
@@ -250,12 +220,11 @@ install: $(INSTALL_PREFIX)/install.txt
 
 ### CLEAN
 
-clean:
+clean::
 	$(Q) "  CLEAN:"
 	$(E) rm -fv $(DEPS) deps_contents.txt
 	$(E) rm -fv src/*.o
 	$(E) rm -fv $(EXM_CUTILS_SO) $(EXM_CUTILS_A)
-	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
 
 distclean: clean
 	@rm -fv Makefile **/*.mk

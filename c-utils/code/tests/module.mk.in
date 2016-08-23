@@ -1,4 +1,7 @@
 
+# EXM C UTILS TESTS MODULE
+
+TEST_SRC :=
 TEST_SRC += tests/tools.c
 TEST_SRC += tests/list.c
 TEST_SRC += tests/heap.c
@@ -15,3 +18,36 @@ TEST_SRC += tests/table_lp.c
 TEST_SRC += tests/table_ip.c
 TEST_SRC += tests/ptr-array.c
 TEST_SRC += tests/dyn_array_i.c
+
+TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
+TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
+TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
+# Test case results
+TEST_SCRIPTS = $(patsubst %.c,  %.sh, $(TEST_SRC))
+# Test case outputs
+TEST_OUTPUT  = $(patsubst %.c, %.out, $(TEST_SRC))
+# Test case results
+TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC))
+
+# Target to just build all C tests
+tests: $(TESTS)
+
+# Run all tests
+test_results: $(TEST_RESULTS)
+
+# Test result rule for C tests
+%.result: %.sh %.x install.txt
+	$(Q) "  SH		$(@)"
+	$(E) rm -f $(@)
+	$(E) $(<) > $(*).tmp 2>&1
+	$(E) mv $(*).tmp $(@) 2>&1
+
+$(TESTS): %.x: %.o $(EXM_CUTILS_LIBS) install.txt
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
+                   -L$(INSTALL_LIB) -lexmcutils \
+                   -o $(@) \
+                   $(RPATH)
+clean::
+	$(Q) "  CLEAN TESTS:"
+	$(E) rm -fv $(TEST_RESULTS) $(TESTS) $(TEST_OBJS) $(TEST_DEPS)
