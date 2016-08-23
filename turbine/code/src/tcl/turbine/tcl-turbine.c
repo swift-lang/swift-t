@@ -234,9 +234,9 @@ log_setup(int rank)
   log_init();
   log_normalize();
 
-  // Did the user disable logging?
+  // Did the user enable logging?
   int enabled;
-  getenv_integer("TURBINE_LOG", 1, &enabled);
+  getenv_integer("TURBINE_LOG", 0, &enabled);
   if (enabled)
   {
     // Should we use a specific log file?
