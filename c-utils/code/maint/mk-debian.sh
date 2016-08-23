@@ -1,11 +1,13 @@
-#!/bin/bash
+#!/bin/zsh
 set -eu
 
 # MK DEBIAN
 # Make the Debian package
 
 echo MK DEBIAN
-set -x
+
+BINARY_PKG=""
+zparseopts -D -E b:=BINARY_PKG
 
 DEB=$1
 ORIG_TGZ=$2
@@ -23,8 +25,8 @@ pushd exmcutils-$VERSION > /dev/null
 
 pwd
 
-set -x
 export DEBIAN_PKG=1
+(( ${#BINARY_PKG} )) && export DEBIAN_BINARY_PKG=1
 debuild -us -uc
 
 popd
