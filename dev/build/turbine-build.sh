@@ -143,7 +143,7 @@ if [ ! -z "$MPI_LIB_NAME" ]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --without-zlib"
+  EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then
@@ -166,7 +166,8 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
-  ./configure --with-adlb=${LB_INSTALL} \
+  ./configure --config-cache \
+              --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
               --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${TURBINE_INSTALL} \
@@ -174,12 +175,17 @@ if (( CONFIGURE )); then
               --disable-log
 fi
 
-if (( MAKE_CLEAN )); then
-  make clean
+if (( MAKE_CLEAN ))
+then
+  rm -fv deps_contents.txt
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
 fi
 if ! make -j ${MAKE_PARALLELISM}
 then
-  rm deps_contents.txt
   echo
   echo Make failed.  The following may be useful:
   echo

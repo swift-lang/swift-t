@@ -4,8 +4,11 @@ set -e
 THIS=$( dirname $0 )
 source ${THIS}/swift-t-settings.sh
 
-if (( MAKE_CLEAN )); then
-  if [ -f Makefile ]; then
+if (( MAKE_CLEAN ))
+then
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
     make clean
   fi
 fi
@@ -37,7 +40,10 @@ fi
 
 set -x
 if (( CONFIGURE )); then
-  ./configure --enable-shared --prefix=${C_UTILS_INSTALL} ${EXTRA_ARGS}
+  ./configure --config-cache \
+              --prefix=${C_UTILS_INSTALL} \
+              --enable-shared \
+              ${EXTRA_ARGS}
 fi
 make -j ${MAKE_PARALLELISM}
 make install

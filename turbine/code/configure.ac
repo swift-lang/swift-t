@@ -528,7 +528,7 @@ AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 AC_SUBST(USE_MPE_LIB_A)
 
-ENABLE_XPT=yes
+ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -545,9 +545,7 @@ AC_ARG_ENABLE(checkpoint,
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
 then
-    AC_MSG_RESULT([Checkpointing enabled]);
-else
-    AC_MSG_RESULT([Checkpointing disabled]);
+    AC_MSG_RESULT([Checkpointing enabled])
 fi
 AC_SUBST(ENABLE_XPT)
 

@@ -51,7 +51,7 @@ if [[ ${MPI_VERSION} == 2 ]]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --without-zlib"
+  EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then
@@ -64,11 +64,18 @@ fi
 
 set -x
 if (( CONFIGURE )); then
-  ./configure --with-c-utils=${C_UTILS_INSTALL} \
-              --prefix=${LB_INSTALL} ${EXTRA_ARGS}
+  ./configure --config-cache \
+              --with-c-utils=${C_UTILS_INSTALL} \
+              --prefix=${LB_INSTALL} \
+              ${EXTRA_ARGS}
 fi
-if (( MAKE_CLEAN )); then
-  make clean
+if (( MAKE_CLEAN ))
+then
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
 fi
 make -j ${MAKE_PARALLELISM}
 make install
