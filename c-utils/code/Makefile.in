@@ -203,7 +203,6 @@ $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS) $(HEADERS)
 	$(E) touch install.txt
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
-	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
 #       Install the headers (if not a binary package) and library
@@ -216,6 +215,7 @@ endif
 #       (if not making a Debian package)
 ifeq ($(DEBIAN_PKG),)
 	$(E) cp $(CP_ARGS) install.txt $(@)
+	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
 endif
