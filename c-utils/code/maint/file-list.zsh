@@ -1,7 +1,10 @@
 #!/bin/zsh
 set -eu
 
-# Produce list of files for make-release-pkg and mk-upstream-tgz
+# FILE LIST
+# Produces list of files for make-release-pkg and mk-upstream-tgz
+# Also makes a soft link to the Debian package files,
+# either for the bin or dev package
 
 print c-utils-config.h.in configure configure.ac README.txt
 print bootstrap Makefile.in src/module.mk.in
@@ -12,11 +15,8 @@ print tests/module.mk.in
 print tests/*.[ch]
 print version.txt NOTICE
 
-print FILE LIST $PWD ${DEBIAN_PKG_TYPE} >&2
-
 if (( ${+DEBIAN_PKG_TYPE} ))
 then
-  ln -sfT debian-${DEBIAN_PKG_TYPE} debian
+  ln -sfT maint/debian-${DEBIAN_PKG_TYPE} debian
   print debian/*[^~]
 fi
-print FILE LIST $PWD ${DEBIAN_PKG_TYPE} DONE >&2
