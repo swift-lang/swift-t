@@ -1,28 +1,28 @@
 changecom(`dnl')#!/bin/bash
-# We use changecom to change the M4 comment to dnl, not hash
+dnl We use changecom to change the M4 comment to dnl, not hash
 
-# Copyright 2013 University of Chicago and Argonne National Laboratory
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License
+dnl Copyright 2013 University of Chicago and Argonne National Laboratory
+dnl
+dnl Licensed under the Apache License, Version 2.0 (the "License");
+dnl you may not use this file except in compliance with the License.
+dnl You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl Unless required by applicable law or agreed to in writing, software
+dnl distributed under the License is distributed on an "AS IS" BASIS,
+dnl WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+dnl See the License for the specific language governing permissions and
+dnl limitations under the License
 
 # TURBINE-SLURM.SH
 
 # Created: esyscmd(`date')
 
-# Define a convenience macro
-# This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1'")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
+dnl Define a convenience macro
+dnl This simply does environment variable substition when m4 runs
+define(`getenv', `esyscmd(printf -- "$`$1'")')dnl
+define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')dnl
 
 #SBATCH --time=getenv(WALLTIME)
 #SBATCH --nodes=getenv(NODES)
