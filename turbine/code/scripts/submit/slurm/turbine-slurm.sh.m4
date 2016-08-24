@@ -30,6 +30,7 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')dnl
 #SBATCH --workdir=getenv(TURBINE_OUTPUT)
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
+#SBATCH --job-name=getenv(TURBINE_JOBNAME)
 
 echo TURBINE-SLURM.SH
 
