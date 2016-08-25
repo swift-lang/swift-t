@@ -211,7 +211,7 @@ ifeq ($(DEBIAN_BIN_PKG),)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
 endif
 	$(E) cp $(CP_ARGS) $(EXM_CUTILS_LIBS) $(INSTALL_LIB)
-#       Finally, copy in the token install.txt file
+#       Finally, copy in the provenance files
 #       (if not making a Debian package)
 ifeq ($(DEBIAN_PKG),)
 	$(E) cp $(CP_ARGS) install.txt $(@)
