@@ -1,5 +1,6 @@
-changecom(`dnl')#!/bin/bash
+changecom(`dnl')#!/bin/bash -l
 # We changed the M4 comment to d-n-l, not hash
+# We need 'bash -l' for the module system
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
