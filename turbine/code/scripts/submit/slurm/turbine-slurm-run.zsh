@@ -59,12 +59,20 @@ do
   eval export ${kv}
 done
 
-sbatch --exclusive --constraint=ib \
-  --output=${OUTPUT_FILE}          \
-  --error=${OUTPUT_FILE}           \
-  ${QUEUE_ARG} ${ACCOUNT_ARG}      \
-  --job-name=${TURBINE_JOBNAME}    \
-  ${TURBINE_SLURM} ${PROGRAM} ${ARGS} | read __ __ __ JOB_ID
+SUBMIT_COMMAND=( sbatch
+                 --output=${OUTPUT_FILE}
+                 --error=${OUTPUT_FILE}
+                 ${QUEUE_ARG}
+                 ${ACCOUNT_ARG}
+                 # TURBINE_SBATCH_ARGS could include
+                 # --exclusive, --constraint=..., etc.
+                 ${TURBINE_SBATCH_ARGS:-}
+                 --job-name=${TURBINE_JOBNAME}
+                 ${TURBINE_SLURM} )
+
+print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.txt
+
+${SUBMIT_COMMAND} | read __ __ __ JOB_ID
 
 # JOB_ID must be an integer:
 if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
