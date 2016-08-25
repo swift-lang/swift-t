@@ -1270,6 +1270,23 @@ done</code></pre>
 <div class="sect2">
 <h3 id="_midway">Midway</h3>
 <div class="paragraph"><p>Midway is a mid-sized SLURM cluster at the University of Chicago</p></div>
+<div class="paragraph"><p>On Midway/SLURM, set environment variable <code>PROJECT</code> as you would for
+<code>--account</code>, and environment variable <code>QUEUE</code> as you would for
+<code>--partition</code>.  See <a href="#variables">Turbine scheduler variables</a>.</p></div>
+<div class="paragraph"><p>In SLURM, we support additional optional environment variable
+<code>TURBINE_SBATCH_ARGS</code>.  These arguments, on Midway, may include
+<code>--exclusive</code> and <code>--constraint=ib</code>.  The internally generated
+<code>sbatch</code> command is logged in <code>$TURBINE_OUTPUT/sbatch.txt</code>.
+For example,</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export TURBINE_SBATCH_ARGS="--exclusive --constraint=ib"
+$ swift-t -n 4 -m slurm program.swift ...
+...
+$ cat $TURBINE_OUTPUT/sbatch.txt
+...
+sbatch --output=... --exclusive --constraint=ib .../turbine-slurm.sh</code></pre>
+</div></div>
 <div class="sect3">
 <h4 id="_public_installation_2">Public installation</h4>
 <div class="ulist"><ul>
@@ -2848,7 +2865,7 @@ MPI: You may use any MPI implementation
 <div id="footer-text">
 Version 0.9.1<br />
 Last updated
- 2016-08-22 11:16:04 CDT
+ 2016-08-25 11:04:36 CDT
 </div>
 </div>
 </body>
