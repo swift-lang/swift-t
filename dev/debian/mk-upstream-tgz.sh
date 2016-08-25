@@ -4,11 +4,22 @@ set -eu
 # MK UPSTREAM TGZ
 # For Debian package: Make the upstream TGZ
 
-export DEBIAN_PKG_TYPE=$1
-TGZ=$2
-NAME=$3
-VERSION=$4
-FILES=$( $5 ) # A program that produces the list of files to include
+echo "Building upstream TGZ..."
+
+if [ ${#} != 5 ]
+then
+  echo "mk-upstream-tgz: usage: DEBIAN_PKG_TYPE TGZ NAME VERSION FILE_LIST"
+  exit 1
+fi
+
+DEBIAN_PKG_TYPE=$1 # Package type: dev or bin
+TGZ=$2             # Output TGZ file
+NAME=$3            # TGZ name
+VERSION=$4         # TGZ version
+FILE_LIST=$5       # Program that produces list of files to include
+
+export DEBIAN_PKG_TYPE  # Export this to FILE_LIST program
+FILES=$( $FILE_LIST )
 
 if [ ${DEBIAN_PKG_TYPE} = dev ]
 then
@@ -17,12 +28,10 @@ fi
 
 D=$( mktemp -d $NAME-deb-tgz-XXX )
 mkdir $D/$NAME-$VERSION
-echo CP
 cp -v --parents $FILES $D/$NAME-$VERSION
-echo CP OK
+
 set -x
 tar cfz $TGZ -C $D $NAME-$VERSION
 
 echo "Created $PWD $TGZ"
-
 rm -r $D

@@ -10,11 +10,13 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ 
-
-override_dh_auto_install:
-	$(MAKE) -j 1 V=1 DESTDIR=$$(pwd)/debian/adlb/usr/sbin/exm/adlb install
-	echo "Done override_dh_auto_build "
+	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- CC=$$(which mpicc) $--prefix=$$(pwd)/debian/lb --with-c-utils=/usr/sbin/exm/c-utils --enable-mpi-2
+	dh_auto_configure -- --enable-shared
+
+#	dh_auto_configure -- --prefix=$$(pwd)/debian/c-utils --enable-shared
+
+override_dh_auto_install:
+	$(MAKE) -j 4 DESTDIR=$$(pwd)/debian/exmcutils/usr \
+		DEBIAN_PKG=1 DEBIAN_BIN_PKG=1 install

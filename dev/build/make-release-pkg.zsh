@@ -10,7 +10,7 @@ set -eu
 # End-user should not need: autotools, patch
 
 # usage:
-# ./construct.zsh
+# ./make-release-pkg.zsh
 
 # Environment:
 # TMP: Fast working directory. Default /tmp.  Works in TMP/distro
@@ -175,6 +175,7 @@ TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd c-utils/code
 FILE_LIST=$( c-utils/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
@@ -183,15 +184,8 @@ print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
 mkdir -pv ${TARGET}
 pushd lb/code
-export_copy bootstrap configure configure.ac Makefile.in install-sh
-export_copy config.h.in
-export_copy maint/*.sh
-export_copy maint/*.c
-export_copy src/*.[ch]
-export_copy config.h.in
-export_copy src/{adlb-version.h.in,mpe-settings.h.in}
-export_copy {src,tests}/module.mk.in
-export_copy version.txt NOTICE debian/control
+FILE_LIST=$( lb/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 

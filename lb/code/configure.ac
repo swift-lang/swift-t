@@ -163,21 +163,21 @@ AC_ARG_WITH(c-utils,
     USE_C_UTILS=${withval}
   ],
   [
-    dnl If not given, look in SOFTWARE, if valid
-    if [[ ${SOFTWARE} == 0 ]]
+    [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+
+    dnl Are we building a Debian package?
+    if [[ ${SOFTWARE} == / ]]
     then
-        AC_MSG_ERROR([Not found: ExM c-utils])
+        location=/usr
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=${location}], [])
+    else # Are we doing a source installation?
+        location=${SOFTWARE}/c-utils
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=${location}], [])
     fi
-    location=${SOFTWARE}/c-utils
-    AC_CHECK_FILE(${location}/include/c-utils.h,
-                  [USE_C_UTILS=1], [])
-    if [[ ${USE_C_UTILS} == 1 ]]
-    then
-        USE_C_UTILS=${location}
-    else
-        AC_MSG_ERROR([Not found: ExM c-utils])
-    fi
-  ])
+    [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+])
 AC_SUBST(USE_C_UTILS)
 
 dnl Log settings.  See debug.h
@@ -295,6 +295,11 @@ AC_SUBST(ENABLE_DEV)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
+
+# Debian stuff
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk

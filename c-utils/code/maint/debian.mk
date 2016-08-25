@@ -24,7 +24,7 @@ DEB_FILE_PATHS = $(patsubst %,debian/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
 
-$(UPSTREAM_TGZ): $(FILE_LIST) $(DEB_LIST)
+$(UPSTREAM_TGZ): $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) configure
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) exmcutils $(VERSION) $(FILE_LIST)
 
