@@ -360,6 +360,25 @@ done
 
 Midway is a mid-sized SLURM cluster at the University of Chicago
 
+On Midway/SLURM, set environment variable +PROJECT+ as you would for
++--account+, and environment variable +QUEUE+ as you would for
++--partition+.  See <<variables,Turbine scheduler variables>>.
+
+In SLURM, we support additional optional environment variable
++TURBINE_SBATCH_ARGS+.  These arguments, on Midway, may include
++--exclusive+ and +--constraint=ib+.  The internally generated
++sbatch+ command is logged in +$TURBINE_OUTPUT/sbatch.txt+.
+For example,
+
+----
+$ export TURBINE_SBATCH_ARGS="--exclusive --constraint=ib"
+$ swift-t -n 4 -m slurm program.swift ...
+...
+$ cat $TURBINE_OUTPUT/sbatch.txt
+...
+sbatch --output=... --exclusive --constraint=ib .../turbine-slurm.sh
+----
+
 ==== Public installation
 
 * Compute nodes
