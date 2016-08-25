@@ -146,6 +146,13 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+
 USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
@@ -166,11 +173,9 @@ AC_ARG_WITH(c-utils,
     [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
 
     dnl Are we building a Debian package?
-    if [[ ${SOFTWARE} == / ]]
+    if (( ${DEBIAN_BUILD} ))
     then
-        location=/usr
-        AC_CHECK_FILE(${location}/include/c-utils.h,
-                      [USE_C_UTILS=${location}], [])
+        USE_C_UTILS==/usr
     else # Are we doing a source installation?
         location=${SOFTWARE}/c-utils
         AC_CHECK_FILE(${location}/include/c-utils.h,

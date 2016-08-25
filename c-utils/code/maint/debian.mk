@@ -20,16 +20,20 @@ else
   UPSTREAM_TGZ = exmcutils-dev_$(VERSION).orig.tar.gz
 endif
 
-DEB_FILE_PATHS = $(patsubst %,debian/%,$(DEB_FILES))
+DEB_FILE_PATHS = $(wildcard maint/debian-dev/* maint/debian-bin/*)
 
 FILE_LIST = maint/file-list.zsh
 
-$(UPSTREAM_TGZ): $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) configure
+# Just for TGZ dependency
+DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS)
+
+$(UPSTREAM_TGZ):  configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) exmcutils $(VERSION) $(FILE_LIST)
 
 $(EXMCUTILS_DEB) $(EXMCUTILS_DEV_DEB): $(UPSTREAM_TGZ)
-	maint/mk-debian.zsh ${DEBIAN_PKG_TYPE} $(@) $(<) exmcutils $(VERSION)
+	../../dev/debian/mk-debian.zsh ${DEBIAN_PKG_TYPE} $(@) $(<) \
+		exmcutils $(VERSION)
 
 clean:: clean-deb
 

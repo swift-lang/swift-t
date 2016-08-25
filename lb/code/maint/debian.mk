@@ -30,7 +30,7 @@ DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
-		$(@) adlbx $(VERSION) $(FILE_LIST)
+		$(@) adlbx 	$(VERSION) $(FILE_LIST)
 
 $(ADLBX_DEB) $(ADLBX_DEV_DEB): $(UPSTREAM_TGZ)
 	../../dev/debian/mk-debian.zsh ${DEBIAN_PKG_TYPE} $(@) $(<) \
@@ -41,7 +41,6 @@ clean:: clean-deb
 clean-deb::
 	$(Q) "  CLEAN DEBIAN"
 # 	This may be a soft link (normal build) or a directory (mk-debian)
-	$(E) rm -rfv debian 
+	$(E) rm -rfv debian
 	$(E) rm -fv *.deb *.orig.tar.gz
 	$(E) rm -rf deb-work-*
-

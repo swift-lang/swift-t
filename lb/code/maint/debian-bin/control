@@ -1,4 +1,4 @@
-Source: exmcutils
+Source: adlbx
 Section: unknown
 Priority: extra
 Maintainer: Justin M Wozniak <wozniak@mcs.anl.gov>
@@ -7,8 +7,8 @@ Standards-Version: 3.9.4
 Homepage: http://swift-lang.org
 #Vcs-Git: git@github.com:swift-lang/swift-t.git
 
-Package: exmcutils
+Package: adlbx
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Misc. C utilities for ExM software
- Misc. C utilities for ExM software
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich (>= 3.0), exmcutils (>= 0.5.1)
+Description: ADLB/X : Asynchronous Dynamic Load Balancer, implementation X
+  Extended, work-stealing ADLB developed for use in Swift/T project.

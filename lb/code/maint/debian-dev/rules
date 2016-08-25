@@ -15,7 +15,7 @@
 override_dh_auto_configure:
 	dh_auto_configure -- -q --config-cache \
 		--enable-shared \
-		--enable-mpi-2 \
+		--enable-debian-build \
 		CC=mpicc
 
 override_dh_auto_install:
