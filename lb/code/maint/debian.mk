@@ -28,7 +28,7 @@ FILE_LIST = maint/file-list.zsh
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 		maint/debian.mk
 
-$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure
+$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) adlbx $(VERSION) $(FILE_LIST)
 
