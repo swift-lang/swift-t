@@ -254,10 +254,17 @@ $(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+#       Install the headers (if not a binary package) and library
+ifeq ($(DEBIAN_BIN_PKG),)
 	$(E) cp $(CP_ARGS) $(INSTALLED_HEADERS) $(INSTALL_INCLUDE)
+endif
 	$(E) cp $(CP_ARGS) $(ADLB_LIBS) $(INSTALL_LIB)
+#       Finally, copy in the provenance files
+#       (if not making a Debian package)
+ifeq ($(DEBIAN_PKG),)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 	$(E) touch $(INSTALL_ETC)/install.txt
+endif
 	$(Q)
 
 # This gives a false autoscan warning for token 'install'
