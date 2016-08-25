@@ -364,7 +364,7 @@ On Midway/SLURM, set environment variable +PROJECT+ as you would for
 +--account+, and environment variable +QUEUE+ as you would for
 +--partition+.  See <<variables,Turbine scheduler variables>>.
 
-In SLURM, we support additional optional environment variable
+In SLURM, Swift/T supports additional optional environment variable
 +TURBINE_SBATCH_ARGS+.  These arguments, on Midway, may include
 +--exclusive+ and +--constraint=ib+.  The internally generated
 +sbatch+ command is logged in +$TURBINE_OUTPUT/sbatch.txt+.
