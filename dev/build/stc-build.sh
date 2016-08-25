@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
-THISDIR=`dirname $0`
+
+THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then

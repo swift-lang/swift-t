@@ -3,6 +3,8 @@ set -e
 
 THIS=$( cd $(dirname $0) && pwd )
 
+${THIS}/check-tools.sh
+
 pushd ${C_UTILS_SRC}
 echo
 echo "Building c-utils"

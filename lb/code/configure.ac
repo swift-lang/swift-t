@@ -66,13 +66,14 @@ AC_PROG_CC
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SSIZE_T
 
 # Checks for functions
-AC_CHECK_FUNCS([memchr memmove memset pow stpcpy strdup strtol uname])
-AC_CHECK_FUNCS([strerror])
+AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
+AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -228,10 +229,10 @@ then
 fi
 rm -f mpi_version.c.txt
 
-XLB_ENABLE_XPT=yes
+XLB_ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
   AS_HELP_STRING([--enable-checkpoint],
-                 [Enable checkpoint functionality (on by default)]),
+                 [Enable checkpoint functionality (Default: disabled)]),
                  [
       if [[ "$enableval" == yes ]]
       then
@@ -243,11 +244,11 @@ AC_ARG_ENABLE(checkpoint,
         echo "Invalid enable-checkpoint value: $enableval"
         exit 1
       fi], [])
-AC_MSG_RESULT([checkpoints enabled])
 AC_SUBST(XLB_ENABLE_XPT)
 
 if [[ ${XLB_ENABLE_XPT} == yes ]]
 then
+  AC_MSG_RESULT([ADLB checkpoints enabled])
   ENABLE_ZLIB=0
   ZLIB_HOME=
   AC_FUNC_FSEEKO

@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
-# Swift/T build script with default settings
+# BUILD ALL
 
-THISDIR=$( dirname $0 )
+# Swift/T build script: runs configuration and compilation
 
-source "${THISDIR}/init-settings.sh"
-source "${THISDIR}/internal-build-all.sh"
+THIS=$( dirname $0 )
+
+${THIS}/check-settings.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/internal-build-all.sh

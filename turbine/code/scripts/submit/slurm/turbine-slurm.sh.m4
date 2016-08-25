@@ -1,5 +1,5 @@
-changecom(`dnl')#!/bin/bash -l
-# We use changecom to change the M4 comment to dnl, not hash
+changecom(`dnl')#!/bin/bash
+# We changed the M4 comment to d-n-l, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #

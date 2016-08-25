@@ -87,7 +87,7 @@ MPI_VERSION=3
 # DISABLE_XPT=1
 
 # Manual zlib setup: required for checkpointing
-# DISABLE_ZLIB=1
+DISABLE_ZLIB=1
 # ZLIB_INSTALL=/path/to/zlib
 
 # Enable developer mode (extra warnings)

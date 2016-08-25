@@ -73,6 +73,7 @@ fi
 
 # Checks for programs
 AC_PROG_CC
+AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
@@ -527,7 +528,7 @@ AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 AC_SUBST(USE_MPE_LIB_A)
 
-ENABLE_XPT=yes
+ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -544,9 +545,7 @@ AC_ARG_ENABLE(checkpoint,
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
 then
-    AC_MSG_RESULT([Checkpointing enabled]);
-else
-    AC_MSG_RESULT([Checkpointing disabled]);
+    AC_MSG_RESULT([Checkpointing enabled])
 fi
 AC_SUBST(ENABLE_XPT)
 

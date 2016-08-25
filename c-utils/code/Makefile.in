@@ -158,8 +158,8 @@ deps_contents.txt:
 ### COMPILE
 
 %.o: %.c
-	$(Q) "  CC		$@"
 #       This line causes a false autoscan warning on token 'CC' (C++)
+	$(Q) "  CC		$@"
 	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
 
 ### LINK
