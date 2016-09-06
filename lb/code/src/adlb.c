@@ -1523,7 +1523,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refc change)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   rc = xlb_refcount_incr(id, change, &notifs);
-  ADLB_CHECK(rc);
+  ADLB_CHECK_MSG(rc, "failed to increment: ");
 
   rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);

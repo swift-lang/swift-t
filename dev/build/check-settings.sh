@@ -1,7 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -eu
 
 # CHECK SETTINGS
+
+# Fail nicely if the user did not create a settings file (via init-settings)
 
 THIS=$( cd $(dirname $0) && pwd )
 
