@@ -187,7 +187,14 @@ ARGS=( ${*} )
 
 if [[ ! -f ${PROGRAM} ]]
 then
-  echo "turbine: program not found: ${PROGRAM}"
+  echo "turbine: Program not found: ${PROGRAM}"
+  exit 1
+fi
+if [[ ${#PROGRAM%.swift} != ${#PROGRAM} ]]
+then
+  echo "turbine: Given a Swift script: ${PROGRAM}"
+  echo "\t Turbine inputs are normally *.tic or *.tcl"
+  echo "\t Use stc to generate a *.tic from a *.swift"
   exit 1
 fi
 
