@@ -196,6 +196,7 @@ any other way.
 +PPN+:: Number of processes per node
 +PROJECT+:: The project name to use with the system scheduler
 +QUEUE+:: Name of queue in which to run
++WALLTIME+:: Wall time argument to pass to scheduler, typically +HH:MM:SS+
 +TURBINE_OUTPUT+:: Directory in which to place Turbine output (if
 unset, a default value is automatically created)
 +TURBINE_OUTPUT_ROOT+:: Directory under which Turbine will
