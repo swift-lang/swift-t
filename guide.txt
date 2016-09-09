@@ -113,6 +113,10 @@ tar xfz swift-t-1.0.tar.gz
 cd swift-t-1.0
 ----
 +
+2. Create a settings file by running:
+----
+./dev/build/init-settings.sh
+----
 3. Edit the settings file: +dev/build/swift-t-settings.sh+
 +
 At a minimum, you must set the install directory with +SWIFT_T_PREFIX+
@@ -133,6 +137,8 @@ TIP: Save your +swift-t-settings.sh+ when you download a new package
 ----
 dev/build/build-all.sh
 ----
++
+See +dev/build/README.md+ for more notes and build options.
 +
 If +build-all.sh+ does not succeed on your system, see Section
 <<Build_configuration, Build configuration>> below.
