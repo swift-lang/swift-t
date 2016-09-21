@@ -113,11 +113,13 @@ tar xfz swift-t-1.0.tar.gz
 cd swift-t-1.0
 ----
 +
-2. Create a settings file by running:
+
+3. Create a settings file by running:
 ----
 ./dev/build/init-settings.sh
 ----
-3. Edit the settings file: +dev/build/swift-t-settings.sh+
++
+4. Edit the settings file: +dev/build/swift-t-settings.sh+
 +
 At a minimum, you must set the install directory with +SWIFT_T_PREFIX+
 (the default will install to +/tmp+).
@@ -132,7 +134,7 @@ enabling/disabling features, debug or optimized builds, etc.
 +
 TIP: Save your +swift-t-settings.sh+ when you download a new package
 +
-4. Run the setup script
+5. Run the setup script
 +
 ----
 dev/build/build-all.sh
@@ -147,7 +149,7 @@ TIP: if you want more control than +build-all.sh+ provides, you can
     build Swift/T with the
     <<build_manual,manual configure/make workflow>>.
 +
-5. Add Turbine and STC to your paths
+6. Add Turbine and STC to your paths
 +
 ----
 PATH=${PATH}:/path/to/swift-t-install/turbine/bin
