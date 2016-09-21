@@ -894,58 +894,53 @@ cd swift-t-1.0</code></pre>
 </li>
 <li>
 <p>
-Edit the settings file: <code>dev/build/swift-t-settings.sh</code>
+Create a settings file by running:
 </p>
-<div class="paragraph"><p>At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
+</li>
+</ol></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>./dev/build/init-settings.sh</code></pre>
+</div></div>
+<div class="paragraph"><p>+
+4. Edit the settings file: <code>dev/build/swift-t-settings.sh</code></p></div>
+<div class="paragraph"><p>+
+At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
 (the default will install to <code>/tmp</code>).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
 configuration settings so that all prerequisites can
 be correctly located and configured (see Section
 <a href="#Build_configuration">Build configuration</a>).</p></div>
-<div class="paragraph"><p>A range of other settings are also available here:
+<div class="paragraph"><p>+
+A range of other settings are also available here:
 enabling/disabling features, debug or optimized builds, etc.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">Save your <code>swift-t-settings.sh</code> when you download a new package</td>
-</tr></table>
-</div>
-</li>
-<li>
-<p>
-Run the setup script
-</p>
+<div class="paragraph"><p>+
+TIP: Save your <code>swift-t-settings.sh</code> when you download a new package</p></div>
+<div class="paragraph"><p>+
+5. Run the setup script</p></div>
+<div class="paragraph"><p>+</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>dev/build/build-all.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed on your system, see Section
+<div class="paragraph"><p>+
+See <code>dev/build/README.md</code> for more notes and build options.</p></div>
+<div class="paragraph"><p>+
+If <code>build-all.sh</code> does not succeed on your system, see Section
 <a href="#Build_configuration">Build configuration</a> below.</p></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Tip</div>
-</td>
-<td class="content">if you want more control than <code>build-all.sh</code> provides, you can
+<div class="paragraph"><p>+
+TIP: if you want more control than <code>build-all.sh</code> provides, you can
     build Swift/T with the
-    <a href="#build_manual">manual configure/make workflow</a>.</td>
-</tr></table>
-</div>
-</li>
-<li>
-<p>
-Add Turbine and STC to your paths
-</p>
+    <a href="#build_manual">manual configure/make workflow</a>.</p></div>
+<div class="paragraph"><p>+
+6. Add Turbine and STC to your paths</p></div>
+<div class="paragraph"><p>+</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>PATH=${PATH}:/path/to/swift-t-install/turbine/bin
 PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
 </div></div>
-</li>
-</ol></div>
 </div>
 </div>
 </div>
@@ -2049,9 +2044,14 @@ Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.
 <li>
 <p>
 The Python-style string format operator <code>format%(arg1,arg2,&#8230;)</code> is
-  equivalent to <code>sprintf(format, arg1, arg2,&#8230;)</code>.  The parentheses
-  may be omitted for single arguments.
+  equivalent to
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>sprintf(format, arg1, arg2, ...)</code></pre>
+</div></div>
+<div class="paragraph"><p>See <a href="#sprintf">sprintf()</a>.
+The parentheses may be omitted for single arguments.</p></div>
 </li>
 </ul></div>
 </div>
@@ -2324,12 +2324,21 @@ Obtain the length of the given string
 Hash the string to a 32-bit integer
 </p>
 </dd>
+</dl></div>
+<a name="sprintf"></a>
+<div class="dlist"><dl>
 <dt class="hdlist1">
-<code>sprintf(string format, int|float|string|boolean&#8230;)</code>
+<code>sprintf(string format, int|float|string|boolean&#8230;) &#8594; string</code>
 </dt>
 <dd>
 <p>
-As <code>sprintf()</code> in C
+As <code>sprintf()</code> in C.  In the <code>format</code> string, use the <code>%%</code> escape to
+obtain a plain <code>%</code>.  Use <code>%i</code> for <code>int</code>, <code>%f</code> for <code>float</code>, <code>%s</code> for
+<code>string</code>.
+Use <code>%i</code> for <code>boolean</code> to obtain <code>"1"</code> for <code>true</code> and <code>"0"</code> for <code>false</code>.
+This function is implemented by calling to the Tcl
+<a href="http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm"><code>format</code></a>
+command.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4961,7 +4970,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-22 14:01:17 CDT
+ 2016-09-21 10:26:58 CDT
 </div>
 </div>
 </body>
