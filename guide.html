@@ -2332,14 +2332,19 @@ Hash the string to a 32-bit integer
 </dt>
 <dd>
 <p>
-As <code>sprintf()</code> in C.  In the <code>format</code> string, use the <code>%%</code> escape to
-obtain a plain <code>%</code>.  Use <code>%i</code> for <code>int</code>, <code>%f</code> for <code>float</code>, <code>%s</code> for
-<code>string</code>.
-Use <code>%i</code> for <code>boolean</code> to obtain <code>"1"</code> for <code>true</code> and <code>"0"</code> for <code>false</code>.
-This function is implemented by calling to the Tcl
-<a href="http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm"><code>format</code></a>
-command.
+As <code>sprintf()</code> in C.
+In the <code>format</code> string, use
+<code>%i</code> for <code>int</code>,
+<code>%f</code> for <code>float</code>,
+<code>%s</code> for <code>string</code>.
+Use <code>%i</code> for <code>boolean</code> to obtain <code>"1"</code> for <code>true</code> and <code>"0"</code> for
+<code>false</code>.
+Use the <code>%%</code> escape to obtain a plain <code>%</code>.
+Most other ANSI C <code>sprintf()</code> features are supported.
 </p>
+<div class="paragraph"><p>This function is implemented by calling to the Tcl
+<a href="http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm"><code>format</code></a>
+command.</p></div>
 </dd>
 <dt class="hdlist1">
 <code>join(string A[], string separator) &#8594; string</code>
@@ -4970,7 +4975,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-09-21 10:26:58 CDT
+ 2016-09-21 10:30:00 CDT
 </div>
 </div>
 </body>
