@@ -998,8 +998,14 @@ The following unary operators are defined:
 * Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.
 
 * The Python-style string format operator +format%(arg1,arg2,...)+ is
-  equivalent to +sprintf(format, arg1, arg2,...)+.  The parentheses
-  may be omitted for single arguments.
+  equivalent to
++
+----
+sprintf(format, arg1, arg2, ...)
+----
++
+See <<sprintf,sprintf()>>.
+The parentheses may be omitted for single arguments.
 
 [[standard_library]]
 == Standard library
@@ -1123,8 +1129,26 @@ Obtain the length of the given string
 +hash(string) -> int+::
 Hash the string to a 32-bit integer
 
-+sprintf(string format, int|float|string|boolean...)+::
-As +sprintf()+ in C
+////
+Had to do a passthrough manual anchor to get this to work right:
+////
+++++
+<a name="sprintf"></a>
+++++
++sprintf(string format, int|float|string|boolean...) -> string+::
+As +sprintf()+ in C.
+In the +format+ string, use
++%i+ for +int+,
++%f+ for +float+,
++%s+ for +string+.
+Use +%i+ for +boolean+ to obtain +"1"+ for +true+ and +"0"+ for
++false+.
+Use the +%%+ escape to obtain a plain +%+.
+Most other ANSI C +sprintf()+ features are supported.
++
+This function is implemented by calling to the Tcl
+http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm[+format+]
+command.
 
 +join(string A[], string separator) -> string+::
 Join strings in +A+ with given separator.  The separator may be the
