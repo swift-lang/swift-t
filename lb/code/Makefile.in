@@ -40,7 +40,7 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB_LIBS = 
+ADLB_LIBS =
 
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
@@ -167,14 +167,14 @@ include tests/module.mk
 
 ### Autoconf sanity:
 
-configure: bootstrap
+configure: configure.ac bootstrap version.txt
 	@echo
 	@echo "Configuration is not up to date (bootstrap)!"
 	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@false
 
-Makefile: configure configure.ac Makefile.in
+Makefile: configure Makefile.in
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
 	@echo "Run ./bootstrap and ./configure again."
