@@ -39,6 +39,8 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
+ENABLE_DEB=@ENABLE_DEB@ # Let Makefile/sed substitution tell us 
+                        # if this is a Debian installation
 
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()

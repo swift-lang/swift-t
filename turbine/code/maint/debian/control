@@ -1,0 +1,14 @@
+Source: turbine
+Section: unknown
+Priority: extra
+Maintainer: Justin M Wozniak <wozniak@mcs.anl.gov>
+Build-Depends:
+Standards-Version: 3.9.4
+Homepage: http://swift-lang.org
+#Vcs-Git: git@github.com:swift-lang/swift-t.git
+
+Package: turbine
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich (>= 3.0), exmcutils (>= 0.5.1), adlbx (>= 0.7.1)
+Description: High-Performance MPI-based execution engine for Swift
+    High-Performance MPI-based execution engine for Swift

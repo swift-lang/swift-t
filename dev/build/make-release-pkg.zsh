@@ -194,33 +194,8 @@ print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
 mkdir -pv ${TARGET}
 pushd turbine/code
-export_copy bootstrap config.h.in configure configure.ac
-export_copy version.txt
-export_copy Makefile.in **/*.mk.in
-export_copy maint/{*.sh,find-tcl.zsh}
-export_copy bin/turbine
-export_copy bin/turbine-{read,write}-doubles
-export_copy scripts/*-config.sh.in scripts/helpers.zsh
-export_copy **/*.[chi] **/*.{tcl,swift}
-export_copy src/executables/turbine_sh.manifest
-export_copy tests/{runbin.zsh.in,run-mpi.zsh}
-export_copy tests/{*.manifest,*.sh,*.data,*.txt}
-export_copy src/util/debug-tokens.tcl.in
-export_copy src/**/*.manifest
-export_copy tests/runbin.zsh.in
-export_copy scripts/{data-log.sh,leak-find.py,rank.zsh}
-export_copy scripts/main-wrap/genleaf
-export_copy scripts/main-wrap/{settings/*.sh,templates/*template*}
-export_copy scripts/mkstatic/*(.)
-export_copy scripts/submit/*.*sh*
-export_copy scripts/submit/cray/*.*sh*
-export_copy scripts/submit/cobalt/*turbine*.*sh*
-export_copy scripts/submit/ec2/turbine-setup-ec2.zsh
-export_copy scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
-export_copy scripts/submit/slurm/*turbine*.*sh*
-export_copy scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
-export_copy src/turbine/turbine-version.h.in
-export_copy etc/help*.txt
+FILE_LIST=$( lb/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
