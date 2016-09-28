@@ -172,11 +172,11 @@ AC_ARG_WITH(c-utils,
   [
     [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
 
-    dnl Are we building a Debian package?
+    # Are we building a Debian package?
     if (( ${DEBIAN_BUILD} ))
     then
-        USE_C_UTILS==/usr
-    else # Are we doing a source installation?
+        USE_C_UTILS=/usr
+    else # We are doing a source installation
         location=${SOFTWARE}/c-utils
         AC_CHECK_FILE(${location}/include/c-utils.h,
                       [USE_C_UTILS=${location}], [])
@@ -301,7 +301,7 @@ AC_SUBST(ENABLE_DEV)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
-# Debian stuff
+# Debian stuff: noops
 AC_ARG_ENABLE([dependency-tracking])
 AC_ARG_ENABLE([maintainer-mode])
 AC_ARG_ENABLE([silent-rules])
