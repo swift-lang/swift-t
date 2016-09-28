@@ -119,7 +119,7 @@ AC_SUBST(ENABLE_FAST)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
-# Debian stuff
+# Debian stuff: noops
 AC_ARG_ENABLE([dependency-tracking])
 AC_ARG_ENABLE([maintainer-mode])
 AC_ARG_ENABLE([silent-rules])
