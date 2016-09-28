@@ -22,7 +22,7 @@ TOP=$PWD
 
 echo "Making: $NAME"
 
-BUILD_DIR=$( mktemp -d deb-work-XXX )
+BUILD_DIR=$( mktemp -d .deb-work-XXX )
 echo "Working in: $BUILD_DIR"
 cd $BUILD_DIR
 

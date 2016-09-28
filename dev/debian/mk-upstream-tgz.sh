@@ -21,13 +21,15 @@ FILE_LIST=$5       # Program that produces list of files to include
 export DEBIAN_PKG_TYPE  # Export this to FILE_LIST program
 FILES=$( $FILE_LIST )
 
-if [ ${DEBIAN_PKG_TYPE} = dev ]
+if [ $DEBIAN_PKG_TYPE = dev ]
 then
   NAME=$NAME-dev
 fi
 
-D=$( mktemp -d $NAME-deb-tgz-XXX )
-mkdir $D/$NAME-$VERSION
+echo NAME: $NAME
+
+D=$( mktemp -d .$NAME-deb-tgz-XXX )
+mkdir -v $D/$NAME-$VERSION
 cp -v --parents $FILES $D/$NAME-$VERSION
 
 set -x
