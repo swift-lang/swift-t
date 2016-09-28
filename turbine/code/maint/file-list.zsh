@@ -6,11 +6,11 @@ set -eu
 # Also makes a soft link to the Debian package files
 
 print bootstrap config.h.in configure configure.ac
-print version.txt
+print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mk,version.mk,debian-list.mk}
 print maint/{*.sh,find-tcl.zsh}
-print bin/turbine
+print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
 print **/*.[chi] **/*.{tcl,swift}

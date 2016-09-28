@@ -11,17 +11,10 @@ License: <special license>
  .
  <Including paragraphs>
 
-# If you want to use GPL v2 or later for the /debian/* files use
-# the following clauses, or change it to suit. Delete these two lines
 Files: debian/*
 Copyright: 2013 University of Chicago and Argonne National Laboratory
 License: Apache 2
 
-Details of the license are available at:
+Details of the license are available at
 
     http://www.apache.org/licenses/LICENSE-2.0.txt
-
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
-# Please avoid to pick license terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.

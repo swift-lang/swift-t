@@ -9,6 +9,6 @@ Homepage: http://swift-lang.org
 
 Package: turbine
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, mpich (>= 3.0), exmcutils (>= 0.5.1), adlbx (>= 0.7.1)
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich (>= 3.0), tcl (>= 8.5), zsh (>= 5.0), exmcutils-dev (>= 0.5.1), adlbx-dev (>= 0.7.1)
 Description: High-Performance MPI-based execution engine for Swift
     High-Performance MPI-based execution engine for Swift

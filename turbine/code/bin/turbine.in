@@ -39,8 +39,8 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
-ENABLE_DEB=@ENABLE_DEB@ # Let Makefile/sed substitution tell us 
-                        # if this is a Debian installation
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+                            # if this is a Debian installation
 
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
@@ -101,7 +101,12 @@ then
 fi
 
 TURBINE_BIN=$( dirname $0 )
-if [[ -z ${TURBINE_HOME} ]]
+
+if (( DEBIAN_BUILD ))
+then
+  TURBINE_HOME=/usr/lib/turbine
+fi
+if (( ! ${+TURBINE_HOME} ))
 then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
