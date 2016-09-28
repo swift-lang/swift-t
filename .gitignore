@@ -44,6 +44,3 @@ pkgIndex.tcl
 .project
 .cproject
 .autotools
-
-# Debian intermediates
-deb-work-*
