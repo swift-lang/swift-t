@@ -10,6 +10,10 @@ ADLBX_DEV_DEB = adlbx-dev_$(VERSION)-1_amd64.deb
 deb: $(ADLBX_DEB)
 dev-deb: $(ADLBX_DEV_DEB)
 
+deb-dev:
+	@echo "No, it's dev-deb!"
+	@exit 1
+
 ifeq (,$(filter dev-deb,$(MAKECMDGOALS)))
   # Make binary package (no headers)
   DEBIAN_PKG_TYPE = bin
