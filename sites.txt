@@ -9,7 +9,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.9.1, July 2016
+v1.0.0, October 2016
 
 ////
 
@@ -319,6 +319,15 @@ MCS users are welcome to use this installation.
 
 * STC: +~wozniak/Public/stc/bin/stc+
 * Turbine: +~wozniak/Public/turbine/bin/turbine+
+
+=== Cooley
+
+https://www.alcf.anl.gov/user-guides/cooley[Cooley] is a large cluster
+at the ALCF.
+
+==== Public installation
+
++~wozniak/Public/sfw/x86_64/swift-t/stc/bin+
 
 === Breadboard
 
