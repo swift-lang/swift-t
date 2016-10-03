@@ -327,7 +327,22 @@ at the ALCF.
 
 ==== Public installation
 
+Add to +PATH+:
+
 +~wozniak/Public/sfw/x86_64/swift-t/stc/bin+
+
+Run on the login nodes with:
+
+----
+swift-t ...
+----
+
+Run on the compute nodes with:
+
+----
+export MODE=cluster QUEUE=default PROJECT=...
+swift-t -m cobalt ...
+----
 
 === Breadboard
 
