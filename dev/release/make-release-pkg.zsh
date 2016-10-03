@@ -39,20 +39,18 @@ export ENABLE_COASTER=0
 # If PACKAGE_DEBIAN=1, build Debian binary packages instead
 PACKAGE_DEBIAN=0
 
+# Run ./bootstrap by default; may be disabled
+BOOTSTRAP=1
+
 DISTRO_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
-while getopts "cpt" opt
+while getopts "bcpt" opt
 do
   case ${opt} in
-    c)
-      ENABLE_COASTER=1
-      ;;
-    p)
-      PACKAGE_DEBIAN=1
-      ;;
-    t)
-      USE_MASTER=1
-      ;;
+    b) BOOTSTRAP=0 ;;
+    c) ENABLE_COASTER=1 ;;
+    p) PACKAGE_DEBIAN=1 ;;
+    t) USE_MASTER=1     ;;
     \?)
       echo "make-release-package.zsh: unknown option: ${OPTARG}"
       exit 1
@@ -135,14 +133,17 @@ declare EXPORT
 
 # SECTION II
 
-for D in ${TOP}/{c-utils,lb,turbine}/code
-do
-  print
-  pushd ${D}
-  print "BOOTSTRAP: ${D}"
-  # ./bootstrap
-  popd
-done
+if (( BOOTSTRAP ))
+then
+  for D in ${TOP}/{c-utils,lb,turbine}/code
+  do
+    print
+    pushd ${D}
+    print "BOOTSTRAP: ${D}"
+    ./bootstrap
+    popd
+  done
+fi
 
 if (( ENABLE_COASTER ))
 then
@@ -174,7 +175,8 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd c-utils/code
-FILE_LIST=$( c-utils/code/maint/file-list.zsh )
+pwd
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -184,7 +186,7 @@ print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
 mkdir -pv ${TARGET}
 pushd lb/code
-FILE_LIST=$( lb/code/maint/file-list.zsh )
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -194,7 +196,7 @@ print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
 mkdir -pv ${TARGET}
 pushd turbine/code
-FILE_LIST=$( turbine/code/maint/file-list.zsh )
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -205,7 +207,7 @@ pushd stc
 pushd code
 TARGET=${EXPORT}/stc/code
 mkdir -pv ${TARGET}
-FILE_LIST=$( stc/code/maint/file-list.zsh )
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 pushd tests
