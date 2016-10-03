@@ -3,7 +3,7 @@ set -eu
 
 # MAKE-RELEASE-PKG.ZSH
 
-# Builds exm-<token>.tar.gz for distribution
+# Builds swift-t-<version>.tar.gz for distribution
 
 # End-user should be able to compile Swift/T
 # with standard tools: make, gcc, ant, javac, etc.
@@ -54,7 +54,7 @@ do
       USE_MASTER=1
       ;;
     \?)
-      echo "construct.zsh: unknown option: ${OPTARG}"
+      echo "make-release-package.zsh: unknown option: ${OPTARG}"
       exit 1
       ;;
   esac
