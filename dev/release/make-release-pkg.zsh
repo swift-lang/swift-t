@@ -23,7 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-EXM_VERSION=1.1
+SWIFT_T_VERSION=1.1
 STC_VERSION=0.7.2
 TURBINE_VERSION=0.9.1
 ADLB_VERSION=0.7.2
@@ -67,9 +67,9 @@ if (( ! USE_MASTER ))
 then
   if (( ENABLE_COASTER ))
   then
-    SWIFT_T_RELEASE=swift-t-${EXM_VERSION}-coaster
+    SWIFT_T_RELEASE=swift-t-${SWIFT_T_VERSION}-coaster
   else
-    SWIFT_T_RELEASE=swift-t-${EXM_VERSION}
+    SWIFT_T_RELEASE=swift-t-${SWIFT_T_VERSION}
   fi
   STC_RELEASE=release/${STC_VERSION}
   TURBINE_RELEASE=release/${TURBINE_VERSION}
