@@ -1,11 +1,10 @@
 #!/bin/sh
-
 set -eu
 
 echo "Running autoconf..."
-autoconf -f 
+autoconf -f
 echo "Running autoheader..."
-autoheader 
+autoheader
 echo "Turbine: bootstrap: OK"
 
 exit 0
