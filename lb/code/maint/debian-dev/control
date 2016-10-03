@@ -1,0 +1,14 @@
+Source: adlbx-dev
+Section: unknown
+Priority: extra
+Maintainer: Justin M Wozniak <wozniak@mcs.anl.gov>
+Build-Depends:
+Standards-Version: 3.9.4
+Homepage: http://swift-lang.org
+#Vcs-Git: git@github.com:swift-lang/swift-t.git
+
+Package: adlbx-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpich (>= 3.0), exmcutils-dev (>= 0.5.1)
+Description: ADLB/X : Asynchronous Dynamic Load Balancer, implementation X
+  Extended, work-stealing ADLB developed for use in Swift/T project.

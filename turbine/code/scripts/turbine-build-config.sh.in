@@ -3,7 +3,14 @@
 # This contains variables relevant to compiling code that uses the 
 # Turbine C interface
 
-TURBINE_HOME='@prefix@'
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+                            # if this is a Debian installation
+if (( DEBIAN_BUILD ))
+then
+  TURBINE_HOME=/usr/lib/turbine
+else
+  TURBINE_HOME='@prefix@'
+fi
 TURBINE_VERSION='@TURBINE_VERSION@'
 C_UTILS_HOME='@USE_C_UTILS@'
 TCL_HOME='@USE_TCL@'
