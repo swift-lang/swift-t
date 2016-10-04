@@ -147,7 +147,7 @@ if (( MAKE_CLEAN )); then
 fi
 if ! make -j ${MAKE_PARALLELISM}
 then
-  rm deps_contents.txt
+  rm -fv deps_contents.txt
   echo
   echo Make failed.  The following may be useful:
   echo
