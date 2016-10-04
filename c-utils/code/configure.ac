@@ -1,8 +1,8 @@
 
 # EXM C-UTILS
 # configure.ac
-# Compile this with: ./setup.sh
-# After compiling this, get help with: ./configure --help
+# Compile this with: ./bootstrap
+# Then, get help with: ./configure --help
 
 define([c_utils_version],
        regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
@@ -54,7 +54,7 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
-AC_CHECK_FUNCS([floor gettimeofday memchr memmove])
+AC_CHECK_FUNCS([floor gettimeofday memchr memmove memset])
 AC_CHECK_FUNCS([strchr strdup strnlen strtol])
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -118,6 +118,11 @@ AC_SUBST(ENABLE_FAST)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_CONFIG_FILES(
 	Makefile

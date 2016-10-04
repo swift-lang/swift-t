@@ -57,11 +57,18 @@ MPI_VERSION=3
 
 # Enable Python integration
 # ENABLE_PYTHON=1
-# PYTHON_INSTALL=/usr/
+# PYTHON_INSTALL=/path/to/python
+# PYTHON_VERSION_MAJOR=2
+# PYTHON_VERSION_MINOR=7
+# PYTHON_VERSION_SUFFIX=m
 
 # Enable R integration
 # ENABLE_R=1
-# R_INSTALL=/usr/
+# R_INSTALL=/path/to/R
+# Define these if Rcpp and RInside are not
+# autodetected
+# RCPP_INSTALL=/path/to/Rcpp
+# RINSIDE_INSTALL=/path/to/RInside
 
 # Enable Julia integration
 # ENABLE_JULIA=1
@@ -80,7 +87,7 @@ MPI_VERSION=3
 # DISABLE_XPT=1
 
 # Manual zlib setup: required for checkpointing
-# DISABLE_ZLIB=1
+DISABLE_ZLIB=1
 # ZLIB_INSTALL=/path/to/zlib
 
 # Enable developer mode (extra warnings)

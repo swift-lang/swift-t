@@ -80,6 +80,7 @@ handle_python_non_string(PyObject* o)
 
 static PyObject* main_module = NULL;
 static PyObject* main_dict   = NULL;
+static PyObject* local_dict  = NULL;
 
 static bool initialized = false;
 
@@ -92,6 +93,8 @@ static int python_init(void)
   if (main_module == NULL) return handle_python_exception();
   main_dict = PyModule_GetDict(main_module);
   if (main_dict == NULL) return handle_python_exception();
+  local_dict = PyDict_New();
+  if (local_dict == NULL) return handle_python_exception();
   initialized = true;
   return TCL_OK;
 }
@@ -121,13 +124,13 @@ python_eval(bool persist, const char* code, const char* expression,
 
   // Execute code:
   DEBUG_TCL_TURBINE("python: code: %s", code);
-  PyObject* localDictionary = PyDict_New();
-  PyRun_String(code, Py_file_input, main_dict, localDictionary);
+
+  PyRun_String(code, Py_file_input, main_dict, local_dict);
   if (PyErr_Occurred()) return handle_python_exception();
 
   // Evaluate expression:
   DEBUG_TCL_TURBINE("python: expression: %s", expression);
-  PyObject* o = PyRun_String(expression, Py_eval_input, main_dict, localDictionary);
+  PyObject* o = PyRun_String(expression, Py_eval_input, main_dict, local_dict);
   if (o == NULL) return handle_python_exception();
 
   // Convert Python result to C string, then to Tcl string:

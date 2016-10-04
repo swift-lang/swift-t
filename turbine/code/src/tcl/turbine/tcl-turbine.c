@@ -72,6 +72,7 @@
 
 #include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
+#include "src/tcl/jvm/tcl-jvm.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 #include "src/tcl/julia/tcl-julia.h"
 #include "src/tcl/python/tcl-python.h"
@@ -233,9 +234,9 @@ log_setup(int rank)
   log_init();
   log_normalize();
 
-  // Did the user disable logging?
+  // Did the user enable logging?
   int enabled;
-  getenv_integer("TURBINE_LOG", 1, &enabled);
+  getenv_integer("TURBINE_LOG", 0, &enabled);
   if (enabled)
   {
     // Should we use a specific log file?
@@ -1760,6 +1761,7 @@ Tclturbine_Init(Tcl_Interp* interp)
 
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
+  tcl_jvm_init(interp);
   tcl_mpe_init(interp);
   tcl_julia_init(interp);
   tcl_python_init(interp);

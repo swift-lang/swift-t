@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
-THISDIR=`dirname $0`
+THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
-      # Disabled due to Turbine configure check
-      #make clean
-      :
+      make clean
   fi
 fi
 
@@ -19,7 +17,7 @@ elif [ ! -f configure ]; then
 fi
 
 EXTRA_ARGS=
-if (( EXM_OPT_BUILD )); then
+if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+=" --enable-fast"
 fi
 
@@ -27,8 +25,17 @@ if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
 fi
 
-if (( EXM_STATIC_BUILD )); then
+if (( SWIFT_T_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
+fi
+
+if (( ENABLE_JVM_SCRIPTING )); then
+  echo "JVM Scripting enabled"
+  EXTRA_ARGS+=" --enable-jvm-scripting"
+fi
+
+if [ ! -z "$USE_JVM_SCRIPT_HOME" ]; then
+  EXTRA_ARGS+=" --with-jvm-scripting=${USE_JVM_SCRIPT_HOME}"
 fi
 
 if (( ENABLE_PYTHON )); then
@@ -39,11 +46,31 @@ if [ ! -z "$PYTHON_INSTALL" ]; then
   EXTRA_ARGS+=" --with-python=${PYTHON_INSTALL}"
 fi
 
+if [ ! -z "$PYTHON_VERSION_MAJOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-major=${PYTHON_VERSION_MAJOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_MINOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-minor=${PYTHON_VERSION_MINOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_SUFFIX" ]; then
+  EXTRA_ARGS+=" --with-python-version-suffix=${PYTHON_VERSION_SUFFIX}"
+fi
+
 if (( ENABLE_R )); then
   EXTRA_ARGS+=" --enable-r"
 fi
 if [ ! -z "$R_INSTALL" ]; then
   EXTRA_ARGS+=" --with-r=${R_INSTALL}"
+fi
+
+if [ ! -z "$RINSIDE_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-rinside=${RINSIDE_INSTALL}"
+fi
+
+if [ ! -z "$RCPP_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-rcpp=${RCPP_INSTALL}"
 fi
 
 if (( ENABLE_JULIA )); then
@@ -87,7 +114,7 @@ if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
-if (( EXM_DEV )); then
+if (( SWIFT_T_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
@@ -99,7 +126,7 @@ if [ ! -z "$MPI_INSTALL" ]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
 fi
 
-if (( EXM_CUSTOM_MPI )); then
+if (( SWIFT_T_CUSTOM_MPI )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
@@ -116,7 +143,7 @@ if [ ! -z "$MPI_LIB_NAME" ]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --without-zlib"
+  EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then
@@ -134,7 +161,13 @@ else
 fi
 
 if (( CONFIGURE )); then
-  ./configure --with-adlb=${LB_INSTALL} \
+  echo ${USE_JVM_SCRIPT_HOME}
+  if (( ENABLE_JVM_SCRIPTING )); then
+    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
+    mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
+  fi
+  ./configure --config-cache \
+              --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
               --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${TURBINE_INSTALL} \
@@ -142,8 +175,14 @@ if (( CONFIGURE )); then
               --disable-log
 fi
 
-if (( MAKE_CLEAN )); then
-  make clean
+if (( MAKE_CLEAN ))
+then
+  rm -fv deps_contents.txt
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
 fi
 if ! make -j ${MAKE_PARALLELISM}
 then

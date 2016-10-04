@@ -66,13 +66,14 @@ AC_PROG_CC
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SSIZE_T
 
 # Checks for functions
-AC_CHECK_FUNCS([memchr memmove memset pow stpcpy strdup strtol uname])
-AC_CHECK_FUNCS([strerror])
+AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
+AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -145,6 +146,13 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+
 USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
@@ -162,21 +170,19 @@ AC_ARG_WITH(c-utils,
     USE_C_UTILS=${withval}
   ],
   [
-    dnl If not given, look in SOFTWARE, if valid
-    if [[ ${SOFTWARE} == 0 ]]
+    [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+
+    # Are we building a Debian package?
+    if (( ${DEBIAN_BUILD} ))
     then
-        AC_MSG_ERROR([Not found: ExM c-utils])
+        USE_C_UTILS=/usr
+    else # We are doing a source installation
+        location=${SOFTWARE}/c-utils
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=${location}], [])
     fi
-    location=${SOFTWARE}/c-utils
-    AC_CHECK_FILE(${location}/include/c-utils.h,
-                  [USE_C_UTILS=1], [])
-    if [[ ${USE_C_UTILS} == 1 ]]
-    then
-        USE_C_UTILS=${location}
-    else
-        AC_MSG_ERROR([Not found: ExM c-utils])
-    fi
-  ])
+    [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+])
 AC_SUBST(USE_C_UTILS)
 
 dnl Log settings.  See debug.h
@@ -228,10 +234,10 @@ then
 fi
 rm -f mpi_version.c.txt
 
-XLB_ENABLE_XPT=yes
+XLB_ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
   AS_HELP_STRING([--enable-checkpoint],
-                 [Enable checkpoint functionality (on by default)]),
+                 [Enable checkpoint functionality (Default: disabled)]),
                  [
       if [[ "$enableval" == yes ]]
       then
@@ -243,11 +249,11 @@ AC_ARG_ENABLE(checkpoint,
         echo "Invalid enable-checkpoint value: $enableval"
         exit 1
       fi], [])
-AC_MSG_RESULT([checkpoints enabled])
 AC_SUBST(XLB_ENABLE_XPT)
 
 if [[ ${XLB_ENABLE_XPT} == yes ]]
 then
+  AC_MSG_RESULT([ADLB checkpoints enabled])
   ENABLE_ZLIB=0
   ZLIB_HOME=
   AC_FUNC_FSEEKO
@@ -294,6 +300,11 @@ AC_SUBST(ENABLE_DEV)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk

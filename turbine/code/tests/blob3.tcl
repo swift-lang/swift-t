@@ -37,7 +37,7 @@ proc rules { } {
     # close container
     adlb::write_refcount_decr $A
 
-    turbine::blob_from_floats $b $A
+    turbine::floats2blob $b $A
     puts DONE
 }
 

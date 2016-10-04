@@ -10,7 +10,7 @@ set -eu
 # End-user should not need: autotools, patch
 
 # usage:
-# ./construct.zsh
+# ./make-release-pkg.zsh
 
 # Environment:
 # TMP: Fast working directory. Default /tmp.  Works in TMP/distro
@@ -23,12 +23,12 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-EXM_VERSION=0.9.0
-STC_VERSION=0.7.0
-TURBINE_VERSION=0.8.0
-ADLB_VERSION=0.7.0
-C_UTILS_VERSION=0.5.0
-SWIFT_K_VERSION=swift-t-0.9.0
+EXM_VERSION=1.0
+STC_VERSION=0.7.1
+TURBINE_VERSION=0.9.0
+ADLB_VERSION=0.7.1
+C_UTILS_VERSION=0.5.1
+SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
 export USE_MASTER=0
@@ -174,14 +174,8 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd c-utils/code
-export_copy c-utils-config.h.in configure configure.ac
-export_copy bootstrap Makefile.in src/module.mk.in
-export_copy maint/*.sh
-export_copy src/*.[ch]
-export_copy c-utils-config.h.in src/c-utils.h.in
-export_copy tests/module.mk.in
-export_copy tests/*.[ch]
-export_copy version.txt NOTICE debian/control
+FILE_LIST=$( c-utils/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
@@ -190,15 +184,8 @@ print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
 mkdir -pv ${TARGET}
 pushd lb/code
-export_copy bootstrap configure configure.ac Makefile.in install-sh
-export_copy config.h.in
-export_copy maint/*.sh
-export_copy maint/*.c
-export_copy src/*.[ch]
-export_copy config.h.in
-export_copy src/{adlb-version.h.in,mpe-settings.h.in}
-export_copy {src,tests}/module.mk.in
-export_copy version.txt NOTICE debian/control
+FILE_LIST=$( lb/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
@@ -207,33 +194,8 @@ print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
 mkdir -pv ${TARGET}
 pushd turbine/code
-export_copy bootstrap config.h.in configure configure.ac
-export_copy version.txt
-export_copy Makefile.in **/*.mk.in
-export_copy maint/{*.sh,find-tcl.zsh}
-export_copy bin/turbine
-export_copy bin/turbine-{read,write}-doubles
-export_copy scripts/*-config.sh.in scripts/helpers.zsh
-export_copy **/*.[chi] **/*.{tcl,swift}
-export_copy src/executables/turbine_sh.manifest
-export_copy tests/{runbin.zsh.in,run-mpi.zsh}
-export_copy tests/{*.manifest,*.sh,*.data,*.txt}
-export_copy src/util/debug-tokens.tcl.in
-export_copy src/**/*.manifest
-export_copy tests/runbin.zsh.in
-export_copy scripts/{data-log.sh,leak-find.py,rank.zsh}
-export_copy scripts/main-wrap/genleaf
-export_copy scripts/main-wrap/{settings/*.sh,templates/*template*}
-export_copy scripts/mkstatic/*(.)
-export_copy scripts/submit/*.*sh*
-export_copy scripts/submit/cray/*.*sh*
-export_copy scripts/submit/cobalt/*turbine*.*sh*
-export_copy scripts/submit/ec2/turbine-setup-ec2.zsh
-export_copy scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
-export_copy scripts/submit/slurm/*turbine*.*sh*
-export_copy scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
-export_copy src/turbine/turbine-version.h.in
-export_copy etc/help*.txt
+FILE_LIST=$( lb/code/maint/file-list.zsh )
+export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
