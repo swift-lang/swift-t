@@ -1,5 +1,5 @@
 #!/bin/sh
-set -u
+set -eu
 
 # MK UPSTREAM TGZ
 # For Debian package: Make the upstream TGZ

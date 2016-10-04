@@ -1,10 +1,5 @@
 
-DEB_FILES =          \
-	changelog    \
-	compat       \
-	control      \
-	copyright    \
-	rules
+# ADLB/X Debian Makefile
 
 include maint/version.mkf
 
@@ -28,13 +23,14 @@ else
   UPSTREAM_TGZ = adlbx-dev_$(VERSION).orig.tar.gz
 endif
 
-DEB_FILE_PATHS = $(wildcard maint/debian-dev/* maint/debian-bin/*)
+DEB_FILES = changelog compat control copyright rules
+DEB_FILE_PATHS = $(patsubst %,maint/debian-$(DEBIAN_PKG_TYPE)/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
-		maint/debian.mk
+		maint/debian.mkf
 
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \

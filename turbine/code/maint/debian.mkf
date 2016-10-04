@@ -1,13 +1,6 @@
 
 # Turbine Debian Makefile
 
-DEB_FILES =          \
-	changelog    \
-	compat       \
-	control      \
-	copyright    \
-	rules
-
 include maint/version.mkf
 
 TURBINE_DEB = turbine_$(VERSION)_amd64.deb
@@ -19,13 +12,14 @@ deb: $(TURBINE_DEB)
 DEBIAN_PKG_TYPE = bin
 UPSTREAM_TGZ = turbine_$(VERSION).orig.tar.gz
 
-DEB_FILE_PATHS = $(wildcard maint/debian/*)
+DEB_FILES = changelog compat control copyright rules
+DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
-		maint/debian.mk
+		maint/debian.mkf
 
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
