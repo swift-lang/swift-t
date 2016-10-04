@@ -39,7 +39,7 @@
 #define ADLB_IS_ERROR(rc) (rc == ADLB_ERROR)
 
 // printf-like macro for printing error info
-#define ERR_PRINTF(args...) printf(args)
+#define ERR_PRINTF(args...) printf(args); fflush(stdout);
 
 /**
   Asserts that condition is true, else returns given error code.

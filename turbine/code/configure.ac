@@ -144,9 +144,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -602,6 +602,7 @@ USE_PY_VERSION_MINOR=7
 USE_PY_VERSION_SUFFIX=
 USE_PYTHON_INCLUDE=0
 USE_PYTHON_LIB=0
+USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
 USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
 HAVE_PYTHON=0
 
@@ -947,7 +948,7 @@ AC_ARG_WITH(tcl,
       for TCLVER in ${TCL_VERSION_PREFS}
       do
         AC_MSG_CHECKING([for tclsh${TCLVER} on path])
-        program=$( which tclsh${TCLVER} )
+        program=$( which tclsh${TCLVER} 2>&1 )
         if [[ ${?} == 0 ]]
         then
           AC_MSG_RESULT([yes: ${program}])

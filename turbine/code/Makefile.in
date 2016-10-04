@@ -750,10 +750,11 @@ DIRECTORIES = $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
 TURBINE_HEADERS := src/turbine/turbine.h      \
-		  src/tcl/turbine/tcl-turbine.h \
-		  src/tcl/static-pkg/static-pkg.h \
-                  src/turbine/turbine-defs.h \
-                  src/tcl/blob/blob.h
+                   src/turbine/turbine-finalizers.h \
+                   src/tcl/turbine/tcl-turbine.h \
+                   src/tcl/static-pkg/static-pkg.h \
+                   src/turbine/turbine-defs.h \
+                   src/tcl/blob/blob.h
 ifeq ($(ENABLE_STATIC_PKG),1)
   TURBINE_HEADERS += $(STATIC_PKG_RESOURCE_H)
 endif

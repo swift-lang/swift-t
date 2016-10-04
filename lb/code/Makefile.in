@@ -167,14 +167,14 @@ include tests/module.mk
 
 ### Autoconf sanity:
 
-configure: bootstrap
+configure: configure.ac bootstrap version.txt
 	@echo
 	@echo "Configuration is not up to date (bootstrap)!"
 	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@false
 
-Makefile: configure configure.ac Makefile.in
+Makefile: configure Makefile.in
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
 	@echo "Run ./bootstrap and ./configure again."
