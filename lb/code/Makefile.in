@@ -40,7 +40,7 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB_LIBS = 
+ADLB_LIBS =
 
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
@@ -162,7 +162,7 @@ TEST_COMMON_SRCS :=
 TEST_SCRIPTS :=
 
 include src/module.mk
-include maint/debian.mk
+include maint/debian.mkf
 include tests/module.mk
 
 ### Autoconf sanity:

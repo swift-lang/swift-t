@@ -473,7 +473,7 @@ include lib/module.mk
 include scripts/main-wrap/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
-include maint/debian.mk
+include maint/debian.mkf
 
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_C_UTILS_SRC)

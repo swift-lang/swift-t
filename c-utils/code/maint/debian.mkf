@@ -1,8 +1,12 @@
 
-DEB_LIST = maint/debian-list.mk
+DEB_FILES =          \
+	changelog    \
+	compat       \
+	control      \
+	copyright    \
+	rules
 
-include maint/version.mk
-include $(DEB_LIST)
+include maint/version.mkf
 
 EXMCUTILS_DEB     = exmcutils_$(VERSION)-1_amd64.deb
 EXMCUTILS_DEV_DEB = exmcutils-dev_$(VERSION)-1_amd64.deb
@@ -40,3 +44,4 @@ clean:: clean-deb
 clean-deb::
 	$(Q) "  CLEAN DEBIAN"
 	$(E) rm -fv debian *.deb *.orig.tar.gz
+	$(E) rm -rf .deb-work-*

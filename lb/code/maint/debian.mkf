@@ -1,8 +1,12 @@
 
-DEB_LIST = maint/debian-list.mk
+DEB_FILES =          \
+	changelog    \
+	compat       \
+	control      \
+	copyright    \
+	rules
 
 include maint/version.mk
-include $(DEB_LIST)
 
 ADLBX_DEB     = adlbx_$(VERSION)-1_amd64.deb
 ADLBX_DEV_DEB = adlbx-dev_$(VERSION)-1_amd64.deb
@@ -47,4 +51,4 @@ clean-deb::
 # 	This may be a soft link (normal build) or a directory (mk-debian)
 	$(E) rm -rfv debian
 	$(E) rm -fv *.deb *.orig.tar.gz
-	$(E) rm -rf deb-work-*
+	$(E) rm -rf .deb-work-*

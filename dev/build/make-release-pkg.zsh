@@ -205,15 +205,7 @@ pushd stc
 pushd code
 TARGET=${EXPORT}/stc/code
 mkdir -pv ${TARGET}
-export_copy build.xml
-export_copy etc/version.txt
-export_copy etc/help*.txt etc/turbine-version.txt
-export_copy src/exm/stc/ast/ExM.g
-export_copy bin/* scripts/stc-config.sh
-export_copy conf/stc-env.sh.template
-export_copy **/*.java
-export_copy lib/*.jar
-export_copy META-INF/MANIFEST.MF
+FILE_LIST=$( stc/code/maint/file-list.zsh )
 popd
 pushd tests
 TARGET=${EXPORT}/stc/tests

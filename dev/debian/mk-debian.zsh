@@ -38,7 +38,7 @@ ln ../$ORIG_TGZ
 tar xfz $ORIG_TGZ
 (
   cd $NAME-$VERSION
-  pwd
+  echo Running debuild in: $(pwd)
   debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
 )
 
