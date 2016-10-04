@@ -6,7 +6,7 @@ DEB_FILES =          \
 	copyright    \
 	rules
 
-include maint/version.mk
+include maint/version.mkf
 
 ADLBX_DEB     = adlbx_$(VERSION)-1_amd64.deb
 ADLBX_DEV_DEB = adlbx-dev_$(VERSION)-1_amd64.deb
