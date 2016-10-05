@@ -63,6 +63,7 @@ fi
 if (( CONFIGURE )); then
   (
     set -x
+    rm config.cache
     ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
