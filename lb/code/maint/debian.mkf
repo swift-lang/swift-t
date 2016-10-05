@@ -29,7 +29,7 @@ DEB_FILE_PATHS = $(patsubst %,maint/debian-$(DEBIAN_PKG_TYPE)/%,$(DEB_FILES))
 FILE_LIST = maint/file-list.zsh
 
 # Just for TGZ dependency
-DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
+DEBIAN_STUFF = $(FILE_LIST) $(DEB_FILE_PATHS) \
 		maint/debian.mkf
 
 # Put the version number in the changelog
