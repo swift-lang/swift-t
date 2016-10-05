@@ -167,13 +167,16 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
   rm config.cache
-  ./configure --config-cache \
-              --with-adlb=${LB_INSTALL} \
-              ${CRAY_ARGS} \
-              --with-c-utils=${C_UTILS_INSTALL} \
-              --prefix=${TURBINE_INSTALL} \
-              ${EXTRA_ARGS} \
-              --disable-log
+  (
+    set -x
+    ./configure --config-cache \
+                --with-adlb=${LB_INSTALL} \
+                ${CRAY_ARGS} \
+                --with-c-utils=${C_UTILS_INSTALL} \
+                --prefix=${TURBINE_INSTALL} \
+                ${EXTRA_ARGS} \
+                --disable-log
+    )
 fi
 
 if (( MAKE_CLEAN ))
