@@ -12,4 +12,5 @@ then
   echo "You may edit swift-t-settings.sh before building."
 else
   echo "Already exists: ${THIS}/swift-t-settings.sh"
+  echo "Move or delete this file and try again."
 fi
