@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+# STC BUILD
+
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
@@ -8,6 +10,10 @@ if (( MAKE_CLEAN )); then
   ${ANT} clean
 fi
 ${ANT} ${STC_ANT_ARGS}
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
 
 if [ ! -z "${STC_INSTALL}" ]
 then

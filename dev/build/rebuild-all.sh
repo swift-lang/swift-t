@@ -15,4 +15,6 @@ export RUN_AUTOTOOLS=1
 export CONFIGURE=1
 export MAKE_CLEAN=1
 
+source ${THIS}/options.sh
+
 source ${THIS}/internal-build-all.sh

@@ -38,12 +38,19 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
-set -x
 if (( CONFIGURE )); then
+  (
+  set -x
   ./configure --config-cache \
               --prefix=${C_UTILS_INSTALL} \
               --enable-shared \
               ${EXTRA_ARGS}
+  )
 fi
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
+
 make -j ${MAKE_PARALLELISM}
 make install
