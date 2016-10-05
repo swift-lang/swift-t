@@ -33,7 +33,6 @@ D=$( mktemp -d .$NAME-deb-tgz-XXX )
 mkdir -v $D/$NAME-$VERSION
 cp -v --parents $FILES $D/$NAME-$VERSION
 
-set -x
 tar cfz $TGZ -C $D $NAME-$VERSION
 
 echo "Created $PWD $TGZ"
