@@ -3,6 +3,7 @@ set -eu
 
 # MK UPSTREAM TGZ
 # For Debian package: Make the upstream TGZ
+# Used internally by Makefiles
 
 echo "Building upstream TGZ..."
 

@@ -1,4 +1,4 @@
-exmcutils-dev (0.5.1-1) unstable; urgency=low
+exmcutils-dev (M4_CUTILS_VERSION) unstable; urgency=low
 
   * See http://swift-lang.org for change history
 

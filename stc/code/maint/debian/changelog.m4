@@ -1,4 +1,4 @@
-adlbx (0.7.1-1) unstable; urgency=low
+stc (M4_STC_VERSION) unstable; urgency=low
 
   * See http://swift-lang.org for change history
 

@@ -19,6 +19,10 @@ FILE_LIST = maint/file-list.zsh
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 		maint/debian.mkf
 
+# Put the version number in the changelog
+maint/debian/changelog: maint/debian/changelog.m4
+	m4 -D M4_STC_VERSION=$(VERSION) $(<) > $(@)
+
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile build.xml
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) stc $(VERSION) $(FILE_LIST)

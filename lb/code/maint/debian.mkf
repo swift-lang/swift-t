@@ -3,8 +3,8 @@
 
 include maint/version.mkf
 
-ADLBX_DEB     = adlbx_$(VERSION)-1_amd64.deb
-ADLBX_DEV_DEB = adlbx-dev_$(VERSION)-1_amd64.deb
+ADLBX_DEB     = adlbx_$(VERSION)_amd64.deb
+ADLBX_DEV_DEB = adlbx-dev_$(VERSION)_amd64.deb
 
 deb: $(ADLBX_DEB)
 dev-deb: $(ADLBX_DEV_DEB)
@@ -31,6 +31,11 @@ FILE_LIST = maint/file-list.zsh
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 		maint/debian.mkf
+
+# Put the version number in the changelog
+maint/debian-$(DEBIAN_PKG_TYPE)/changelog: \
+	maint/debian-$(DEBIAN_PKG_TYPE)/changelog.m4
+	m4 -D M4_ADLBX_VERSION=$(VERSION) $(<) > $(@)
 
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \

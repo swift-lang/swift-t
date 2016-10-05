@@ -3,6 +3,7 @@ set -eu
 
 # MK DEBIAN
 # Make the Debian package
+# Used internally by Makefiles
 
 echo "MK DEBIAN"
 
@@ -20,7 +21,7 @@ VERSION=$5         # Debian version
 
 TOP=$PWD
 
-echo "Making: $NAME"
+echo "Making: $NAME $VERSION"
 
 BUILD_DIR=$( mktemp -d .deb-work-XXX )
 echo "Working in: $BUILD_DIR"

@@ -5,16 +5,16 @@ set -eu
 # Main user interface to make all Swift/T DEBs
 
 # Options:
-# -b : Make bundle
+# -b : Make bundle containing all DEBs and an installer script
 # -c : Clean DEBs
 
 setopt pushdsilent nullglob
 zparseopts -D -E b=B c=C
 
-CUTILS_VERSION=$(  < c-utils/code/version.txt )
-ADLBX_VERSION=$(   < lb/code/version.txt      )
-TURBINE_VERSION=$( < turbine/code/version.txt )
-STC_VERSION=$(     < stc/code/etc/version.txt )
+source dev/build/get-versions.sh
+
+# The TGZ to be constructed here:
+TGZ=swift-t-debs-${SWIFT_T_VERSION}.tgz
 
 typeset -A MODULES DEBS VERSIONS
 MODULES=( c-utils exmcutils lb lb      turbine turbine stc stc )
@@ -36,18 +36,35 @@ then
   return
 fi
 
+COMPLETE=0
 START=${SECONDS}
+
+cleanup()
+{
+  if (( ! COMPLETE ))
+  then
+    print
+    print "Exiting early due to error: Cleaning up..."
+    rm -rv $1
+  else
+    print "Normal exit."
+    rm -r $1
+  fi
+}
 
 if (( ${#B} ))
 then
-  T=$( mktemp -d make-debs.XXX )
-  BUNDLE_DIR=${PWD}/${T}/swift-t-debs
+  WORK_DIR=${PWD}/$( mktemp -d make-debs.XXX )
+  BUNDLE_DIR=${WORK_DIR}/swift-t-debs
   mkdir -pv ${BUNDLE_DIR}
+  TRAPEXIT() { cleanup ${WORK_DIR} }
 fi
 
 for M in ${(@k)MODULES}
 do
+  print
   pushd ${M}/code
+  print "Making DEB in ${PWD}..."
   D=${DEBS[${M}]}
   make ${D}
   (( ${#B} )) && ln -t ${BUNDLE_DIR} *.deb
@@ -61,8 +78,15 @@ then
      -D M4_TURBINE_VERSION=${TURBINE_VERSION} \
      -D M4_STC_VERSION=${STC_VERSION}         \
      dev/debian/install-debs.sh.m4 > ${BUNDLE_DIR}/install-debs.sh
+  cp dev/debian/install-readme.md ${BUNDLE_DIR}/README.txt
   chmod u+x ${BUNDLE_DIR}/install-debs.sh
-
+  pushd ${WORK_DIR}
+  tar cfz ${TGZ} swift-t-debs
+  popd
+  mv -v ${WORK_DIR}/${TGZ} .
+  # Report the product and its size to the user:
+  du -h ${TGZ}
+  COMPLETE=1
 fi
 
 STOP=${SECONDS}

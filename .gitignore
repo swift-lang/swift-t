@@ -45,3 +45,6 @@ pkgIndex.tcl
 .project
 .cproject
 .autotools
+
+# Auto-filtered Debian changelogs
+changelog

@@ -8,8 +8,8 @@ set -eu
 
 print c-utils-config.h.in configure configure.ac README.txt
 print bootstrap Makefile.in src/module.mk.in
-print maint/*sh maint/*.mk maint/*.mkf
-print src/*.[ch]
+print maint/*sh maint/*.mkf
+print src/*.[ch] src/c-utils.h.in
 print tests/module.mk.in
 print tests/*.[ch]
 print version.txt NOTICE

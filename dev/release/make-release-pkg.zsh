@@ -23,11 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-SWIFT_T_VERSION=1.1
-STC_VERSION=0.7.2
-TURBINE_VERSION=0.9.1
-ADLB_VERSION=0.7.2
-C_UTILS_VERSION=0.5.2
+source dev/build/get-versions.sh
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers

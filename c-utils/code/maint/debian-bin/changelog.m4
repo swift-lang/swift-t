@@ -1,4 +1,4 @@
-turbine (0.9.0) unstable; urgency=low
+exmcutils (M4_CUTILS_VERSION) unstable; urgency=low
 
   * See http://swift-lang.org for change history
 
