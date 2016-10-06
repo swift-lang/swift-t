@@ -6,7 +6,7 @@ set -eu
 # This will install the 4 Swift/T modules as Debian packages
 
 # First, install dependencies from APT
-sudo apt-get install zsh tcl-dev mpich ant
+sudo apt-get install ant mpich swig tcl-dev zsh
 
 # The correct version numbered are pasted here by M4:
 CUTILS_VERSION=M4_CUTILS_VERSION

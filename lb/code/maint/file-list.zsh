@@ -11,10 +11,9 @@ print config.h.in
 print maint/*.sh maint/*.c
 print maint/{debian,version}.mkf
 print src/*.[ch]
-print config.h.in
 print src/{adlb-version.h.in,mpe-settings.h.in}
 print {src,tests}/module.mk.in
-print version.txt NOTICE debian/control
+print version.txt NOTICE
 
 if (( ${+DEBIAN_PKG_TYPE} ))
 then

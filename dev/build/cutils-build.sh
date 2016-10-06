@@ -39,12 +39,13 @@ if (( DISABLE_STATIC )); then
 fi
 
 if (( CONFIGURE )); then
+  rm -f config.cache
   (
-  set -x
-  ./configure --config-cache \
-              --prefix=${C_UTILS_INSTALL} \
-              --enable-shared \
-              ${EXTRA_ARGS}
+    set -x
+    ./configure --config-cache \
+                --prefix=${C_UTILS_INSTALL} \
+                --enable-shared \
+                ${EXTRA_ARGS}
   )
 fi
 

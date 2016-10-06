@@ -20,4 +20,5 @@ override_dh_auto_configure:
 
 override_dh_auto_install:
 	$(MAKE) -j 4 DESTDIR=$$(pwd)/debian/adlbx/usr \
-		DEBIAN_PKG=1 DEBIAN_BIN_PKG=1 install
+		DEBIAN_PKG=1 DEBIAN_BIN_PKG=1 \
+		install

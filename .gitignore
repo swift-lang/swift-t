@@ -48,3 +48,6 @@ pkgIndex.tcl
 
 # Auto-filtered Debian changelogs
 changelog
+
+# The Swift/T Debian distribution
+swift-t-debs-*.tgz

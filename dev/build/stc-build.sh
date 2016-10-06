@@ -9,11 +9,12 @@ source ${THISDIR}/swift-t-settings.sh
 if (( MAKE_CLEAN )); then
   ${ANT} clean
 fi
-${ANT} ${STC_ANT_ARGS}
 
 if (( ! RUN_MAKE )); then
   exit
 fi
+
+${ANT} ${STC_ANT_ARGS}
 
 if [ ! -z "${STC_INSTALL}" ]
 then

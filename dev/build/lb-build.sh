@@ -67,6 +67,7 @@ if (( CONFIGURE )); then
     ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
+                CC=${CC} \
                 ${EXTRA_ARGS}
   )
 fi

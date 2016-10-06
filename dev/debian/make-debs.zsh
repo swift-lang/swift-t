@@ -3,6 +3,7 @@ set -eu
 
 # MAKE DEBS
 # Main user interface to make all Swift/T DEBs
+# Warning: this installs the created DEBs
 
 # Options:
 # -b : Make bundle containing all DEBs and an installer script
@@ -16,13 +17,15 @@ source dev/build/get-versions.sh
 # The TGZ to be constructed here:
 TGZ=swift-t-debs-${SWIFT_T_VERSION}.tgz
 
-typeset -A MODULES DEBS VERSIONS
-MODULES=( c-utils exmcutils lb lb      turbine turbine stc stc )
-DEBS=(    c-utils dev-deb   lb dev-deb turbine deb     stc deb )
-VERSIONS=(    c-utils ${CUTILS_VERSION}
-              lb      ${ADLBX_VERSION}
-              turbine ${TURBINE_VERSION}
-              stc     ${STC_VERSION} )
+# The DEB module names, types, Makefile targets, and versions
+typeset -A MODULES DEBS TYPES VERSIONS
+MODULES=(  c-utils exmcutils lb adlbx   turbine turbine stc stc )
+TYPES=(    c-utils -dev      lb -dev    turbine ""      stc "" )
+DEBS=(     c-utils dev-deb   lb dev-deb turbine deb     stc deb )
+VERSIONS=( c-utils ${CUTILS_VERSION}
+           lb      ${ADLBX_VERSION}
+           turbine ${TURBINE_VERSION}
+           stc     ${STC_VERSION} )
 
 if (( ${#C} ))
 then
@@ -67,7 +70,13 @@ do
   print "Making DEB in ${PWD}..."
   D=${DEBS[${M}]}
   make ${D}
-  (( ${#B} )) && ln -t ${BUNDLE_DIR} *.deb
+  N=${MODULES[${M}]}
+  T=${TYPES[${M}]}
+  V=${VERSIONS[${M}]}
+  DEB=${N}${T}_${V}_amd64.deb
+  stat --format "" ${DEB} # Ensure file exists
+  (( ${#B} )) && ln -t ${BUNDLE_DIR} ${DEB}
+  sudo dpkg -i ${DEB}
   popd
 done
 
