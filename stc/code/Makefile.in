@@ -5,7 +5,7 @@
 
 all: lib/stc.jar
 
-include maint/debian.mk
+include maint/debian.mkf
 
 lib/stc.jar:
 	ant

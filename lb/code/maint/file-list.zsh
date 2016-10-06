@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 set -eu
 
 # ADLB/X FILE LIST
@@ -9,7 +9,7 @@ set -eu
 print bootstrap configure configure.ac Makefile.in install-sh
 print config.h.in
 print maint/*.sh maint/*.c
-print maint/{debian.mk,version.mk,debian-list.mk}
+print maint/{debian,version}.mkf
 print src/*.[ch]
 print config.h.in
 print src/{adlb-version.h.in,mpe-settings.h.in}

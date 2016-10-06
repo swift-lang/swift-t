@@ -1,11 +1,10 @@
 
-DEB_LIST = maint/debian-list.mk
+# ExM c-utils Debian Makefile
 
-include maint/version.mk
-include $(DEB_LIST)
+include maint/version.mkf
 
-EXMCUTILS_DEB     = exmcutils_$(VERSION)-1_amd64.deb
-EXMCUTILS_DEV_DEB = exmcutils-dev_$(VERSION)-1_amd64.deb
+EXMCUTILS_DEB     = exmcutils_$(VERSION)_amd64.deb
+EXMCUTILS_DEV_DEB = exmcutils-dev_$(VERSION)_amd64.deb
 
 deb: $(EXMCUTILS_DEB)
 dev-deb: $(EXMCUTILS_DEV_DEB)
@@ -20,14 +19,20 @@ else
   UPSTREAM_TGZ = exmcutils-dev_$(VERSION).orig.tar.gz
 endif
 
-DEB_FILE_PATHS = $(wildcard maint/debian-dev/* maint/debian-bin/*)
+DEB_FILES = changelog compat control copyright rules
+DEB_FILE_PATHS = $(patsubst %,maint/debian-$(DEBIAN_PKG_TYPE)/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
+
+# Put the version number in the changelog
+maint/debian-$(DEBIAN_PKG_TYPE)/changelog: \
+	maint/debian-$(DEBIAN_PKG_TYPE)/changelog.m4
+	m4 -D M4_CUTILS_VERSION=$(VERSION) $(<) > $(@)
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS)
 
-$(UPSTREAM_TGZ):  configure Makefile
+$(UPSTREAM_TGZ):  configure Makefile $(DEBIAN_STUFF)
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) exmcutils $(VERSION) $(FILE_LIST)
 
@@ -40,3 +45,4 @@ clean:: clean-deb
 clean-deb::
 	$(Q) "  CLEAN DEBIAN"
 	$(E) rm -fv debian *.deb *.orig.tar.gz
+	$(E) rm -rf .deb-work-*

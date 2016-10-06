@@ -8,3 +8,5 @@ source.txt
 /src/exm/stc/ast/antlr/**
 /conf/stc-env.sh
 /build/
+
+debian

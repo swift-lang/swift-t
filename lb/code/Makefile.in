@@ -162,7 +162,7 @@ TEST_COMMON_SRCS :=
 TEST_SCRIPTS :=
 
 include src/module.mk
-include maint/debian.mk
+include maint/debian.mkf
 include tests/module.mk
 
 ### Autoconf sanity:

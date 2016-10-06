@@ -13,7 +13,7 @@
 	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- --enable-shared
+	dh_auto_configure -- --enable-shared -q
 
 #	dh_auto_configure -- --prefix=$$(pwd)/debian/c-utils --enable-shared
 

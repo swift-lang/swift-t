@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 set -eu
 
 # TURBINE FILE LIST
@@ -8,22 +8,21 @@ set -eu
 print bootstrap config.h.in configure configure.ac
 print version.txt README.txt
 print Makefile.in **/*.mk.in
-print maint/{debian.mk,version.mk,debian-list.mk}
+print maint/{debian.mkf,version.mkf}
 print maint/{*.sh,find-tcl.zsh}
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
 print **/*.[chi] **/*.{tcl,swift}
-print src/executables/turbine_sh.manifest
 print tests/{runbin.zsh.in,run-mpi.zsh}
 print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in
 print src/**/*.manifest
-print tests/runbin.zsh.in
 print scripts/{data-log.sh,leak-find.py,rank.zsh}
 print scripts/main-wrap/genleaf
-print scripts/main-wrap/{settings/*.sh,templates/*template*}
-print scripts/mkstatic/*(.)
+print scripts/main-wrap/settings/*.sh
+print scripts/mkstatic/*.{sh,template}
+print scripts/mkstatic/About.txt
 print scripts/submit/*.*sh*
 print scripts/submit/cray/*.*sh*
 print scripts/submit/cobalt/*turbine*.*sh*

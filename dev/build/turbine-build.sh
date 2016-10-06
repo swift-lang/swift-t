@@ -166,6 +166,7 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
+  rm config.cache
   ./configure --config-cache \
               --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
@@ -184,6 +185,11 @@ then
     make clean
   fi
 fi
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
+
 if ! make -j ${MAKE_PARALLELISM}
 then
   rm -fv deps_contents.txt

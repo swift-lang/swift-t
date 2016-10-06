@@ -1,4 +1,4 @@
-adlbx-dev (0.7.1-1) unstable; urgency=low
+exmcutils (M4_CUTILS_VERSION) unstable; urgency=low
 
   * See http://swift-lang.org for change history
 

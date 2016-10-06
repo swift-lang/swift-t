@@ -109,7 +109,7 @@ DEPS :=
 OBJS :=
 include src/module.mk
 include tests/module.mk
-include maint/debian.mk
+include maint/debian.mkf
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 

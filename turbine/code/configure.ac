@@ -144,9 +144,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])

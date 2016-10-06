@@ -3,7 +3,7 @@ set -eu
 
 # MAKE-RELEASE-PKG.ZSH
 
-# Builds exm-<token>.tar.gz for distribution
+# Builds swift-t-<version>.tar.gz for distribution
 
 # End-user should be able to compile Swift/T
 # with standard tools: make, gcc, ant, javac, etc.
@@ -23,11 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-EXM_VERSION=1.0
-STC_VERSION=0.7.1
-TURBINE_VERSION=0.9.0
-ADLB_VERSION=0.7.1
-C_UTILS_VERSION=0.5.1
+source dev/build/get-versions.sh
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
@@ -39,22 +35,20 @@ export ENABLE_COASTER=0
 # If PACKAGE_DEBIAN=1, build Debian binary packages instead
 PACKAGE_DEBIAN=0
 
+# Run ./bootstrap by default; may be disabled
+BOOTSTRAP=1
+
 DISTRO_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
-while getopts "cpt" opt
+while getopts "bcpt" opt
 do
   case ${opt} in
-    c)
-      ENABLE_COASTER=1
-      ;;
-    p)
-      PACKAGE_DEBIAN=1
-      ;;
-    t)
-      USE_MASTER=1
-      ;;
+    b) BOOTSTRAP=0 ;;
+    c) ENABLE_COASTER=1 ;;
+    p) PACKAGE_DEBIAN=1 ;;
+    t) USE_MASTER=1     ;;
     \?)
-      echo "construct.zsh: unknown option: ${OPTARG}"
+      echo "make-release-package.zsh: unknown option: ${OPTARG}"
       exit 1
       ;;
   esac
@@ -67,9 +61,9 @@ if (( ! USE_MASTER ))
 then
   if (( ENABLE_COASTER ))
   then
-    SWIFT_T_RELEASE=swift-t-${EXM_VERSION}-coaster
+    SWIFT_T_RELEASE=swift-t-${SWIFT_T_VERSION}-coaster
   else
-    SWIFT_T_RELEASE=swift-t-${EXM_VERSION}
+    SWIFT_T_RELEASE=swift-t-${SWIFT_T_VERSION}
   fi
   STC_RELEASE=release/${STC_VERSION}
   TURBINE_RELEASE=release/${TURBINE_VERSION}
@@ -135,14 +129,17 @@ declare EXPORT
 
 # SECTION II
 
-for D in ${TOP}/{c-utils,lb,turbine}/code
-do
-  print
-  pushd ${D}
-  print "BOOTSTRAP: ${D}"
-  # ./bootstrap
-  popd
-done
+if (( BOOTSTRAP ))
+then
+  for D in ${TOP}/{c-utils,lb,turbine}/code
+  do
+    print
+    pushd ${D}
+    print "BOOTSTRAP: ${D}"
+    ./bootstrap
+    popd
+  done
+fi
 
 if (( ENABLE_COASTER ))
 then
@@ -174,7 +171,8 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd c-utils/code
-FILE_LIST=$( c-utils/code/maint/file-list.zsh )
+pwd
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -184,7 +182,7 @@ print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
 mkdir -pv ${TARGET}
 pushd lb/code
-FILE_LIST=$( lb/code/maint/file-list.zsh )
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -194,7 +192,7 @@ print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
 mkdir -pv ${TARGET}
 pushd turbine/code
-FILE_LIST=$( lb/code/maint/file-list.zsh )
+FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
@@ -205,15 +203,8 @@ pushd stc
 pushd code
 TARGET=${EXPORT}/stc/code
 mkdir -pv ${TARGET}
-export_copy build.xml
-export_copy etc/version.txt
-export_copy etc/help*.txt etc/turbine-version.txt
-export_copy src/exm/stc/ast/ExM.g
-export_copy bin/* scripts/stc-config.sh
-export_copy conf/stc-env.sh.template
-export_copy **/*.java
-export_copy lib/*.jar
-export_copy META-INF/MANIFEST.MF
+FILE_LIST=( $( maint/file-list.zsh ) )
+export_copy ${FILE_LIST}
 popd
 pushd tests
 TARGET=${EXPORT}/stc/tests

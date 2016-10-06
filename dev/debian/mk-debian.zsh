@@ -3,6 +3,7 @@ set -eu
 
 # MK DEBIAN
 # Make the Debian package
+# Used internally by Makefiles
 
 echo "MK DEBIAN"
 
@@ -20,7 +21,7 @@ VERSION=$5         # Debian version
 
 TOP=$PWD
 
-echo "Making: $NAME"
+echo "Making: $NAME $VERSION"
 
 BUILD_DIR=$( mktemp -d .deb-work-XXX )
 echo "Working in: $BUILD_DIR"
@@ -38,7 +39,7 @@ ln ../$ORIG_TGZ
 tar xfz $ORIG_TGZ
 (
   cd $NAME-$VERSION
-  pwd
+  echo Running debuild in: $(pwd)
   debuild -eDEB_BUILD_OPTIONS="parallel=4" -us -uc
 )
 
