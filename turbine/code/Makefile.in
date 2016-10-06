@@ -775,6 +775,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
 	$(E) rm -f $(@)
+	$(E) chmod u+x bin/turbine # A configure-generated file
 #       Set up directories
 	$(E) mkdir -pv $(DIRECTORIES)
 #       Copy in build provenance files
