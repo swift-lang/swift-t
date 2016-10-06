@@ -925,59 +925,74 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-1.0.tar.gz
-cd swift-t-1.0</code></pre>
+<pre><code>tar xfz swift-t-1.1.tar.gz
+cd swift-t-1.1</code></pre>
 </div></div>
 </li>
 <li>
 <p>
 Create a settings file by running:
 </p>
-</li>
-</ol></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>./dev/build/init-settings.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>+
-4. Edit the settings file: <code>dev/build/swift-t-settings.sh</code></p></div>
-<div class="paragraph"><p>+
-At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
+</li>
+<li>
+<p>
+Edit the settings file: <code>dev/build/swift-t-settings.sh</code>
+</p>
+<div class="paragraph"><p>At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
 (the default will install to <code>/tmp</code>).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
 configuration settings so that all prerequisites can
 be correctly located and configured (see Section
 <a href="#Build_configuration">Build configuration</a>).</p></div>
-<div class="paragraph"><p>+
-A range of other settings are also available here:
+<div class="paragraph"><p>A range of other settings are also available here:
 enabling/disabling features, debug or optimized builds, etc.</p></div>
-<div class="paragraph"><p>+
-TIP: Save your <code>swift-t-settings.sh</code> when you download a new package</p></div>
-<div class="paragraph"><p>+
-5. Run the setup script</p></div>
-<div class="paragraph"><p>+</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">Save your <code>swift-t-settings.sh</code> when you download a new package</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Run the setup script
+</p>
 <div class="listingblock">
 <div class="content">
 <pre><code>dev/build/build-all.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>+
-See <code>dev/build/README.md</code> for more notes and build options.</p></div>
-<div class="paragraph"><p>+
-If <code>build-all.sh</code> does not succeed on your system, see Section
+<div class="paragraph"><p>See <code>dev/build/README.md</code> for more notes and build options.</p></div>
+<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed on your system, see Section
 <a href="#Build_configuration">Build configuration</a> below.</p></div>
-<div class="paragraph"><p>+
-TIP: if you want more control than <code>build-all.sh</code> provides, you can
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">if you want more control than <code>build-all.sh</code> provides, you can
     build Swift/T with the
-    <a href="#build_manual">manual configure/make workflow</a>.</p></div>
-<div class="paragraph"><p>+
-6. Add Turbine and STC to your paths</p></div>
-<div class="paragraph"><p>+</p></div>
+    <a href="#build_manual">manual configure/make workflow</a>.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+Add Turbine and STC to your paths
+</p>
 <div class="listingblock">
 <div class="content">
 <pre><code>PATH=${PATH}:/path/to/swift-t-install/turbine/bin
 PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
 </div></div>
+</li>
+</ol></div>
 </div>
 </div>
 </div>
@@ -5013,7 +5028,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-10-06 13:29:04 CDT
+ 2016-10-06 13:34:25 CDT
 </div>
 </div>
 </body>
