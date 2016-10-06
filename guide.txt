@@ -59,6 +59,7 @@ $ cd swift-t-debs
 ----
 +
 3. Install:
++
 ----
 $ ./install-debs.sh
 ----
@@ -75,7 +76,7 @@ The link:sites.html[Turbine Sites Guide]
 is a accompanying resource for configuration settings and preinstalled software
 for specific systems.
 
-=== Installation of Prerequisites
+==== Prerequisites
 
 All Swift/T prerequisites can be installed using the appropriate
 package manager for your system.
@@ -86,7 +87,7 @@ package manager for your system.
    will almost certainly be pre-installed.
 ** Many operating systems provide packages with MPI implementations
    that are usable, but often outdated.
-   E.g. the +mpich2+ package on Debian/Ubuntu.
+   E.g. the +mpich+ package on Debian/Ubuntu.
 ** See http://www.mpich.org[MPICH Guides] for information on installing the
    latest version of MPICH.
 ** Installing MPICH from source is not difficult.
@@ -118,7 +119,7 @@ Turbine is compatible with GCC, ICC, Clang, and XLC.
 If you have difficulties with compiler compatibility,
 please <<support,contact us>>.
 
-=== Installation of Swift/T from Source
+==== Installation of Swift/T from Source
 
 Once you have found all prerequisites, we can continue with building
 Swift/T from source.
