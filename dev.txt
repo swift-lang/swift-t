@@ -181,6 +181,10 @@ Other useful Makefile features:
 * +make deps+ to make the dependency files
 * +make tags+ to make an +etags+ +TAGS+ file
 
+Our convention is to filter +*.mk.in+ to +*.mk+ via +configure+;
+unfiltered makefile includes are +*.mkf+.  (This eases the use of
++.gitignore+ .)
+
 === Ant
 
 The build system for STC is a relatively simple Ant build file.  The
@@ -1523,7 +1527,6 @@ git clone git@github.com:swift-lang/swift-t.git
 *Turbine, run:
 +
 ----
-rm -r autom4te.cache configure
 ./bootstrap
 ----
 ** Use +dev/build/make-release-pkg.zsh+ to make the release package
