@@ -166,7 +166,7 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
-  rm config.cache
+  rm -f config.cache
   (
     set -x
     ./configure --config-cache \
@@ -195,6 +195,7 @@ fi
 
 if ! make -j ${MAKE_PARALLELISM}
 then
+  rm -fv deps_contents.txt
   echo
   echo Make failed.  The following may be useful:
   echo
