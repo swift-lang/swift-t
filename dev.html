@@ -1025,6 +1025,9 @@ header file.  Use <code>make check_includes</code> to detect these errors.</p></
 </p>
 </li>
 </ul></div>
+<div class="paragraph"><p>Our convention is to filter <code><strong>.mk.in</code> to <code></strong>.mk</code> via <code>configure</code>;
+unfiltered makefile includes are <code>*.mkf</code>.  (This eases the use of
+<code>.gitignore</code> .)</p></div>
 </div>
 <div class="sect2">
 <h3 id="_ant">5.2. Ant</h3>
@@ -3312,8 +3315,7 @@ After updating version numbers, in each of c-utils, ADLB, and
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>rm -r autom4te.cache configure
-./bootstrap</code></pre>
+<pre><code>./bootstrap</code></pre>
 </div></div>
 </li>
 <li>
@@ -3346,7 +3348,7 @@ Test package on Linux and Mac
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2016-08-22 13:51:28 CDT
+ 2016-10-04 13:46:15 CDT
 </div>
 </div>
 </body>
