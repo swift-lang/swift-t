@@ -39,6 +39,32 @@ http://github.com/swift-lang/swift-t/issues
 
 == Installation
 
+Swift/T may be installed via binary Debian (and Ubuntu) packages or
+from source.
+
+=== For Debian-based systems (including Ubuntu)
+
+1. Obtain the Swift/T Debian packages from the
+link:downloads.html[Downloads page] or via +wget+:
++
+----
+$ wget http://swift-lang.github.io/swift-t/downloads/swift-t-debs-1.1.tar.gz
+----
++
+2. Unpack and enter package directory:
++
+----
+$ tar xfz swift-t-debs-1.1.tar.gz
+$ cd swift-t-debs
+----
++
+3. Install:
+----
+$ ./install-debs.sh
+----
+
+=== From source
+
 Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
@@ -97,14 +123,12 @@ please <<support,contact us>>.
 Once you have found all prerequisites, we can continue with building
 Swift/T from source.
 
-1. Obtain the Swift/T source package
+1. Obtain the Swift/T source package from the
+link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.0.tar.gz
+wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.1.tar.gz
 ----
-+
-Cf. http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
-for other packages
 +
 2. Unpack and enter package directory
 +
