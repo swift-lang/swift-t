@@ -166,7 +166,7 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
-  rm config.cache
+  rm -f config.cache
   ./configure --config-cache \
               --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
