@@ -23,7 +23,7 @@ common application patterns.
 
 Links:
 
-* link:swift.html[General documentation for Swift/T]
+* link:guide.html[General documentation for Swift/T]
 
 * Post to https://lists.ci.uchicago.edu/cgi-bin/mailman/listinfo/swift-user[the Swift
   user list] with questions about these examples.
@@ -41,7 +41,7 @@ Swift/T has a powerful shell interface in its
 link:guide.html#app_functions[app function] syntax.  Here are some
 advanced examples:
 
-To pass a whole command line into a generic app function, use: 
+To pass a whole command line into a generic app function, use:
 
 EXAMPLE(sh-c/sh-1.swift)
 
@@ -51,12 +51,12 @@ this is my message
 ----
 
 Programs that are found in different locations on different machines
-can be accessed like this: 
+can be accessed like this:
 
 EXAMPLE(sh-c/sh-2.swift)
 
 You can put the "program configuration" section in a separate file and
-link:guide.html#modules[+import+] it. 
+link:guide.html#modules[+import+] it.
 
 If you prefer, you could also put separate definitions of +program+ in
 separate files and link:guide.html#cpp_macro[conditionally +#include+]
