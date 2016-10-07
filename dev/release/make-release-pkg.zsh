@@ -38,7 +38,7 @@ PACKAGE_DEBIAN=0
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
 
-DISTRO_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 while getopts "bcpt" opt
 do
@@ -54,6 +54,8 @@ do
   esac
 done
 
+source ${THIS}/../build/get-versions.sh
+
 # Define tokens (location in SVN or Git):
 # If using release paths, use "release/version" or git branch/tag name
 # If using master (USE_MASTER), use "master"
@@ -67,8 +69,8 @@ then
   fi
   STC_RELEASE=release/${STC_VERSION}
   TURBINE_RELEASE=release/${TURBINE_VERSION}
-  ADLB_RELEASE=release/${ADLB_VERSION}
-  C_UTILS_RELEASE=release/${C_UTILS_VERSION}
+  ADLB_RELEASE=release/${ADLBX_VERSION}
+  C_UTILS_RELEASE=release/${CUTILS_VERSION}
   SWIFT_K_RELEASE=${SWIFT_K_VERSION}
 else
   SWIFT_T_RELEASE=swift-t-master
@@ -223,7 +225,7 @@ mkdir -pv ${TARGET}
 pushd dev/build
 # Create swift-t-settings.sh from template
 cp -uv swift-t-settings.sh.template swift-t-settings.sh
-export_copy *.sh *.txt *.template
+export_copy *.sh *.template
 popd
 printf "OK\n\n"
 
