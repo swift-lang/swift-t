@@ -15,7 +15,7 @@ zparseopts -D -E b=B c=C
 source dev/build/get-versions.sh
 
 # The TGZ to be constructed here:
-TGZ=swift-t-debs-${SWIFT_T_VERSION}.tgz
+TGZ=swift-t-debs-${SWIFT_T_VERSION}.tar.gz
 
 # The DEB module names, types, Makefile targets, and versions
 typeset -A MODULES DEBS TYPES VERSIONS
