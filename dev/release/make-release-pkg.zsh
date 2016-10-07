@@ -40,6 +40,8 @@ BOOTSTRAP=1
 
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
+setopt PUSHD_SILENT KSH_GLOB
+
 while getopts "bcpt" opt
 do
   case ${opt} in
@@ -223,9 +225,7 @@ print "Copying build scripts..."
 TARGET=${EXPORT}/dev/build
 mkdir -pv ${TARGET}
 pushd dev/build
-# Create swift-t-settings.sh from template
-cp -uv swift-t-settings.sh.template swift-t-settings.sh
-export_copy *.sh *.template
+export_copy *.template !(swift-t-settings).sh
 popd
 printf "OK\n\n"
 
