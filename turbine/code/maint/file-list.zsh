@@ -13,7 +13,7 @@ print maint/{*.sh,find-tcl.zsh}
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
-print **/*.[chi] **/*.{tcl,swift}
+print **/*.[chi] **/*.{tcl,swift} src/**/*.m4
 print tests/{runbin.zsh.in,run-mpi.zsh}
 print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in
