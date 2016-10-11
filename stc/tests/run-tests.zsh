@@ -225,7 +225,7 @@ run_test()
   # Get test command-line arguments
   if [[ -r ${ARGS_FILE} ]]
   then
-    ARGS=( $( < ${ARGS_FILE} ) ) 
+    ARGS=( $( < ${ARGS_FILE} ) )
   fi
 
   # Run the test from within the test directory
@@ -247,7 +247,7 @@ run_test()
     fi
 
     # RUN IT
-    print "running:   $( basename ${TCL_FILE} )"    
+    print "running:   $( basename ${TCL_FILE} )"
     if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     then
       CODE=${TEST_OK}
@@ -513,7 +513,7 @@ do
 
     # Disambiguate test output of different opt levels
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
-    
+
     TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
@@ -574,7 +574,7 @@ do
           printf "No warning in stc output\n"
       fi
     fi
-    
+
     if grep -F -q "THIS-TEST-SHOULD-NOT-CAUSE-WARNING" ${SWIFT_FILE}
     then
       if grep -q "^WARN" ${STC_ERR_FILE}
