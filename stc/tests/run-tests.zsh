@@ -148,7 +148,7 @@ RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 export STC_TESTS_OUT_DIR=${STC_TESTS_OUT_DIR:-$STC_TESTS_DIR}
 mkdir -p ${STC_TESTS_OUT_DIR}
 
-export TURBINE_USER_LIB=${STC_TESTS_DIR}
+export SWIFT_PATH=${STC_TESTS_DIR}
 
 which tclsh > /dev/null
 if [[ ${?} != 0 ]]
