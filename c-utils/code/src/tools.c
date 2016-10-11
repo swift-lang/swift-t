@@ -374,13 +374,16 @@ slurp(const char* filename)
 void
 print_ints(const int* A, int n)
 {
-  printf("[");
+  void* t = alloca(n*16*sizeof(char));
+  char* p = t;
+  append(p, "[");
   for (int i = 0; i < n; i++)
   {
-    printf("%i", A[i]);
-    if (i < n-1) printf(",");
+    append(p, "%i", A[i]);
+    if (i < n-1) append(p, ",");
   }
-  printf("]");
+  append(p, "]\n");
+  printf("%s", (char*) t);
 }
 
 static inline void
@@ -408,7 +411,7 @@ quicksort_ints(int* A, int first, int last)
         i++;
       while (A[j] > A[pivot])
         j--;
-      printf("i: %i j: %i\n", i, j);
+      // printf("i: %i j: %i\n", i, j);
       if (i < j)
         swap_ints(&A[i], &A[j]);
     }

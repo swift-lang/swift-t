@@ -20,7 +20,6 @@ namespace eval funcs_610 {
   }
 
   proc f_body { outputs inputs } {
-    puts "$outputs _ $inputs"
 
     set i_value [ retrieve_decr_integer $inputs ]
 
