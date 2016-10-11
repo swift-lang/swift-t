@@ -130,37 +130,15 @@ crash()
   exit 1
 }
 
-STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
-STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
-
-if (( ! ${+STC} ))
+STC=$( which stc 2> /dev/null )
+if (( ! ${#STC} ))
 then
-  STC=""
-  for D in ${STC_TRIES}
-  do
-    if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
-      then
-      STC=${D}/bin/stc
-      break
-    fi
-  done
-  if [[ ${STC} == "" ]]
-  then
-    STC=$( which stc )
-    [[ ${?} != 0 ]] && STC=""
-  fi
-  if [[ ${STC} == "" ]]
-  then
-    print "Could not find STC!"
-    exit 1
-  fi
+  crash "Put stc in your PATH."
 fi
-print "using stc: ${STC}\n"
+print "using stc: '${STC}'\n"
 
 STC_HOME="$(dirname $(dirname ${STC} ))"
-STC_ENV="$STC_HOME/conf/stc-env.sh"
-
-source "$STC_HOME/scripts/stc-config.sh"
+STC_ENV="${STC_HOME}/etc/stc-config.sh"
 
 export TURBINE_HOME # needed by run-test.zsh
 
