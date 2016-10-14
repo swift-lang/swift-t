@@ -2,6 +2,7 @@
 
 # CP-PARENTS
 # Substitute for cp --parents on non-GNU systems
+# We use bash because dash is not on the Mac by default
 
 usage()
 {
@@ -24,26 +25,27 @@ try()
 {
   COMMAND=${*}
   $COMMAND
-  if [ ${?} != 0 ]
+  if (( ${?} ))
   then
     crash "cp-parents.sh: failed on command:\n  ${COMMAND}"
   fi
 }
 
 ARGS=""
+# This pattern requires bash (not dash):
 if [[ $1 = -* ]]
 then
   ARGS=$1
   shift
 fi
 
-if [ ${#*} -lt 2 ]
+if (( ${#*} < 2 ))
 then
   crash "Requires SRC, DEST"
 fi
 
 SRCS=
-while [ ${#*} -gt 1 ]
+while (( ${#*} > 1 ))
 do
   SRCS="$SRCS $1"
   shift
