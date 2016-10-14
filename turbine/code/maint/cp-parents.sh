@@ -1,14 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 # CP-PARENTS
 # Substitute for cp --parents on non-GNU systems
 
 usage()
 {
-  echo "usage: cp-parents.sh ARGS SRC/FILE DEST"
-  echo "Copies SRC/FILE to DEST/SRC/FILE"
-  echo "ARGS must start with dash and are passed to cp"
-  echo "Emulates GNU's cp --parents"
+  echo "usage: cp-parents.sh [ARGS] SRC/FILE* DEST"
+  echo "Copies SRC/FILE* to DEST/SRC/FILE"
+  echo "A single token ARGS is optional, and must start with dash"
+  echo "Emulates GNU's cp $ARGS --parents SRC/FILE* DEST"
 }
 
 crash()
@@ -30,8 +30,8 @@ try()
   fi
 }
 
-ARGS=
-if [ $1 = "-*" ]
+ARGS=""
+if [[ $1 = -* ]]
 then
   ARGS=$1
   shift
