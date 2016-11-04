@@ -1111,9 +1111,9 @@ Equivalent to the Swift/T plus (+++) operator.
 
 *Import:* +string+
 
-+substring(string s, int start, int end) -> string+::
++substring(string s, int start, int length) -> string+::
 Obtain substring of given string +s+ starting from character +start+
-to character +end+.
+of length +length+.
 
 +find(string s, string substring, int start_index, int end_index) -> int+::
 Find the index of the first occurence of the string +substring+ within
