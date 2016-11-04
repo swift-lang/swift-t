@@ -37,7 +37,7 @@ AC_SUBST(USE_MAC)
 # Provide CC=mpicc by default
 if [[ "${CC}" == "" ]]
 then
-  echo "CC not set: setting CC=mpicc"
+  AC_MSG_RESULT([CC not set: setting CC=mpicc])
   export CC=mpicc
 fi
 which ${CC} >& /dev/null
@@ -146,6 +146,13 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+
 USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
@@ -163,21 +170,19 @@ AC_ARG_WITH(c-utils,
     USE_C_UTILS=${withval}
   ],
   [
-    dnl If not given, look in SOFTWARE, if valid
-    if [[ ${SOFTWARE} == 0 ]]
+    [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+
+    # Are we building a Debian package?
+    if (( ${DEBIAN_BUILD} ))
     then
-        AC_MSG_ERROR([Not found: ExM c-utils])
+        USE_C_UTILS=/usr
+    else # We are doing a source installation
+        location=${SOFTWARE}/c-utils
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=${location}], [])
     fi
-    location=${SOFTWARE}/c-utils
-    AC_CHECK_FILE(${location}/include/c-utils.h,
-                  [USE_C_UTILS=1], [])
-    if [[ ${USE_C_UTILS} == 1 ]]
-    then
-        USE_C_UTILS=${location}
-    else
-        AC_MSG_ERROR([Not found: ExM c-utils])
-    fi
-  ])
+    [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+])
 AC_SUBST(USE_C_UTILS)
 
 dnl Log settings.  See debug.h
@@ -295,6 +300,11 @@ AC_SUBST(ENABLE_DEV)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk

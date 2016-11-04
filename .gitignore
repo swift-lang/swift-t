@@ -1,4 +1,5 @@
-.gitignore
+# .gitignore
+
 *~
 *.o
 *.so
@@ -18,6 +19,10 @@ config.log
 # Autoconf-generated Makefiles
 Makefile
 *.mk
+
+# Debian stuff
+*.orig.tar.gz
+*.deb
 
 # STC output
 *.tic
@@ -40,3 +45,9 @@ pkgIndex.tcl
 .project
 .cproject
 .autotools
+
+# Auto-filtered Debian changelogs
+changelog
+
+# The Swift/T Debian distribution
+swift-t-debs-*.tgz

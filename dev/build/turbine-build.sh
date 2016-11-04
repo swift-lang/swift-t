@@ -166,13 +166,17 @@ if (( CONFIGURE )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
   fi
-  ./configure --config-cache \
-              --with-adlb=${LB_INSTALL} \
-              ${CRAY_ARGS} \
-              --with-c-utils=${C_UTILS_INSTALL} \
-              --prefix=${TURBINE_INSTALL} \
-              ${EXTRA_ARGS} \
-              --disable-log
+  rm -f config.cache
+  (
+    set -x
+    ./configure --config-cache \
+                --with-adlb=${LB_INSTALL} \
+                ${CRAY_ARGS} \
+                --with-c-utils=${C_UTILS_INSTALL} \
+                --prefix=${TURBINE_INSTALL} \
+                ${EXTRA_ARGS} \
+                --disable-log
+    )
 fi
 
 if (( MAKE_CLEAN ))
@@ -184,8 +188,14 @@ then
     make clean
   fi
 fi
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
+
 if ! make -j ${MAKE_PARALLELISM}
 then
+  rm -fv deps_contents.txt
   echo
   echo Make failed.  The following may be useful:
   echo

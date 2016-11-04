@@ -84,7 +84,7 @@ MPI_VERSION=3
 # ENABLE_MPE=1
 
 # Disable ADLB checkpoint functionality
-# DISABLE_XPT=1
+DISABLE_XPT=1
 
 # Manual zlib setup: required for checkpointing
 DISABLE_ZLIB=1
@@ -94,13 +94,13 @@ DISABLE_ZLIB=1
 # EXM_DEV=1
 
 # Disable build of static libraries and executables
-# DISABLE_STATIC=1
+DISABLE_STATIC=1
 
 # Do full static build (default is dynamic)
 # EXM_STATIC_BUILD=1
 
 # HDF5 location (yes/no/PATH location of h5cc)
-# WITH_HDF5=no
+WITH_HDF5=no
 
 #+================================+
 #| Default build behavior         |

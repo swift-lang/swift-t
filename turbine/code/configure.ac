@@ -71,6 +71,14 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 # Checks for programs
 AC_PROG_CC
 AC_PROG_LN_S
@@ -136,9 +144,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -163,15 +171,16 @@ AC_ARG_WITH(c-utils,
         then
             AC_MSG_ERROR([Not found: ExM c-utils])
         fi
-        location=${SOFTWARE}/c-utils
-        AC_CHECK_FILE(${location}/include/c-utils.h,
-                      [USE_C_UTILS=1], [])
-        if [[ ${USE_C_UTILS} == 1 ]]
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            USE_C_UTILS=${location}
-        else
-            AC_MSG_ERROR([Not found: ExM c-utils])
+            USE_C_UTILS=/usr
+        else # We are doing a source installation
+             location=${SOFTWARE}/c-utils
+             AC_CHECK_FILE(${location}/include/c-utils.h,
+                           [USE_C_UTILS=${location}], [])
         fi
+        [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
     ]
 )
 AC_SUBST(USE_C_UTILS)
@@ -565,16 +574,16 @@ AC_ARG_WITH(adlb,
     ],
     [
         dnl If not given, look in SOFTWARE, if valid
-        if [[ ${SOFTWARE} == 0 ]]
+        [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            AC_MSG_ERROR([Not found: ADLB])
-        fi
-        location=${SOFTWARE}/lb
-        AC_CHECK_FILE(${location}/include/adlb.h,
-                      [USE_ADLB=${location}], [])
-        if [[ ${USE_ADLB} == 0 ]]
-        then
-            AC_MSG_ERROR([Not found: ADLB])
+            USE_ADLB=/usr
+        else # We are doing a source installation
+            location=${SOFTWARE}/lb
+            AC_CHECK_FILE(${location}/include/adlb.h,
+                          [USE_ADLB=${location}], [])
+            [[ ${USE_ADLB} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
         fi
     ]
 )
@@ -1291,6 +1300,7 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        bin/turbine
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1325,5 +1335,9 @@ AC_CONFIG_FILES(
 
         #         $USE_JVM_SCRIPT_HOME/src/module.mk
 
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_OUTPUT

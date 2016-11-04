@@ -123,7 +123,7 @@ adlb_code
 xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 {
   DEBUG("requestqueue_add(rank=%i,type=%i,count=%i,blocking=%s)", rank,
-         type, count, blocking ? "true" : "false");
+        type, count, blocking ? "true" : "false");
   assert(count >= 1);
   request* R;
 
@@ -165,6 +165,8 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 
   list2_add_item(L, item);
   request_queue_size++;
+
+  // printf("request_queue_size: %i\n", request_queue_size);
 
   if (blocking)
   {
@@ -252,7 +254,7 @@ static bool in_targets_array(request *R)
     return false;
   }
   int targets_ix = xlb_my_worker_idx(&xlb_s.layout, R->rank);
-  return R == &targets[targets_ix];
+  return (R == &targets[targets_ix]);
 }
 
 /*
@@ -336,6 +338,16 @@ xlb_requestqueue_matches_type(int type)
   return pop_rank_from_types(L);
 }
 
+static inline bool get_parallel_workers_unordered(int count,
+                                                  int parallelism,
+                                                  int* ranks,
+                                                  struct list2* L);
+
+static inline bool get_parallel_workers_ordered(int count,
+                                                int parallelism,
+                                                int* ranks,
+                                                struct list2* L);
+
 bool
 xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 {
@@ -346,17 +358,140 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
   TRACE("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
         type, parallelism, count);
 
-  if (count >= parallelism)
+  if (count < parallelism)
+    return false;
+
+  if (xlb_s.par_mod == 1)
+    result = get_parallel_workers_unordered(count, parallelism, ranks, L);
+  else
+    result = get_parallel_workers_ordered(count, parallelism, ranks, L);
+  TRACE_END;
+  return result;
+}
+
+static inline bool
+get_parallel_workers_unordered(int count, int parallelism, int* ranks,
+                               struct list2* L)
+{
+  TRACE("\t found: count: %i needed: %i", count, parallelism);
+  for (int i = 0; i < parallelism; i++)
   {
-    TRACE("\t found: count: %i needed: %i", count, parallelism);
-    result = true;
-    for (int i = 0; i < parallelism; i++)
+    ranks[i] = pop_rank_from_types(L);
+    assert(ranks[i] != ADLB_RANK_NULL);
+  }
+  return true;
+}
+
+static inline void extract_worker_ranks(struct list2* L, int* result);
+
+static inline bool find_contig(int* A, int n, int k, int m, int* result);
+
+static inline request* find_request(struct list2* L, int rank);
+
+static inline bool
+get_parallel_workers_ordered(int count, int parallelism, int* ranks,
+                             struct list2* L)
+{
+  int t[count];
+  if (count < parallelism)
+      return false;
+
+  // printf("\nget_parallel_workers_ordered(count: %i parallelism: %i)\n", count, parallelism);
+
+  extract_worker_ranks(L, t);
+  quicksort_ints(t, 0, count-1);
+
+  // print_ints(t, count);
+
+  int p; // Index of start rank in t
+  bool result = find_contig(t, count, parallelism, xlb_s.par_mod, &p);
+
+  if (!result)
+  {
+    // printf("Could not satisfy ADLB_PAR_MOD=%i\n", xlb_s.par_mod);
+    return false;
+  }
+
+  for (int i = 0; i < parallelism; i++)
+  {
+    ranks[i] = t[p]+i;
+    request* R = find_request(L, ranks[i]);
+    request_match_update(R, in_targets_array(R), 1);
+  }
+
+  // print_ints(ranks, parallelism);
+
+  return true;
+}
+
+static inline void
+extract_worker_ranks(struct list2* L, int* result)
+{
+  int i = 0;
+  for (struct list2_item *item = L->head; item != NULL;
+       item = item->next)
+  {
+    request* R = (request*)item->data;
+    result[i++] = R->rank;
+  }
+}
+
+/**
+   Find k contiguous entries in array A(n), starting at A[p],
+   where A[p] % m == 0.
+ */
+static inline bool
+find_contig(int* A, int n, int k, int m, int* result)
+{
+  int n_k = n-k; // Useful place to give up
+  int p = 0;
+  // printf("find_contig: n=%i k=%i m=%i\n", n, k, m);
+  do
+  {
+    // printf("p trial1: %i\n", p);
+    // Advance to next allowable PAR_MOD start point
+    while (A[p] % m != 0){
+      // printf(" A[p]: %i\n", A[p]);
+      if (++p > n_k) return false;
+    }
+    // printf("p trial2: %i\n", p);
+
+    int start = A[p];
+    // printf("start: %i\n", start);
+    int next = start+1;
+    int q = p+1;
+    int z = q+k-1;
+    if (z > n) break;
+    for ( ; q < z; q++)
+      // Proceed while we have sequential ranks
+      if (A[q] != next++) goto loop;
+    // Found it!
+    *result = p;
+    return true;
+
+    loop: p = q; // Not sequential: try again
+    // printf("loop: p=%i n_k=%i\n", p, n_k);
+  }
+  while (p < n_k);
+  return false;
+}
+
+static inline request*
+find_request(struct list2* L, int rank)
+{
+  // printf("find_request: %i\n", rank);
+  request* result = NULL;
+  for (struct list2_item *item = L->head; item != NULL;
+       item = item->next)
+  {
+    request* R = (request*) item->data;
+    if (R->rank == rank)
     {
-      ranks[i] = pop_rank_from_types(L);
-      assert(ranks[i] != ADLB_RANK_NULL);
+      result = R;
+      break;
     }
   }
-  TRACE_END;
+  assert(result != NULL);
   return result;
 }
 

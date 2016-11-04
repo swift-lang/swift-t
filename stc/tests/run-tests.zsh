@@ -130,37 +130,15 @@ crash()
   exit 1
 }
 
-STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
-STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
-
-if (( ! ${+STC} ))
+STC=$( which stc 2> /dev/null )
+if (( ! ${#STC} ))
 then
-  STC=""
-  for D in ${STC_TRIES}
-  do
-    if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
-      then
-      STC=${D}/bin/stc
-      break
-    fi
-  done
-  if [[ ${STC} == "" ]]
-  then
-    STC=$( which stc )
-    [[ ${?} != 0 ]] && STC=""
-  fi
-  if [[ ${STC} == "" ]]
-  then
-    print "Could not find STC!"
-    exit 1
-  fi
+  crash "Put stc in your PATH."
 fi
-print "using stc: ${STC}\n"
+print "using stc: '${STC}'\n"
 
 STC_HOME="$(dirname $(dirname ${STC} ))"
-STC_ENV="$STC_HOME/conf/stc-env.sh"
-
-source "$STC_HOME/scripts/stc-config.sh"
+STC_ENV="${STC_HOME}/etc/stc-config.sh"
 
 export TURBINE_HOME # needed by run-test.zsh
 
@@ -170,7 +148,7 @@ RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 export STC_TESTS_OUT_DIR=${STC_TESTS_OUT_DIR:-$STC_TESTS_DIR}
 mkdir -p ${STC_TESTS_OUT_DIR}
 
-export TURBINE_USER_LIB=${STC_TESTS_DIR}
+export SWIFT_PATH=${STC_TESTS_DIR}
 
 which tclsh > /dev/null
 if [[ ${?} != 0 ]]
@@ -247,7 +225,7 @@ run_test()
   # Get test command-line arguments
   if [[ -r ${ARGS_FILE} ]]
   then
-    ARGS=( $( < ${ARGS_FILE} ) ) 
+    ARGS=( $( < ${ARGS_FILE} ) )
   fi
 
   # Run the test from within the test directory
@@ -269,7 +247,7 @@ run_test()
     fi
 
     # RUN IT
-    print "running:   $( basename ${TCL_FILE} )"    
+    print "running:   $( basename ${TCL_FILE} )"
     if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     then
       CODE=${TEST_OK}
@@ -535,7 +513,7 @@ do
 
     # Disambiguate test output of different opt levels
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
-    
+
     TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
@@ -596,7 +574,7 @@ do
           printf "No warning in stc output\n"
       fi
     fi
-    
+
     if grep -F -q "THIS-TEST-SHOULD-NOT-CAUSE-WARNING" ${SWIFT_FILE}
     then
       if grep -q "^WARN" ${STC_ERR_FILE}

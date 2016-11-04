@@ -5,3 +5,32 @@ TEST_EXEC_SRCS += $(wildcard $(DIR)/*.c )
 TEST_COMMON_SRCS += $(wildcard $(DIR)/common/*.c )
 
 TEST_SCRIPTS += $(wildcard $(DIR)/*.sh )
+
+TEST_EXECS = $(patsubst %.c, %.x, $(TEST_EXEC_SRCS))
+TEST_EXEC_OBJS = $(patsubst %.c, %.o, $(TEST_EXEC_SRCS))
+TEST_COMMON_OBJS = $(patsubst %.c, %.o, $(TEST_COMMON_SRCS))
+TEST_OBJS = $(TEST_EXEC_OBJS) $(TEST_COMMON_OBJS)
+TEST_EXEC_DEPS = $(patsubst %.c, %.d, $(TEST_EXEC_SRCS))
+TEST_COMMON_DEPS = $(patsubst %.c, %.d, $(TEST_COMMON_SRCS))
+TEST_DEPS = $(TEST_EXEC_DEPS) $(TEST_COMMON_DEPS)
+
+TEST_RESULTS = $(patsubst %.sh, %.result, $(TEST_SCRIPTS))
+TEST_TMP = $(patsubst %.sh, %.tmp, $(TEST_SCRIPTS))
+
+%.x: %.o $(INSTALL_TOKEN) $(TEST_COMMON_OBJS)
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(TEST_COMMON_OBJS) $(LDFLAGS) \
+             -L lib -ladlb $(LIBS) -lm \
+	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
+
+tests: $(TEST_EXECS)
+
+test_results: $(TEST_RESULTS)
+
+# Require all tests to be built before running - don't track
+# exact dependencies between scripts and executables right now
+$(TEST_RESULTS): %.result : %.sh $(TEST_EXECS)
+	$(Q) "  TEST           $(@)"
+	$(E) rm -f $(@)
+	$(E) $(<) > $(*).tmp 2>&1
+	$(E) mv $(*).tmp $(@) 2>&1

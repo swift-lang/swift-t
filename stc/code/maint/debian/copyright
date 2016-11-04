@@ -1,0 +1,20 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: stc
+Source: <>
+
+Files: *
+Copyright: <years> <put author's name and email here>
+           <years> <likewise for another author>
+License: <special license>
+ <Put the license of the package here indented by 1 space>
+ <This follows the format of Description: lines in control file>
+ .
+ <Including paragraphs>
+
+Files: debian/*
+Copyright: 2013 University of Chicago and Argonne National Laboratory
+License: Apache 2
+
+    Details of the license are available at
+
+    http://www.apache.org/licenses/LICENSE-2.0.txt

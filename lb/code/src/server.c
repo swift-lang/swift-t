@@ -120,6 +120,7 @@ xlb_engine_work_array xlb_server_ready_work;
 
 static adlb_code setup_idle_time(void);
 static adlb_code setup_load_min(void);
+static adlb_code setup_par_mod(void);
 
 static inline int xlb_server_number(int rank);
 
@@ -165,6 +166,8 @@ xlb_server_init(const struct xlb_state *state)
   code = setup_idle_time();
   ADLB_CHECK(code);
   code = setup_load_min();
+  ADLB_CHECK(code);
+  code = setup_par_mod();
   ADLB_CHECK(code);
   // Set a default value for now:
   mm_set_max(mm_default, 10*MB);
@@ -544,6 +547,20 @@ setup_load_min()
   }
   if (xlb_load_min > 0)
     printf("ADLB_LOAD_MIN: %0.3f\n", xlb_load_min);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+setup_par_mod()
+{
+  bool success = getenv_integer("ADLB_PAR_MOD", 1, &xlb_s.par_mod);
+  if (!success || xlb_s.par_mod < 0)
+  {
+    printf("Illegal value of ADLB_PAR_MOD!\n");
+    return ADLB_ERROR;
+  }
+  if (xlb_s.par_mod != 1)
+    printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
   return ADLB_SUCCESS;
 }
 

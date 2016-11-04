@@ -10,9 +10,7 @@ if (( MAKE_CLEAN )); then
   fi
 fi
 
-if (( RUN_AUTOTOOLS )); then
-  ./bootstrap
-elif [ ! -f configure ]; then
+if (( RUN_AUTOTOOLS )) || [ ! -f configure ]; then
   # Attempt to run autotools
   ./bootstrap
 fi
@@ -62,13 +60,22 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
-set -x
 if (( CONFIGURE )); then
-  ./configure --config-cache \
-              --with-c-utils=${C_UTILS_INSTALL} \
-              --prefix=${LB_INSTALL} \
-              ${EXTRA_ARGS}
+  (
+    set -x
+    rm -f config.cache
+    ./configure --config-cache \
+                --with-c-utils=${C_UTILS_INSTALL} \
+                --prefix=${LB_INSTALL} \
+                CC=${CC} \
+                ${EXTRA_ARGS}
+  )
 fi
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
+
 if (( MAKE_CLEAN ))
 then
   rm -fv config.cache
@@ -77,5 +84,6 @@ then
     make clean
   fi
 fi
+
 make -j ${MAKE_PARALLELISM}
 make install
