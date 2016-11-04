@@ -43,7 +43,7 @@ EXEC_SCRIPT=0
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "f:hlm:n:vVxXC:d:e:i:o:s:St:" OPTION
+while getopts "f:hlm:M:n:vVxXC:d:e:i:o:s:St:" OPTION
 do
   case ${OPTION} in
     f)
@@ -77,7 +77,7 @@ do
       EXEC_SCRIPT=1
       ;;
     # Pass through to scheduler script:
-    C) ;& d) ;& i) ;& o) ;& s) ;& t)
+    C) ;& d) ;& i) ;& M) ;& o) ;& s) ;& t)
       SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     e)

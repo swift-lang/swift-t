@@ -46,6 +46,8 @@
 #   LOG_FILE:    Path to turbine.log
 #   OUTPUT_FILE: Path to output.txt
 #   JOB_ID_FILE: Path to jobid.txt
+#   MAIL_ENABLED: If mail is enabled, 1, else 0.  Default 0.
+#   MAIL_ADDRESS: If mail is enabled, an email address.
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
@@ -110,6 +112,7 @@ then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
+export MAIL_ENABLED=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -120,7 +123,7 @@ env=()
 export ENV env
 
 # Get options
-while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
+while getopts "C:d:e:i:M:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
@@ -141,6 +144,9 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
       ;;
     i)
        INIT_SCRIPT=${OPTARG}
+       ;;
+    M) MAIL_ENABLED=1
+       MAIL_ADDRESS=${OPTARG}
        ;;
     n) PROCS=${OPTARG}
       ;;

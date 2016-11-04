@@ -77,7 +77,7 @@ IMPORT_STRING=""
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hE:i:o:t:vV"
 STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
-TURBINE_CHARS="e:i:lm:n:s:xX"
+TURBINE_CHARS="e:i:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -102,7 +102,7 @@ do
       ;;
 
     # Turbine arguments
-    e) ;& i) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
+    e) ;& i) ;& l) ;& m) ;& M) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
