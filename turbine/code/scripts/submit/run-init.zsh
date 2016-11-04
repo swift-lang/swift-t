@@ -113,6 +113,7 @@ then
 fi
 SETTINGS=0
 export MAIL_ENABLED=0
+export MAIL_ADDRESS=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt

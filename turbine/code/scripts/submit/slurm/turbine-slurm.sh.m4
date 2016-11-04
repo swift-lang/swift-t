@@ -32,6 +32,12 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 #SBATCH --ntasks-per-node=getenv(PPN)
 #SBATCH --workdir=getenv(TURBINE_OUTPUT)
 
+# M4 conditional to optionally perform user email notifications
+ifelse(getenv(MAIL_ENABLED),`1',
+#SBATCH --mail-user=getenv(MAIL_ADDRESS)
+#SBATCH --mail-type=ALL
+)
+
 echo TURBINE-SLURM.SH
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
