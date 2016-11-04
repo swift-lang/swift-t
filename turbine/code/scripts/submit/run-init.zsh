@@ -127,48 +127,40 @@ while getopts "C:d:e:i:M:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
-    C)
-      CHANGE_DIRECTORY=${OPTARG}
+    C) CHANGE_DIRECTORY=${OPTARG}
       ;;
-    d)
-      OUTPUT_TOKEN_FILE=${OPTARG}
+    d) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
-    e)
-      KV=${OPTARG}
-      if [[ ! ${OPTARG} =~ ".*=.*" ]]
-      then
-        # Look up unset environment variables
-        KV="${KV}=${(P)KV}"
-      fi
-      env+="${KV}"
-      ;;
-    i)
-       INIT_SCRIPT=${OPTARG}
+    e) KV=${OPTARG}
+       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       then
+         # Look up unset environment variables
+         KV="${KV}=${(P)KV}"
+       fi
+       env+="${KV}"
+       ;;
+    i) INIT_SCRIPT=${OPTARG}
        ;;
     M) MAIL_ENABLED=1
        MAIL_ADDRESS=${OPTARG}
        ;;
     n) PROCS=${OPTARG}
-      ;;
+       ;;
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
-      ;;
+       ;;
     s) SETTINGS=${OPTARG}
-      ;;
+       ;;
     t) WALLTIME=${OPTARG}
-      ;;
-    V)
-      VERBOSE=1
-      ;;
-    x)
-      export EXEC_SCRIPT=1
-      ;;
-    X)
-      export TURBINE_STATIC_EXEC=1
-      ;;
-    *)
-      print "abort"
-      exit 1
-      ;;
+       ;;
+    V) VERBOSE=1
+       ;;
+    x) export EXEC_SCRIPT=1
+       ;;
+    X) export TURBINE_STATIC_EXEC=1
+       ;;
+    *) print "abort"
+       exit 1
+       ;;
   esac
 done
 shift $(( OPTIND-1 ))
