@@ -466,8 +466,8 @@ Swift has the conventional types:
 +int+:: A 64-bit integer.
 +float+:: A 64-bit (double-precision) floating point number.
 +boolean+:: A boolean (true/false).
-+file+:: A file (see Section Files).
-+blob+:: External byte data (see Section Blobs).
++file+:: A file (see <<section_files,Section Files>>).
++blob+:: External byte data (see <<section_blobs,Section Blobs>>).
 
 Literals for these types use conventional syntax:
 
@@ -511,27 +511,29 @@ line data 2
             behavior.  To disable the C preprocessor, use the +-p+ option
             to STC.
 
+[[section_files]]
 === Files
 
 A file is a first-class entity in Swift that in many ways can be treated
-as any other variable.  The main difference is that a file can be
+as any other variable, and passed to and from
+<<app_functions,+app+ functions>>.
+The main difference is that a file is
 *mapped* to path in a filesystem.  Assigning to a mapped file variable
 results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type +string+.  Absolute
 paths or relative paths are specified, with relative paths interpreted
 relative to the path in which turbine was run.
 File variables can also be initialized with data from a pre-existing
-file using the +input_file+ function.  File paths are relative to the
-working directory for Turbine.
+file using the <<library_files,+input()+>> function.
+File paths are relative to the working directory for Turbine.
 
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
 ----
-file x = input_file("/home/user/in.txt");
+file x = input("/home/user/in.txt");
 file y <"/home/user/out.txt">; // Declare a mapped file
 y = x; // Do the copy
 ----
-
 
 A range of functions to work with files are provided in the
 +files+ library module.
@@ -542,7 +544,7 @@ file f[] = glob("directory/*.txt");
 
 // Read the contents of a file with read
 string filename = "in.txt";
-string contents = read(input_file(filename));
+string contents = read(input(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
 // Write directly to a file with write
@@ -587,6 +589,7 @@ results in a parse error: the +>=+ sequence is tokenized as
 _greater-than-or-equal-to_.
 ======
 
+[[section_blobs]]
 === Blobs
 
 Blobs represent raw byte data.  They are primarily used to pass
@@ -670,8 +673,8 @@ assigned as follows:
 ----
 // An array of arrays of files with string keys
 file A[string][string];
-A["foo"]["bar"] = input_file("test.txt");
-A["foo"]["qux"] = input_file("test2.txt");
+A["foo"]["bar"] = input("test.txt");
+A["foo"]["qux"] = input("test2.txt");
 ----
 
 *Note:* there is currently a limitation in assignment of nested arrays
@@ -1296,6 +1299,7 @@ If condition is false, report +message+ and exit immediately.
 +adlb_servers()    -> int+:: Number of ADLB servers
 +turbine_workers() -> int+:: Number of Turbine workers
 
+[[library_files]]
 === Files
 
 +filename(file) -> string+::   Obtain the name of a file
@@ -1359,6 +1363,7 @@ Returns the file part of the given string path.
 
 Returns the file part of the given file path.
 
+[[library_blobs]]
 === Blobs
 
 *Import:* +blob+

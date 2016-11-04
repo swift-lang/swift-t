@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.8" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,9 +94,7 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-pre {
-  white-space: pre-wrap;
-}
+
 
 #author {
   color: #527bbd;
@@ -225,7 +223,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; vertical-align: text-bottom; }
+span.image img { border-style: none; }
 a.image:visited { color: white; }
 
 dl {
@@ -1437,7 +1435,7 @@ A boolean (true/false).
 </dt>
 <dd>
 <p>
-A file (see Section Files).
+A file (see <a href="#section_files">Section Files</a>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1445,7 +1443,7 @@ A file (see Section Files).
 </dt>
 <dd>
 <p>
-External byte data (see Section Blobs).
+External byte data (see <a href="#section_blobs">Section Blobs</a>).
 </p>
 </dd>
 </dl></div>
@@ -1576,22 +1574,24 @@ Asciidoc-style: like Python-style but use 4 dashes instead of 3 quotes.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_files">10.2. Files</h3>
+<h3 id="section_files">10.2. Files</h3>
 <div class="paragraph"><p>A file is a first-class entity in Swift that in many ways can be treated
-as any other variable.  The main difference is that a file can be
+as any other variable, and passed to and from
+<a href="#app_functions"><code>app</code> functions</a>.
+The main difference is that a file is
 <strong>mapped</strong> to path in a filesystem.  Assigning to a mapped file variable
 results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type <code>string</code>.  Absolute
 paths or relative paths are specified, with relative paths interpreted
 relative to the path in which turbine was run.
 File variables can also be initialized with data from a pre-existing
-file using the <code>input_file</code> function.  File paths are relative to the
-working directory for Turbine.</p></div>
+file using the <a href="#library_files"><code>input()</code></a> function.
+File paths are relative to the working directory for Turbine.</p></div>
 <div class="paragraph"><p>For example, if <code>/home/user/in.txt</code> is a file with some data in it,
 the following Swift program will copy the file to <code>/home/user/out.txt</code>.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>file x = input_file("/home/user/in.txt");
+<pre><code>file x = input("/home/user/in.txt");
 file y &lt;"/home/user/out.txt"&gt;; // Declare a mapped file
 y = x; // Do the copy</code></pre>
 </div></div>
@@ -1604,7 +1604,7 @@ file f[] = glob("directory/*.txt");
 
 // Read the contents of a file with read
 string filename = "in.txt";
-string contents = read(input_file(filename));
+string contents = read(input(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
 // Write directly to a file with write
@@ -1668,7 +1668,7 @@ system and cleared on system reboot.)</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_blobs">10.3. Blobs</h3>
+<h3 id="section_blobs">10.3. Blobs</h3>
 <div class="paragraph"><p>Blobs represent raw byte data.  They are primarily used to pass
 data to and from native code libraries callable from Swift.  They are
 like Swift strings but may contain arbitrary data.</p></div>
@@ -1745,8 +1745,8 @@ assigned as follows:</p></div>
 <div class="content">
 <pre><code>// An array of arrays of files with string keys
 file A[string][string];
-A["foo"]["bar"] = input_file("test.txt");
-A["foo"]["qux"] = input_file("test2.txt");</code></pre>
+A["foo"]["bar"] = input("test.txt");
+A["foo"]["qux"] = input("test2.txt");</code></pre>
 </div></div>
 <div class="paragraph"><p><strong>Note:</strong> there is currently a limitation in assignment of nested arrays
 that a given array can only be assigned at a single "index level".  If
@@ -2706,7 +2706,7 @@ Number of Turbine workers
 </div>
 </div>
 <div class="sect2">
-<h3 id="_files_2">13.7. Files</h3>
+<h3 id="library_files">13.7. Files</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>filename(file) &#8594; string</code>
@@ -2879,7 +2879,7 @@ Returns the file part of the given file path.
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_blobs_2">13.8. Blobs</h3>
+<h3 id="library_blobs">13.8. Blobs</h3>
 <div class="paragraph"><p><strong>Import:</strong> <code>blob</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -5037,8 +5037,12 @@ waiting for the debugger to attach.  When you attach, set the variable
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
+<<<<<<< HEAD
 Last updated
  2016-11-04 10:05:31 CDT
+=======
+Last updated 2016-10-21 13:44:16 CDT
+>>>>>>> 5c4089413563b524c41f124332856ea17a02e3a0
 </div>
 </div>
 </body>
