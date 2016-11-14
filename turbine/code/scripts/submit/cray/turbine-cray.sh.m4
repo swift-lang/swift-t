@@ -53,6 +53,9 @@ ifelse(getenv(TITAN), `true',
 # Disable mail
 #PBS -m n
 
+# User directives:
+getenv(TURBINE_DIRECTIVE)
+
 VERBOSE=getenv(VERBOSE)
 (( VERBOSE )) && set -x
 
