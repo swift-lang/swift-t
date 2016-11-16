@@ -48,12 +48,24 @@ package: $(PACKAGE) libs
 USE_MAC = @USE_MAC@
 
 INSTALL_PREFIX  = @prefix@
-INSTALL_BIN     = $(INSTALL_PREFIX)/bin
-INSTALL_ETC     = $(INSTALL_PREFIX)/etc
-INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
-INSTALL_LIB     = $(INSTALL_PREFIX)/lib
-INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
-INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
+
+ifeq ($(DESTDIR),)
+# 	Regular build
+	ENABLE_DEB = 0
+	INSTALL_BIN = $(INSTALL_PREFIX)/bin
+	INSTALL_TOP = $(INSTALL_PREFIX)
+else
+# 	Debian installation
+	ENABLE_DEB = 1
+	INSTALL_BIN = $(DESTDIR)/bin
+	INSTALL_TOP = $(DESTDIR)/lib/turbine
+endif
+
+INSTALL_ETC     = $(INSTALL_TOP)/etc
+INSTALL_INCLUDE = $(INSTALL_TOP)/include
+INSTALL_LIB     = $(INSTALL_TOP)/lib
+INSTALL_SCRIPTS = $(INSTALL_TOP)/scripts
+INSTALL_EXPORT  = $(INSTALL_TOP)/export
 # The submit scripts are loaded from their respective module.mk files
 SCRIPTS_SUBMIT  :=
 
@@ -461,6 +473,7 @@ include lib/module.mk
 include scripts/main-wrap/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
+include maint/debian.mkf
 
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_C_UTILS_SRC)
@@ -733,19 +746,20 @@ PROVENANCE = version.txt source.txt config.log
 install: install.txt
 
 # Installed files:
-DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
+DIRECTORIES = $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
 TURBINE_HEADERS := src/turbine/turbine.h      \
-		  src/tcl/turbine/tcl-turbine.h \
-		  src/tcl/static-pkg/static-pkg.h \
-                  src/turbine/turbine-defs.h \
-                  src/tcl/blob/blob.h
+                   src/turbine/turbine-finalizers.h \
+                   src/tcl/turbine/tcl-turbine.h \
+                   src/tcl/static-pkg/static-pkg.h \
+                   src/turbine/turbine-defs.h \
+                   src/tcl/blob/blob.h
 ifeq ($(ENABLE_STATIC_PKG),1)
   TURBINE_HEADERS += $(STATIC_PKG_RESOURCE_H)
 endif
 
-BINS := $(shell ls bin/turbine \
+BINS := $(shell ls bin/turbine               \
                    bin/turbine-write-doubles \
                    bin/turbine-read-doubles )
 ifeq ($(ENABLE_STATIC_PKG),1)
@@ -761,6 +775,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
 	$(E) rm -f $(@)
+	$(E) chmod u+x bin/turbine # A configure-generated file
 #       Set up directories
 	$(E) mkdir -pv $(DIRECTORIES)
 #       Copy in build provenance files
@@ -768,20 +783,21 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
-	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
+	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)   $(INSTALL_LIB)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_TOP)
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
-	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help*.txt         $(INSTALL_ETC)
 	@echo
 	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
+	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
 	$(E) date "+DATE:   %m/%d/%Y %I:%M%p"    >> $(@)
 #       Use true to ignore errors (e.g., if this is not an git clone)
 	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
-	$(E) cp $(CP_ARGS) $(@) $(INSTALL_PREFIX)
+	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
 
 ### Autoconf sanity:
 
@@ -831,6 +847,7 @@ distclean:: clean
 	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
+# This line causes a false autoscan warning on token 'install'
 .PHONY: clean install package package_static libs test_results
 
 ### DEBUG BUILD SYSTEM

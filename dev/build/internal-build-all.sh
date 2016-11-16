@@ -3,21 +3,19 @@ set -e
 
 THIS=$( cd $(dirname $0) && pwd )
 
-pushd ${C_UTILS_SRC}
-echo
-echo "Building c-utils"
-pwd
-echo "================"
-${THIS}/cutils-build.sh
-popd
+${THIS}/check-tools.sh
 
-pushd ${LB_SRC}
+pushd ${C_UTILS_SRC} > /dev/null
 echo
-echo "Building lb"
-pwd
-echo "================"
+echo "Building c-utils in $PWD"
+${THIS}/cutils-build.sh
+popd > /dev/null
+
+pushd ${LB_SRC} > /dev/null
+echo
+echo "Building lb in $PWD"
 ${THIS}/lb-build.sh
-popd
+popd > /dev/null
 
 if [ ! -z "$COASTER_SRC" -a ! -z "$COASTER_INSTALL" ]
 then
@@ -30,18 +28,14 @@ then
   popd
 fi
 
-pushd ${TURBINE_SRC}
+pushd ${TURBINE_SRC} > /dev/null
 echo
-echo "Building Turbine"
-pwd
-echo "================"
+echo "Building Turbine in $PWD"
 ${THIS}/turbine-build.sh
-popd
+popd > /dev/null
 
-pushd ${STC_SRC}
+pushd ${STC_SRC} > /dev/null
 echo
-echo "Building STC"
-pwd
-echo "================"
+echo "Building STC in $PWD"
 ${THIS}/stc-build.sh
-popd
+popd > /dev/null

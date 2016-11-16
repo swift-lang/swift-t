@@ -5,7 +5,14 @@
 # TURBINE_USER_LIB - directory for user library code
 # TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
-TURBINE_HOME=@prefix@
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+                            # if this is a Debian installation
+if (( DEBIAN_BUILD ))
+then
+  TURBINE_HOME=/usr/lib/turbine
+else
+  TURBINE_HOME='@prefix@'
+fi
 TURBINE_VERSION=@TURBINE_VERSION@
 export C_UTILS=@USE_C_UTILS@
 export TCL=@USE_TCL@

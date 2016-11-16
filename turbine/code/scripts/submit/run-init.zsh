@@ -46,6 +46,8 @@
 #   LOG_FILE:    Path to turbine.log
 #   OUTPUT_FILE: Path to output.txt
 #   JOB_ID_FILE: Path to jobid.txt
+#   MAIL_ENABLED: If mail is enabled, 1, else 0.  Default 0.
+#   MAIL_ADDRESS: If mail is enabled, an email address.
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
@@ -72,9 +74,9 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
 export ADLB_SERVERS=${ADLB_SERVERS:-1}
 export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
-export TURBINE_LOG=${TURBINE_LOG:-1}
-export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
-export ADLB_DEBUG=${ADLB_DEBUG:-1}
+export TURBINE_LOG=${TURBINE_LOG:-0}
+export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
+export ADLB_DEBUG=${ADLB_DEBUG:-0}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
 export VERBOSE=0
@@ -110,6 +112,8 @@ then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
+export MAIL_ENABLED=0
+export MAIL_ADDRESS=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -120,49 +124,44 @@ env=()
 export ENV env
 
 # Get options
-while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
+while getopts "C:d:e:i:M:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
-    C)
-      CHANGE_DIRECTORY=${OPTARG}
+    C) CHANGE_DIRECTORY=${OPTARG}
       ;;
-    d)
-      OUTPUT_TOKEN_FILE=${OPTARG}
+    d) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
-    e)
-      KV=${OPTARG}
-      if [[ ! ${OPTARG} =~ ".*=.*" ]]
-      then
-        # Look up unset environment variables
-        KV="${KV}=${(P)KV}"
-      fi
-      env+="${KV}"
-      ;;
-    i)
-       INIT_SCRIPT=${OPTARG}
+    e) KV=${OPTARG}
+       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       then
+         # Look up unset environment variables
+         KV="${KV}=${(P)KV}"
+       fi
+       env+="${KV}"
+       ;;
+    i) INIT_SCRIPT=${OPTARG}
+       ;;
+    M) MAIL_ENABLED=1
+       MAIL_ADDRESS=${OPTARG}
        ;;
     n) PROCS=${OPTARG}
-      ;;
+       ;;
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
-      ;;
+       ;;
     s) SETTINGS=${OPTARG}
-      ;;
+       ;;
     t) WALLTIME=${OPTARG}
-      ;;
-    V)
-      VERBOSE=1
-      ;;
-    x)
-      export EXEC_SCRIPT=1
-      ;;
-    X)
-      export TURBINE_STATIC_EXEC=1
-      ;;
-    *)
-      print "abort"
-      exit 1
-      ;;
+       ;;
+    V) VERBOSE=1
+       ;;
+    x) export EXEC_SCRIPT=1
+       ;;
+    X) export TURBINE_STATIC_EXEC=1
+       ;;
+    *) print "abort"
+       exit 1
+       ;;
   esac
 done
 shift $(( OPTIND-1 ))

@@ -1,0 +1,18 @@
+
+# STC MAKEFILE
+
+# This is only used to build the Debian package
+
+all: lib/stc.jar
+
+include maint/debian.mkf
+
+lib/stc.jar:
+	ant
+
+install:
+#	These are the hard-coded Debian installation targets:
+	ant -Ddist.dir=$(DESTDIR)/lib/stc -Dturbine.home=/usr -Ddebian=true install
+
+clean::
+	ant clean

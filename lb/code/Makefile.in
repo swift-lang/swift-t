@@ -40,7 +40,7 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB_LIBS = 
+ADLB_LIBS =
 
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
@@ -129,7 +129,6 @@ ifeq ($(ENABLE_MPE),yes)
         RPATH += -Wl,-rpath -Wl,$(MPE)/lib
 endif
 
-
 ENABLE_ZLIB = @ENABLE_ZLIB@
 ZLIB = @ZLIB_HOME@
 
@@ -163,18 +162,19 @@ TEST_COMMON_SRCS :=
 TEST_SCRIPTS :=
 
 include src/module.mk
+include maint/debian.mkf
 include tests/module.mk
 
 ### Autoconf sanity:
 
-configure: bootstrap
+configure: configure.ac bootstrap version.txt
 	@echo
 	@echo "Configuration is not up to date (bootstrap)!"
 	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@false
 
-Makefile: configure configure.ac Makefile.in
+Makefile: configure Makefile.in
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
 	@echo "Run ./bootstrap and ./configure again."
@@ -229,37 +229,6 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) | lib
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
 
-### APPS AND TESTS
-
-TEST_EXECS = $(patsubst %.c, %.x, $(TEST_EXEC_SRCS))
-TEST_EXEC_OBJS = $(patsubst %.c, %.o, $(TEST_EXEC_SRCS))
-TEST_COMMON_OBJS = $(patsubst %.c, %.o, $(TEST_COMMON_SRCS))
-TEST_OBJS = $(TEST_EXEC_OBJS) $(TEST_COMMON_OBJS)
-TEST_EXEC_DEPS = $(patsubst %.c, %.d, $(TEST_EXEC_SRCS))
-TEST_COMMON_DEPS = $(patsubst %.c, %.d, $(TEST_COMMON_SRCS))
-TEST_DEPS = $(TEST_EXEC_DEPS) $(TEST_COMMON_DEPS)
-
-TEST_RESULTS = $(patsubst %.sh, %.result, $(TEST_SCRIPTS))
-TEST_TMP = $(patsubst %.sh, %.tmp, $(TEST_SCRIPTS))
-
-%.x: %.o $(INSTALL_TOKEN) $(TEST_COMMON_OBJS)
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(CFLAGS) -o $(@) $(<) $(TEST_COMMON_OBJS) $(LDFLAGS) \
-             -L lib -ladlb $(LIBS) -lm \
-	     $(RPATH) -Wl,-rpath -Wl,$(INSTALL_LIB)
-
-tests: $(TEST_EXECS)
-
-test_results: $(TEST_RESULTS)
-
-# Require all tests to be built before running - don't track
-# exact dependencies between scripts and executables right now
-$(TEST_RESULTS): %.result : %.sh $(TEST_EXECS)
-	$(Q) "  TEST           $(@)"
-	$(E) rm -f $(@)
-	$(E) $(<) > $(*).tmp 2>&1
-	$(E) mv $(*).tmp $(@) 2>&1
-
 ### INSTALL
 
 INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb_types.h
@@ -285,10 +254,17 @@ $(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+#       Install the headers (if not a binary package) and library
+ifeq ($(DEBIAN_BIN_PKG),)
 	$(E) cp $(CP_ARGS) $(INSTALLED_HEADERS) $(INSTALL_INCLUDE)
+endif
 	$(E) cp $(CP_ARGS) $(ADLB_LIBS) $(INSTALL_LIB)
+#       Finally, copy in the provenance files
+#       (if not making a Debian package)
+ifeq ($(DEBIAN_PKG),)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 	$(E) touch $(INSTALL_ETC)/install.txt
+endif
 	$(Q)
 
 # This gives a false autoscan warning for token 'install'

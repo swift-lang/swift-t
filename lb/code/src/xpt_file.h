@@ -18,10 +18,10 @@
  */
 
 #ifdef XLB_ENABLE_XPT
-#ifndef __XLB_XPT_FILE_H
-#define __XLB_XPT_FILE_H
 
-#include <stdio.h>
+#pragma once
+
+#include <stdint.h>
 
 #include "adlb-defs.h"
 #include "adlb_types.h"
@@ -40,7 +40,7 @@ typedef struct {
   int fd; // File descriptor for file being written
   xpt_block_num_t curr_block; // Number of current block
   xpt_file_pos_t curr_block_start; // Offset of current block in file
-  xpt_block_pos_t curr_block_pos; // Write position in current block 
+  xpt_block_pos_t curr_block_pos; // Write position in current block
   unsigned char *buffer; // buffer of size XLB_XPT_BUFFER_SIZE
   xpt_block_pos_t buffer_used; // Amount of buffer currently used
 } xlb_xpt_state;
@@ -52,7 +52,7 @@ typedef struct {
   xpt_block_pos_t block_size; // Block size
   xpt_rank_t ranks;      // Number of ranks
   xpt_rank_t curr_rank;  // Log from current rank being read
- 
+
   // Position in file, must be maintained to be in sync with file object
   xpt_block_num_t curr_block;
   xpt_block_pos_t curr_block_pos;
@@ -75,9 +75,9 @@ xlb_xpt_write(const void *key, size_t key_len,
               const void *val, size_t val_len,
               xlb_xpt_state *state, xpt_file_pos_t *val_offset);
 
-/* Read a checkpoint value from the file being written, 
+/* Read a checkpoint value from the file being written,
    The value offset must match that returned by xlb_xpt_write.
-   buffer must be at least val_len in size 
+   buffer must be at least val_len in size
    if file is null, indicates current checkpoint file being written,
       otherwise open previously written file. */
 adlb_code
@@ -113,7 +113,7 @@ xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank);
   Returns ADLB_DONE if no more valid records for this rank
   Returns ADLB_NOTHING if corrupted record encountered, but can
                        try to continue
-                    
+
   buffer: caller-provided buffer used to store data
   key_len, val_len: length in bytes
   key, val: pointers into buffer for start of key/value data
@@ -123,5 +123,4 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
        size_t *key_len, void **key, size_t *val_len, void **val,
        xpt_file_pos_t *val_offset);
 
-#endif // __XLB_XPT_FILE_H
 #endif // XLB_ENABLE_XPT

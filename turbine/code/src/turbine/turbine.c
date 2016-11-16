@@ -51,6 +51,9 @@
 #include "async_exec.h"
 #include "cache.h"
 #include "turbine.h"
+#include "turbine-finalizers.h"
+
+#include "src/tcl/adlb/tcl-adlb.h"
 
 MPI_Comm turbine_task_comm   = MPI_COMM_NULL;
 MPI_Comm turbine_leader_comm = MPI_COMM_NULL;
@@ -62,6 +65,14 @@ static bool initialized = false;
 
 static int mpi_size = -1;
 static int mpi_rank = -1;
+
+struct finalizer
+{
+  void (*func)(void*);
+  void* context;
+};
+/** List of user finalization work, each a struct finalizer. */
+static struct list* finalizers = NULL;
 
 static void
 check_versions()
@@ -239,10 +250,42 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
+int
+turbine_register_finalizer(void (*func)(void*), void* context)
+{
+  if (finalizers == NULL)
+    finalizers = list_create();
+  struct finalizer* fzr = malloc(sizeof(fzr));
+  fzr->func    = func;
+  fzr->context = context;
+  struct list_item* item = list_add(finalizers, fzr);
+  if (item == NULL)
+    return 0;
+  return 1;
+}
+
+static void
+call_user_finalizers(void)
+{
+  if (finalizers == NULL) return;
+  while (true)
+  {
+    struct finalizer* fzr = list_poll(finalizers);
+    if (fzr == NULL) break;
+    // Call user finalizer:
+    fzr->func(fzr->context);
+  }
+}
+
 void
 turbine_finalize(Tcl_Interp *interp)
 {
+  bool print_time;
+  getenv_boolean("ADLB_PRINT_TIME", false, &print_time);
+  if (print_time)
+    if (adlb_comm_rank == 0)
+      printf("turbine finalizing at: %0.3f\n", log_time());
   turbine_cache_finalize();
   turbine_async_exec_finalize(interp);
+  call_user_finalizers();
 }
-

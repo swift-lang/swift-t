@@ -16,15 +16,16 @@
 
 // Needed for pread() on BlueWaters:
 #define _XOPEN_SOURCE 500
-#include "xpt_file.h"
 
 #ifdef XLB_ENABLE_XPT
+
+#include "xpt_file.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
-#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -34,7 +35,7 @@
 #include "checks.h"
 #include "common.h"
 #include "debug.h"
-#include "vint.h"
+#include <vint.h>
 
 // Magic number to put at start of blocks;
 static const unsigned char xpt_magic_num = 0x42;

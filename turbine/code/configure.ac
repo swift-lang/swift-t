@@ -71,8 +71,17 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 # Checks for programs
 AC_PROG_CC
+AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
@@ -135,9 +144,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -162,15 +171,16 @@ AC_ARG_WITH(c-utils,
         then
             AC_MSG_ERROR([Not found: ExM c-utils])
         fi
-        location=${SOFTWARE}/c-utils
-        AC_CHECK_FILE(${location}/include/c-utils.h,
-                      [USE_C_UTILS=1], [])
-        if [[ ${USE_C_UTILS} == 1 ]]
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            USE_C_UTILS=${location}
-        else
-            AC_MSG_ERROR([Not found: ExM c-utils])
+            USE_C_UTILS=/usr
+        else # We are doing a source installation
+             location=${SOFTWARE}/c-utils
+             AC_CHECK_FILE(${location}/include/c-utils.h,
+                           [USE_C_UTILS=${location}], [])
         fi
+        [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
     ]
 )
 AC_SUBST(USE_C_UTILS)
@@ -527,7 +537,7 @@ AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 AC_SUBST(USE_MPE_LIB_A)
 
-ENABLE_XPT=yes
+ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -544,9 +554,7 @@ AC_ARG_ENABLE(checkpoint,
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
 then
-    AC_MSG_RESULT([Checkpointing enabled]);
-else
-    AC_MSG_RESULT([Checkpointing disabled]);
+    AC_MSG_RESULT([Checkpointing enabled])
 fi
 AC_SUBST(ENABLE_XPT)
 
@@ -566,16 +574,16 @@ AC_ARG_WITH(adlb,
     ],
     [
         dnl If not given, look in SOFTWARE, if valid
-        if [[ ${SOFTWARE} == 0 ]]
+        [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            AC_MSG_ERROR([Not found: ADLB])
-        fi
-        location=${SOFTWARE}/lb
-        AC_CHECK_FILE(${location}/include/adlb.h,
-                      [USE_ADLB=${location}], [])
-        if [[ ${USE_ADLB} == 0 ]]
-        then
-            AC_MSG_ERROR([Not found: ADLB])
+            USE_ADLB=/usr
+        else # We are doing a source installation
+            location=${SOFTWARE}/lb
+            AC_CHECK_FILE(${location}/include/adlb.h,
+                          [USE_ADLB=${location}], [])
+            [[ ${USE_ADLB} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
         fi
     ]
 )
@@ -594,6 +602,11 @@ USE_PY_VERSION_MINOR=7
 USE_PY_VERSION_SUFFIX=
 USE_PYTHON_INCLUDE=0
 USE_PYTHON_LIB=0
+<<<<<<< HEAD
+=======
+USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
+USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
+>>>>>>> fe47ae99cf7eee185e11e7b0377aff3fdb7c368f
 HAVE_PYTHON=0
 
 AC_ARG_WITH(python-version-major,
@@ -941,7 +954,7 @@ AC_ARG_WITH(tcl,
       for TCLVER in ${TCL_VERSION_PREFS}
       do
         AC_MSG_CHECKING([for tclsh${TCLVER} on path])
-        program=$( which tclsh${TCLVER} )
+        program=$( which tclsh${TCLVER} 2>&1 )
         if [[ ${?} == 0 ]]
         then
           AC_MSG_RESULT([yes: ${program}])
@@ -1293,6 +1306,7 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        bin/turbine
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1327,5 +1341,9 @@ AC_CONFIG_FILES(
 
         #         $USE_JVM_SCRIPT_HOME/src/module.mk
 
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_OUTPUT
