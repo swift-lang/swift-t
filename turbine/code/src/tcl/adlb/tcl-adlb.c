@@ -778,6 +778,31 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  char* comm_name = Tcl_GetString(objv[1]);
+  MPI_Comm comm;
+  if (strcmp(comm_name, "world") == 0)
+    comm = MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "adlb") == 0)
+    comm = MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "null") == 0)
+    comm = MPI_COMM_NULL;
+  else if (strcmp(comm_name, "leaders") == 0)
+    comm = ADLB_GetComm_leaders();
+  else if (strcmp(comm_name, "workers") == 0)
+    comm = ADLB_GetComm_workers();
+  else
+    return turbine_user_errorv
+      (interp, "adlb::comm_get: error: unknown comm: %s", comm_name);
+  Tcl_Obj* result = Tcl_NewLongObj(comm);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 /**
    usage: no args, returns rank within workers
 */
@@ -5820,37 +5845,6 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb:comm_null
- */
-static int
-ADLB_GetCommNull_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
-{
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(MPI_COMM_NULL));
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommLeaders_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm leaders = ADLB_GetComm_leaders();
-  Tcl_Obj* result = Tcl_NewLongObj(leaders);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommWorkers_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm workers = ADLB_GetComm_workers();
-  Tcl_Obj* result = Tcl_NewLongObj(workers);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-/**
    usage: adlb::fail
  */
 static int
@@ -5958,8 +5952,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_CommRank_Cmd);
   COMMAND("size",      ADLB_CommSize_Cmd);
-  COMMAND("comm_workers", ADLB_GetCommWorkers_Cmd);
-  COMMAND("comm_leaders", ADLB_GetCommLeaders_Cmd);
+  COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
@@ -6043,7 +6036,6 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
   COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
   COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
-  COMMAND("comm_null", ADLB_GetCommNull_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
