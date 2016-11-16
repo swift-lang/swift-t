@@ -129,9 +129,9 @@ report_version()
   fi
   print " using MPI: ${MPI_LIB}"
   print " using Tcl: ${TCLSH}"
-  if [[ ${TURBINE_USE_PYTHON} != "" ]]
+  if (( ${#TURBINE_USE_PYTHON} + ${#TURBINE_USE_PYTHON_NAME} ))
   then
-    print " using Python: ${TURBINE_USE_PYTHON}"
+    print " using Python: ${TURBINE_USE_PYTHON} ${TURBINE_USE_PYTHON_NAME}"
   fi
   if [[ ${TURBINE_USE_R} != 0 ]]
   then
