@@ -469,3 +469,8 @@ namespace eval turbine {
       store_integer $o [ expr {$i_value != $i_value} ]
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

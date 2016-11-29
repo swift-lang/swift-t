@@ -155,3 +155,8 @@ namespace eval turbine {
   }
 
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:
