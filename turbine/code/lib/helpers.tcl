@@ -139,7 +139,7 @@ proc cat { args } {
 }
 
 namespace eval turbine {
-  
+
   # Create a dictionary with integer keys numbered from start with contents
   # of list
   proc dict_from_list { l {start_index 0}} {
