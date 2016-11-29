@@ -359,7 +359,9 @@ namespace eval turbine {
 
     proc string2float_impl { input } {
       if { ! [ string is double $input ] } {
-        error "could not convert string '${input}' to float"
+          turbine_error \
+              "string2float():" \
+              "could not convert string '${input}' to float"
       }
       return $input
     }
@@ -397,7 +399,10 @@ namespace eval turbine {
     }
 
     proc string2bool_impl { input } {
-      return [ expr { $input ? 1 : 0 } ]
+        if [ catch { set result [ expr { $input ? 1 : 0 } ] } e ] {
+            turbine_error "string2bool(): $e"
+        }
+        return $result
     }
 
     # Good for performance testing

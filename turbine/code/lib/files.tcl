@@ -714,4 +714,11 @@ namespace eval turbine {
         close $fp
         return $lines
     }
+
+    proc file_mtime_impl { filename } {
+        if [ catch { set result [ file mtime $filename ] } e ] {
+            turbine_error "file_mtime(): $e"
+        }
+        return $result
+    }
 }

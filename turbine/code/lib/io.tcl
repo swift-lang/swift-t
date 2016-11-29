@@ -46,10 +46,13 @@ namespace eval turbine {
         foreach a $args {
             lappend L $a
         }
-        if { [ catch { set s [ eval format $L ] } ] } {
+        if [ catch { set s [ eval format $L ] } e ] {
             set fmt [ lindex $L 0 ]
             turbine_error \
-                [ format "error in printf(): format: \"%s\"" $fmt ]
+                "error in printf(): \n" \
+                [ format "format: \"%s\"\n" $fmt ] \
+                "arguments:" [ lreplace $L 0 0 ] "\n" \
+                "details: $e"
         }
 
         if [ newline ] {
