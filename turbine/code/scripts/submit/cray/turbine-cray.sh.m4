@@ -15,7 +15,7 @@ changecom(`dnl')#!/bin/bash -e
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE-APRUN.SH
+# TURBINE-CRAY.SH
 
 # Created: esyscmd(`date')
 
