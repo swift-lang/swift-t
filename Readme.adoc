@@ -4,6 +4,7 @@ Swift/T is an implicitly parallel programming language for composing external fu
 Swift/T runs as an MPI program, and is compatible with Cray and Blue Gene supercomputers, as well as PBS or SLURM clusters, and can also run on a laptop (Linux or Mac).
 
 Swift/T may be installed following one of these methods:
+
 * Debian (Ubuntu) packages (recommended)
 * A +configure+/+make+ source build (recommended for exotic systems)
 * A script that automates the +configure+/+make+ process (recommended)
