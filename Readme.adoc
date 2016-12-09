@@ -1,11 +1,7 @@
 
-Swift/T is an implicitly parallel programming language for composing external functions and command-line executables into massively parallel applications.  The external functions may be calls to external programs, libraries, or scripting languages (via embedded interpreters)  Thus, it is a _workflow language_ for
+Swift/T is an implicitly parallel programming language for composing external functions and command-line executables into massively parallel applications.  The external functions may be calls to external programs, libraries, or scripting languages (via embedded interpreters)  Thus, it is a _workflow language_ for extreme-scale computing, capable of executing very large numbers (trillions) of tasks at high rates across the largest supercomputers.
 
 Swift/T runs as an MPI program, and is compatible with Cray and Blue Gene supercomputers, as well as PBS or SLURM clusters, and can also run on a laptop (Linux or Mac).
-
-The Swift/T user guide and prepackaged distributions are available online at
-the Swift/T homepage: http://swift-lang.org/Swift-T .  We recommend
-that you start there if you are new to Swift or Swift/T.
 
 Swift/T may be installed following one of these methods:
 * Debian (Ubuntu) packages (recommended)
@@ -14,6 +10,10 @@ Swift/T may be installed following one of these methods:
 
 *Links*
 
+* http://swift-lang.org/Swift-T[The Swift/T front page]
+
 * http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
+
+* http://swift-lang.github.io/swift-t/guide.html[The Swift/T Guide]: manual for the language and runtime
 
 * http://swift-lang.github.io/swift-t/sites.html[The Sites Guide]: guidance for building and running Swift/T on various systems
