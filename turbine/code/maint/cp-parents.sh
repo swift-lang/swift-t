@@ -9,7 +9,7 @@ usage()
   echo "usage: cp-parents.sh [ARGS] SRC/FILE* DEST"
   echo "Copies SRC/FILE* to DEST/SRC/FILE"
   echo "A single token ARGS is optional, and must start with dash"
-  echo "Emulates GNU's cp $ARGS --parents SRC/FILE* DEST"
+  echo "Emulates GNU's cp ARGS --parents SRC/FILE* DEST"
 }
 
 crash()
