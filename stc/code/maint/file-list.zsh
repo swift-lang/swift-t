@@ -8,7 +8,7 @@ set -eu
 
 # Does not contain the tests- the Debian package does not get them
 
-print build.xml configure{,.ac} Makefile{,.in}
+print build.xml configure{,.ac} Makefile.in
 print maint/{{debian,version}.mkf,file-list.zsh}
 print etc/help*.txt etc/{version.txt,turbine-version.txt}
 print src/exm/stc/ast/ExM.g
