@@ -1529,7 +1529,7 @@ git clone git@github.com:swift-lang/swift-t.git
 ----
 ./bootstrap
 ----
-** Use +dev/build/make-release-pkg.zsh+ to make the release package
+** Use +dev/release/make-release-pkg.zsh+ to make the release package
 ** Copy the package to the +gh-pages+ branch
 ** Test package on Linux and Mac
 * +git push+ package to GitHub
