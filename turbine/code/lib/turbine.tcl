@@ -328,7 +328,6 @@ namespace eval turbine {
         set last_server  [ expr [adlb::size] - 1 ]
         log [ cat "WORKERS: $n_workers" \
                   "RANKS: $first_worker - $last_worker" ]
-
         log [ cat "SERVERS: $n_adlb_servers" \
                   "RANKS: $first_server - $last_server" ]
 

@@ -11,4 +11,4 @@ endif
 
 $(DIR)/rinside-adapter.o: $(DIR)/rinside-adapter.C
 	$(Q) "  CXX		$(<)"
-	$(E) $(CXX) -c -o $(@) $(CXXFLAGS) $(INCLUDES) $(<)
+	$(E) $(CXX) -c -o $(@) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES) $(<)

@@ -37,7 +37,7 @@ AC_SUBST(USE_MAC)
 # Provide CC=mpicc by default
 if [[ "${CC}" == "" ]]
 then
-  echo "CC not set: setting CC=mpicc"
+  AC_MSG_RESULT([CC not set: setting CC=mpicc])
   export CC=mpicc
 fi
 which ${CC} >& /dev/null
@@ -47,19 +47,18 @@ then
   exit 1
 fi
 
-echo "using CC=$( which ${CC} )"
+# Report location of CC
+AC_MSG_RESULT([using CC=$( which ${CC} )])
 
-echo "PREFIX: ${prefix}"
-SOFTWARE=$( cd $(dirname ${prefix}) ; /bin/pwd )
+AC_MSG_RESULT([PREFIX: ${prefix}])
+SOFTWARE=$( dirname ${prefix} 2>&1 )
+SOFTWARE=$( test -d ${SOFTWARE} && cd ${SOFTWARE} 2>&1 && /bin/pwd )
 if [[ ${?} == 0 ]]
 then
-  echo "SOFTWARE: ${SOFTWARE}"
+  AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 else
   SOFTWARE=0
 fi
-
-# Report location of CC
-echo "using CC=$( which ${CC} )"
 
 # Checks for programs
 AC_PROG_CC
@@ -67,13 +66,14 @@ AC_PROG_CC
 AC_TYPE_INT32_T
 AC_TYPE_INT64_T
 AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SSIZE_T
 
 # Checks for functions
-AC_CHECK_FUNCS([memchr memmove memset pow stpcpy strdup strtol uname])
-AC_CHECK_FUNCS([strerror])
+AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
+AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -146,6 +146,13 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+
 USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
@@ -163,21 +170,19 @@ AC_ARG_WITH(c-utils,
     USE_C_UTILS=${withval}
   ],
   [
-    dnl If not given, look in SOFTWARE, if valid
-    if [[ ${SOFTWARE} == 0 ]]
+    [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+
+    # Are we building a Debian package?
+    if (( ${DEBIAN_BUILD} ))
     then
-        AC_MSG_ERROR([Not found: ExM c-utils])
+        USE_C_UTILS=/usr
+    else # We are doing a source installation
+        location=${SOFTWARE}/c-utils
+        AC_CHECK_FILE(${location}/include/c-utils.h,
+                      [USE_C_UTILS=${location}], [])
     fi
-    location=${SOFTWARE}/c-utils
-    AC_CHECK_FILE(${location}/include/c-utils.h,
-                  [USE_C_UTILS=1], [])
-    if [[ ${USE_C_UTILS} == 1 ]]
-    then
-        USE_C_UTILS=${location}
-    else
-        AC_MSG_ERROR([Not found: ExM c-utils])
-    fi
-  ])
+    [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
+])
 AC_SUBST(USE_C_UTILS)
 
 dnl Log settings.  See debug.h
@@ -213,7 +218,7 @@ AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
                    [MPI version])
 
 AC_MSG_CHECKING([MPI version])
-${CC} -E ${CFLAGS} maint/mpi_version.c > mpi_version.c.txt
+${CC} -E -P ${CFLAGS} maint/mpi_version.c > mpi_version.c.txt
 [[ ${?} != 0 ]] && AC_MSG_ERROR([Could not preprocess maint/mpi_version.c])
 
 MPI_VERSION_LINE=$( grep "The MPI version is" mpi_version.c.txt )
@@ -221,18 +226,18 @@ AC_MSG_RESULT([${MPI_VERSION_LINE}])
 MPI_VERSION=$( echo ${MPI_VERSION_LINE} | cut -d ' ' -f 5 )
 if [[ ${ADLB_MPI_VERSION} == 3 ]]
 then
-  [[ ${MPI_VERSION} == 3 ]] || \
-    AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
-                  You must 1) re-configure with --enable-mpi-2
-                              which disables parallel tasks; or
-                           2) use an MPI 3 implementation])
+   [[ ${MPI_VERSION} == 3 ]] || \
+     AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
+                   You must 1) re-configure with --enable-mpi-2
+                               which disables parallel tasks; or
+                            2) use an MPI 3 implementation])
 fi
 rm -f mpi_version.c.txt
 
-XLB_ENABLE_XPT=yes
+XLB_ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
   AS_HELP_STRING([--enable-checkpoint],
-                 [Enable checkpoint functionality (on by default)]),
+                 [Enable checkpoint functionality (Default: disabled)]),
                  [
       if [[ "$enableval" == yes ]]
       then
@@ -244,11 +249,11 @@ AC_ARG_ENABLE(checkpoint,
         echo "Invalid enable-checkpoint value: $enableval"
         exit 1
       fi], [])
-AC_MSG_RESULT([checkpoints enabled])
 AC_SUBST(XLB_ENABLE_XPT)
 
 if [[ ${XLB_ENABLE_XPT} == yes ]]
 then
+  AC_MSG_RESULT([ADLB checkpoints enabled])
   ENABLE_ZLIB=0
   ZLIB_HOME=
   AC_FUNC_FSEEKO
@@ -295,6 +300,11 @@ AC_SUBST(ENABLE_DEV)
 
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk

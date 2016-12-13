@@ -1,0 +1,14 @@
+Source: exmcutils
+Section: unknown
+Priority: extra
+Maintainer: Justin M Wozniak <wozniak@mcs.anl.gov>
+Build-Depends:
+Standards-Version: 3.9.4
+Homepage: http://swift-lang.org
+#Vcs-Git: git@github.com:swift-lang/swift-t.git
+
+Package: exmcutils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Misc. C utilities for ExM software
+ Misc. C utilities for ExM software

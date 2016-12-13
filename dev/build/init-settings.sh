@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
+set -eu
 
-THISDIR=$( cd $(dirname $0) && pwd )
+# INIT SETTINGS
 
-if [ ! -f "${THISDIR}/exm-settings.sh" ]; then
-  cp "${THISDIR}/exm-settings.sh.template" "${THISDIR}/exm-settings.sh"
-  echo "Created ${THISDIR}/exm-settings.sh"
+THIS=$( cd $(dirname $0) && pwd )
+
+if [ ! -f ${THIS}/swift-t-settings.sh ]
+then
+  cp ${THIS}/swift-t-settings.sh.template ${THIS}/swift-t-settings.sh
+  echo "Created ${THIS}/swift-t-settings.sh"
+  echo "You may edit swift-t-settings.sh before building."
 else
-  echo "Already exists: ${THISDIR}/exm-settings.sh"
+  echo "Already exists: ${THIS}/swift-t-settings.sh"
+  echo "Move or delete this file and try again."
 fi
-
-source "${THISDIR}/exm-settings.sh"
-echo "Sourced ${THISDIR}/exm-settings.sh"
-echo "Installation target is: EXM_PREFIX=${EXM_PREFIX}"
-echo "You may edit exm-settings.sh and source again before building."

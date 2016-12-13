@@ -18,5 +18,9 @@ set items [ eval list \
 puts [ eval ::pkg::create -name "sudoku" -version 0.0 $items ]
 
 set items [ eval list \
+                -source 610.funcs.tcl ]
+puts [ eval ::pkg::create -name "funcs_610" -version 0.0 $items ]
+
+set items [ eval list \
                 -source 654-typevar.funcs.tcl ]
 puts [ eval ::pkg::create -name "funcs_654" -version 2.0 $items ]

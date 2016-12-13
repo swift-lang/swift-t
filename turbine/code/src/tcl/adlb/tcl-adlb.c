@@ -778,6 +778,31 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  char* comm_name = Tcl_GetString(objv[1]);
+  MPI_Comm comm;
+  if (strcmp(comm_name, "world") == 0)
+    comm = MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "adlb") == 0)
+    comm = MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "null") == 0)
+    comm = MPI_COMM_NULL;
+  else if (strcmp(comm_name, "leaders") == 0)
+    comm = ADLB_GetComm_leaders();
+  else if (strcmp(comm_name, "workers") == 0)
+    comm = ADLB_GetComm_workers();
+  else
+    return turbine_user_errorv
+      (interp, "adlb::comm_get: error: unknown comm: %s", comm_name);
+  Tcl_Obj* result = Tcl_NewLongObj(comm);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 /**
    usage: no args, returns rank within workers
 */
@@ -2760,19 +2785,19 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
     case ADLB_DATA_TYPE_INTEGER:
       dc = ADLB_Unpack_integer(&tmp.INTEGER, data, length);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking data %i", dc);
+            "Retrieve failed due to error unpacking integer data <%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewADLBInt(tmp.INTEGER);
       break;
     case ADLB_DATA_TYPE_REF:
       dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_REFC, true);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking data %i", dc);
+            "Retrieve failed due to error unpacking reference data <%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewADLB_ID(tmp.REF.id);
       break;
     case ADLB_DATA_TYPE_FLOAT:
       dc = ADLB_Unpack_float(&tmp.FLOAT, data, length);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking data %i", dc);
+            "Retrieve failed due to error unpacking float data <%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewDoubleObj(tmp.FLOAT);
       break;
     case ADLB_DATA_TYPE_STRING:
@@ -2782,7 +2807,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
       dc = ADLB_Unpack_string(&tmp.STRING, (void*)data,
                               length, false);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking data %i", dc);
+            "Retrieve failed due to error unpacking string data <%"PRId64"> length: %zi error code: %i", id, length, dc);
       *result = Tcl_NewStringObj(tmp.STRING.value,
                                  (int) (tmp.STRING.length-1));
       break;
@@ -2791,7 +2816,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
       // Ok to cast away const since we're copying blob
       dc = ADLB_Unpack_blob(&tmp.BLOB, (void*)data, length, true);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-                    "Retrieve failed due to error unpacking data");
+                    "Retrieve failed due to error unpacking blob data <%"PRId64"> length: %zi error code: %i", id, length, dc);
       // Don't provide id to avoid blob caching
       *result = build_tcl_blob(tmp.BLOB.value, tmp.BLOB.length, NULL);
       break;
@@ -2972,8 +2997,8 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   size_t length;
-  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
-                     &length);
+  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
+                               &type, xfer, &length);
   CHECK_ADLB_RETRIEVE(ac, handle);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
@@ -3732,10 +3757,10 @@ ADLB_Blob_From_Float_List_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_from_string <string value>
+   adlb::string2blob <string value> -> blob
  */
 static int
-ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_String2Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -3759,11 +3784,11 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_to_string <blob value>
+   adlb::blob2string <blob value> -> string
    Convert null-terminated blob to string
  */
 static int
-ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_Blob2String_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -4882,7 +4907,7 @@ static int
 ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  int result; 
+  int result;
 #ifdef ENABLE_XPT
   result = 1;
 #else
@@ -4891,7 +4916,7 @@ ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
   return TCL_OK;
 }
-    
+
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
   filename: the filename of the checkpoint file.  If empty string,
@@ -5820,37 +5845,6 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb:comm_null
- */
-static int
-ADLB_GetCommNull_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
-{
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(MPI_COMM_NULL));
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommLeaders_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm leaders = ADLB_GetComm_leaders();
-  Tcl_Obj* result = Tcl_NewLongObj(leaders);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommWorkers_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm workers = ADLB_GetComm_workers();
-  Tcl_Obj* result = Tcl_NewLongObj(workers);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-/**
    usage: adlb::fail
  */
 static int
@@ -5958,8 +5952,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_CommRank_Cmd);
   COMMAND("size",      ADLB_CommSize_Cmd);
-  COMMAND("comm_workers", ADLB_GetCommWorkers_Cmd);
-  COMMAND("comm_leaders", ADLB_GetCommLeaders_Cmd);
+  COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
@@ -6000,8 +5993,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("store_blob_ints", ADLB_Blob_store_ints_Cmd);
   COMMAND("blob_from_float_list", ADLB_Blob_From_Float_List_Cmd);
   COMMAND("blob_from_int_list", ADLB_Blob_From_Int_List_Cmd);
-  COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
-  COMMAND("blob_to_string", ADLB_Blob_To_String_Cmd);
+  COMMAND("string2blob", ADLB_String2Blob_Cmd);
+  COMMAND("blob2string", ADLB_Blob2String_Cmd);
   COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("read_refcount_incr", ADLB_Read_Refcount_Incr_Cmd);
@@ -6043,7 +6036,6 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
   COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
   COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
-  COMMAND("comm_null", ADLB_GetCommNull_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);

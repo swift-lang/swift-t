@@ -1,19 +1,21 @@
 #!/bin/zsh -f
+set -eu
 
 # SWIFT-T
 # Main user interface script
 
-set -eu
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
+if (( DEBIAN_BUILD ))
+then
+  STC_HOME=/usr
+  STC_TOP=/usr/lib/stc
+else
+  STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+  STC_TOP=${STC_HOME}
+fi
+source "${STC_TOP}/etc/stc-config.sh"
 
-# Exit codes: (cf. ExitCode.java)
-EXIT_ERROR_SCRIPT=6
-
-STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 STC=${STC_HOME}/bin/stc
-STC_ENV="$STC_HOME/conf/stc-env.sh"
-
-source "$STC_HOME/scripts/stc-config.sh"
-
 TURBINE=${TURBINE_HOME}/bin/turbine
 
 STC_OPTS=()
@@ -33,7 +35,7 @@ help()
   cat ${STC_HOME}/etc/help-options-1.txt
   print
   printf "TURBINE OPTIONS\n\n"
-  cat ${TURBINE_HOME}/etc/help-options-1.txt
+  cat ${TURBINE_TOP}/etc/help-options-1.txt
   print
   printf "SWIFT-T OPTIONS\n\n"
   printf "These options are available in the swift-t program but not stc.\n\n"
@@ -41,9 +43,9 @@ help()
   print
   printf "TURBINE PASSTHROUGH OPTIONS\n\n"
   printf "You must use the pass-through feature to access these options.\n\n"
-  cat ${TURBINE_HOME}/etc/help-options-2.txt
+  cat ${TURBINE_TOP}/etc/help-options-2.txt
   print
-  cat ${TURBINE_HOME}/etc/help-env.txt
+  cat ${TURBINE_TOP}/etc/help-env.txt
   print
   # These are details about compiler flag terms
   cat ${STC_HOME}/etc/help-option-terms.txt
@@ -77,7 +79,7 @@ IMPORT_STRING=""
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hE:i:o:t:vV"
 STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
-TURBINE_CHARS="e:i:lm:n:s:xX"
+TURBINE_CHARS="e:i:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -102,7 +104,7 @@ do
       ;;
 
     # Turbine arguments
-    e) ;& i) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
+    e) ;& i) ;& l) ;& m) ;& M) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 

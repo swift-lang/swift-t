@@ -61,12 +61,15 @@ argv_accept(string... keys)
   "if { <<seconds>> > 0 } { after [ expr {round(<<seconds>> * 1000)} ] }"
 ];
 
-(int t) clock_seconds() "turbine" "0.1" 
+(int t) clock_seconds() "turbine" "0.1"
   [ "set <<t>> [ clock seconds ]" ];
 
 // Millisecond-precision floating point time
 (float t) clock() "turbine" "0.1.1"
   [ "set <<t>> [ expr {[ clock clicks -milliseconds ] / 1000.0 } ]" ];
 
+// From: http://code.activestate.com/recipes/146035-largest-int-supported-by-a-platform-and-the-number
+(int i) INT_MAX() "turbine" "0.0"
+[ "set <<i>> [ expr [ regsub F [ format 0x%X -1 ] 7 ] ]" ];
 
 #endif

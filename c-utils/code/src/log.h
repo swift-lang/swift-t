@@ -26,9 +26,17 @@
 
 #include <stdbool.h>
 
+extern bool log_enabled;
+
 void log_init(void);
 
-void log_enabled(bool b);
+void log_enable(bool b);
+
+static inline bool
+log_is_enabled(void)
+{
+  return log_enabled;
+}
 
 /**
    Set log output file
@@ -51,8 +59,8 @@ void log_normalize(void);
  */
 double log_time(void);
 
-void   log_finalize(void);
+void   log_printf(char* format, ...);
 
-void log_printf(char* format, ...);
+void   log_finalize(void);
 
 #endif

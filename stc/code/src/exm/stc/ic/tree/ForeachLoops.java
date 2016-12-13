@@ -788,6 +788,11 @@ public class ForeachLoops {
       } else if (expandLoops || fullUnroll) {
         long instCount = loopBody.getInstructionCount();
         long iterCount = constIterCount();
+
+        if (instCount == 0) {
+          return NO_UNROLL;
+        }
+
         if (expandLoops && iterCount >= 0) {
           // See if the loop has a small number of iterations, could just expand;
           if (iterCount <= getUnrollMaxIters(true)) {

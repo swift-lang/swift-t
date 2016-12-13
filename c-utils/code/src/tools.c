@@ -25,6 +25,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h> // For alloca() on Mac
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -369,4 +370,55 @@ slurp(const char* filename)
 
   fclose(file);
   return result;
+}
+
+void
+print_ints(const int* A, int n)
+{
+  void* t = alloca(n*16*sizeof(char));
+  char* p = t;
+  append(p, "[");
+  for (int i = 0; i < n; i++)
+  {
+    append(p, "%i", A[i]);
+    if (i < n-1) append(p, ",");
+  }
+  append(p, "]\n");
+  printf("%s", (char*) t);
+}
+
+static inline void
+swap_ints(int* a, int* b)
+{
+  int t;
+  t  = *a;
+  *a = *b;
+  *b = t;
+}
+
+/** From: http://www.cquestions.com/2008/01/c-program-for-quick-sort.html */
+void
+quicksort_ints(int* A, int first, int last)
+{
+  if (first < last)
+  {
+    int pivot = first;
+    int i = first;
+    int j = last;
+
+    while (i < j)
+    {
+      while (A[i] <= A[pivot] && i<last)
+        i++;
+      while (A[j] > A[pivot])
+        j--;
+      // printf("i: %i j: %i\n", i, j);
+      if (i < j)
+        swap_ints(&A[i], &A[j]);
+    }
+    swap_ints(&A[pivot], &A[j]);
+
+    quicksort_ints(A,first,j-1);
+    quicksort_ints(A,j+1,last);
+  }
 }

@@ -101,6 +101,11 @@
   [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
 
 @pure
+(string s) join(string A[], string separator)
+  "turbine" "0.4.0" // "string_join"
+  [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
+
+@pure
 (string o) toUpper(string s) "turbine" "0.8.0"
   [ "set <<o>> [ string toupper <<s>> ] " ];
 

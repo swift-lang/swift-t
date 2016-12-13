@@ -33,7 +33,8 @@
 static FILE* output;
 static char* filename = NULL;
 static double log_start = 0;
-static bool enabled = true;
+
+bool log_enabled;
 
 /** If true, prepend an MPI-like rank identifier */
 static bool rank_enabled;
@@ -43,13 +44,15 @@ static int  rank;
 void
 log_init()
 {
+  log_enabled = true;
   output = stdout;
+  rank_enabled = false;
 }
 
 void
-log_enabled(bool b)
+log_enable(bool b)
 {
-  enabled = b;
+  log_enabled = b;
 }
 
 static void log_cleanup(void);
@@ -112,7 +115,7 @@ log_time()
 void
 log_printf(char* format, ...)
 {
-  if (!enabled)
+  if (!log_enabled)
     return;
 
   double t = log_time();

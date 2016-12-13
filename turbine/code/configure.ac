@@ -31,13 +31,13 @@ then
   AC_MSG_ERROR("You must provide --prefix")
 fi
 
-echo "PREFIX: ${prefix}"
+AC_MSG_RESULT([PREFIX: ${prefix}])
 SOFTWARE=$( cd $(dirname ${prefix}) && /bin/pwd )
 if [[ ${?} != 0 ]]
 then
   SOFTWARE=0
 fi
-echo "SOFTWARE: ${SOFTWARE}"
+AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 
 if [[ ${prefix} == ${PWD} ]]
 then
@@ -71,8 +71,17 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 # Checks for programs
 AC_PROG_CC
+AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
@@ -135,9 +144,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -162,23 +171,27 @@ AC_ARG_WITH(c-utils,
         then
             AC_MSG_ERROR([Not found: ExM c-utils])
         fi
-        location=${SOFTWARE}/c-utils
-        AC_CHECK_FILE(${location}/include/c-utils.h,
-                      [USE_C_UTILS=1], [])
-        if [[ ${USE_C_UTILS} == 1 ]]
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            USE_C_UTILS=${location}
-        else
-            AC_MSG_ERROR([Not found: ExM c-utils])
+            USE_C_UTILS=/usr
+        else # We are doing a source installation
+             location=${SOFTWARE}/c-utils
+             AC_CHECK_FILE(${location}/include/c-utils.h,
+                           [USE_C_UTILS=${location}], [])
         fi
+        [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
     ]
 )
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-echo "checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
+AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
+  AC_MSG_RESULT([yes])
+else
+  AC_MSG_RESULT([no])
 fi
 AC_SUBST(USE_LIBCUTILS_A)
 
@@ -524,7 +537,7 @@ AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 AC_SUBST(USE_MPE_LIB_A)
 
-ENABLE_XPT=yes
+ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -536,15 +549,12 @@ AC_ARG_ENABLE(checkpoint,
       then
         ENABLE_XPT=no
       else
-        echo "Invalid enable-checkpoint value: $enableval"
-        exit 1
+        AC_MSG_ERROR([Invalid enable-checkpoint value: $enableval])
       fi
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
 then
-    AC_MSG_RESULT([Checkpointing enabled]);
-else
-    AC_MSG_RESULT([Checkpointing disabled]);
+    AC_MSG_RESULT([Checkpointing enabled])
 fi
 AC_SUBST(ENABLE_XPT)
 
@@ -564,16 +574,16 @@ AC_ARG_WITH(adlb,
     ],
     [
         dnl If not given, look in SOFTWARE, if valid
-        if [[ ${SOFTWARE} == 0 ]]
+        [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            AC_MSG_ERROR([Not found: ADLB])
-        fi
-        location=${SOFTWARE}/lb
-        AC_CHECK_FILE(${location}/include/adlb.h,
-                      [USE_ADLB=${location}], [])
-        if [[ ${USE_ADLB} == 0 ]]
-        then
-            AC_MSG_ERROR([Not found: ADLB])
+            USE_ADLB=/usr
+        else # We are doing a source installation
+            location=${SOFTWARE}/lb
+            AC_CHECK_FILE(${location}/include/adlb.h,
+                          [USE_ADLB=${location}], [])
+            [[ ${USE_ADLB} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
         fi
     ]
 )
@@ -592,6 +602,7 @@ USE_PY_VERSION_MINOR=7
 USE_PY_VERSION_SUFFIX=
 USE_PYTHON_INCLUDE=0
 USE_PYTHON_LIB=0
+USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
 USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
 HAVE_PYTHON=0
 
@@ -600,7 +611,7 @@ AC_ARG_WITH(python-version-major,
                    [Use this version (Default: 2)]),
    [
      USE_PY_VERSION_MAJOR=${withval}
-   ],[ echo unset ])
+   ],[])
 AC_ARG_WITH(python-version-minor,
    AS_HELP_STRING([--with-python-version-minor],
                    [Use this version (Default: 7)]),
@@ -623,6 +634,9 @@ AC_ARG_ENABLE(python,
 
       HAVE_PYTHON=1
     ])
+
+# Default name:
+USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
 
 AC_ARG_WITH(python,
    AS_HELP_STRING([--with-python],
@@ -657,8 +671,8 @@ if [[ ${HAVE_PYTHON} == 1 ]]
 then
     USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
     USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    echo "Using Python lib directory: ${USE_PYTHON_LIBDIR}"
-    echo "Using Python lib name:      ${USE_PYTHON_NAME}"
+    AC_MSG_RESULT([Using Python lib directory: ${USE_PYTHON_LIBDIR}])
+    AC_MSG_RESULT([Using Python lib name:      ${USE_PYTHON_NAME}])
 fi
 
 AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
@@ -678,21 +692,39 @@ AC_SUBST(USE_PYTHON_NAME)
 
 if (( HAVE_PYTHON ))
 then
-    echo "Python enabled"
+    AC_MSG_RESULT([Python enabled])
 else
-    echo "Python disabled"
+    AC_MSG_RESULT([Python disabled])
 fi
 
 # R is optional
 HAVE_R=0
 USE_R=0
-AC_ARG_ENABLE(r,
+RCPP_PATH=0
+RINSIDE_PATH=0
+AC_ARG_ENABLE(r, # Drop this?  Almost guaranteed to fail.
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
       HAVE_R=1
-      USE_R=/usr/share/R
+      USE_R="/usr" # Acceptable default?
     ])
+
+AC_ARG_WITH(rinside,
+   AS_HELP_STRING([--with-rinside],
+                   [Use this RInside directory]),
+   [
+      HAVE_R=1
+      RINSIDE_PATH=${withval}
+   ])
+
+AC_ARG_WITH(rcpp,
+   AS_HELP_STRING([--with-rcpp],
+                   [Use this Rcpp directory]),
+   [
+      HAVE_R=1
+      RCPP_PATH=${withval}
+   ])
 
 AC_ARG_WITH(r,
    AS_HELP_STRING([--with-r],
@@ -700,24 +732,111 @@ AC_ARG_WITH(r,
   [
       HAVE_R=1
       USE_R=${withval}
-      AC_CHECK_FILE(${USE_R}/include/R.h, [],
-                    [AC_MSG_ERROR([Could not find R header!])])
-      # C++ is only required if we enable R
-      AC_PROG_CXX
-      LD=${CXX}
   ])
 
+if [[ ${HAVE_R} == 1 ]]
+then
+  AC_CHECK_FILE(${USE_R}/include/R.h, [],
+        [AC_MSG_ERROR([Could not find R header!])])
+  if [[ ${RINSIDE_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS=" ${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
+      done
+    else
+      RINSIDE_PATH=${USE_R}/RInside
+    fi
+  fi
+
+  if [[ ${RCPP_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS="${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
+      done
+    else
+      RCPP_PATH=${USE_R}/Rcpp
+    fi
+  fi
+
+  AC_CHECK_FILE(${RINSIDE_PATH}/include/RInside.h, [],
+                 [AC_MSG_ERROR([Could not find RInside header!])])
+  AC_CHECK_FILE(${RCPP_PATH}/include/Rcpp.h, [],
+                 [AC_MSG_ERROR([Could not find Rcpp header!])])
+
+  # C++ is only required if we enable R
+  AC_PROG_CXX
+  LD=${CXX}
+fi # if HAVE_R
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)
+AC_SUBST(RINSIDE_PATH)
+AC_SUBST(RCPP_PATH)
 
-if (( HAVE_R ))
+# JVM scripting support: Disabled by default
+HAVE_JVM_SCRIPT=0
+USE_JVM_SCRIPT_HOME=0
+AC_ARG_ENABLE(jvm-scripting,
+    AS_HELP_STRING([--enable-jvm-scripting],
+                   [Enable calling JVM scripting languages]),
+    [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=swift-t-jvm
+    ])
+AC_ARG_WITH(jvm-scripting,
+   AS_HELP_STRING([--with-jvm-scripting],
+                   [Use this JVM scripting plugin home directory]),
+  [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=${withval}
+  ])
+if (( ${HAVE_JVM_SCRIPT} ))
 then
-    echo "R enabled"
+    AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
+                  [AC_MSG_ERROR([Could not find JVM scripting header!])])
+    AC_MSG_RESULT([JVM scripting enabled])
 else
-    echo "R disabled"
+    AC_MSG_RESULT([JVM scripting disabled])
 fi
 
+AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
+AC_SUBST(HAVE_JVM_SCRIPT)
+AC_SUBST(USE_JVM_SCRIPT_HOME)
+
+#JVM HOME
+AC_SUBST(JVMHOME,"/usr/lib/jvm/java-8-oracle")
+AC_ARG_WITH([jvm-home],
+            [AS_HELP_STRING([--with-jvm-home],
+               [Set up the jvm home directory (default: /usr/lib/jvm/java-8-oracle)])],
+            [AC_SUBST(JVMHOME,$withval)],
+            )
+
+#JVM SWIFT-T LIBs
+AC_SUBST(JVMLIB,$(pwd)"/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes")
+AC_ARG_WITH([swift-jvm-engine-lib],
+            [AS_HELP_STRING([--with-swift-jvm-engine-lib],
+               [Set up the swift jvm engine lib (default: classes)])],
+            [AC_SUBST(JVMLIB,$withval)],
+            )
+# End of JVM scripting configuration
+
+# Julia: optional
 HAVE_JULIA=0
 USE_JULIA=0
 AC_ARG_WITH(julia,
@@ -732,13 +851,6 @@ AC_ARG_WITH(julia,
 AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])
 AC_SUBST(HAVE_JULIA)
 AC_SUBST(USE_JULIA)
-
-if (( HAVE_JULIA ))
-then
-    echo "Julia enabled"
-else
-    echo "Julia disabled"
-fi
 
 HAVE_COASTER=0
 USE_COASTER=0
@@ -839,7 +951,7 @@ AC_ARG_WITH(tcl,
       for TCLVER in ${TCL_VERSION_PREFS}
       do
         AC_MSG_CHECKING([for tclsh${TCLVER} on path])
-        program=$( which tclsh${TCLVER} )
+        program=$( which tclsh${TCLVER} 2>&1 )
         if [[ ${?} == 0 ]]
         then
           AC_MSG_RESULT([yes: ${program}])
@@ -933,7 +1045,7 @@ do
       AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
       if [[ -r ${LIB_DIR}/${LIBTCL} ]]
       then
-        AC_MSG_RESULT([exists!])
+        AC_MSG_RESULT([yes])
         TCL_VERSION=${TCLVER}
         USE_TCL_LIB_DIR=${LIB_DIR}
 
@@ -961,9 +1073,9 @@ then
     AC_MSG_ERROR([could not find libtcl!])
 fi
 
-echo "using Tcl version: ${TCL_VERSION}"
-echo "Tcl shared library: ${USE_LIBTCL_SO}"
-echo "Tcl static library: ${USE_LIBTCL_A}"
+AC_MSG_RESULT([using Tcl version: ${TCL_VERSION}])
+AC_MSG_RESULT([Tcl shared library: ${USE_LIBTCL_SO}])
+AC_MSG_RESULT([Tcl static library: ${USE_LIBTCL_A}])
 AC_SUBST(TCL_VERSION)
 
 # Set USE_TCL_CFG_DIR: location of tclConfig.sh
@@ -1157,10 +1269,10 @@ m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 if [[ "${HAVE_HDF5}" == 1 ]]
 then
-    echo "HDF5 enabled"
+    AC_MSG_RESULT([HDF5 enabled])
 else
-    echo "HDF5 disabled"
-    echo "Note: HDF5 is only required if you need Turbine's HDF features."
+    AC_MSG_RESULT([HDF5 disabled])
+    AC_MSG_RESULT([Note: HDF5 is only required if you need Turbine's HDF features.])
 fi
 
 AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
@@ -1187,10 +1299,11 @@ AC_SUBST(LDFLAGS)
 
 m4_include([../../dev/m4/syslibs.m4])
 
-echo
-echo "Preparing config files: please wait..."
+AC_MSG_RESULT([])
+AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        bin/turbine
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1200,6 +1313,7 @@ AC_CONFIG_FILES(
         src/tcl/blob/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
@@ -1221,5 +1335,12 @@ AC_CONFIG_FILES(
         tests/runbin.zsh
 	Makefile
 )
+
+        #         $USE_JVM_SCRIPT_HOME/src/module.mk
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_OUTPUT

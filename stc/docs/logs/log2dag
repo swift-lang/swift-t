@@ -1,0 +1,87 @@
+#!/usr/bin/env tclsh
+
+if { [ llength $argv ] != 2 } {
+  puts "usage: log2dag <input.log> <output.dag>"
+  exit 1
+}
+
+# The input log we plan to scan
+set input [ lindex $argv 0 ]
+
+# The output Graphviz dot file
+set output [ lindex $argv 1 ]
+
+set current_function "PROTO"
+
+proc output_setup { } {
+  global output output_fd
+  set output_fd [ open $output "w" ]
+  puts $output_fd "digraph G \{"
+}
+
+proc output_close { } {
+  global output_fd
+  puts $output_fd "\}"
+  close $output_fd
+}
+
+proc out { args } {
+  global output_fd
+  puts $output_fd [ join $args "" ]
+}
+
+proc process_file { input } {
+
+  set fd [ open $input "r" ]
+  set counter 1
+  while { [ gets $fd line ] >= 0 } {
+    process_line $line $counter
+  }
+  incr counter
+
+  close $fd
+}
+
+set P [ list function store rule ]
+
+proc process_line { line number } {
+  global P
+  foreach t $P {
+    set i [ lsearch $line ${t}: ]
+    if { $i >= 0 } {
+      set timestamp [ lindex $line [ expr $i - 1 ] ]
+      process_$t $line $i $timestamp
+    }
+  }
+}
+
+proc process_function { line i timestamp } {
+  global current_function
+  set old_function $current_function
+  set current_function [ lindex $line [ expr $i + 1 ] ]_$timestamp
+  regsub -all "\\." $current_function "_" current_function
+}
+
+proc process_store { line i timestamp } {
+  global current_function
+  regexp {store: <(.*)>.*} $line _ td
+  out "$current_function -> $td"
+}
+
+proc process_rule { line i timestamp } {
+  set j [ lsearch $line "=>" ]
+  set tds [ list ]
+  set action [ lindex $line [ expr $j+1 ] ]
+  regsub -all "\\-" $action    "_" action
+  regsub -all ":"   $action    "_" action
+  regsub -all "\\." $timestamp "_" timestamp
+  for { set c [ expr $i + 1 ] } { $c < $j } { incr c } {
+    set token [ lindex $line $c ]
+    set td [ string range $token 1 end-1 ]
+    out "$td -> $action" _$timestamp
+  }
+}
+
+output_setup
+process_file $input
+output_close

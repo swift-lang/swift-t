@@ -15,6 +15,6 @@
  */
 
 @dispatch=WORKER
-  (string output) R(string code, string return_expression)
+  (string output) R(string code, string return_expression="\"\"")
     "turbine" "0.1.0"
     [ "set <<output>> [ r::eval <<code>> <<return_expression>> ]" ];

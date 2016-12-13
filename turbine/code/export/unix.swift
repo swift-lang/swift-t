@@ -19,6 +19,11 @@
 #ifndef UNIX_SWIFT
 #define UNIX_SWIFT
 
+app (file o) cp(file i)
+{
+  "cp" i o;
+}
+
 // cat-print (to stdout)
 app catp(file f[])
 {
@@ -48,6 +53,16 @@ app printenv()
 app (file o) echo(string s)
 {
   "echo" s @stdout=o;
+}
+
+app (void v) sleep(int i)
+{
+  "sleep" i;
+}
+
+app (void v) mkdir(string dirname)
+{
+  "mkdir" "-p" dirname;
 }
 
 #endif

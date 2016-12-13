@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
 set -e
 
-THISDIR=`dirname $0`
-source ${THISDIR}/exm-settings.sh
+THIS=$( dirname $0 )
+source ${THIS}/swift-t-settings.sh
 
-if (( MAKE_CLEAN )); then
-  if [ -f Makefile ]; then
-    # Disabled due to Turbine configure check
-    #make clean
-    :
+if (( MAKE_CLEAN ))
+then
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
+    make clean
   fi
 fi
 
-if (( SVN_UPDATE )); then
-  svn update
-fi
-
 EXTRA_ARGS=
-if (( EXM_OPT_BUILD )); then
+if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
 fi
 
@@ -29,11 +26,11 @@ elif [ ! -f configure ]; then
   ./bootstrap
 fi
 
-if (( EXM_DEBUG_BUILD )); then
+if (( SWIFT_T_DEBUG_BUILD )); then
    export CFLAGS="-g -O0"
 fi
 
-if (( EXM_STATIC_BUILD )); then
+if (( SWIFT_T_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
@@ -42,7 +39,19 @@ if (( DISABLE_STATIC )); then
 fi
 
 if (( CONFIGURE )); then
-  ./configure --enable-shared --prefix=${C_UTILS_INSTALL} ${EXTRA_ARGS}
+  rm -f config.cache
+  (
+    set -x
+    ./configure --config-cache \
+                --prefix=${C_UTILS_INSTALL} \
+                --enable-shared \
+                ${EXTRA_ARGS}
+  )
 fi
+
+if (( ! RUN_MAKE )); then
+  exit
+fi
+
 make -j ${MAKE_PARALLELISM}
 make install

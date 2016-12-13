@@ -135,7 +135,14 @@ namespace eval turbine {
         foreach a $args {
             lappend L [ retrieve_decr $a ]
         }
-        set s [ eval format $L ]
+        if [ catch { set s [ eval format $L ] } e ] {
+            turbine_error \
+                "Error in usage2 of sprintf()" \
+                "or string format operator (%)\n" \
+                "format: \"" [ lindex $L 0 ] "\"\n" \
+                "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
+                "details: $e"
+        }
         store_string $result $s
     }
 
@@ -329,14 +336,14 @@ namespace eval turbine {
         rule $inputs "string_join_body $result $container $separator" \
             name "string_join-$result"
     }
-    
+
     # This is called when every entry in container is set
     proc string_join_body { result container separator } {
         set separator_value [ retrieve_decr_string $separator ]
         set container_val [ adlb::enumerate $container dict all 0 1 ]
         store_string $result [ string_join_impl $container_val $separator ]
     }
-    
+
     proc string_join_impl { container separator } {
         set A [ list ]
         set sorted_keys [ lsort -integer [ dict keys $container ] ]
@@ -346,3 +353,7 @@ namespace eval turbine {
         return [ join $A $separator ]
     }
 }
+
+# Local Variables:
+# tcl-indent-level: 4
+# End:

@@ -72,6 +72,7 @@
 
 #include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
+#include "src/tcl/jvm/tcl-jvm.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 #include "src/tcl/julia/tcl-julia.h"
 #include "src/tcl/python/tcl-python.h"
@@ -233,9 +234,9 @@ log_setup(int rank)
   log_init();
   log_normalize();
 
-  // Did the user disable logging?
+  // Did the user enable logging?
   int enabled;
-  getenv_integer("TURBINE_LOG", 1, &enabled);
+  getenv_integer("TURBINE_LOG", 0, &enabled);
   if (enabled)
   {
     // Should we use a specific log file?
@@ -256,7 +257,7 @@ log_setup(int rank)
       log_rank_set(rank);
   }
   else
-    log_enabled(false);
+    log_enable(false);
 
   return TCL_OK;
 }
@@ -327,16 +328,22 @@ struct rule_opts
   adlb_put_opts opts;
 };
 
+static inline void rule_log(int inputs,
+                            const adlb_datum_id input_list[],
+                            const char* action);
+
 static inline void rule_set_opts_default(struct rule_opts* opts,
                                          const char* action,
                                          char* buffer, int buffer_size);
 
-static inline int
-rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
-                    struct rule_opts* opts,
-                    Tcl_Obj *const objs[], int count,
-                    char *name_buffer, int name_buffer_size,
-                    const char *action);
+static inline int rule_opts_from_list(Tcl_Interp* interp,
+                                      Tcl_Obj *const objv[],
+                                      struct rule_opts* opts,
+                                      Tcl_Obj *const objs[],
+                                      int count,
+                                      char *name_buffer,
+                                      int name_buffer_size,
+                                      const char *action);
 
 /**
    usage:
@@ -396,6 +403,8 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   opts.opts.priority = ADLB_curr_priority;
 
+  rule_log(inputs, input_list, action);
+
   adlb_code ac = ADLB_Dput(action, action_len, opts.target,
         adlb_comm_rank, opts.work_type, opts.opts, opts.name,
         input_list, inputs, input_pair_list, input_pairs);
@@ -407,6 +416,21 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
     free((void*)input_pair_list[i].subscript.key);
   }
   return TCL_OK;
+}
+
+static inline void
+rule_log(int inputs, const adlb_datum_id input_list[],
+         const char* action)
+{
+  char log_string[1024];
+  if (log_is_enabled())
+  {
+    char* p = &log_string[0];
+    append(p, "rule: ");
+    for (int i = 0; i < inputs; i++)
+      append(p, "<%i> ", (int) input_list[i]);
+    log_printf("%s=> %s", log_string, action);
+  }
 }
 
 static inline void
@@ -1019,7 +1043,7 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
   for (int i = 1; i < cmd_argc; i++)
     cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
   cmd_argv[cmd_argc] = NULL; // Need to NULL-terminate for execvp()
-  
+
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
   if (child == 0)
@@ -1737,6 +1761,7 @@ Tclturbine_Init(Tcl_Interp* interp)
 
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
+  tcl_jvm_init(interp);
   tcl_mpe_init(interp);
   tcl_julia_init(interp);
   tcl_python_init(interp);

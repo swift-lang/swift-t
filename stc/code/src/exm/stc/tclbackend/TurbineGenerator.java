@@ -2206,7 +2206,7 @@ public class TurbineGenerator implements CompilerBackend {
                          usedTclFunctionNames, args, s);
 
     point.add(proc);
-    s.add(Turbine.turbineLog("enter function: " + id));
+    s.add(Turbine.turbineLog("function: " + id));
 
     pointPush(s);
     functionStack.push(id);

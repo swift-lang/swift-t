@@ -148,7 +148,7 @@ Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
                                           int count);
 
 /**
-   Return error message for user consumption.
+   Return error message for cleaner handling.
    Message is created from concatenating args.
    Return value is error code.
  */

@@ -1,4 +1,5 @@
 #!/bin/zsh
+set -eu
 
 # STC TESTS JENKINS.ZSH
 
@@ -20,24 +21,9 @@
 
 # Any arguments to this script are passed to run-tests.zsh
 
-check_error()
-{
-  CODE=$1
-  MSG=$2
-  if (( CODE != 0 ))
-  then
-    print "Operation failed: ${MSG}"
-    print "Exit code: ${CODE}"
-    exit 1
-  fi
-  return 0
-}
-
-pwd
-
-print
-printf "DATE: "
-date "+%m/%d/%Y %I:%M%p"
+print "JENKINS.ZSH"
+print " in $(/bin/pwd)"
+printf "DATE: $(date "+%m/%d/%Y %I:%M%p")"
 print
 
 TESTS_SKIP=0
@@ -61,17 +47,19 @@ print "Using TURBINE:     ${TURBINE_INSTALL}"
 print "Using MPI install: ${MPICH_INSTALL}"
 ${TURBINE_HOME}/bin/turbine -v
 
-cd tests
+print "stc -v"
+${STC} -v
+print
 
 export ADLB_PERF_COUNTERS=0
 nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
       -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
       tee results.out
-check_error ${pipestatus[1]} "run-tests.zsh"
+print
 
+print "Aggregating results..."
 SUITE_RESULT="result_aggregate.xml";
 ./jenkins-results.zsh > ${SUITE_RESULT}
-check_error ${?} "jenkins-results.zsh"
 
 print
 print "SUITE RESULT XML:"

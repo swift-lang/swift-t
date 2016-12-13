@@ -89,16 +89,17 @@ else
   WORK_DIRECTORY=${CHANGE_DIRECTORY}
 fi
 
+MAIL_ARG=""
+if (( MAIL_ENABLED ))
+then
+  MAIL_ARG=( -M ${MAIL_ADDRESS} )
+fi
+
 # Create the environment list in a format Cobalt can support
 ENV_LIST=${env}
 export ENV_LIST
 
-if (( ${EXEC_SCRIPT} == 0 ))
-then
-  COMMAND="${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
-else
-  COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
-fi
+print $COMMAND
 
 # Launch it
 if [[ ${MODE} == "cluster" ]]
@@ -114,6 +115,7 @@ then
        ${QUEUE_ARG}            \
        --cwd ${WORK_DIRECTORY} \
        ${=MODE_ARG}            \
+       ${MAIL_ARG}             \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \
@@ -126,10 +128,11 @@ else # Blue Gene
        --cwd ${WORK_DIRECTORY} \
        --env "${ENV}"          \
        ${=MODE_ARG}            \
+       ${MAIL_ARG}             \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \
-        ${TCLSH} ${PROGRAM} ${=ARGS} | \
+        ${=COMMAND} | \
     read JOB_ID
 fi
 

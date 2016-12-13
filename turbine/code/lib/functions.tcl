@@ -321,25 +321,12 @@ namespace eval turbine {
         return $result
     }
 
-    # User function
-    proc toint { result input } {
-        rule $input "toint_body $input $result" \
-            name "toint-$input"
+    proc string2int { result inputs } {
+        rule $inputs [ list string2int_body {*}$inputs $result ] \
+            name "string2int-$inputs"
     }
 
-    proc toint_body { input result } {
-        set t [ retrieve_decr $input ]
-        set i [ toint_impl $t ]
-
-        store_integer $result $i
-    }
-
-    proc parse_int { result inputs } {
-        rule $inputs [ list parse_int_body {*}$inputs $result ] \
-            name "parse_int-$inputs"
-    }
-
-    proc parse_int_body { str base result } {
+    proc string2int_body { str base result } {
         set str_val [ retrieve_decr_string $str ]
         set base_val [ retrieve_decr_integer $base ]
         set i [ parse_int_impl $str_val $base_val ]
@@ -347,57 +334,75 @@ namespace eval turbine {
         store_integer $result $i
     }
 
-    proc fromint { result input } {
-        rule $input "fromint_body $result $input" \
-            name "fromint-$input-$result"
+    proc int2string { result input } {
+        rule $input "int2string_body $result $input" \
+            name "int2string-$input-$result"
     }
 
-    proc fromint_body { result input } {
+    proc int2string_body { result input } {
         set t [ retrieve_decr_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
 
-    proc tofloat { result input } {
-        rule $input "tofloat_body $input $result" \
-            name "tofloat-$input"
+    proc string2float { result input } {
+        rule $input "string2float_body $input $result" \
+            name "string2float-$input"
     }
 
-    proc tofloat_body { input result } {
+    proc string2float_body { input result } {
         set t [ retrieve_decr $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
-        store_float $result [ tofloat_impl $t ]
+        store_float $result [ string2float_impl $t ]
     }
 
-    proc tofloat_impl { input } {
+    proc string2float_impl { input } {
       if { ! [ string is double $input ] } {
-        error "could not convert string '${input}' to float"
+          turbine_error \
+              "string2float():" \
+              "could not convert string '${input}' to float"
       }
       return $input
     }
 
-    proc fromfloat { result input } {
-        rule $input "fromfloat_body $input $result"
+    proc float2string { result input } {
+        rule $input "float2string_body $input $result"
     }
 
-    proc fromfloat_body { input result } {
+    proc float2string_body { input result } {
         set t [ retrieve_decr $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
 
-    proc boolToString { result input } {
-        rule $input "boolToString_body $result $input"
+    proc bool2string { result input } {
+        rule $input "bool2string_body $result $input"
     }
 
-    proc boolToString_body { result input } {
+    proc bool2string_body { result input } {
         set v [ retrieve_decr_integer $input ]
-        store_string $result [ boolToString_impl $v ]
+        store_string $result [ bool2string_impl $v ]
     }
 
-    proc boolToString_impl { input } {
-      return [ expr {$input ? "true" : "false"} ]
+    proc bool2string_impl { input } {
+      return [ expr { $input ? "true" : "false" } ]
+    }
+
+    proc string2bool { result input } {
+        rule $input "string2bool_body $result $input"
+    }
+
+    proc string2bool_body { result input } {
+        set v [ retrieve_decr $input ]
+        store_integer $result [ string2bool_impl $v ]
+    }
+
+    proc string2bool_impl { input } {
+        if [ catch { set result [ expr { $input ? 1 : 0 } ] } e ] {
+            turbine_error "string2bool(): $e"
+        }
+        return $result
     }
 
     # Good for performance testing
@@ -507,10 +512,23 @@ namespace eval turbine {
 
     # create a void type (i.e. just set it)
     proc make_void { o i } {
+        set inputs [ list ]
+        foreach v $i {
+            if { [ string first "file" $v ] != -1 } {
+                set v [ get_file_td $v ]
+            }
+            lappend inputs $v
+        }
+
+        rule $inputs [ list make_void_body $o $inputs ] name make_void-$o
+    }
+
+    proc make_void_body { output inputs } {
+        # inputs: may be empty list
         # Do this in reverse order for faster propagation
         # (Pretend to read inputs AFTER setting output!)
-        store_void $o
-        foreach v $i {
+        store_void $output
+        foreach v $inputs {
             read_refcount_decr $v
         }
     }

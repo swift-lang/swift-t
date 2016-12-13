@@ -37,25 +37,25 @@ namespace eval turbine {
       store_blob $result 0 0
   }
 
-  proc blob_from_string { result input } {
-    rule $input "blob_from_string_body $input $result" \
-        name "bfs-$input-$result"
+  proc string2blob { result input } {
+    rule $input "string2blob_body $input $result" \
+        name "string2blob-$input-$result"
   }
-  proc blob_from_string_body { input result } {
+  proc string2blob_body { input result } {
     set t [ retrieve_decr_string $input ]
     store_blob_string $result $t
   }
 
-  proc string_from_blob { result input } {
-    rule $input "string_from_blob_body $input $result" \
+  proc blob2string { result input } {
+    rule $input "blob2string_body $input $result" \
         name "sfb-$input-$result"
   }
-  proc string_from_blob_body { input result } {
+  proc blob2string_body { input result } {
     set s [ retrieve_decr_blob_string $input ]
     store_string $result $s
   }
 
-  proc floats_from_blob_impl { blob } {
+  proc blob2floats_impl { blob } {
     set s       [ blobutils_sizeof_float ]
     set p      [ blobutils_cast_long_to_dbl_ptr [ lindex $blob 0 ] ]
     set length [ lindex $blob 1 ]
@@ -76,7 +76,7 @@ namespace eval turbine {
     set s       [ blobutils_sizeof_float ]
     set p       [ blobutils_cast_long_to_dbl_ptr [ lindex $L 0 ] ]
     set length  [ lindex $L 1 ]
-    
+
     set result  [ dict create ]
 
     # total = m x n
@@ -90,7 +90,7 @@ namespace eval turbine {
     }
     for { set i 0 } { $i < $m } { incr i } {
       set row [ dict create ]
-        
+
       for { set j 0 } { $j < $n } { incr j } {
         set k [ expr { $j * $m + $i} ]
         dict append row $j [ blobutils_get_float $p $k ]
@@ -99,7 +99,7 @@ namespace eval turbine {
     }
     return $result
   }
-  
+
   proc sorted_dict_values { kv_dict } {
     set N [ dict size $kv_dict ]
     set A [ list ]
@@ -110,39 +110,39 @@ namespace eval turbine {
     return $A
   }
 
-  proc blob_from_floats { out in } {
+  proc floats2blob { out in } {
     set floats [ lindex $in 0 ]
     set blob [ lindex $out 0 ]
-    rule $floats "blob_from_floats_body $blob $floats"
+    rule $floats "floats2blob_body $blob $floats"
   }
 
-  proc blob_from_floats_body { blob floats } {
+  proc floats2blob_body { blob floats } {
     set floats_val [ adlb::retrieve $floats container ]
-    set blob_val [ blob_from_floats_impl $floats_val ]
-   
+    set blob_val [ floats2blob_impl $floats_val ]
+
     store_blob $blob $blob_val
     adlb::local_blob_free $blob_val
   }
 
-  proc blob_from_floats_impl { kv_dict } {
+  proc floats2blob_impl { kv_dict } {
     return [ adlb::blob_from_float_list [ sorted_dict_values $kv_dict ] ]
   }
 
-  proc blob_from_ints { out in } {
+  proc ints2blob { out in } {
     set ints [ lindex $in 0 ]
     set blob [ lindex $out 0 ]
-    rule $ints "blob_from_ints_body $blob $ints"
+    rule $ints "ints2blob_body $blob $ints"
   }
 
-  proc blob_from_ints_body { blob ints } {
+  proc ints2blob_body { blob ints } {
     set ints_val [ adlb::retrieve $ints container ]
-    set blob_val [ blob_from_ints_impl $ints_val ]
-   
+    set blob_val [ ints2blob_impl $ints_val ]
+
     store_blob $blob $blob_val
     adlb::local_blob_free $blob_val
   }
 
-  proc blob_from_ints_impl { kv_dict } {
+  proc ints2blob_impl { kv_dict } {
     return [ adlb::blob_from_int_list [ sorted_dict_values $kv_dict ] ]
   }
 
@@ -204,21 +204,21 @@ namespace eval turbine {
 
     # Input:  L: a Tcl dict of integer->integer indexed from 0
     # Output:    a SWIG pointer (double*) to a fresh double array
-    proc blob_dict_to_int_array { d } { 
+    proc blob_dict_to_int_array { d } {
         set L [ dict size $d ]
         set bytes [ expr $L * [ blobutils_sizeof_int ] ]
         set ptr [ blobutils_malloc $bytes ]
         set ptr [ blobutils_cast_to_int_ptr $ptr ]
-        for { set i 0 } { $i < $L } { incr i } { 
-            set v [ dict get $d $i ] 
-            blobutils_set_int $ptr $i $v 
+        for { set i 0 } { $i < $L } { incr i } {
+            set v [ dict get $d $i ]
+            blobutils_set_int $ptr $i $v
         }
         return $ptr
     }
 
     # Input:  L: a Tcl dict of integer->string indexed from 0
     # Output:    a SWIG pointer (char**) to the C strings
-    proc blob_strings_to_char_ptr_ptr { d } { 
+    proc blob_strings_to_char_ptr_ptr { d } {
         set argc [ dict size $d ]
         # Allocate array of char*
         set bytes [ expr $argc * [blobutils_sizeof_ptr] ]
@@ -231,7 +231,7 @@ namespace eval turbine {
         # This is a void**
         set v [ blobutils_cast_to_ptrptr $alloc ]
         # Set arguments...
-        for { set i 0 } { $i < $argc } { incr i } { 
+        for { set i 0 } { $i < $argc } { incr i } {
             set s [ dict get $d $i ]
             set p [ blobutils_cast_string_to_ptr $s ]
             blobutils_set_ptr $v $i $p

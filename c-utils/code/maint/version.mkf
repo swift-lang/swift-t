@@ -1,0 +1,2 @@
+
+VERSION = $(shell cat version.txt)

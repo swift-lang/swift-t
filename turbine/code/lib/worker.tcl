@@ -118,7 +118,7 @@ namespace eval turbine {
     }
 
     proc leader_hook { } {
-        if { [ adlb::comm_leaders ] == [ adlb::comm_null ] } {
+        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
             # I am not a leader
             return
         }

@@ -6,17 +6,13 @@ import io;
 import string;
 import R;
 
-global const string template =
+template =
 """
   x <- %i
   a <- x+100
   cat("the answer is: ", a, "\\n")
-  a
 """;
 
-main
-{
-  code = sprintf(template, 4);
-  s = R(code);
-  printf("the answer was: %i", s);
-}
+code = sprintf(template, 4);
+s = R(code, "toString(a)");
+printf("the answer was: %i", s);

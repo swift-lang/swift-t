@@ -50,36 +50,50 @@ fi
 # Filter the template to create the PBS submit script
 TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
 TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
-
 m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
-
 print "wrote: ${TURBINE_CRAY}"
 
+# If the user specified a queue, we use it:
 QUEUE_ARG=""
 if (( ${+QUEUE} ))
 then
   QUEUE_ARG="-q ${QUEUE}"
 fi
 
+# Convert any user turbine-cray-run -e K=V settings to qsub -e K=V:
+export APRUN_ENV=''
+for kv in ${env}
+do
+  print "turbine: user environment variable: ${kv}"
+  APRUN_ENV+="-e ${kv} "
+done
+
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
 # Read all output from qsub
 QSUB_OUT=""
-qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
+qsub -V ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   while read T ; do QSUB_OUT+="${T} " ; done
 
 # Did we get a job number?
 # Break output into words:
 QSUB_OUT_ARRAY=( ${=QSUB_OUT} )
+if (( ${#QSUB_OUT_ARRAY} == 0 ))
+then
+  print
+  print "turbine: error: received nothing from qsub!"
+  return 1
+fi
 QSUB_OUT_WORD1=${QSUB_OUT_ARRAY[1]}
 # Chop off anything after a dot
 QSUB_OUT_WORD1_PFX=${QSUB_OUT_WORD1%.*}
 if [[ ${QSUB_OUT_WORD1_PFX} != <-> ]]
 then
-  print "received invalid job ID from qsub!"
-  print "received:"
-  echo ${QSUB_OUT_ARRAY} | fmt -w 60
-  exit 1
+  print
+  print "turbine: error: received invalid job ID from qsub!"
+  print "turbine: received:"
+  print ${QSUB_OUT_ARRAY} | fmt -w 60
+  return 1
 fi
 
 JOB_ID=$( print ${QSUB_OUT} | tr -d " " ) # Trim

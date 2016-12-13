@@ -1,7 +1,0 @@
-
-nice make -j 4
-
-make: *** No targets specified and no makefile found.  Stop.
-
-TOOK: 00
-CODE=2

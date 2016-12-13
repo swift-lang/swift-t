@@ -1,2 +1,0 @@
-import io;
-printf("HELLO");

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-THISDIR=`dirname $0`
-source ${THISDIR}/exm-settings.sh
+THISDIR=$( dirname $0 )
+source ${THISDIR}/swift-t-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
@@ -10,27 +10,21 @@ if (( MAKE_CLEAN )); then
   fi
 fi
 
-if (( SVN_UPDATE )); then
-  svn update
-fi
-
-if (( RUN_AUTOTOOLS )); then
-  ./bootstrap
-elif [ ! -f configure ]; then
+if (( RUN_AUTOTOOLS )) || [ ! -f configure ]; then
   # Attempt to run autotools
   ./bootstrap
 fi
 
 EXTRA_ARGS=
-if (( EXM_OPT_BUILD )); then
+if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast "
 fi
 
-if (( EXM_DEBUG_BUILD )); then
+if (( SWIFT_T_DEBUG_BUILD )); then
     EXTRA_ARGS+="--enable-log-debug "
 fi
 
-if (( EXM_TRACE_BUILD )); then
+if (( SWIFT_T_TRACE_BUILD )); then
     EXTRA_ARGS+="--enable-log-trace "
 fi
 
@@ -38,7 +32,7 @@ if (( ENABLE_MPE )); then
     EXTRA_ARGS+="--with-mpe=${MPE_INSTALL} "
 fi
 
-if (( EXM_STATIC_BUILD )); then
+if (( SWIFT_T_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
@@ -46,7 +40,7 @@ if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
-if (( EXM_DEV )); then
+if (( SWIFT_T_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
@@ -55,7 +49,7 @@ if [[ ${MPI_VERSION} == 2 ]]; then
 fi
 
 if (( DISABLE_ZLIB )); then
-  EXTRA_ARGS+=" --without-zlib"
+  EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
 if [ ! -z "$ZLIB_INSTALL" ]; then
@@ -67,11 +61,29 @@ if (( DISABLE_STATIC )); then
 fi
 
 if (( CONFIGURE )); then
-  ./configure --with-c-utils=${C_UTILS_INSTALL} \
-              --prefix=${LB_INSTALL} ${EXTRA_ARGS}
+  (
+    set -x
+    rm -f config.cache
+    ./configure --config-cache \
+                --with-c-utils=${C_UTILS_INSTALL} \
+                --prefix=${LB_INSTALL} \
+                CC=${CC} \
+                ${EXTRA_ARGS}
+  )
 fi
-if (( MAKE_CLEAN )); then
-  make clean
+
+if (( ! RUN_MAKE )); then
+  exit
 fi
+
+if (( MAKE_CLEAN ))
+then
+  rm -fv config.cache
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
+fi
+
 make -j ${MAKE_PARALLELISM}
 make install
