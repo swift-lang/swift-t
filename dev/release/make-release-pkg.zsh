@@ -227,6 +227,11 @@ mkdir -pv ${TARGET}
 pushd dev/build
 export_copy *.template !(swift-t-settings).sh
 popd
+TARGET=${EXPORT}/dev/m4
+mkdir -pv ${TARGET}
+pushd dev/m4
+export_copy *.m4
+popd
 printf "OK\n\n"
 
 if (( ENABLE_COASTER ))
