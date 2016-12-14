@@ -145,6 +145,12 @@ then
   done
 fi
 
+pushd stc/code
+print
+print "AUTOCONF: STC"
+autoconf
+popd
+
 if (( ENABLE_COASTER ))
 then
   swiftk_log="$(pwd)/swift-k.log"
@@ -226,6 +232,11 @@ TARGET=${EXPORT}/dev/build
 mkdir -pv ${TARGET}
 pushd dev/build
 export_copy *.template !(swift-t-settings).sh
+popd
+TARGET=${EXPORT}/dev/m4
+mkdir -pv ${TARGET}
+pushd dev/m4
+export_copy *.m4
 popd
 printf "OK\n\n"
 
