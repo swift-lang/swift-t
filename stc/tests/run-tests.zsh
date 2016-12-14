@@ -1,6 +1,9 @@
 #!/bin/zsh -f
 set -eu
 
+echo RUN-TESTS
+set -x 
+
 # STC RUN-TESTS
 
 # See About.txt for notes
