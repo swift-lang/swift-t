@@ -59,8 +59,9 @@ touch results.out
 
 export ADLB_PERF_COUNTERS=0
 nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
-      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
-      tee results.out
+     -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*}
+# |& \
+  #    tee results.out
 print
 
 print "Aggregating results..."
