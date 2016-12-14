@@ -133,8 +133,7 @@ crash()
   exit 1
 }
 
-STC=$( which stc 2> /dev/null )
-if (( ! ${#STC} ))
+if ! STC=$( which stc > /dev/null )
 then
   crash "Put stc in your PATH."
 fi
