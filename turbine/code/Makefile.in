@@ -788,7 +788,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) etc/help*.txt         $(INSTALL_ETC)
+	$(E) $(CP_PARENTS) $(CP_ARGS) etc/help/*.txt $(INSTALL_TOP)
 	@echo
 	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)

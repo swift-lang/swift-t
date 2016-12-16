@@ -228,18 +228,14 @@ help()
 {
   print "STC HELP\n"
 
-  print "stc <options> <program.swift> <program.tic>?"
-  print "Compiles program.swift."
-  print "The <program.tic> argument is optional."
-  print
-  print "Swift/T Guide: http://swift-lang.org/Swift-T/guide.html\n"
+  cat ${STC_HOME}/etc/help/stc-header.txt
   # These options are available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-1.txt
+  cat ${STC_HOME}/etc/help/options-1.txt
   # These options are not available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-2.txt
+  cat ${STC_HOME}/etc/help/options-2.txt
   print
   # These are details about compiler flag terms
-  cat ${STC_HOME}/etc/help-option-terms.txt
+  cat ${STC_HOME}/etc/help/option-terms.txt
   echo
   report_optimizations
   exit 0
@@ -256,7 +252,6 @@ report_optimizations()
   echo "O3 optimizations: ${O3_OPTS}"
   echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
 }
-
 
 # Set this to 1 to debug this script (-V)
 VERBOSE=0

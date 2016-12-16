@@ -1,4 +1,0 @@
-   -t <flag>:<value>
-          Turbine pass-through
-          Pass -<flag> <value> to Turbine
-          Use this to access other Turbine features
