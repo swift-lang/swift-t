@@ -1,0 +1,4 @@
+    -E
+       Just preprocess
+    -u
+         Only compile if target is not up-to-date

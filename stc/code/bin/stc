@@ -245,15 +245,16 @@ help()
   exit 0
 }
 
-report_optimizations() {
-    echo "Optimization levels:"
-    echo "===================="
-    echo "All levels include optimizations from previous."
-    echo "O0 optimizations: ${O0_OPTS}"
-    echo "O1 optimizations: ${O1_OPTS}"
-    echo "O2 (default) optimizations: ${O2_OPTS}"
-    echo "O3 optimizations: ${O3_OPTS}"
-    echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
+report_optimizations()
+{
+  echo "Optimization levels:"
+  echo "===================="
+  echo "All levels include optimizations from previous."
+  echo "O0 optimizations: ${O0_OPTS}"
+  echo "O1 optimizations: ${O1_OPTS}"
+  echo "O2 (default) optimizations: ${O2_OPTS}"
+  echo "O3 optimizations: ${O3_OPTS}"
+  echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
 }
 
 
