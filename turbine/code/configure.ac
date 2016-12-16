@@ -1040,6 +1040,7 @@ do
   do
     for LIB_DIR in ${LIB_DIR_OPTS}
     do
+      LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
       AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
