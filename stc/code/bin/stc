@@ -226,9 +226,8 @@ function set_opt_level() {
 
 help()
 {
-  print "STC HELP\n"
-
   cat ${STC_HOME}/etc/help/stc-header.txt
+  print
   # These options are available in the swift-t interface:
   cat ${STC_HOME}/etc/help/options-1.txt
   # These options are not available in the swift-t interface:
