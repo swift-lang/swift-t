@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# STC bootstrap
+# This does nothing- it is just here to be like the other modules
+# for building Debian packages
+
+exit 0
