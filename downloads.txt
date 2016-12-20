@@ -30,6 +30,7 @@ the +minor+ version number.
 * 2016/12/20
 
 *Changes:*
+
 * New communicator features for in situ workflows
 * New +TURBINE_DIRECTIVE+ feature
 * Mail support for some schedulers
@@ -43,6 +44,7 @@ the +minor+ version number.
 * 2016/10/05
 
 *Changes:*
+
 * Now provide binary releases in Debian format
 
 == Series 1.0
