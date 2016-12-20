@@ -31,7 +31,7 @@ print scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
 print scripts/submit/slurm/*turbine*.*sh*
 print scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
 print src/turbine/turbine-version.h.in
-print etc/help*.txt
+print etc/help/*.txt
 
 if (( ${+DEBIAN_PKG_TYPE} ))
 then
