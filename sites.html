@@ -745,8 +745,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.0.0,</span>
-<span id="revdate">October 2016</span>
+<span id="revnumber">version 1.2.0,</span>
+<span id="revdate">December 2016</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1031,6 +1031,42 @@ output directory creation.  See <a href="#turbine_output">Turbine output</a>
 </p>
 </dd>
 </dl></div>
+<div class="sect3">
+<h4 id="_limited_support">Limited support</h4>
+<div class="paragraph"><p>These recently developed features are not yet available for all
+schedulers, feel free to request implementation.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_DIRECTIVE</code>
+</dt>
+<dd>
+<p>
+Paste the given text into the submit script
+(currently supported systems: <code>cray</code>).  Allows users to insert, e.g.,
+reservation information into the script.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p><strong>Mail</strong></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>MAIL_ENABLED</code>
+</dt>
+<dd>
+<p>
+If 1, send email on job completion.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>MAIL_ADDRESS</code>
+</dt>
+<dd>
+<p>
+If <code>MAIL_ENABLED</code>, send the email to the given address.
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="options">Turbine scheduler script options</h3>
@@ -2892,9 +2928,9 @@ MPI: You may use any MPI implementation
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.0.0<br />
+Version 1.2.0<br />
 Last updated
- 2016-10-03 12:58:35 CDT
+ 2016-12-20 15:13:09 CST
 </div>
 </div>
 </body>
