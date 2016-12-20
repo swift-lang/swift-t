@@ -12,6 +12,7 @@ set -eu
 setopt pushdsilent nullglob
 zparseopts -D -E b=B c=C
 
+source turbine/code/scripts/helpers.zsh
 source dev/build/get-versions.sh
 
 # The TGZ to be constructed here:
@@ -68,6 +69,8 @@ do
   print
   pushd ${M}/code
   print "Making DEB in ${PWD}..."
+  uptodate configure configure.ac bootstrap || ./bootstrap
+  uptodate Makefile configure || ./configure
   D=${DEBS[${M}]}
   make ${D}
   N=${MODULES[${M}]}
