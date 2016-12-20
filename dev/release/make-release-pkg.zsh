@@ -38,6 +38,7 @@ PACKAGE_DEBIAN=0
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
 
+# Canonicalize this directory
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 setopt PUSHD_SILENT KSH_GLOB
