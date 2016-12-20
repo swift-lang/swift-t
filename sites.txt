@@ -9,7 +9,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.0.0, October 2016
+v1.2.0, December 2016
 
 ////
 
@@ -203,6 +203,20 @@ unset, a default value is automatically created)
 automatically create +TURBINE_OUTPUT+ if necessary
 +TURBINE_OUTPUT_FORMAT+:: Allows customization of the automatic
 output directory creation.  See <<turbine_output,Turbine output>>
+
+==== Limited support
+
+These recently developed features are not yet available for all
+schedulers, feel free to request implementation.
+
++TURBINE_DIRECTIVE+:: Paste the given text into the submit script
+(currently supported systems: +cray+).  Allows users to insert, e.g.,
+reservation information into the script.
+
+*Mail*
+
++MAIL_ENABLED+:: If 1, send email on job completion.
++MAIL_ADDRESS+:: If +MAIL_ENABLED+, send the email to the given address.
 
 [[options]]
 === Turbine scheduler script options
