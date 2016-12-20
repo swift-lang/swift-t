@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-October 2016
+December 2016
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.

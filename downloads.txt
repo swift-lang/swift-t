@@ -22,7 +22,20 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
-== Current/stable: Series 1.1
+== Current/stable: Series 1.2
+
+* Release 1.1
+** [link:downloads/swift-t-1.2.tar.gz[swift-t-1.2.tar.gz]] (9 MB)
+** [link:downloads/swift-t-debs-1.2.tar.gz[swift-t-debs-1.2.tar.gz]] (6.2 MB)
+* 2016/12/20
+
+*Changes:*
+* New communicator features for in situ workflows
+* New +TURBINE_DIRECTIVE+ feature
+* Mail support for some schedulers
+
+
+== Series 1.1
 
 * Release 1.1
 ** [link:downloads/swift-t-1.1.tar.gz[swift-t-1.1.tar.gz]] (9 MB)
@@ -30,7 +43,6 @@ the +minor+ version number.
 * 2016/10/05
 
 *Changes:*
-
 * Now provide binary releases in Debian format
 
 == Series 1.0
