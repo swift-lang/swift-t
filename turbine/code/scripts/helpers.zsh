@@ -172,9 +172,9 @@ compile()
   return 0
 }
 
-# Check if file $1 is uptodate wrt $2
-# $1 is uptodate if it exists and is newer than $2
-# If $2 does not exist, crash
+# Check if file $1 is uptodate wrt remaining arguments
+# $1 is uptodate if it exists and is newer than remaining arguments
+# If $2 does not exist, fail
 uptodate()
 {
   if [[ ${#} < 2 ]]
@@ -216,20 +216,17 @@ uptodate()
     return 1
   fi
 
-  local CODE
   for f in ${PREREQS}
   do
-    [[ ${TARGET} -nt ${f} ]]
-    CODE=${?}
-    if (( ${CODE} == 0 ))
+    if [[ ${TARGET} -nt ${f} ]]
     then
       ((VERBOSE)) && print "${TARGET} : ${f} is uptodate"
     else
       ((VERBOSE)) && print "${TARGET} : ${f} is not uptodate"
-      return ${CODE}
+      return 1
     fi
   done
-  return ${CODE}
+  return 0
 }
 
 rm0()
