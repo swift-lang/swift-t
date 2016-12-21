@@ -1402,6 +1402,11 @@ TODO
 
 TODO
 
+=== Batcher
+
++batcher+ is a simple demonstration of ADLB useful for learning how it
+works.  See the header of +batcher.c+.  Build it with +make apps/batcher.x+
+
 == CPU Profiling
 
 It is possible to obtain information about CPU usage in Turbine by using
@@ -1559,6 +1564,7 @@ For the three Makefile-based modules, the test conventions are:
   test
 * The test output may be checked by +X.sh+
 * If the exit code is 0, the Makefile moves +X.tmp+ to +X.result+
+* To run a single test, do +make X.result+
 
 ==== C-Utils
 
