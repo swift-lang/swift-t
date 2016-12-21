@@ -1431,6 +1431,119 @@ information in various formats, including text and graphical.
 
 Note: on Ubuntu, +pprof+ is renamed to +google-pprof+.
 
+=== File index
+
+_Most important files first._
+
++adlb.h+::
+The ADLB API
+
++adlb-defs.h+::
+Key definitions, error codes, and parameters
+
++adlb.c+::
+The ADLB client-side implementation (communicates with servers)
+
++handlers.[ch]+::
+Server-side handling and function dispatch for client RPCs
+
++adlb_types.[ch]+::
+ADLB data type definitions and serialization code
+
++checks.h+::
+ADLB functions can produce a nice error stack with these functions.
+
++common.[ch]+::
+Some common functions and global state.
+
++data.[ch]+::
+The ADLB data module (+_Store()+, +_Retrieve()+)
+
++engine.[ch]+::
+Implementation for data-dependent execution
+
++workqueue.[ch]+::
+Storage for work units that are ready to run
+
++requestqueue.[ch]+::
+Storage for workers waiting for work
+
++debug.[ch]+::
+Debugging macros
+
++debug_symbols.[ch]+::
+Features for Swift-level debug symbols, not
+fully implemented
+
++messaging.[ch]+::
+MPI tag definitions; also human-readable names for debugging
+
++server.[ch]+::
+The main ADLB server loop
+
++steal.[ch]+::
+Server-server work steals
+
++sync.[ch]+::
+Server-server synchronization, largely for steals
+
++backoffs.[ch]+::
+ADLB uses timed backoffs when doing certain
+operations, these are configured here.
+
++notifications.[ch]+::
+Data structures and functions for sending notifications about data
+dependency resolution
+
++location.[ch]+::
+Location functionality
+
++layout.[ch]+, +layout-defs.h+::
+Rank and hostname functions, mapping from workers to servers
+
++data_structs.[ch]+::
+Support for the ADLB struct type
+
++refcount.[ch]+::
+Reference counting for ADLB data
+
++multiset.[ch]+::
+An abstract data structure for use in certain data storage cases
+
++mpi-tools.[ch]+::
+A MPI error check
+
++data_cleanup.[ch]+::
+ADLB garbage collection
+
++data_internal.h+::
+Some internal data module definitions and error
+handling macros
+
++adlb-xpt.[ch]+, +xpt_index.[ch]+, +xpt_file.c+::
+Features for checkpointing, minimally tested
+
++adlb-version.h.in+::
+Version numbers (manipulated by the build system)
+
++client_internal.h+::
+A couple prototypes (should be moved?)
+
++adlb_conf.h+::
+Autotools-generated header
+
++adlb_prof.c+::
+Profiling interface, like the +PMPI_+ interfaces in MPI.
+
++mpe-settings.h+::
+MPE configuration (filtered by +configure+)
+
++adlb-mpe.h+::
+ADLB MPE configuration switch
+
++mpe-tools.[ch]+::
+MPE functionality
+
 == Test suites
 
 Each component has a testing mechanism:
