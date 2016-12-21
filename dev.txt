@@ -30,6 +30,8 @@ https://groups.google.com/forum/#!forum/swift-t-user[Swift/T User Group].
 Please file documentation requests here:
 https://github.com/swift-lang/swift-t/issues
 
+with +Type:Doc+.
+
 These can be:
 
 * Requests for more comments in the code
