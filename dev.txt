@@ -14,7 +14,7 @@ Settings:
 
 = Swift/T Developers' Guide
 Justin M. Wozniak
-August 2016
+December 2016
 
 This document is for developers interested in modifying or extending
 the Swift/T codebase.
@@ -27,8 +27,13 @@ http://swift-lang.org/Swift-T/guide.html[general user guide] first.
 For further support, post to the
 https://groups.google.com/forum/#!forum/swift-t-user[Swift/T User Group].
 
-Please reports errors in this document at
-https://github.com/swift-lang/swift-t/issues .
+Please file documentation requests here:
+https://github.com/swift-lang/swift-t/issues
+
+These can be:
+
+* Requests for more comments in the code
+* Clarifications in the Swift/T Guide or enhancements to this document
 
 == How to contribute to Swift/T
 
@@ -92,8 +97,8 @@ code.
 . Swift/T typically starts with a user invocation of +swift-t+, a
 simple shell script.  This invokes +stc+ and +turbine+, which are also
 shell scripts.  All use +getopt+.
-. +stc+ translates the `getopt's to Java properties, to be passed into
-the JVM via +java -D+.
+. +stc+ translates the +getopt+&ZeroWidthSpace;s to Java properties,
+to be passed into the JVM via +java -D+.
 . STC starts in +exm/stc/ui/Main.java+.  All properties are registered
 in +exm/stc/common/Settings.java+.  STC emits a +&#42;.tic+ file.
 . Turbine starts as a parallel invocation of +tclsh+, each running the
@@ -593,7 +598,7 @@ Tcl extensions.
    functionality
 ** +src/tcl/mpe+ is the MPE library for Turbine
 ** +src/tcl/LANG+ are libraries for Python, R, Julia.  These are
-   optional.
+   optional (enabled at configure time).
 ** +src/tcl/blob+ allows for the use of +blob+&#8203;s, i.e., unformatted
    bytes.  See the link:blob.html[blob guide].
 
@@ -646,7 +651,7 @@ turbine::finalize
 It loads the Turbine Tcl package, loads defaults and environment
 settings, initializes Turbine, starts progress, and finalizes.
 
-The rules proc contains the initial calls to get the program
+The +proc rules+ contains the initial calls to get the program
 running. It is only executed by the worker with rank 0.
 
 Other code may be placed in functions.
@@ -1264,7 +1269,8 @@ http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer[ADLB]
 implementation that additionally offers:
 
 * work stealing;
-* data operations; and
+* data storage operations;
+* data-dependent execution; and
 * parallel tasks.
 
 Tcl bindings for ADLB/X are supported, see the ExM Swift/Turbine
@@ -1307,7 +1313,7 @@ To simplify calls to MPI, we have wrapper macros that use XLB code
 conventions, error handling techniques, and debug logging.  In many
 cases, these turn 5-line expressions into 1-line expressions.  Macros
 +SEND()+, +RECV()+, +IRECV()+ correspond to +MPI_Send()+, +MPI_Recv()+,
-+MPI_Irecv()+, etc.  Cf.  +messaging.h+.
++MPI_Irecv()+, etc.  Cf. +messaging.h+.
 
 [[Debugging]]
 ==== Debugging modes
@@ -1336,8 +1342,8 @@ such systems).
 === RPC system
 
 ADLB is primarily a worker-server system.  The workers execute ADLB in
-+adlb.c+.  These issue calls in a typical +IRECV()+, +SEND()+,
-+WAIT()+ pattern.  This allows the server to send the initial response
++adlb.c+.  These issue calls in a typical +IRECV(); SEND(); WAIT();+
+pattern.  This allows the server to send the initial response
 with +RSEND+.
 
 The server uses +PROBE+ and dispatches to the appropriate handler.
@@ -1493,7 +1499,7 @@ User-visible symbols are prefixed with +turbine_+.
 
 === Java code
 
-Open brace before newline
+Open brace before newline.
 
 == Git
 
