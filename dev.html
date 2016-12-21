@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.8" />
 <title>Swift/T Developers' Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,9 +94,7 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-pre {
-  white-space: pre-wrap;
-}
+
 
 #author {
   color: #527bbd;
@@ -225,7 +223,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; vertical-align: text-bottom; }
+span.image img { border-style: none; }
 a.image:visited { color: white; }
 
 dl {
@@ -744,7 +742,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
-<span id="revdate">August 2016</span>
+<span id="revdate">December 2016</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -764,8 +762,21 @@ the Swift/T codebase.</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>For further support, post to the
 <a href="https://groups.google.com/forum/#!forum/swift-t-user">Swift/T User Group</a>.</p></div>
-<div class="paragraph"><p>Please reports errors in this document at
-<a href="https://github.com/swift-lang/swift-t/issues">https://github.com/swift-lang/swift-t/issues</a> .</p></div>
+<div class="paragraph"><p>Please file documentation requests here:
+<a href="https://github.com/swift-lang/swift-t/issues">https://github.com/swift-lang/swift-t/issues</a></p></div>
+<div class="paragraph"><p>These can be:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Requests for more comments in the code
+</p>
+</li>
+<li>
+<p>
+Clarifications in the Swift/T Guide or enhancements to this document
+</p>
+</li>
+</ul></div>
 </div>
 </div>
 <div class="sect1">
@@ -918,8 +929,8 @@ shell scripts.  All use <code>getopt</code>.
 </li>
 <li>
 <p>
-<code>stc</code> translates the `getopt&#8217;s to Java properties, to be passed into
-the JVM via <code>java -D</code>.
+<code>stc</code> translates the <code>getopt</code>&ZeroWidthSpace;s to Java properties,
+to be passed into the JVM via <code>java -D</code>.
 </p>
 </li>
 <li>
@@ -1806,7 +1817,7 @@ Tcl extensions are in <code>src/tcl</code>
 <li>
 <p>
 <code>src/tcl/LANG</code> are libraries for Python, R, Julia.  These are
-   optional.
+   optional (enabled at configure time).
 </p>
 </li>
 <li>
@@ -1863,7 +1874,7 @@ turbine::finalize</code></pre>
 </div></div>
 <div class="paragraph"><p>It loads the Turbine Tcl package, loads defaults and environment
 settings, initializes Turbine, starts progress, and finalizes.</p></div>
-<div class="paragraph"><p>The rules proc contains the initial calls to get the program
+<div class="paragraph"><p>The <code>proc rules</code> contains the initial calls to get the program
 running. It is only executed by the worker with rank 0.</p></div>
 <div class="paragraph"><p>Other code may be placed in functions.</p></div>
 </div>
@@ -2883,7 +2894,12 @@ work stealing;
 </li>
 <li>
 <p>
-data operations; and
+data storage operations;
+</p>
+</li>
+<li>
+<p>
+data-dependent execution; and
 </p>
 </li>
 <li>
@@ -2941,7 +2957,7 @@ these and propagating errors up the call stack, see <code>checks.h</code>.</p></
 conventions, error handling techniques, and debug logging.  In many
 cases, these turn 5-line expressions into 1-line expressions.  Macros
 <code>SEND()</code>, <code>RECV()</code>, <code>IRECV()</code> correspond to <code>MPI_Send()</code>, <code>MPI_Recv()</code>,
-<code>MPI_Irecv()</code>, etc.  Cf.  <code>messaging.h</code>.</p></div>
+<code>MPI_Irecv()</code>, etc.  Cf. <code>messaging.h</code>.</p></div>
 </div>
 <div class="sect3">
 <h4 id="Debugging">9.3.3. Debugging modes</h4>
@@ -2990,8 +3006,8 @@ such systems).</p></div>
 <div class="sect2">
 <h3 id="_rpc_system">9.4. RPC system</h3>
 <div class="paragraph"><p>ADLB is primarily a worker-server system.  The workers execute ADLB in
-<code>adlb.c</code>.  These issue calls in a typical <code>IRECV()</code>, <code>SEND()</code>,
-<code>WAIT()</code> pattern.  This allows the server to send the initial response
+<code>adlb.c</code>.  These issue calls in a typical <code>IRECV(); SEND(); WAIT();</code>
+pattern.  This allows the server to send the initial response
 with <code>RSEND</code>.</p></div>
 <div class="paragraph"><p>The server uses <code>PROBE</code> and dispatches to the appropriate handler.
 The handler functions are registered with the RPC system
@@ -3055,6 +3071,11 @@ for information about this protocol.</p></div>
 <h3 id="_mpe_2">9.11. MPE</h3>
 <div class="paragraph"><p>TODO</p></div>
 </div>
+<div class="sect2">
+<h3 id="_batcher">9.12. Batcher</h3>
+<div class="paragraph"><p><code>batcher</code> is a simple demonstration of ADLB useful for learning how it
+works.  See the header of <code>batcher.c</code>.  Build it with <code>make apps/batcher.x</code></p></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -3088,6 +3109,296 @@ information in various formats, including text and graphical.</p></div>
 pprof --pdf `which tclsh8.5` turbine.prof_12345 &gt; turbine.prof_12345.pdf</code></pre>
 </div></div>
 <div class="paragraph"><p>Note: on Ubuntu, <code>pprof</code> is renamed to <code>google-pprof</code>.</p></div>
+<div class="sect2">
+<h3 id="_file_index">10.1. File index</h3>
+<div class="paragraph"><p><em>Most important files first.</em></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>adlb.h</code>
+</dt>
+<dd>
+<p>
+The ADLB API
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb-defs.h</code>
+</dt>
+<dd>
+<p>
+Key definitions, error codes, and parameters
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb.c</code>
+</dt>
+<dd>
+<p>
+The ADLB client-side implementation (communicates with servers)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>handlers.[ch]</code>
+</dt>
+<dd>
+<p>
+Server-side handling and function dispatch for client RPCs
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb_types.[ch]</code>
+</dt>
+<dd>
+<p>
+ADLB data type definitions and serialization code
+</p>
+</dd>
+<dt class="hdlist1">
+<code>checks.h</code>
+</dt>
+<dd>
+<p>
+ADLB functions can produce a nice error stack with these functions.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>common.[ch]</code>
+</dt>
+<dd>
+<p>
+Some common functions and global state.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>data.[ch]</code>
+</dt>
+<dd>
+<p>
+The ADLB data module (<code>_Store()</code>, <code>_Retrieve()</code>)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>engine.[ch]</code>
+</dt>
+<dd>
+<p>
+Implementation for data-dependent execution
+</p>
+</dd>
+<dt class="hdlist1">
+<code>workqueue.[ch]</code>
+</dt>
+<dd>
+<p>
+Storage for work units that are ready to run
+</p>
+</dd>
+<dt class="hdlist1">
+<code>requestqueue.[ch]</code>
+</dt>
+<dd>
+<p>
+Storage for workers waiting for work
+</p>
+</dd>
+<dt class="hdlist1">
+<code>debug.[ch]</code>
+</dt>
+<dd>
+<p>
+Debugging macros
+</p>
+</dd>
+<dt class="hdlist1">
+<code>debug_symbols.[ch]</code>
+</dt>
+<dd>
+<p>
+Features for Swift-level debug symbols, not
+fully implemented
+</p>
+</dd>
+<dt class="hdlist1">
+<code>messaging.[ch]</code>
+</dt>
+<dd>
+<p>
+MPI tag definitions; also human-readable names for debugging
+</p>
+</dd>
+<dt class="hdlist1">
+<code>server.[ch]</code>
+</dt>
+<dd>
+<p>
+The main ADLB server loop
+</p>
+</dd>
+<dt class="hdlist1">
+<code>steal.[ch]</code>
+</dt>
+<dd>
+<p>
+Server-server work steals
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sync.[ch]</code>
+</dt>
+<dd>
+<p>
+Server-server synchronization, largely for steals
+</p>
+</dd>
+<dt class="hdlist1">
+<code>backoffs.[ch]</code>
+</dt>
+<dd>
+<p>
+ADLB uses timed backoffs when doing certain
+operations, these are configured here.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>notifications.[ch]</code>
+</dt>
+<dd>
+<p>
+Data structures and functions for sending notifications about data
+dependency resolution
+</p>
+</dd>
+<dt class="hdlist1">
+<code>location.[ch]</code>
+</dt>
+<dd>
+<p>
+Location functionality
+</p>
+</dd>
+<dt class="hdlist1">
+<code>layout.[ch]</code>, <code>layout-defs.h</code>
+</dt>
+<dd>
+<p>
+Rank and hostname functions, mapping from workers to servers
+</p>
+</dd>
+<dt class="hdlist1">
+<code>data_structs.[ch]</code>
+</dt>
+<dd>
+<p>
+Support for the ADLB struct type
+</p>
+</dd>
+<dt class="hdlist1">
+<code>refcount.[ch]</code>
+</dt>
+<dd>
+<p>
+Reference counting for ADLB data
+</p>
+</dd>
+<dt class="hdlist1">
+<code>multiset.[ch]</code>
+</dt>
+<dd>
+<p>
+An abstract data structure for use in certain data storage cases
+</p>
+</dd>
+<dt class="hdlist1">
+<code>mpi-tools.[ch]</code>
+</dt>
+<dd>
+<p>
+A MPI error check
+</p>
+</dd>
+<dt class="hdlist1">
+<code>data_cleanup.[ch]</code>
+</dt>
+<dd>
+<p>
+ADLB garbage collection
+</p>
+</dd>
+<dt class="hdlist1">
+<code>data_internal.h</code>
+</dt>
+<dd>
+<p>
+Some internal data module definitions and error
+handling macros
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb-xpt.[ch]</code>, <code>xpt_index.[ch]</code>, <code>xpt_file.c</code>
+</dt>
+<dd>
+<p>
+Features for checkpointing, minimally tested
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb-version.h.in</code>
+</dt>
+<dd>
+<p>
+Version numbers (manipulated by the build system)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>client_internal.h</code>
+</dt>
+<dd>
+<p>
+A couple prototypes (should be moved?)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb_conf.h</code>
+</dt>
+<dd>
+<p>
+Autotools-generated header
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb_prof.c</code>
+</dt>
+<dd>
+<p>
+Profiling interface, like the <code>PMPI_</code> interfaces in MPI.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>mpe-settings.h</code>
+</dt>
+<dd>
+<p>
+MPE configuration (filtered by <code>configure</code>)
+</p>
+</dd>
+<dt class="hdlist1">
+<code>adlb-mpe.h</code>
+</dt>
+<dd>
+<p>
+ADLB MPE configuration switch
+</p>
+</dd>
+<dt class="hdlist1">
+<code>mpe-tools.[ch]</code>
+</dt>
+<dd>
+<p>
+MPE functionality
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -3127,6 +3438,11 @@ The test output may be checked by <code>X.sh</code>
 <li>
 <p>
 If the exit code is 0, the Makefile moves <code>X.tmp</code> to <code>X.result</code>
+</p>
+</li>
+<li>
+<p>
+To run a single test, do <code>make X.result</code>
 </p>
 </li>
 </ul></div>
@@ -3199,7 +3515,7 @@ for macros/constants.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_java_code">12.2. Java code</h3>
-<div class="paragraph"><p>Open brace before newline</p></div>
+<div class="paragraph"><p>Open brace before newline.</p></div>
 </div>
 </div>
 </div>
@@ -3320,7 +3636,7 @@ After updating version numbers, in each of c-utils, ADLB, and
 </li>
 <li>
 <p>
-Use <code>dev/build/make-release-pkg.zsh</code> to make the release package
+Use <code>dev/release/make-release-pkg.zsh</code> to make the release package
 </p>
 </li>
 <li>
@@ -3347,8 +3663,7 @@ Test package on Linux and Mac
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated
- 2016-10-04 13:46:15 CDT
+Last updated 2016-12-21 12:34:23 CST
 </div>
 </div>
 </body>
