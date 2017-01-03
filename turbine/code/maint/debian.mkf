@@ -16,6 +16,7 @@ DEB_FILES = changelog compat control copyright rules
 DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
+FILE_ENTRIES = $(shell $(FILE_LIST))
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
@@ -25,7 +26,7 @@ DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 maint/debian/changelog: maint/debian/changelog.m4
 	m4 -D M4_TURBINE_VERSION=$(VERSION) $(<) > $(@)
 
-$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile
+$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile $(FILE_ENTRIES)
 	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
 		$(@) turbine $(VERSION) $(FILE_LIST)
 
