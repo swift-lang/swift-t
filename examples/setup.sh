@@ -8,4 +8,5 @@
 source $( turbine -S )
 export TCL_INCLUDE_SPEC TCL_HOME
 
-export BLAS=${BLAS:-${HOME}/Downloads/BLAS/BLAS.a}
+# export BLAS=${BLAS:-${HOME}/Downloads/BLAS/BLAS.a}
+export BLAS=${BLAS:-/usr/lib/libblas.a}
