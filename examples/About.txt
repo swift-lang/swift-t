@@ -1,10 +1,11 @@
 
 = Leaf Function Examples
 
-Each numbered example contains a run.sh script.  This script is not
-mentioned in the guide.  It is a stand-alone way to test the whole suite.
+Each numbered example contains a run.sh script.
 
 To run all examples, use ./run.sh
+(This script is not mentioned in the guide.  It is a stand-alone way to
+test the whole suite.)
 
 ////
 Local Variables:
