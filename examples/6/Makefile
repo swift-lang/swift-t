@@ -7,6 +7,8 @@ LIBS = $(TCL_LIB_SPEC) \
 	-Wl,-rpath -Wl,$(TCL)/lib
 
 ### Settings:
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
+# We skip settings if this is just'make clean'
 ifeq (${COMPILER},)
 $(warning Set COMPILER!)
 endif
@@ -34,6 +36,7 @@ LDFLAGS = -qnoeh -L/soft/compilers/ibmcmp-nov2013/xlf/bg/14.1/lib64 \
           -L/soft/compilers/ibmcmp-nov2012/lib64/bg -libmc++
 SHARED = -qmkshrobj
 endif
+endif # make clean
 
 ### FORTWRAP
 
