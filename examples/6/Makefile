@@ -1,6 +1,4 @@
 
-# Use ./build.sh to run this
-
 all: prog-f90 prog-cxx pkgIndex.tcl prog-swift.tcl
 
 INCLUDES = -I . ${TCL_INCLUDE_SPEC}
