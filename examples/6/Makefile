@@ -47,7 +47,9 @@ $(FORTWRAP_OUT): func.f90 Makefile
 # 	which fortwrap.py
 	fortwrap.py $(<)
 # 	Fix FortWrap-generated Fortran code for modern (strict) gfortran
-#       This "fix" creates a memory leak but I'm stumped. -Justin
+#       This "fix" creates a memory leak but arrays of strings are
+#       not supported in FortWrap.
+#       Cf. http://fortwrap.sourceforge.net/#Issues
 	sed -i 's/CALL C_F_POINTER/! CALL C_F_POINTER/' CppWrappers.f90
 	sed -i 's/DEALLOCATE/! DEALLOCATE/' CppWrappers.f90
 ifeq (${COMPILER},BGQ)
