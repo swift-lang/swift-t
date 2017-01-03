@@ -9,12 +9,7 @@ then
   exit 1
 fi
 
-source $( ${TURBINE_BIN}/turbine -S )
-echo $TURBINE_HOME
-
+source $( $TURBINE_BIN/turbine -S )
 source $TURBINE_HOME/scripts/turbine-config.sh
 
-echo $TCLLIBPATH
-
-
-${TCLSH} ${TURBINE_HOME}/scripts/turbine-write-doubles.tcl ${*}
+$TCLSH $TURBINE_HOME/scripts/turbine-write-doubles.tcl ${*}
