@@ -4,10 +4,10 @@ echo "Stand-alone"
 ./test-g.sh
 
 echo "SWIG"
-swig -module g g.h
+swig g.i
 
-echo "SWIG-G"
-./test-swig-g.sh
+echo "Compile SWIG"
+./compile-swig-g.sh
 
 echo "TEST-G-TCL"
 export TCLLIBPATH=$PWD
