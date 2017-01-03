@@ -5,7 +5,7 @@
 
 # Usage: turbine-write-doubles.tcl <output> <doubles...>
 
-package require turbine 0.1.1
+package require turbine
 
 if { $argc < 1 } {
     puts "requires output file name!"

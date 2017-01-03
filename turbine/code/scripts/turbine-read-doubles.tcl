@@ -2,11 +2,11 @@
 
 # TURBINE-READ-DOUBLES
 
-# Reads a file of doubles
+# Reads a file of doubles, prints them to stdout
 
 # Usage: turbine-read-doubles.tcl <input>
 
-package require turbine 0.1.1
+package require turbine
 
 if { $argc < 1 } {
     puts "requires input file name!"
@@ -14,8 +14,6 @@ if { $argc < 1 } {
 }
 
 set input [ lindex $argv 0 ]
-
-# puts "input file: $input"
 
 set blob [ new_turbine_blob ]
 

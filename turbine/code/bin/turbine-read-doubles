@@ -1,13 +1,14 @@
 #!/bin/bash
 
-TURBINE_HOME=$( cd "$( dirname "$0" )/.." ; /bin/pwd )
+# TURBINE READ DOUBLES
+
+TURBINE_BIN=$( cd "$( dirname "$0" )" ; /bin/pwd )
 if [ ${?} != 0 ]
 then
   echo "Could not find Turbine!"
   exit 1
 fi
-TURBINE_SCRIPTS=${TURBINE_HOME}/scripts
 
-source ${TURBINE_SCRIPTS}/turbine-config.sh
+source $( ${TURBINE_BIN}/turbine -S )
 
-${TCLSH} ${TURBINE_SCRIPTS}/turbine-read-doubles.tcl ${*}
+${TCLSH} ${TURBINE_HOME}/scripts/turbine-read-doubles.tcl ${*}
