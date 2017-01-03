@@ -56,4 +56,4 @@ else
 fi
 
 # Run the examples suite:
-./r
+./run.sh
