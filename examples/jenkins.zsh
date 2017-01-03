@@ -17,17 +17,20 @@ which mpiexec
 print
 
 # Build BLAS
-BV=3.5.0
+BV=3.6.0
 export BLAS=/tmp/exm-blas-build/BLAS-$BV/BLAS.a
-if [[ ! -f ${BLAS} ]]
+if [[ -f ${BLAS} ]]
 then
+  print "Found BLAS: ${BLAS}"
+else
   print "Downloading BLAS..."
   mkdir -p /tmp/exm-blas-build
   pushd /tmp/exm-blas-build
   rm -fv blas.tgz
-  wget http://www.netlib.org/blas/blas.tgz
+  wget http://www.netlib.org/blas/blas-3.6.0.tgz
   tar xfz blas.tgz
   cd BLAS-$BV
+  print "Compiling BLAS..."
   for f in *.f
   do
     gfortran -fPIC -c ${f}
@@ -37,9 +40,12 @@ then
   popd
 fi
 
-# Get FortWrap
-if [[ ! -f /tmp/exm-fortwrap/fortwrap-1.0.4/fortwrap.py ]]
+# Install FortWrap here:
+path+=/tmp/exm-fortwrap/fortwrap-1.0.4
+if [[ -e /tmp/exm-fortwrap/fortwrap-1.0.4/fortwrap.py ]]
 then
+  print "Found FortWrap: $( which fortwrap.py )"
+else
   print "Downloading FortWrap"
   mkdir -p /tmp/exm-fortwrap
   pushd /tmp/exm-fortwrap
@@ -48,7 +54,6 @@ then
   print "FortWrap successfully installed in ${PWD}/fortwrap-1.0.4"
   popd
 fi
-path+=/tmp/exm-fortwrap/fortwrap-1.0.4
 
 # Run the examples suite:
-./run.sh
+./r

@@ -8,5 +8,6 @@
 source $( turbine -S )
 export TCL_INCLUDE_SPEC TCL_HOME
 
-# export BLAS=${BLAS:-${HOME}/Downloads/BLAS/BLAS.a}
-export BLAS=${BLAS:-/usr/lib/libblas.a}
+# Set BLAS here
+# (The Jenkins test script (jenkins.zsh) sets BLAS)
+export BLAS=${BLAS:-${HOME}/Downloads/BLAS-3.6.0/BLAS.a}
