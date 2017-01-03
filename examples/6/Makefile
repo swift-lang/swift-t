@@ -51,7 +51,7 @@ ifeq (${COMPILER},BGQ)
 	sed -i s/_MOD/_NMOD/ $(FORTWRAP_OUT)
 #       This DEALLOCATE fails on the BG/Q
 #       This "fix" creates a memory leak but I'm stumped. -Justin
-	sed -i s/DEALLOCATE/!DEALLOCATE/ CppWrappers.f90
+	sed -i 's/DEALLOCATE/! DEALLOCATE/' CppWrappers.f90
 endif
 
 ### SWIG
