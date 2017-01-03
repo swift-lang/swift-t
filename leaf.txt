@@ -219,7 +219,7 @@ include::examples/2/swig-g.sh[]
 SWIG produces +g_wrap.c+.  Compile this and create a Tcl package
 (+test-swig-g.sh+):
 ----
-include::examples/2/test-swig-g.sh[]
+include::examples/2/compile-swig-g.sh[]
 ----
 This produces +libg.so+ and the Tcl package file +pkgIndex.tcl+.
 We test this from Tcl (+test-g.tcl+):
@@ -574,8 +574,8 @@ include::examples/7/test-f.swift[]
 ----
 
 For more information about the APIs used to store/retrieve Swift/T
-data and issue rules, see link:turbine-internals.html[Turbine
-Internals].
+data and issue rules, see the
+link:dev.html[Swift/T Developers' Guide].
 
 The interface/body/implementation pattern is used by much of the
 Swift/T library.  The source of this library is found in the Turbine
