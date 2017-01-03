@@ -18,17 +18,17 @@ CXXFLAGS = $(INCLUDES) -fPIC -g
 FC = gfortran
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 LDFLAGS = -lgfortran
-SHARED = -shared 
+SHARED = -shared
 endif
 ifeq (${COMPILER},BGQ-GNU)
 # CXX=powerpc64-bgq-linux-g++
 # CXXFLAGS = $(INCLUDES) -g
 # FC=powerpc64-bgq-linux-gfortran
-# FFLAGS=-ffree-form -cpp -I . -fPIC -fmax-errors=3 -g # -std=f2003 
+# FFLAGS=-ffree-form -cpp -I . -fPIC -fmax-errors=3 -g # -std=f2003
 endif
 ifeq (${COMPILER},BGQ)
 CXX = /soft/compilers/wrappers/xl/mpixlcxx
-CXXFLAGS = $(INCLUDES) -qpic -g -qnoeh 
+CXXFLAGS = $(INCLUDES) -qpic -g -qnoeh
 FC = /soft/compilers/wrappers/xl/mpixlf90_r
 FFLAGS = -I . -qpic -g
 LDFLAGS = -qnoeh -L/soft/compilers/ibmcmp-nov2013/xlf/bg/14.1/lib64 \

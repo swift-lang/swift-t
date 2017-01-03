@@ -1,5 +1,4 @@
 #!/bin/zsh
-
 set -eu
 
 C_UTILS=/tmp/exm-install/c-utils
