@@ -17,7 +17,7 @@ which mpiexec
 print
 
 # Build BLAS
-BV=3.6.0
+BV=3.6.0 # BLAS Version
 export BLAS=/tmp/exm-blas-build/BLAS-$BV/BLAS.a
 if [[ -f ${BLAS} ]]
 then
@@ -27,8 +27,8 @@ else
   mkdir -p /tmp/exm-blas-build
   pushd /tmp/exm-blas-build
   rm -fv blas.tgz
-  wget http://www.netlib.org/blas/blas-3.6.0.tgz
-  tar xfz blas.tgz
+  wget http://www.netlib.org/blas/blas-$BV.tgz
+  tar xfz blas-$BV.tgz
   cd BLAS-$BV
   print "Compiling BLAS..."
   for f in *.f
