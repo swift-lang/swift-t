@@ -1,8 +1,12 @@
-.gitignore
+# Backups:
 *~
+
+# Compiler outputs:
 *.o
 *.so
 *.a
+# Executables:
+*.x
 
 # GCC dependency files
 *.d
