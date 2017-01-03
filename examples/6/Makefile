@@ -43,9 +43,13 @@ endif # make clean
 FORTWRAP_OUT = FortFuncs.h FortFuncs.cpp FortWrap.h \
 	string_array.h string_array.cpp CppWrappers.f90
 
-$(FORTWRAP_OUT): func.f90
-#	which fortwrap.py
+$(FORTWRAP_OUT): func.f90 Makefile
+# 	which fortwrap.py
 	fortwrap.py $(<)
+# 	Fix FortWrap-generated Fortran code for modern (strict) gfortran
+#       This "fix" creates a memory leak but I'm stumped. -Justin
+	sed -i 's/CALL C_F_POINTER/! CALL C_F_POINTER/' CppWrappers.f90
+	sed -i 's/DEALLOCATE/! DEALLOCATE/' CppWrappers.f90
 ifeq (${COMPILER},BGQ)
 #	Fixes for BG/Q:
 	sed -i s/_MOD/_NMOD/ $(FORTWRAP_OUT)
