@@ -1028,6 +1028,7 @@ int g(int i1, int i2)
 <div class="content">
 <pre><code>#include "g.h"
 
+int
 main()
 {
   g(2, 3);
@@ -1068,6 +1069,8 @@ we need to make the Tcl package.</p></div>
 <div class="content">
 <pre><code>#!/bin/sh
 set -ex
+
+# Compile the SWIG-generated Tcl extension library
 
 gcc -c -fPIC -Wall g.c
 gcc -c -fPIC $TCL_INCLUDE_SPEC g_wrap.c
@@ -1250,6 +1253,7 @@ double* b(double* v, int length) {
 <pre><code>#include &lt;stdlib.h&gt;
 #include "b.h"
 
+int
 main() {
   double v[4] = { 1, 2, 3, 10 };
   double* sum = b(v, 4);
@@ -1467,7 +1471,7 @@ similarly to the C example above (<code>mvm.tcl</code>).</p></div>
 <pre><code>#!/bin/bash -eu
 
 TURBINE=$( which turbine )
-TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
+source $( $TURBINE -S )
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # Wrap the Fortran in C++
@@ -1738,8 +1742,8 @@ int z = f(x,y);
 printf("sum: %i", z);</code></pre>
 </div></div>
 <div class="paragraph"><p>For more information about the APIs used to store/retrieve Swift/T
-data and issue rules, see <a href="turbine-internals.html">Turbine
-Internals</a>.</p></div>
+data and issue rules, see the
+<a href="dev.html">Swift/T Developers' Guide</a>.</p></div>
 <div class="paragraph"><p>The interface/body/implementation pattern is used by much of the
 Swift/T library.  The source of this library is found in the Turbine
 installation directory.  The Swift headers are in <code>turbine/export</code> and
@@ -1904,7 +1908,8 @@ controller: output: MY_OUTPUT</code></pre>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-06-20 11:22:58 CDT
+Last updated
+ 2017-01-03 14:47:06 CST
 </div>
 </div>
 </body>
