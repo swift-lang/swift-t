@@ -1,7 +1,7 @@
 #!/bin/bash -eu
 
 TURBINE=$( which turbine )
-TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
+source $( $TURBINE -S )
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # Wrap the Fortran in C++
