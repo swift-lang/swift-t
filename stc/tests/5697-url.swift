@@ -11,7 +11,7 @@ app (url o) copy_url(url i)
     o = copy_url(i);
 }
 
-(url o) copy_url3(url i) "turbine" "0.0" [
+(url o) copy_url3(url i) "turbine" "1.0" [
   "puts [ list copy_url3 [ turbine::local_file_path <<i>> ] [ turbine::local_file_path $<<o>> ] ]"
 ];
 

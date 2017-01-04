@@ -2,7 +2,7 @@
 package provide funcs_5697 0.5
 
 namespace eval funcs_5697 {
-  package require turbine 0.3.0
+  package require turbine 1.0
   namespace import ::turbine::*
 
   proc copy_url5 { outputs inputs } {
