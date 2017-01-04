@@ -1,7 +1,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include <mpi.h>
 
@@ -24,16 +23,12 @@ main()
 
   // Build up arguments
   int argc = 3;
-  char* argv[argc];
-  argv[0] = "howdy";
-  argv[1] = "ok";
-  argv[2] = "bye";
-
+  char const * argv[3] = { "howdy", "ok", "bye" };
   char output[128];
 
   // Run Turbine
-  turbine_code rc = turbine_run(comm, "test-f.tcl",
-                                argc, argv, output);
+  turbine_code rc = turbine_run(comm, "test-f.tic",
+                                argc, &argv[0], output);
   assert(rc == TURBINE_SUCCESS);
 
   if (rank == 0)
