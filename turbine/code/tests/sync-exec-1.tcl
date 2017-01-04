@@ -15,7 +15,7 @@
 # Test basic sync_exec functionality
 
 
-package require turbine 0.8.0
+package require turbine 1.0
 
 turbine::c::sync_exec "" "" "" echo Hello World
 

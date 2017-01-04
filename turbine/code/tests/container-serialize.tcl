@@ -14,7 +14,7 @@
 
 # Test container serialization
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc test_retrieve_container { } {
     # Check looking up

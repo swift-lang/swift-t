@@ -14,7 +14,7 @@
 
 # Test noop executor - basic sanity test for async executors
 
-package require turbine 0.5.0
+package require turbine 1.0
 
 set NOOP_WORK_TYPE 1
 
@@ -59,7 +59,7 @@ turbine::enable_read_refcount
 set noop_work_type [ turbine::adlb_work_type $turbine::NOOP_EXEC_NAME ]
 
 turbine::check_can_execute $turbine::NOOP_EXEC_NAME
-turbine::start main 
+turbine::start main
 turbine::finalize
 
 puts OK

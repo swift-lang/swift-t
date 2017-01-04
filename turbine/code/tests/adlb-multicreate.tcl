@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 turbine::defaults
 turbine::init $servers

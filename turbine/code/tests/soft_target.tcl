@@ -14,7 +14,7 @@
 
 # Test soft targeted rule on two ranks
 
-package require turbine 0.5.0
+package require turbine 1.0
 namespace import turbine::*
 
 proc task_fixed { msg tag rank sleep_ms } {
@@ -39,14 +39,14 @@ proc rules { } {
       turbine::rule {} [ list task_fixed tag:$rank "part1" $rank 100 ] \
             type $turbine::WORK target $rank strictness SOFT
     }
-    
+
     # Give time for previous work to start running
     after 100
-    
+
     # Second check that rules go to multiple ranks when lots of work
     for { set i 0 } { $i <= 3 } { incr i } {
       turbine::rule {}                      \
-          [ list task_flexible 100 tag:$i ] \
+          [ list task_flexible 200 tag:$i ] \
           target 1 strictness SOFT
     }
     # Drop into main worker loop, so some tasks should run on this rank

@@ -14,7 +14,7 @@
 
 # Test placement policies
 
-package require turbine 0.8.0
+package require turbine 1.0
 
 # Should be 2 workers, 2 servers
 proc main { } {
@@ -73,7 +73,7 @@ proc test_random { placement_mode } {
     }
   }
 
-  puts "Fraction on my server: $my_server_chosen/$N for $placement_mode" 
+  puts "Fraction on my server: $my_server_chosen/$N for $placement_mode"
   set my_server_frac [ expr {($my_server_chosen / double($N))} ]
   if [ expr {$my_server_frac < 0.35 || $my_server_frac > 0.65} ] {
     error "Fraction allocated on my server is out of range: $my_server_frac\
@@ -98,7 +98,7 @@ proc test_random_multicreate { placement_mode } {
   }
 
   set total [ expr $N * $M ]
-  puts "Fraction on my server: $my_server_chosen/$total for $placement_mode" 
+  puts "Fraction on my server: $my_server_chosen/$total for $placement_mode"
   set my_server_frac [ expr {($my_server_chosen / double($total))} ]
   if [ expr {$my_server_frac < 0.35 || $my_server_frac > 0.65} ] {
     error "Fraction allocated on my server is out of range: $my_server_frac\
