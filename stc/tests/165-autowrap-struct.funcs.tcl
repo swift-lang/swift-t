@@ -2,7 +2,7 @@
 package provide funcs_165 0.5
 
 namespace eval funcs_165 {
-  package require turbine 0.3.0
+  package require turbine 1.0
   namespace import ::turbine::*
 
   proc fmt_person { person } {
