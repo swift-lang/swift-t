@@ -1,25 +1,18 @@
-#!/bin/bash -e
+#!/bin/bash
+set -eu
 
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-TURBINE=$( which turbine )
-TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
+source $( turbine -S)
+
 TURBINE_INCLUDE=${TURBINE_HOME}/include
 TURBINE_LIB=${TURBINE_HOME}/lib
 
-# Obtain Turbine build configuration
-source ${TURBINE_HOME}/scripts/turbine-config.sh
+INCLUDES="-I . ${TURBINE_INCLUDES}"
 
-C_UTILS_INCLUDE=${C_UTILS}/include
-ADLB_INCLUDE=${ADLB}/include
+set -x
+stc -r ${PWD} -r ${TURBINE_LIB} test-f.swift test-f.tic
 
-INCLUDES="-I . -I ${TURBINE_INCLUDE} ${TCL_INCLUDE_SPEC} "
-INCLUDES+="-I ${C_UTILS_INCLUDE} -I ${ADLB_INCLUDE}"
-
-stc -r ${PWD} -r ${TURBINE_LIB} test-f.swift test-f.tcl
-
-${MPICC} -c ${INCLUDES} controller.c
-${MPICC} -o controller.x controller.o \
-  -L ${TURBINE_LIB} -l tclturbine \
-  -Wl,-rpath -Wl,${TURBINE_LIB}
+${MPICC} -c -Wall ${INCLUDES} controller.c
+${MPICC} -o controller.x controller.o ${TURBINE_LIBS} ${TURBINE_RPATH}
