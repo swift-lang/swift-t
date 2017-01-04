@@ -3,7 +3,7 @@ package provide sudoku 0.0
 
 # Dummy functions that emulate sudoku app
 namespace eval sudoku {
-    package require turbine 0.3.0
+    package require turbine 1.0
     namespace import ::turbine::*
 
     # Total squares on board
