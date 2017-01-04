@@ -57,7 +57,7 @@ turbine_run_interp(MPI_Comm comm, const char* script_file,
 {
   // Read the user script
   char* script = slurp(script_file);
- 
+
   if (script == NULL)
   {
     printf("turbine_run(): Could not load script: %s\n", script_file);
@@ -82,7 +82,7 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
     Tcl_Init(interp);
     created_interp = true;
   }
-  
+
   if (comm != MPI_COMM_NULL)
   {
     // Store communicator pointer in Tcl variable for turbine::init

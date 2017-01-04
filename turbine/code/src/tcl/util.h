@@ -181,7 +181,7 @@ int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
     goto label;                                                  \
   }
 
-  
+
 
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.
