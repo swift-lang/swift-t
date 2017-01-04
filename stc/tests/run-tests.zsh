@@ -130,12 +130,10 @@ crash()
   exit 1
 }
 
-if (( ! ${#STC} )) # This environment variable is set by Jenkins.
+if (( ! ${+STC} )) # This environment variable is set by Jenkins.
 then
-  if ! STC=$( which stc > /dev/null )
-  then
-    crash "Put stc in your PATH or set STC."
-  fi
+  STC=$( which stc 2> /dev/null )
+  (( ${#STC} == 0 )) && crash "Put stc in your PATH or set STC."
 fi
 print "using stc: '${STC}'\n"
 
