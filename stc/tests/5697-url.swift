@@ -43,17 +43,16 @@ main() {
   url f3<"file://test3"> = copy_url3(input_url("http://three.com"));
 
   assertEqual(urlname(f3), "file://test3", "url 3");
-  
+
   url f4<"file://test4"> = copy_url4(input_url("http://four.com"));
 
   assertEqual(urlname(f4), "file://test4", "url 4");
- 
+
   url f5<"file://test5"> = copy_url5(input_url("http://five.com"));
 
   assertEqual(urlname(f5), "file://test5", "url 5");
- 
+
   url f6<"file://test6"> = copy_url6(input_url("http://six.com"));
 
   assertEqual(urlname(f6), "file://test6", "url 6");
 }
-
