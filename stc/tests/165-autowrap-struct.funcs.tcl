@@ -15,7 +15,7 @@ namespace eval funcs_165 {
 
   proc fmt_person_async { out inputs } {
     set person [ lindex $inputs 0 ]
-    rule "$person" "funcs_165::fmt_person_async_body $out $person" 
+    rule "$person" "funcs_165::fmt_person_async_body $out $person"
   }
   proc fmt_person_async_body { out person } {
     store_string $out [ fmt_person [ retrieve_decr_struct $person ] ]
