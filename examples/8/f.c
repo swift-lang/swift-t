@@ -1,6 +1,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <mpi.h>
 #include "f.h"
 
