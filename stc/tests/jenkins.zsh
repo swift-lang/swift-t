@@ -47,17 +47,23 @@ print "Using TURBINE:     ${TURBINE_INSTALL}"
 print "Using MPI install: ${MPICH_INSTALL}"
 ${TURBINE_HOME}/bin/turbine -v
 
+set -x
 if (( ${+PARALLEL} ))
 then
   print "PARALLEL enabled..."
   # Seed with middle digits from current nanoseconds
   S=$( date +%N )
   RANDOM=${S:1:4}
-  export TEST_ADLB_WORKERS=$(( RANDOM % 10 + 1 ))
   export TEST_ADLB_SERVERS=$(( RANDOM %  5 + 1 ))
   print "TEST_ADLB_SERVERS=${TEST_ADLB_SERVERS}"
+  export TEST_ADLB_WORKERS=0
+  while (( TEST_ADLB_WORKERS < TEST_ADLB_SERVERS ))
+  do
+    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 1 ))
+  done
   print "TEST_ADLB_WORKERS=${TEST_ADLB_WORKERS}"
 fi
+set +x
 
 print "stc -v"
 ${STC} -v
