@@ -10,40 +10,43 @@ echo
 echo "maint/jenkins.zsh ..."
 echo
 
-MPICH=/tmp/mpich-install
+# MPICH=/tmp/mpich-install
 # MPICH=$HOME/sfw/mpich-master
 
-if [[ ! -d ${MPICH} ]]
-then
-  print "MPICH disappeared!"
-  print "You must manually run the MPICH Jenkins test to restore MPICH"
-  exit 1
-fi
+# if [[ ! -d ${MPICH} ]]
+# then
+#   print "MPICH disappeared!"
+#   print "You must manually run the MPICH Jenkins test to restore MPICH"
+#   exit 1
+# fi
 
 rm -rf autom4te.cache
 rm -rf /tmp/exm-install/lb
 
 set -x
-PATH=$MPICH/bin:$PATH
+which mpicc
+# PATH=$MPICH/bin:$PATH
 
-MPICC=$(which mpicc)
+# MPICC=$(which mpicc)
 
 # Diagnostic:
-echo MPICC: $MPICC
-$MPICC -show
+# echo MPICC: $MPICC
+# $MPICC -show
 echo
 
 ./bootstrap
 
 # Build once with trace logging on to see if it builds
-./configure CC=$MPICC --prefix=/tmp/exm-install/lb \
+# $MPICC
+./configure CC=mpicc --prefix=/tmp/exm-install/lb \
   --enable-log-debug --enable-log-trace --enable-log-trace-mpi
 echo
 make clean
 make
 
 # Now build for tests without logging
-./configure CC=$MPICC --prefix=/tmp/exm-install/lb
+# $MPICC
+./configure CC=mpicc --prefix=/tmp/exm-install/lb
 echo
 make clean
 make install
