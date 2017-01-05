@@ -36,7 +36,6 @@ MPI_LIB_SPEC='@USE_MPI_LIB_SPEC@'
 ENABLE_MPE='@ENABLE_MPE@'
 MPE='@USE_MPE@'
 
-
 # TURBINE_INCLUDES has the flags for all non-system dependencies of 
 # Turbine that user code may reference
 TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS_HOME}/include \
