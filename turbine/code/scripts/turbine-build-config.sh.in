@@ -44,10 +44,15 @@ if [ ! -z "$MPI_INCLUDE" -a "$MPI_INCLUDE" != 0 ]; then
   TURBINE_INCLUDES+=" -I$MPI_INCLUDE"
 fi
 
-# TURBINE_INCLUDES has the flags for all library dependencies of
+# Only use -ltclturbinestatic when static build is enabled
+TURBINE_STATIC=@ENABLE_STATIC@
+tclturbinestatic="-ltclturbinestatic"
+(( ! TURBINE_STATIC )) && tclturbinestatic=""
+
+# TURBINE_LIBS has the flags for all library dependencies of
 # Turbine that user code may reference
 TURBINE_LIBS="-L${TURBINE_HOME}/lib \
-              -ltclturbinestatic -ltclturbine \
+              ${tclturbinestatic} -ltclturbine \
               -L${ADLB_HOME}/lib -ladlb \
               -L${C_UTILS_HOME}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"
