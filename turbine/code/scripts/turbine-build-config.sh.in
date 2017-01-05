@@ -1,4 +1,7 @@
-# BASH-formatted setup script processed by turbine/configure
+
+# TURBINE BUILD CONFIG
+
+# BASH-formatted setup script filtered by turbine/configure
 #
 # This contains variables relevant to compiling code that uses the 
 # Turbine C interface
