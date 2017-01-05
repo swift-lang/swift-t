@@ -1,4 +1,7 @@
-#!/bin/sh -e
+#!/bin/sh
+set -e
+
+set -x
 
 cd $( dirname $0 )
 
