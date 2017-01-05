@@ -1,8 +1,10 @@
 
-# Jenkins - important variables
+# JENKINS CONFIGURE
+
 # Should be sourced by jenkins.sh and jenkins-tests.zsh;
 #  both configure/make from scratch
 
+# Jenkins - important variables
 MPICH=/tmp/mpich-install
 C_UTILS=/tmp/exm-install/c-utils
 ADLB=/tmp/exm-install/lb
