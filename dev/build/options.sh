@@ -1,13 +1,17 @@
 
-# Build command-line options
+# OPTIONS.SH
+# Extract command-line options
 
+# Defaults
+export FORCE_BOOTSTRAP=0
 export RUN_MAKE=1
 
-while getopts "cm" OPT
+while getopts "Bcm" OPT
 do
   case $OPT in
-    c) MAKE_CLEAN=0 ;;
-    m) RUN_MAKE=0   ;;
-    ?) echo exit 1  ;;
+    B) FORCE_BOOTSTRAP=1 ;;
+    c) MAKE_CLEAN=0      ;;
+    m) RUN_MAKE=0        ;;
+    ?) echo exit 1       ;;
   esac
 done
