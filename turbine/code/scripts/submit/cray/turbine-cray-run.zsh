@@ -72,7 +72,7 @@ done
 
 # Read all output from qsub
 QSUB_OUT=""
-qsub -V ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
+qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   while read T ; do QSUB_OUT+="${T} " ; done
 
 # Did we get a job number?
