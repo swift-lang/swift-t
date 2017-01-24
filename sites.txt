@@ -951,19 +951,29 @@ QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
 
 Beagle is a Cray XE6 at the University of Chicago
 
-Remember that at run time, Beagle jobs can access only +/lustre+, not
-NFS (including home directories).  Thus, you must install Turbine and
-its libraries in +/lustre+.  Also, your data must be in +/lustre+.
+Remember that at run time, Beagle compute node jobs can access only
++/lustre+, not NFS (including home directories).  Thus, you must
+install Turbine and its libraries in +/lustre+.  Also, your data must
+be in +/lustre+.
 
 ==== Public installation
 
 ===== Login nodes
 
+*As of: Swift/T 1.2.0, January 2017*
+
 This installation is for use on the <<login_node,login node>>.
 
-* Swift/T master - 2015/8/3
-* Turbine: +~wozniak/Public/sfw/x86_64/swift-t/turbine+
-* STC: +~wozniak/Public/sfw/x86_64/swift-t/stc+
+Add to +PATH+:
+----
+/soft/swift-t/login/2017-01/stc/bin
+/soft/swift-t/login/2017-01/turbine/bin
+----
+
+Add to +LD_LIBRARY_PATH+:
+----
+/soft/swift-t/deps/R-3.3.2/lib64/R/lib
+----
 
 ===== Compute nodes
 
