@@ -2194,31 +2194,27 @@ it as follows (for a single node/32 processes per node):</p></div>
 <div class="sect2">
 <h3 id="_beagle">Beagle</h3>
 <div class="paragraph"><p>Beagle is a Cray XE6 at the University of Chicago</p></div>
-<div class="paragraph"><p>Remember that at run time, Beagle jobs can access only <code>/lustre</code>, not
-NFS (including home directories).  Thus, you must install Turbine and
-its libraries in <code>/lustre</code>.  Also, your data must be in <code>/lustre</code>.</p></div>
+<div class="paragraph"><p>Remember that at run time, Beagle compute node jobs can access only
+<code>/lustre</code>, not NFS (including home directories).  Thus, you must
+install Turbine and its libraries in <code>/lustre</code>.  Also, your data must
+be in <code>/lustre</code>.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_10">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_2">Login nodes</h5>
+<div class="paragraph"><p><strong>As of: Swift/T 1.2.0, January 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Swift/T master - 2015/8/3
-</p>
-</li>
-<li>
-<p>
-Turbine: <code>~wozniak/Public/sfw/x86_64/swift-t/turbine</code>
-</p>
-</li>
-<li>
-<p>
-STC: <code>~wozniak/Public/sfw/x86_64/swift-t/stc</code>
-</p>
-</li>
-</ul></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/soft/swift-t/login/2017-01/stc/bin
+/soft/swift-t/login/2017-01/turbine/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>Add to <code>LD_LIBRARY_PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/soft/swift-t/deps/R-3.3.2/lib64/R/lib</code></pre>
+</div></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_2">Compute nodes</h5>
@@ -2794,7 +2790,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-01-23 14:14:49 CST
+Last updated 2017-01-23 23:07:59 CST
 </div>
 </div>
 </body>
