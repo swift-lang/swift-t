@@ -962,7 +962,10 @@ be in +/lustre+.
 
 *As of: Swift/T 1.2.0, January 2017*
 
-This installation is for use on the <<login_node,login node>>.
+This installation is for use on the <<login_node,login node>>.  It has
+http://swift-lang.github.io/swift-t/guide.html#leaf_python[Python]
+and
+http://swift-lang.github.io/swift-t/guide.html#leaf_r[R] enabled.
 
 Add to +PATH+:
 ----
@@ -973,6 +976,11 @@ Add to +PATH+:
 Add to +LD_LIBRARY_PATH+:
 ----
 /soft/swift-t/deps/R-3.3.2/lib64/R/lib
+----
+
+Run with:
+----
+nice swift-t workflow.swift
 ----
 
 ===== Compute nodes
