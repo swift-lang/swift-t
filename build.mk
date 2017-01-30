@@ -1,6 +1,6 @@
 
 # BUILD.MK
-# Use build.sh
+# Use via build.sh
 
 ASCIIDOC = asciidoc --attribute stylesheet=$(PWD)/swift.css \
                     -a max-width=800px
@@ -11,6 +11,8 @@ all: guide.html gallery.html dev.html sites.html
 %.html: %.txt
 	@ echo ASCIIDOC $(<)
 	@ $(ASCIIDOC) $(<)
+
+pubs.html: swift-t.list.adoc
 
 # Gallery has extra dependencies and uses M4 to assemble
 GALLERY_SWIFT = $(shell find gallery -name "*.swift")
