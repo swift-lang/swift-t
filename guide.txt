@@ -2843,6 +2843,10 @@ waiting for the debugger to attach.  When you attach, set the variable
 
 For more information, see the link:dev.html[Developers' Guide].
 
+== Publications
+
+For more information, see the link:pubs.html[Swift/T Publications].
+
 ////
 Local Variables:
 mode: doc
