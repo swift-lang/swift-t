@@ -1,0 +1,15 @@
+////
+Swift/T publications list, asciidoc format
+http://swift-lang.github.io/swift-t/pubs.html
+////
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+= Swift/T Publications
+
+_Most recent first_ +
+
+include::swift-t.list.adoc[]
