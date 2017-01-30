@@ -2839,6 +2839,11 @@ Rank 0, running in process +23274+, has blocked (in a loop) and is
 waiting for the debugger to attach.  When you attach, set the variable
 +t=1+ to break out of the loop.  Then you can debug normally.
 
+== Model exploration workflows
+
+The http://www.mcs.anl.gov/~emews/tutorial[EMEWS Tutorial] covers
+building and running advanced model exploration workflows in Swift/T.
+
 == Developers' guide
 
 For more information, see the link:dev.html[Developers' Guide].
