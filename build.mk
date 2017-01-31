@@ -36,10 +36,6 @@ gallery.html: gallery.txt $(GALLERY_CODE)
 	@ echo ASCIIDOC $(<)
 	@ $(ASCIIDOC) $(<)
 
-downloads.html: downloads.txt
-	@ echo ASCIIDOC $(<)
-	@ $(ASCIIDOC) $(<)
-
 clean:
 	rm -fv gallery.txt
 	rm -fv leaf.html swift.html
