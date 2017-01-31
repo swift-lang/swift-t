@@ -54,7 +54,7 @@ $ wget http://swift-lang.github.io/swift-t/downloads/swift-t-debs-1.2.tar.gz
 2. Unpack and enter package directory:
 +
 ----
-$ tar xfz swift-t-debs-1.1.tar.gz
+$ tar xfz swift-t-debs-1.2.tar.gz
 $ cd swift-t-debs
 ----
 +
