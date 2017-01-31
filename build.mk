@@ -8,9 +8,17 @@ ASCIIDOC = asciidoc --attribute stylesheet=$(PWD)/swift.css \
 # Must compile leaf.txt with make-stc-docs.zsh (snippets, etc.)
 all: guide.html gallery.html dev.html sites.html
 
-%.html: %.txt
+define ASCIIDOC_CMDS
 	@ echo ASCIIDOC $(<)
 	@ $(ASCIIDOC) $(<)
+endef
+
+%.html: %.txt
+	$(ADOC_CMDS)
+
+guide.html: guide.txt
+	$(ADOC_CMDS)
+	./google-analytics.sh $(@)
 
 pubs.html: swift-t.list.adoc
 
