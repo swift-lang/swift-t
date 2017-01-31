@@ -14,10 +14,10 @@ define ASCIIDOC_CMDS
 endef
 
 %.html: %.txt
-	$(ADOC_CMDS)
+	$(ASCIIDOC_CMDS)
 
 guide.html: guide.txt
-	$(ADOC_CMDS)
+	$(ASCIIDOC_CMDS)
 	./google-analytics.sh $(@)
 
 pubs.html: swift-t.list.adoc
