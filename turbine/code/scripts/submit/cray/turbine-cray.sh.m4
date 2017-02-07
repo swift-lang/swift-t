@@ -45,8 +45,7 @@ ifelse(getenv(TITAN), `true',
 #PBS -l mppnppn=getenv(PPN)))
 ### End job size directives selection
 
-# This is ineffective- we have to use 'aprun -e'
-# PBS -V
+
 
 # Merge stdout/stderr
 #PBS -j oe
