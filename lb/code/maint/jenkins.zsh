@@ -10,48 +10,35 @@ echo
 echo "maint/jenkins.zsh ..."
 echo
 
-# MPICH=/tmp/mpich-install
-# MPICH=$HOME/sfw/mpich-master
-
-# if [[ ! -d ${MPICH} ]]
-# then
-#   print "MPICH disappeared!"
-#   print "You must manually run the MPICH Jenkins test to restore MPICH"
-#   exit 1
-# fi
-
 rm -rf autom4te.cache
 rm -rf /tmp/exm-install/lb
 
-set -x
+echo "which mpicc:"
 which mpicc
-# PATH=$MPICH/bin:$PATH
-
-# MPICC=$(which mpicc)
-
-# Diagnostic:
-# echo MPICC: $MPICC
-# $MPICC -show
 echo
 
-./bootstrap
+(
+  set -x
+  ./bootstrap
 
-# Build once with trace logging on to see if it builds
-# $MPICC
-./configure CC=mpicc --prefix=/tmp/exm-install/lb \
-  --enable-log-debug --enable-log-trace --enable-log-trace-mpi
-echo
-make clean
-make
+  # Build once with trace logging on to see if it builds
 
-# Now build for tests without logging
-# $MPICC
-./configure CC=mpicc --prefix=/tmp/exm-install/lb
-echo
-make clean
-make install
+  ./configure CC=mpicc --prefix=/tmp/exm-install/lb \
+              --enable-log-debug --enable-log-trace \
+              --enable-log-trace-mpi
+  echo
+  make clean
+  make
 
-# Diagostics:
+  # Now build for tests without logging
+  # $MPICC
+  ./configure CC=mpicc --prefix=/tmp/exm-install/lb
+  echo
+  make clean
+  make install
+)
+
+# Diagnostics:
 # ldd lib/libadlb.so
 # make V=1 apps/batcher.x
 # ldd apps/batcher.x
@@ -113,7 +100,6 @@ inspect_results() {
   print "</testsuite>"
 }
 
-set +x
 inspect_results > ${SUITE_RESULT}
 
 exit 0
