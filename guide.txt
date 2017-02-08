@@ -1420,6 +1420,37 @@ hostmap and return one rank running on that host with +HARD+, +RANK+.
 +hostmapOneWorkerRank(string) -> int+:: Lookup the string as a host
 in the hostmap and return one of the worker ranks running on that host.
 
+[[library_unix]]
+=== Unix tools
+
+Swift/T provides a small number of standardized +app+ functions for
+common shell tools.  Here, "via +tool+" means that the program +tool+
+is simply used to perform the task.
+
+These functions may be found in +turbine/export/unix.swift+, and may
+be easily copied out and extended to serve other purposes.
+
+*Import:* +unix+
+
++cp(file) -> file+:: Copy file to file (via +cp+).
+
++catp(file f[])+:: (_cat-print_) Print files to standard output (via +cat+).
+
++cat(file f[]) -> file+:: Concatentate all files to output file (via +cat+).
+
++sed(file, string command) -> file+:: Perform the given +sed command+,
+output to file (via +sed+).
+
++touch() -> file+:: Apply +touch+ to the file (via +touch+).
+
++printenv()+:: Print the environment to standard output (via +printenv+).
+
++echo(string) -> file+:: Write the string to the file (via +echo+).
+
++sleep(int i) -> void+:: Sleep for given number of seconds (via +sleep+).
+
++mkdir(string) -> void+:: Make the given directory (via +mkdir+).
+
 [[leaf_functions]]
 == Defining leaf functions
 
