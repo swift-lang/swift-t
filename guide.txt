@@ -42,6 +42,10 @@ http://github.com/swift-lang/swift-t/issues
 Swift/T may be installed via binary Debian (and Ubuntu) packages or
 from source.
 
+Our GitHub repository is here:
+
+http://github.com/swift-lang/swift-t
+
 === For Debian-based systems (including Ubuntu)
 
 1. Obtain the Swift/T Debian packages from the
