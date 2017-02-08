@@ -3026,6 +3026,90 @@ in the hostmap and return one of the worker ranks running on that host.
 </dd>
 </dl></div>
 </div>
+<div class="sect2">
+<h3 id="library_unix">13.10. Unix tools</h3>
+<div class="paragraph"><p>Swift/T provides a small number of standardized <code>app</code> functions for
+common shell tools.  Here, "via <code>tool</code>" means that the program <code>tool</code>
+is simply used to perform the task.</p></div>
+<div class="paragraph"><p>These functions may be found in <code>turbine/export/unix.swift</code>, and may
+be easily copied out and extended to serve other purposes.</p></div>
+<div class="paragraph"><p><strong>Import:</strong> <code>unix</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>cp(file) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Copy file to file (via <code>cp</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>catp(file f[])</code>
+</dt>
+<dd>
+<p>
+(<em>cat-print</em>) Print files to standard output (via <code>cat</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>cat(file f[]) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Concatentate all files to output file (via <code>cat</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sed(file, string command) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Perform the given <code>sed command</code>,
+output to file (via <code>sed</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>touch() &#8594; file</code>
+</dt>
+<dd>
+<p>
+Apply <code>touch</code> to the file (via <code>touch</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>printenv()</code>
+</dt>
+<dd>
+<p>
+Print the environment to standard output (via <code>printenv</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>echo(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Write the string to the file (via <code>echo</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sleep(int i) &#8594; void</code>
+</dt>
+<dd>
+<p>
+Sleep for given number of seconds (via <code>sleep</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>mkdir(string) &#8594; void</code>
+</dt>
+<dd>
+<p>
+Make the given directory (via <code>mkdir</code>).
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5050,7 +5134,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-01-31 13:37:46 CST
+Last updated 2017-02-08 10:22:48 CST
 </div>
 </div>
 
