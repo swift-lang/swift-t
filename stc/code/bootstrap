@@ -4,4 +4,6 @@
 # This does nothing- it is just here to be like the other modules
 # for building Debian packages
 
+autoconf
+
 exit 0
