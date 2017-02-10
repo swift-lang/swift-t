@@ -295,6 +295,11 @@
              else="${dist.dir}/bin">
     <equals arg1="${debian_build}" arg2="1"/>
   </condition>
+  <condition property="use_java_value"
+             value="${use.java}"
+             else="">
+    <isset property="use.java"/>
+  </condition>
 
   <!-- Install: User must have set dist.dir -->
   <target name="install"
@@ -325,6 +330,7 @@
       <filterset>
         <filter token="DEBIAN_BUILD" value="${debian_build}"/>
         <filter token="TURBINE_HOME" value="${turbine.home}"/>
+        <filter token="USE_JAVA"     value="${use_java_value}"/>
       </filterset>
     </copy>
 
