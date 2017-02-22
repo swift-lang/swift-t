@@ -216,9 +216,14 @@ namespace eval turbine {
         return $ptr
     }
 
+    proc blob_string_list_to_char_ptr_ptr { L } {
+        set D [ list2dict $L ]
+        return [ blob_string_dict_to_char_ptr_ptr $D ]
+    }
+
     # Input:  L: a Tcl dict of integer->string indexed from 0
     # Output:    a SWIG pointer (char**) to the C strings
-    proc blob_strings_to_char_ptr_ptr { d } {
+    proc blob_string_dict_to_char_ptr_ptr { d } {
         set argc [ dict size $d ]
         # Allocate array of char*
         set bytes [ expr $argc * [blobutils_sizeof_ptr] ]
@@ -237,6 +242,16 @@ namespace eval turbine {
             blobutils_set_ptr $v $i $p
         }
         return $charss
+    }
+
+    # Puts result (char**) in argv_name
+    # Returns argc
+    proc blob_string_list_to_argv { program L argv_name } {
+        upvar $argv_name argv
+        set D [ list2dict [ list $program {*}$L ] ]
+        set argc [ dict size $D ]
+        set argv [ blob_string_dict_to_char_ptr_ptr $D ]
+        return $argc
     }
 }
 
