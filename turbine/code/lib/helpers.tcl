@@ -142,7 +142,7 @@ namespace eval turbine {
 
   # Create a dictionary with integer keys numbered from start with contents
   # of list
-  proc dict_from_list { l {start_index 0}} {
+  proc list2dict { l {start_index 0}} {
     set d [ dict create ]
     set i $start_index
 

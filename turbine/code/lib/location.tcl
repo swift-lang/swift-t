@@ -71,6 +71,6 @@ namespace eval turbine {
       # There is no input
       set names [ adlb::hostmap_list ]
 
-      return [ dict_from_list $names ]
+      return [ list2dict $names ]
   }
 }
