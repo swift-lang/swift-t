@@ -1065,6 +1065,52 @@ Configure Turbine with:
 ./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe
 ----
 
+=== Cori
+
+http://www.nersc.gov/users/computational-systems/cori/[Cori]
+is a Cray XC40 at NERSC.
+
+==== Public installation
+
+*As of:* 2017/03/07
+
+===== Login nodes
+
+This installation was configured with Python 2.7.10.
+
+Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+===== Compute nodes
+
+Cori uses SLURM.
+
+==== Build instructions
+
+Use
+
+----
+module load gcc
+----
+
+*As of:* 2017/03/07
+
+===== Login nodes
+
+No special configuration is necessary.
+
+===== Compute nodes
+
+Cray systems do not use +mpicc+.  We set +CC=/opt/gcc/6.2.0/bin/gcc+
+via +module load gcc+ and use compiler flags to configure the MPI
+library.
+
+Configure ADLB with:
+
+----
+export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
+export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
+----
+
 === Swan
 
 Swan is a Cray XC40 at Cray.
