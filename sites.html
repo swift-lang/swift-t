@@ -2337,11 +2337,54 @@ export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
 </div>
 </div>
 <div class="sect2">
+<h3 id="_cori">Cori</h3>
+<div class="paragraph"><p><a href="http://www.nersc.gov/users/computational-systems/cori/">Cori</a>
+is a Cray XC40 at NERSC.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_11">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
+<div class="sect4">
+<h5 id="_login_nodes_3">Login nodes</h5>
+<div class="paragraph"><p>This installation was configured with Python 2.7.10.</p></div>
+<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_3">Compute nodes</h5>
+<div class="paragraph"><p>Cori uses SLURM.</p></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions">Build instructions</h4>
+<div class="paragraph"><p>Use</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load gcc</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
+<div class="sect4">
+<h5 id="_login_nodes_4">Login nodes</h5>
+<div class="paragraph"><p>No special configuration is necessary.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_4">Compute nodes</h5>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=/opt/gcc/6.2.0/bin/gcc</code>
+via <code>module load gcc</code> and use compiler flags to configure the MPI
+library.</p></div>
+<div class="paragraph"><p>Configure ADLB with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
+export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_swan">Swan</h3>
 <div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_11">Public installation</h4>
+<h4 id="_public_installation_12">Public installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2480,7 +2523,7 @@ module load swift-t</code></pre>
 <h3 id="_edison">Edison</h3>
 <div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_12">Public Installation</h4>
+<h4 id="_public_installation_13">Public Installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2798,7 +2841,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-01-23 23:17:11 CST
+Last updated 2017-03-08 13:09:28 CST
 </div>
 </div>
 </body>
