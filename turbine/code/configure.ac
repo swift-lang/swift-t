@@ -884,7 +884,7 @@ AC_ARG_WITH(tclsh-local,
         [name of tclsh compatible with build system]),
     [
         AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
+        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
         if [[ ${?} != 0 ]]
         then
             AC_MSG_ERROR([failed!])
@@ -1122,13 +1122,13 @@ then
       Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
-# TCL_VERSION needed by find-tcl.zsh
+# TCL_VERSION needed by find-tcl.sh
 export TCL_VERSION
 
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
         AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary in ${USE_TCL}!])
@@ -1136,7 +1136,7 @@ then
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
     export NO_RUN=1
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
         AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary at ${USE_TCL}!])
