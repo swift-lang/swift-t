@@ -9,13 +9,13 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.2.0, January 2017
+v1.2.0, March 2017
 
 ////
 
 This file is on the web at:
 
-http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html
+http://swift-lang.github.io/swift-t/sites.html
 
 ////
 
@@ -59,8 +59,8 @@ guide for information on specific configuration
 settings for your system.
 
 The settings are generally implemented by modifying the
-+exm-settings.sh+ configuration script.  In some cases,
-where the setting is not configurable through +exm-settings.sh+,
++swift-t-settings.sh+ configuration script.  In some cases,
+where the setting is not configurable through +swift-t-settings.sh+,
 it may be necessary to directly modify the +configure+ or +make+
 command lines by following the manual build process, or by modifying
 build scripts under the +build+ subdirectory
@@ -305,7 +305,7 @@ This is the simplest method to run Turbine.
 
 ==== Build procedure
 
-The +exm-setup.zsh+ script should work without any special configuration.
+The +turbine-build.sh+ script should work without any special configuration.
 
 To run, simply build a MPI hosts file and pass that to Turbine, which
 will pass it to +mpiexec+.
