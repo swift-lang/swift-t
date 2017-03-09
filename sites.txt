@@ -593,6 +593,70 @@ $ which gcc
 $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
 ----
 
+=== JLSE KNL
+
+These are the Knights Landing nodes at ANL/JLSE.
+
+*As of:* 2017/03/09
+
+Dependencies are installed in:
+
+----
+~wozniak/Public/sfw/icc/Python-2.7.12
+~wozniak/Public/sfw/icc/mpich-3.2
+~wozniak/Public/sfw/icc/tcl-8.6.6
+~wozniak/Public/sfw/ant-1.10.1
+----
+
+The same build can be used for login and compute nodes, since the
+architecture and MPI library are the same &#x1f632;.  The only potential
+gotcha is loading the Intel +compilervars.sh+ script to set library paths.
+
+==== Public installation
+
+Add to +PATH+: +~wozniakPublic/sfw/icc/swift-t/stc/bin+
+
+This version is linked to Python 2.7.12.
+
+===== Login node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+$ nice swift-t program.swift
+----
+
+===== Compute node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH program.swift
+----
+
+The following Swift script will validate that you have 256 cores to
+use:
+
+----
+app processors() {
+  "cat" "/proc/cpuinfo" ;
+}
+processors();
+----
+
+==== Build instructions
+
+Apply
+
+----
+source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+----
+
+Configure ADLB and Turbine as usual, no special settings are required.
+
 == Blue Gene
 
 The Blue Gene systems at ANL are <<scheduled_systems,scheduled
@@ -1069,6 +1133,15 @@ Configure Turbine with:
 
 http://www.nersc.gov/users/computational-systems/cori/[Cori]
 is a Cray XC40 at NERSC.
+
+Dependencies are installed in:
+
+----
+~wozniak/Public/sfw/Python-2.7.10
+~wozniak/Public/sfw/mpich-3.1.4
+~wozniak/Public/sfw/swig-3.0.12
+~wozniak/Public/sfw/tcl-8.6.6
+----
 
 ==== Public installation
 
