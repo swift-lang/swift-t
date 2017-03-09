@@ -1082,7 +1082,17 @@ Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
 
 ===== Compute nodes
 
-Cori uses SLURM.
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
+
+Cori uses SLURM.  Run with:
+
+----
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+swift-t -m slurm ~/mcs/ste/hi.swift
+----
+
+The +TURBINE_DIRECTIVE+ enables a special SLURM constraint:
+cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
 ==== Build instructions
 
@@ -1092,7 +1102,7 @@ Use
 module load gcc
 ----
 
-*As of:* 2017/03/07
+*As of:* 2017/03/09
 
 ===== Login nodes
 
@@ -1105,10 +1115,22 @@ via +module load gcc+ and use compiler flags to configure the MPI
 library.
 
 Configure ADLB with:
-
++
 ----
 export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
 export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
+./configure ...
+----
+
+Configure Turbine with:
++
+----
+./configure
+  --enable-custom-mpi
+  --with-launcher=/usr/bin/srun
+  --with-mpi-include=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
+  --with-mpi-lib-dir=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib
+  ...
 ----
 
 === Swan
