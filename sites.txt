@@ -1091,7 +1091,7 @@ export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
 swift-t -m slurm ~/mcs/ste/hi.swift
 ----
 
-The +TURBINE_DIRECTIVE+ enables a special SLURM constraint:
+The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
 ==== Build instructions
@@ -1114,7 +1114,6 @@ Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
 to configure the MPI library.
 
 Configure ADLB with:
-+
 ----
 export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
 export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
@@ -1122,7 +1121,6 @@ export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
 ----
 
 Configure Turbine with:
-+
 ----
 ./configure
   --enable-custom-mpi
