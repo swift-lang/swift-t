@@ -2350,7 +2350,15 @@ is a Cray XC40 at NERSC.</p></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_3">Compute nodes</h5>
-<div class="paragraph"><p>Cori uses SLURM.</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>Cori uses SLURM.  Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+swift-t -m slurm ~/mcs/ste/hi.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint:
+cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
 </div>
 </div>
 <div class="sect3">
@@ -2360,7 +2368,7 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="content">
 <pre><code>module load gcc</code></pre>
 </div></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_4">Login nodes</h5>
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
@@ -2371,10 +2379,23 @@ is a Cray XC40 at NERSC.</p></div>
 via <code>module load gcc</code> and use compiler flags to configure the MPI
 library.</p></div>
 <div class="paragraph"><p>Configure ADLB with:</p></div>
+<div class="paragraph"><p>+</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
-export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
+export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
+./configure ...</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure Turbine with:</p></div>
+<div class="paragraph"><p>+</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure
+  --enable-custom-mpi
+  --with-launcher=/usr/bin/srun
+  --with-mpi-include=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
+  --with-mpi-lib-dir=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib
+  ...</code></pre>
 </div></div>
 </div>
 </div>
@@ -2841,9 +2862,8 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-03-08 13:09:28 CST
+Last updated 2017-03-09 09:16:42 CST
 </div>
 </div>
 </body>
 </html>
-
