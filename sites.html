@@ -2411,8 +2411,15 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_3">Login nodes</h5>
-<div class="paragraph"><p>This installation was configured with Python 2.7.10.</p></div>
-<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at <code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code></p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+nice swift-t workflow.swift</code></pre>
+</div></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_3">Compute nodes</h5>
@@ -2420,8 +2427,9 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-swift-t -m slurm ~/mcs/ste/hi.swift</code></pre>
+<pre><code>module load java
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
 cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
@@ -2925,7 +2933,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-03-09 11:59:57 CST
+Last updated 2017-03-09 12:38:37 CST
 </div>
 </div>
 </body>
