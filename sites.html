@@ -744,7 +744,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.2.0,</span>
-<span id="revdate">January 2017</span>
+<span id="revdate">March 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -781,8 +781,8 @@ should follow that build procedure, and use this
 guide for information on specific configuration
 settings for your system.</p></div>
 <div class="paragraph"><p>The settings are generally implemented by modifying the
-<code>exm-settings.sh</code> configuration script.  In some cases,
-where the setting is not configurable through <code>exm-settings.sh</code>,
+<code>swift-t-settings.sh</code> configuration script.  In some cases,
+where the setting is not configurable through <code>swift-t-settings.sh</code>,
 it may be necessary to directly modify the <code>configure</code> or <code>make</code>
 command lines by following the manual build process, or by modifying
 build scripts under the <code>build</code> subdirectory
@@ -1209,7 +1209,7 @@ subsequent Swift/T jobs in:</p></div>
 <div class="paragraph"><p>This is the simplest method to run Turbine.</p></div>
 <div class="sect3">
 <h4 id="_build_procedure">Build procedure</h4>
-<div class="paragraph"><p>The <code>exm-setup.zsh</code> script should work without any special configuration.</p></div>
+<div class="paragraph"><p>The <code>turbine-build.sh</code> script should work without any special configuration.</p></div>
 <div class="paragraph"><p>To run, simply build a MPI hosts file and pass that to Turbine, which
 will pass it to <code>mpiexec</code>.</p></div>
 <div class="listingblock">
@@ -2357,7 +2357,7 @@ is a Cray XC40 at NERSC.</p></div>
 <pre><code>export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
 swift-t -m slurm ~/mcs/ste/hi.swift</code></pre>
 </div></div>
-<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint:
+<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
 cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
 </div>
 </div>
@@ -2859,7 +2859,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-03-09 09:21:53 CST
+Last updated 2017-03-09 09:27:53 CST
 </div>
 </div>
 </body>
