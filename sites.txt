@@ -1149,9 +1149,21 @@ Dependencies are installed in:
 
 ===== Login nodes
 
+////
 This installation was configured with Python 2.7.10.
+////
 
-Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+This installation was configured with the Python 2.7.12 at +/usr/common/software/python/2.7-anaconda/envs/deeplearning+
+
+Add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+Run with
+
+----
+module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+nice swift-t workflow.swift
+----
 
 ===== Compute nodes
 
@@ -1160,8 +1172,9 @@ Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
 Cori uses SLURM.  Run with:
 
 ----
+module load java
 export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-swift-t -m slurm ~/mcs/ste/hi.swift
+swift-t -m slurm workflow.swift
 ----
 
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
