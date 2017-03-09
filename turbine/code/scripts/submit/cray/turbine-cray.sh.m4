@@ -25,9 +25,11 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
-#PBS -A getenv(PROJECT))
+#PBS -A getenv(PROJECT)
+)
 ifelse(getenv(QUEUE), `',,
-#PBS -q getenv(QUEUE))
+#PBS -q getenv(QUEUE)
+)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
