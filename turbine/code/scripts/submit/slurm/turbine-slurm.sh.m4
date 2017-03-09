@@ -56,6 +56,8 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 COMMAND="getenv(COMMAND)"
 
-module load openmpi gcc/4.9
+# Use this on Midway:
+# module load openmpi gcc/4.9
+
 ${TURBINE_LAUNCHER} ${COMMAND}
 # Return exit code from mpirun
