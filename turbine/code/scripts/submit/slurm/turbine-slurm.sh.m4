@@ -38,6 +38,9 @@ ifelse(getenv(MAIL_ENABLED),`1',
 #SBATCH --mail-type=ALL
 )
 
+# User directives:
+getenv(TURBINE_DIRECTIVE)
+
 echo TURBINE-SLURM.SH
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
