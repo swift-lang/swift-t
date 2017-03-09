@@ -1110,16 +1110,15 @@ No special configuration is necessary.
 
 ===== Compute nodes
 
-Cray systems do not use +mpicc+.  We set +CC=/opt/gcc/6.2.0/bin/gcc+
-via +module load gcc+ and use compiler flags to configure the MPI
-library.
+Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
+to configure the MPI library.
 
 Configure ADLB with:
 +
 ----
 export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
 export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
-./configure ...
+./configure CC=gcc ...
 ----
 
 Configure Turbine with:
