@@ -274,7 +274,7 @@ static int pop_rank_from_types(struct list2 *type_list)
   return rank;
 }
 
-static inline int requestq_matches_tgt_node();
+static inline int requestq_matches_tgt_node(int task_tgt_idx, int task_type);
 
 /**
    If target_rank is in the request_queue and requests work of
