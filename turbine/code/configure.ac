@@ -79,8 +79,15 @@ AC_ARG_ENABLE(debian-build,
 )
 AC_SUBST(DEBIAN_BUILD)
 
-# Checks for programs
+# Check for CC
 AC_PROG_CC
+
+# Report location of CC
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
+AC_SUBST(USE_CC)
+
+# Checks for programs
 AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])

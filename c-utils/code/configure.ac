@@ -35,6 +35,9 @@ AC_SUBST(USE_MAC)
 # Checks for programs
 AC_PROG_CC
 
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
+
 # Checks for header files
 AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
