@@ -9,14 +9,14 @@ deb: $(TURBINE_DEB)
 
 # Turbine has only one Debian type, with headers, but this is still
 # called a bin
-DEBIAN_PKG_TYPE = bin
+PKG_TYPE = deb-bin
 UPSTREAM_TGZ = turbine_$(VERSION).orig.tar.gz
 
 DEB_FILES = changelog compat control copyright rules
 DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
 
 FILE_LIST = maint/file-list.zsh
-FILE_ENTRIES = $(shell $(FILE_LIST))
+FILE_ENTRIES = $(shell PKG_TYPE=$(PKG_TYPE) $(FILE_LIST))
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
@@ -27,7 +27,7 @@ maint/debian/changelog: maint/debian/changelog.m4
 	m4 -D M4_TURBINE_VERSION=$(VERSION) $(<) > $(@)
 
 $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile $(FILE_ENTRIES)
-	../../dev/debian/mk-upstream-tgz.sh ${DEBIAN_PKG_TYPE} \
+	../../dev/mk-src-tgz.sh $(PKG_TYPE) \
 		$(@) turbine $(VERSION) $(FILE_LIST)
 
 $(TURBINE_DEB): $(UPSTREAM_TGZ)
