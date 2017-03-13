@@ -6,16 +6,14 @@ set -eu
 # Find working Tcl in directory DIR ($1)
 # Refers to TCL_VERSION in the environment
 # Currently used by configure
+# This should support the minimal POSIX shell
 
 DIR=$1
 NO_RUN=${NO_RUN:-0}
 
-crash()
-{
-  echo    > /dev/stderr
-  echo $1 > /dev/stderr
-  exit 1
-}
+THIS=$( dirname $0 )
+SWIFT_T=$( cd $THIS/../../.. ; /bin/pwd )
+. $SWIFT_T/dev/helpers.sh
 
 if [ ${#} = 0 ]
 then
