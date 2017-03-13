@@ -9,7 +9,7 @@ print bootstrap config.h.in configure configure.ac
 print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf}
-print maint/{*.sh,find-tcl.zsh}
+print maint/{*.sh,find-tcl.sh}
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh

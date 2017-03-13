@@ -31,7 +31,12 @@ echo NAME: $NAME
 
 D=$( mktemp -d .$NAME-$PKG_TYPE-tgz-XXX )
 mkdir -v $D/$NAME-$VERSION
-cp -v --parents $FILES $D/$NAME-$VERSION
+cp -v --parents $FILES $D/$NAME-$VERSION || \
+  {
+    echo ""
+    echo "mk-src-tgz.sh: Some file copy failed! See above for error message."
+    exit 1
+  }
 
 tar cfz $TGZ -C $D $NAME-$VERSION
 

@@ -13,7 +13,7 @@ setopt pushdsilent nullglob
 zparseopts -D -E b=B c=C
 
 source turbine/code/scripts/helpers.zsh
-source dev/build/get-versions.sh
+source dev/get-versions.sh
 
 # The TGZ to be constructed here:
 TGZ=swift-t-debs-${SWIFT_T_VERSION}.tar.gz

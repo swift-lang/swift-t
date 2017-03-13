@@ -23,7 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-source dev/build/get-versions.sh
+source dev/get-versions.sh
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
