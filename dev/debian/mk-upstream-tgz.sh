@@ -19,7 +19,7 @@ NAME=$3            # TGZ name
 VERSION=$4         # TGZ version
 FILE_LIST=$5       # Program that produces list of files to include
 
-export DEBIAN_PKG_TYPE=$PKG_TYPE  # Export this to FILE_LIST program
+export PKG_TYPE=$PKG_TYPE  # Export this to FILE_LIST program
 FILES=$( $FILE_LIST )
 
 if [ $PKG_TYPE = deb-dev ]

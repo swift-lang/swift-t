@@ -15,8 +15,7 @@ print src/{adlb-version.h.in,mpe-settings.h.in}
 print {src,tests}/module.mk.in
 print version.txt NOTICE
 
-if [[ ${PKG_TYPE} == "deb-dev" ||
-      ${PKG_TYPE} == "deb-bin" ]]
+if [[ ${PKG_TYPE} == deb-* ]]
 then
   ln -sfT maint/debian-${PKG_TYPE} debian
   print debian/*[^~]

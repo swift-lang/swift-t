@@ -33,7 +33,7 @@ print scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt
 
-if (( ${+PKG_TYPE} ))
+if [[ ${PKG_TYPE} == deb-* ]]
 then
   ln -sfT maint/debian debian
   print debian/*[^~]
