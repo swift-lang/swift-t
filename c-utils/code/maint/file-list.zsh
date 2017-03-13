@@ -14,8 +14,9 @@ print tests/module.mk.in
 print tests/*.[ch]
 print version.txt NOTICE
 
-if (( ${+DEBIAN_PKG_TYPE} ))
+if [[ ${PKG_TYPE} == "deb-dev" ||
+      ${PKG_TYPE} == "deb-bin" ]]
 then
-  ln -sfT maint/debian-${DEBIAN_PKG_TYPE} debian
+  ln -sfT maint/debian-${PKG_TYPE} debian
   print debian/*[^~]
 fi
