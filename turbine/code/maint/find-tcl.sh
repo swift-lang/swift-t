@@ -8,6 +8,7 @@ set -eu
 # Currently used by configure
 
 DIR=$1
+NO_RUN=${NO_RUN:-0}
 
 crash()
 {
@@ -16,7 +17,7 @@ crash()
   exit 1
 }
 
-if [ "${DIR:-}" = "" ]
+if [ ${#} = 0 ]
 then
   crash "Not given: Tcl directory"
 fi
@@ -26,7 +27,7 @@ then
   crash "Could not find Tcl directory: ${DIR}"
 fi
 
-if [ "${TCL_VERSION:-}" == "" ]
+if [ -z "${TCL_VERSION:-}" ]
 then
   crash "Not set: TCL_VERSION"
 fi
@@ -38,7 +39,7 @@ do
   if [ -x $F ]
   then
     # Get V: the version reported by tclsh
-    if [[ "${NO_RUN:-}" == 1 ]]
+    if [ ${NO_RUN} = 1 ]
     then
       # Skip trying to run: we are cross-compiling
       V=$TCL_VERSION
@@ -49,7 +50,7 @@ do
         crash "Could not run: $F"
       fi
     fi
-    if [ $V == $TCL_VERSION ]
+    if [ $V = $TCL_VERSION ]
     then
       # This works: return success
       echo $F
