@@ -272,5 +272,4 @@ RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
 tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
 print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-
 du -h ${RELEASE_TGZ}
