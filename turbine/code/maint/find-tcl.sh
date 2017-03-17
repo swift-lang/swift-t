@@ -13,7 +13,14 @@ NO_RUN=${NO_RUN:-0}
 
 THIS=$( dirname $0 )
 SWIFT_T=$( cd $THIS/../../.. ; /bin/pwd )
-. $SWIFT_T/dev/helpers.sh
+
+# Copied from /dev/helpers.sh: Cannot source that file (#111)
+crash()
+{
+  echo    > /dev/stderr
+  echo $1 > /dev/stderr
+  exit 1
+}
 
 if [ ${#} = 0 ]
 then
