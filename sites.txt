@@ -990,7 +990,6 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
 --with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
 ----
 
-
 ==== Details
 
 Submitting jobs on Blue Waters is largely the same with with other Cray
@@ -1010,6 +1009,33 @@ it as follows (for a single node/32 processes per node):
 ----
 QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
 ----
+
+=== JYC
+
+JYC is a small Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Public installation
+
+===== Login nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+Run with:
+
+----
+$ nice swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+===== Dependencies
+
+Dependencies are installed in:
+
+* +~wozniak/Public/sfw/Python-3.6.1rc1+
+* +~wozniak/Public/sfw/tcl-8.6.1+
+* +~wozniak/Public/sfw/login/mpich-3.2+
 
 === Beagle
 
