@@ -31,7 +31,7 @@ then
 fi
 
 USE_JAVA=@USE_JAVA@
-if (( ${+USE_JAVA} ))
+if (( ${#USE_JAVA} > 0 ))
 then
   JVM=${USE_JAVA}
 fi
