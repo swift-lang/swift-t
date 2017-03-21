@@ -215,6 +215,8 @@ reservation information into the script.
 
 *Mail*
 
+(Currently supported systems: +slurm+)
+
 +MAIL_ENABLED+:: If 1, send email on job completion.
 +MAIL_ADDRESS+:: If +MAIL_ENABLED+, send the email to the given address.
 
