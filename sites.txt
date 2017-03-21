@@ -1037,6 +1037,45 @@ Dependencies are installed in:
 * +~wozniak/Public/sfw/tcl-8.6.1+
 * +~wozniak/Public/sfw/login/mpich-3.2+
 
+===== Compute nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
+
+Run with:
+
+----
+$ export CRAY_PPN=true
+$ swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+==== Build procedure
+
+===== Compute nodes
+
+*As of:*  2017/03
+
+(Same as Blue Waters.)
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
+----
++
+* Configure Turbine with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
+----
+
 === Beagle
 
 Beagle is a Cray XE6 at the University of Chicago
