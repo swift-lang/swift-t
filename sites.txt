@@ -444,16 +444,20 @@ turbine -m slurm ...
 **** Turbine: +~wozniak/Public/sfw/compute/gcc/swift-t-mpich-py/stc/bin+
 **** Python: +~wozniak/Public/sfw/Python-2.7.10/bin+
 
-* Login node: *As of:* master - 2016/06/14
+* Login node:
 +
 Run with:
 +
 ----
 nice swift-t -n 2 program.swift
 ----
-** Vanilla MPICH:
+** Vanilla MPICH, Python 2.7.10: *As of:* master - 2016/06/14
 *** STC: +~wozniak/Public/sfw/login/gcc/swift-t/stc/bin+
 *** Turbine: +~wozniak/Public/sfw/login/gcc/swift-t/turbine/bin+
+
+** Vanilla MPICH, Python 3.6.1: *As of:* master - 2017/03/22
+*** STC: +~wozniak/Public/sfw/login/gcc/swift-t-py-3.6.1/stc/bin+
+*** Turbine: +~wozniak/Public/sfw/login/gcc/swift-t-py-3.6.1/turbine/bin+
 
 ==== Build procedure
 
