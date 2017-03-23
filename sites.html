@@ -1710,9 +1710,8 @@ gotcha is loading the Intel <code>compilervars.sh</code> script to set library p
 <div class="paragraph"><p>Run with</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source
-/soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ nice swift-t program.swift</code></pre>
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect4">
@@ -1720,9 +1719,9 @@ $ nice swift-t program.swift</code></pre>
 <div class="paragraph"><p>Run with</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
 $ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
-$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH program.swift</code></pre>
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>The following Swift script will validate that you have 256 cores to
 use:</p></div>
@@ -3036,7 +3035,7 @@ MPI: You may use any MPI implementation
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-03-23 12:21:21 CDT
+Last updated 2017-03-23 12:30:08 CDT
 </div>
 </div>
 </body>
