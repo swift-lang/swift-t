@@ -629,8 +629,7 @@ This version is linked to Python 2.7.12.
 Run with
 
 ----
-$ source
-/soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
 $ nice swift-t workflow.swift
 ----
 
@@ -639,7 +638,7 @@ $ nice swift-t workflow.swift
 Run with
 
 ----
-$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
 $ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
 $ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
 ----
