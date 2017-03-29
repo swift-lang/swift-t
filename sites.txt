@@ -1708,6 +1708,25 @@ other single system.
 * SWIG: You may use SWIG from source or the MacPorts +swig-tcl+ package
 * MPI: You may use any MPI implementation
 
+== Miscellaneous notes
+
+This section contains miscellaneous notes about compiling and running
+Swift/T.
+
+=== RTLD_GLOBAL
+
+Some Python compiled packages including Numpy do not immediately work
+with Swift/T, or any C code that instantiated Python through its C
+interface. See
+http://stackoverflow.com/questions/8302810/undefined-symbol-in-c-when-loading-a-python-shared-library[this
+StackOverflow thread] for details.
+
+In Swift/T, the top-level calling C code is the Tcl interpreter.  So
+to solve the problem, you make a one-line change in the Tcl source
+file +unix/tclLoadDl.c+ to ensure that +dlopenflags |= RTLD_GLOBAL+,
+thus, it will always use +dlopen(..., RTLD_NOW | RTLD_GLOBAL)+.  For
+example, in Tcl 8.6.6, change line 90 to +if (1) {+.
+
 ////
 Local Variables:
 mode: doc
