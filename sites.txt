@@ -360,6 +360,74 @@ export MODE=cluster QUEUE=default PROJECT=...
 swift-t -m cobalt ...
 ----
 
+[[cooley_candle]]
+==== CANDLE installation
+
+*As of:* 2017/03/29
+
+Add to +PATH+:
+
++~wozniak/Public/sfw/x86_64/login/swift-t-conda/stc/bin+
+
+This installation is linked to the Python in +
++/soft/analytics/conda/env/Candle_ML+ +
+which has Theano and TensorFlow installed.
+
+===== How this was built
+
+There is a conflict with zlib between the system MVAPICH and the Conda
+installation.  So we compile everything to use the Conda zlib.
+
+1. Change the Tcl +Makefile+ to contain: +
+line 193:
++
+----
+Candle_ML_RP = -Wl,-rpath -Wl,/soft/analytics/conda/env/Candle_ML/lib
+CC_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)
+LD_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)
+----
++
+line 283:
++
+----
+LIBS = -ldl -L /soft/analytics/conda/env/Candle_ML/lib -lz  -lpthread -lieee -lm
+----
++
+Check that you are using the zlib in Conda with:
++
+----
+ldd libtcl8.6.so
+ldd tclsh
+----
+2. Compile a plain MPICH from source. (This will work on the compute
+nodes with +swift-t&nbsp;-m&nbsp;cobalt+ .)   Check that it uses no zlib with:
++
+----
+ldd lib/.libs/libmpi.so
+----
+3. Configure ADLB with the MPICH in step 2 and +--without-zlib+.
+Check that it uses the zlib in Conda with:
++
+----
+ldd lib/libadlb.so
+----
+4. Configure Turbine with:
++
+----
+--disable-checkpoint --without-zlib --with-hdf5=no
+----
++
+Check that it uses no zlib:
++
+----
+ldd lib/libturbine.so
+----
+5. Run with:
++
+----
+swift-t -m cobalt ...
+----
+
 === Breadboard
 
 Cf. link:http://wiki.mcs.anl.gov/radix/index.php/Breadboard[Breadboard Wiki]
