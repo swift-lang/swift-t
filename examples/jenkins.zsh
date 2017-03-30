@@ -4,9 +4,7 @@ set -eu
 C_UTILS=/tmp/exm-install/c-utils
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
-# MPICH=/tmp/mpich-install
 
-# PATH=${MPICH}/bin:${PATH}
 PATH=${TURBINE}/bin:${PATH}
 PATH=${STC}/bin:${PATH}
 
