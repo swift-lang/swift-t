@@ -10,4 +10,6 @@
 B=""
 zparseopts -D -E B=B
 
+export TURBINE_HOME=${HOME}/swift-t/turbine/code
+
 make ${B} -f build.mk ${*}

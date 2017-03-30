@@ -740,7 +740,7 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:750px">
+<body class="article" style="max-width:800px">
 <div id="header">
 <h1>Blob Utilities</h1>
 <div id="toc">
@@ -752,14 +752,39 @@ asciidoc.install(2);
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph"><p>The blob utilities are intended to allow users to convert Swift
-blobs into C pointer and length arguments for C leaf functions.</p></div>
-<div class="paragraph"><p>The blob utilities are SWIG-wrapped C functions, thus accessible
-from Tcl functions called by Swift.</p></div>
+blobs into C-style pointer and length arguments for C/C++/Fortran leaf functions.</p></div>
+<div class="paragraph"><p>The blob utilities are:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+SWIG-wrapped C functions, thus accessible from Tcl functions called by Swift
+</p>
+</li>
+<li>
+<p>
+Tcl functions to provide convenience functionality
+</p>
+</li>
+</ol></div>
 <div class="paragraph"><p>For usage examples, see the <a href="leaf.html">Swift/T Leaf Function Guide</a>.</p></div>
 <div class="paragraph"><p>The blob utilities may also be used by user C leaf functions.
 Simply include <code>turbine/include/blob.h</code>.</p></div>
-<div class="paragraph"><p>This documentation is generated from <code>blob.h</code> by <code>maint/doc.sh</code>.
-The functions are implemented in <code>blob.c</code>.</p></div>
+<div class="paragraph"><p>This documentation is generated from <code>blob.h</code> and <code>blob.tcl</code> by <code>maint/doc.sh</code>.
+The C functions are implemented in <code>blob.c</code>.</p></div>
+<div class="paragraph"><p>Blobs may be represented in Tcl by either:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+A SWIG-generated <code>turbine_blob*</code> (called a <code>turbine_blob</code>)
+</p>
+</li>
+<li>
+<p>
+A Tcl <code>[list pointer length]</code> (called a Tcl blob).  These are used by STC
+and the Turbine Data (TD) system.
+</p>
+</li>
+</ol></div>
 </div>
 </div>
 <div class="sect1">
@@ -777,7 +802,7 @@ you can pass it in and out of functions, display it, etc.</p></div>
 } turbine_blob;</code></pre>
 </div></div>
 <div class="paragraph"><p>Based on this struct, SWIG will generate the following
-Tcl functions, assuming <code>blob</code> is a <code>blob*</code>:</p></div>
+Tcl functions, assuming <code>blob</code> is a <code>turbine_blob*</code>:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>new_turbine_blob</code>
@@ -835,7 +860,8 @@ Returns <code>blob&#8594;length</code>, an <code>int</code>.
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_pointers_and_sizes">Pointers and sizes</h3>
-<div class="paragraph"><p>Functions for blob creation, memory allocation/deallocation,
+<div class="paragraph"><p>Functions for <code>turbine_blob</code> creation,
+memory allocation/deallocation,
 pointer arithmetic, and <code>sizeof()</code>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -843,8 +869,8 @@ pointer arithmetic, and <code>sizeof()</code>.</p></div>
 </dt>
 <dd>
 <p>
-Create a turbine_blob from
-   an long integer representing the pointer and the length.
+Create a <code>turbine_blob</code> from
+   a long integer representing the pointer and the length.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -852,7 +878,7 @@ Create a turbine_blob from
 </dt>
 <dd>
 <p>
-Create a turbine_blob from
+Create a <code>turbine_blob</code> from
    the pointer and the length.
 </p>
 </dd>
@@ -951,7 +977,7 @@ Integer (64-bit) to <code>void*</code>.
 </dt>
 <dd>
 <p>
-Integer to <code>void**</code>.
+<code>void*</code> to <code>void**</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -967,11 +993,11 @@ Integer to <code>void**</code>.
 </dt>
 <dd>
 <p>
-Integer to <code>char**</code>.
+<code>void*</code> to <code>char**</code>.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>blobutils_cast_to_ptrptr s</code>
+<code>blobutils_cast_string_to_ptrptr s</code>
 </dt>
 <dd>
 <p>
@@ -1241,11 +1267,185 @@ Write <code>blob</code> to HDF file with name given in <code>output</code>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_tcl_convenience_functions">Tcl convenience functions</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>These functions operate on Tcl blobs.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>blob_size_async out blob</code>
+</dt>
+<dd>
+<p>
+Turbine rule to obtain the size of TD <code>blob</code> in TD <code>out</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_size blob</code>
+</dt>
+<dd>
+<p>
+Obtain the size of blob
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_null blob</code>
+</dt>
+<dd>
+<p>
+Store <code>NULL</code> in the blob
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string2blob</code>
+</dt>
+<dd>
+<p>
+Turbine rule to translate TD blob <code>input</code> into TD string <code>result</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob2string</code>
+</dt>
+<dd>
+<p>
+Turbine rule to translate TD string <code>input</code> in TD blob <code>result</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob2floats</code>
+</dt>
+<dd>
+<p>
+Obtain doubles from blob, return as dictionary
+          mapping integer index to double
+</p>
+</dd>
+<dt class="hdlist1">
+<code>matrix_from_blob_fortran_impl blob m n</code>
+</dt>
+<dd>
+<p>
+Obtain doubles from blob, return as dictionary
+          mapping integer indices to double in Fortran order,
+          <code>m</code> is the number of rows, <code>n</code> is the number of columns
+</p>
+</dd>
+<dt class="hdlist1">
+<code>floats2blob out in</code>
+</dt>
+<dd>
+<p>
+Store Tcl floats from dict into blob
+</p>
+</dd>
+<dt class="hdlist1">
+<code>floats2blob out in</code>
+</dt>
+<dd>
+<p>
+Store Tcl ints from dict into blob
+</p>
+</dd>
+<dt class="hdlist1">
+<code>floats2blob n</code>
+</dt>
+<dd>
+<p>
+Store <code>n</code> zeroes into new blob
+</p>
+</dd>
+<dt class="hdlist1">
+<code>turbine_run_output_blob dummy blob</code>
+</dt>
+<dd>
+<p>
+Store blob as <code>turbine_run()</code> result, <code>dummy</code> is unused
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_debug_ints blob</code>
+</dt>
+<dd>
+<p>
+Print blob of ints
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_fmt blob</code>
+</dt>
+<dd>
+<p>
+Return printable blob metadata
+           (TD, pointer, length) as string
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_fmt blob</code>
+</dt>
+<dd>
+<p>
+Print blob metadata (TD, pointer, length) via <code>blob_fmt</code>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_dict_to_int_array</code>
+</dt>
+<dd>
+<p>
+Input:  L: a Tcl dict of integer&#8594;integer indexed from 0.<br />
+            Output:    a SWIG pointer (<code>int*</code>) to a fresh array of <code>int</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_string_list_to_char_ptr_ptr</code>
+</dt>
+<dd>
+<p>
+Convert Tcl list of strings to <code>char**</code>.<br />
+            Helpful for passing data into C-style argc/argv interfaces.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_string_dict_to_char_ptr_ptr d</code>
+</dt>
+<dd>
+<p>
+Input: A Tcl dict of integer&#8594;string indexed from 0.<br />
+            Output: A SWIG pointer (<code>char**</code>) to the C strings.<br />
+            Helpful for passing data into C-style argc/argv interfaces.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_strings_to_char_ptr_ptr d</code>
+</dt>
+<dd>
+<p>
+Deprecated alias for <code>blob_string_dict_to_char_ptr_ptr</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>blob_string_list_to_argv program L argv_name</code>
+</dt>
+<dd>
+<p>
+Convert Tcl list of strings <code>L</code> to <code>char**</code>.<br />
+            Helpful for passing data into C-style argc/argv interfaces.<br />
+            Puts result (<code>char**</code>) in <code>argv_name</code>.<br />
+            <code>program</code>: Program name as string (i.e., argv[0]).<br />
+            <code>L</code>: list of strings (i.e., argv[1]&#8230;argv[argc-1]).<br />
+            Returns <code>argc</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-04-01 13:57:28 CDT
+Last updated
+ 2017-03-30 14:44:10 CDT
 </div>
 </div>
 </body>

@@ -1,24 +1,35 @@
-
-
 :toc:
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
 
 = Blob Utilities
 
 The blob utilities are intended to allow users to convert Swift
-blobs into C pointer and length arguments for C leaf functions.
+blobs into C-style pointer and length arguments for C/C++/Fortran leaf functions.
 
-The blob utilities are SWIG-wrapped C functions, thus accessible
-from Tcl functions called by Swift.
+The blob utilities are:
+
+1. SWIG-wrapped C functions, thus accessible from Tcl functions called by Swift
+2. Tcl functions to provide convenience functionality
 
 For usage examples, see the link:leaf.html[Swift/T Leaf Function Guide].
 
 The blob utilities may also be used by user C leaf functions.
 Simply include +turbine/include/blob.h+.
 
-This documentation is generated from +blob.h+ by +maint/doc.sh+.
-The functions are implemented in +blob.c+.
- 
-== Struct +turbine_blob+ 
+This documentation is generated from +blob.h+ and +blob.tcl+ by +maint/doc.sh+.
+The C functions are implemented in +blob.c+.
+
+Blobs may be represented in Tcl by either:
+
+1. A SWIG-generated +turbine_blob*+ (called a +turbine_blob+)
+2. A Tcl +[list pointer length]+ (called a Tcl blob).  These are used by STC
+and the Turbine Data (TD) system.
+
+== Struct +turbine_blob+
 
 Simple struct for variable-length data blob.
 
@@ -35,7 +46,7 @@ typedef struct
 
 
 Based on this struct, SWIG will generate the following
-Tcl functions, assuming +blob+ is a +blob*+:
+Tcl functions, assuming +blob+ is a +turbine_blob*+:
  
 +new_turbine_blob+:: Returns a fresh +turbine_blob*+.
 
@@ -54,19 +65,20 @@ Tcl functions, assuming +blob+ is a +blob*+:
 
 +turbine_blob_length_get blob+:: Returns +blob->length+, an +int+.
 
-== Functions 
+== Functions
 
-=== Pointers and sizes 
+=== Pointers and sizes
 
-Functions for blob creation, memory allocation/deallocation,
-pointer arithmetic, and +sizeof()+. 
-
-
-+blobutils_create pointer length+:: Create a turbine_blob from
-   an long integer representing the pointer and the length.
+Functions for +turbine_blob+ creation,
+memory allocation/deallocation,
+pointer arithmetic, and +sizeof()+.
 
 
-+blobutils_create_ptr pointer length+:: Create a turbine_blob from
++blobutils_create pointer length+:: Create a +turbine_blob+ from
+   a long integer representing the pointer and the length.
+
+
++blobutils_create_ptr pointer length+:: Create a +turbine_blob+ from
    the pointer and the length.
 
 
@@ -95,13 +107,13 @@ pointer arithmetic, and +sizeof()+.
 +blobutils_sizeof_float+:: Obtain +sizeof(double)+.
     (In Swift/T, all floats are 64-bit)
 
-=== Casts 
+=== Casts
 
 
 Cast functions for simple SWIG type transformations.
 Not all possible type pairs are yet implemented.
 In our naming scheme, if a type is not given, +void*+ is assumed.
- 
+
 
 
 +blobutils_cast_to_ptr i+:: Integer to +void*+.
@@ -110,16 +122,16 @@ In our naming scheme, if a type is not given, +void*+ is assumed.
 +blobutils_cast_int64_to_ptr i+:: Integer (64-bit) to +void*+.
 
 
-+blobutils_cast_to_ptrptr p+:: Integer to +void**+.
++blobutils_cast_to_ptrptr p+:: +void*+ to +void**+.
 
 
 +blobutils_cast_to_string p+:: +void*+ to +char**+.
 
 
-+blobutils_cast_to_char_ptrptr p+:: Integer to +char**+.
++blobutils_cast_to_char_ptrptr p+:: +void*+ to +char**+.
 
 
-+blobutils_cast_to_ptrptr s+:: +char*+ to +void*+.
++blobutils_cast_string_to_ptrptr s+:: +char*+ to +void*+.
 
 
 +blobutils_cast_to_int p+:: +void*+ to +int+.
@@ -169,9 +181,9 @@ In our naming scheme, if a type is not given, +void*+ is assumed.
 
 +blobutils_cast_to_dbl_ptr p+:: +void*+ to +double*+.
 
-=== Array manipulation 
+=== Array manipulation
 
-These functions treat their inputs as arrays and do manipulation. 
+These functions treat their inputs as arrays and do manipulation.
 
 
 +blobutils_zeroes_float p n+:: Set all +n+ entries of +double+ array +p+ to 0.0.
@@ -204,9 +216,9 @@ These functions treat their inputs as arrays and do manipulation.
 +blobutils_set_int pointer index i+:: Assume blob is array of +int+ - do array store.
     That is, set +pointer[index]=i+.
 
-=== I/O 
+=== I/O
 
-Blob I/O functions. 
+Blob I/O functions.
 
 
 +blobutils_write output blob+:: Write blob +blob+ to file with name given in +output+.
@@ -216,19 +228,91 @@ Blob I/O functions.
 +blobutils_read input blob+:: Read blob +blob+ from file with name given in +output+.
         Returns +true+ on success, else +false+.
 
-=== String utilities 
+=== String utilities
 
-Functions for string operations. 
+Functions for string operations.
 
 
 +blobutils_strdup s+:: Duplicate s.
 
-=== HDF utilities 
+=== HDF utilities
 
-Functions for HDF operations. 
+Functions for HDF operations.
 
 
 +blobutils_hdf_write output dataset blob+:: Write +blob+ to HDF file with name given in +output+
          in dataset +dataset+.
          Returns +true+ on success, else +false+.
+
+== Tcl convenience functions
+These functions operate on Tcl blobs.
+
++blob_size_async out blob+:: Turbine rule to obtain the size of TD +blob+ in TD +out+
+
+
++blob_size blob+:: Obtain the size of blob
+
+
++blob_null blob+:: Store +NULL+ in the blob
+
+
++string2blob+:: Turbine rule to translate TD blob +input+ into TD string +result+
+
+
++blob2string+:: Turbine rule to translate TD string +input+ in TD blob +result+
+
+
++blob2floats+:: Obtain doubles from blob, return as dictionary
+          mapping integer index to double
+
+
++matrix_from_blob_fortran_impl blob m n+:: Obtain doubles from blob, return as dictionary
+          mapping integer indices to double in Fortran order,
+          +m+ is the number of rows, +n+ is the number of columns
+
+
++floats2blob out in+:: Store Tcl floats from dict into blob
+
+
++floats2blob out in+:: Store Tcl ints from dict into blob
+
+
++floats2blob n+:: Store +n+ zeroes into new blob
+
+
++turbine_run_output_blob dummy blob+:: Store blob as +turbine_run()+ result, +dummy+ is unused
+
+
++blob_debug_ints blob+:: Print blob of ints
+
+
++blob_fmt blob+:: Return printable blob metadata
+           (TD, pointer, length) as string
+
+
++blob_fmt blob+:: Print blob metadata (TD, pointer, length) via +blob_fmt+
+
+
++blob_dict_to_int_array+:: Input:  L: a Tcl dict of integer->integer indexed from 0. +
+            Output:    a SWIG pointer (+int*+) to a fresh array of +int+.
+
+
++blob_string_list_to_char_ptr_ptr+:: Convert Tcl list of strings to +char**+. +
+            Helpful for passing data into C-style argc/argv interfaces.
+
+
++blob_string_dict_to_char_ptr_ptr d+:: Input: A Tcl dict of integer->string indexed from 0. +
+            Output: A SWIG pointer (+char**+) to the C strings. +
+            Helpful for passing data into C-style argc/argv interfaces.
+
+
++blob_strings_to_char_ptr_ptr d+:: Deprecated alias for +blob_string_dict_to_char_ptr_ptr+.
+
+
++blob_string_list_to_argv program L argv_name+:: Convert Tcl list of strings +L+ to +char\*\*+. +
+            Helpful for passing data into C-style argc/argv interfaces. +
+            Puts result (+char**+) in +argv_name+. +
+            +program+: Program name as string (i.e., argv[0]). +
+            +L+: list of strings (i.e., argv[1]...argv[argc-1]). +
+            Returns +argc+.
 
