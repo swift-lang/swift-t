@@ -244,6 +244,11 @@ namespace eval turbine {
         return $charss
     }
 
+    # Deprecated alias for blob_string_dict_to_char_ptr_ptr
+    proc blob_strings_to_char_ptr_ptr { d } {
+        return [ blob_string_dict_to_char_ptr_ptr $d ]
+    }
+
     # Puts result (char**) in argv_name
     # Returns argc
     proc blob_string_list_to_argv { program L argv_name } {
