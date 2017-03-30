@@ -1,4 +1,9 @@
 
+////
+This file is on the web at:
+http://swift-lang.github.io/swift-t/sites.html
+////
+
 :toc:
 
 ////
@@ -11,18 +16,6 @@ Swift/T Sites Guide
 Justin M. Wozniak <wozniak@mcs.anl.gov>
 v1.2.0, March 2017
 
-////
-
-This file is on the web at:
-
-http://swift-lang.github.io/swift-t/sites.html
-
-////
-
-////
-Settings:
-////
-:miscellaneous.newline: \n
 
 == How to use this guide
 
