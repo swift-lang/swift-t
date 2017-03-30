@@ -1634,6 +1634,14 @@ git clone git@github.com:swift-lang/swift-t.git
 
 == Release procedure
 
+=== Source release
+
+
+
+==== Procedure
+
+The Swift/T maintainer does this for each Swift/T release.
+
 * For each component:
 ** Test branch +master+
 ** Run +autoscan+
@@ -1660,6 +1668,19 @@ git clone git@github.com:swift-lang/swift-t.git
 ** Copy the package to the +gh-pages+ branch
 ** Test package on Linux and Mac
 * +git push+ package to GitHub
+
+=== Debian
+
+==== Procedure
+
+The Swift/T maintainer does this for each Swift/T release.
+
+For each C-Utils and ADLB/X: do +make deb+ and +make deb-dev+. +
+For Turbine and STC: do +make deb+
+
+=== Spack
+
+Use the +dev/build-spacks.sh+ script to build the 4 Spack source packages.
 
 ////
 Local Variables:
