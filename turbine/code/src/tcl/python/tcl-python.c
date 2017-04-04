@@ -45,7 +45,7 @@
 #if HAVE_PYTHON==1
 
 static int
-handle_python_exception(void)
+handle_python_exception(bool exceptions_are_errors)
 {
   printf("\n");
   printf("PYTHON EXCEPTION:\n");
@@ -65,7 +65,9 @@ handle_python_exception(void)
 
   #endif
 
-  return TCL_ERROR;
+  if (exceptions_are_errors)
+    return TCL_ERROR;
+  return TCL_OK;
 }
 
 static int
@@ -90,18 +92,25 @@ static int python_init(void)
   DEBUG_TCL_TURBINE("python: initializing...");
   Py_InitializeEx(1);
   main_module  = PyImport_AddModule("__main__");
-  if (main_module == NULL) return handle_python_exception();
+  if (main_module == NULL) return handle_python_exception(true);
   main_dict = PyModule_GetDict(main_module);
-  if (main_dict == NULL) return handle_python_exception();
+  if (main_dict == NULL) return handle_python_exception(true);
   local_dict = PyDict_New();
-  if (local_dict == NULL) return handle_python_exception();
+  if (local_dict == NULL) return handle_python_exception(true);
   initialized = true;
   return TCL_OK;
 }
 
 static void python_finalize(void);
 
-static char* python_result_default = "NOTHING";
+static char* python_result_default   = "__NOTHING__";
+static char* python_result_exception = "__EXCEPTION__";
+
+#define EXCEPTION(ee)                                            \
+  {                                                               \
+    *output = Tcl_NewStringObj(python_result_exception, -1);      \
+    return handle_python_exception(ee);                           \
+  }
 
 /**
    @param persist: If true, retain the Python interpreter,
@@ -112,7 +121,8 @@ static char* python_result_default = "NOTHING";
    @return Tcl error code
  */
 static int
-python_eval(bool persist, const char* code, const char* expression,
+python_eval(bool persist, bool exceptions_are_errors,
+            const char* code, const char* expression,
             Tcl_Obj** output)
 {
   int rc;
@@ -126,12 +136,14 @@ python_eval(bool persist, const char* code, const char* expression,
   DEBUG_TCL_TURBINE("python: code: %s", code);
 
   PyRun_String(code, Py_file_input, main_dict, local_dict);
-  if (PyErr_Occurred()) return handle_python_exception();
+  if (PyErr_Occurred())
+    EXCEPTION(exceptions_are_errors);
 
   // Evaluate expression:
   DEBUG_TCL_TURBINE("python: expression: %s", expression);
   PyObject* o = PyRun_String(expression, Py_eval_input, main_dict, local_dict);
-  if (o == NULL) return handle_python_exception();
+  if (o == NULL)
+    EXCEPTION(exceptions_are_errors);
 
   // Convert Python result to C string, then to Tcl string:
   rc = PyArg_Parse(o, "s", &result);
@@ -156,15 +168,18 @@ static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
+  TCL_ARGS(5);
   int rc;
   int persist;
+  int exceptions_are_errors;
   rc = Tcl_GetBooleanFromObj(interp, objv[1], &persist);
+  rc = Tcl_GetBooleanFromObj(interp, objv[2], &exceptions_are_errors);
   TCL_CHECK_MSG(rc, "first arg should be integer!");
-  char* code = Tcl_GetString(objv[2]);
-  char* expression = Tcl_GetString(objv[3]);
+  char* code = Tcl_GetString(objv[3]);
+  char* expression = Tcl_GetString(objv[4]);
   Tcl_Obj* result = NULL;
-  rc = python_eval(persist, code, expression, &result);
+  rc = python_eval(persist, exceptions_are_errors,
+                   code, expression, &result);
   TCL_CHECK(rc);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
