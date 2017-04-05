@@ -40,15 +40,33 @@
 
 #if HAVE_R==1
 
+static char* r_result_exception = "__EXCEPTION__";
+
+#define EXCEPTION(ee)                                               \
+  do {                                                              \
+    result = Tcl_NewStringObj(r_result_exception, -1);              \
+    if (ee) {                                                       \
+      return turbine_user_errorv(interp, "User error in R");        \
+    } else {                                                        \
+      result = Tcl_NewStringObj(r_result_exception, -1);            \
+    }                                                               \
+  } while(0);
+
 static int
 R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(3);
+  TCL_ARGS(4);
+  int exceptions_are_errors;
+  int rc = Tcl_GetBooleanFromObj(interp, objv[1], &exceptions_are_errors);
+  TCL_CHECK_MSG(rc,
+                "R: argument exceptions_are_errors should be boolean!");
   // A chunk of R code that does not return anything:
-  char* code = Tcl_GetString(objv[1]);
+  char* code = Tcl_GetString(objv[2]);
   // A chunk of R code that returns a string to Swift:
-  char* return_expression = Tcl_GetString(objv[2]);
+  char* expr = Tcl_GetString(objv[3]);
+
+  Tcl_Obj* result;
 
   // The string result from R: Default is empty string
   char* s = "";
@@ -57,18 +75,21 @@ R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   bool status;
   status = use_rinside_void(code);
-  if (!status) return turbine_user_errorv(interp, "User error in R");
+  if (!status) EXCEPTION(exceptions_are_errors);
 
-  if (strlen(return_expression) > 0)
+  if (strlen(expr) > 0)
   {
     empty = false;
-    status = use_rinside_expr(return_expression, &s, &length);
-    if (!status) return turbine_user_errorv(interp, "User error in R");
+    status = use_rinside_expr(expr, &s, &length);
   }
 
-  Tcl_Obj* result = Tcl_NewStringObj(s, length);
-  if (!empty)
-    free(s);
+  if (status)
+  {
+    result = Tcl_NewStringObj(s, length);
+    if (!empty) free(s);
+  }
+  else
+    EXCEPTION(exceptions_are_errors);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -79,7 +100,7 @@ static int
 R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_ARGS(3);
   turbine_tcl_condition_failed(interp, objv[0],
                        "Turbine not compiled with R support");
   return TCL_ERROR;
