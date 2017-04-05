@@ -24,6 +24,10 @@
  */
 
 #include "config.h"
+#ifdef HAVE_SYS_PARAM_H
+// Python will try to redefine this:
+#undef HAVE_SYS_PARAM_H
+#endif
 
 #if HAVE_PYTHON==1
 // This file includes the Python header
@@ -31,12 +35,10 @@
 #include "src/tcl/python/turbine-python-version.h"
 #endif
 
-// #define _GNU_SOURCE // for asprintf()
 #include <stdio.h>
 
 #include <tcl.h>
 
-#include <list.h>
 #include "src/util/debug.h"
 #include "src/tcl/util.h"
 
@@ -106,7 +108,7 @@ static void python_finalize(void);
 static char* python_result_default   = "__NOTHING__";
 static char* python_result_exception = "__EXCEPTION__";
 
-#define EXCEPTION(ee)                                            \
+#define EXCEPTION(ee)                                             \
   {                                                               \
     *output = Tcl_NewStringObj(python_result_exception, -1);      \
     return handle_python_exception(ee);                           \
@@ -115,15 +117,15 @@ static char* python_result_exception = "__EXCEPTION__";
 /**
    @param persist: If true, retain the Python interpreter,
                    else finalize it
+   @param exceptions_are_errors: If true, abort on Python exception
    @param code: The multiline string of Python code.
-                The last line is evaluated to the returned result
+   @param expr: A Python expression to be evaluated to the returned result
    @param output: Store result pointer here
-   @return Tcl error code
+   @return Tcl return code
  */
 static int
 python_eval(bool persist, bool exceptions_are_errors,
-            const char* code, const char* expression,
-            Tcl_Obj** output)
+            const char* code, const char* expr, Tcl_Obj** output)
 {
   int rc;
   char* result = python_result_default;
@@ -134,16 +136,14 @@ python_eval(bool persist, bool exceptions_are_errors,
 
   // Execute code:
   DEBUG_TCL_TURBINE("python: code: %s", code);
-
   PyRun_String(code, Py_file_input, main_dict, local_dict);
-  if (PyErr_Occurred())
-    EXCEPTION(exceptions_are_errors);
+  if (PyErr_Occurred()) EXCEPTION(exceptions_are_errors);
 
   // Evaluate expression:
-  DEBUG_TCL_TURBINE("python: expression: %s", expression);
-  PyObject* o = PyRun_String(expression, Py_eval_input, main_dict, local_dict);
-  if (o == NULL)
-    EXCEPTION(exceptions_are_errors);
+  DEBUG_TCL_TURBINE("python: expr: %s", expr);
+  PyObject* o = PyRun_String(expr, Py_eval_input,
+                             main_dict, local_dict);
+  if (o == NULL) EXCEPTION(exceptions_are_errors);
 
   // Convert Python result to C string, then to Tcl string:
   rc = PyArg_Parse(o, "s", &result);
@@ -176,10 +176,10 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetBooleanFromObj(interp, objv[2], &exceptions_are_errors);
   TCL_CHECK_MSG(rc, "first arg should be integer!");
   char* code = Tcl_GetString(objv[3]);
-  char* expression = Tcl_GetString(objv[4]);
+  char* expr = Tcl_GetString(objv[4]);
   Tcl_Obj* result = NULL;
   rc = python_eval(persist, exceptions_are_errors,
-                   code, expression, &result);
+                   code, expr, &result);
   TCL_CHECK(rc);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -191,9 +191,8 @@ static int
 Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(4);
   return turbine_user_errorv(interp,
-                   "Turbine not compiled with Python support");
+                     "Turbine not compiled with Python support");
 }
 
 #endif
