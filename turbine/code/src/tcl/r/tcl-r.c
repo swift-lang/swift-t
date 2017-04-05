@@ -25,7 +25,6 @@
 
 #include "config.h"
 
-#define _GNU_SOURCE // for asprintf()
 #include <stdio.h>
 
 #include <tcl.h>
