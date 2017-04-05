@@ -173,8 +173,10 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   int persist;
   int exceptions_are_errors;
   rc = Tcl_GetBooleanFromObj(interp, objv[1], &persist);
+  TCL_CHECK_MSG(rc, "python: argument persist should be integer!");
   rc = Tcl_GetBooleanFromObj(interp, objv[2], &exceptions_are_errors);
-  TCL_CHECK_MSG(rc, "first arg should be integer!");
+  TCL_CHECK_MSG(rc,
+                "python: argument exceptions_are_errors should be integer!");
   char* code = Tcl_GetString(objv[3]);
   char* expr = Tcl_GetString(objv[4]);
   Tcl_Obj* result = NULL;
