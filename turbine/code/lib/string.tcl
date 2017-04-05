@@ -137,7 +137,7 @@ namespace eval turbine {
         }
         if [ catch { set s [ eval format $L ] } e ] {
             turbine_error \
-                "Error in usage2 of sprintf()" \
+                "Error in usage of sprintf()" \
                 "or string format operator (%)\n" \
                 "format: \"" [ lindex $L 0 ] "\"\n" \
                 "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
