@@ -1037,7 +1037,7 @@ header file.  Use <code>make check_includes</code> to detect these errors.</p></
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>Our convention is to filter <code><strong>.mk.in</code> to <code></strong>.mk</code> via <code>configure</code>;
+<div class="paragraph"><p>Our convention is to filter <code>*.mk.in</code> to <code>*.mk</code> via <code>configure</code>;
 unfiltered makefile includes are <code>*.mkf</code>.  (This eases the use of
 <code>.gitignore</code> .)</p></div>
 </div>
@@ -3534,6 +3534,11 @@ for macros/constants.</p></div>
 <div class="sect1">
 <h2 id="_release_procedure">14. Release procedure</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_source_release">14.1. Source release</h3>
+<div class="sect3">
+<h4 id="_procedure">14.1.1. Procedure</h4>
+<div class="paragraph"><p>The Swift/T maintainer does this for each Swift/T release.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3660,11 +3665,26 @@ Test package on Linux and Mac
 </ul></div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_debian">14.2. Debian</h3>
+<div class="sect3">
+<h4 id="_procedure_2">14.2.1. Procedure</h4>
+<div class="paragraph"><p>The Swift/T maintainer does this for each Swift/T release.</p></div>
+<div class="paragraph"><p>For each C-Utils and ADLB/X: do <code>make deb</code> and <code>make deb-dev</code>.<br />
+For Turbine and STC: do <code>make deb</code></p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_spack">14.3. Spack</h3>
+<div class="paragraph"><p>Use the <code>dev/build-spacks.sh</code> script to build the 4 Spack source packages.</p></div>
+</div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2016-12-21 13:16:55 CST
+Last updated 2017-04-06 11:16:33 EDT
 </div>
 </div>
 </body>
