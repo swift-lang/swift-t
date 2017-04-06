@@ -188,7 +188,7 @@ Other useful Makefile features:
 * +make deps+ to make the dependency files
 * +make tags+ to make an +etags+ +TAGS+ file
 
-Our convention is to filter +*.mk.in+ to +*.mk+ via +configure+;
+Our convention is to filter +\*.mk.in+ to +\*.mk+ via +configure+;
 unfiltered makefile includes are +*.mkf+.  (This eases the use of
 +.gitignore+ .)
 
