@@ -1,417 +1,269 @@
 
-////
-EMEWS_2016
-////
-[[EMEWS_2016]]
-* *From desktop to large-scale model exploration with Swift/T* +
+* [[EMEWS_2016]]
+*From desktop to large-scale model exploration with Swift/T* +
 Jonathan Ozik, Nicholson Collier, and Justin M. Wozniak. +
 Proc. Winter Simulation Conference 2016.  +
 
-////
-Cancer2_2016
-////
-[[Cancer2_2016]]
-* *High performance model exploration of mutation patterns in an agent-based model of colorectal cancer* +
+* [[Cancer2_2016]]
+*High performance model exploration of mutation patterns in an agent-based model of colorectal cancer* +
 Jonathan Ozik, Nicholson Collier, Justin M. Wozniak, Charles Macal, Chase Cockrell, Melinda Stack, and Gary An. +
 Computational Approaches for Cancer Workshop at SC 2016. (Best paper.) +
  [http://www.mcs.anl.gov/~wozniak/papers/Cancer2_2016.pdf[PDF]]
 
-////
-Cancer1_2016
-////
-[[Cancer1_2016]]
-* *High performance calibration of a colorectal cancer natural history model with Incremental Mixture Importance Sampling* +
+* [[Cancer1_2016]]
+*High performance calibration of a colorectal cancer natural history model with Incremental Mixture Importance Sampling* +
 Jonathan Ozik, Nicholson Collier, Justin M. Wozniak, Carolyn Rutter, and Jessica Hwang. +
 Computational Approaches for Cancer Workshop at SC 2016.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Cancer1_2016.pdf[PDF]]
 
-////
-Dataflow_2016
-////
-[[Dataflow_2016]]
-* *Challenges and opportunities for dataflow processing on exascale computers* +
+* [[Dataflow_2016]]
+*Challenges and opportunities for dataflow processing on exascale computers* +
 Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
 Proc. Data-Flow Execution Models for Extreme-Scale Computing at PACT 2016.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Dataflow_2016.pdf[PDF]]
 
-////
-Hercules_2016
-////
-[[Hercules_2016]]
-* *Flexible data-aware scheduling for workflows over an in-memory object store* +
+* [[Hercules_2016]]
+*Flexible data-aware scheduling for workflows over an in-memory object store* +
 Francisco Rodrigo Duro, Javier Garcia Blas, Florin Isaila, Justin M. Wozniak, Jesus Carretero, and Robert Ross. +
 Proc. CCGrid 2016.  +
 
-////
-MRS_2015
-////
-[[MRS_2015]]
-* *Modeling diffuse scattering using first-principles based methods* +
+* [[MRS_2015]]
+*Modeling diffuse scattering using first-principles based methods* +
 Anh Ngo, Justin M. Wozniak, Jonathan Morris, Stephan Rosenkranz, Raymond Osborn, and Peter Zapol. +
 Proc. Materials Research Society Fall Meeting 2015.  +
  Abstract: [http://www.mcs.anl.gov/~wozniak/papers/MRS_2015.txt[TXT]]
 
-////
-BigDataTools_2015
-////
-[[BigDataTools_2015]]
-* *Integrating big data tools for X-ray science* +
+* [[BigDataTools_2015]]
+*Integrating big data tools for X-ray science* +
 Justin M. Wozniak. +
  Talk at Joint Laboratory for Extreme-Scale Computing Workshop 2015. +
  Abstract: [http://www.mcs.anl.gov/~wozniak/papers/BigDataTools_2015.txt[TXT]]
 
-////
-MRTC_2015
-////
-[[MRTC_2015]]
-* *Many resident task computing in support of dynamic ensemble computations* +
+* [[MRTC_2015]]
+*Many resident task computing in support of dynamic ensemble computations* +
 Jonathan Ozik, Nicholson Collier, and Justin M. Wozniak. +
 Proc. MTAGS at SC 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/MRTC_2015.pdf[PDF]]
 
-////
-Workflows_2015
-////
-[[Workflows_2015]]
-* *Lessons learned from building in situ coupling frameworks* +
+* [[Workflows_2015]]
+*Lessons learned from building in situ coupling frameworks* +
 Matthieu Dorier, Matthieu Dreher, Tom Peterka, Justin M. Wozniak, Gabriel Antoniu, and Bruno Raffin. +
 Proc. In Situ Infrastructures for Enabling Extreme-scale Analysis and Visualization at SC 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Workflows_2015.pdf[PDF]]
 
-////
-Swift_2015
-////
-[[Swift_2015]]
-* *Interlanguage parallel scripting for distributed-memory scientific computing* +
+* [[Swift_2015]]
+*Interlanguage parallel scripting for distributed-memory scientific computing* +
 Justin M. Wozniak, Timothy G. Armstrong, Ketan C. Maheshwari, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
 WORKS '15: Proceedings of the 10th Workshop in Support of Large-Scale Science 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_2015.pdf[PDF]]
 
-////
-ProgrammingModels_2015
-////
-[[ProgrammingModels_2015]]
-* *Swift: Extreme-scale, implicitly parallel scripting* +
+* [[ProgrammingModels_2015]]
+*Swift: Extreme-scale, implicitly parallel scripting* +
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
 In: Programming Models for Parallel Computing,2015. +
  [http://www.mcs.anl.gov/~wozniak/papers/ProgrammingModels_Swift_2015.pdf[PDF]]
 
-////
-Swift_ExMatEx_2015
-////
-[[Swift_ExMatEx_2015]]
-* *Swift: Parallel scripting for simulation ensembles* +
+* [[Swift_ExMatEx_2015]]
+*Swift: Parallel scripting for simulation ensembles* +
 Justin M. Wozniak. +
  ExMatEx all-hands meeting 2015. +
 
-////
-ExperimentFeedback_2015
-////
-[[ExperimentFeedback_2015]]
-* *Accelerating the experimental feedback loop: Data streams at the APS* +
+* [[ExperimentFeedback_2015]]
+*Accelerating the experimental feedback loop: Data streams at the APS* +
 Ian Foster, Tekin Bicer, Raj Kettimuthu, Michael Wilde, Justin M. Wozniak, Francesco de Carlo, Ben Blaiszik, Kyle Chard, Francesco de Carlo, and Ray Osborn. +
 Proc. STREAM 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/ExperimentFeedback_2015.pdf[PDF]]
 
-////
-CLASSE_2015
-////
-[[CLASSE_2015]]
-* *Big data tools for light source science* +
+* [[CLASSE_2015]]
+*Big data tools for light source science* +
 Justin M. Wozniak. +
  Talk at Cornell High Energy Synchrotron Source 2015. +
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/CLASSE_2015.pptx[PPTX]]
 
-////
-Swift_Tcl_2015
-////
-[[Swift_Tcl_2015]]
-* *Swift/T: Dataflow composition of Tcl scripts for petascale computing* +
+* [[Swift_Tcl_2015]]
+*Swift/T: Dataflow composition of Tcl scripts for petascale computing* +
 Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, and Ian Foster. +
 Proc. Annual Tcl/Tk Conference 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_Tcl_2015.pdf[PDF]]
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/Swift_Tcl_slides_2015.pptx[PPTX]]
 
-////
-BGQ_2015
-////
-[[BGQ_2015]]
-* *Porting ordinary applications to Blue Gene/Q supercomputers* +
+* [[BGQ_2015]]
+*Porting ordinary applications to Blue Gene/Q supercomputers* +
 Ketan Maheshwari, Justin Wozniak, Timothy Armstrong, Daniel S. Katz, T. Andrew Binkowski, Xiaoliang Zhong, Olle Heinonen, Dmitry Karpeyev, and Michael Wilde. +
 Proc. eScience 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/BGQ_2015.pdf[PDF]]
 
-////
-APS_2015
-////
-[[APS_2015]]
-* *Single crystal diffuse scattering: Beyond the workflow* +
+* [[APS_2015]]
+*Single crystal diffuse scattering: Beyond the workflow* +
 Ray Osborn et al. +
 APS Users Meeting 2015.  +
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/APS_2015.pptx[PPTX]]
 
-////
-Interlang_short_2015
-////
-[[Interlang_short_2015]]
-* *Toward interlanguage parallel scripting for distributed-memory scientific computing* +
+* [[Interlang_short_2015]]
+*Toward interlanguage parallel scripting for distributed-memory scientific computing* +
 Justin M. Wozniak, Timothy G. Armstrong, Ketan C. Maheshwari, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
 Proc. CLUSTER 2015.  +
 
-////
-Swift_APS_2015
-////
-[[Swift_APS_2015]]
-* *Swift parallel scripting for fast, productive beamline data analysis* +
+* [[Swift_APS_2015]]
+*Swift parallel scripting for fast, productive beamline data analysis* +
 Hemant Sharma, Justin M. Wozniak, Jun Park, Guy Jennings, Ian Foster, Jonathan Almer, Raymond Osborn, and Michael Wilde. +
 APS Users Meeting 2015.  +
 
-////
-Workflow_Swift_2015
-////
-[[Workflow_Swift_2015]]
-* *Implicitly parallel functional dataflow for DOE science workflows* +
+* [[Workflow_Swift_2015]]
+*Implicitly parallel functional dataflow for DOE science workflows* +
 Daniel S. Katz, Michael Wilde, and Justin M. Wozniak. +
 Proc. Workshop on the Future of Scientific Workflows 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Workflow_Swift_2015.pdf[PDF]]
 
-////
-Workflow_DE_2015
-////
-[[Workflow_DE_2015]]
-* *Workflows at experimental facilities: Use cases from the Advanced Photon Source* +
+* [[Workflow_DE_2015]]
+*Workflows at experimental facilities: Use cases from the Advanced Photon Source* +
 Ian Foster, Tekin Bicer, Raj Kettimuthu, Michael Wilde, Justin M. Wozniak, Francesco de Carlo, Ben Blaiszik, Kyle Chard, Francesco de Carlo, and Ray Osborn. +
 Proc. Workshop on the Future of Scientific Workflows 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Workflow_DE_2015.pdf[PDF]]
 
-////
-HEDM_2014
-////
-[[HEDM_2014]]
-* *Big data staging with MPI-IO for interactive X-ray science* +
+* [[HEDM_2014]]
+*Big data staging with MPI-IO for interactive X-ray science* +
 Justin M. Wozniak, Hemant Sharma, Timothy G. Armstrong, Michael Wilde, Jonathan D. Almer, and Ian Foster. +
 Proc. Big Data Computing 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_MPI-IO_2014.pdf[PDF]]
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/Swift_MPI-IO_slides_2014.pdf[PDF]]
 
-////
-Hercules_2014
-////
-[[Hercules_2014]]
-* *Exploiting data locality in Swift/T workflows using Hercules* +
+* [[Hercules_2014]]
+*Exploiting data locality in Swift/T workflows using Hercules* +
 Francisco Rodrigo Duro, Javier Garcia Blas, Florin Isaila, Jesus Carretero, Justin M. Wozniak, and Robert Ross. +
 Proc. NESUS Workshop 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Hercules_2014.pdf[PDF]]
 
-////
-Swift_ESPT_2014
-////
-[[Swift_ESPT_2014]]
-* *Case studies in dataflow composition of scalable high performance applications* +
+* [[Swift_ESPT_2014]]
+*Case studies in dataflow composition of scalable high performance applications* +
 Justin M. Wozniak, Timothy G. Armstrong, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
 Proc. Extreme-scale Programming Tools at SC 2014.  +
 
-////
-SwiftNAMD_2014
-////
-[[SwiftNAMD_2014]]
-* *Petascale Tcl with NAMD, VMD, and Swift/T* +
+* [[SwiftNAMD_2014]]
+*Petascale Tcl with NAMD, VMD, and Swift/T* +
 James C. Phillips, John E. Stone, Kirby L. Vandivort, Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Klaus Schulten. +
 Proc. High Performance Technical Computing in Dynamic Languages at SC 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_NAMD_2014.pdf[PDF]]
 
-////
-Swift_2014
-////
-[[Swift_2014]]
-* *Language features for scalable distributed-memory dataflow computing* +
+* [[Swift_2014]]
+*Language features for scalable distributed-memory dataflow computing* +
 Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
 Proc. Data-Flow Execution Models for Extreme-Scale Computing at PACT 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/DFM_2014.pdf[PDF]]
 
-////
-Wozniak_2014
-////
-[[Wozniak_2014]]
-* *The assembly and management of scalable computational experiments* +
+* [[Wozniak_2014]]
+*The assembly and management of scalable computational experiments* +
 Justin M. Wozniak. +
  Computation Institute Fellow Nomination Talk 2014. +
  [http://www.mcs.anl.gov/~wozniak/papers/Wozniak-CI_2014.pdf[PDF]]
 
-////
-NetworkingMaterials_2014
-////
-[[NetworkingMaterials_2014]]
-* *Networking materials data: Accelerating discovery at an experimental facility* +
+* [[NetworkingMaterials_2014]]
+*Networking materials data: Accelerating discovery at an experimental facility* +
 Ian Foster, Rachana Ananthakrishnan, Ben Blaiszik, Kyle Chard, Ray Osborn, Steve Tuecke, Michael Wilde, and Justin M. Wozniak. +
 Proc. Workshop on High Performance Computing, Grids and Clouds 2014.  +
 
-////
-STC_2014
-////
-[[STC_2014]]
-* *Compiler techniques for massively scalable implicit task parallelism* +
+* [[STC_2014]]
+*Compiler techniques for massively scalable implicit task parallelism* +
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
 Proc. SC 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_2014.pdf[PDF]]
 
-////
-GeMTC_2014
-////
-[[GeMTC_2014]]
-* *Design and evaluation of the GeMTC framework for GPU-enabled many task computing* +
+* [[GeMTC_2014]]
+*Design and evaluation of the GeMTC framework for GPU-enabled many task computing* +
 Scott J. Krieder, Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Daniel S. Katz, Benjamin Grimmer, Ian T. Foster, and Ioan Raicu. +
 Proc. HPDC 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/GeMTC_2014.pdf[PDF]]
 
-////
-ScientificDataCloud_2014
-////
-[[ScientificDataCloud_2014]]
-* *Evaluating storage systems for scientific data in the cloud* +
+* [[ScientificDataCloud_2014]]
+*Evaluating storage systems for scientific data in the cloud* +
 Ketan Maheshwari, Justin M. Wozniak, Hao Yang, Daniel S. Katz, Matei Ripeanu, Victor Zavala, and Michael Wilde. +
 Proc. ScienceCloud 2014. (Best&nbsp;paper awardee) +
  [http://www.mcs.anl.gov/~wozniak/papers/ScientificStorageCloud_2014.pdf[PDF]]
 
-////
-GeMTC_Cloud_2014
-////
-[[GeMTC_Cloud_2014]]
-* *Implicitly-parallel functional dataflow for productive cloud programming on Chameleon* +
+* [[GeMTC_Cloud_2014]]
+*Implicitly-parallel functional dataflow for productive cloud programming on Chameleon* +
 Scott Krieder, Ioan Raicu, Justin M. Wozniak, and Michael Wilde. +
 Proc. NSFCloud Workshop on Experimental Support for Cloud Computing 2014.  +
 
-////
-Multilanguage_2014
-////
-[[Multilanguage_2014]]
-* *Toward computational experiment management via multi-language applications* +
+* [[Multilanguage_2014]]
+*Toward computational experiment management via multi-language applications* +
 Justin M. Wozniak, Timothy G. Armstrong, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
 DOE Workshop on Software Productivity for eXtreme scale Science (SWP4XS) 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Multilanguage_2014.pdf[PDF]]
 
-////
-Dataflow_2014
-////
-[[Dataflow_2014]]
-* *Productive composition of extreme-scale applications using implicitly parallel dataflow* +
+* [[Dataflow_2014]]
+*Productive composition of extreme-scale applications using implicitly parallel dataflow* +
 Michael Wilde, Justin M. Wozniak, Timothy G. Armstrong, Daniel S. Katz, and Ian T. Foster. +
 DOE Workshop on Software Productivity for eXtreme scale Science (SWP4XS) 2014.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Dataflow_2014.pdf[PDF]]
 
-////
-Scripting_Beamline_2014
-////
-[[Scripting_Beamline_2014]]
-* *Parallel scripting for beamline science: Connecting Big Data and HPC* +
+* [[Scripting_Beamline_2014]]
+*Parallel scripting for beamline science: Connecting Big Data and HPC* +
 Justin M. Wozniak. +
  At BES Facilities Computing Working Group Technical Meeting 2014. +
 
-////
-Turbine_2013
-////
-[[Turbine_2013]]
-* *Turbine: A distributed-memory dataflow engine for high performance many-task applications* +
+* [[Turbine_2013]]
+*Turbine: A distributed-memory dataflow engine for high performance many-task applications* +
 Justin M. Wozniak, Timothy G. Armstrong, Ketan Maheshwari, Ewing L. Lusk, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
 Fundamenta Informaticae 28(3), 2013. +
  [http://www.mcs.anl.gov/~wozniak/papers/Turbine_2013.pdf[PDF]]
 
-////
-Swift_Galaxy_Portal_2013
-////
-[[Swift_Galaxy_Portal_2013]]
-* *Extending the Galaxy portal with parallel and distributed execution capability* +
+* [[Swift_Galaxy_Portal_2013]]
+*Extending the Galaxy portal with parallel and distributed execution capability* +
 Ketan Maheshwari, Alex Rodriguez, David Kelly, Ravi Madduri, Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
 Proc. DataCloud 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift-Galaxy_2013.pdf[PDF]]
 
-////
-Swift_MPI_2013
-////
-[[Swift_MPI_2013]]
-* *Dataflow coordination of data-parallel tasks via MPI 3.0* +
+* [[Swift_MPI_2013]]
+*Dataflow coordination of data-parallel tasks via MPI 3.0* +
 Justin M. Wozniak, Tom Peterka, Timothy G. Armstrong, James Dinan, Ewing L. Lusk, Michael Wilde, and Ian T. Foster. +
 Proc. EuroMPI 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_MPI_2013.pdf[PDF]]
 
-////
-Reusability_2013
-////
-[[Reusability_2013]]
-* *Reusability in science: From initial user engagement to dissemination of results* +
+* [[Reusability_2013]]
+*Reusability in science: From initial user engagement to dissemination of results* +
 Ketan Maheshwari, David Kelly, Scott J. Krieder, Justin M. Wozniak, Daniel S. Katz, Zhi-Gang Mei, and Mainak Mookherjee. +
 Proc. Workshop on Sustainable Software for Science: Practice and Experiences at SC 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Reusability_2013.pdf[PDF]]
 
-////
-Swift_2013
-////
-[[Swift_2013]]
-* *Swift/T: Scalable data flow programming for distributed-memory task-parallel applications* +
+* [[Swift_2013]]
+*Swift/T: Scalable data flow programming for distributed-memory task-parallel applications* +
 Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Daniel S. Katz, Ewing Lusk, and Ian T. Foster. +
 Proc. CCGrid 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_2013.pdf[PDF]]
 
-////
-Swift_Power_2013
-////
-[[Swift_Power_2013]]
-* *Evaluating cloud computing techniques for smart power grid design using parallel scripting* +
+* [[Swift_Power_2013]]
+*Evaluating cloud computing techniques for smart power grid design using parallel scripting* +
 Ketan Maheshwari, Ken Birman, Justin M. Wozniak, and Devin Van Zandt. +
 Proc. CCGrid 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_PowerGrid_2013.pdf[PDF]]
 
-////
-Swift_MPE_2013
-////
-[[Swift_MPE_2013]]
-* *A model for tracing and debugging large-scale task-parallel programs with MPE* +
+* [[Swift_MPE_2013]]
+*A model for tracing and debugging large-scale task-parallel programs with MPE* +
 Justin M. Wozniak, Anthony Chan, Timothy G. Armstrong, Michael Wilde, Ewing Lusk, and Ian T. Foster. +
 Proc. Workshop on Leveraging Abstractions and Semantics in High-performance Computing (LASH-C) at PPoPP 2013.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_MPE_2013.pdf[PDF]]
 
-////
-Swift_ExMatEx_2013
-////
-[[Swift_ExMatEx_2013]]
-* *Rapid development of highly concurrent multi-scale simulators with Swift* +
+* [[Swift_ExMatEx_2013]]
+*Rapid development of highly concurrent multi-scale simulators with Swift* +
 Justin M. Wozniak. +
  ExMatEx all-hands meeting 2013. +
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/Swift_ExMatEx_2013.pdf[PDF]]
 
-////
-Swift_Chirp_2013
-////
-[[Swift_Chirp_2013]]
-* *Swift+Chirp for synchrotron beamline data analysis* +
+* [[Swift_Chirp_2013]]
+*Swift+Chirp for synchrotron beamline data analysis* +
 Justin M. Wozniak. +
  At Cooperative Computing Laboratory Workshop 2013. +
 
-////
-Turbine_2012
-////
-[[Turbine_2012]]
-* *Turbine: A distributed-memory dataflow engine for extreme-scale many-task applications* +
+* [[Turbine_2012]]
+*Turbine: A distributed-memory dataflow engine for extreme-scale many-task applications* +
 Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Ketan Maheshwari, Daniel S. Katz, Matei Ripeanu, Ewing L. Lusk, and Ian T. Foster. +
 Proc. Workshop on Scalable Workflow Enactment Engines and Technologies 2012.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Turbine_2012.pdf[PDF]]
  Slides: [http://www.mcs.anl.gov/~wozniak/papers/Turbine_slides_2012.pdf[PDF]]
 
-////
-Triton_2012
-////
-[[Triton_2012]]
-* *A case for optimistic coordination in HPC storage systems* +
-Philip Carns, Kevin Harms, Dries Kimpe, Justin M. Wozniak, Robert Ross, Lee Ward, Matthew Curry, Ruth Klundt, Geoff Danielson, Cengiz Karakoyunlu, John Chandy, Bradley Settlemyer, and William Gropp. +
-Proc. Petascale Data Storage Workshop (PDSW) at SC 2012.  +
- [http://www.mcs.anl.gov/~wozniak/papers/Triton_2012.pdf[PDF]]
- Slides: [http://www.mcs.anl.gov/~wozniak/papers/Triton_slides_2012.pdf[PDF]]
-
-////
-ExM_2012
-////
-[[ExM_2012]]
-* *ExM: High level dataflow programming for extreme-scale systems* +
+* [[ExM_2012]]
+*ExM: High level dataflow programming for extreme-scale systems* +
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, Ketan Maheshwari, Daniel S. Katz, Matei Ripeanu, Ewing L. Lusk, and Ian T. Foster. +
 HotPar (poster series) 2012.  +
  [http://www.mcs.anl.gov/~wozniak/papers/ExM_2012.pdf[PDF]]
