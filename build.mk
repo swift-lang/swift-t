@@ -13,12 +13,21 @@ define ASCIIDOC_CMDS
 	@ $(ASCIIDOC) $(<)
 endef
 
-%.html: %.txt
+%.html: %.txt build.mk
 	$(ASCIIDOC_CMDS)
 
 guide.html: guide.txt
 	$(ASCIIDOC_CMDS)
 	./google-analytics.sh $(@)
+
+TEXCV = $(HOME)/mcs/vita/texcv
+BIB = $(TEXCV)/Biblio/Wozniak.bib
+BIBGEN = $(TEXCV)/bibgen/bibgen
+
+swift-t.list.adoc: $(BIBGEN) $(BIB)
+	$(BIBGEN) $(BIB) swift-t.list asciidoc $(@)
+# 	Update timestamp Asciidoc puts at end of file:
+	@ touch pubs.txt
 
 pubs.html: swift-t.list.adoc
 
