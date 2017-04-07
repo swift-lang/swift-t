@@ -1,0 +1,24 @@
+
+= FILES
+
+== Libraries
+
+util.tcl:    General Tcl utilities
+mpe.tcl:     General MPE processing utilities
+turbine.tcl: MPE processing tools for Turbine runs
+
+== Scripts
+
+See:
+https://sites.google.com/site/exmproject/development/turbine---usage#TOC-MPE-log-processing
+
+= Internals
+
+Each script uses clog2_print to get a text version of the CLOG
+The reader should look at the output of clog2_print -
+it is a moderately readable key/value format
+
+Each script reads definitions using an mpe.tcl utility
+Then, the log is read again for script-specific events
+
+Then, statistics are collected and output is generated.
