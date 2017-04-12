@@ -20,12 +20,14 @@ guide.html: guide.txt
 	$(ASCIIDOC_CMDS)
 	./google-analytics.sh $(@)
 
-TEXCV = $(HOME)/mcs/vita/texcv
-BIB = $(TEXCV)/Biblio/Wozniak.bib
-BIBGEN = $(TEXCV)/bibgen/bibgen
+TEXCV     = $(HOME)/mcs/vita/texcv
+BIB       = $(TEXCV)/Biblio/Wozniak.bib
+BIBGEN    = $(TEXCV)/bibgen/bibgen
+GENERATOR = $(TEXCV)/bibgen/generate-asciidoc.tcl
 
-swift-t.list.adoc: $(BIBGEN) $(BIB)
-	$(BIBGEN) $(BIB) swift-t.list asciidoc $(@)
+swift-t.list.adoc: $(BIBGEN) $(BIB) swift-t.list $(GENERATOR) build.mk
+	@ echo BIBGEN $(@)
+	@ $(BIBGEN) $(BIB) swift-t.list asciidoc $(@)
 # 	Update timestamp Asciidoc puts at end of file:
 	@ touch pubs.txt
 
