@@ -253,10 +253,10 @@ endif
 HAVE_JVM_SCRIPT    = @HAVE_JVM_SCRIPT@
 USE_JVM_SCRIPT_HOME= @USE_JVM_SCRIPT_HOME@
 
-HAVE_PYTHON          = @HAVE_PYTHON@
-PYTHON_INCLUDE_FLAGS = @PYTHON_INCLUDE_FLAGS@
-PYTHON_LIB_FLAGS     = @PYTHON_LIB_FLAGS@
-PYTHON_LIBDIR        = @PYTHON_LIBDIR@
+HAVE_PYTHON        = @HAVE_PYTHON@
+USE_PYTHON_INCLUDE = @USE_PYTHON_INCLUDE@
+USE_PYTHON_LIBDIR  = @USE_PYTHON_LIBDIR@
+USE_PYTHON_NAME    = @USE_PYTHON_NAME@
 
 HAVE_R = @HAVE_R@
 USE_R  = @USE_R@
@@ -287,7 +287,7 @@ ifeq ($(ENABLE_MPE),1)
 	INCLUDES += -I $(USE_MPE)/include
 endif
 ifeq ($(HAVE_PYTHON),1)
-	INCLUDES += $(PYTHON_INCLUDE_FLAGS)
+	INCLUDES += -I $(USE_PYTHON_INCLUDE)
 endif
 ifeq  ($(HAVE_R),1)
 ifneq ($(USE_R),)
@@ -345,8 +345,15 @@ ifeq ($(ENABLE_MPE),1)
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
-  LIBS += -L$(PYTHON_LIBDIR) $(PYTHON_LIB_FLAGS)
-  RPATH_PYTHON = yes
+  ifneq ($(USE_PYTHON_LIBDIR),0)
+    ifneq ($(USE_PYTHON_LIBDIR),)
+      ifeq ($(filter $(USE_PYTHON_LIBDIR),$(SYSTEM_LIBS)),)
+        LIBS += -L$(USE_PYTHON_LIBDIR)
+        RPATH_PYTHON = yes
+      endif
+    endif
+  endif
+  LIBS += -l$(USE_PYTHON_NAME)
 endif
 ifeq ($(HAVE_R),1)
 ifneq ($(USE_R),)
@@ -368,8 +375,8 @@ ifeq ($(USE_MAC),yes)
   RINSIDE_INSTALL_NAME=$(shell otool -D $(RINSIDE_PATH)/lib/libRInside.dylib | sed -n 2p)
   FIX_RINSIDE_INSTALL_NAME = install_name_tool -change $(RINSIDE_INSTALL_NAME) $(RINSIDE_LIB)/libRInside.dylib $(TCL_TURBINE_SO)
 
-  ifneq ($(PYTHON_LIBDIR),)
-    PYTHON_LIB_NAME =  $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
+  ifneq ($(USE_PYTHON_LIBDIR),)
+    PYTHON_LIB_NAME =  $(USE_PYTHON_LIBDIR)/lib$(USE_PYTHON_NAME).dylib
     PYTHON_INSTALL_NAME = $(shell otool -D $(PYTHON_LIB_NAME) | sed -n 2p)
     FIX_PYTHON_INSTALL_NAME = install_name_tool -change $(PYTHON_INSTALL_NAME) $(PYTHON_LIB_NAME) $(TCL_TURBINE_SO)
   endif
@@ -428,7 +435,7 @@ ifeq ($(RPATH_MPE),yes)
   RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
 endif
 ifeq ($(RPATH_PYTHON),yes)
-  RPATHS += -Wl,-rpath -Wl,$(PYTHON_LIBDIR)
+  RPATHS += -Wl,-rpath -Wl,$(USE_PYTHON_LIBDIR)
 endif
 ifeq ($(RPATH_R),yes)
   RPATHS += -Wl,-rpath -Wl,$(R_LIB)

@@ -42,8 +42,20 @@ if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
 fi
 
-if (( PYTHON_EXE )); then
-  EXTRA_ARGS+=" --with-python=${PYTHON_EXE}"
+if [ ! -z "$PYTHON_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-python=${PYTHON_INSTALL}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_MAJOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-major=${PYTHON_VERSION_MAJOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_MINOR" ]; then
+  EXTRA_ARGS+=" --with-python-version-minor=${PYTHON_VERSION_MINOR}"
+fi
+
+if [ ! -z "$PYTHON_VERSION_SUFFIX" ]; then
+  EXTRA_ARGS+=" --with-python-version-suffix=${PYTHON_VERSION_SUFFIX}"
 fi
 
 if (( ENABLE_R )); then
