@@ -2874,6 +2874,102 @@ Rank 0, running in process +23274+, has blocked (in a loop) and is
 waiting for the debugger to attach.  When you attach, set the variable
 +t=1+ to break out of the loop.  Then you can debug normally.
 
+[[mpe]]
+=== Profiling with the Message Passing Environment (MPE)
+
+The Message Passing Environment
+(http://www.mcs.anl.gov/research/projects/perfvis/software/MPE[MPE])
+is a profiling library for MPI-based applications like Swift/T.  By
+enabling MPE, you can obtain a wealth of profiling information about
+Swift/T internals and your user tasks.
+
+MPE works closely with MPI, it intercepts MPI API calls to capture the
+profiling data.
+
+==== Compiling for MPE
+
+(Thanks to Azza Ahmed for producing these instructions.)
+
+1. *Install MPE.* This starts by downloading the library, for example
+from the
+http://www.mcs.anl.gov/research/projects/perfvis/download/index.htm[official
+site].
+Installing from source is ideally straight
+forward, except that one also needs to generate a shared library file
++libmpe.so+, which the Swift/T installer expects to find in
+the +mpe_installation_dir/lib+.  The final command looks something
+like:
++
+----
+$ ./configure CC=mpicc F77=mpifort –prefix=<mpe_installation_dir> MPI_LIBS=-lpthread –enable-PIC
+$ make
+$ make install
+$ make installcheck  # 4 yeses is what you are looking for!
+# Then, add <mpe_installation_dir>/bin to your PATH
+----
++
+Notes about the configuration parameters above:
++
+* +CC+ and +F77+ are program to compile MPI C programs and Fortran
+  programs, and they are mandatory parameters when building MPE from
+  source. When working with default +mpicc+ these are fine.
+* +MPI_LIBS=-lpthread+: This parameter is an MPI requirement. On some systems
+  machine, regular MPI programs do not compile successfully without
+  this library. Therefore, you may need to include it in the MPE build
+  process as well.
+* +--enable-PIC+ is necesary to build the shared library
+  (+libmpe.so+), which the Swift/T installer expected to find in
+  +installation_path/lib+.
++
+Once MPE is installed properly, you will need to run code similar to
+this:
+https://trac.mpich.org/projects/mpich/ticket/1104[MPICH ticket #1104]
+to create the shared library (.so) file. This is a work around,
+as MPE does not support shared libraries, even if you configure with
++--enable-shared+.
+
+2. *Install Swift/T C-utils.*  Install as usual.
+
+3. *Install ADLB.* Configure with:
++
+----
+$ export CFLAGS=-mpilog
+$ export LDFLAGS="-L/<mpe_installation_dir/lib>/ -lmpe \
+                  -Wl,-rpath -Wl,/<mpe_installation_dir>/lib"
+$ ./configure --prefix=... CC=mpecc             \
+              --with-mpe=<mpe_installation_dir> \
+              --with-c-utils=...
+$ make install
+----
+
+4. *Install Turbine.* Configure with:
++
+----
+$ unset CFLAGS LDFLAGS
+$ ./configure --with-mpe=<mpe_installation_dir> <Turbine arguments...>
+$ make install
+----
+
+5. *Install STC.*  Install as usual.
+
+==== Runtime usage
+
+Now, when you run, ADLB will create a MPE CLOG file in +PWD+.  You can
+process it with the normal MPE tools such as Jumpshot.  It will
+contain customized ADLB-specific information.  See ADLB
+https://github.com/swift-lang/swift-t/blob/master/lb/code/src/mpe-tools.c[+mpe-tools.c+]
+for the list of events that are captured.  These correspond to
+functions with the similar names in
+https://github.com/swift-lang/swift-t/blob/master/lb/code/src/adlb.h[+adlb.h+],
+such as task puts and gets, and data stores and retrieves.
+
+==== Log processing
+
+Swift/T provides some tools to process MPE logs.  They are available
+and
+https://github.com/swift-lang/swift-t/tree/master/mpe[documented here].  See also
+http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013[this paper].
+
 == Model exploration workflows
 
 The http://www.mcs.anl.gov/~emews/tutorial[EMEWS Tutorial] covers
