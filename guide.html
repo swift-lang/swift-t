@@ -741,7 +741,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">December 2016</span><br />
+<span id="author">April 2017</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3480,6 +3480,40 @@ foreach time in [1:5] {
   }
 }</code></pre>
 </div></div>
+<div class="sect3">
+<h4 id="app_retry">14.3.1. App retry</h4>
+<div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.  To
+have Turbine automatically retry to run <code>app</code> functions <code>N</code> times, simply set
+environment variable <code>TURBINE_APP_RETRIES</code> to <code>N</code>.</p></div>
+<div class="paragraph"><p>Consider this Swift script (<code>false.swift</code>):<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>app f() { "false" ; }
+f();</code></pre>
+</div></div>
+<div class="paragraph"><p>This is the behavior with <code>TURBINE_APP_RETRIES</code> enabled:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export TURBINE_APP_RETRIES=3
+$ export TURBINE_LOG=1
+$ swift-t ~/mcs/ste/false.swift
+   0.061 exec: false {}
+   0.063 shell: false
+   0.068 shell: Command failed with exit code: 1: retries: 1/3 on: hostname
+   0.072 shell: false
+   0.076 shell: Command failed with exit code: 1: retries: 2/3 on: hostname
+   0.230 shell: false
+   0.234 shell: Command failed with exit code: 1: retries: 3/3 on: hostname
+   0.567 shell: false
+
+Swift: app execution failed on: hostname
+ shell: Command failed with exit code: 256
+ command: false
+
+Swift: Aborting MPI job...</code></pre>
+</div></div>
+<div class="paragraph"><p>A randomized, exponential backoff delay is applied between tries.</p></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_remote_job_execution_with_coasters">14.4. Remote job execution with Coasters</h3>
@@ -4482,6 +4516,15 @@ turbine ...</code></pre>
 <div class="paragraph"><p>The seed is recorded in the log.</p></div>
 </dd>
 <dt class="hdlist1">
+<code>TURBINE_APP_RETRIES</code>
+</dt>
+<dd>
+<p>
+If set to a positive integer, <code>app</code> functions will be retried that
+many times they produce exit code 0.  Cf. <a href="#app_retry">App retry</a>.
+</p>
+</dd>
+<dt class="hdlist1">
 <code>ADLB_DEBUG_RANKS=1</code>
 </dt>
 <dd>
@@ -5258,7 +5301,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-04-07 14:07:42 EDT
+Last updated 2017-04-12 14:50:19 EDT
 </div>
 </div>
 
