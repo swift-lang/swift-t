@@ -1782,7 +1782,6 @@ foreach time in [1:5] {
 }
 ----
 
-[[app_retry]]
 ==== App retry
 
 Some user application codes fail for non-deterministic reasons.  To
