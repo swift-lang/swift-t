@@ -1782,6 +1782,42 @@ foreach time in [1:5] {
 }
 ----
 
+[[app_retry]]
+==== App retry
+
+Some user application codes fail for non-deterministic reasons.  To
+have Turbine automatically retry to run +app+ functions +N+ times, simply set
+environment variable +TURBINE_APP_RETRIES+ to +N+.
+
+Consider this Swift script (+false.swift+): +
+----
+app f() { "false" ; }
+f();
+----
+
+This is the behavior with +TURBINE_APP_RETRIES+ enabled:
+----
+$ export TURBINE_APP_RETRIES=3
+$ export TURBINE_LOG=1
+$ swift-t ~/mcs/ste/false.swift
+   0.061 exec: false {}
+   0.063 shell: false
+   0.068 shell: Command failed with exit code: 1: retries: 1/3 on: hostname
+   0.072 shell: false
+   0.076 shell: Command failed with exit code: 1: retries: 2/3 on: hostname
+   0.230 shell: false
+   0.234 shell: Command failed with exit code: 1: retries: 3/3 on: hostname
+   0.567 shell: false
+
+Swift: app execution failed on: hostname
+ shell: Command failed with exit code: 256
+ command: false
+
+Swift: Aborting MPI job...
+----
+
+A randomized, exponential backoff delay is applied between tries.
+
 === Remote job execution with Coasters
 
 *Note:* Swift/T and Coasters integration is a work in progress
@@ -2466,6 +2502,10 @@ turbine ...
 ----
 +
 The seed is recorded in the log.
+
++TURBINE_APP_RETRIES+::
+If set to a positive integer, +app+ functions will be retried that
+many times they produce exit code 0.  Cf. <<app_retry, App retry>>.
 
 +ADLB_DEBUG_RANKS=1+:: Enable a report showing the rank and hostname
 of each process.  This allows you to determine whether your process
