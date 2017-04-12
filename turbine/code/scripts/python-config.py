@@ -31,9 +31,9 @@ def get_lib_name():
 
 def get_config_value(name):
     if name == 'include-dir':
-        value = sysconfig.get_path('include')
+        value = sysconfig.get_config_var('INCLUDEPY')
     elif name == 'include-flags':
-        value = '-I' + sysconfig.get_path('include')
+        value = '-I' + sysconfig.get_config_var('INCLUDEPY')
     elif name == 'lib-dir':
         value = sysconfig.get_config_var('LIBDIR')
     elif name == 'lib-name':
