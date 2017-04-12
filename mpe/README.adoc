@@ -17,14 +17,15 @@ These scripts started as Tcl scripts, which worked, but were too slow to process
 
 * Many tools allow you to look at only one rank or all ranks.  "All ranks" is denoted as -1.
 
-* Many tools refer to +MPE_EVENTS+.  This is a space separated list, e.g.:
+* Many tools refer to +MPE_EVENTS+.  This is a space separated list, e.g.: +
+** Look for significant ADLB operations (task puts, data stores):
 +
-Look for significant ADLB operations (task puts, data stores):
 ----
 export MPE_EVENTS="ADLB_Put ADLB_Store"
 ----
 +
-Look for example user leaf function "optimizer":
+** Look for example user leaf function "optimizer":
++
 ----
 export MPE_EVENTS="optimizer"
 ----
