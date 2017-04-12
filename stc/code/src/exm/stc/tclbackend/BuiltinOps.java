@@ -62,9 +62,15 @@ public class BuiltinOps {
     } else {
       if (op == BuiltinOpcode.SPRINTF) {
         Square fmtArgs = new TclList(argExpr);
-        Square fmt = new Square(new Token("eval"), new Token("format"),
-                                                                  fmtArgs);
-        return new SetVariable(TclNamer.prefixVar(out.name()), fmt);
+        Square fmt = new Square(new Token("eval"),
+                                new Token("format"),
+                                fmtArgs);
+        SetVariable sv = new SetVariable(TclNamer.prefixVar(out.name()), fmt);
+        Sequence handler = new Command(new Token("turbine_error"),
+                                       fmtArgs,
+                                       new Value("e"));
+        //      Catch catch = new Catch(sv
+        return sv;
       } else {
         assert(out != null);
         assert(Types.isPrimValue(out));
