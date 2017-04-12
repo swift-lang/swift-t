@@ -26,9 +26,7 @@
 #include "config.h"
 
 #if HAVE_PYTHON==1
-// This file includes the Python header
-// It is auto-generated at configure time
-#include "src/tcl/python/turbine-python-version.h"
+#include "Python.h"
 #endif
 
 // #define _GNU_SOURCE // for asprintf()
