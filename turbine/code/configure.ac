@@ -1045,6 +1045,7 @@ do
   do
     for LIB_DIR in ${LIB_DIR_OPTS}
     do
+      test -d ${LIB_DIR} || continue
       LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
