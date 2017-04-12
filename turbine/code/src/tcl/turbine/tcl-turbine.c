@@ -1090,8 +1090,9 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
                   strerror(errno));
   }
 
-  int exitcode;
-  waitpid(child, &exitcode, 0);
+  int status;
+  waitpid(child, &status, 0);
+  int exitcode = WEXITSTATUS(status);
 
   if (exitcode != 0)
   {
