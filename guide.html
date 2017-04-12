@@ -5111,6 +5111,128 @@ waiting for the debugger to attach.  When you attach, set the variable
 <code>t=1</code> to break out of the loop.  Then you can debug normally.</p></div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="mpe">17.8. Profiling with the Message Passing Environment (MPE)</h3>
+<div class="paragraph"><p>The Message Passing Environment
+(<a href="http://www.mcs.anl.gov/research/projects/perfvis/software/MPE">MPE</a>)
+is a profiling library for MPI-based applications like Swift/T.  By
+enabling MPE, you can obtain a wealth of profiling information about
+Swift/T internals and your user tasks.</p></div>
+<div class="paragraph"><p>MPE works closely with MPI, it intercepts MPI API calls to capture the
+profiling data.</p></div>
+<div class="sect3">
+<h4 id="_compiling_for_mpe">17.8.1. Compiling for MPE</h4>
+<div class="paragraph"><p>(Thanks to Azza Ahmed for producing these instructions.)</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+<strong>Install MPE.</strong> This starts by downloading the library, for example
+from the
+<a href="http://www.mcs.anl.gov/research/projects/perfvis/download/index.htm">official
+site</a>.
+Installing from source is ideally straight
+forward, except that one also needs to generate a shared library file
+<code>libmpe.so</code>, which the Swift/T installer expects to find in
+the <code>mpe_installation_dir/lib</code>.  The final command looks something
+like:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ ./configure CC=mpicc F77=mpifort –prefix=&lt;mpe_installation_dir&gt; MPI_LIBS=-lpthread –enable-PIC
+$ make
+$ make install
+$ make installcheck  # 4 yeses is what you are looking for!
+# Then, add &lt;mpe_installation_dir&gt;/bin to your PATH</code></pre>
+</div></div>
+<div class="paragraph"><p>Notes about the configuration parameters above:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>CC</code> and <code>F77</code> are program to compile MPI C programs and Fortran
+  programs, and they are mandatory parameters when building MPE from
+  source. When working with default <code>mpicc</code> these are fine.
+</p>
+</li>
+<li>
+<p>
+<code>MPI_LIBS=-lpthread</code>: This parameter is an MPI requirement. On some systems
+  machine, regular MPI programs do not compile successfully without
+  this library. Therefore, you may need to include it in the MPE build
+  process as well.
+</p>
+</li>
+<li>
+<p>
+<code>--enable-PIC</code> is necesary to build the shared library
+  (<code>libmpe.so</code>), which the Swift/T installer expected to find in
+  <code>installation_path/lib</code>.
+</p>
+<div class="paragraph"><p>Once MPE is installed properly, you will need to run code similar to
+this:
+<a href="https://trac.mpich.org/projects/mpich/ticket/1104">MPICH ticket #1104</a>
+to create the shared library (.so) file. This is a work around,
+as MPE does not support shared libraries, even if you configure with
+<code>--enable-shared</code>.</p></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<strong>Install Swift/T C-utils.</strong>  Install as usual.
+</p>
+</li>
+<li>
+<p>
+<strong>Install ADLB.</strong> Configure with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export CFLAGS=-mpilog
+$ export LDFLAGS="-L/&lt;mpe_installation_dir/lib&gt;/ -lmpe \
+                  -Wl,-rpath -Wl,/&lt;mpe_installation_dir&gt;/lib"
+$ ./configure --prefix=... CC=mpecc             \
+              --with-mpe=&lt;mpe_installation_dir&gt; \
+              --with-c-utils=...
+$ make install</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>Install Turbine.</strong> Configure with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ unset CFLAGS LDFLAGS
+$ ./configure --with-mpe=&lt;mpe_installation_dir&gt; &lt;Turbine arguments...&gt;
+$ make install</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>Install STC.</strong>  Install as usual.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="_runtime_usage">17.8.2. Runtime usage</h4>
+<div class="paragraph"><p>Now, when you run, ADLB will create a MPE CLOG file in <code>PWD</code>.  You can
+process it with the normal MPE tools such as Jumpshot.  It will
+contain customized ADLB-specific information.  See ADLB
+<a href="https://github.com/swift-lang/swift-t/blob/master/lb/code/src/mpe-tools.c"><code>mpe-tools.c</code></a>
+for the list of events that are captured.  These correspond to
+functions with the similar names in
+<a href="https://github.com/swift-lang/swift-t/blob/master/lb/code/src/adlb.h"><code>adlb.h</code></a>,
+such as task puts and gets, and data stores and retrieves.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_log_processing">17.8.3. Log processing</h4>
+<div class="paragraph"><p>Swift/T provides some tools to process MPE logs.  They are available
+and
+<a href="https://github.com/swift-lang/swift-t/tree/master/mpe">documented here</a>.  See also
+<a href="http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013">this paper</a>.</p></div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5136,7 +5258,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-08 10:26:14 CST
+Last updated 2017-04-07 14:07:42 EDT
 </div>
 </div>
 
