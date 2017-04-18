@@ -440,7 +440,7 @@ Run with:
 export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
 swift-t -m cobalt ...
 ----
-+
+
 (Also runs on the login nodes.)
 
 ===== To build with Python and R
