@@ -143,12 +143,15 @@ namespace eval turbine {
         #         "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
         #         "details: $e"
         # }
-        if [ catch { set s [ eval format $L ] } e ] {
+        set s [ sprintf_impl $L ]
+
+        store_string $result $s
+    }
+    proc sprintf_impl { args } {
+        if [ catch { set s [ format {*}$args ] } e ] {
             puts CAUGHT1
             sprintf_error $L $e
         }
-
-        store_string $result $s
     }
     proc sprintf_error { L e } {
         turbine_error \
@@ -158,7 +161,7 @@ namespace eval turbine {
             "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
             "details: $e"
     }
-    
+
     proc find { result inputs } {
 	set str         [ lindex $inputs 0 ]
 	set subs        [ lindex $inputs 1 ]
