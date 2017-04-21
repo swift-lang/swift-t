@@ -61,17 +61,11 @@ public class BuiltinOps {
       return new Command(tclFn, argExpr);
     } else {
       if (op == BuiltinOpcode.SPRINTF) {
-        Square fmtArgs = new TclList(argExpr);
-        // Square fmt = new Square(new Token("eval"),
-        //                         new Token("format"),
-        //                         fmtArgs);
-        Square sprintf = new Square(new Token("sprintf_impl"),
-                                    fmtArgs);
-        SetVariable sv = new SetVariable(TclNamer.prefixVar(out.name()), sprintf);
-        // Sequence handler = new Command(new Token("turbine_error"),
-        //                                fmtArgs,
-        //                                new Value("e"));
-        //      Catch catch = new Catch(sv
+        List<Expression> tokens = new ArrayList<>(argExpr.size()+1);
+        tokens.add(new Token("turbine::sprintf_impl"));
+        tokens.addAll(argExpr);
+        Square sq = new Square(tokens);
+        SetVariable sv = new SetVariable(TclNamer.prefixVar(out.name()), sq);
         return sv;
       } else {
         assert(out != null);
