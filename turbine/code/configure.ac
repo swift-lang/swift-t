@@ -612,7 +612,7 @@ AC_ARG_ENABLE(python,
   ])
 
 AC_ARG_WITH(python,
-   AS_HELP_STRING([--with-python],
+   AS_HELP_STRING([--with-python-exe],
                   [Specify custom path to python executable]),
   [
       if test "x${withval}" == "xyes"; then
