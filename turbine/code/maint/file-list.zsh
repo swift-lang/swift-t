@@ -13,7 +13,7 @@ print maint/{*.sh,find-tcl.sh}
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
-print **/*.[cChi] **/*.{tcl,swift} src/**/*.m4
+print **/*.[cChi] **/*.{tcl,swift}
 print tests/{runbin.zsh.in,run-mpi.zsh}
 print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in
@@ -30,6 +30,7 @@ print scripts/submit/ec2/turbine-setup-ec2.zsh
 print scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
 print scripts/submit/slurm/*turbine*.*sh*
 print scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
+print scripts/python-config.py
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt
 
