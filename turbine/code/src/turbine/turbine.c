@@ -163,7 +163,8 @@ setup_cache()
   unsigned long max_memory;
   bool b;
 
-  b = getenv_integer("TURBINE_CACHE_SIZE", 1024, &size);
+  // Cache is disabled by default:
+  b = getenv_integer("TURBINE_CACHE_SIZE", 0, &size);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
