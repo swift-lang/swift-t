@@ -660,7 +660,8 @@ HAVE_R=0
 USE_R=0
 RCPP_PATH=0
 RINSIDE_PATH=0
-AC_ARG_ENABLE(r, # Drop this?  Almost guaranteed to fail.
+# Drop this?  Almost guaranteed to fail.
+AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
