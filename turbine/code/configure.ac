@@ -603,101 +603,54 @@ fi
 AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
-# By default, use default location and version 2.7
-USE_PY_VERSION_MAJOR=2
-USE_PY_VERSION_MINOR=7
-USE_PY_VERSION_SUFFIX=
-USE_PYTHON_INCLUDE=0
-USE_PYTHON_LIB=0
-USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-USE_PYTHON_NAME=""
-HAVE_PYTHON=0
-
-AC_ARG_WITH(python-version-major,
-   AS_HELP_STRING([--with-python-version-major],
-                   [Use this version (Default: 2)]),
-   [
-     USE_PY_VERSION_MAJOR=${withval}
-   ],[])
-AC_ARG_WITH(python-version-minor,
-   AS_HELP_STRING([--with-python-version-minor],
-                   [Use this version (Default: 7)]),
-   [
-     USE_PY_VERSION_MINOR=${withval}
-   ])
-AC_ARG_WITH(python-version-suffix,
-   AS_HELP_STRING([--with-python-version-suffix],
-                   [Use this version (Default: <none>)]),
-   [
-     USE_PY_VERSION_SUFFIX=${withval}
-   ])
-
 AC_ARG_ENABLE(python,
-    AS_HELP_STRING([--enable-python],
-                   [Enable calling python]),
-    [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
-      HAVE_PYTHON=1
-    ])
-
-
-AC_ARG_WITH(python,
-   AS_HELP_STRING([--with-python],
-                   [Use this python directory]),
+   AS_HELP_STRING([--enable-python],
+                  [Enable calling Python language (searches PATH for python executable)]),
   [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
       HAVE_PYTHON=1
-      AC_CHECK_FILE(${withval}/include/python${USE_PYTHON_VERSION}/Python.h, [],
-                    [AC_MSG_ERROR([Could not find python header!])])
-      USE_PYTHON_INCLUDE=${withval}/include
-      USE_PYTHON_LIBDIR=${withval}/lib
-      USE_PYTHON_NAME=libpython${USE_PYTHON_VERSION}.so
+      PYTHON_EXE=""
   ])
 
-AC_ARG_WITH(python-lib,
-    AS_HELP_STRING([--with-python-lib],
-                   [Use this python directory library -
-                    provide fully qualified path]),
-    [
+AC_ARG_WITH(python-exe,
+   AS_HELP_STRING([--with-python-exe],
+                  [Specify complete path to python executable]),
+  [
+      if test "x${withval}" == "xyes"; then
+          # Look for exe in PATH below
+          PYTHON_EXE=""
+      else
+          PYTHON_EXE=${withval}
+          if test "x$PYTHON_EXE" != "x"; then
+              AC_CHECK_FILE(${PYTHON_EXE}, [],
+                [AC_MSG_ERROR([Specified python exe not found!  Tried: $PYTHON_EXE])])
+          fi
+      fi
       HAVE_PYTHON=1
-      USE_PYTHON_LIB=${withval}
-      AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
-                    [AC_MSG_ERROR([Could not find python!])])
-      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
-      USE_PYTHON_NAME=$( basename ${USE_PYTHON_LIB} )
-      USE_PYTHON=${USE_PYTHON_LIB} # Copy
-    ])
-
-if [[ ${HAVE_PYTHON} == 1 ]]
-then
-    USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
-    USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    AC_MSG_RESULT([Using Python lib directory: ${USE_PYTHON_LIBDIR}])
-    AC_MSG_RESULT([Using Python lib name:      ${USE_PYTHON_NAME}])
-fi
-
-AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MAJOR],
-                   $USE_PY_VERSION_MAJOR,[Python version: major])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MINOR],
-                   $USE_PY_VERSION_MINOR,[Python version: minor])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_SUFFIX],
-                   $USE_PY_VERSION_SUFFIX,[Python version: suffix])
-AC_SUBST(USE_PY_VERSION_MAJOR)
-AC_SUBST(USE_PY_VERSION_MINOR)
-AC_SUBST(USE_PY_VERSION_SUFFIX)
-AC_SUBST(HAVE_PYTHON)
-AC_SUBST(USE_PYTHON_INCLUDE)
-AC_SUBST(USE_PYTHON_LIBDIR)
-AC_SUBST(USE_PYTHON_NAME)
+  ])
 
 if (( HAVE_PYTHON ))
 then
+    if test "x$PYTHON_EXE" == "x"; then
+        AC_PATH_PROG([PYTHON_EXE], [python], [NOT_FOUND])
+    fi
+    if test "x$PYTHON_EXE" == "xNOT_FOUND"; then
+        AC_MSG_ERROR([Unable to find given python executable in PATH])
+    fi
+    TURBINE_CODEDIR=`pwd`
+    PYTHON_INCLUDE_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --include-flags) || AC_MSG_ERROR([Failed to execute python-config.py --include-flags])
+    PYTHON_LIB_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-flags) || AC_MSG_ERROR([Failed to execute python-config.py --lib-flags])
+    PYTHON_LIBDIR=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-dir) || AC_MSG_ERROR([Failed to execute python-config --lib-dir])
+    PYTHON_NAME=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-name) || AC_MSG_ERROR([Failed to execute python-config --lib-name])
     AC_MSG_RESULT([Python enabled])
+    AC_MSG_RESULT([Using Python include flags: ${PYTHON_INCLUDE_FLAGS}])
+    AC_MSG_RESULT([Using Python lib flags:     ${PYTHON_LIB_FLAGS}])
+    AC_MSG_RESULT([Using Python lib dir:       ${PYTHON_LIBDIR}])
+    AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
+    AC_SUBST(HAVE_PYTHON)
+    AC_SUBST(PYTHON_INCLUDE_FLAGS)
+    AC_SUBST(PYTHON_LIB_FLAGS)
+    AC_SUBST(PYTHON_LIBDIR)
+    AC_SUBST(PYTHON_NAME)
 else
     AC_MSG_RESULT([Python disabled])
 fi
@@ -707,7 +660,8 @@ HAVE_R=0
 USE_R=0
 RCPP_PATH=0
 RINSIDE_PATH=0
-AC_ARG_ENABLE(r, # Drop this?  Almost guaranteed to fail.
+# Drop this?  Almost guaranteed to fail.
+AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [

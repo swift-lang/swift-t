@@ -135,15 +135,25 @@ namespace eval turbine {
         foreach a $args {
             lappend L [ retrieve_decr $a ]
         }
-        if [ catch { set s [ eval format $L ] } e ] {
-            turbine_error \
-                "Error in usage2 of sprintf()" \
-                "or string format operator (%)\n" \
-                "format: \"" [ lindex $L 0 ] "\"\n" \
-                "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
-                "details: $e"
-        }
+        set s [ sprintf_impl {*}$L ]
+
         store_string $result $s
+    }
+    proc sprintf_impl { args } {
+        if [ catch {
+            set s [ format {*}$args ]
+        } e ] {
+            sprintf_error $args $e
+        }
+        return $s
+    }
+    proc sprintf_error { L e } {
+        turbine_error \
+            "Error in usage of sprintf()" \
+            "or string format operator (%)\n" \
+            "format: \"" [ lindex $L 0 ] "\"\n" \
+            "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
+            "details: $e"
     }
 
     proc find { result inputs } {
