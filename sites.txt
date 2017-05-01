@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.2.0, March 2017
+v1.2.0, April 2017
 
 
 == How to use this guide
@@ -356,6 +356,8 @@ swift-t -m cobalt ...
 [[cooley_candle]]
 ==== CANDLE installation
 
+===== Python only
+
 *As of:* 2017/03/29
 
 Add to +PATH+:
@@ -370,6 +372,8 @@ which has Theano and TensorFlow installed.
 
 There is a conflict with zlib between the system MVAPICH and the Conda
 installation.  So we compile everything to use the Conda zlib.
+
+Use the system +/usr/bin/gcc+ (4.4.7).
 
 1. Change the Tcl +Makefile+ to contain: +
 line 193:
@@ -418,8 +422,35 @@ ldd lib/libturbine.so
 5. Run with:
 +
 ----
+export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
 swift-t -m cobalt ...
 ----
++
+(Also runs on the login nodes.)
+
+===== Python and R
+
+This installation was compiled with GCC 4.8.1 (+/soft/compilers/gcc/4.8.1+)
+
+Add to +PATH+:
+
++~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin+
+
+Run with:
+
+----
+export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
+swift-t -m cobalt ...
+----
+
+(Also runs on the login nodes.)
+
+===== To build with Python and R
+
+As above for Python, but additionally:
+
+1. Put R in +PATH+: +~wozniak/Public/sfw/x86_64/R-3.2.3/bin+
+2. Configure Turbine with: +--with-r=~wozniak/Public/sfw/x86_64/R-3.2.3/lib64/R+
 
 === Breadboard
 
