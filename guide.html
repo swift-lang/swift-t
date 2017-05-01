@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -2773,12 +2775,35 @@ Write string to file
 </p>
 </dd>
 <dt class="hdlist1">
+<code>write_array_string(string[] A, int chunk=100, boolean indices=false) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Write strings in <code>A</code> to output file, <code>chunk</code> at a time
+(<code>chunk</code> defaults to 100).
+There is no ordering on the output.
+If <code>indices==true</code>, the integer indices of <code>A</code> will be
+put on each line as a prefix.
+This is more efficient than <code>write(join(A))</code> for large <code>A</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>write_array_string_ordered(string A[]) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Write strings in <code>A</code> to output file in order.
+This is more efficient than <code>write(join(A))</code> for large <code>A</code>,
+but slower than <code>write_array_string()</code> (which is not ordered).
+</p>
+</dd>
+<dt class="hdlist1">
 <code>glob(string) &#8594; file[]</code>
 </dt>
 <dd>
 <p>
-Perform glob operation, returning files
-that match.  Available glob symbols include:
+Perform glob operation, returning files that match.
+Available glob symbols include:
 </p>
 <div class="ulist"><ul>
 <li>
@@ -5301,7 +5326,8 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-04-12 14:55:47 EDT
+Last updated
+ 2017-05-01 18:32:11 CDT
 </div>
 </div>
 
