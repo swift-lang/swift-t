@@ -750,6 +750,29 @@ namespace eval turbine {
 	close $fp
 	close_file $output
     }
+
+    proc write_array_string_ordered { outputs inputs } {
+        rule $inputs "write_array_string_ordered_body $outputs $inputs"
+    }
+    proc write_array_string_ordered_body { output a } {
+
+        set size [ adlb::container_size $a ]
+
+        # Set up output file
+        set d [ get_filename_val $output ]
+        ensure_directory_exists2 $d
+	set fp [ ::open $d w+ ]
+
+        log "write_array_string_ordered: file=$d"
+
+        for { set i 0 } { $i < $size } { incr i } {
+            set v [ adlb::lookup $a $i ]
+            log "write_array_string_ordered: i=$i"
+            puts $fp "$v"
+        }
+	close $fp
+	close_file $output
+    }
 }
 
 # Local Variables:

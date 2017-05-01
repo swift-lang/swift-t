@@ -80,4 +80,8 @@
 write_array_string(string a[], int chunk)
 "turbine" "1.0" "write_array_string";
 
+(file o)
+write_array_string_ordered(string a[])
+"turbine" "1.0" "write_array_string_ordered";
+
 #endif // FILES_SWIFT
