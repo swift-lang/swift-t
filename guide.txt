@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-December 2016
+April 2017
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -1317,11 +1317,28 @@ automatic operations and optimizations are disabled
 
 *Import:* +files+
 
-+read(file) -> string+::   Read file as a string
-+write(string) -> file+::  Write string to file
++read(file) -> string+::
+Read file as a string
 
-+glob(string) -> file[]+:: Perform glob operation, returning files
-that match.  Available glob symbols include:
++write(string) -> file+::
+Write string to file
+
++write_array_string(string[] A, int chunk=100, boolean indices=false) -> file+::
+Write strings in +A+ to output file, +chunk+ at a time
+(+chunk+ defaults to 100).
+There is no ordering on the output.
+If +indices==true+, the integer indices of +A+ will be
+put on each line as a prefix.
+This is more efficient than +write(join(A))+ for large +A+.
+
++write_array_string_ordered(string A[]) -> file+::
+Write strings in +A+ to output file in order.
+This is more efficient than +write(join(A))+ for large +A+,
+but slower than +write_array_string()+ (which is not ordered).
+
++glob(string) -> file[]+::
+Perform glob operation, returning files that match.
+Available glob symbols include:
 +
 * +*+: any character sequence (including the zero-length sequence)
 * +?+: any character
