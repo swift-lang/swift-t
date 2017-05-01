@@ -76,4 +76,8 @@
 "turbine" "0.0"
 [ "set <<f>> [ file tail <<p>> ]" ];
 
+(file o)
+write_array_string(string a[], int chunk)
+"turbine" "1.0" "write_array_string";
+
 #endif // FILES_SWIFT

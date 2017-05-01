@@ -721,6 +721,35 @@ namespace eval turbine {
         }
         return $result
     }
+
+    proc write_array_string { outputs inputs } {
+        rule $inputs "write_array_string_body $outputs $inputs"
+    }
+    proc write_array_string_body { output a chunk } {
+
+        # Set up chunks
+        set chunk_value [ retrieve_integer $chunk ]
+        set size [ adlb::container_size $a ]
+
+        # Set up output file
+        set d [ get_filename_val $output ]
+        ensure_directory_exists2 $d
+	set fp [ ::open $d w+ ]
+
+        log "write_array_string: file=$d chunk=$chunk_value"
+
+        for { set i 0 } { $i < $size } { incr i $chunk_value } {
+            set D [ adlb::enumerate $a dict $chunk_value $i ]
+            set count [ dict size $D ]
+            log "write_array_string: count=$count"
+            dict for { k v } $D {
+                # show k v
+                puts $fp "$k $v"
+            }
+        }
+	close $fp
+	close_file $output
+    }
 }
 
 # Local Variables:
