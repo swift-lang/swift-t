@@ -695,6 +695,9 @@ AC_ARG_WITH(r,
 
 if [[ ${HAVE_R} == 1 ]]
 then
+  AC_MSG_RESULT([Adding to PATH: $USE_R/../../bin ])
+  PATH=$USE_R/../../bin:$PATH
+
   AC_CHECK_FILE(${USE_R}/include/R.h, [],
         [AC_MSG_ERROR([Could not find R header!])])
   if [[ ${RINSIDE_PATH} == 0 ]]
