@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -2621,14 +2623,16 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="content">
 <pre><code>~wozniak/Public/sfw/Python-2.7.10
 ~wozniak/Public/sfw/mpich-3.1.4
+~wozniak/Public/sfw/R-3.4.0
 ~wozniak/Public/sfw/swig-3.0.12
 ~wozniak/Public/sfw/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
 <h4 id="_public_installation_13">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_4">Login nodes</h5>
+<div class="paragraph"><p><strong>Python</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
 <div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
 <code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code></p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
@@ -2637,6 +2641,19 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="content">
 <pre><code>module load java
 export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+nice swift-t workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>Python and R</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/05/03</p></div>
+<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
+<code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code> and R 3.4.0</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t-r/stc/bin</code></p></div>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
@@ -2656,12 +2673,12 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_2">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>module load gcc</code></pre>
 </div></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_5">Login nodes</h5>
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
@@ -3172,7 +3189,8 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-04-19 10:45:56 CDT
+Last updated
+ 2017-05-03 12:29:54 CDT
 </div>
 </div>
 </body>
