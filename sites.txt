@@ -1302,19 +1302,18 @@ Dependencies are installed in:
 ----
 ~wozniak/Public/sfw/Python-2.7.10
 ~wozniak/Public/sfw/mpich-3.1.4
+~wozniak/Public/sfw/R-3.4.0
 ~wozniak/Public/sfw/swig-3.0.12
 ~wozniak/Public/sfw/tcl-8.6.6
 ----
 
 ==== Public installation
 
-*As of:* 2017/03/07
-
 ===== Login nodes
 
-////
-This installation was configured with Python 2.7.10.
-////
+*Python*
+
+*As of:* 2017/03/07
 
 This installation was configured with the Python 2.7.12 at +
 +/usr/common/software/python/2.7-anaconda/envs/deeplearning+
@@ -1325,6 +1324,23 @@ Run with
 ----
 module load java
 export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+nice swift-t workflow.swift
+----
+
+*Python and R*
+
+*As of:* 2017/05/03
+
+This installation was configured with the Python 2.7.12 at +
++/usr/common/software/python/2.7-anaconda/envs/deeplearning+ and R 3.4.0
+
+Add to +PATH+: +~wozniak/Public/sfw/login/swift-t-r/stc/bin+
+
+Run with
+----
+module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 nice swift-t workflow.swift
 ----
 
@@ -1344,13 +1360,13 @@ cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-job
 
 ==== Build instructions
 
+*As of:* 2017/03/09
+
 Use
 
 ----
 module load gcc
 ----
-
-*As of:* 2017/03/09
 
 ===== Login nodes
 
