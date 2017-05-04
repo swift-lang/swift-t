@@ -2659,12 +2659,14 @@ nice swift-t workflow.swift</code></pre>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_5">Compute nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>module load java
 export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
@@ -2687,12 +2689,18 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 <h5 id="_compute_nodes_6">Compute nodes</h5>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
 to configure the MPI library.</p></div>
+<div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
+<div class="paragraph"><p>Configure c-utils with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure CC=cc</code></pre>
+</div></div>
 <div class="paragraph"><p>Configure ADLB with:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
 export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
-./configure CC=gcc ...</code></pre>
+./configure CC=cc ...</code></pre>
 </div></div>
 <div class="paragraph"><p>Configure Turbine with:</p></div>
 <div class="listingblock">
@@ -3190,7 +3198,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer-text">
 Version 1.2.0<br />
 Last updated
- 2017-05-03 12:29:54 CDT
+ 2017-05-04 10:00:17 CDT
 </div>
 </div>
 </body>
