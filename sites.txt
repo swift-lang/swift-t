@@ -1346,12 +1346,14 @@ nice swift-t workflow.swift
 
 ===== Compute nodes
 
-Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-r/stc/bin+
 
 Cori uses SLURM.  Run with
 ----
 module load java
 export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 swift-t -m slurm workflow.swift
 ----
 
@@ -1377,11 +1379,18 @@ No special configuration is necessary.
 Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
 to configure the MPI library.
 
+Use +/usr/bin/cc+ .
+
+Configure c-utils with:
+----
+./configure CC=cc
+----
+
 Configure ADLB with:
 ----
 export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
 export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
-./configure CC=gcc ...
+./configure CC=cc ...
 ----
 
 Configure Turbine with:
