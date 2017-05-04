@@ -364,9 +364,26 @@ Add to +PATH+:
 
 +~wozniak/Public/sfw/x86_64/login/swift-t-conda/stc/bin+
 
+Run as noted above.
+
 This installation is linked to the Python in +
 +/soft/analytics/conda/env/Candle_ML+ +
 which has Theano and TensorFlow installed.
+
+===== Python and R
+
+Add to +PATH+:
+
++~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin+
+
+Run as noted above.
+
+* This installation is linked to the Python in +
+  +/soft/analytics/conda/env/Candle_ML+ +
+  which has Theano and TensorFlow installed.
+* This installation is linked to the R in +
+  +~wozniak/Public/sfw/x86_64/R-3.2.3-gcc-4.8.1+ +
+  which has mlrMBO installed.
 
 ===== How this was built
 
