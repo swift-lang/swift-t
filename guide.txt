@@ -1384,6 +1384,22 @@ Returns the file part of the given string path.
 
 Returns the file part of the given file path.
 
++rootname_string(string) -> string+::
+
+Returns the root part of the given string path (filename without extension).
+
++rootname(file) -> string+::
+
+Returns the root part of the given file path (filename without extension).
+
++extension_string(string) -> string+::
+
+Returns the filename extension part of the given string path.
+
++extension(file) -> string+::
+
+Returns the filename extension part of the given file path.
+
 [[library_blobs]]
 === Blobs
 
