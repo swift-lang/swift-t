@@ -29,7 +29,7 @@
 "turbine" "0.0.2" "substring";
 
 @pure
-(string t[]) split(string s, string delimiter)
+(string t[]) split(string s, string delimiter=" ")
 "turbine" "0.0.2" "split"
 [ "set <<t>> [ turbine::split_impl <<s>> <<delimiter>> ]" ];
 
