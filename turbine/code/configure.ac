@@ -163,7 +163,7 @@ USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
     AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
     [
-        AC_MSG_CHECKING([${withval}/include/c-utils.h])
+        AC_MSG_CHECKING([for ${withval}/include/c-utils.h])
         [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
         if [[ ${USE_C_UTILS} == 0 ]]
         then
@@ -193,7 +193,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
+AC_MSG_CHECKING([for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
