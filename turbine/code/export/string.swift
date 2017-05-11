@@ -113,4 +113,8 @@
 (string o) toLower(string s) "turbine" "0.8.0"
   [ "set <<o>> [ string tolower <<s>> ] " ];
 
+@pure
+(string o) join_args(string separator, string|int|float... args)
+"turbine" "0.0.2" "join_args";
+
 #endif
