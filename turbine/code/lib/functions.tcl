@@ -520,7 +520,8 @@ namespace eval turbine {
             lappend inputs $v
         }
 
-        rule $inputs [ list make_void_body $o $inputs ] name make_void-$o
+        rule $inputs [ list make_void_body $o $inputs ] \
+            name make_void-$o
     }
 
     proc make_void_body { output inputs } {
