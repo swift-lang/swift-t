@@ -1112,9 +1112,12 @@ As +printf()+ in C
 
 === String functions
 
-+strcat(string s1, string s2)+::
-Returns the concatenation of +s1+ and +s2+.
++strcat(string|int|float...) -> string::
+Returns the concatenation of all arguments as strings.
 Equivalent to the Swift/T plus (+++) operator.
+
++length(string) -> int+::
+Obtain length of string.
 
 *Import:* +string+
 
@@ -1158,7 +1161,7 @@ Tokenize string +s+ with given delimiter
 Remove leading and trailing whitespace from +s+
 
 +strlen(string) -> int+::
-Obtain the length of the given string
+Obtain the length of the given string (as +length()+).
 
 +hash(string) -> int+::
 Hash the string to a 32-bit integer
