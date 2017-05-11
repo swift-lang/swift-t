@@ -1154,8 +1154,9 @@ string +substring+ within string +s+, after the index +start_index+,
 with the string +rep_string+. In case no such occurence of +substring+
 exists in +s+, the original string +s+ is returned unmodified.
 
-+split(string s, string delimiter) -> string[]+::
-Tokenize string +s+ with given delimiter
++split(string s, string delimiter=" ") -> string[]+::
+Tokenize string +s+ with given delimiter. +
+The +delimiter+ is optional, the default is a space (+" "+).
 
 +trim(string s) -> string+::
 Remove leading and trailing whitespace from +s+
@@ -1187,10 +1188,10 @@ This function is implemented by calling to the Tcl
 http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm[+format+]
 command.
 
-+join(string A[], string separator=",") -> string+::
++join(string A[], string separator=" ") -> string+::
 Join strings in +A+ with given +separator+.  The +separator+ may be the
 empty string.  +
-The +separator+ is optional, the default is a comma (+","+).
+The +separator+ is optional, the default is a space (+" "+).
 
 === Math
 
