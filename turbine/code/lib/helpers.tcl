@@ -133,7 +133,6 @@ proc draw { L } {
     return [ lindex $L $i ]
 }
 
-# Tcl function
 proc cat { args } {
     return [ join $args " " ]
 }
