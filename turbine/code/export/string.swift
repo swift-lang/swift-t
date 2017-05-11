@@ -91,7 +91,7 @@
 
 @pure
 (string s) string_from_floats(float F[]) {
-  // Assume internal repr give correctly formatted floats
+  // Assume internal repr gives correctly formatted floats
   s = string_join(array_repr(F), ",");
 }
 
