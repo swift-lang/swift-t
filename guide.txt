@@ -1027,7 +1027,7 @@ The following unary operators are defined:
 
 * +==+ and +!=+ may also be used on strings.
 
-* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.
+* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.  Cf. <<dircat,dircat()>>.
 
 * The Python-style string format operator +format%(arg1,arg2,...)+ is
   equivalent to
@@ -1192,6 +1192,11 @@ command.
 Join strings in +A+ with given +separator+.  The +separator+ may be the
 empty string.  +
 The +separator+ is optional, the default is a space (+" "+).
+
+[[dircat]]
++dircat(string...) -> string+::
+_directory-concatenate_.
+Concatenate arguments with +/+ as separator.  Cf. <<String operators>>.
 
 === Math
 
