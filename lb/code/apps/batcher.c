@@ -149,7 +149,7 @@ main(int argc, char *argv[])
   MPI_Barrier(MPI_COMM_WORLD);
   double start_time = MPI_Wtime();
 
-  if (am_server )
+  if (am_server)
   {
     // server rank
     ADLB_Server(3000000);
