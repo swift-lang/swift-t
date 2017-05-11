@@ -1184,9 +1184,9 @@ This function is implemented by calling to the Tcl
 http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm[+format+]
 command.
 
-+join(string A[], string separator) -> string+::
-Join strings in +A+ with given separator.  The separator may be the
-empty string
++join(string A[], string separator=",") -> string+::
+Join strings in +A+ with given +separator+.  The +separator+ may be the
+empty string.  The +separator+ is optional, the default is a comma (+","+).
 
 === Math
 
