@@ -1186,7 +1186,8 @@ command.
 
 +join(string A[], string separator=",") -> string+::
 Join strings in +A+ with given +separator+.  The +separator+ may be the
-empty string.  The +separator+ is optional, the default is a comma (+","+).
+empty string.  +
+The +separator+ is optional, the default is a comma (+","+).
 
 === Math
 
