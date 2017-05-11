@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">April 2017</span><br />
+<span id="author">May 2017</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2414,12 +2414,12 @@ Most other ANSI C <code>sprintf()</code> features are supported.
 command.</p></div>
 </dd>
 <dt class="hdlist1">
-<code>join(string A[], string separator) &#8594; string</code>
+<code>join(string A[], string separator=",") &#8594; string</code>
 </dt>
 <dd>
 <p>
-Join strings in <code>A</code> with given separator.  The separator may be the
-empty string
+Join strings in <code>A</code> with given <code>separator</code>.  The <code>separator</code> may be the
+empty string.  The <code>separator</code> is optional, the default is a comma (<code>","</code>).
 </p>
 </dd>
 </dl></div>
@@ -2901,6 +2901,38 @@ Returns the file part of the given string path.
 <dd>
 <p>
 Returns the file part of the given file path.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>rootname_string(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Returns the root part of the given string path (filename without extension).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>rootname(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Returns the root part of the given file path (filename without extension).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>extension_string(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Returns the filename extension part of the given string path.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>extension(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Returns the filename extension part of the given file path.
 </p>
 </dd>
 </dl></div>
@@ -5327,7 +5359,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-05-01 18:32:11 CDT
+ 2017-05-11 16:52:10 CDT
 </div>
 </div>
 
