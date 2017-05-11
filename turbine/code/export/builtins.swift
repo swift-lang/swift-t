@@ -253,4 +253,8 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 (string o) __sprintf_op__(string fmt, int|float|string|boolean... args)
 "turbine" "0.0.2" "sprintf";
 
+@pure
+(string result[]) pick_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_integer_string";
+
 #endif

@@ -542,6 +542,20 @@ namespace eval turbine {
         read_refcount_decr $input
         store_integer $output 0
     }
+
+    proc pick_integer_string { outputs inputs } {
+        rule $inputs "pick_integer_string_body $outputs $inputs"
+    }
+    proc pick_integer_string_body { args } {
+        lassign $args result A indices
+        set picks [ adlb::enumerate $indices members all 0 ]
+        set L [ list ]
+        foreach pick $picks {
+            set s [ adlb::lookup $A $pick ]
+            lappend L $s
+        }
+        array_build $result $L 1 string
+    }
 }
 
 # Local Variables:
