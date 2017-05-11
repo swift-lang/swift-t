@@ -226,10 +226,6 @@ then
   exit 1
 fi
 
-# Make these visible in Swift script via getenv()
-export SWIFT_T_PROGRAM=$PROGRAM_SWIFT
-export SWIFT_T_PROGRAM_ROOT=$( basename --suffix .swift $PROGRAM_SWIFT )
-
 make_stc_output()
 {
   # Set up STC file arguments
