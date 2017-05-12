@@ -902,8 +902,8 @@ accepts integers:
 
 ----
 int N = 100;
-int count = 0;
-for (int i = 0; i < N; i = i+1, count = count+c)
+int count;
+for (int i = 0, count = 0; i < N; i = i+1, count = count+c)
 {
   int c;
   if (condition_function(i))
@@ -935,8 +935,13 @@ while the right-hand-side is the variable in the _previous_ loop
 iteration.  Then, the condition is checked for loop exit.  If the loop
 continues, the body is executed again, etc.
 
+Variables declared in the initializer are only visible in the loop
+body scope.  Variables used on the right-hand-side of updates must be
+assigned (but not necessarily declared) in the initializer, or in the
+loop body.
+
 *Performance Tip:* use the +foreach+ loop instead of +for+ if your
-loop iterations are independent and can be executed in parallel.
+loop iterations are independent and can simply be executed in parallel.
 
 === Explicit data-dependent execution
 
