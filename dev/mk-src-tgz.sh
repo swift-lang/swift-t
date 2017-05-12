@@ -9,11 +9,11 @@ echo "Building upstream TGZ..."
 
 if [ ${#} != 5 ]
 then
-  echo "mk-upstream-tgz: usage: DEBIAN_PKG_TYPE TGZ NAME VERSION FILE_LIST"
+  echo "mk-upstream-tgz: usage: PKG_TYPE TGZ NAME VERSION FILE_LIST"
   exit 1
 fi
 
-PKG_TYPE=$1        # Package type: dev or bin or spack
+PKG_TYPE=$1        # Package type: src or deb-dev or deb-bin or spack
 TGZ=$2             # Output TGZ file
 NAME=$3            # TGZ name
 VERSION=$4         # TGZ version
@@ -34,7 +34,8 @@ mkdir -v $D/$NAME-$VERSION
 cp -v --parents $FILES $D/$NAME-$VERSION || \
   {
     echo ""
-    echo "mk-src-tgz.sh: Some file copy failed! See above for error message."
+    echo "mk-src-tgz.sh: " \
+         "Some file copy failed! See above for error message."
     exit 1
   }
 
