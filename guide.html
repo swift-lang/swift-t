@@ -1966,8 +1966,8 @@ accepts integers:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>int N = 100;
-int count = 0;
-for (int i = 0; i &lt; N; i = i+1, count = count+c)
+int count;
+for (int i = 0, count = 0; i &lt; N; i = i+1, count = count+c)
 {
   int c;
   if (condition_function(i))
@@ -1997,8 +1997,12 @@ left-hand-side is the variable in the <em>next</em> iteration of the loop,
 while the right-hand-side is the variable in the <em>previous</em> loop
 iteration.  Then, the condition is checked for loop exit.  If the loop
 continues, the body is executed again, etc.</p></div>
+<div class="paragraph"><p>Variables declared in the initializer are only visible in the loop
+body scope.  Variables used on the right-hand-side of updates must be
+assigned (but not necessarily declared) in the initializer, or in the
+loop body.</p></div>
 <div class="paragraph"><p><strong>Performance Tip:</strong> use the <code>foreach</code> loop instead of <code>for</code> if your
-loop iterations are independent and can be executed in parallel.</p></div>
+loop iterations are independent and can simply be executed in parallel.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -2095,7 +2099,7 @@ String concatenation is also performed with <code>&#43;</code> (plus).
 </li>
 <li>
 <p>
-Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.
+Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.  Cf. <a href="#dircat">dircat()</a>.
 </p>
 </li>
 <li>
@@ -2285,12 +2289,20 @@ As <code>printf()</code> in C
 <h3 id="_string_functions">13.4. String functions</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<code>strcat(string s1, string s2)</code>
++strcat(string|int|float&#8230;) &#8594; string
 </dt>
 <dd>
 <p>
-Returns the concatenation of <code>s1</code> and <code>s2</code>.
+Returns the concatenation of all arguments as strings.
 Equivalent to the Swift/T plus (<code>+</code>) operator.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>length(string) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain length of string.
 </p>
 </dd>
 </dl></div>
@@ -2360,11 +2372,12 @@ exists in <code>s</code>, the original string <code>s</code> is returned unmodif
 </p>
 </dd>
 <dt class="hdlist1">
-<code>split(string s, string delimiter) &#8594; string[]</code>
+<code>split(string s, string delimiter=" ") &#8594; string[]</code>
 </dt>
 <dd>
 <p>
-Tokenize string <code>s</code> with given delimiter
+Tokenize string <code>s</code> with given delimiter.<br />
+The <code>delimiter</code> is optional, the default is a space (<code>" "</code>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2380,7 +2393,7 @@ Remove leading and trailing whitespace from <code>s</code>
 </dt>
 <dd>
 <p>
-Obtain the length of the given string
+Obtain the length of the given string (as <code>length()</code>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2414,18 +2427,28 @@ Most other ANSI C <code>sprintf()</code> features are supported.
 command.</p></div>
 </dd>
 <dt class="hdlist1">
-<code>join(string A[], string separator=",") &#8594; string</code>
+<code>join(string A[], string separator=" ") &#8594; string</code>
 </dt>
 <dd>
 <p>
 Join strings in <code>A</code> with given <code>separator</code>.  The <code>separator</code> may be the
-empty string.  The <code>separator</code> is optional, the default is a comma (<code>","</code>).
+empty string. <br />
+The <code>separator</code> is optional, the default is a space (<code>" "</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>dircat(string&#8230;) &#8594; string</code>
+</dt>
+<dd>
+<p>
+<em>directory-concatenate</em>.
+Concatenate arguments with <code>/</code> as separator.  Cf. <a href="#String operators">[String operators]</a>.
 </p>
 </dd>
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_math">13.5. Math</h3>
+<h3 id="dircat">13.5. Math</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>max|min_integer(int,int) &#8594; int</code>
@@ -5359,7 +5382,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-05-11 16:52:10 CDT
+ 2017-05-12 18:37:48 CDT
 </div>
 </div>
 
