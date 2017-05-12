@@ -20,8 +20,11 @@ Reasons: Swift/T release versions (what else?)
 = Swift/T Guide
 May 2017
 
-The Swift/Turbine Compiler (STC) allows you to write Swift programs
-and run them using Turbine.
+Swift/T is a hierarchical, parallel programming system that allows you
+to rapidly develop many-task workflows that call into sequential code
+concurrently.  It is implemented with a compiler and runtime system; the Swift/Turbine Compiler (STC) allows you to write Swift programs and
+run them using Turbine.  At runtime, Swift/T programs are MPI programs
+capable of utilizing very large supercomputers.
 
 [[support]]
 == Support
