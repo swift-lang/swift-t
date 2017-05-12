@@ -12,6 +12,11 @@ Settings:
 ////
 :miscellaneous.newline: \n
 
+////
+Note to self: consider preprocessing this with M4.
+Reasons: Swift/T release versions (what else?)
+////
+
 = Swift/T Guide
 May 2017
 
