@@ -550,11 +550,35 @@ namespace eval turbine {
         lassign $args result A indices
         set picks [ adlb::enumerate $indices members all 0 ]
         set L [ list ]
+        # Output list:
         foreach pick $picks {
             set s [ adlb::lookup $A $pick ]
             lappend L $s
         }
-        array_build $result $L 1 string
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
+    }
+
+    proc pick_stable_integer_string { outputs inputs } {
+        rule $inputs "pick_stable_integer_string_body $outputs $inputs"
+    }
+    proc pick_stable_integer_string_body { args } {
+        lassign $args result A indices
+        set D [ adlb::enumerate $indices dict all 0 ]
+        # Indices in stable order:
+        set stable [ list ]
+        set N [ dict size $D ]
+        for { set i 0 } { $i < $N } { incr i } {
+            lappend stable [ dict get $D $i ]
+        }
+        # Output list:
+        set L [ list ]
+        foreach index $stable {
+            set s [ adlb::lookup $A $index ]
+            lappend L $s
+        }
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
     }
 }
 
