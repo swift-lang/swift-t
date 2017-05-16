@@ -26,8 +26,8 @@ DEB_FILE_PATHS = $(patsubst %,maint/debian-$(DEB_TYPE)/%,$(DEB_FILES))
 FILE_LIST = maint/file-list.zsh
 
 # Put the version number in the changelog
-maint/debian-$(PKG_TYPE)/changelog: \
-	maint/debian-$(PKG_TYPE)/changelog.m4
+maint/debian-$(DEB_TYPE)/changelog: \
+	maint/debian-$(DEB_TYPE)/changelog.m4
 	m4 -D M4_CUTILS_VERSION=$(VERSION) $(<) > $(@)
 
 # Just for TGZ dependency
@@ -38,7 +38,7 @@ $(UPSTREAM_TGZ):  configure Makefile $(DEBIAN_STUFF)
 		$(@) exmcutils $(VERSION) $(FILE_LIST)
 
 $(EXMCUTILS_DEB) $(EXMCUTILS_DEV_DEB): $(UPSTREAM_TGZ)
-	../../dev/debian/mk-debian.zsh ${PKG_TYPE} $(@) $(<) \
+	../../dev/debian/mk-debian.zsh $(DEB_TYPE) $(@) $(<) \
 		exmcutils $(VERSION)
 
 clean:: clean-deb

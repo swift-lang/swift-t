@@ -72,7 +72,7 @@ do
   uptodate configure configure.ac bootstrap || ./bootstrap
   uptodate Makefile configure || ./configure
   D=${DEBS[${M}]}
-  make ${D}
+  PKG_TYPE=$D make ${D}
   N=${MODULES[${M}]}
   T=${TYPES[${M}]}
   V=${VERSIONS[${M}]}
