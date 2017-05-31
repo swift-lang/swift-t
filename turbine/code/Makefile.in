@@ -520,8 +520,10 @@ endif
 
 deps: $(DEPS)
 
+ifeq (${DEPCC},)
 # Assume we always have gcc for deps processing
-DEPCC = mpicc
+DEPCC = gcc
+endif
 
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
