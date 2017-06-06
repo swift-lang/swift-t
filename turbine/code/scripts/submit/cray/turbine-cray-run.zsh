@@ -51,6 +51,7 @@ fi
 TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
 TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
 m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
+chmod u+x ${TURBINE_CRAY}
 print "wrote: ${TURBINE_CRAY}"
 
 # If the user specified a queue, we use it:
