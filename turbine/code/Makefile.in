@@ -257,6 +257,7 @@ HAVE_PYTHON          = @HAVE_PYTHON@
 PYTHON_INCLUDE_FLAGS = @PYTHON_INCLUDE_FLAGS@
 PYTHON_LIB_FLAGS     = @PYTHON_LIB_FLAGS@
 PYTHON_LIBDIR        = @PYTHON_LIBDIR@
+PYTHON_NAME          = @PYTHON_NAME@
 
 HAVE_R = @HAVE_R@
 USE_R  = @USE_R@
@@ -519,8 +520,10 @@ endif
 
 deps: $(DEPS)
 
+ifeq (${DEPCC},)
 # Assume we always have gcc for deps processing
 DEPCC = gcc
+endif
 
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)

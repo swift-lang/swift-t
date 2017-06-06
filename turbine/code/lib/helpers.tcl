@@ -133,9 +133,16 @@ proc draw { L } {
     return [ lindex $L $i ]
 }
 
-# Tcl function
 proc cat { args } {
     return [ join $args " " ]
+}
+
+# Remove and return element 0 from list
+proc list_pop_first { L_name } {
+    upvar $L_name L
+    set result [ lindex $L 0 ]
+    set L [ lreplace $L 0 0 ]
+    return $result
 }
 
 namespace eval turbine {

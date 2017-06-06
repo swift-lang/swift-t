@@ -76,4 +76,24 @@
 "turbine" "0.0"
 [ "set <<f>> [ file tail <<p>> ]" ];
 
+@pure
+(string f) rootname_string(string p)
+"turbine" "0.0"
+[ "set <<f>> [ file rootname <<p>> ]" ];
+
+@pure
+(string f) rootname(file p)
+"turbine" "0.0"
+[ "set <<f>> [ file rootname <<p>> ]" ];
+
+@pure
+(string f) extension_string(string p)
+"turbine" "0.0"
+[ "set <<f>> [ file extension <<p>> ]" ];
+
+@pure
+(string f) extension(file p)
+"turbine" "0.0"
+[ "set <<f>> [ file extension <<p>> ]" ];
+
 #endif // FILES_SWIFT

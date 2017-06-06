@@ -29,7 +29,7 @@
 "turbine" "0.0.2" "substring";
 
 @pure
-(string t[]) split(string s, string delimiter)
+(string t[]) split(string s, string delimiter=" ")
 "turbine" "0.0.2" "split"
 [ "set <<t>> [ turbine::split_impl <<s>> <<delimiter>> ]" ];
 
@@ -43,7 +43,7 @@
   "turbine" "0.0.1" "find"
   [ "set <<o>> [ turbine::find_impl <<s>> <<substring>> <<start_index>> <<end_index>> ]" ];
 
-/* string_count: number of non-overlapping occurences of substring in string */
+/* string_count: number of non-overlapping occurrences of substring in string */
 @pure
 (int o) string_count(string s, string substring, int start_index, int end_index)
   "turbine" "0.0.1" "count"
@@ -91,17 +91,17 @@
 
 @pure
 (string s) string_from_floats(float F[]) {
-  // Assume internal repr give correctly formatted floats
+  // Assume internal repr gives correctly formatted floats
   s = string_join(array_repr(F), ",");
 }
 
 @pure
-(string s) string_join(string A[], string separator)
+(string s) string_join(string A[], string separator=" ")
   "turbine" "0.4.0" // "string_join"
   [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
 
 @pure
-(string s) join(string A[], string separator)
+(string s) join(string A[], string separator=" ")
   "turbine" "0.4.0" // "string_join"
   [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
 
@@ -112,5 +112,9 @@
 @pure
 (string o) toLower(string s) "turbine" "0.8.0"
   [ "set <<o>> [ string tolower <<s>> ] " ];
+
+@pure
+(string o) join_args(string separator, string|int|float... args)
+"turbine" "0.0.2" "join_args";
 
 #endif
