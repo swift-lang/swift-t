@@ -1293,6 +1293,7 @@ AC_CONFIG_FILES(
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
+        scripts/submit/theta/module.mk
         scripts/turbine-config.sh
         scripts/turbine-build-config.sh
         tests/module.mk
