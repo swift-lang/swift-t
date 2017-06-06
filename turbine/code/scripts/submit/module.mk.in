@@ -11,3 +11,4 @@ include $(SCRIPTS_SUBMIT_DIR)/ec2/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/pbs/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/slurm/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/sge/module.mk
+include $(SCRIPTS_SUBMIT_DIR)/theta/module.mk
