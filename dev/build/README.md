@@ -12,6 +12,12 @@ clean and ant clean.
 ./fast-build-all.sh - does a build without reconfiguring.
 Should only be used after running build-all.sh .
 
+The build scripts have a common set of options (cf. options.sh)
+
+* -B -- Force ./bootstrap to run for each module
+* -c -- Do not make clean
+* -m -- Do not run make (only configure)
+
 ./mpi_build.sh - build MPICH from source
 
 ./tcl_build.sh - build Tcl from source
