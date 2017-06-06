@@ -31,7 +31,7 @@ fi
 if (( CONFIGURE )); then
   rm -f config.cache
   (
-    set -x
+    set -eux
     ./configure --config-cache \
                 --prefix=${C_UTILS_INSTALL} \
                 --enable-shared \
