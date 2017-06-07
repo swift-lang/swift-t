@@ -952,6 +952,114 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 == Cray
 
+=== Theta
+
+https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
+
+Dependencies are installed in:
+
+----
+/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
+/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+----
+
+==== Public installation
+
+===== Login nodes
+
+////
+
+*Python*
+
+*As of:* 2017/03/07
+
+This installation was configured with the Python 2.7.12 at +
++/usr/common/software/python/2.7-anaconda/envs/deeplearning+
+
+Add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+Run with
+----
+module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+nice swift-t workflow.swift
+----
+
+*Python and R*
+
+*As of:* 2017/05/03
+
+This installation was configured with the Python 2.7.12 at +
++/usr/common/software/python/2.7-anaconda/envs/deeplearning+ and R 3.4.0
+
+Add to +PATH+: +~wozniak/Public/sfw/login/swift-t-r/stc/bin+
+
+Run with
+----
+module load java
+export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+nice swift-t workflow.swift
+----
+
+////
+
+===== Compute nodes
+
+Add to +PATH+: +/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
+
+Theta uses Cobalt.  Run with
+----
+$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
+----
+
+==== Build instructions
+
+*As of:* 2017/06/07
+
+Use
+
+----
+$ module load gcc
+----
+
+===== Login nodes
+
+////
+No special configuration is necessary.
+////
+
+===== Compute nodes
+
+Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
+to configure the MPI library.
+
+Use +gcc+ .
+
+Configure ADLB with:
+----
+$ MPI=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+$ export CFLAGS=-I$MPI/include
+$ export LDFLAGS="-L$MPI/lib -lmpich"
+$ ./configure CC=gcc ...
+----
+
+Configure Turbine with:
+----
+$ ./configure
+  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+  --with-tcl=/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
+  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+  --with-hdf5=no
+  --disable-static --disable-static-pkg
+  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+----
+
 === Titan
 
 Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
