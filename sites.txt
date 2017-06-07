@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.2.0, May 2017
+v1.2.0, June 2017
 
 
 == How to use this guide
