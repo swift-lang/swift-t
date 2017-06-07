@@ -15,7 +15,7 @@ changecom(`dnl')#!/bin/bash
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE-COBALT.SH
+# TURBINE-THETA.SH
 
 # Created: esyscmd(`date')
 
@@ -64,22 +64,22 @@ echo "LAUNCHER:     ${LAUNCHER}"
 echo "VALGRIND:     ${VALGRIND}"
 echo
 
-# Unpack and export all user environment variables
-export getenv(ENV_LIST)
-
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/lib:/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/lib/python2.7/site-packages/numpy/core
-export PATH=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin:$PATH
-
-PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+# Put environment variables from run-init into 'aprun -e' format
+ENV_LIST="getenv(ENV_LIST)"
+APRUN_ENVS=""
+for KV in ${ENV_LIST}
+do
+    APRUN_ENVS+="-e ${KV} "
+done
 
 # Run Turbine:
 aprun -n ${PROCS} -N ${PPN} \
--e PYTHONPATH=$PY/lib/python2.7:$PY/lib/python2.7/site-packages \
-            ${VALGRIND} ${COMMAND}
+      ${APRUN_ENVS} \
+      ${VALGRIND} ${COMMAND}
 CODE=${?}
 
 echo
-echo "Turbine launcher done."
+echo "Turbine Theta launcher done."
 echo "CODE: ${CODE}"
 echo "COMPLETE: $(date)"
 
