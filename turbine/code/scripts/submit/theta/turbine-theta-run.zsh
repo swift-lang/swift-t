@@ -67,8 +67,6 @@ fi
 ENV_LIST=${env}
 export ENV_LIST
 
-print $COMMAND
-
 # Launch it
 export COMMAND
 TURBINE_THETA_M4=${TURBINE_HOME}/scripts/submit/theta/turbine-theta.sh.m4
@@ -76,14 +74,14 @@ TURBINE_THETA=${TURBINE_OUTPUT}/turbine-theta.sh
 m4 ${TURBINE_THETA_M4} > ${TURBINE_THETA}
 print "wrote: ${TURBINE_THETA}"
 chmod u+x ${TURBINE_OUTPUT}/turbine-theta.sh
-qsub -n ${NODES}             \
-     -t ${WALLTIME}          \
-     ${QUEUE_ARG}            \
-     --cwd ${WORK_DIRECTORY} \
-     ${MAIL_ARG}             \
-     -o ${TURBINE_OUTPUT}/output.txt \
-     -e ${TURBINE_OUTPUT}/output.txt \
-     --jobname ${TURBINE_JOBNAME}    \
+qsub -n ${NODES}                          \
+     -t ${WALLTIME}                       \
+     ${QUEUE_ARG}                         \
+     --cwd ${WORK_DIRECTORY}              \
+     ${MAIL_ARG}                          \
+     -o ${TURBINE_OUTPUT}/output.txt      \
+     -e ${TURBINE_OUTPUT}/output.txt      \
+     --jobname ${TURBINE_JOBNAME}         \
      ${TURBINE_OUTPUT}/turbine-theta.sh | \
   read JOB_ID
 

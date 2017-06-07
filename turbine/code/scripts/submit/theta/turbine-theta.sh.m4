@@ -23,11 +23,9 @@ changecom(`dnl')#!/bin/bash
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
 #COBALT -A getenv(PROJECT)
-#COBALT -q default 
+#COBALT -q default
 
-set -x
-
-module swap PrgEnv-intel/6.0.4 PrgEnv-gnu 
+module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
@@ -71,8 +69,6 @@ export getenv(ENV_LIST)
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/lib:/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/lib/python2.7/site-packages/numpy/core
 export PATH=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin:$PATH
-
-echo LLD $LD_LIBRARY_PATH
 
 PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
 
