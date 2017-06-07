@@ -36,8 +36,8 @@ if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
 fi
 
-if (( PYTHON_EXE )); then
-  EXTRA_ARGS+=" --with-python=${PYTHON_EXE}"
+if (( ${#PYTHON_EXE} > 0 )); then
+  EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
 fi
 
 if (( ENABLE_R )); then
