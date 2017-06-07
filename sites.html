@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.2.0,</span>
-<span id="revdate">April 2017</span>
+<span id="revdate">June 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2206,10 +2206,77 @@ Run with:
 <h2 id="_cray">Cray</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="_theta">Theta</h3>
+<div class="paragraph"><p><a href="https://www.alcf.anl.gov/theta">Theta</a> is a Cray at ALCF.</p></div>
+<div class="paragraph"><p>Dependencies are installed in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
+/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_public_installation_9">Public installation</h4>
+<div class="sect4">
+<h5 id="_login_nodes">Login nodes</h5>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes">Compute nodes</h5>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
+<div class="paragraph"><p>Theta uses Cobalt.  Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_2">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2017/06/07</p></div>
+<div class="paragraph"><p>Use</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ module load gcc</code></pre>
+</div></div>
+<div class="sect4">
+<h5 id="_login_nodes_2">Login nodes</h5>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_2">Compute nodes</h5>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
+to configure the MPI library.</p></div>
+<div class="paragraph"><p>Use <code>gcc</code> .</p></div>
+<div class="paragraph"><p>Configure ADLB with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ MPI=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+$ export CFLAGS=-I$MPI/include
+$ export LDFLAGS="-L$MPI/lib -lmpich"
+$ ./configure CC=gcc ...</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure Turbine with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ ./configure
+  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+  --with-tcl=/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
+  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
+  --with-hdf5=no
+  --disable-static --disable-static-pkg
+  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_titan">Titan</h3>
 <div class="paragraph"><p>Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_9">Public installation</h4>
+<h4 id="_public_installation_10">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 8/27/2014</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2329,10 +2396,10 @@ turbine-aprun-run.zsh -n 32 helloworld.tcl</code></pre>
 <div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_10">Public installation</h4>
+<h4 id="_public_installation_11">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
 <div class="sect4">
-<h5 id="_login_nodes">Login nodes</h5>
+<h5 id="_login_nodes_3">Login nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2341,7 +2408,7 @@ Urbana-Champaign.</p></div>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes">Compute nodes</h5>
+<h5 id="_compute_nodes_3">Compute nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2414,9 +2481,9 @@ it as follows (for a single node/32 processes per node):</p></div>
 <div class="paragraph"><p>JYC is a small Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_11">Public installation</h4>
+<h4 id="_public_installation_12">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_2">Login nodes</h5>
+<h5 id="_login_nodes_4">Login nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -2447,7 +2514,7 @@ Urbana-Champaign.</p></div>
 </ul></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_2">Compute nodes</h5>
+<h5 id="_compute_nodes_4">Compute nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -2461,7 +2528,7 @@ $ swift-t -n 8 workflow.swift</code></pre>
 <div class="sect3">
 <h4 id="_build_procedure_10">Build procedure</h4>
 <div class="sect4">
-<h5 id="_compute_nodes_3">Compute nodes</h5>
+<h5 id="_compute_nodes_5">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
 <div class="paragraph"><p>(Same as Blue Waters.)</p></div>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
@@ -2500,9 +2567,9 @@ Configure Turbine with:
 install Turbine and its libraries in <code>/lustre</code>.  Also, your data must
 be in <code>/lustre</code>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_12">Public installation</h4>
+<h4 id="_public_installation_13">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_3">Login nodes</h5>
+<h5 id="_login_nodes_5">Login nodes</h5>
 <div class="paragraph"><p><strong>As of: Swift/T 1.2.0, January 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.  It has
 <a href="http://swift-lang.github.io/swift-t/guide.html#leaf_python">Python</a>
@@ -2526,7 +2593,7 @@ and
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_4">Compute nodes</h5>
+<h5 id="_compute_nodes_6">Compute nodes</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2651,9 +2718,9 @@ is a Cray XC40 at NERSC.</p></div>
 ~wozniak/Public/sfw/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_public_installation_13">Public installation</h4>
+<h4 id="_public_installation_14">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_4">Login nodes</h5>
+<h5 id="_login_nodes_6">Login nodes</h5>
 <div class="paragraph"><p><strong>Python</strong></p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
 <div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
@@ -2681,7 +2748,7 @@ nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_5">Compute nodes</h5>
+<h5 id="_compute_nodes_7">Compute nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
 <div class="listingblock">
@@ -2697,7 +2764,7 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_2">Build instructions</h4>
+<h4 id="_build_instructions_3">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2705,11 +2772,11 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 <pre><code>module load gcc</code></pre>
 </div></div>
 <div class="sect4">
-<h5 id="_login_nodes_5">Login nodes</h5>
+<h5 id="_login_nodes_7">Login nodes</h5>
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_6">Compute nodes</h5>
+<h5 id="_compute_nodes_8">Compute nodes</h5>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
 to configure the MPI library.</p></div>
 <div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
@@ -2743,7 +2810,7 @@ export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
 <div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_14">Public installation</h4>
+<h4 id="_public_installation_15">Public installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2882,7 +2949,7 @@ module load swift-t</code></pre>
 <h3 id="_edison">Edison</h3>
 <div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_15">Public Installation</h4>
+<h4 id="_public_installation_16">Public Installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -3220,8 +3287,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated
- 2017-05-04 15:18:33 CDT
+Last updated 2017-06-07 10:20:19 CDT
 </div>
 </div>
 </body>
