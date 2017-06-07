@@ -959,8 +959,9 @@ https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
 Dependencies are installed in:
 
 ----
-/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
 /gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
+/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
 /home/wozniak/Public/sfw/R-3.4.0/lib64/R
 ----
 
