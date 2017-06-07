@@ -57,10 +57,8 @@ MPI_VERSION=3
 
 # Enable Python integration
 # ENABLE_PYTHON=1
-# PYTHON_INSTALL=/path/to/python
-# PYTHON_VERSION_MAJOR=2
-# PYTHON_VERSION_MINOR=7
-# PYTHON_VERSION_SUFFIX=m
+# or
+# PYTHON_EXE=/path/to/bin/python
 
 # Enable R integration
 # ENABLE_R=1
