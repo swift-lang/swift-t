@@ -1,11 +1,15 @@
+   -c
+          Print config filename
+          Use 'source $(turbine -c)' to obtain the Turbine configuration
+   -C
+          Print build config filename
+          Use 'source $(turbine -C)' to obtain the Turbine build
+          configuration when compiling leaf functions, etc.
+
    -f <file>
           Provide an MPI machine file
    -h
           help
-   -S
-          Print build settings filename
-          Use 'source $(turbine -S)' to obtain Turbine build settings
-          when compiling leaf functions, etc.
    -v
           Report version number
    -V
