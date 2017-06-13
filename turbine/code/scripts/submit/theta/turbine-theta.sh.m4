@@ -23,7 +23,7 @@ changecom(`dnl')#!/bin/bash
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
 #COBALT -A getenv(PROJECT)
-#COBALT -q default
+#COBALT -q getenv(QUEUE)
 
 module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 
