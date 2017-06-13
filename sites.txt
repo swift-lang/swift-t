@@ -202,9 +202,14 @@ output directory creation.  See <<turbine_output,Turbine output>>
 These recently developed features are not yet available for all
 schedulers, feel free to request implementation.
 
-+TURBINE_DIRECTIVE+:: Paste the given text into the submit script
-(currently supported systems: +cray+).  Allows users to insert, e.g.,
-reservation information into the script.
++TURBINE_DIRECTIVE+::
+Paste the given text into the submit script (currently supported
+systems: +cray+).  Allows users to insert, e.g., reservation
+information into the script.
+
++TURBINE_SBATCH_ARGS+::
+Optional arguments passed to +sbatch+.  These arguments may include
++--exclusive+ and +--constraint=...+, etc.
 
 *Mail*
 
@@ -218,23 +223,29 @@ reservation information into the script.
 
 For scheduled systems, Turbine accepts a common set of command line options.
 
-+-d <directory>+:: Set the Turbine output directory.  (Overrides
-+TURBINE_OUTPUT+).
++-d <directory>+::
+Set the Turbine output directory.  (Overrides +TURBINE_OUTPUT+).
 
-+-e <key>=<value>+:: Set an environment variable in the job
-environment.  This may be used multiple times
++-D <file>+::
+Turbine writes the value of +TURBINE_OUTPUT+ into
++turbine-directory.txt+ in +$PWD+.  This is a convenience feature for
+shell scripting.  To change the name of this file,
+specify it with +-D+.  To prevent this from happening, specify
++-D /dev/null+. 
 
-+-i <script>+:: Set an initialization script to run before launching
-Turbine.  This script will have +TURBINE_OUTPUT+ in the environment,
-so you may perform additional configuration just before job launch.
-+
-Other available environment variables include
-+PROCS+ (the total number of MPI processes),
-+TURBINE_WORKERS+ (the number of Turbine worker processes),
-+SCRIPT+ and +ARGS+ (the Swift/Turbine command),
-+WALLTIME+, +NODES+, +PPN+, etc.
-See +run-init.zsh+ for other variables.
-Also, all environment variables from +turbine-config.sh+
++-e <key>=<value>+::
+Set an environment variable in the job environment.  This may be used
+multiple times.
+
++-i <script>+::
+Set an initialization script to run before launching Turbine.  This
+script will have +TURBINE_OUTPUT+ in the environment, so you may
+perform additional configuration just before job launch.  + Other
+available environment variables include +PROCS+ (the total number of
+MPI processes), +TURBINE_WORKERS+ (the number of Turbine worker
+processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
++WALLTIME+, +NODES+, +PPN+, etc.  See +run-init.zsh+ for other
+variables.  Also, all environment variables from +turbine-config.sh+
 (i.e., Turbine installation information) are available.
 
 +-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
@@ -960,7 +971,7 @@ Dependencies are installed in:
 
 ----
 /gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
+/gpfs/mira-home/wozniak/Public/sfw/theta/swig-3.0.12
 /gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
 /home/wozniak/Public/sfw/R-3.4.0/lib64/R
 ----
