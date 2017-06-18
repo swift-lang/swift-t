@@ -622,10 +622,7 @@ namespace eval turbine {
     proc file_write_body { dst str } {
         set str_val [ retrieve_decr_string $str ]
 	set d [ get_filename_val $dst ]
-        ensure_directory_exists2 $d
-	set fp [ ::open $d w+ ]
-        puts -nonewline $fp $str_val
-	close $fp
+        file_write_local d $str_val
 	close_file $dst
     }
 
@@ -634,7 +631,7 @@ namespace eval turbine {
     # TODO: calling convention not figured out yet
     proc file_write_local { local_file_name data } {
         upvar $local_file_name local_file
-        ensure_directory_exists2 $local_file_name
+        ensure_directory_exists2 $local_file
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
         puts -nonewline $fp $data
 	close $fp
