@@ -14,7 +14,9 @@
  * limitations under the License
  */
 
-// Swift/Turbine builtins defined here
+/** Swift/Turbine builtins defined here
+    These are automatically imported.
+*/
 
 // HACK: have preprocessor ignore this: now automatically included
 #define BUILTINS_SWIFT
@@ -256,5 +258,10 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure
 (string result[]) pick_integer_string(string A[], int indices[])
 "turbine" "0.4.0" "pick_integer_string";
+
+@pure
+(string result[]) pick_stable_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_stable_integer_string";
+
 
 #endif

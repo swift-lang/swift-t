@@ -30,6 +30,9 @@ Makefile
 # Tcl packages
 pkgIndex.tcl
 
+# Scheduler output directory file
+turbine-directory.txt
+
 # Fortran output
 *.mod
 

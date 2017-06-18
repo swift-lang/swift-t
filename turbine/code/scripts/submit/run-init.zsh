@@ -124,13 +124,13 @@ env=()
 export ENV env
 
 # Get options
-while getopts "C:d:e:i:M:n:o:s:t:VxX" OPTION
+while getopts "d:D:e:i:M:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
-    C) CHANGE_DIRECTORY=${OPTARG}
+    d) CHANGE_DIRECTORY=${OPTARG}
       ;;
-    d) OUTPUT_TOKEN_FILE=${OPTARG}
+    D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e) KV=${OPTARG}
        if [[ ! ${OPTARG} =~ ".*=.*" ]]
