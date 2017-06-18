@@ -634,7 +634,7 @@ namespace eval turbine {
     # TODO: calling convention not figured out yet
     proc file_write_local { local_file_name data } {
         upvar $local_file_name local_file
-        ensure_directory_exists2 $local_file_name
+        ensure_directory_exists2 $local_file
 	set fp [ ::open [ local_file_path $local_file ] w+ ]
         puts -nonewline $fp $data
 	close $fp
