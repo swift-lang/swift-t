@@ -705,8 +705,8 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   MPI_Comm comm = (MPI_Comm) comm_int;
 
