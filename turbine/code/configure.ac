@@ -242,7 +242,7 @@ AC_ARG_ENABLE(custom-mpi,
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [name in PATH or full path to job launcher
+                   [full path to job launcher
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
