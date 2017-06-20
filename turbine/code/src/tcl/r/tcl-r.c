@@ -99,7 +99,6 @@ static int
 R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
            int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
   turbine_tcl_condition_failed(interp, objv[0],
                        "Turbine not compiled with R support");
   return TCL_ERROR;

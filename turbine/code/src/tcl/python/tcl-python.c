@@ -33,6 +33,8 @@
 #include "Python.h"
 #endif
 
+#include <dlfcn.h>
+
 #include <stdio.h>
 
 #include <tcl.h>
@@ -88,6 +90,19 @@ static bool initialized = false;
 
 static int python_init(void)
 {
+/* Loading python library symbols so that dynamic extensions don't throw symbol not found error.           
+           Ref Link: http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
+        */
+  char str_python_lib[17];
+#ifdef _WIN32
+  sprintf(str_python_lib, "libpython%d.%d.dll", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+#elif defined __unix__
+  sprintf(str_python_lib, "libpython%d.%d.so", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+#elif defined __APPLE__
+  sprintf(str_python_lib, "libpython%d.%d.dylib", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+#endif
+  dlopen(str_python_lib, RTLD_NOW | RTLD_GLOBAL);
+
   if (initialized) return TCL_OK;
   DEBUG_TCL_TURBINE("python: initializing...");
   Py_InitializeEx(1);

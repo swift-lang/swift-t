@@ -6,7 +6,7 @@
 # Please fill in all of these variables
 
 # Install root: change to your install location
-export SWIFT_T_PREFIX=/tmp/exm-install
+export SWIFT_T_PREFIX=/tmp/swift-t-install
 
 #+====================================+
 #|| Optional configuration variables ||
@@ -56,11 +56,9 @@ MPI_VERSION=3
 # EXM_DEBUG_BUILD=1
 
 # Enable Python integration
-# ENABLE_PYTHON=1
-# PYTHON_INSTALL=/path/to/python
-# PYTHON_VERSION_MAJOR=2
-# PYTHON_VERSION_MINOR=7
-# PYTHON_VERSION_SUFFIX=m
+# ENABLE_PYTHON=1 # Finds Python in PATH
+# or specify the Python interpreter executable
+# PYTHON_EXE=$HOME/sfw/Python-2.7.10/bin/python
 
 # Enable R integration
 # ENABLE_R=1

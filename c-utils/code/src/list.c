@@ -234,15 +234,12 @@ list_poll(struct list* target)
 void*
 list_random(struct list* target)
 {
-  int i;
-  // printf("%s %i \n", "list size: ", target->size);
-
   if (target->size == 0)
     return NULL;
 
   int p = rand() % target->size;
   struct list_item* item = target->head;
-  for (i = 0; i < p; i++)
+  for (int i = 0; i < p; i++)
     item = item->next;
 
   return item->data;

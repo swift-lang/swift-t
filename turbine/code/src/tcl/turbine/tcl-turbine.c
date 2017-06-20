@@ -859,7 +859,7 @@ Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
-  Tcl_Obj* result = Tcl_NewLongObj(turbine_task_comm);
+  Tcl_Obj* result = Tcl_NewWideIntObj((long long int) turbine_task_comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -1702,8 +1702,8 @@ Turbine_CopyTo_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(4);
-  int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   const char* name_in  = Tcl_GetString(objv[2]);
   const char* name_out = Tcl_GetString(objv[3]);
@@ -1722,8 +1722,8 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Unpack
   TCL_ARGS(4);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   int root;
   rc = Tcl_GetIntFromObj(interp, objv[2], &root);

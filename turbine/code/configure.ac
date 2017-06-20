@@ -242,7 +242,7 @@ AC_ARG_ENABLE(custom-mpi,
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [name in PATH or full path to job launcher
+                   [full path to job launcher
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
@@ -1293,6 +1293,7 @@ AC_CONFIG_FILES(
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
+        scripts/submit/theta/module.mk
         scripts/turbine-config.sh
         scripts/turbine-build-config.sh
         tests/module.mk
