@@ -46,7 +46,7 @@ setopt PUSHD_SILENT KSH_GLOB
 while getopts "bcpt" opt
 do
   case ${opt} in
-    b) BOOTSTRAP=0 ;;
+    b) BOOTSTRAP=0      ;;
     c) ENABLE_COASTER=1 ;;
     t) USE_MASTER=1     ;;
     \?)

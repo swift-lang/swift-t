@@ -9,7 +9,7 @@ print bootstrap config.h.in configure configure.ac
 print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf}
-print maint/{*.sh,find-tcl.sh}
+print maint/*.sh
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
@@ -30,6 +30,7 @@ print scripts/submit/ec2/turbine-setup-ec2.zsh
 print scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
 print scripts/submit/slurm/*turbine*.*sh*
 print scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
+print scripts/submit/theta/{turbine-theta-run.zsh,turbine-theta.sh.m4}
 print scripts/python-config.py
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt
