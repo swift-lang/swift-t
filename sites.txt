@@ -959,10 +959,10 @@ https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
 Dependencies are installed in:
 
 ----
-/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
-/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+/home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+/home/wozniak/Public/sfw/theta/tcl-8.6.1
+/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 ----
 
 ==== Public installation
@@ -1008,13 +1008,15 @@ nice swift-t workflow.swift
 
 ===== Compute nodes
 
-Add to +PATH+: +/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
+Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
 
-Theta uses Cobalt.  Run with
+Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
+Run with:
 ----
 $ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 $ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ export PROJECT=... QUEUE=...
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
 ----
 
@@ -1057,8 +1059,8 @@ $ ./configure
   --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
   --with-hdf5=no
   --disable-static --disable-static-pkg
-  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 ----
 
 === Titan
