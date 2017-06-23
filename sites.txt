@@ -1013,7 +1013,7 @@ Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 Run with:
 ----
-$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
 $ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 $ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
 $ export PROJECT=... QUEUE=...
