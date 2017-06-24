@@ -295,6 +295,28 @@ namespace eval turbine {
         set argv [ blob_string_dict_to_char_ptr_ptr $D ]
         return $argc
     }
+
+	# DOCD(blob_string_dict_to_char_ppp d,
+    #      `Input: A Tcl dict of int->int->string indexed from 0. +
+    #       Output: A SWIG pointer (+char***+) to the C strings. +
+    #       Helpful for passing data into C-style multi argc/argv interfaces.')
+    proc blob_string_dict_to_char_ppp { d } {
+        set v [ dict size $d ]
+        # Allocate array of char**
+        set bytes [ expr $v * [blobutils_sizeof_ptr] ]
+        # This is a void*
+        set alloc [ blobutils_malloc $bytes ]
+		# This is a void**
+		set alloc** [ blobutils_cast_to_ptrptr $alloc ]
+        # This is a char***
+        set charppp [ blobutils_cast_to_char_ppp $alloc ]
+		dict for { k v } $d {
+			set p [ blob_string_dict_to_char_ptr_ptr $v ]
+			set p [ blobutils_cast_char_ptrptr_to_ptr $p ]
+			blobutils_set_ptr ${alloc**} $k $p
+		}
+		return $charppp
+	}
 }
 
 # Local Variables:
