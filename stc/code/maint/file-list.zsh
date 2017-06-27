@@ -18,7 +18,7 @@ print lib/*.jar
 print META-INF/MANIFEST.MF
 print README
 
-if [[ ${PKG_TYPE} == deb-* ]]
+if [[ ${DEB_TYPE} == "bin" ]]
 then
   ln -sfT maint/debian debian
   print debian/*[^~]

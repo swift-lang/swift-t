@@ -5,20 +5,24 @@ include maint/version.mkf
 
 TURBINE_DEB = turbine_$(VERSION)_amd64.deb
 
-deb: $(TURBINE_DEB)
+deb-bin: $(TURBINE_DEB)
 
 # Turbine has only one Debian type, with headers, but this is still
 # called a bin
 PKG_TYPE = deb-bin
+DEB_TYPE = bin
 UPSTREAM_TGZ = turbine_$(VERSION).orig.tar.gz
 
 DEB_FILES = changelog compat control copyright rules
 DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
 
-ifeq ($(ENABLE_DEB),1) # Do this FS scan only if building a DEB
 FILE_LIST = maint/file-list.zsh
+
+ifeq ($(ENABLE_DEB),1) # Do this FS scan only if building a DEB
 FILE_ENTRIES = $(shell PKG_TYPE=$(PKG_TYPE) $(FILE_LIST))
 endif
+
+$(info FILE_LIST $(FILE_LIST) $(ENABLE_DEB))
 
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
@@ -33,7 +37,7 @@ $(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile $(FILE_ENTRIES)
 		$(@) turbine $(VERSION) $(FILE_LIST)
 
 $(TURBINE_DEB): $(UPSTREAM_TGZ)
-	../../dev/debian/mk-debian.zsh ${DEBIAN_PKG_TYPE} $(@) $(<) \
+	../../dev/debian/mk-debian.zsh ${DEB_TYPE} $(@) $(<) \
 		turbine $(VERSION)
 
 clean:: clean-deb

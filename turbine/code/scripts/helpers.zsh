@@ -432,3 +432,16 @@ clm()
     CMD=${CMD}" }"
     awk "${CMD}"
 }
+
+rm0()
+# File removal, ok with empty argument list
+# Safer than rm -f
+{
+  local R V
+  zparseopts -D -E r=R v=V
+  if (( ${#*} == 0 ))
+  then
+    return 0
+  fi
+  rm ${R} ${V} ${*}
+}

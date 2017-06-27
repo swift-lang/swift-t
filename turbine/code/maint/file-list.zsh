@@ -8,7 +8,7 @@ set -eu
 print bootstrap config.h.in configure configure.ac
 print version.txt README.txt
 print Makefile.in **/*.mk.in
-print maint/{debian.mkf,version.mkf}
+print maint/{debian.mkf,version.mkf,file-list.zsh}
 print maint/*.sh
 print bin/turbine{,.in}
 print bin/turbine-{read,write}-doubles
@@ -35,7 +35,7 @@ print scripts/python-config.py
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt
 
-if [[ ${PKG_TYPE} == deb-* ]]
+if [[ ${DEB_TYPE} == "bin" ]]
 then
   ln -sfT maint/debian debian
   print debian/*[^~]
