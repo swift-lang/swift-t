@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">May 2017</span><br />
+<span id="author">June 2017</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -775,7 +775,8 @@ capable of utilizing very large supercomputers.</p></div>
 <div class="sect1">
 <h2 id="_installation">2. Installation</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Swift/T may be installed via binary Debian (and Ubuntu) packages or
+<div class="paragraph"><p>Swift/T may be installed via binary Debian (and Ubuntu) packages,
+from <a href="http://spack.io">Spack</a>, or
 from source.</p></div>
 <div class="paragraph"><p>Our GitHub repository is here:</p></div>
 <div class="paragraph"><p><a href="http://github.com/swift-lang/swift-t">http://github.com/swift-lang/swift-t</a></p></div>
@@ -789,7 +790,7 @@ Obtain the Swift/T Debian packages from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ wget http://swift-lang.github.io/swift-t/downloads/swift-t-debs-1.2.tar.gz</code></pre>
+<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-debs-1.3.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -798,7 +799,7 @@ Unpack and enter package directory:
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ tar xfz swift-t-debs-1.2.tar.gz
+<pre><code>$ tar xfz swift-t-debs-1.3.tar.gz
 $ cd swift-t-debs</code></pre>
 </div></div>
 </li>
@@ -814,7 +815,18 @@ Install:
 </ol></div>
 </div>
 <div class="sect2">
-<h3 id="_from_source">2.2. From source</h3>
+<h3 id="_from_spack">2.2. From Spack</h3>
+<div class="paragraph"><p>Simply clone Spack and install STC.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ git clone https://github.com/llnl/spack.git
+$ . spack/share/spack/setup-env.sh
+$ spack install stc</code></pre>
+</div></div>
+<div class="paragraph"><p>This will install all necessary dependencies.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_from_source">2.3. From source</h3>
 <div class="paragraph"><p>Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
@@ -824,7 +836,7 @@ from a source package.</p></div>
 is a accompanying resource for configuration settings and preinstalled software
 for specific systems.</p></div>
 <div class="sect3">
-<h4 id="_prerequisites">2.2.1. Prerequisites</h4>
+<h4 id="_prerequisites">2.3.1. Prerequisites</h4>
 <div class="paragraph"><p>All Swift/T prerequisites can be installed using the appropriate
 package manager for your system.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -910,7 +922,7 @@ If you have difficulties with compiler compatibility,
 please <a href="#support">contact us</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_installation_of_swift_t_from_source">2.2.2. Installation of Swift/T from Source</h4>
+<h4 id="_installation_of_swift_t_from_source">2.3.2. Installation of Swift/T from Source</h4>
 <div class="paragraph"><p>Once you have found all prerequisites, we can continue with building
 Swift/T from source.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -921,7 +933,7 @@ Obtain the Swift/T source package from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.1.tar.gz</code></pre>
+<pre><code>wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-1.3.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -930,8 +942,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-1.1.tar.gz
-cd swift-t-1.1</code></pre>
+<pre><code>tar xfz swift-t-1.3.tar.gz
+cd swift-t-1.3</code></pre>
 </div></div>
 </li>
 <li>
@@ -4478,7 +4490,7 @@ Either variable name may be used.
 <dd>
 <p>
 Directory location for <a href="#unmapped_files">unmapped files</a>.
-<code>SWIFT_PATH</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
+<code>SWIFT_TMP</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5385,7 +5397,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-05-12 18:41:42 CDT
+ 2017-06-28 15:17:19 CDT
 </div>
 </div>
 

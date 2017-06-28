@@ -1041,9 +1041,18 @@ schedulers, feel free to request implementation.</p></div>
 </dt>
 <dd>
 <p>
-Paste the given text into the submit script
-(currently supported systems: <code>cray</code>, <code>slurm</code>).  Allows users to insert, e.g.,
-reservation information into the script.
+Paste the given text into the submit script (currently supported
+systems: <code>cray</code>, <code>slurm</code>).  Allows users to insert, e.g., reservation
+information into the script.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_SBATCH_ARGS</code>
+</dt>
+<dd>
+<p>
+Optional arguments passed to <code>sbatch</code>.  These arguments may include
+<code>--exclusive</code> and <code>--constraint=&#8230;</code>, etc.  Supported systems: <code>slurm</code>.
 </p>
 </dd>
 </dl></div>
@@ -1078,8 +1087,19 @@ If <code>MAIL_ENABLED</code>, send the email to the given address.
 </dt>
 <dd>
 <p>
-Set the Turbine output directory.  (Overrides
-<code>TURBINE_OUTPUT</code>).
+Set the Turbine output directory.  (Overrides <code>TURBINE_OUTPUT</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-D &lt;file&gt;</code>
+</dt>
+<dd>
+<p>
+Turbine writes the value of <code>TURBINE_OUTPUT</code> into
+<code>turbine-directory.txt</code> in <code>$PWD</code>.  This is a convenience feature for
+shell scripting.  To change the name of this file,
+specify it with <code>-D</code>.  To prevent this from happening, specify
+<code>-D /dev/null</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1087,8 +1107,8 @@ Set the Turbine output directory.  (Overrides
 </dt>
 <dd>
 <p>
-Set an environment variable in the job
-environment.  This may be used multiple times
+Set an environment variable in the job environment.  This may be used
+multiple times.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1096,18 +1116,16 @@ environment.  This may be used multiple times
 </dt>
 <dd>
 <p>
-Set an initialization script to run before launching
-Turbine.  This script will have <code>TURBINE_OUTPUT</code> in the environment,
-so you may perform additional configuration just before job launch.
+Set an initialization script to run before launching Turbine.  This
+script will have <code>TURBINE_OUTPUT</code> in the environment, so you may
+perform additional configuration just before job launch.  + Other
+available environment variables include <code>PROCS</code> (the total number of
+MPI processes), <code>TURBINE_WORKERS</code> (the number of Turbine worker
+processes), <code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
+<code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.  See <code>run-init.zsh</code> for other
+variables.  Also, all environment variables from <code>turbine-config.sh</code>
+(i.e., Turbine installation information) are available.
 </p>
-<div class="paragraph"><p>Other available environment variables include
-<code>PROCS</code> (the total number of MPI processes),
-<code>TURBINE_WORKERS</code> (the number of Turbine worker processes),
-<code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
-<code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.
-See <code>run-init.zsh</code> for other variables.
-Also, all environment variables from <code>turbine-config.sh</code>
-(i.e., Turbine installation information) are available.</p></div>
 </dd>
 <dt class="hdlist1">
 <code>-n &lt;procs&gt;</code>
@@ -3290,7 +3308,8 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-06-23 09:19:17 CDT
+Last updated
+ 2017-06-28 15:30:19 CDT
 </div>
 </div>
 </body>
