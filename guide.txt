@@ -2497,7 +2497,7 @@ anchor:env_swift_tmp[]
 +TMP+::
 
 Directory location for <<unmapped_files,unmapped files>>.
-+SWIFT_PATH+ overrides +TMP+.  The default is +/tmp+.
++SWIFT_TMP+ overrides +TMP+.  The default is +/tmp+.
 
 +SWIFT_TMP_AUTODELETE=0+:: By default, Swift/T deletes
 <<unmapped_files,unmapped files>> when they are no longer used.
