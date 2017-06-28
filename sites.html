@@ -1042,7 +1042,7 @@ schedulers, feel free to request implementation.</p></div>
 <dd>
 <p>
 Paste the given text into the submit script
-(currently supported systems: <code>cray</code>).  Allows users to insert, e.g.,
+(currently supported systems: <code>cray</code>, <code>slurm</code>).  Allows users to insert, e.g.,
 reservation information into the script.
 </p>
 </dd>
@@ -2211,10 +2211,10 @@ Run with:
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
-/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+<pre><code>/home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+/home/wozniak/Public/sfw/theta/tcl-8.6.1
+/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
 </div></div>
 <div class="sect3">
 <h4 id="_public_installation_9">Public installation</h4>
@@ -2223,13 +2223,15 @@ Run with:
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes">Compute nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
-<div class="paragraph"><p>Theta uses Cobalt.  Run with</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>/home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
+<div class="paragraph"><p>Theta uses Cobalt/APRUN, which in Swift/T is machine type <code>theta</code>.
+Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+<pre><code>$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 $ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ export PROJECT=... QUEUE=...
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
 </div></div>
 </div>
@@ -2267,8 +2269,8 @@ $ ./configure CC=gcc ...</code></pre>
   --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
   --with-hdf5=no
   --disable-static --disable-static-pkg
-  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
 </div></div>
 </div>
 </div>
@@ -3288,7 +3290,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.2.0<br />
-Last updated 2017-06-07 11:31:50 CDT
+Last updated 2017-06-23 09:19:17 CDT
 </div>
 </div>
 </body>
