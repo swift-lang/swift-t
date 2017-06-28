@@ -2184,6 +2184,29 @@ block again until <code>A[key]</code> is stored.
 </p>
 </dd>
 </dl></div>
+<div class="sect3">
+<h4 id="pick">13.1.1. Pick functions</h4>
+<div class="paragraph"><p>Select items from an array.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+pick_integer_string(string A[], int indices[]) &#8594; string result[]
+</dt>
+<dd>
+<p>
+Select the <code>indices</code> from <code>A</code>.  The <code>result</code> may be reordered.
+</p>
+</dd>
+<dt class="hdlist1">
+pick_stable_integer_string(string A[], int indices[]) &#8594; string result[]
+</dt>
+<dd>
+<p>
+Select the <code>indices</code> from <code>A</code>.
+The ordering of <code>result</code> will be the same as in <code>A</code>.
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_type_conversion">13.2. Type conversion</h3>
@@ -2449,6 +2472,15 @@ command.</p></div>
 Join strings in <code>A</code> with given <code>separator</code>.  The <code>separator</code> may be the
 empty string. <br />
 The <code>separator</code> is optional, the default is a space (<code>" "</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>join_args(string separator, string|int+float&#8230;) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Join given arguments with given <code>separator</code>.  The <code>separator</code> may be the
+empty string.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5397,7 +5429,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-06-28 15:17:19 CDT
+ 2017-06-28 15:48:32 CDT
 </div>
 </div>
 
