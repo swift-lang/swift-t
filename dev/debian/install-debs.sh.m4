@@ -24,3 +24,7 @@ sudo dpkg -i exmcutils-dev_${CUTILS_VERSION}_amd64.deb
 sudo dpkg -i adlbx-dev_${ADLBX_VERSION}_amd64.deb
 sudo dpkg -i turbine_${TURBINE_VERSION}_amd64.deb
 sudo dpkg -i stc_${STC_VERSION}_amd64.deb
+
+# These packages were built with MPICH: make sure the user is
+# using MPICH
+sudo update-alternatives --set mpirun /usr/bin/mpirun.mpich
