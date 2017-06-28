@@ -1092,6 +1092,18 @@ aliases for this function.)
 This function blocks until +A+ is closed.  Consumers of +A[key]+ may
 block again until +A[key]+ is stored.
 
+[[pick]]
+==== Pick functions
+
+Select items from an array.
+
+pick_integer_string(string A[], int indices[]) -> string result[]::
+Select the +indices+ from +A+.  The +result+ may be reordered.
+
+pick_stable_integer_string(string A[], int indices[]) -> string result[]::
+Select the +indices+ from +A+.
+The ordering of +result+ will be the same as in +A+.
+
 === Type conversion
 
 ////
@@ -1218,6 +1230,11 @@ command.
 Join strings in +A+ with given +separator+.  The +separator+ may be the
 empty string.  +
 The +separator+ is optional, the default is a space (+" "+).
+
+[[join_args]]
++join_args(string separator, string|int+float...) -> string+::
+Join given arguments with given +separator+.  The +separator+ may be the
+empty string.
 
 [[dircat]]
 +dircat(string...) -> string+::
