@@ -1150,7 +1150,7 @@ As +printf()+ in C
 
 === String functions
 
-+strcat(string|int|float...) -> string::
++strcat(string|int|float...) -> string+::
 Returns the concatenation of all arguments as strings.
 Equivalent to the Swift/T plus (+++) operator.
 
