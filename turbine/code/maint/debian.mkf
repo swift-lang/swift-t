@@ -22,8 +22,6 @@ ifeq ($(ENABLE_DEB),1) # Do this FS scan only if building a DEB
 FILE_ENTRIES = $(shell PKG_TYPE=$(PKG_TYPE) $(FILE_LIST))
 endif
 
-$(info FILE_LIST $(FILE_LIST) $(ENABLE_DEB))
-
 # Just for TGZ dependency
 DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
 		maint/debian.mkf
