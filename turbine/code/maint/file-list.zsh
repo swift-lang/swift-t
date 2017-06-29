@@ -35,7 +35,7 @@ print scripts/python-config.py
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt
 
-if [[ ${DEB_TYPE} == "bin" ]]
+if [[ ${PKG_TYPE} == "deb-bin" ]]
 then
   ln -sfT maint/debian debian
   print debian/*[^~]
