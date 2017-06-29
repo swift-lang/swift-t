@@ -14,7 +14,7 @@ Settings:
 
 = Swift/T Developers' Guide
 Justin M. Wozniak
-December 2016
+June 2017
 
 This document is for developers interested in modifying or extending
 the Swift/T codebase.
