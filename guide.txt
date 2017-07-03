@@ -1151,7 +1151,7 @@ As +printf()+ in C
 
 === String functions
 
-+strcat(string|int|float...) -> string::
++strcat(string|int|float...) -> string+::
 Returns the concatenation of all arguments as strings.
 Equivalent to the Swift/T plus (+++) operator.
 
@@ -1279,7 +1279,20 @@ Obtain random integer from +start+, inclusive, to +end+, exclusive
 
 *Import:* +sys+
 
-+getenv(string) -> string+:: Obtain an environment variable
++getenv(string) -> string+::
+Obtain an environment variable
+
++sleep(float) -> void+::
+Delay for the given number of seconds.
+
++clock() -> float+::
+Obtain time since the Unix epoch in seconds.
+
++clock_seconds() -> int+::
+Obtain time since the Unix epoch in whole seconds.
+
++INT_MAX() -> int+::
+Obtain the largest integer representable on the current platform.
 
 [[argv]]
 ==== Command line
