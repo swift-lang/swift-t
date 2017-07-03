@@ -22,6 +22,7 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
+[[stable]]
 == Current/stable: Series 1.3
 
 * Release 1.3
