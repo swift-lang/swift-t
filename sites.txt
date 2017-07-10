@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.2.0, June 2017
+v1.3.0, July 2017
 
 
 == How to use this guide
@@ -231,7 +231,7 @@ Turbine writes the value of +TURBINE_OUTPUT+ into
 +turbine-directory.txt+ in +$PWD+.  This is a convenience feature for
 shell scripting.  To change the name of this file,
 specify it with +-D+.  To prevent this from happening, specify
-+-D /dev/null+. 
++-D /dev/null+.
 
 +-e <key>=<value>+::
 Set an environment variable in the job environment.  This may be used
@@ -1483,7 +1483,12 @@ export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 nice swift-t workflow.swift
 ----
 
+[[cori_compute]]
 ===== Compute nodes
+
+There are two Swift/T installations for two different Python installations:
+
+*Python and R (I)*
 
 Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-r/stc/bin+
 
@@ -1499,9 +1504,27 @@ swift-t -m slurm workflow.swift
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
+*Python and R (II)* +
+*As of:* 2017/07/10
+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-07-10/stc/bin+
+
+Cori uses SLURM.  Run with
+----
+module load java
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
+----
+
+The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
+cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
+
+
 ==== Build instructions
 
-*As of:* 2017/03/09
+*As of:* 2017/07/10
 
 Use
 
