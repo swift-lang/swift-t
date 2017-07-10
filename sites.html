@@ -745,8 +745,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.2.0,</span>
-<span id="revdate">June 2017</span>
+<span id="revnumber">version 1.3.0,</span>
+<span id="revdate">July 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2769,7 +2769,9 @@ nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_7">Compute nodes</h5>
+<h5 id="cori_compute">Compute nodes</h5>
+<div class="paragraph"><p>There are two Swift/T installations for two different Python installations:</p></div>
+<div class="paragraph"><p><strong>Python and R (I)</strong></p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
 <div class="listingblock">
@@ -2782,11 +2784,25 @@ swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
 cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
+<div class="paragraph"><p><strong>Python and R (II)</strong><br />
+<strong>As of:</strong> 2017/07/10</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-2017-07-10/stc/bin</code></p></div>
+<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load java
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
+cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_3">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/07/10</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2797,7 +2813,7 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_8">Compute nodes</h5>
+<h5 id="_compute_nodes_7">Compute nodes</h5>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
 to configure the MPI library.</p></div>
 <div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
@@ -3307,9 +3323,9 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.2.0<br />
+Version 1.3.0<br />
 Last updated
- 2017-06-28 15:30:19 CDT
+ 2017-07-10 18:56:29 CDT
 </div>
 </div>
 </body>
