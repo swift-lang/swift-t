@@ -1505,15 +1505,15 @@ The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
 *Python and R (II)* +
-*As of:* 2017/07/10
+*As of:* 2017/07/11
 
-Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-07-10/stc/bin+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-07-11/stc/bin+
 
 Cori uses SLURM.  Run with
 ----
 module load java
 export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
+export PYTHONHOME=/usr/common/software/intel-tensorflow
 export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
 ----
@@ -1521,10 +1521,9 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
-
 ==== Build instructions
 
-*As of:* 2017/07/10
+*As of:* 2017/07/11
 
 Use
 
