@@ -354,7 +354,7 @@ Add to +PATH+:
 Run on the login nodes with:
 
 ----
-swift-t ...
+nice swift-t ...
 ----
 
 Run on the compute nodes with:
