@@ -3933,6 +3933,22 @@ code is passed to Python for evaluation.  The output is:</p></div>
                 [ 0.,  2.,  0.],
                 [ 0.,  0.,  2.]])</code></pre>
 </div></div>
+<div class="sect4">
+<h5 id="_python_state">Python state</h5>
+<div class="paragraph"><p>The <code>python()</code> function reset the Python interpreter at the end of each task.  If
+you want to access state from a previous Python task, use
+<code>python_persist()</code>, which leaves the Python interpreter in memory.
+Global variables and other state in Python will be accessible from
+task to task.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_exceptions">Exceptions</h5>
+<div class="paragraph"><p>Normally, uncaught exceptions are caught by Swift/T, reported via a
+Python stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to <code>python()</code> or
+<code>python_persist()</code>: <code>exceptions_are_errors=false</code>.  The exception
+stack trace will still be reported, but the function will return
+successfully with value <code>"&#95;&#95;EXCEPTION&#95;&#95;"</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3947,6 +3963,7 @@ Python symbols- refer to the first error in the Python stack trace.
 Due to the Python C API, error reports may be slightly better for the
 code argument and worse in the expression argument.</td>
 </tr></table>
+</div>
 </div>
 </div>
 <div class="sect3">
@@ -3984,6 +4001,19 @@ the answer was: 104</code></pre>
 expression as a Swift string.  The expression must evaluate to a R
 string.  The expression argument may be omitted if desired, in which
 case the return value is always the empty string.</p></div>
+<div class="sect4">
+<h5 id="_r_state">R state</h5>
+<div class="paragraph"><p>State is always maintained in the R interpreter, so global variables
+can be accessed from task to task.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_exceptions_2">Exceptions</h5>
+<div class="paragraph"><p>Normally, uncaught exceptions are caught by Swift/T, reported via a R
+stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to <code>R()</code>:
+<code>exceptions_are_errors=false</code>.  The exception stack trace will still
+be reported, but the function will return successfully with value
+<code>"&#95;&#95;EXCEPTION&#95;&#95;"</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3993,6 +4023,7 @@ case the return value is always the empty string.</p></div>
 shared library, enabling better performance than calling the <code>R</code>
 program (which may be done by using a normal Swift <a href="#app_functions">app function</a>).</td>
 </tr></table>
+</div>
 </div>
 </div>
 <div class="sect3">
@@ -5461,7 +5492,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-07-03 14:18:19 CDT
+ 2017-07-11 15:20:44 CDT
 </div>
 </div>
 
