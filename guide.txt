@@ -2094,6 +2094,23 @@ code is passed to Python for evaluation.  The output is:
                 [ 0.,  0.,  2.]])
 ----
 
+===== Python state
+
+The +python()+ function reset the Python interpreter at the end of each task.  If
+you want to access state from a previous Python task, use
++python_persist()+, which leaves the Python interpreter in memory.
+Global variables and other state in Python will be accessible from
+task to task.
+
+===== Exceptions
+
+Normally, uncaught exceptions are caught by Swift/T, reported via a
+Python stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to +python()+ or
++python_persist()+: +exceptions_are_errors=false+.  The exception
+stack trace will still be reported, but the function will return
+successfully with value +"&#95;&#95;EXCEPTION&#95;&#95;"+.
+
 NOTE: To use this, Turbine must be <<build_python,configured and
 compiled with Python enabled>>.  This feature is implemented by
 linking to Python as a shared library, enabling better performance
@@ -2142,6 +2159,20 @@ _expression_.  This simply executes the R code, then returns the
 expression as a Swift string.  The expression must evaluate to a R
 string.  The expression argument may be omitted if desired, in which
 case the return value is always the empty string.
+
+===== R state
+
+State is always maintained in the R interpreter, so global variables
+can be accessed from task to task.
+
+===== Exceptions
+
+Normally, uncaught exceptions are caught by Swift/T, reported via a R
+stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to +R()+:
++exceptions_are_errors=false+.  The exception stack trace will still
+be reported, but the function will return successfully with value
++"&#95;&#95;EXCEPTION&#95;&#95;"+.
 
 NOTE: To use this, Turbine must be <<build_r,configured and compiled
 with R enabled>>.  This feature is implemented by linking to R as a
