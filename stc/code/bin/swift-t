@@ -71,14 +71,15 @@ report_version()
 }
 
 PROGRAM_TCL=""
-CHECK_DATES=0
+CHECK_DEPS=0
+STC_DEPS_ARGS=()
 VERBOSE=0
 EXEC_STRING=""
 IMPORT_STRING=""
 
 # Process all flags: split among this script, STC, or Turbine
 SWIFT_T_CHARS="hE:i:o:t:vV"
-STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
+STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:uU:"
 TURBINE_CHARS="e:i:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
@@ -95,12 +96,17 @@ do
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
     o) PROGRAM_TCL=${OPTARG} ;;
-    u) CHECK_DATES=1 ;;
 
     # STC arguments:
     A) ;& d) ;& D) ;& F) ;& f) ;& I) ;&
     j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
+      ;;
+
+    # STC deps arguments:
+    u) ;& U)
+      CHECK_DEPS=1
+      STC_DEPS_ARGS+=( -${OPTION} ${OPTARG} )
       ;;
 
     # Turbine arguments
@@ -128,8 +134,11 @@ do
 done
 shift $(( OPTIND - 1 ))
 
+(( VERBOSE >= 1 )) && STC_OPTS+="-V"
+(( VERBOSE == 2 )) && TURBINE_OPTS+="-V"
+
 # Print a message when we are verbose.
-message()
+verbose()
 {
   local T
   zparseopts -D -E t=T # Accept -t for TAB
@@ -144,13 +153,13 @@ message()
 }
 
 # Print a command when we are verbose, then execute it
-verbose()
+verbose_cmd()
 {
-  message -t ${*}
+  verbose -t ${*}
   ${*}
 }
 
-message "Swift/T"
+verbose "Swift/T"
 
 # Handle temp file creation across platforms
 # Always has .SUFFIX somewhere, preferably at the end
@@ -206,7 +215,7 @@ elif [[ ${EXEC_STRING} == "" ]]
   then
   # Create/compile/run/delete imports + program.swift
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-  message "Writing: ${PROGRAM_SWIFT}"
+  verbose "Writing: ${PROGRAM_SWIFT}"
   echo ${IMPORT_STRING} >  ${PROGRAM_SWIFT}
   cat $1                >> ${PROGRAM_SWIFT}
   shift
@@ -214,7 +223,7 @@ elif [[ ${EXEC_STRING} == "" ]]
 else
   # Create/compile/run/delete -E string
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-  message "Writing: ${PROGRAM_SWIFT}"
+  verbose "Writing: ${PROGRAM_SWIFT}"
   echo ${IMPORT_STRING} ${EXEC_STRING} >> ${PROGRAM_SWIFT}
   DELETE_PROGRAM_SWIFT=1
 fi
@@ -227,57 +236,49 @@ then
 fi
 
 make_stc_output()
+# If the user did not provide an output file, we make one
 {
-  # Set up STC file arguments
   if [[ ${PROGRAM_TCL} == "" ]]
   then
     PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
     PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
     NAME=${PROGRAM_FILE%.swift}
     PROGRAM_TCL=$( make_temp "tic" ${PROGRAM_DIR} ${NAME} )
-    DELETE_PROGRAM_TCL=1
+    DELETE_PROGRAM_TCL=1 # Delete this temporary file later
+    CHECK_DEPS=0 # We just made a stub file, it is not up-to-date!
   fi
 }
 
-DELETE_PROGRAM_TCL=0
-SKIP_COMPILE=0
-
-if (( CHECK_DATES ))
+# Set up output and deps arguments
+DELETE_PROGRAM_TCL=0 # Do not delete this by default
+make_stc_output
+if (( CHECK_DEPS ))
 then
-  if [[ -e ${PROGRAM_TCL} ]] && \
-     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]]
-  then
-    SKIP_COMPILE=1
-    message "${PROGRAM_TCL} is up-to-date."
-  fi
+  STC_OPTS+=( ${STC_DEPS_ARGS} )
 fi
 
-if (( ! SKIP_COMPILE ))
-then
-  # Run STC
-  make_stc_output
-  message "Compiling: ${PROGRAM_SWIFT}"
-  message "       to: ${PROGRAM_TCL}"
-  verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
-fi
+# Run STC
+verbose "Compiling: ${PROGRAM_SWIFT}"
+verbose "       to: ${PROGRAM_TCL}"
+verbose_cmd ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
 
 # Run Turbine
 EXITCODE=0
-message "Running:   ${PROGRAM_TCL}"
-verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
+verbose "Running:   ${PROGRAM_TCL}"
+verbose_cmd ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
   EXITCODE=1
 
 # Clean up
 if (( DELETE_PROGRAM_TCL ))
 then
-  message "Removing: ${PROGRAM_TCL}"
+  verbose "Removing: ${PROGRAM_TCL}"
   rm ${PROGRAM_TCL}
 fi
 
 if (( DELETE_PROGRAM_SWIFT ))
 then
-  message "Removing: ${PROGRAM_SWIFT}"
+  verbose "Removing: ${PROGRAM_SWIFT}"
   rm ${PROGRAM_SWIFT}
 fi
 
-exit ${EXITCODE}
+return ${EXITCODE}
