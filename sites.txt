@@ -328,17 +328,38 @@ Operates as a generic cluster (see above).
 ----
 echo crush.mcs.anl.gov >  hosts.txt
 echo crank.mcs.anl.gov >> hosts.txt
-turbine -l -n 3 -f hosts.txt program.tic
+swift-t -l -n 3 -t f:hosts.txt workflow.swift
 ----
 
 ==== Public installation
 
-*As of:* trunk, 8/13/2013
+*As of:* +master+, 2017/07/19
 
-MCS users are welcome to use this installation.
+MCS users are welcome to use this installation.  It has Python 2.7.10
+and R 3.4.1 .
 
-* STC: +~wozniak/Public/stc/bin/stc+
-* Turbine: +~wozniak/Public/turbine/bin/turbine+
+Simply add Swift/T and Python to your +PATH+:
+
+* STC: +~wozniak/Public/x86_64/swift-t/stc/bin+
+* Python: +~wozniak/Public/x86_64/Python-2.7.10/bin+
+
+Add Python and R to your +LD_LIBRARY_PATH+:
+----
+export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/R-3.4.1/lib/R/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/Python-2.7.10/lib:$LD_LIBRARY_PATH
+----
+
+==== Build instructions
+
+* Check that +which mpicc+ is +/usr/bin/mpicc+
+* Configure c-utils as usual
+* Configure ADLB with +CC=mpicc+
+* Configure Turbine with:
++
+----
+  --with-python-exe=/home/wozniak/Public/sfw/x86_64/Python-2.7.10/bin/python
+  --with-r=/home/wozniak/Public/sfw/x86_64/R-3.4.1/lib/R
+----
 
 === Cooley
 
