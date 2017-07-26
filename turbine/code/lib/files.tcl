@@ -382,7 +382,7 @@ namespace eval turbine {
         error "argument error: called init_unmapped on mapped file:
               <$file_handle>"
       }
-      set filename [ mktemp ]
+      set filename [ mktemp_impl ]
       set_filename_val $file_handle $filename
       return $filename
     }
@@ -451,8 +451,17 @@ namespace eval turbine {
 
     variable mktemp_files
 
+    proc mktemp_string { output input } {
+        # No input!
+        rule "" "mktemp_body $output" name "mktemp-$output"
+    }
+    proc mktemp_body { output } {
+        set filename [ mktemp_impl ]
+        store_string $output $filename
+    }
+
     # Return the filename of a unique temporary file
-    proc mktemp { } {
+    proc mktemp_impl { } {
         global env
         variable mktemp_files
         if { [ info tclversion ] >= 8.6 } {
