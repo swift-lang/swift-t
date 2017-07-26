@@ -535,10 +535,9 @@ The main difference is that a file is
 results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type +string+.  Absolute
 paths or relative paths are specified, with relative paths interpreted
-relative to the path in which turbine was run.
-File variables can also be initialized with data from a pre-existing
+relative to the path in which +turbine+ was run.
+File variables can also be written by assiging a pre-existing
 file using the <<library_files,+input()+>> function.
-File paths are relative to the working directory for Turbine.
 
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
@@ -580,8 +579,9 @@ may be set with environment variable +TMPDIR+ which defaults to
 +/tmp+, or +SWIFT_TMP+.  The filename will contain +.turbine+ in the
 middle or as a suffix, depending on +mktemp+ implementation.
 
-8.6:: Implemented with a Tcl builtin.  File always has suffix
-+.turbine+.
+8.6:: Implemented with a Tcl builtin.  The default directory is
++/tmp+, set environment variable +SWIFT_TMP+ to change this.  The file
+always has suffix +.turbine+.
 
 Swift/T assumes that the file system is shared among all nodes.  Set
 +SWIFT_TMP+ to a shared file system for best results when running
