@@ -775,7 +775,8 @@ capable of utilizing very large supercomputers.</p></div>
 <div class="sect1">
 <h2 id="_installation">2. Installation</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Swift/T may be installed via binary Debian (and Ubuntu) packages or
+<div class="paragraph"><p>Swift/T may be installed via binary Debian (and Ubuntu) packages,
+from <a href="http://spack.io">Spack</a>, or
 from source.</p></div>
 <div class="paragraph"><p>Our GitHub repository is here:</p></div>
 <div class="paragraph"><p><a href="http://github.com/swift-lang/swift-t">http://github.com/swift-lang/swift-t</a></p></div>
@@ -789,7 +790,7 @@ Obtain the Swift/T Debian packages from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ wget http://swift-lang.github.io/swift-t/downloads/swift-t-debs-1.2.tar.gz</code></pre>
+<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-debs-1.3.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -798,7 +799,7 @@ Unpack and enter package directory:
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ tar xfz swift-t-debs-1.2.tar.gz
+<pre><code>$ tar xfz swift-t-debs-1.3.tar.gz
 $ cd swift-t-debs</code></pre>
 </div></div>
 </li>
@@ -814,7 +815,18 @@ Install:
 </ol></div>
 </div>
 <div class="sect2">
-<h3 id="_from_source">2.2. From source</h3>
+<h3 id="spack">2.2. From Spack</h3>
+<div class="paragraph"><p>Simply clone Spack and install STC.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ git clone https://github.com/llnl/spack.git
+$ . spack/share/spack/setup-env.sh
+$ spack install stc</code></pre>
+</div></div>
+<div class="paragraph"><p>This will install all necessary dependencies.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_from_source">2.3. From source</h3>
 <div class="paragraph"><p>Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
@@ -824,7 +836,7 @@ from a source package.</p></div>
 is a accompanying resource for configuration settings and preinstalled software
 for specific systems.</p></div>
 <div class="sect3">
-<h4 id="_prerequisites">2.2.1. Prerequisites</h4>
+<h4 id="_prerequisites">2.3.1. Prerequisites</h4>
 <div class="paragraph"><p>All Swift/T prerequisites can be installed using the appropriate
 package manager for your system.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -910,7 +922,7 @@ If you have difficulties with compiler compatibility,
 please <a href="#support">contact us</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_installation_of_swift_t_from_source">2.2.2. Installation of Swift/T from Source</h4>
+<h4 id="_installation_of_swift_t_from_source">2.3.2. Installation of Swift/T from Source</h4>
 <div class="paragraph"><p>Once you have found all prerequisites, we can continue with building
 Swift/T from source.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -921,7 +933,7 @@ Obtain the Swift/T source package from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.1.tar.gz</code></pre>
+<pre><code>wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-1.3.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -930,8 +942,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-1.1.tar.gz
-cd swift-t-1.1</code></pre>
+<pre><code>tar xfz swift-t-1.3.tar.gz
+cd swift-t-1.3</code></pre>
 </div></div>
 </li>
 <li>
@@ -1361,7 +1373,7 @@ expressions and identifiers of corresponding unassigned variables.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_composite_functions">9. Composite functions</h2>
+<h2 id="composite_functions">9. Composite functions</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Composite functions provide a way to organise and reuse Swift code.
 They have the form:</p></div>
@@ -1590,10 +1602,9 @@ The main difference is that a file is
 results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type <code>string</code>.  Absolute
 paths or relative paths are specified, with relative paths interpreted
-relative to the path in which turbine was run.
+relative to the path in which <code>turbine</code> was run.
 File variables can also be written by assiging a pre-existing
-file using the <a href="#library_files"><code>input()</code></a> function.
-File paths are relative to the working directory for Turbine.</p></div>
+file using the <a href="#library_files"><code>input()</code></a> function.</p></div>
 <div class="paragraph"><p>For example, if <code>/home/user/in.txt</code> is a file with some data in it,
 the following Swift program will copy the file to <code>/home/user/out.txt</code>.</p></div>
 <div class="listingblock">
@@ -1614,7 +1625,7 @@ string filename = "in.txt";
 string contents = read(input(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
-// Write directly to a file with write
+// Write directly to an unmapped file
 file tmp = write("first line\nsecond line");
 
 // Find the name of a file with filename
@@ -1643,8 +1654,9 @@ middle or as a suffix, depending on <code>mktemp</code> implementation.
 </dt>
 <dd>
 <p>
-Implemented with a Tcl builtin.  File always has suffix
-<code>.turbine</code>.
+Implemented with a Tcl builtin.  The default directory is
+<code>/tmp</code>, set environment variable <code>SWIFT_TMP</code> to change this.  The file
+always has suffix <code>.turbine</code>.
 </p>
 </dd>
 </dl></div>
@@ -1652,7 +1664,7 @@ Implemented with a Tcl builtin.  File always has suffix
 <code>SWIFT_TMP</code> to a shared file system for best results when running
 across nodes.  (The directory <code>/tmp</code> is usually a fast local file
 system and cleared on system reboot.)</p></div>
-<div class="paragraph"><p>If a file is only specified in a return type of a <a href="#composite function">composite function</a>, that does not declare the
+<div class="paragraph"><p>If a file is only specified in a return type of a <a href="#composite function">composite_function</a>, that does not declare the
 file, create a temporary file, or assign to it, e.g.:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2179,6 +2191,29 @@ block again until <code>A[key]</code> is stored.
 </p>
 </dd>
 </dl></div>
+<div class="sect3">
+<h4 id="pick">13.1.1. Pick functions</h4>
+<div class="paragraph"><p>Select items from an array.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+pick_integer_string(string A[], int indices[]) &#8594; string result[]
+</dt>
+<dd>
+<p>
+Select the <code>indices</code> from <code>A</code>.  The <code>result</code> may be reordered.
+</p>
+</dd>
+<dt class="hdlist1">
+pick_stable_integer_string(string A[], int indices[]) &#8594; string result[]
+</dt>
+<dd>
+<p>
+Select the <code>indices</code> from <code>A</code>.
+The ordering of <code>result</code> will be the same as in <code>A</code>.
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_type_conversion">13.2. Type conversion</h3>
@@ -2299,7 +2334,7 @@ As <code>printf()</code> in C
 <h3 id="_string_functions">13.4. String functions</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-+strcat(string|int|float&#8230;) &#8594; string
+<code>strcat(string|int|float&#8230;) &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2444,6 +2479,15 @@ command.</p></div>
 Join strings in <code>A</code> with given <code>separator</code>.  The <code>separator</code> may be the
 empty string. <br />
 The <code>separator</code> is optional, the default is a space (<code>" "</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>join_args(string separator, string|int+float&#8230;) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Join given arguments with given <code>separator</code>.  The <code>separator</code> may be the
+empty string.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2619,6 +2663,38 @@ Average
 <dd>
 <p>
 Obtain an environment variable
+</p>
+</dd>
+<dt class="hdlist1">
+<code>sleep(float) &#8594; void</code>
+</dt>
+<dd>
+<p>
+Delay for the given number of seconds.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>clock() &#8594; float</code>
+</dt>
+<dd>
+<p>
+Obtain time since the Unix epoch in seconds.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>clock_seconds() &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain time since the Unix epoch in whole seconds.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>INT_MAX() &#8594; int</code>
+</dt>
+<dd>
+<p>
+Obtain the largest integer representable on the current platform.
 </p>
 </dd>
 </dl></div>
@@ -3838,14 +3914,14 @@ typedef matrix string;
 (matrix A) eye(int n)
 {
   string command = sprintf("repr(eye(%i))", n);
-  matrix t = python(numpy, command);
+  matrix t = python_persist(numpy, command);
   A = replace_all(t, "\n", "", 0);
 }
 
 (matrix R) add(matrix A1, matrix A2)
 {
   string command = sprintf("repr(%s+%s)", A1, A2);
-  matrix t = python(numpy, command);
+  matrix t = python_persist(numpy, command);
   R = replace_all(t, "\n", "", 0);
 }
 
@@ -3864,6 +3940,23 @@ code is passed to Python for evaluation.  The output is:</p></div>
                 [ 0.,  2.,  0.],
                 [ 0.,  0.,  2.]])</code></pre>
 </div></div>
+<div class="sect4">
+<h5 id="_python_state">Python state</h5>
+<div class="paragraph"><p>The <code>python()</code> function reset the Python interpreter at the end of
+each task.  If you want to access state from a previous Python task,
+use <code>python_persist()</code>, which leaves the Python interpreter in memory.
+Global variables and other state in Python will be accessible from
+task to task.  When using Numpy, always use <code>python_persist()</code>, as
+Numpy cannot be re-initialized.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_exceptions">Exceptions</h5>
+<div class="paragraph"><p>Normally, uncaught exceptions are caught by Swift/T, reported via a
+Python stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to <code>python()</code> or
+<code>python_persist()</code>: <code>exceptions_are_errors=false</code>.  The exception
+stack trace will still be reported, but the function will return
+successfully with value <code>"&#95;&#95;EXCEPTION&#95;&#95;"</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3878,6 +3971,7 @@ Python symbols- refer to the first error in the Python stack trace.
 Due to the Python C API, error reports may be slightly better for the
 code argument and worse in the expression argument.</td>
 </tr></table>
+</div>
 </div>
 </div>
 <div class="sect3">
@@ -3915,6 +4009,19 @@ the answer was: 104</code></pre>
 expression as a Swift string.  The expression must evaluate to a R
 string.  The expression argument may be omitted if desired, in which
 case the return value is always the empty string.</p></div>
+<div class="sect4">
+<h5 id="_r_state">R state</h5>
+<div class="paragraph"><p>State is always maintained in the R interpreter, so global variables
+can be accessed from task to task.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_exceptions_2">Exceptions</h5>
+<div class="paragraph"><p>Normally, uncaught exceptions are caught by Swift/T, reported via a R
+stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to <code>R()</code>:
+<code>exceptions_are_errors=false</code>.  The exception stack trace will still
+be reported, but the function will return successfully with value
+<code>"&#95;&#95;EXCEPTION&#95;&#95;"</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3924,6 +4031,7 @@ case the return value is always the empty string.</p></div>
 shared library, enabling better performance than calling the <code>R</code>
 program (which may be done by using a normal Swift <a href="#app_functions">app function</a>).</td>
 </tr></table>
+</div>
 </div>
 </div>
 <div class="sect3">
@@ -4485,7 +4593,7 @@ Either variable name may be used.
 <dd>
 <p>
 Directory location for <a href="#unmapped_files">unmapped files</a>.
-<code>SWIFT_PATH</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
+<code>SWIFT_TMP</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4831,6 +4939,9 @@ When doing a <a href="#build_manual">manual build</a> provide the <code>--with-r
  options.
 </p>
 </li>
+</ul></div>
+<div class="paragraph"><p>Other notes:</p></div>
+<div class="ulist"><ul>
 <li>
 <p>
 When installing R from a binary package, be sure to include the
@@ -5392,7 +5503,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-07-26 13:41:44 CDT
+ 2017-07-26 13:56:10 CDT
 </div>
 </div>
 

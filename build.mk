@@ -6,7 +6,7 @@ ASCIIDOC = asciidoc --attribute stylesheet=$(PWD)/swift.css \
                     --attribute max-width=800px
 
 # Must compile leaf.txt with make-stc-docs.zsh (snippets, etc.)
-all: guide.html gallery.html dev.html sites.html
+all: guide.html gallery.html dev.html downloads.html sites.html
 
 define ASCIIDOC_CMDS
 	@ echo ASCIIDOC $(<)
