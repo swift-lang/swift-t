@@ -120,7 +120,7 @@ gdb_check(int rank)
     {
       pid_t pid = getpid();
       printf("Waiting for gdb: rank: %i pid: %i\n", rank, pid);
-      int t = 0;
+      volatile int t = 0;
       int i = 0;
       while (!t)
         // In GDB, set t=1 to break out
