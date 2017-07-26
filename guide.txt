@@ -602,8 +602,9 @@ Swift/T assumes that the file system is shared among all nodes.  Set
 across nodes.  (The directory +/tmp+ is usually a fast local file
 system and cleared on system reboot.)
 
-If a file is only specified in a return type of a <<composite
-function,composite_function>>, that does not declare the
+If a file is only specified in a return type of a
+<<composite_function,composite function>>,
+that specification not declare the
 file, create a temporary file, or assign to it, e.g.:
 ----
 (app o) f() { /* Error: o is not assigned. */ }
