@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">May 2017</span><br />
+<span id="author">July 2017</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1591,7 +1591,7 @@ results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type <code>string</code>.  Absolute
 paths or relative paths are specified, with relative paths interpreted
 relative to the path in which turbine was run.
-File variables can also be initialized with data from a pre-existing
+File variables can also be written by assiging a pre-existing
 file using the <a href="#library_files"><code>input()</code></a> function.
 File paths are relative to the working directory for Turbine.</p></div>
 <div class="paragraph"><p>For example, if <code>/home/user/in.txt</code> is a file with some data in it,
@@ -1652,6 +1652,13 @@ Implemented with a Tcl builtin.  File always has suffix
 <code>SWIFT_TMP</code> to a shared file system for best results when running
 across nodes.  (The directory <code>/tmp</code> is usually a fast local file
 system and cleared on system reboot.)</p></div>
+<div class="paragraph"><p>If a file is only specified in a return type of a <a href="#composite function">composite function</a>, that does not declare the
+file, create a temporary file, or assign to it, e.g.:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>(app o) f() { /* Error: o is not assigned. */ }</code></pre>
+</div></div>
+<div class="paragraph"><p>The body of <code>f()</code> should create a <code>file</code> and assign it to <code>o</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -5385,7 +5392,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-05-12 18:41:42 CDT
+ 2017-07-26 13:41:44 CDT
 </div>
 </div>
 
