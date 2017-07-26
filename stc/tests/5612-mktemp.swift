@@ -3,15 +3,15 @@ import files;
 string s = mktemp_string();
 trace(s);
 
-(file o, void v) g()
+(file o, void w) g()
 {
   o = mktemp();
-  v = trace(filename(f)); // Or Python
+  w = trace(filename(o)); // Or Python
 }
 
-report(file f)
+report(file r)
 {
-  trace(filename(f));
+  trace(filename(r));
 }
 
 file f;
