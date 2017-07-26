@@ -186,8 +186,6 @@ setup_cache()
   return true;
 }
 
-
-
 void
 turbine_version(version* output)
 {
