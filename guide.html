@@ -1664,13 +1664,15 @@ always has suffix <code>.turbine</code>.
 <code>SWIFT_TMP</code> to a shared file system for best results when running
 across nodes.  (The directory <code>/tmp</code> is usually a fast local file
 system and cleared on system reboot.)</p></div>
-<div class="paragraph"><p>If a file is only specified in a return type of a <a href="#composite function">composite_function</a>, that does not declare the
+<div class="paragraph"><p>If a file is only specified in a return type of a
+<a href="#composite_function">composite function</a>,
+that specification not declare the
 file, create a temporary file, or assign to it, e.g.:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>(app o) f() { /* Error: o is not assigned. */ }</code></pre>
 </div></div>
-<div class="paragraph"><p>The body of <code>f()</code> should create a <code>file</code> and assign it to <code>o</code>.</p></div>
+<div class="paragraph"><p>The body of <code>f()</code> should assign to <code>o</code>.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -5503,7 +5505,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-07-26 13:56:10 CDT
+ 2017-07-26 14:05:03 CDT
 </div>
 </div>
 
