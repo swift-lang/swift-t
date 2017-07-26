@@ -609,7 +609,7 @@ file, create a temporary file, or assign to it, e.g.:
 ----
 (app o) f() { /* Error: o is not assigned. */ }
 ----
-The body of +f()+ should create a +file+ and assign it to +o+.
+The body of +f()+ should assign to +o+.
 
 [NOTE]
 ======
