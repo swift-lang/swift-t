@@ -435,6 +435,7 @@ expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.
 
+[[composite_functions]]
 == Composite functions
 
 Composite functions provide a way to organise and reuse Swift code.
@@ -559,7 +560,7 @@ string filename = "in.txt";
 string contents = read(input(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
-// Write directly to a file with write
+// Write directly to an unmapped file
 file tmp = write("first line\nsecond line");
 
 // Find the name of a file with filename
@@ -586,6 +587,14 @@ Swift/T assumes that the file system is shared among all nodes.  Set
 +SWIFT_TMP+ to a shared file system for best results when running
 across nodes.  (The directory +/tmp+ is usually a fast local file
 system and cleared on system reboot.)
+
+If a file is only specified in a return type of a <<composite
+function,composite_function>>, that does not declare the
+file, create a temporary file, or assign to it, e.g.:
+----
+(app o) f() { /* Error: o is not assigned. */ }
+----
+The body of +f()+ should create a +file+ and assign it to +o+.
 
 [NOTE]
 ======
