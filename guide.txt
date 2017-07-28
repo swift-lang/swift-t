@@ -981,10 +981,10 @@ In general, execution ordering in Swift/T is implicit and driven by
 data dependencies.  In some cases it is useful to add explicit data
 dependencies, for example if you want to print a message to indicate
 that variable was assigned.  It is possible for the programmer to
-express additional execution ordering using two constructs: the +wait+
-statement and the +\=>+ chaining operator.
+express additional execution ordering using three constructs: the
++wait+ and +wait deep+ statements and the +\=>+ chaining operator.
 
-In a wait statement, a block of code is executed after
+In a +wait+ statement, a block of code is executed after
 one or more variables are closed.
 ----
 x = f();
@@ -996,6 +996,19 @@ wait(x, y) {
   trace("x and y are closed!");
 }
 ----
+
+In a +wait deep+ statement, a block of code is executed after all
+elements of an array have been closed:
+----
+int A[];
+A = [f(), g()];
+
+wait deep (A) {
+  trace("All elements of A are closed!");
+}
+
+----
+
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
