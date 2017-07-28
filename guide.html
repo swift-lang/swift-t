@@ -2035,9 +2035,9 @@ loop iterations are independent and can simply be executed in parallel.</p></div
 data dependencies.  In some cases it is useful to add explicit data
 dependencies, for example if you want to print a message to indicate
 that variable was assigned.  It is possible for the programmer to
-express additional execution ordering using two constructs: the <code>wait</code>
-statement and the <code>=&gt;</code> chaining operator.</p></div>
-<div class="paragraph"><p>In a wait statement, a block of code is executed after
+express additional execution ordering using three constructs: the
+<code>wait</code> and <code>wait deep</code> statements and the <code>=&gt;</code> chaining operator.</p></div>
+<div class="paragraph"><p>In a <code>wait</code> statement, a block of code is executed after
 one or more variables are closed.</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2048,6 +2048,17 @@ wait (x) {
 }
 wait(x, y) {
   trace("x and y are closed!");
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>In a <code>wait deep</code> statement, a block of code is executed after all
+elements of an array have been closed:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int A[];
+A = [f(), g()];
+
+wait deep (A) {
+  trace("All elements of A are closed!");
 }</code></pre>
 </div></div>
 <div class="paragraph"><p>The chaining operator chains statements together so that a
@@ -5504,8 +5515,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated
- 2017-07-26 14:05:03 CDT
+Last updated 2017-07-28 09:56:57 BST
 </div>
 </div>
 
