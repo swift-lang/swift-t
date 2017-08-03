@@ -2119,7 +2119,7 @@ code is passed to Python for evaluation.  The output is:
 
 ===== Python state
 
-The +python()+ function reset the Python interpreter at the end of
+The +python()+ function resets the Python interpreter at the end of
 each task.  If you want to access state from a previous Python task,
 use +python_persist()+, which leaves the Python interpreter in memory.
 Global variables and other state in Python will be accessible from
