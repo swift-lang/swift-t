@@ -119,6 +119,12 @@ blobutils_cast_int64_to_ptr(int64_t i)
   return (void*) i;
 }
 
+void*
+blobutils_cast_char_ptrptr_to_ptr(char** p)
+{
+  return (void*) p;
+}
+
 void**
 blobutils_cast_to_ptrptr(void* p)
 {
@@ -135,6 +141,12 @@ char**
 blobutils_cast_to_char_ptrptr(void* p)
 {
   return (char**) p;
+}
+
+char***
+blobutils_cast_to_char_ppp(void* p)
+{
+  return (char***) p;
 }
 
 void*
@@ -469,4 +481,3 @@ blobutils_hdf_write(const char* output, const char* dataset,
   return false;
 }
 #endif // HAVE_HDF
-

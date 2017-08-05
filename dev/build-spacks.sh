@@ -55,4 +55,4 @@ pop
 
 echo
 echo "Built all Spack packages."
-du -h spack/*.tar.gz
+du -h $OUTPUT/*.tar.gz

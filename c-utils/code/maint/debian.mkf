@@ -6,10 +6,10 @@ include maint/version.mkf
 EXMCUTILS_DEB     = exmcutils_$(VERSION)_amd64.deb
 EXMCUTILS_DEV_DEB = exmcutils-dev_$(VERSION)_amd64.deb
 
-deb: $(EXMCUTILS_DEB)
-dev-deb: $(EXMCUTILS_DEV_DEB)
+deb:     $(EXMCUTILS_DEB)
+deb-dev: $(EXMCUTILS_DEV_DEB)
 
-ifeq (,$(filter deb-dev,$(MAKECMDGOALS)))
+ifeq ($(PKG_TYPE),deb-bin)
 # Make binary package (no headers)
   PKG_TYPE = deb-bin
   DEB_TYPE = bin
@@ -27,19 +27,19 @@ DEB_FILE_PATHS = $(patsubst %,maint/debian-$(DEB_TYPE)/%,$(DEB_FILES))
 FILE_LIST = maint/file-list.zsh
 
 # Put the version number in the changelog
-maint/debian-$(PKG_TYPE)/changelog: \
-	maint/debian-$(PKG_TYPE)/changelog.m4
+maint/debian-$(DEB_TYPE)/changelog: \
+	maint/debian-$(DEB_TYPE)/changelog.m4
 	m4 -D M4_CUTILS_VERSION=$(VERSION) $(<) > $(@)
 
 # Just for TGZ dependency
-DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS)
+DEBIAN_STUFF = $(FILE_LIST) $(DEB_FILE_PATHS)
 
 $(UPSTREAM_TGZ):  configure Makefile $(DEBIAN_STUFF)
 	../../dev/mk-src-tgz.sh ${PKG_TYPE} \
 		$(@) exmcutils $(VERSION) $(FILE_LIST)
 
 $(EXMCUTILS_DEB) $(EXMCUTILS_DEV_DEB): $(UPSTREAM_TGZ)
-	../../dev/debian/mk-debian.zsh ${PKG_TYPE} $(@) $(<) \
+	../../dev/debian/mk-debian.zsh $(DEB_TYPE) $(@) $(<) \
 		exmcutils $(VERSION)
 
 clean:: clean-deb

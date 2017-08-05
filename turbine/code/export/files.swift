@@ -96,4 +96,22 @@
 "turbine" "0.0"
 [ "set <<f>> [ file extension <<p>> ]" ];
 
+(file o)
+write_array_string(string a[], int chunk)
+"turbine" "1.0" "write_array_string";
+
+(file o)
+write_array_string_ordered(string a[])
+"turbine" "1.0" "write_array_string_ordered";
+
+(string s)
+mktemp_string()
+"turbine" "1.0" "mktemp_string";
+
+(file o)
+mktemp()
+{
+  o = input(mktemp_string());
+}
+
 #endif // FILES_SWIFT

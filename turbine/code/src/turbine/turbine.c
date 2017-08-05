@@ -93,7 +93,7 @@ check_versions()
    This is a separate function so we can set a function breakpoint
  */
 static void
-gdb_sleep(int* t, int i)
+gdb_sleep(volatile int* t, int i)
 {
   sleep(1);
   DEBUG_TURBINE("gdb_check: %i %i\n", *t, i);
@@ -120,7 +120,7 @@ gdb_check(int rank)
     {
       pid_t pid = getpid();
       printf("Waiting for gdb: rank: %i pid: %i\n", rank, pid);
-      int t = 0;
+      volatile int t = 0;
       int i = 0;
       while (!t)
         // In GDB, set t=1 to break out
@@ -185,8 +185,6 @@ setup_cache()
 
   return true;
 }
-
-
 
 void
 turbine_version(version* output)

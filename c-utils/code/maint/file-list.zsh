@@ -17,6 +17,7 @@ print version.txt NOTICE
 if [[ ${PKG_TYPE} == "deb-dev" ||
       ${PKG_TYPE} == "deb-bin" ]]
 then
-  ln -sfT maint/debian-${PKG_TYPE} debian
+  DEB_TYPE=${PKG_TYPE#deb-} # Chop off "deb-"
+  ln -sfT maint/debian-${DEB_TYPE} debian
   print debian/*[^~]
 fi

@@ -148,6 +148,8 @@ int blobutils_sizeof_float(void);
 void* blobutils_cast_to_ptr(int i);
 /** DOCD(blobutils_cast_int64_to_ptr i, Integer (64-bit) to +void*+.) */
 void* blobutils_cast_int64_to_ptr(int64_t i);
+/** DOCD(blobutils_cast_char_ptrptr_to_ptr p, +char**+ to +void*+.) */
+void* blobutils_cast_char_ptrptr_to_ptr(char** p);
 
 /** DOCD(blobutils_cast_to_ptrptr p, +void*+ to +void**+.) */
 void** blobutils_cast_to_ptrptr(void* p);
@@ -155,6 +157,8 @@ void** blobutils_cast_to_ptrptr(void* p);
 char* blobutils_cast_to_string(void* p);
 /** DOCD(blobutils_cast_to_char_ptrptr p, +void*+ to +char**+.) */
 char** blobutils_cast_to_char_ptrptr(void* p);
+/** DOCD(blobutils_cast_to_char_ppp p, +void*+ to +char***+.) */
+char*** blobutils_cast_to_char_ppp(void* p);
 /** DOCD(blobutils_cast_string_to_ptrptr s, +char*+ to +void*+.) */
 void* blobutils_cast_string_to_ptr(char* s);
 
