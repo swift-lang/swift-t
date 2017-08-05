@@ -31,7 +31,7 @@
          Write output *.tic file here
     -p
        Disable preprocessing via CPP
-    -r
+    -r <DIRECTORY>
        Add an RPATH for a Swift/T extension
     -u
        Only compile if target is not up-to-date
