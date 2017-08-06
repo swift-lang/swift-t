@@ -72,7 +72,7 @@ SUBMIT_COMMAND=( sbatch
 
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.txt
 
-${SUBMIT_COMMAND} | read __ __ __ JOB_ID
+JOB_ID=$( echo $( ${SUBMIT_COMMAND} )| grep -o "[1-9][0-9]*$" )
 
 # JOB_ID must be an integer:
 if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
