@@ -22,9 +22,30 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
-== Current/stable: Series 1.2
+[[stable]]
+== Current/stable: Series 1.3
 
-* Release 1.1
+* Release 1.3
+** http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-1.3.tar.gz[swift-t-1.3.tar.gz] (8.2 MB)
+** http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-debs-1.3.tar.gz[swift-t-debs-1.3.tar.gz] (6.2 MB)
+* 2017/06/28
+
+*Changes:*
+
+* Support for https://www.alcf.anl.gov/theta[Theta]
+* Better support for OpenMPI
+* New builtins: link:guide.html#pick[+pick+ functions],
+                link:guide.html#join_args[+join_args()+]
+https://github.com/swift-lang/swift-t/issues/124[#124]
+* New Python autoconfiguration feature https://github.com/swift-lang/swift-t/issues/110[#110]
+* New Python, R error suppression https://github.com/swift-lang/swift-t/issues/114[#114]
+* New http://bitbucket.org/jmjwozniak/mpix_launch_swift[MPIX_Launch]
+* Default delimiters for +split()+, +join()+
+* New blob features
+
+== Series 1.2
+
+* Release 1.2
 ** [link:downloads/swift-t-1.2.tar.gz[swift-t-1.2.tar.gz]] (9 MB)
 ** [link:downloads/swift-t-debs-1.2.tar.gz[swift-t-debs-1.2.tar.gz]] (6.2 MB)
 * 2016/12/20

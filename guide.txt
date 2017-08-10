@@ -18,7 +18,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-May 2017
+August 2017
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -47,7 +47,8 @@ http://github.com/swift-lang/swift-t/issues
 
 == Installation
 
-Swift/T may be installed via binary Debian (and Ubuntu) packages or
+Swift/T may be installed via binary Debian (and Ubuntu) packages,
+from http://spack.io[Spack], or
 from source.
 
 Our GitHub repository is here:
@@ -60,13 +61,13 @@ http://github.com/swift-lang/swift-t
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-$ wget http://swift-lang.github.io/swift-t/downloads/swift-t-debs-1.2.tar.gz
+$ wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-debs-1.3.tar.gz
 ----
 +
 2. Unpack and enter package directory:
 +
 ----
-$ tar xfz swift-t-debs-1.2.tar.gz
+$ tar xfz swift-t-debs-1.3.tar.gz
 $ cd swift-t-debs
 ----
 +
@@ -75,6 +76,19 @@ $ cd swift-t-debs
 ----
 $ ./install-debs.sh
 ----
+
+[[spack]]
+=== From Spack
+
+Simply clone Spack and install STC.
+
+----
+$ git clone https://github.com/llnl/spack.git
+$ . spack/share/spack/setup-env.sh
+$ spack install stc
+----
+
+This will install all necessary dependencies.
 
 === From source
 
@@ -140,14 +154,14 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-wget http://swift-lang.github.io/swift-t/downloads/swift-t-1.1.tar.gz
+wget http://swift-lang.github.io/swift-t-downloads/1.3/swift-t-1.3.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-tar xfz swift-t-1.1.tar.gz
-cd swift-t-1.1
+tar xfz swift-t-1.3.tar.gz
+cd swift-t-1.3
 ----
 +
 3. Create a settings file by running:
@@ -435,6 +449,7 @@ expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.
 
+[[composite_functions]]
 == Composite functions
 
 Composite functions provide a way to organise and reuse Swift code.
@@ -534,10 +549,9 @@ The main difference is that a file is
 results in a file being created in the file system at the specified path.
 File paths can be arbitrary Swift expressions of type +string+.  Absolute
 paths or relative paths are specified, with relative paths interpreted
-relative to the path in which turbine was run.
-File variables can also be initialized with data from a pre-existing
+relative to the path in which +turbine+ was run.
+File variables can also be written by assiging a pre-existing
 file using the <<library_files,+input()+>> function.
-File paths are relative to the working directory for Turbine.
 
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
@@ -559,7 +573,7 @@ string filename = "in.txt";
 string contents = read(input(filename));
 trace("Contents of " + filename + ":\n" + contents);
 
-// Write directly to a file with write
+// Write directly to an unmapped file
 file tmp = write("first line\nsecond line");
 
 // Find the name of a file with filename
@@ -579,13 +593,23 @@ may be set with environment variable +TMPDIR+ which defaults to
 +/tmp+, or +SWIFT_TMP+.  The filename will contain +.turbine+ in the
 middle or as a suffix, depending on +mktemp+ implementation.
 
-8.6:: Implemented with a Tcl builtin.  File always has suffix
-+.turbine+.
+8.6:: Implemented with a Tcl builtin.  The default directory is
++/tmp+, set environment variable +SWIFT_TMP+ to change this.  The file
+always has suffix +.turbine+.
 
 Swift/T assumes that the file system is shared among all nodes.  Set
 +SWIFT_TMP+ to a shared file system for best results when running
 across nodes.  (The directory +/tmp+ is usually a fast local file
 system and cleared on system reboot.)
+
+If a file is only specified in a return type of a
+<<composite_function,composite function>>,
+that specification not declare the
+file, create a temporary file, or assign to it, e.g.:
+----
+(app o) f() { /* Error: o is not assigned. */ }
+----
+The body of +f()+ should assign to +o+.
 
 [NOTE]
 ======
@@ -957,10 +981,10 @@ In general, execution ordering in Swift/T is implicit and driven by
 data dependencies.  In some cases it is useful to add explicit data
 dependencies, for example if you want to print a message to indicate
 that variable was assigned.  It is possible for the programmer to
-express additional execution ordering using two constructs: the +wait+
-statement and the +\=>+ chaining operator.
+express additional execution ordering using three constructs: the
++wait+ and +wait deep+ statements and the +\=>+ chaining operator.
 
-In a wait statement, a block of code is executed after
+In a +wait+ statement, a block of code is executed after
 one or more variables are closed.
 ----
 x = f();
@@ -972,6 +996,19 @@ wait(x, y) {
   trace("x and y are closed!");
 }
 ----
+
+In a +wait deep+ statement, a block of code is executed after all
+elements of an array have been closed:
+----
+int A[];
+A = [f(), g()];
+
+wait deep (A) {
+  trace("All elements of A are closed!");
+}
+
+----
+
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
@@ -1079,6 +1116,18 @@ aliases for this function.)
 This function blocks until +A+ is closed.  Consumers of +A[key]+ may
 block again until +A[key]+ is stored.
 
+[[pick]]
+==== Pick functions
+
+Select items from an array.
+
+pick_integer_string(string A[], int indices[]) -> string result[]::
+Select the +indices+ from +A+.  The +result+ may be reordered.
+
+pick_stable_integer_string(string A[], int indices[]) -> string result[]::
+Select the +indices+ from +A+.
+The ordering of +result+ will be the same as in +A+.
+
 === Type conversion
 
 ////
@@ -1125,7 +1174,7 @@ As +printf()+ in C
 
 === String functions
 
-+strcat(string|int|float...) -> string::
++strcat(string|int|float...) -> string+::
 Returns the concatenation of all arguments as strings.
 Equivalent to the Swift/T plus (+++) operator.
 
@@ -1206,6 +1255,11 @@ Join strings in +A+ with given +separator+.  The +separator+ may be the
 empty string.  +
 The +separator+ is optional, the default is a space (+" "+).
 
+[[join_args]]
++join_args(string separator, string|int+float...) -> string+::
+Join given arguments with given +separator+.  The +separator+ may be the
+empty string.
+
 [[dircat]]
 +dircat(string...) -> string+::
 _directory-concatenate_.
@@ -1248,7 +1302,20 @@ Obtain random integer from +start+, inclusive, to +end+, exclusive
 
 *Import:* +sys+
 
-+getenv(string) -> string+:: Obtain an environment variable
++getenv(string) -> string+::
+Obtain an environment variable
+
++sleep(float) -> void+::
+Delay for the given number of seconds.
+
++clock() -> float+::
+Obtain time since the Unix epoch in seconds.
+
++clock_seconds() -> int+::
+Obtain time since the Unix epoch in whole seconds.
+
++INT_MAX() -> int+::
+Obtain the largest integer representable on the current platform.
 
 [[argv]]
 ==== Command line
@@ -2022,14 +2089,14 @@ typedef matrix string;
 (matrix A) eye(int n)
 {
   string command = sprintf("repr(eye(%i))", n);
-  matrix t = python(numpy, command);
+  matrix t = python_persist(numpy, command);
   A = replace_all(t, "\n", "", 0);
 }
 
 (matrix R) add(matrix A1, matrix A2)
 {
   string command = sprintf("repr(%s+%s)", A1, A2);
-  matrix t = python(numpy, command);
+  matrix t = python_persist(numpy, command);
   R = replace_all(t, "\n", "", 0);
 }
 
@@ -2049,6 +2116,24 @@ code is passed to Python for evaluation.  The output is:
                 [ 0.,  2.,  0.],
                 [ 0.,  0.,  2.]])
 ----
+
+===== Python state
+
+The +python()+ function resets the Python interpreter at the end of
+each task.  If you want to access state from a previous Python task,
+use +python_persist()+, which leaves the Python interpreter in memory.
+Global variables and other state in Python will be accessible from
+task to task.  When using Numpy, always use +python_persist()+, as
+Numpy cannot be re-initialized.
+
+===== Exceptions
+
+Normally, uncaught exceptions are caught by Swift/T, reported via a
+Python stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to +python()+ or
++python_persist()+: +exceptions_are_errors=false+.  The exception
+stack trace will still be reported, but the function will return
+successfully with value +"&#95;&#95;EXCEPTION&#95;&#95;"+.
 
 NOTE: To use this, Turbine must be <<build_python,configured and
 compiled with Python enabled>>.  This feature is implemented by
@@ -2098,6 +2183,20 @@ _expression_.  This simply executes the R code, then returns the
 expression as a Swift string.  The expression must evaluate to a R
 string.  The expression argument may be omitted if desired, in which
 case the return value is always the empty string.
+
+===== R state
+
+State is always maintained in the R interpreter, so global variables
+can be accessed from task to task.
+
+===== Exceptions
+
+Normally, uncaught exceptions are caught by Swift/T, reported via a R
+stack trace, and cause Swift/T to abort.  To run through these
+exceptions, provide an optional 3rd argument to +R()+:
++exceptions_are_errors=false+.  The exception stack trace will still
+be reported, but the function will return successfully with value
++"&#95;&#95;EXCEPTION&#95;&#95;"+.
 
 NOTE: To use this, Turbine must be <<build_r,configured and compiled
 with R enabled>>.  This feature is implemented by linking to R as a
@@ -2497,7 +2596,7 @@ anchor:env_swift_tmp[]
 +TMP+::
 
 Directory location for <<unmapped_files,unmapped files>>.
-+SWIFT_PATH+ overrides +TMP+.  The default is +/tmp+.
++SWIFT_TMP+ overrides +TMP+.  The default is +/tmp+.
 
 +SWIFT_TMP_AUTODELETE=0+:: By default, Swift/T deletes
 <<unmapped_files,unmapped files>> when they are no longer used.
@@ -2710,6 +2809,8 @@ To build Swift/T with R, either:
 * When doing a <<build_manual,manual build>> provide the +--with-r+
  argument to +configure+.  See +./configure&nbsp;--help+ for further
  options.
+
+Other notes:
 
 * When installing R from a binary package, be sure to include the
   +devel+ package.

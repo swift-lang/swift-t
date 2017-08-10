@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Developers' Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -94,7 +94,9 @@ ul > li > * { color: black; }
   padding: 0;
   margin: 0;
 }
-
+pre {
+  white-space: pre-wrap;
+}
 
 #author {
   color: #527bbd;
@@ -223,7 +225,7 @@ div.exampleblock > div.content {
 }
 
 div.imageblock div.content { padding-left: 0; }
-span.image img { border-style: none; }
+span.image img { border-style: none; vertical-align: text-bottom; }
 a.image:visited { color: white; }
 
 dl {
@@ -742,7 +744,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
-<span id="revdate">December 2016</span>
+<span id="revdate">June 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3630,16 +3632,13 @@ Edit <code>guide.txt</code>: update version number for download and date
 </li>
 </ul></div>
 </li>
+</ul></div>
+</li>
 <li>
 <p>
-After updating version numbers, in each of c-utils, ADLB, and
-*Turbine, run:
+Build release packages
 </p>
-<div class="listingblock">
-<div class="content">
-<pre><code>./bootstrap</code></pre>
-</div></div>
-</li>
+<div class="ulist"><ul>
 <li>
 <p>
 Use <code>dev/release/make-release-pkg.zsh</code> to make the release package
@@ -3647,7 +3646,24 @@ Use <code>dev/release/make-release-pkg.zsh</code> to make the release package
 </li>
 <li>
 <p>
-Copy the package to the <code>gh-pages</code> branch
+Use <code>dev/debian/make-debs.zsh -b</code> to make the Debian package installer
+</p>
+</li>
+<li>
+<p>
+Use <code>dev/build-spacks.sh</code> to make the Spack releases
+</p>
+</li>
+<li>
+<p>
+Update the Spack <code>package.py</code> files and issue a pull request to Spack
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Copy the package to the <code>swift-t-downloads</code> repo, <code>gh-pages</code> branch
 </p>
 </li>
 <li>
@@ -3655,28 +3671,13 @@ Copy the package to the <code>gh-pages</code> branch
 Test package on Linux and Mac
 </p>
 </li>
-</ul></div>
-</li>
 <li>
 <p>
-<code>git push</code> package to GitHub
+<code>git push</code> tag and downloads to GitHub
 </p>
 </li>
 </ul></div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_debian">14.2. Debian</h3>
-<div class="sect3">
-<h4 id="_procedure_2">14.2.1. Procedure</h4>
-<div class="paragraph"><p>The Swift/T maintainer does this for each Swift/T release.</p></div>
-<div class="paragraph"><p>For each C-Utils and ADLB/X: do <code>make deb</code> and <code>make deb-dev</code>.<br />
-For Turbine and STC: do <code>make deb</code></p></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_spack">14.3. Spack</h3>
-<div class="paragraph"><p>Use the <code>dev/build-spacks.sh</code> script to build the 4 Spack source packages.</p></div>
 </div>
 </div>
 </div>
@@ -3684,7 +3685,8 @@ For Turbine and STC: do <code>make deb</code></p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-04-06 11:16:33 EDT
+Last updated
+ 2017-06-29 10:40:18 CDT
 </div>
 </div>
 </body>

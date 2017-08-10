@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.2.0, June 2017
+v1.3.0, July 2017
 
 
 == How to use this guide
@@ -202,9 +202,14 @@ output directory creation.  See <<turbine_output,Turbine output>>
 These recently developed features are not yet available for all
 schedulers, feel free to request implementation.
 
-+TURBINE_DIRECTIVE+:: Paste the given text into the submit script
-(currently supported systems: +cray+).  Allows users to insert, e.g.,
-reservation information into the script.
++TURBINE_DIRECTIVE+::
+Paste the given text into the submit script (currently supported
+systems: +cray+, +slurm+).  Allows users to insert, e.g., reservation
+information into the script.
+
++TURBINE_SBATCH_ARGS+::
+Optional arguments passed to +sbatch+.  These arguments may include
++--exclusive+ and +--constraint=...+, etc.  Supported systems: +slurm+.
 
 *Mail*
 
@@ -218,23 +223,29 @@ reservation information into the script.
 
 For scheduled systems, Turbine accepts a common set of command line options.
 
-+-d <directory>+:: Set the Turbine output directory.  (Overrides
-+TURBINE_OUTPUT+).
++-d <directory>+::
+Set the Turbine output directory.  (Overrides +TURBINE_OUTPUT+).
 
-+-e <key>=<value>+:: Set an environment variable in the job
-environment.  This may be used multiple times
++-D <file>+::
+Turbine writes the value of +TURBINE_OUTPUT+ into
++turbine-directory.txt+ in +$PWD+.  This is a convenience feature for
+shell scripting.  To change the name of this file,
+specify it with +-D+.  To prevent this from happening, specify
++-D /dev/null+.
 
-+-i <script>+:: Set an initialization script to run before launching
-Turbine.  This script will have +TURBINE_OUTPUT+ in the environment,
-so you may perform additional configuration just before job launch.
-+
-Other available environment variables include
-+PROCS+ (the total number of MPI processes),
-+TURBINE_WORKERS+ (the number of Turbine worker processes),
-+SCRIPT+ and +ARGS+ (the Swift/Turbine command),
-+WALLTIME+, +NODES+, +PPN+, etc.
-See +run-init.zsh+ for other variables.
-Also, all environment variables from +turbine-config.sh+
++-e <key>=<value>+::
+Set an environment variable in the job environment.  This may be used
+multiple times.
+
++-i <script>+::
+Set an initialization script to run before launching Turbine.  This
+script will have +TURBINE_OUTPUT+ in the environment, so you may
+perform additional configuration just before job launch.  + Other
+available environment variables include +PROCS+ (the total number of
+MPI processes), +TURBINE_WORKERS+ (the number of Turbine worker
+processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
++WALLTIME+, +NODES+, +PPN+, etc.  See +run-init.zsh+ for other
+variables.  Also, all environment variables from +turbine-config.sh+
 (i.e., Turbine installation information) are available.
 
 +-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
@@ -317,17 +328,38 @@ Operates as a generic cluster (see above).
 ----
 echo crush.mcs.anl.gov >  hosts.txt
 echo crank.mcs.anl.gov >> hosts.txt
-turbine -l -n 3 -f hosts.txt program.tic
+swift-t -l -n 3 -t f:hosts.txt workflow.swift
 ----
 
 ==== Public installation
 
-*As of:* trunk, 8/13/2013
+*As of:* +master+, 2017/07/19
 
-MCS users are welcome to use this installation.
+MCS users are welcome to use this installation.  It has Python 2.7.10
+and R 3.4.1 .
 
-* STC: +~wozniak/Public/stc/bin/stc+
-* Turbine: +~wozniak/Public/turbine/bin/turbine+
+Simply add Swift/T and Python to your +PATH+:
+
+* STC: +~wozniak/Public/x86_64/swift-t/stc/bin+
+* Python: +~wozniak/Public/x86_64/Python-2.7.10/bin+
+
+Add Python and R to your +LD_LIBRARY_PATH+:
+----
+export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/R-3.4.1/lib/R/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/Python-2.7.10/lib:$LD_LIBRARY_PATH
+----
+
+==== Build instructions
+
+* Check that +which mpicc+ is +/usr/bin/mpicc+
+* Configure c-utils as usual
+* Configure ADLB with +CC=mpicc+
+* Configure Turbine with:
++
+----
+  --with-python-exe=/home/wozniak/Public/sfw/x86_64/Python-2.7.10/bin/python
+  --with-r=/home/wozniak/Public/sfw/x86_64/R-3.4.1/lib/R
+----
 
 === Cooley
 
@@ -343,7 +375,7 @@ Add to +PATH+:
 Run on the login nodes with:
 
 ----
-swift-t ...
+nice swift-t ...
 ----
 
 Run on the compute nodes with:
@@ -959,10 +991,10 @@ https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
 Dependencies are installed in:
 
 ----
-/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
-/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+/home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+/home/wozniak/Public/sfw/theta/tcl-8.6.1
+/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 ----
 
 ==== Public installation
@@ -1008,9 +1040,10 @@ nice swift-t workflow.swift
 
 ===== Compute nodes
 
-Add to +PATH+: +/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
+Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
 
-Theta uses Cobalt.  Run with
+Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
+Run with:
 ----
 $ GCC=/opt/gcc/6.3.0/snos/lib64
 $ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
@@ -1058,8 +1091,8 @@ $ ./configure
   --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
   --with-hdf5=no
   --disable-static --disable-static-pkg
-  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 ----
 
 === Titan
@@ -1471,7 +1504,12 @@ export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
 nice swift-t workflow.swift
 ----
 
+[[cori_compute]]
 ===== Compute nodes
+
+There are two Swift/T installations for two different Python installations:
+
+*Python and R (I)*
 
 Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-r/stc/bin+
 
@@ -1487,9 +1525,26 @@ swift-t -m slurm workflow.swift
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
 
+*Python and R (II)* +
+*As of:* 2017/07/11
+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-07-11/stc/bin+
+
+Cori uses SLURM.  Run with
+----
+module load java
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/intel-tensorflow
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
+----
+
+The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
+cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
+
 ==== Build instructions
 
-*As of:* 2017/03/09
+*As of:* 2017/07/11
 
 Use
 

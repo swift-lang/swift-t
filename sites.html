@@ -745,8 +745,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.2.0,</span>
-<span id="revdate">June 2017</span>
+<span id="revnumber">version 1.3.0,</span>
+<span id="revdate">July 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1041,9 +1041,18 @@ schedulers, feel free to request implementation.</p></div>
 </dt>
 <dd>
 <p>
-Paste the given text into the submit script
-(currently supported systems: <code>cray</code>).  Allows users to insert, e.g.,
-reservation information into the script.
+Paste the given text into the submit script (currently supported
+systems: <code>cray</code>, <code>slurm</code>).  Allows users to insert, e.g., reservation
+information into the script.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_SBATCH_ARGS</code>
+</dt>
+<dd>
+<p>
+Optional arguments passed to <code>sbatch</code>.  These arguments may include
+<code>--exclusive</code> and <code>--constraint=&#8230;</code>, etc.  Supported systems: <code>slurm</code>.
 </p>
 </dd>
 </dl></div>
@@ -1078,8 +1087,19 @@ If <code>MAIL_ENABLED</code>, send the email to the given address.
 </dt>
 <dd>
 <p>
-Set the Turbine output directory.  (Overrides
-<code>TURBINE_OUTPUT</code>).
+Set the Turbine output directory.  (Overrides <code>TURBINE_OUTPUT</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-D &lt;file&gt;</code>
+</dt>
+<dd>
+<p>
+Turbine writes the value of <code>TURBINE_OUTPUT</code> into
+<code>turbine-directory.txt</code> in <code>$PWD</code>.  This is a convenience feature for
+shell scripting.  To change the name of this file,
+specify it with <code>-D</code>.  To prevent this from happening, specify
+<code>-D /dev/null</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1087,8 +1107,8 @@ Set the Turbine output directory.  (Overrides
 </dt>
 <dd>
 <p>
-Set an environment variable in the job
-environment.  This may be used multiple times
+Set an environment variable in the job environment.  This may be used
+multiple times.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1096,18 +1116,16 @@ environment.  This may be used multiple times
 </dt>
 <dd>
 <p>
-Set an initialization script to run before launching
-Turbine.  This script will have <code>TURBINE_OUTPUT</code> in the environment,
-so you may perform additional configuration just before job launch.
+Set an initialization script to run before launching Turbine.  This
+script will have <code>TURBINE_OUTPUT</code> in the environment, so you may
+perform additional configuration just before job launch.  + Other
+available environment variables include <code>PROCS</code> (the total number of
+MPI processes), <code>TURBINE_WORKERS</code> (the number of Turbine worker
+processes), <code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
+<code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.  See <code>run-init.zsh</code> for other
+variables.  Also, all environment variables from <code>turbine-config.sh</code>
+(i.e., Turbine installation information) are available.
 </p>
-<div class="paragraph"><p>Other available environment variables include
-<code>PROCS</code> (the total number of MPI processes),
-<code>TURBINE_WORKERS</code> (the number of Turbine worker processes),
-<code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
-<code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.
-See <code>run-init.zsh</code> for other variables.
-Also, all environment variables from <code>turbine-config.sh</code>
-(i.e., Turbine installation information) are available.</p></div>
 </dd>
 <dt class="hdlist1">
 <code>-n &lt;procs&gt;</code>
@@ -1229,22 +1247,60 @@ Operates as a generic cluster (see above).</p></div>
 <div class="content">
 <pre><code>echo crush.mcs.anl.gov &gt;  hosts.txt
 echo crank.mcs.anl.gov &gt;&gt; hosts.txt
-turbine -l -n 3 -f hosts.txt program.tic</code></pre>
+swift-t -l -n 3 -t f:hosts.txt workflow.swift</code></pre>
 </div></div>
 <div class="sect3">
 <h4 id="_public_installation">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> trunk, 8/13/2013</p></div>
-<div class="paragraph"><p>MCS users are welcome to use this installation.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> <code>master</code>, 2017/07/19</p></div>
+<div class="paragraph"><p>MCS users are welcome to use this installation.  It has Python 2.7.10
+and R 3.4.1 .</p></div>
+<div class="paragraph"><p>Simply add Swift/T and Python to your <code>PATH</code>:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-STC: <code>~wozniak/Public/stc/bin/stc</code>
+STC: <code>~wozniak/Public/x86_64/swift-t/stc/bin</code>
 </p>
 </li>
 <li>
 <p>
-Turbine: <code>~wozniak/Public/turbine/bin/turbine</code>
+Python: <code>~wozniak/Public/x86_64/Python-2.7.10/bin</code>
 </p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Add Python and R to your <code>LD_LIBRARY_PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/R-3.4.1/lib/R/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/Public/sfw/x86_64/Python-2.7.10/lib:$LD_LIBRARY_PATH</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions">Build instructions</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Check that <code>which mpicc</code> is <code>/usr/bin/mpicc</code>
+</p>
+</li>
+<li>
+<p>
+Configure c-utils as usual
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpicc</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>  --with-python-exe=/home/wozniak/Public/sfw/x86_64/Python-2.7.10/bin/python
+  --with-r=/home/wozniak/Public/sfw/x86_64/R-3.4.1/lib/R</code></pre>
+</div></div>
 </li>
 </ul></div>
 </div>
@@ -1260,7 +1316,7 @@ at the ALCF.</p></div>
 <div class="paragraph"><p>Run on the login nodes with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>swift-t ...</code></pre>
+<pre><code>nice swift-t ...</code></pre>
 </div></div>
 <div class="paragraph"><p>Run on the compute nodes with:</p></div>
 <div class="listingblock">
@@ -1877,7 +1933,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions">Build instructions</h4>
+<h4 id="_build_instructions_2">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2211,10 +2267,10 @@ Run with:
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/mira-home/Public/sfw/theta/swig-3.0.12
-/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+<pre><code>/home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+/home/wozniak/Public/sfw/theta/tcl-8.6.1
+/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
 </div></div>
 <div class="sect3">
 <h4 id="_public_installation_9">Public installation</h4>
@@ -2223,19 +2279,21 @@ Run with:
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes">Compute nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
-<div class="paragraph"><p>Theta uses Cobalt.  Run with</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>/home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
+<div class="paragraph"><p>Theta uses Cobalt/APRUN, which in Swift/T is machine type <code>theta</code>.
+Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+<pre><code>$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 $ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ export PROJECT=... QUEUE=...
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
 </div></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_2">Build instructions</h4>
+<h4 id="_build_instructions_3">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2017/06/07</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2267,8 +2325,8 @@ $ ./configure CC=gcc ...</code></pre>
   --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
   --with-hdf5=no
   --disable-static --disable-static-pkg
-  --with-python-exe=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/R-3.4.0/lib64/R</code></pre>
+  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
+  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
 </div></div>
 </div>
 </div>
@@ -2749,7 +2807,9 @@ nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_7">Compute nodes</h5>
+<h5 id="cori_compute">Compute nodes</h5>
+<div class="paragraph"><p>There are two Swift/T installations for two different Python installations:</p></div>
+<div class="paragraph"><p><strong>Python and R (I)</strong></p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
 <div class="listingblock">
@@ -2762,11 +2822,25 @@ swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
 cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
+<div class="paragraph"><p><strong>Python and R (II)</strong><br />
+<strong>As of:</strong> 2017/07/11</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-2017-07-11/stc/bin</code></p></div>
+<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load java
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/intel-tensorflow
+export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
+cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_3">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
+<h4 id="_build_instructions_4">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2017/07/11</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2777,7 +2851,7 @@ cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_8">Compute nodes</h5>
+<h5 id="_compute_nodes_7">Compute nodes</h5>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
 to configure the MPI library.</p></div>
 <div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
@@ -3287,8 +3361,9 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.2.0<br />
-Last updated 2017-06-07 11:31:50 CDT
+Version 1.3.0<br />
+Last updated
+ 2017-07-19 12:43:19 CDT
 </div>
 </div>
 </body>
