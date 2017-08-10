@@ -379,6 +379,22 @@ namespace eval turbine {
         }
         return [ join $A $separator ]
     }
+
+    proc pick_regexp { pattern L } {
+        set result [ dict create ]
+        dict for { k v } $L {
+            if [ catch {
+                if [ regexp $pattern $v ] {
+                    dict set result $k $v
+                }
+            } e ] {
+                turbine_error "error in pick_regexp(): "        \
+                              "pattern='$pattern' value='$v'\n" \
+                              "details: $e"
+            }
+        }
+        return $result
+    }
 }
 
 # Local Variables:
