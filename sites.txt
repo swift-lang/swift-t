@@ -1012,9 +1012,10 @@ Add to +PATH+: +/gpfs/mira-home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
 
 Theta uses Cobalt.  Run with
 ----
+$ GCC=/opt/gcc/6.3.0/snos/lib64
 $ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
 $ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
+$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
 ----
 
