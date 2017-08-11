@@ -9,7 +9,7 @@ then
   exit 1
 fi
 
-source $( $TURBINE_BIN/turbine -S )
+source $( $TURBINE_BIN/turbine -C )
 source $TURBINE_HOME/scripts/turbine-config.sh
 
 $TCLSH $TURBINE_HOME/scripts/turbine-write-doubles.tcl ${*}

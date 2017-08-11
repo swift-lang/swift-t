@@ -9,6 +9,6 @@ then
   exit 1
 fi
 
-source $( $TURBINE_BIN/turbine -S )
+source $( $TURBINE_BIN/turbine -C )
 
 $TCLSH $TURBINE_HOME/scripts/turbine-read-doubles.tcl ${*}
