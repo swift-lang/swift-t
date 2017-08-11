@@ -373,6 +373,35 @@ namespace eval turbine {
             # Spin
         }
     }
+
+    proc system { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        set tokens [ list ]
+        set n [ dict size $command ]
+        for { set i 0 } { $i < $n } { incr i } {
+            lappend tokens [ dict get $command $i ]
+        }
+        if [ catch { set s [ exec {*}$tokens ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
+    }
+
+    proc system1 { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        if [ catch { set s [ exec {*}$command ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
+    }
 }
 
 # Local Variables:
