@@ -38,17 +38,19 @@ else
 fi
 
 # Install FortWrap here:
-path+=/tmp/exm-fortwrap/fortwrap-1.0.4
-if [[ -e /tmp/exm-fortwrap/fortwrap-1.0.4/fortwrap.py ]]
+FV=git # FortWrap Version
+path+=/tmp/exm-fortwrap-${FV}
+if [[ -e /tmp/exm-fortwrap-${FV}/fortwrap.py ]]
 then
   print "Found FortWrap: $( which fortwrap.py )"
 else
   print "Downloading FortWrap"
-  mkdir -p /tmp/exm-fortwrap
-  pushd /tmp/exm-fortwrap
-  wget http://downloads.sourceforge.net/project/fortwrap/fortwrap-1.0.4/fortwrap-1.0.4.tar.gz
-  tar xfz fortwrap-1.0.4.tar.gz
-  print "FortWrap successfully installed in ${PWD}/fortwrap-1.0.4"
+  mkdir -p /tmp/exm-fortwrap-${FV}
+  pushd /tmp/exm-fortwrap-${FV}
+  # wget http://downloads.sourceforge.net/project/fortwrap/fortwrap-1.0.4/fortwrap-1.0.4.tar.gz
+  # tar xfz fortwrap-1.0.4.tar.gz
+  wget https://raw.githubusercontent.com/mcfarljm/fortwrap/master/fortwrap.py
+  print "FortWrap successfully installed in /tmp/exm-fortwrap-${FV}"
   popd
 fi
 
