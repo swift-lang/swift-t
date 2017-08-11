@@ -1,6 +1,9 @@
 #!/bin/bash
 set -eu
 
+# RUN
+# Runs all examples
+
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 cd $THIS
 
