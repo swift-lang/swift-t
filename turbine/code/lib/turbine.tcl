@@ -198,11 +198,11 @@ namespace eval turbine {
         }
 
         if { $workers_running_sum >= $n_workers } {
-          error "Too many workers allocated to executor types: \
-                  {$n_workers_by_type}.\n \
-                  Have $n_workers total workers, allocated
-                  $workers_running_sum already, need at least one to \
-                  serve as regular worker"
+          turbine_fail "Too many workers allocated to custom work types! \n" \
+              "counts: " [ report_work_type_counts $n_workers_by_type ] "\n" \
+              "Total workers:  $n_workers \n" \
+              "Custom workers: $workers_running_sum \n" \
+              "Need at least one regular worker."
         }
 
         # Remainder goes to regular workers
@@ -213,6 +213,14 @@ namespace eval turbine {
 
         return [ dict create servers $n_servers workers $n_workers \
                              workers_by_type $n_workers_by_type ]
+    }
+
+    proc report_work_type_counts { n_workers_by_type } {
+        set result [ list ]
+        dict for { k v } $n_workers_by_type {
+            lappend result "${k}:${v}"
+        }
+        return $result
     }
 
     # Return names of all registered async executors
@@ -367,7 +375,10 @@ namespace eval turbine {
         foreach exec_name $exec_names {
             if { ( ! [ dict exists $n_workers_by_type $exec_name ] ) ||
                  [ dict get $n_workers_by_type $exec_name ] <= 0 } {
-              error "Executor $exec_name has no assigned workers"
+                turbine_fail "Custom work types error: " \
+                        "Executor $exec_name has no assigned workers!\n" \
+                        "Set environment variable TURBINE_${exec_name}_WORKERS " \
+                        "to some number of workers."
             }
         }
     }
@@ -431,6 +442,13 @@ namespace eval turbine {
         } else {
             error $msg
         }
+    }
+
+    proc turbine_fail { args } {
+        if { [ adlb::rank ] == 0 } {
+            puts* {*}$args
+        }
+        exit 1
     }
 
     # Turbine logging contains string values (possibly long)
