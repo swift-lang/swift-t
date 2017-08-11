@@ -1,6 +1,7 @@
-#!/bin/bash -e
+#!/bin/bash
+set -e
 
-source $(turbine -S)
+source $( turbine -C )
 
 set -x
 
