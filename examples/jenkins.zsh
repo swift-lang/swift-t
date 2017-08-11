@@ -9,7 +9,7 @@ PATH=${TURBINE}/bin:${PATH}
 PATH=${STC}/bin:${PATH}
 
 print "Settings:"
-which mpicc mpiexec swift-t stc
+which mpicc mpiexec swift-t stc turbine
 
 print
 
