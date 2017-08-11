@@ -50,6 +50,7 @@ else
   # wget http://downloads.sourceforge.net/project/fortwrap/fortwrap-1.0.4/fortwrap-1.0.4.tar.gz
   # tar xfz fortwrap-1.0.4.tar.gz
   wget https://raw.githubusercontent.com/mcfarljm/fortwrap/master/fortwrap.py
+  chmod u+x fortwrap.py
   print "FortWrap successfully installed in /tmp/exm-fortwrap-${FV}"
   popd
 fi
