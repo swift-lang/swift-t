@@ -5,13 +5,14 @@
 
 FV=git # FortWrap Version
 path+=/tmp/exm-fortwrap-${FV}
-if [[ -e /tmp/exm-fortwrap-${FV}/fortwrap.py ]]
+if [[ -x /tmp/exm-fortwrap-${FV}/fortwrap.py ]]
 then
   echo "Found FortWrap: $( which fortwrap.py )"
 else
   echo "Downloading FortWrap"
   mkdir -p /tmp/exm-fortwrap-${FV}
   pushd /tmp/exm-fortwrap-${FV}
+  rm -fv fortwrap.py
   wget https://raw.githubusercontent.com/mcfarljm/fortwrap/master/fortwrap.py
   chmod u+x fortwrap.py
   echo "FortWrap successfully installed in /tmp/exm-fortwrap-${FV}"
