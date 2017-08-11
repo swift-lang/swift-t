@@ -4,9 +4,6 @@
 
 # Set these for your system:
 
-echo PATH: $PATH
-which turbine
-
 # Get Turbine's build settings
 source $( turbine -S )
 export TCL_INCLUDE_SPEC TCL_HOME

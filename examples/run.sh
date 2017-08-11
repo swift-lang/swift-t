@@ -7,8 +7,6 @@ set -eu
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 cd $THIS
 
-echo PATH: $PATH
-
 source setup.sh
 
 # Sanity check variables:
