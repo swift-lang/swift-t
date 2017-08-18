@@ -20,8 +20,6 @@
  *  Created on: May 4, 2011
  *      Author: wozniak
  *
- * TD means Turbine Datum, which is a variable id stored in ADLB
- * TR means TRansform, the in-memory record from a rule
  * */
 
 #include <assert.h>
