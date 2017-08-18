@@ -14,6 +14,9 @@
 # limitations under the License
 # Turbine builtin functions for blob manipulation
 
+# BLOB.TCL
+# Turbine implementations for blob.swift
+
 # DOCSECTION(Tcl convenience functions)
 # DOCN(These functions operate on Tcl blobs.)
 
