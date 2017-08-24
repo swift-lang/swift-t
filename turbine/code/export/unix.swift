@@ -65,4 +65,9 @@ app (void v) mkdir(string dirname)
   "mkdir" "-p" dirname;
 }
 
+app (void o) rm(string flags, string dirname)
+{
+  "rm" flags dirname;
+}
+
 #endif
