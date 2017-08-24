@@ -59,10 +59,10 @@ echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "COMMAND:      ${COMMAND}"
 echo "PROCS:        ${PROCS}"
 echo "PPN:          ${PPN}"
-echo "TCLLIBPATH:   ${TCLLIBPATH}"
-echo "LAUNCHER:     ${LAUNCHER}"
-[[ -n ${VALGRIND} ]] && \
-echo "VALGRIND:     ${VALGRIND}"
+# echo "TCLLIBPATH:   ${TCLLIBPATH}"
+# echo "LAUNCHER:     ${LAUNCHER}"
+#[[ -n ${VALGRIND} ]] && \
+# echo "VALGRIND:     ${VALGRIND}"
 echo
 
 # Put environment variables from run-init into 'aprun -e' format
@@ -72,6 +72,8 @@ for KV in ${ENV_LIST}
 do
     APRUN_ENVS+="-e ${KV} "
 done
+
+# echo APRUN_ENVS: $APRUN_ENVS
 
 # Run Turbine:
 aprun -n ${PROCS} -N ${PPN} \
