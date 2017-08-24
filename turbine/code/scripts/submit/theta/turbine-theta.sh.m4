@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash
+changecom(`dnl')#!/bin/bash -l
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -25,6 +25,7 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 #COBALT -A getenv(PROJECT)
 #COBALT -q getenv(QUEUE)
 
+module load modules
 module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 
 # Get the time zone: for time stamps on log messages
