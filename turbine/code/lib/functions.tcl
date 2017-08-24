@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Turbine builtin functions
+# Misc. Turbine builtin functions
 
 # All builtins will have signature:
 #   f <OUTPUT LIST> <INPUT LIST>

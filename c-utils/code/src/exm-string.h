@@ -51,6 +51,7 @@ void chomp(char* s);
 
 /**
    Provide strnlen on systems that do not have it (e.g., Mac)
+   This produces a false autoscan warning
 */
 static inline size_t
 strnlen(char* text, size_t maxlen)

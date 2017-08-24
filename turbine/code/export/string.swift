@@ -117,4 +117,9 @@
 (string o) join_args(string separator, string|int|float... args)
 "turbine" "0.0.2" "join_args";
 
+@pure
+(string o[]) pick_regexp(string pattern, string L[])
+ "turbine" "1.0"
+[ "set <<o>> [ turbine::pick_regexp <<pattern>> <<L>> ]" ];
+
 #endif

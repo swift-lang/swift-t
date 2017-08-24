@@ -137,6 +137,14 @@ proc cat { args } {
     return [ join $args " " ]
 }
 
+proc puts* { args } {
+    puts [ join $args "" ]
+}
+
+proc putsn { args } {
+    puts [ join $args "\n" ]
+}
+
 # Remove and return element 0 from list
 proc list_pop_first { L_name } {
     upvar $L_name L

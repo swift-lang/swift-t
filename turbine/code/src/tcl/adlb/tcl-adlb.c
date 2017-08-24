@@ -705,8 +705,8 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   MPI_Comm comm = (MPI_Comm) comm_int;
 
@@ -748,9 +748,9 @@ ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   else if (objc == 2)
   {
-    int comm_int;
-    int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
-    TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+    Tcl_WideInt comm_int;
+    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
     MPI_Comm comm = (MPI_Comm) comm_int;
     MPI_Comm_rank(comm, &result);
   }
@@ -766,9 +766,9 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2)
-  int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
   MPI_Comm comm = (MPI_Comm) comm_int;
 
   int size;
@@ -798,7 +798,7 @@ ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
   else
     return turbine_user_errorv
       (interp, "adlb::comm_get: error: unknown comm: %s", comm_name);
-  Tcl_Obj* result = Tcl_NewLongObj(comm);
+  Tcl_Obj* result = Tcl_NewWideIntObj((long long int) comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

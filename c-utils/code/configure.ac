@@ -59,6 +59,7 @@ AC_TYPE_SIZE_T
 # because of known autoconf issues.  We do check for strnlen here:
 AC_CHECK_FUNCS([floor gettimeofday memchr memmove memset])
 AC_CHECK_FUNCS([strchr strdup strnlen strtol])
+AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 

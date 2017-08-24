@@ -107,7 +107,7 @@ R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 
 /**
-   Shorten object creation lines.  r:: namespace is prepended
+   Shorten create-command lines.  r:: namespace is prepended
  */
 #define COMMAND(tcl_function, c_function) \
     Tcl_CreateObjCommand(interp, "r::" tcl_function, c_function, \
@@ -115,7 +115,7 @@ R_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    Called when Tcl loads this extension
  */
-int DLLEXPORT
+int
 Tclr_Init(Tcl_Interp *interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
