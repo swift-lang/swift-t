@@ -25,7 +25,9 @@ define(`getenv', `esyscmd(printf -- "$`$1' ")')
 #COBALT -A getenv(PROJECT)
 #COBALT -q getenv(QUEUE)
 
+source /opt/modules/default/init/bash
 module load modules
+PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 
 # Get the time zone: for time stamps on log messages
