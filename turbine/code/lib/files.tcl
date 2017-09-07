@@ -693,27 +693,27 @@ namespace eval turbine {
         }
     }
 
-    proc file_lines { result input } {
+    proc file_lines { result input comment } {
         	set src [ lindex $input 0 ]
         rule_file_helper "file_lines-$result-$src" [ list ] \
-            [ list ] [ list $src ] \
+            [ list $comment ] [ list $src ] \
             $::turbine::WORK \
             [ list file_lines_body $result $src ]
     }
     proc file_lines_body { result input } {
         set input_val [ retrieve_decr_file $input ]
-        set lines_val [ file_lines_impl $input_val ]
+        set comment_val [ retrive_decr $comment ]
+        set lines_val [ file_lines_impl $input_val $comment_val ]
         array_kv_build $result $lines_val 1 integer string
     }
-
     # input_file: local file representation
-    proc file_lines_impl { input_file } {
+    proc file_lines_impl { input_file comment } {
         set input_name [ local_file_path $input_file ]
         set fp [ ::open $input_name r ]
         set line_number 0
         set lines [ dict create ]
         while { [ gets $fp line ] >= 0 } {
-            regsub "#.*" $line "" line
+            regsub "${comment}.*" $line "" line
             set line [ string trim $line ]
             if { [ string length $line ] > 0 } {
                 dict append lines $line_number $line

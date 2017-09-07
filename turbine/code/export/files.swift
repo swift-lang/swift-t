@@ -52,9 +52,9 @@
 "turbine" "0.1" [ "set <<o>> [ turbine::file_mtime_impl <<f>> ]" ];
 
 @pure
-(string s[]) file_lines(file f)
+(string s[]) file_lines(file f, string comment="#")
     "turbine" "0.1" "file_lines"
-  [ "set <<s>> [ turbine::file_lines_impl <<f>> ] " ];
+  [ "set <<s>> [ turbine::file_lines_impl <<f>> <<comment>> ] " ];
 
 @pure
 (string d) dirname_string(string p)
