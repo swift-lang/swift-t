@@ -261,8 +261,8 @@ if (( ! SKIP_COMPILE ))
 then
   # Run STC
   make_stc_output
-  message "Compiling: ${PROGRAM_SWIFT}"
-  message "       to: ${PROGRAM_TCL}"
+  verbose "Compiling: ${PROGRAM_SWIFT}"
+  verbose "       to: ${PROGRAM_TCL}"
   verbose_cmd ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
   sync
 fi
