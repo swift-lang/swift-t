@@ -3196,8 +3196,8 @@ before workflow execution, and remove it on workflow completion.
 
 ==== C/C++ hooks
 
-If you are calling C/C++ native code from Swift/T, you can use the
-provided C/C++ shutdown hook to clean up at the end of the workflow.
+If you are calling C/C\++ native code from Swift/T, you can use the
+provided C/C\++ shutdown hook to clean up at the end of the workflow.
 The function signature is in +turbine-finalizers.h+:
 
 ----
