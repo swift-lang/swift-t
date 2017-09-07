@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">July 2017</span><br />
+<span id="author">September 2017</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2965,13 +2965,14 @@ Attempt to find a file with the given name in the filesystem: return
 </p>
 </dd>
 <dt class="hdlist1">
-<code>file_lines(file) &#8594; string[]</code>
+<code>file_lines(file, comment="#") &#8594; string[]</code>
 </dt>
 <dd>
 <p>
 Reads the whole file, returning each line as a separate entry in the
-output array.  Comments with <code>#</code> are excised, leading and trailing
-whitespace is trimmed, and blank lines are omitted.
+output array.  The <code>comment</code> argument is optional and defaults to
+<code>"#"</code> .  Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5490,6 +5491,43 @@ and
 <a href="http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013">this paper</a>.</p></div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_startup_shutdown_hooks">17.9. Startup/shutdown hooks</h3>
+<div class="paragraph"><p>Turbine has hooks that can be accessed to execute shell scripts, Tcl
+code, or C/C++ code on each node at startup and shutdown.</p></div>
+<div class="sect3">
+<h4 id="_shell_or_tcl_hooks">17.9.1. Shell or Tcl hooks</h4>
+<div class="paragraph"><p>By simply setting environment variables, you can trigger fragments of
+Tcl or shell code to execute on each node of the Swift/T run at
+startup and/or shutdown.  In this example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export TURBINE_LEADER_HOOK_STARTUP=" puts [ exec $PWD/hook-startup.sh ]"
+$ export TURBINE_LEADER_HOOK_SHUTDOWN="puts [ exec $PWD/hook-shutdown.sh ]"
+$ swift-t workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>the Tcl fragments in double quotes will be run at startup and shutdown
+respectively.  In this case, the Tcl fragments simply <code>exec</code> the given
+shell scripts.</p></div>
+<div class="paragraph"><p>These fragments are run on the <em>leader</em> ranks of each node.  These are
+the lowest ranks on the node.</p></div>
+<div class="paragraph"><p>A typical use of this feature is to copy data into node-local storage
+before workflow execution, and remove it on workflow completion.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_c_c_hooks">17.9.2. C/C++ hooks</h4>
+<div class="paragraph"><p>If you are calling C/C<code> native code from Swift/T, you can use the
+provided C/C</code> shutdown hook to clean up at the end of the workflow.
+The function signature is in <code>turbine-finalizers.h</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int turbine_register_finalizer(void (*func)(void*),
+                               void* context);</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>func()</code> will be called once per rank at the end of the workflow.
+Multiple functions can be registered.</p></div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5516,7 +5554,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-08-03 10:38:56 CDT
+ 2017-09-07 14:56:50 CDT
 </div>
 </div>
 
