@@ -3167,6 +3167,47 @@ and
 https://github.com/swift-lang/swift-t/tree/master/mpe[documented here].  See also
 http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013[this paper].
 
+=== Startup/shutdown hooks
+
+Turbine has hooks that can be accessed to execute shell scripts, Tcl
+code, or C/C++ code on each node at startup and shutdown.
+
+==== Shell or Tcl hooks
+
+By simply setting environment variables, you can trigger fragments of
+Tcl or shell code to execute on each node of the Swift/T run at
+startup and/or shutdown.  In this example:
+
+----
+$ export TURBINE_LEADER_HOOK_STARTUP=" puts [ exec $PWD/hook-startup.sh ]"
+$ export TURBINE_LEADER_HOOK_SHUTDOWN="puts [ exec $PWD/hook-shutdown.sh ]"
+$ swift-t workflow.swift
+----
+
+the Tcl fragments in double quotes will be run at startup and shutdown
+respectively.  In this case, the Tcl fragments simply +exec+ the given
+shell scripts.
+
+These fragments are run on the _leader_ ranks of each node.  These are
+the lowest ranks on the node.
+
+A typical use of this feature is to copy data into node-local storage
+before workflow execution, and remove it on workflow completion.
+
+==== C/C++ hooks
+
+If you are calling C/C++ native code from Swift/T, you can use the
+provided C/C++ shutdown hook to clean up at the end of the workflow.
+The function signature is in +turbine-finalizers.h+:
+
+----
+int turbine_register_finalizer(void (*func)(void*),
+                               void* context);
+----
+
+The +func()+ will be called once per rank at the end of the workflow.
+Multiple functions can be registered.
+
 == Model exploration workflows
 
 The http://www.mcs.anl.gov/~emews/tutorial[EMEWS Tutorial] covers
