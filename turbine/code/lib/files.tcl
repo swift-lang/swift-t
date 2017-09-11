@@ -712,8 +712,12 @@ namespace eval turbine {
         set fp [ ::open $input_name r ]
         set line_number 0
         set lines [ dict create ]
+        # Comments are disabled if the comment string is empty
+        set comments_enabled [ string length $comment ]
         while { [ gets $fp line ] >= 0 } {
-            regsub "${comment}.*" $line "" line
+            if $comments_enabled {
+                regsub "${comment}.*" $line "" line
+            }
             set line [ string trim $line ]
             if { [ string length $line ] > 0 } {
                 dict append lines $line_number $line
