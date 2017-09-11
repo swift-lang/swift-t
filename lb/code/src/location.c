@@ -217,6 +217,12 @@ xlb_get_hostmap_mode(xlb_hostmap_mode *mode)
   return ADLB_SUCCESS;
 }
 
+static inline void create_leader_comm(MPI_Comm comm,
+                                      int leader_rank_count,
+                                      int* leader_ranks,
+                                      MPI_Comm* leader_comm);
+static inline void set_rank_envs(int layout_rank, int leader_rank);
+
 adlb_code
 xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
                   MPI_Comm comm, MPI_Comm *leader_comm)
@@ -237,9 +243,7 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
     // Find lowest non-server
     while (list_item != NULL &&
            xlb_is_server(layout, list_item->data))
-    {
       list_item = list_item->next;
-    }
 
     if (list_item != NULL)
     {
@@ -252,9 +256,34 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
         layout->am_leader = true;
         DEBUG("am leader");
       }
+
+      set_rank_envs(layout->rank, leader_rank);
     }
+    // else the node has only servers!
   }
 
+  create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
+  free(leader_ranks);
+
+  return ADLB_SUCCESS;
+}
+
+/** Set environment variables for user code */
+static inline void
+set_rank_envs(int layout_rank, int leader_rank)
+{
+  char t[64];
+  sprintf(t, "%i", layout_rank);
+  setenv("ADLB_RANK_SELF", t, 1);
+  sprintf(t, "%i", leader_rank);
+  setenv("ADLB_RANK_LEADER", t, 1);
+}
+
+/** Use MPI groups to create the leader communicator */
+static inline void
+create_leader_comm(MPI_Comm comm, int leader_rank_count,
+                   int* leader_ranks, MPI_Comm* leader_comm)
+{
   MPI_Group group_all, group_leaders;
   MPI_Comm_group(comm, &group_all);
 
@@ -263,10 +292,6 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
   MPI_Comm_create(comm, group_leaders, leader_comm);
   MPI_Group_free(&group_leaders);
   MPI_Group_free(&group_all);
-
-  free(leader_ranks);
-
-  return ADLB_SUCCESS;
 }
 
 adlb_code
