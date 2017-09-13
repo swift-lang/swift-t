@@ -56,17 +56,36 @@ do
       # Show error outputs
       REPORT_ERRORS=1
       ;;
-    k)
-      # skip some tests
-      SKIP_COUNT=${OPTARG}
+    f)
+      ADDTL_STC_ARGS+="-f${OPTARG}"
+      ;;
+    F)
+      ADDTL_STC_ARGS+="-F${OPTARG}"
       ;;
     J)
       # Jacoco coverage
       JACOCO_COVERAGE=1
       ;;
+    k)
+      # skip some tests
+      SKIP_COUNT=${OPTARG}
+      ;;
+    l)
+      LEAK_CHECK=0
+      ;;
     n)
       # run a limited number of tests
       MAX_TESTS=${OPTARG}
+      ;;
+    o)
+      if [ ! -d ${OPTARG} ]; then
+        echo "${OPTARG} is not a directory"
+        exit 1
+      fi
+      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
+      ;;
+    O)
+      STC_OPT_LEVELS+=${OPTARG}
       ;;
     p)
       # run only tests that match one of the patterns
@@ -76,27 +95,8 @@ do
       # don't run tests that match one of the patterns
       SKIP_PATTERNS+=${OPTARG}
       ;;
-    f)
-      ADDTL_STC_ARGS+="-f${OPTARG}"
-      ;;
-    F)
-      ADDTL_STC_ARGS+="-F${OPTARG}"
-      ;;
     V)
       VERBOSE=1
-      ;;
-    O)
-      STC_OPT_LEVELS+=${OPTARG}
-      ;;
-    l)
-      LEAK_CHECK=0
-      ;;
-    o)
-      if [ ! -d ${OPTARG} ]; then
-        echo "${OPTARG} is not a directory"
-        exit 1
-      fi
-      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
       ;;
     *)
       # ZSH already prints an error message
