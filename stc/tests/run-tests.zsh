@@ -19,7 +19,8 @@ SKIP_PATTERNS=()
 SKIP_COUNT=0
 
 COMPILE_ONLY=0
-RUN_DISABLED=0
+# If 1, run even tests that are skipped with SKIP-THIS-TEST
+RUN_SKIPPED_TESTS=0
 # If 1, show error outputs
 REPORT_ERRORS=0
 VERBOSE=0
@@ -49,8 +50,7 @@ do
       COMPILE_ONLY=1
       ;;
     D)
-      #Run disabled tests
-      RUN_DISABLED=1
+      RUN_SKIPPED_TESTS=1
       ;;
     e)
       # Show error outputs
@@ -473,13 +473,13 @@ do
     fi
   fi
 
-  if (( RUN_DISABLED == 1 ))
+  if (( ! RUN_SKIPPED_TESTS ))
   then
-    :
-  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
-  then
-    DISABLED_TESTS+=${TEST_NAME}
-    continue
+    if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+    then
+      DISABLED_TESTS+=${TEST_NAME}
+      continue
+    fi
   fi
 
   if [[ ${#SKIP_PATTERNS} > 0 ]]
@@ -503,17 +503,16 @@ do
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
   do
-    # Skip specific optimization levels
-    if (( RUN_DISABLED == 1 ))
+    if (( ! RUN_SKIPPED_TESTS ))
     then
-      :
-    elif grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
-    then
-      echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
-      DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
-      continue
+      # Skip specific optimization levels
+      if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
+      then
+        print "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
+        DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
+        continue
+      fi
     fi
-
 
     # Disambiguate test output of different opt levels
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
