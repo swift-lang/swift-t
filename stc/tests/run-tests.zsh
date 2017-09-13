@@ -36,7 +36,7 @@ JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
 # Save user JVM flags
 STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
 
-while getopts "cCDef:F:Jk:ln:o:O:p:P:V" OPTION
+while getopts "cCDef:F:hJk:ln:o:O:p:P:V" OPTION
 do
   case ${OPTION}
     in
@@ -61,6 +61,10 @@ do
       ;;
     F)
       ADDTL_STC_ARGS+="-F${OPTARG}"
+      ;;
+    h)
+      print "See About.txt for usage."
+      exit
       ;;
     J)
       # Jacoco coverage
