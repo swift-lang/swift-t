@@ -501,7 +501,7 @@ do
   fi
 
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
-  for OPT_LEVEL in $STC_OPT_LEVELS
+  for OPT_LEVEL in ${STC_OPT_LEVELS}
   do
     if (( ! RUN_SKIPPED_TESTS ))
     then
