@@ -36,7 +36,7 @@ JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
 # Save user JVM flags
 STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
 
-while getopts "cCDeJk:n:p:P:VO:f:F:alo:" OPTION
+while getopts "acCDef:F:Jk:ln:o:O:p:P:V" OPTION
 do
   case ${OPTION}
     in
