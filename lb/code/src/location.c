@@ -225,6 +225,7 @@ static inline void set_rank_envs(int layout_rank, int leader_rank);
 
 adlb_code
 xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
+                  char* my_name,
                   MPI_Comm comm, MPI_Comm *leader_comm)
 {
   // Cannot be more leaders than hosts
@@ -235,6 +236,7 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
 
   TABLE_FOREACH(&hosts->map, table_item)
   {
+    char* name = table_item->key;
     struct list_i *rank_list = table_item->data;
     assert(rank_list->size > 0);
 
@@ -257,7 +259,8 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
         DEBUG("am leader");
       }
 
-      set_rank_envs(layout->rank, leader_rank);
+      if (strcmp(my_name, name) == 0)
+        set_rank_envs(layout->rank, leader_rank);
     }
     // else the node has only servers!
   }

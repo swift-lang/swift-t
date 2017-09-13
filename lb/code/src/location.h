@@ -82,6 +82,7 @@ void xlb_hostmap_free(struct xlb_hostmap *hostmap);
  */
 adlb_code
 xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
+                  char* my_name,
                   MPI_Comm comm, MPI_Comm *leader_comm);
 
 #endif
