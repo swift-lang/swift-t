@@ -166,7 +166,6 @@ xlb_hostmap_init(const xlb_layout *layout,
     if (layout->rank == 0 && debug_hostmap)
       printf("HOSTMAP: %s -> %i\n", name, rank);
 
-
     if (!table_contains(&(*hostmap)->map, name))
     {
       struct list_i* L = list_i_create();
@@ -221,12 +220,14 @@ static inline void create_leader_comm(MPI_Comm comm,
                                       int leader_rank_count,
                                       int* leader_ranks,
                                       MPI_Comm* leader_comm);
-static inline void set_rank_envs(int layout_rank, int leader_rank);
+static inline void set_rank_envs(xlb_layout* layout,
+                                 struct list_i_item* list_item,
+                                 int leader_rank);
 
 adlb_code
-xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
+xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
                   char* my_name,
-                  MPI_Comm comm, MPI_Comm *leader_comm)
+                  MPI_Comm comm, MPI_Comm* leader_comm)
 {
   // Cannot be more leaders than hosts
   int max_leaders = hosts->map.size;
@@ -237,10 +238,10 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
   TABLE_FOREACH(&hosts->map, table_item)
   {
     char* name = table_item->key;
-    struct list_i *rank_list = table_item->data;
+    struct list_i* rank_list = table_item->data;
     assert(rank_list->size > 0);
 
-    struct list_i_item *list_item = rank_list->head;
+    struct list_i_item* list_item = rank_list->head;
 
     // Find lowest non-server
     while (list_item != NULL &&
@@ -260,7 +261,7 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
       }
 
       if (strcmp(my_name, name) == 0)
-        set_rank_envs(layout->rank, leader_rank);
+        set_rank_envs(layout, list_item, leader_rank);
     }
     // else the node has only servers!
   }
@@ -273,13 +274,27 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
 
 /** Set environment variables for user code */
 static inline void
-set_rank_envs(int layout_rank, int leader_rank)
+set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
+              int leader_rank)
 {
+  // Count offset between leader and myself
+  int offset = 0;
+  while (true)
+  {
+    assert(list_item != NULL);
+    if (list_item->data == layout->rank) break;
+    if (! xlb_is_server(layout, list_item->data))
+      offset++;
+    list_item = list_item->next;
+  }
+
   char t[64];
-  sprintf(t, "%i", layout_rank);
+  sprintf(t, "%i", layout->rank);
   setenv("ADLB_RANK_SELF", t, 1);
   sprintf(t, "%i", leader_rank);
   setenv("ADLB_RANK_LEADER", t, 1);
+  sprintf(t, "%i", offset);
+  setenv("ADLB_RANK_OFFSET", t, 1);
 }
 
 /** Use MPI groups to create the leader communicator */
