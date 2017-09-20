@@ -20,8 +20,6 @@
  *  Created on: May 4, 2011
  *      Author: wozniak
  *
- * TD means Turbine Datum, which is a variable id stored in ADLB
- * TR means TRansform, the in-memory record from a rule
  * */
 
 #include <assert.h>
@@ -93,7 +91,7 @@ check_versions()
    This is a separate function so we can set a function breakpoint
  */
 static void
-gdb_sleep(int* t, int i)
+gdb_sleep(volatile int* t, int i)
 {
   sleep(1);
   DEBUG_TURBINE("gdb_check: %i %i\n", *t, i);
@@ -120,7 +118,7 @@ gdb_check(int rank)
     {
       pid_t pid = getpid();
       printf("Waiting for gdb: rank: %i pid: %i\n", rank, pid);
-      int t = 0;
+      volatile int t = 0;
       int i = 0;
       while (!t)
         // In GDB, set t=1 to break out
@@ -163,7 +161,8 @@ setup_cache()
   unsigned long max_memory;
   bool b;
 
-  b = getenv_integer("TURBINE_CACHE_SIZE", 1024, &size);
+  // Cache is disabled by default:
+  b = getenv_integer("TURBINE_CACHE_SIZE", 0, &size);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
@@ -184,8 +183,6 @@ setup_cache()
 
   return true;
 }
-
-
 
 void
 turbine_version(version* output)

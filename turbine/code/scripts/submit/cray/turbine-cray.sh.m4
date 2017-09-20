@@ -25,9 +25,11 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
-#PBS -A getenv(PROJECT))
+#PBS -A getenv(PROJECT)
+)
 ifelse(getenv(QUEUE), `',,
-#PBS -q getenv(QUEUE))
+#PBS -q getenv(QUEUE)
+)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
@@ -45,8 +47,7 @@ ifelse(getenv(TITAN), `true',
 #PBS -l mppnppn=getenv(PPN)))
 ### End job size directives selection
 
-# This is ineffective- we have to use 'aprun -e'
-# PBS -V
+
 
 # Merge stdout/stderr
 #PBS -j oe

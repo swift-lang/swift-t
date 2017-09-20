@@ -27,9 +27,8 @@ import java.util.List;
  * */
 public class Square extends Expression
 {
-
-  private final List<Expression> items;
-
+  private List<Expression> items = null;
+  private Command command = null;
 
   /** if true, add braces as appropriate for context */
   private boolean treatAsList = false;
@@ -63,6 +62,11 @@ public class Square extends Expression
       items.add(new Token(s));
   }
 
+  public Square(Command command)
+  {
+    this.command = command;
+  }
+  
   public void add(Expression item)
   {
     items.add(item);
@@ -89,14 +93,23 @@ public class Square extends Expression
         sb.append("{");
 
     sb.append("[ ");
-    Iterator<Expression> it = items.iterator();
-    while (it.hasNext())
+
+    if (items != null)
     {
-      Expression tree = it.next();
-      tree.appendTo(sb, mode);
-      if (it.hasNext())
-        sb.append(' ');
+      Iterator<Expression> it = items.iterator();
+      while (it.hasNext())
+      {
+        Expression tree = it.next();
+        tree.appendTo(sb, mode);
+        if (it.hasNext())
+          sb.append(' ');
+      }
     }
+    else
+    {
+      command.appendTo(sb);
+    }
+    
     sb.append(" ]");
 
     if (brace)

@@ -5,11 +5,10 @@
 #  both configure/make from scratch
 
 # Jenkins - important variables
-# MPICH=/tmp/mpich-install
 C_UTILS=/tmp/exm-install/c-utils
 ADLB=/tmp/exm-install/lb
 TURBINE=/tmp/exm-install/turbine
-PATH=${PATH}:$TURBINE/bin # :$MPICH/bin
+PATH=${PATH}:$TURBINE/bin
 
 rm -rf autom4te.cache
 ./bootstrap
@@ -21,7 +20,5 @@ rm -rf autom4te.cache
             --with-hdf5=no           \
             --disable-static-pkg     \
             --disable-static
-
-#             --with-mpi=$MPICH
 
 make clean

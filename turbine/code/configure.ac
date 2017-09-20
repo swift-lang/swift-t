@@ -26,9 +26,21 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
+
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 if [[ ${prefix} == "NONE" ]]
 then
-  AC_MSG_ERROR("You must provide --prefix")
+  if (( ! DEBIAN_BUILD ))
+  then
+    AC_MSG_ERROR("You must provide --prefix")
+  fi
 fi
 
 AC_MSG_RESULT([PREFIX: ${prefix}])
@@ -71,16 +83,15 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
-DEBIAN_BUILD=0
-AC_ARG_ENABLE(debian-build,
-  AS_HELP_STRING(
-    [--enable-debian-build], [configure for a Debian package]),
-    [DEBIAN_BUILD=1]
-)
-AC_SUBST(DEBIAN_BUILD)
+# Check for CC
+AC_PROG_CC
+
+# Report location of CC
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
+AC_SUBST(USE_CC)
 
 # Checks for programs
-AC_PROG_CC
 AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
@@ -156,7 +167,7 @@ USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
     AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
     [
-        AC_MSG_CHECKING([${withval}/include/c-utils.h])
+        AC_MSG_CHECKING([for ${withval}/include/c-utils.h])
         [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
         if [[ ${USE_C_UTILS} == 0 ]]
         then
@@ -186,7 +197,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
+AC_MSG_CHECKING([for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
@@ -235,7 +246,7 @@ AC_ARG_ENABLE(custom-mpi,
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [name in PATH or full path to job launcher
+                   [full path to job launcher
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
@@ -596,103 +607,54 @@ fi
 AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
-# By default, use default location and version 2.7
-USE_PY_VERSION_MAJOR=2
-USE_PY_VERSION_MINOR=7
-USE_PY_VERSION_SUFFIX=
-USE_PYTHON_INCLUDE=0
-USE_PYTHON_LIB=0
-USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
-HAVE_PYTHON=0
-
-AC_ARG_WITH(python-version-major,
-   AS_HELP_STRING([--with-python-version-major],
-                   [Use this version (Default: 2)]),
-   [
-     USE_PY_VERSION_MAJOR=${withval}
-   ],[])
-AC_ARG_WITH(python-version-minor,
-   AS_HELP_STRING([--with-python-version-minor],
-                   [Use this version (Default: 7)]),
-   [
-     USE_PY_VERSION_MINOR=${withval}
-   ])
-AC_ARG_WITH(python-version-suffix,
-   AS_HELP_STRING([--with-python-version-suffix],
-                   [Use this version (Default: <none>)]),
-   [
-     USE_PY_VERSION_SUFFIX=${withval}
-   ])
-
 AC_ARG_ENABLE(python,
-    AS_HELP_STRING([--enable-python],
-                   [Enable calling python]),
-    [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
-      HAVE_PYTHON=1
-    ])
-
-# Default name:
-USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
-
-AC_ARG_WITH(python,
-   AS_HELP_STRING([--with-python],
-                   [Use this python directory]),
+   AS_HELP_STRING([--enable-python],
+                  [Enable calling Python language (searches PATH for python executable)]),
   [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
       HAVE_PYTHON=1
-      AC_CHECK_FILE(${withval}/include/python${USE_PYTHON_VERSION}/Python.h, [],
-                    [AC_MSG_ERROR([Could not find python header!])])
-      USE_PYTHON_INCLUDE=${withval}/include
-      USE_PYTHON_LIBDIR=${withval}/lib
-      USE_PYTHON_NAME=libpython${USE_PYTHON_VERSION}.so
+      PYTHON_EXE=""
   ])
 
-AC_ARG_WITH(python-lib,
-    AS_HELP_STRING([--with-python-lib],
-                   [Use this python directory library -
-                    provide fully qualified path]),
-    [
+AC_ARG_WITH(python-exe,
+   AS_HELP_STRING([--with-python-exe],
+                  [Specify complete path to python executable]),
+  [
+      if test "x${withval}" == "xyes"; then
+          # Look for exe in PATH below
+          PYTHON_EXE=""
+      else
+          PYTHON_EXE=${withval}
+          if test "x$PYTHON_EXE" != "x"; then
+              AC_CHECK_FILE(${PYTHON_EXE}, [],
+                [AC_MSG_ERROR([Specified python exe not found!  Tried: $PYTHON_EXE])])
+          fi
+      fi
       HAVE_PYTHON=1
-      USE_PYTHON_LIB=${withval}
-      AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
-                    [AC_MSG_ERROR([Could not find python!])])
-      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
-      USE_PYTHON_NAME=$( basename ${USE_PYTHON_LIB} )
-      USE_PYTHON=${USE_PYTHON_LIB} # Copy
-    ])
-
-if [[ ${HAVE_PYTHON} == 1 ]]
-then
-    USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
-    USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    AC_MSG_RESULT([Using Python lib directory: ${USE_PYTHON_LIBDIR}])
-    AC_MSG_RESULT([Using Python lib name:      ${USE_PYTHON_NAME}])
-fi
-
-AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MAJOR],
-                   $USE_PY_VERSION_MAJOR,[Python version: major])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MINOR],
-                   $USE_PY_VERSION_MINOR,[Python version: minor])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_SUFFIX],
-                   $USE_PY_VERSION_SUFFIX,[Python version: suffix])
-AC_SUBST(USE_PY_VERSION_MAJOR)
-AC_SUBST(USE_PY_VERSION_MINOR)
-AC_SUBST(USE_PY_VERSION_SUFFIX)
-AC_SUBST(HAVE_PYTHON)
-AC_SUBST(USE_PYTHON_INCLUDE)
-AC_SUBST(USE_PYTHON_LIBDIR)
-AC_SUBST(USE_PYTHON_NAME)
+  ])
 
 if (( HAVE_PYTHON ))
 then
+    if test "x$PYTHON_EXE" == "x"; then
+        AC_PATH_PROG([PYTHON_EXE], [python], [NOT_FOUND])
+    fi
+    if test "x$PYTHON_EXE" == "xNOT_FOUND"; then
+        AC_MSG_ERROR([Unable to find given python executable in PATH])
+    fi
+    TURBINE_CODEDIR=`pwd`
+    PYTHON_INCLUDE_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --include-flags) || AC_MSG_ERROR([Failed to execute python-config.py --include-flags])
+    PYTHON_LIB_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-flags) || AC_MSG_ERROR([Failed to execute python-config.py --lib-flags])
+    PYTHON_LIBDIR=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-dir) || AC_MSG_ERROR([Failed to execute python-config --lib-dir])
+    PYTHON_NAME=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-name) || AC_MSG_ERROR([Failed to execute python-config --lib-name])
     AC_MSG_RESULT([Python enabled])
+    AC_MSG_RESULT([Using Python include flags: ${PYTHON_INCLUDE_FLAGS}])
+    AC_MSG_RESULT([Using Python lib flags:     ${PYTHON_LIB_FLAGS}])
+    AC_MSG_RESULT([Using Python lib dir:       ${PYTHON_LIBDIR}])
+    AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
+    AC_SUBST(HAVE_PYTHON)
+    AC_SUBST(PYTHON_INCLUDE_FLAGS)
+    AC_SUBST(PYTHON_LIB_FLAGS)
+    AC_SUBST(PYTHON_LIBDIR)
+    AC_SUBST(PYTHON_NAME)
 else
     AC_MSG_RESULT([Python disabled])
 fi
@@ -702,7 +664,8 @@ HAVE_R=0
 USE_R=0
 RCPP_PATH=0
 RINSIDE_PATH=0
-AC_ARG_ENABLE(r, # Drop this?  Almost guaranteed to fail.
+# Drop this?  Almost guaranteed to fail.
+AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
@@ -736,6 +699,9 @@ AC_ARG_WITH(r,
 
 if [[ ${HAVE_R} == 1 ]]
 then
+  AC_MSG_RESULT([Adding to PATH: $USE_R/../../bin ])
+  PATH=$USE_R/../../bin:$PATH
+
   AC_CHECK_FILE(${USE_R}/include/R.h, [],
         [AC_MSG_ERROR([Could not find R header!])])
   if [[ ${RINSIDE_PATH} == 0 ]]
@@ -884,7 +850,7 @@ AC_ARG_WITH(tclsh-local,
         [name of tclsh compatible with build system]),
     [
         AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
+        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
         if [[ ${?} != 0 ]]
         then
             AC_MSG_ERROR([failed!])
@@ -1040,6 +1006,7 @@ do
   do
     for LIB_DIR in ${LIB_DIR_OPTS}
     do
+      test -d ${LIB_DIR} || continue
       LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
@@ -1122,13 +1089,13 @@ then
       Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
-# TCL_VERSION needed by find-tcl.zsh
+# TCL_VERSION needed by find-tcl.sh
 export TCL_VERSION
 
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
         AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary in ${USE_TCL}!])
@@ -1136,7 +1103,7 @@ then
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
     export NO_RUN=1
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
         AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary at ${USE_TCL}!])
@@ -1330,6 +1297,7 @@ AC_CONFIG_FILES(
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
+        scripts/submit/theta/module.mk
         scripts/turbine-config.sh
         scripts/turbine-build-config.sh
         tests/module.mk

@@ -4,6 +4,7 @@ set -e
 # REBUILD ALL
 
 # Rebuilds after reconfiguration, make clean, ant clean
+# Does not run ./bootstrap - provide -B if you want that
 
 THIS=$( dirname $0 )
 

@@ -35,6 +35,9 @@ AC_SUBST(USE_MAC)
 # Checks for programs
 AC_PROG_CC
 
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
+
 # Checks for header files
 AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
@@ -56,6 +59,7 @@ AC_TYPE_SIZE_T
 # because of known autoconf issues.  We do check for strnlen here:
 AC_CHECK_FUNCS([floor gettimeofday memchr memmove memset])
 AC_CHECK_FUNCS([strchr strdup strnlen strtol])
+AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 

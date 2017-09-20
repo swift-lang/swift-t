@@ -13,5 +13,6 @@ do
     c) MAKE_CLEAN=0      ;;
     m) RUN_MAKE=0        ;;
     ?) echo exit 1       ;;
+    *) exit 1            ;; # Bash prints an error message
   esac
 done

@@ -1,7 +1,21 @@
 
 # STC MAKEFILE
 
-# This is only used to build the Debian package
+# This is only used to build the Debian package or Spack package
+
+USE_JAVA = @USE_JAVA@
+
+ifneq ($(DESTDIR),)
+# 	Debian
+	INSTALL_PREFIX = $(DESTDIR)/lib/stc
+	USE_TURBINE    = /usr
+	DEBIAN         = -Ddebian=true
+else
+# 	Spack
+	INSTALL_PREFIX = @prefix@
+	USE_TURBINE    = @USE_TURBINE@
+	DEBIAN         =
+endif
 
 all: lib/stc.jar
 
@@ -10,9 +24,13 @@ include maint/debian.mkf
 lib/stc.jar:
 	ant
 
-install:
-#	These are the hard-coded Debian installation targets:
-	ant -Ddist.dir=$(DESTDIR)/lib/stc -Dturbine.home=/usr -Ddebian=true install
+install: lib/stc.jar
+	which ant
+	ant -Ddist.dir=$(INSTALL_PREFIX)  \
+	    -Dturbine.home=$(USE_TURBINE) \
+	    -Duse.java=$(USE_JAVA)        \
+	    $(DEBIAN)                     \
+	    install
 
 clean::
 	ant clean

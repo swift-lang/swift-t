@@ -2,26 +2,27 @@
 
 # DOC.SH
 # Extracts DOC() statements from target file
-# Primarily used to generate Asciidoc from C code 
+# Primarily used to generate Asciidoc from C code
 
+# doc.m4 is documented here because M4 does not have comments
 # doc.m4 diverts all input except that within DOC() statements
-# To avoid confusing your C editor, you may want to comment 
+# To avoid confusing your C editor, you may want to comment
 # like this: /** DOC(asciidoc text here) */
 
-# m4 macros: 
+# m4 macros:
 # DOCT():     Simple text output (doc-text)
 # DOCN():     Simple text output plus newline (doc-newline)
 # DOCNN():    Simple text output plus two newlines
 # DOCD():     Use Asciidoc's definition syntax (doc-definition)
 # DOC_CODE(): Code snippet.  Use this in the C source: #define DOC_CODE(x) x
 
-# If your doc text contains comma, you should quote it: 
+# If your doc text contains comma, you should quote it:
 # DOCT(`text, with comma')
 
 # We delete leading spaces from the asciidoc file
 # (outside of code snippets)
 
-MAINT=$( cd $( dirname $0 ) ; /bin/pwd ) 
+MAINT=$( cd $( dirname $0 ) ; /bin/pwd )
 
 usage()
 {
@@ -29,8 +30,8 @@ usage()
   printf "\t doc.sh <INPUT> <OUTPUT>\n"
 }
 
-if [[ ${#*} != 2 ]] 
-then 
+if [[ ${#*} != 2 ]]
+then
   usage
   exit 1
 fi

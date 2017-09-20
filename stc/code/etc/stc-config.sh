@@ -5,6 +5,7 @@
 # shell variables.
 # Can be sourced by other scripts.
 # This will abort the process if any errors are encountered.
+# This is filtered by build.xml target "install"
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
@@ -27,4 +28,10 @@ if [[ ! -x "${TURBINE_HOME}/bin/turbine" ]]
 then
   print "${TURBINE_HOME} does not appear to be a valid Turbine installation: expected ${TURBINE_HOME}/bin/turbine to be present"
   exit ${EXIT_ERROR_SCRIPT}
+fi
+
+USE_JAVA=@USE_JAVA@
+if (( ${#USE_JAVA} > 0 ))
+then
+  JVM=${USE_JAVA}
 fi

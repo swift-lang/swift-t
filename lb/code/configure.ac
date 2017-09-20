@@ -48,7 +48,8 @@ then
 fi
 
 # Report location of CC
-AC_MSG_RESULT([using CC=$( which ${CC} )])
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
 
 AC_MSG_RESULT([PREFIX: ${prefix}])
 SOFTWARE=$( dirname ${prefix} 2>&1 )
