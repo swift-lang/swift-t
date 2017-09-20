@@ -36,7 +36,8 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   JOB_ID: Job ID from the scheduler
+#   ENV:       User environment variables "K1=V1:K2=V2 ..."
+#   ENV_PAIRS: User environment variables "K1=V1 K2=V2 ..."
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -57,6 +58,8 @@
 #   TURBINE_LOG
 #   TURBINE_DEBUG
 #   ADLB_DEBUG
+# OTHER CONVENTIONS
+#   JOB_ID: Job ID from the scheduler (not available at run time)
 
 # Files:
 # Creates TURBINE_OUTPUT containing:
