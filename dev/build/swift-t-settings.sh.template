@@ -115,6 +115,11 @@ ANT=ant
 # Ant arguments for STC build
 STC_ANT_ARGS=""
 
+# If Ant fails, it could be due to the Java installation used or the
+# values of JAVA_HOME or ANT_HOME
+# export JAVA_HOME=
+# export ANT_HOME=
+
 # Make build parallelism: increase to speed up builds
 MAKE_PARALLELISM=1
 
