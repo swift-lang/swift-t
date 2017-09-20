@@ -45,9 +45,8 @@ export TURBINE_HOME=${TURBINE_INSTALL}
 print "Using STC:         ${STC}"
 print "Using TURBINE:     ${TURBINE_INSTALL}"
 print "Using MPI install: ${MPICH_INSTALL}"
-${TURBINE_HOME}/bin/turbine -v
+print
 
-set -x
 if (( ${+PARALLEL} ))
 then
   print "PARALLEL enabled..."
@@ -63,14 +62,15 @@ then
   done
   print "TEST_ADLB_WORKERS=${TEST_ADLB_WORKERS}"
 fi
-set +x
 
 print "stc -v"
 ${STC} -v
 print
 
+cat ${TURBINE_INSTALL}/export/files.swift
+
 export ADLB_PERF_COUNTERS=0
-nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
+nice ./run-tests.zsh -O0 -O1 -O2 -O3 -p 5671 \
      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
      tee results.out
 print
