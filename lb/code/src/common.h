@@ -57,7 +57,7 @@ struct xlb_state {
   xlb_layout layout;
 
   /**
-    Host to rank map
+    Map host to rank-list.  Ranks in the list are ordered lowest->highest
    */
   struct xlb_hostmap *hostmap;
 
