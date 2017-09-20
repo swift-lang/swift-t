@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-#LOCATION.tcl
+# LOCATION.TCL
 # Functions to deal with placement of computation in the cluster
 
 namespace eval turbine {
@@ -71,6 +71,6 @@ namespace eval turbine {
       # There is no input
       set names [ adlb::hostmap_list ]
 
-      return [ dict_from_list $names ]
+      return [ list2dict $names ]
   }
 }

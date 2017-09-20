@@ -23,7 +23,7 @@
 # string s = enumerate(c)
 # trace(s);
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc rules { } {
 

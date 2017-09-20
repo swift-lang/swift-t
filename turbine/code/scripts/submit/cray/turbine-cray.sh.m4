@@ -25,9 +25,11 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
-#PBS -A getenv(PROJECT))
+#PBS -A getenv(PROJECT)
+)
 ifelse(getenv(QUEUE), `',,
-#PBS -q getenv(QUEUE))
+#PBS -q getenv(QUEUE)
+)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
@@ -44,9 +46,6 @@ ifelse(getenv(TITAN), `true',
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN)))
 ### End job size directives selection
-
-# This is ineffective- we have to use 'aprun -e'
-# PBS -V
 
 # Merge stdout/stderr
 #PBS -j oe
@@ -91,7 +90,7 @@ export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
 # Output header
 echo "Turbine: turbine-cray.sh"
-date "+%m/%d/%Y %I:%M%p"
+date "+%Y/%m/%d %I:%M%p"
 echo
 
 PROCS=getenv(`PROCS')
@@ -102,11 +101,13 @@ cd ${TURBINE_OUTPUT}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
 # Put environment variables from run-init into 'aprun -e' format
-ENVS=""
+ENV_PAIRS=( getenv(ENV_PAIRS) )
+ENVS_APRUN=()
+
 for KV in ${ENV_PAIRS[@]}
 do
     echo KV $KV
-    ENVS+="-e ${KV} "
+    ENVS_APRUN+=( -e "${KV}" )
 done
 
 echo ENVS $ENVS
@@ -114,15 +115,17 @@ echo ENVS $ENVS
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
+    # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
+    aprun -n getenv(PROCS) -N getenv(PPN) ??? -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
     echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
-    aprun -n getenv(PROCS) -N getenv(PPN) ${ENVS} -cc none -d 1 \
+    set -x
+    aprun -n getenv(PROCS) -N getenv(PPN) ${ENVS_APRUN[@]} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

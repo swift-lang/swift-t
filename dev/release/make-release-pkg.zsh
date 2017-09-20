@@ -23,7 +23,7 @@ set -eu
 # Section IV:  Make tar.gz
 
 # Define RELEASE numbers
-source dev/build/get-versions.sh
+source dev/get-versions.sh
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
@@ -32,12 +32,13 @@ export USE_MASTER=0
 # If ENABLE_COASTER, enable coaster support
 export ENABLE_COASTER=0
 
-# If PACKAGE_DEBIAN=1, build Debian binary packages instead
-PACKAGE_DEBIAN=0
+# Signal to lower-level scripts that this is a source package
+export PKG_TYPE=src
 
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
 
+# Canonicalize this directory
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 setopt PUSHD_SILENT KSH_GLOB
@@ -45,9 +46,8 @@ setopt PUSHD_SILENT KSH_GLOB
 while getopts "bcpt" opt
 do
   case ${opt} in
-    b) BOOTSTRAP=0 ;;
+    b) BOOTSTRAP=0      ;;
     c) ENABLE_COASTER=1 ;;
-    p) PACKAGE_DEBIAN=1 ;;
     t) USE_MASTER=1     ;;
     \?)
       echo "make-release-package.zsh: unknown option: ${OPTARG}"
@@ -56,7 +56,7 @@ do
   esac
 done
 
-source ${THIS}/../build/get-versions.sh
+source ${THIS}/../get-versions.sh
 
 # Define tokens (location in SVN or Git):
 # If using release paths, use "release/version" or git branch/tag name
@@ -145,6 +145,12 @@ then
   done
 fi
 
+pushd stc/code
+print
+print "AUTOCONF: STC"
+autoconf
+popd
+
 if (( ENABLE_COASTER ))
 then
   swiftk_log="$(pwd)/swift-k.log"
@@ -227,6 +233,11 @@ mkdir -pv ${TARGET}
 pushd dev/build
 export_copy *.template !(swift-t-settings).sh
 popd
+TARGET=${EXPORT}/dev/m4
+mkdir -pv ${TARGET}
+pushd dev/m4
+export_copy *.m4
+popd
 printf "OK\n\n"
 
 if (( ENABLE_COASTER ))
@@ -260,5 +271,4 @@ RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
 tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
 print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-
 du -h ${RELEASE_TGZ}

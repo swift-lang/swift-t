@@ -1,4 +1,5 @@
 #!/bin/zsh -f
+set -eu
 
 # STC: Swift-Turbine Compiler
 
@@ -36,6 +37,11 @@ O3_OPTS=("pipeline" "reorder-insts" "expand-loops" "full-unroll"
          "full-function-inline")
 EXPERIMENTAL_OPTS=()
 
+# The *.swift file
+INPUT=""
+# The *.tic file
+OUTPUT=""
+
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
 
@@ -47,6 +53,11 @@ rpath=()
 
 # Keyword args to pass to compiler
 STC_ARGS=()
+
+# If true, only compile if the TIC is not up-to-date wrt these files
+CHECK_DEPS=0
+# If CHECK_DEPS, we check against these files
+DEPS=()
 
 function get_compiler_opt_name() {
     case $1
@@ -226,36 +237,31 @@ function set_opt_level() {
 
 help()
 {
-  print "STC HELP\n"
-
-  print "stc <options> <program.swift> <program.tic>?"
-  print "Compiles program.swift."
-  print "The <program.tic> argument is optional."
+  cat ${STC_HOME}/etc/help/stc-header.txt
   print
-  print "Swift/T Guide: http://swift-lang.org/Swift-T/guide.html\n"
   # These options are available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-1.txt
+  cat ${STC_HOME}/etc/help/options-1.txt
   # These options are not available in the swift-t interface:
-  cat ${STC_HOME}/etc/help-options-2.txt
+  cat ${STC_HOME}/etc/help/options-2.txt
   print
   # These are details about compiler flag terms
-  cat ${STC_HOME}/etc/help-option-terms.txt
+  cat ${STC_HOME}/etc/help/option-terms.txt
   echo
   report_optimizations
   exit 0
 }
 
-report_optimizations() {
-    echo "Optimization levels:"
-    echo "===================="
-    echo "All levels include optimizations from previous."
-    echo "O0 optimizations: ${O0_OPTS}"
-    echo "O1 optimizations: ${O1_OPTS}"
-    echo "O2 (default) optimizations: ${O2_OPTS}"
-    echo "O3 optimizations: ${O3_OPTS}"
-    echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
+report_optimizations()
+{
+  echo "Optimization levels:"
+  echo "===================="
+  echo "All levels include optimizations from previous."
+  echo "O0 optimizations: ${O0_OPTS}"
+  echo "O1 optimizations: ${O1_OPTS}"
+  echo "O2 (default) optimizations: ${O2_OPTS}"
+  echo "O3 optimizations: ${O3_OPTS}"
+  echo "OX (experimental) optimizations: ${EXPERIMENTAL_OPTS}"
 }
-
 
 # Set this to 1 to debug this script (-V)
 VERBOSE=0
@@ -304,7 +310,7 @@ report_version()
 # Set default options before processing args
 set_opt_level 2
 
-while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uvVx" OPTION
+while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uU:vVx" OPTION
 do
   case ${OPTION}
     in
@@ -352,21 +358,27 @@ do
     O)
        set_opt_level $OPTARG
       ;;
-    u) STC_ARGS+="-u"
+    u)
+      CHECK_DEPS=1
+      ;;
+    U)
+      CHECK_DEPS=1
+      DEPS+=${OPTARG}
       ;;
     v)
       report_version
       ;;
     V)
-      (( VERBOSE )) && set -x
-      VERBOSE=1
+      (( ++VERBOSE ))
+      if (( VERBOSE == 2 )) { set -x }
       ;;
     x)
-      echo "Under construction"
+      print "Under construction"
       return ${EXIT_ERROR_SCRIPT}
       ;;
     *)
       # getopts already printed an error message
+      print "Use 'stc -h' for help."
       return ${EXIT_ERROR_SCRIPT}
       ;;
   esac
@@ -375,7 +387,14 @@ done
 shift $(( OPTIND-1 ))
 
 # After shifting out the options we are left with the file names
-INPUT=$1
+if (( ${#*} >= 1 ))
+then
+  INPUT=$1
+else
+  print "No input file was specified!"
+  print "Use 'stc -h' for help."
+  return ${EXIT_ERROR_SCRIPT}
+fi
 if [[ ${#*} > 1 ]]
 then
   # This is optional (STC Java implementation defaults to *.tic)
@@ -385,7 +404,7 @@ fi
 
 # Clear this in case the user has set it
 unset DEBUG
-if [[ ${DEBUG_PORT} != "" ]]
+if [[ ${DEBUG_PORT:-} != "" ]]
 then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
@@ -404,18 +423,18 @@ for lib in stc antlr-3.5-complete-no-st3 log4j-1.2.16 \
            commons-cli-1.2 commons-io-2.4 commons-lang3-3.3.2 \
            guava-18.0
 do
-  CLASSPATH+=":${STC_HOME}/lib/$lib.jar"
+  CLASSPATH+=":${STC_HOME}/lib/${lib}.jar"
 done
 
 TURBINE_VERSION=$( < ${STC_HOME}/etc/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
-if [[ ${LOGFILE} != "" ]]
+if [[ ${LOGFILE:-} != "" ]]
 then
   FLAGS+="-Dstc.log.file=${LOGFILE}"
 fi
 
-if [[ ${STC_LOG_TRACE} = true ]]
+if [[ ${STC_LOG_TRACE:-} = true ]]
 then
   FLAGS+="-Dstc.log.trace=true"
 fi
@@ -425,7 +444,6 @@ if [[ ${RPATH} != "" ]]
   FLAGS+="-Dstc.rpath=${RPATH}"
 fi
 
-#FLAGS+="
 # Check stc is compiled
 if [[ ! -f ${STC} ]]
 then
@@ -433,6 +451,37 @@ then
     print "Did you forget to compile STC?"
     return ${EXIT_ERROR_SCRIPT}
 fi
+
+check_deps()
+# If this function returns, we need to run the compiler
+{
+  verbose "Checking dependencies..."
+  [[ ${OUTPUT} == "" ]] && OUTPUT=${INPUT%.swift}.tic
+  verbose "Output file is: ${OUTPUT}"
+  if [[ ! -f ${OUTPUT} ]]
+  then
+    verbose "Output file does not exist."
+    return
+  fi
+  if [[ ${INPUT} -nt ${OUTPUT} ]]
+  then
+    verbose "Input file (${INPUT}) is newer than output (${OUTPUT})."
+    return
+  fi
+  local DEP
+  for DEP in ${DEPS}
+  do
+    if [[ ${DEP} -nt ${OUTPUT} ]]
+    then
+      verbose "Dependency file (${DEP}) is newer than output (${OUTPUT})."
+      return
+    fi
+  done
+  verbose "Output file is up to date - not compiling."
+  exit 0
+}
+
+(( CHECK_DEPS )) && check_deps
 
 # Extra info flags
 FLAGS+=("-Dstc.stc_home=${STC_HOME}"
@@ -447,13 +496,12 @@ JVM_FLAGS+="-Xss8m"
 # Enable assertions
 JVM_FLAGS+="-enableassertions"
 # Include any from environment (overriding defaults)
-JVM_FLAGS+=${=STC_JVM_FLAGS}
+JVM_FLAGS+=${=STC_JVM_FLAGS:-}
 
 # Group all JVM args together
-ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
-
+ARGS="${JVM_FLAGS} ${DEBUG:-} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+(( VERBOSE )) && set -x
 ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
-
 # Return the exit code from the java process
 EXITCODE=${?}
 return ${EXITCODE}

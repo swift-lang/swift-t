@@ -86,10 +86,6 @@ public class Main {
     PrintStream icOutput = setupICOutput();
     File finalOutput = selectOutputFile(stcArgs);
 
-    if (skipCompile(stcArgs, finalOutput)) {
-      System.exit(ExitCode.SUCCESS.code());
-    }
-
     // Use intermediate file so we don't create invalid output in case of
     // compilation errors
     File tmpOutput = setupTmpOutput();
@@ -186,23 +182,6 @@ public class Main {
     recordArgValues(result);
     return result;
   }
-
-  /**
-   * Check conditions for skipping compilation entirely
-   * @param args
-   * @param infile
-   * @param outfile
-   * @return
-   */
-  private static boolean skipCompile(Args args, File outfile) {
-    if (args.updateOutput &&
-        !olderThan(outfile, new File(args.inputFilename))) {
-      Logging.getSTCLogger().debug("Output up to date. Done.");
-      return true;
-    }
-    return false;
-  }
-
 
   private static boolean preprocessOnly() {
     boolean skipCompile = false;

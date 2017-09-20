@@ -89,8 +89,9 @@ namespace eval turbine {
 
       dict for {key value} $args {
         if [ dict exists $turbine_argv $key ] {
-          error "Named command-line argument $key was provided at both\
-                 compile time and run time"
+            turbine_error \
+                "Named command-line argument $key was provided" \
+                "at both compile time and run time"
         }
         dict set turbine_argv $key $value
       }
@@ -229,11 +230,12 @@ namespace eval turbine {
             set base_defined 1
             set base [ lindex $args 0 ]
         } else {
-           error "argv_get_body: args: $c"
+           error "argv_get_impl: bad c: $c"
         }
         if { [ catch { set result [ dict get $turbine_argv $key ] } ] } {
             if { ! $base_defined } {
-                return -code $error_code "Could not find argv($key)"
+                turbine_error \
+                    "argv(): The command line did not provide '$key'"
             }
             set result $base
         }
@@ -289,14 +291,15 @@ namespace eval turbine {
             set base_defined 1
             set base [ lindex $args 0 ]
         } else {
-            error "argp_get_body: args: $c"
+            error "argp_get_body: bad c: $c"
         }
         if { $i < 0 } {
-            error "argp_get_body: i < 0: $i"
+            turbine_error "argp($i): must be > 0"
         }
         if { $i > $turbine_argc } {
             if { ! $base_defined } {
-                return -code $error_code "argp: index $i > argc $turbine_argc"
+                turbine_error \
+                    "argp($i): there are only $turbine_argc arguments"
             }
             set result $base
         } else {
@@ -370,4 +373,38 @@ namespace eval turbine {
             # Spin
         }
     }
+
+    proc system { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        set tokens [ list ]
+        set n [ dict size $command ]
+        for { set i 0 } { $i < $n } { incr i } {
+            lappend tokens [ dict get $command $i ]
+        }
+        if [ catch { set s [ exec {*}$tokens ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
+    }
+
+    proc system1 { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        if [ catch { set s [ exec {*}$command ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
+    }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

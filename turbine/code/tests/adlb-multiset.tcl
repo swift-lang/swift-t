@@ -15,7 +15,7 @@
 # Flex ADLB data store with container_insert and container_size
 # No real Turbine data flow here
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 namespace import turbine::string_*
 

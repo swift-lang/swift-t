@@ -14,6 +14,7 @@
  * limitations under the License
  */
 
+
 package exm.stc.tclbackend.tree;
 
 import java.util.ArrayList;
@@ -21,6 +22,9 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * A normal single Tcl command
+ */
 public class Command extends TclTree
 {
   private final List<TclTree> tokens;

@@ -1,9 +1,9 @@
-Swift/T HELP
+Swift/T Help
 
 swift-t <options> <program.swift>
 Compiles program.swift with STC and runs it with Turbine
 
-Swift/T Guide: http://swift-lang.org/Swift-T/guide.html
+Swift/T Web Site: http://swift-lang.org/Swift-T
 
 You may provide STC and/or Turbine options.
 When there is a conflict, STC takes precedence.

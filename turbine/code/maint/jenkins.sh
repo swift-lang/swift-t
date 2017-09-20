@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -eu
 
-# Jenkins script - build only
+# Turbine Jenkins script - build only
 
 print JENKINS.ZSH
 

@@ -16,7 +16,7 @@
 
 # usage: bin/turbine -l -n 6 tests/adlb-steal-1.tcl
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 enum WORK_TYPE { T }
 

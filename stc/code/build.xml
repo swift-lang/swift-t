@@ -295,6 +295,11 @@
              else="${dist.dir}/bin">
     <equals arg1="${debian_build}" arg2="1"/>
   </condition>
+  <condition property="use_java_value"
+             value="${use.java}"
+             else="">
+    <isset property="use.java"/>
+  </condition>
 
   <!-- Install: User must have set dist.dir -->
   <target name="install"
@@ -310,7 +315,7 @@
     <mkdir dir="${dist.dir}/etc"/>
     <mkdir dir="${dist.dir}/lib"/>
     <copy todir="${dist.bin}"
-          verbose="${lf}" overwrite="true">
+          verbose="${lf}">
       <filelist
           id="binfiles"
           dir="bin"
@@ -319,24 +324,36 @@
         <filter token="DEBIAN_BUILD" value="${debian_build}"/>
       </filterset>
     </copy>
-    <copy file="etc/stc-config.sh" todir="${dist.dir}/etc"
-          verbose="${lf}"          overwrite="true">
+    <copy file="etc/stc-config.sh"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"        >
       <filterset>
         <filter token="DEBIAN_BUILD" value="${debian_build}"/>
         <filter token="TURBINE_HOME" value="${turbine.home}"/>
+        <filter token="USE_JAVA"     value="${use_java_value}"/>
       </filterset>
     </copy>
 
-    <!-- <copy verbose="${lf}" file="conf/stc-env.sh" todir="${dist.dir}/conf"/> -->
-    <copy verbose="${lf}" todir="${dist.dir}/etc">
-          <fileset dir="etc" includes="help*.txt"/>
+    <copy todir="${dist.dir}/etc"
+          verbose="${lf}">
+      <fileset dir="etc"
+               includes="help/*.txt"/>
     </copy>
-    <copy verbose="${lf}" file="etc/version.txt" todir="${dist.dir}/etc"/>
-    <copy verbose="${lf}" file="source.txt"      todir="${dist.dir}/etc"/>
-    <copy verbose="${lf}" file="etc/turbine-version.txt" todir="${dist.dir}/etc"/>
+    <copy file="etc/version.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
+    <copy file="source.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
+    <copy file="etc/turbine-version.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
 
-    <copy verbose="${lf}" todir="${dist.dir}/lib">
-      <fileset dir="lib" includes="*.jar" excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
+    <copy todir="${dist.dir}/lib"
+          verbose="${lf}">
+      <fileset dir="lib"
+               includes="*.jar"
+               excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
     </copy>
     <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
     <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>

@@ -1,5 +1,4 @@
 #!/bin/zsh -f
-
 set -eu
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>

@@ -13,7 +13,7 @@
 # limitations under the License
 # Test garbage collection
 
-package require turbine 0.4.0
+package require turbine 1.0
 
 
 turbine::defaults

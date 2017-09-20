@@ -14,7 +14,7 @@
 
 # Test global creation
 
-package require turbine 0.7.0
+package require turbine 1.0
 
 turbine::defaults
 turbine::init $servers

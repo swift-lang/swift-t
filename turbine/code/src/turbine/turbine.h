@@ -46,7 +46,7 @@ typedef struct {
 
 /**
    If the user parallel task is being released, this
-   
+
    if (rc will be set to the communicator to use.
    If task is not parallel, this is MPI_COMM_SELF
 */
@@ -67,19 +67,18 @@ int turbine_code_tostring(char* output, turbine_code code);
 void turbine_finalize(Tcl_Interp *interp);
 
 turbine_code turbine_run(MPI_Comm comm, const char* script_file,
-                         int argc, const char** argv, char* output);
+                         int argc, char const *const * argv, char*  output);
 
 /*
   Run script stored in C string.
   interp: if not null, use this interpreter.  If null, create a fresh one
  */
 turbine_code turbine_run_string(MPI_Comm comm, const char* script,
-                                int argc, const char** argv, char* output,
+                                int argc, char const *const * argv, char* output,
                                 Tcl_Interp* interp);
 
 turbine_code turbine_run_interp(MPI_Comm comm, const char* script_file,
-                                int argc, const char** argv, char* output,
+                                int argc, char const *const * argv, char* output,
                                 Tcl_Interp* interp);
-
 
 #endif

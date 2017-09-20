@@ -1,0 +1,9 @@
+STC Help
+
+Usage:
+  stc <options> <program.swift> <program.tic>?
+
+Compiles program.swift with STC.
+The <program.tic> argument is optional.
+
+Swift/T Web Site: http://swift-lang.org/Swift-T

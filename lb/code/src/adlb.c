@@ -246,8 +246,9 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
     code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);
     ADLB_CHECK(code);
 
-    code = xlb_setup_leaders(&xlb_s.layout, hostmap, comm,
-                             &xlb_s.leader_comm);
+    code = xlb_setup_leaders(&xlb_s.layout, hostmap,
+                             hostnames.my_name,
+                             comm, &xlb_s.leader_comm);
     ADLB_CHECK(code);
 
     if (xlb_s.hostmap_mode == HOSTMAP_ENABLED)

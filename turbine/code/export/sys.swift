@@ -68,8 +68,20 @@ argv_accept(string... keys)
 (float t) clock() "turbine" "0.1.1"
   [ "set <<t>> [ expr {[ clock clicks -milliseconds ] / 1000.0 } ]" ];
 
+CLOCK_FMT_ISO8601="%Y-%m-%dT%H:%M:%S";
+CLOCK_FMT_RFC3339="%Y-%m-%d %H:%M:%S";
+
+(string s) clock_format(string format, int t) "turbine" "0.1"
+[ "set <<s>> [ clock format <<t>> -format <<format>> ]" ];
+
 // From: http://code.activestate.com/recipes/146035-largest-int-supported-by-a-platform-and-the-number
 (int i) INT_MAX() "turbine" "0.0"
 [ "set <<i>> [ expr [ regsub F [ format 0x%X -1 ] 7 ] ]" ];
+
+(string o, int exit_code) system(string command[]) "turbine" "1.0"
+[ "turbine::system <<command>> <<o>> <<exit_code>>" ];
+
+(string o, int exit_code) system1(string command) "turbine" "1.0"
+[ "turbine::system1 <<command>> <<o>> <<exit_code>>" ];
 
 #endif

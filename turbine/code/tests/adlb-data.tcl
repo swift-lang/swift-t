@@ -18,7 +18,7 @@
 # This may be used as a benchmark by setting
 # TURBINE_TEST_PARAM_1 in the environment
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 namespace import turbine::string_*
 

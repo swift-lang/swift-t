@@ -15,7 +15,7 @@
 # Flex ADLB but do nothing
 # Nice to have for quick manual experiments
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 puts NOOP
 

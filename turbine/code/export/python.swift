@@ -21,9 +21,13 @@
 */
 
 @dispatch=WORKER
-(string output) python(string code, string expr="\"\"") "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 0 <<code>> <<expr>> ]" ];
+(string output) python(string code, string expr="\"\"",
+                       boolean exceptions_are_errors=true)
+"turbine" "0.1.0"
+[ "set <<output>> [ turbine::python 0 <<exceptions_are_errors>> <<code>> <<expr>>  ]" ];
 
 @dispatch=WORKER
-(string output) python_persist(string code, string expr="\"\"") "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 1 <<code>> <<expr>> ]" ];
+(string output) python_persist(string code, string expr="\"\"",
+                               boolean exceptions_are_errors=true)
+"turbine" "0.1.0"
+[ "set <<output>> [ turbine::python 1 <<exceptions_are_errors>> <<code>> <<expr>> ]" ];

@@ -20,7 +20,7 @@
 # Task run times are from 0 to max_task
 # When a worker completes a task, it may submit new tasks
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc default { env_var d } {
     global env

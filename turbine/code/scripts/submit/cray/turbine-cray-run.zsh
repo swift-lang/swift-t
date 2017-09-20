@@ -51,28 +51,23 @@ fi
 TURBINE_CRAY_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-cray.sh.m4
 TURBINE_CRAY=${TURBINE_OUTPUT}/turbine-cray.sh
 m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
+chmod u+x ${TURBINE_CRAY}
 print "wrote: ${TURBINE_CRAY}"
-
-# If the user specified a queue, we use it:
-QUEUE_ARG=""
-if (( ${+QUEUE} ))
-then
-  QUEUE_ARG="-q ${QUEUE}"
-fi
-
-# Convert any user turbine-cray-run -e K=V settings to qsub -e K=V:
-export APRUN_ENV=''
-for kv in ${env}
-do
-  print "turbine: user environment variable: ${kv}"
-  APRUN_ENV+="-e ${kv} "
-done
 
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
+# # Convert any user turbine-cray-run -e K=V settings to qsub -e K=V:
+# export ENV_APRUN=""
+# for kv in ${ENV_PAIRS}
+# do
+#   print "turbine: user environment variable: ${kv}"
+#   ENV_APRUN+="-e '${kv}' "
+# done
+
+
 # Read all output from qsub
 QSUB_OUT=""
-qsub -V ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
+qsub ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   while read T ; do QSUB_OUT+="${T} " ; done
 
 # Did we get a job number?

@@ -133,16 +133,31 @@ proc draw { L } {
     return [ lindex $L $i ]
 }
 
-# Tcl function
 proc cat { args } {
     return [ join $args " " ]
 }
 
+proc puts* { args } {
+    puts [ join $args "" ]
+}
+
+proc putsn { args } {
+    puts [ join $args "\n" ]
+}
+
+# Remove and return element 0 from list
+proc list_pop_first { L_name } {
+    upvar $L_name L
+    set result [ lindex $L 0 ]
+    set L [ lreplace $L 0 0 ]
+    return $result
+}
+
 namespace eval turbine {
-  
+
   # Create a dictionary with integer keys numbered from start with contents
   # of list
-  proc dict_from_list { l {start_index 0}} {
+  proc list2dict { l {start_index 0}} {
     set d [ dict create ]
     set i $start_index
 
@@ -155,3 +170,8 @@ namespace eval turbine {
   }
 
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

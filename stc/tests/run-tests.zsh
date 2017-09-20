@@ -19,7 +19,8 @@ SKIP_PATTERNS=()
 SKIP_COUNT=0
 
 COMPILE_ONLY=0
-RUN_DISABLED=0
+# If 1, run even tests that are skipped with SKIP-THIS-TEST
+RUN_SKIPPED_TESTS=0
 # If 1, show error outputs
 REPORT_ERRORS=0
 VERBOSE=0
@@ -36,7 +37,7 @@ JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
 # Save user JVM flags
 STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
 
-while getopts "cCDeJk:n:p:P:VO:f:F:alo:" OPTION
+while getopts "cCDef:F:hJk:ln:o:O:p:P:V" OPTION
 do
   case ${OPTION}
     in
@@ -49,24 +50,46 @@ do
       COMPILE_ONLY=1
       ;;
     D)
-      #Run disabled tests
-      RUN_DISABLED=1
+      RUN_SKIPPED_TESTS=1
       ;;
     e)
       # Show error outputs
       REPORT_ERRORS=1
       ;;
-    k)
-      # skip some tests
-      SKIP_COUNT=${OPTARG}
+    f)
+      ADDTL_STC_ARGS+="-f${OPTARG}"
+      ;;
+    F)
+      ADDTL_STC_ARGS+="-F${OPTARG}"
+      ;;
+    h)
+      print "See About.txt for usage."
+      exit
       ;;
     J)
       # Jacoco coverage
       JACOCO_COVERAGE=1
       ;;
+    k)
+      # skip some tests
+      SKIP_COUNT=${OPTARG}
+      ;;
+    l)
+      LEAK_CHECK=0
+      ;;
     n)
       # run a limited number of tests
       MAX_TESTS=${OPTARG}
+      ;;
+    o)
+      if [ ! -d ${OPTARG} ]; then
+        echo "${OPTARG} is not a directory"
+        exit 1
+      fi
+      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
+      ;;
+    O)
+      STC_OPT_LEVELS+=${OPTARG}
       ;;
     p)
       # run only tests that match one of the patterns
@@ -76,27 +99,8 @@ do
       # don't run tests that match one of the patterns
       SKIP_PATTERNS+=${OPTARG}
       ;;
-    f)
-      ADDTL_STC_ARGS+="-f${OPTARG}"
-      ;;
-    F)
-      ADDTL_STC_ARGS+="-F${OPTARG}"
-      ;;
     V)
       VERBOSE=1
-      ;;
-    O)
-      STC_OPT_LEVELS+=${OPTARG}
-      ;;
-    l)
-      LEAK_CHECK=0
-      ;;
-    o)
-      if [ ! -d ${OPTARG} ]; then
-        echo "${OPTARG} is not a directory"
-        exit 1
-      fi
-      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
       ;;
     *)
       # ZSH already prints an error message
@@ -130,10 +134,10 @@ crash()
   exit 1
 }
 
-STC=$( which stc 2> /dev/null )
-if (( ! ${#STC} ))
+if (( ! ${+STC} )) # This environment variable is set by Jenkins.
 then
-  crash "Put stc in your PATH."
+  STC=$( which stc 2> /dev/null )
+  (( ${#STC} == 0 )) && crash "Put stc in your PATH or set STC."
 fi
 print "using stc: '${STC}'\n"
 
@@ -469,13 +473,13 @@ do
     fi
   fi
 
-  if (( RUN_DISABLED == 1 ))
+  if (( ! RUN_SKIPPED_TESTS ))
   then
-    :
-  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
-  then
-    DISABLED_TESTS+=${TEST_NAME}
-    continue
+    if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+    then
+      DISABLED_TESTS+=${TEST_NAME}
+      continue
+    fi
   fi
 
   if [[ ${#SKIP_PATTERNS} > 0 ]]
@@ -497,19 +501,18 @@ do
   fi
 
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
-  for OPT_LEVEL in $STC_OPT_LEVELS
+  for OPT_LEVEL in ${STC_OPT_LEVELS}
   do
-    # Skip specific optimization levels
-    if (( RUN_DISABLED == 1 ))
+    if (( ! RUN_SKIPPED_TESTS ))
     then
-      :
-    elif grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
-    then
-      echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
-      DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
-      continue
+      # Skip specific optimization levels
+      if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
+      then
+        print "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
+        DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
+        continue
+      fi
     fi
-
 
     # Disambiguate test output of different opt levels
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"

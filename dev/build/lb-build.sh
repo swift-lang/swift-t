@@ -4,12 +4,6 @@ set -e
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
-if (( MAKE_CLEAN )); then
-  if [ -f Makefile ]; then
-    make clean
-  fi
-fi
-
 if (( RUN_AUTOTOOLS )) || [ ! -f configure ]; then
   # Attempt to run autotools
   ./bootstrap
@@ -62,8 +56,8 @@ fi
 
 if (( CONFIGURE )); then
   (
-    set -x
     rm -f config.cache
+    set -ex
     ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \

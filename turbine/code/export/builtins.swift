@@ -14,7 +14,9 @@
  * limitations under the License
  */
 
-// Swift/Turbine builtins defined here
+/** Swift/Turbine builtins defined here
+    These are automatically imported.
+*/
 
 // HACK: have preprocessor ignore this: now automatically included
 #define BUILTINS_SWIFT
@@ -119,8 +121,8 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure @builtin_op=PARSE_INT
 (int o) string2int(string i, int base=10) "turbine" "0.0.2" "string2int";
 @pure
-(int o) toint(string i) {
-  o = parseInt(i, 10);
+(int o) toint(string _i) {
+  o = parseInt(_i, 10);
 }
 @pure @builtin_op=PARSE_INT
 (int o) parseInt(string i, int base=10) "turbine" "0.0.2" "string2int";
@@ -252,5 +254,14 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @builtin_op=SPRINTF
 (string o) __sprintf_op__(string fmt, int|float|string|boolean... args)
 "turbine" "0.0.2" "sprintf";
+
+@pure
+(string result[]) pick_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_integer_string";
+
+@pure
+(string result[]) pick_stable_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_stable_integer_string";
+
 
 #endif

@@ -138,7 +138,7 @@ turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
 /**
    Convenience function to construct Tcl list of strings
  */
-Tcl_Obj* turbine_tcl_list_new(int count, const char** strings);
+Tcl_Obj* turbine_tcl_list_new(int count, char const *const * strings);
 
 /**
    Convenience function to construct Tcl list of integers
@@ -181,7 +181,7 @@ int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
     goto label;                                                  \
   }
 
-  
+
 
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.

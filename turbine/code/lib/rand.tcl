@@ -73,7 +73,7 @@ namespace eval turbine {
     # This works b/c rand() generates a number in [0.0, 1.0)
     proc randint_impl { lo hi } {
         if { [ expr {$lo >= $hi} ] } {
-            turbine_error "randint: empty range \[$lo, $hi)"
+            turbine_error "randint: illegal range \[$lo, $hi)"
         }
         set range [ expr {$hi - $lo} ]
         return [ expr {(int(rand() * $range)) + $lo} ]

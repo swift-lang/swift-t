@@ -9,29 +9,29 @@ echo "MK DEBIAN"
 
 if [ ${#} != 5 ]
 then
-  echo "mk-debian: usage: DEBIAN_PKG_TYPE DEB ORIG_TGZ NAME VERSION"
+  echo "mk-debian: usage: PKG_TYPE DEB ORIG_TGZ NAME VERSION"
+  echo "mk-debian: given $*"
   exit 1
 fi
 
-DEBIAN_PKG_TYPE=$1 # Package type: dev or bin
-DEB=$2             # Output DEB file
-ORIG_TGZ=$3        # Upstream TGZ file
-NAME=$4            # Debian name
-VERSION=$5         # Debian version
+DEB_TYPE=$1 # Debian type: dev or bin
+DEB=$2      # Output DEB file
+ORIG_TGZ=$3 # Upstream TGZ file
+NAME=$4     # Debian name
+VERSION=$5  # Debian version
 
 TOP=$PWD
 
-echo "Making: $NAME $VERSION"
+echo "Making: $NAME $DEB_TYPE $VERSION => $DEB"
 
 BUILD_DIR=$( mktemp -d .deb-work-XXX )
 echo "Working in: $BUILD_DIR"
 cd $BUILD_DIR
 
+set -x
 export DEBIAN_PKG=1
-if [ ${DEBIAN_PKG_TYPE} = "bin" ]
+if ! [ ${DEB_TYPE} = "bin" ]
 then
-  export DEBIAN_BINARY_PKG=1
-else
   NAME=$NAME-dev
 fi
 
@@ -46,4 +46,4 @@ tar xfz $ORIG_TGZ
 mv -v $DEB $TOP
 
 cd $TOP
-# rm -r $BUILD_DIR
+rm -r $BUILD_DIR
