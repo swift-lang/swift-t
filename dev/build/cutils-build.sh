@@ -39,6 +39,14 @@ if (( CONFIGURE )); then
   )
 fi
 
+if (( MAKE_CLEAN ))
+then
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
+fi
+
 if (( ! RUN_MAKE )); then
   exit
 fi

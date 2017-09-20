@@ -19,4 +19,6 @@ export MAKE_CLEAN=1
 
 source ${THIS}/options.sh
 
+echo $FORCE_BOOTSTRAP
+
 source ${THIS}/internal-build-all.sh
