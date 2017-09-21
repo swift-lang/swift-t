@@ -47,7 +47,9 @@ ifelse(getenv(TITAN), `true',
 #PBS -l nodes=getenv(NODES),
 ### Default aprun mode
 #PBS -l mppwidth=getenv(PROCS)
-#PBS -l mppnppn=getenv(PPN)))
+#PBS -l mppnppn=getenv(PPN)
+)
+)
 ### End job size directives selection
 
 # Merge stdout/stderr
