@@ -56,18 +56,11 @@ print "wrote: ${TURBINE_CRAY}"
 
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
-# # Convert any user turbine-cray-run -e K=V settings to qsub -e K=V:
-# export ENV_APRUN=""
-# for kv in ${ENV_PAIRS}
-# do
-#   print "turbine: user environment variable: ${kv}"
-#   ENV_APRUN+="-e '${kv}' "
-# done
-
-
-# Read all output from qsub
+# qsub -V forwards the environment to turbine-cray.sh
+#         (works on Beagle)
+# Read all output from qsub into QSUB_OUT
 QSUB_OUT=""
-qsub ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
+qsub -V ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-cray.sh | \
   while read T ; do QSUB_OUT+="${T} " ; done
 
 # Did we get a job number?

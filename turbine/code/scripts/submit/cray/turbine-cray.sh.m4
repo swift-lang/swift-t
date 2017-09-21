@@ -17,6 +17,9 @@ changecom(`dnl')#!/bin/bash -e
 
 # TURBINE-CRAY.SH
 
+# Note: we assume the environment was forwarded here by qsub -V
+#       and will be picked up by aprun (works on Beagle)
+
 # Created: esyscmd(`date')
 
 # Define a convenience macro
@@ -100,32 +103,20 @@ cd ${TURBINE_OUTPUT}
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
-# Put environment variables from run-init into 'aprun -e' format
-ENV_PAIRS=( getenv(ENV_PAIRS) )
-ENVS_APRUN=()
-
-for KV in ${ENV_PAIRS[@]}
-do
-    echo KV $KV
-    ENVS_APRUN+=( -e "${KV}" )
-done
-
-echo ENVS $ENVS
-
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) ??? -cc none -d 1 \
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
     echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
     set -x
-    aprun -n getenv(PROCS) -N getenv(PPN) ${ENVS_APRUN[@]} -cc none -d 1 \
+    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
