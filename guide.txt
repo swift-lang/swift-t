@@ -2662,7 +2662,7 @@ To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
 with it enabled)
 
 +TURBINE_LAUNCH_OPTIONS+::
-Provide other arguments to +mpiexec+, such as a machine file, etc.
+Provide other arguments to +mpiexec+.
 
 +TURBINE_SRAND+::
 If unset or empty, the random number generator seed will be set to the
