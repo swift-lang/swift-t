@@ -2,6 +2,8 @@
 ////
 Swift/T guide, asciidoc format
 http://swift-lang.github.io/swift-t/guide.html
+
+This document is filled at column 70 by emacs auto-fill-mode.
 ////
 
 :toc:
