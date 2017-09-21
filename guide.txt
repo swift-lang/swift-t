@@ -24,9 +24,10 @@ September 2017
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
-concurrently.  It is implemented with a compiler and runtime system; the Swift/Turbine Compiler (STC) allows you to write Swift programs and
-run them using Turbine.  At runtime, Swift/T programs are MPI programs
-capable of utilizing very large supercomputers.
+concurrently.  It is implemented with a compiler and runtime system;
+the Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.  At runtime, Swift/T programs are MPI
+programs capable of utilizing very large supercomputers.
 
 [[support]]
 == Support
@@ -385,7 +386,6 @@ Swift is a statically and strongly typed language.  Thus, every variable
 in the program must have a fixed type at compile time and types are,
 with limited exceptions, not automatically converted.
 
-
 To declare a variable in Swift code, you must declare it with
 one of following variations of the variable declaration syntax:
 --------------------------------------
@@ -402,18 +402,19 @@ x = 1;
 --------------------------------------
 
 In the last two cases, the variable is declared and assigned in the
-same statement.
-In the first two cases, the type of the variable is explicitly specified
-by the programmer.  In the last case, where the type of the variable is
-omitted and there was no prior declaration of the variable, then the
-type of the variable is automatically inferred based on the type of the
-expression on the right hand side of the assignment.
+same statement.  In the first two cases, the type of the variable is
+explicitly specified by the programmer.  In the last case, where the
+type of the variable is omitted and there was no prior declaration of
+the variable, then the type of the variable is automatically inferred
+based on the type of the expression on the right hand side of the
+assignment.
 
-The scope of a variable is limited to the code block in which the declaration
-appears.  Two variables with the same name cannot be declared in the same
-block.  *Shadowing* of variables, where a variable has the same name as
-a variable in an outer scope, is also not allowed in Swift.  This language
-design decision is intended to eliminate some common programming errors.
+The scope of a variable is limited to the code block in which the
+declaration appears.  Two variables with the same name cannot be
+declared in the same block.  *Shadowing* of variables, where a
+variable has the same name as a variable in an outer scope, is also
+not allowed in Swift.  This language design decision is intended to
+eliminate some common programming errors.
 
 This is shadowing and will result in a compile error:
 -------------------------------------------
@@ -423,8 +424,8 @@ int x;
 }
 -------------------------------------------
 
-This is not shadowing, because the scopes of the two declarations of x do not
-overlap, and is allowed:
+This is not shadowing, because the scopes of the two declarations of x
+do not overlap, and is allowed:
 -------------------------------------------
 {
   int x;
