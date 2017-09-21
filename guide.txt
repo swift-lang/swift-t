@@ -326,7 +326,8 @@ in the Swift source code.  E.g. a function defined on line 100
 of a Swift source file can be called at line 10.
 
 STC input is preprocessed by
-https://gcc.gnu.org/onlinedocs/cpp[+cpp+], the C preprocessor.
+https://gcc.gnu.org/onlinedocs/cpp[+cpp+], the C preprocessor,
+<<cpp,by default>>.
 
 == Comments
 
