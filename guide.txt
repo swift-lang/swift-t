@@ -2610,15 +2610,16 @@ goes to standard output by default.
 
 +SWIFT_PATH+::
 +TURBINE_PATH+::
-
 Space-separated list of Swift/T extension (Tcl) package locations.
 Either variable name may be used.
+
++TURBINE_USER_LIB+::
+Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 
 anchor:env_swift_tmp[]
 
 +SWIFT_TMP+::
 +TMP+::
-
 Directory location for <<unmapped_files,unmapped files>>.
 +SWIFT_TMP+ overrides +TMP+.  The default is +/tmp+.
 
@@ -2627,9 +2628,6 @@ Directory location for <<unmapped_files,unmapped files>>.
 Setting this to 0 logs these temporary files when created and prevents
 Swift/T from automatically deleting them.
 
-+TURBINE_USER_LIB+::
-
-Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
