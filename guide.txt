@@ -235,11 +235,16 @@ swift-t -n 4 program.swift
 In this case, +program.tic+ is created in a temporary file and then
 deleted after execution.
 
-+swift-t+ accepts arguments for both STC and Turbine.
-Provide +-h+ to any tool (+swift-t+, +stc+, +turbine+) to obtain help.
+Provide +-h+ to any command (+swift-t+, +stc+, +turbine+) to obtain
+help.
 
-See the <<Turbine,Turbine section>> for more information about
-running the program.
++swift-t+ accepts arguments for both STC and Turbine.  If there is a
+conflict between the +stc+ argument and the +turbine+ argument, +stc+
+receives the argument.  Use:
+----
+swift-t -t <flag>[:<value>]+
+----
+to pass +-<flag> [<value>]+ to +turbine+
 
 [[stc_arguments]]
 STC accepts the following arguments:
@@ -276,6 +281,19 @@ Additional arguments for advanced users/developers:
 +-L+:: Specify log file for more verbose STC debug log
 +-f+:: Enable a specific optimization.  See <<Optimizations>>
 +-F+:: Disable a specific compiler optimization.  See <<Optimizations>>
+
+See the <<Turbine,Turbine section>> for more information about
+arguments for run time.
+
+[[swift-t-t]]
+Use +swift-t -t <flag>[:<value>]+ to pass-through to +turbine+.  A
+common use case for this is +-f+, which is a compiler option flag for
++stc+ (analogous to +gcc -f+) and a runtime flag for +turbine+
+(analogous to +mpiexec -f+).  For example, to pass a MPICH hosts file
+from +swift-t+ to +turbine+, use:
+----
+swift-t -t f:hosts.txt workflow.swift ...
+----
 
 == Program structure
 
