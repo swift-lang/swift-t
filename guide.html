@@ -754,9 +754,10 @@ asciidoc.install(2);
 <div class="sectionbody">
 <div class="paragraph"><p>Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
-concurrently.  It is implemented with a compiler and runtime system; the Swift/Turbine Compiler (STC) allows you to write Swift programs and
-run them using Turbine.  At runtime, Swift/T programs are MPI programs
-capable of utilizing very large supercomputers.</p></div>
+concurrently.  It is implemented with a compiler and runtime system;
+the Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.  At runtime, Swift/T programs are MPI
+programs capable of utilizing very large supercomputers.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1039,10 +1040,16 @@ argument may be given as an alternate output file name.</p></div>
 </div></div>
 <div class="paragraph"><p>In this case, <code>program.tic</code> is created in a temporary file and then
 deleted after execution.</p></div>
-<div class="paragraph"><p><code>swift-t</code> accepts arguments for both STC and Turbine.
-Provide <code>-h</code> to any tool (<code>swift-t</code>, <code>stc</code>, <code>turbine</code>) to obtain help.</p></div>
-<div class="paragraph"><p>See the <a href="#Turbine">Turbine section</a> for more information about
-running the program.</p></div>
+<div class="paragraph"><p>Provide <code>-h</code> to any command (<code>swift-t</code>, <code>stc</code>, <code>turbine</code>) to obtain
+help.</p></div>
+<div class="paragraph"><p><code>swift-t</code> accepts arguments for both STC and Turbine.  If there is a
+conflict between the <code>stc</code> argument and the <code>turbine</code> argument, <code>stc</code>
+receives the argument.  Use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -t &lt;flag&gt;[:&lt;value&gt;]+</code></pre>
+</div></div>
+<div class="paragraph"><p>to pass <code>-&lt;flag&gt; [&lt;value&gt;]</code> to <code>turbine</code></p></div>
 <div class="paragraph" id="stc_arguments"><p>STC accepts the following arguments:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -1180,6 +1187,17 @@ Disable a specific compiler optimization.  See <a href="#Optimizations">[Optimiz
 </p>
 </dd>
 </dl></div>
+<div class="paragraph"><p>See the <a href="#Turbine">Turbine section</a> for more information about
+arguments for run time.</p></div>
+<div class="paragraph" id="swift-t-t"><p>Use <code>swift-t -t &lt;flag&gt;[:&lt;value&gt;]</code> to pass-through to <code>turbine</code>.  A
+common use case for this is <code>-f</code>, which is a compiler option flag for
+<code>stc</code> (analogous to <code>gcc -f</code>) and a runtime flag for <code>turbine</code>
+(analogous to <code>mpiexec -f</code>).  For example, to pass a MPICH hosts file
+from <code>swift-t</code> to <code>turbine</code>, use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t -t f:hosts.txt workflow.swift ...</code></pre>
+</div></div>
 </div>
 </div>
 <div class="sect1">
@@ -1206,7 +1224,8 @@ wait for input variables and set output variables.</p></div>
 in the Swift source code.  E.g. a function defined on line 100
 of a Swift source file can be called at line 10.</p></div>
 <div class="paragraph"><p>STC input is preprocessed by
-<a href="https://gcc.gnu.org/onlinedocs/cpp"><code>cpp</code></a>, the C preprocessor.</p></div>
+<a href="https://gcc.gnu.org/onlinedocs/cpp"><code>cpp</code></a>, the C preprocessor,
+<a href="#cpp">by default</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1306,17 +1325,18 @@ int x = 1;
 x = 1;</code></pre>
 </div></div>
 <div class="paragraph"><p>In the last two cases, the variable is declared and assigned in the
-same statement.
-In the first two cases, the type of the variable is explicitly specified
-by the programmer.  In the last case, where the type of the variable is
-omitted and there was no prior declaration of the variable, then the
-type of the variable is automatically inferred based on the type of the
-expression on the right hand side of the assignment.</p></div>
-<div class="paragraph"><p>The scope of a variable is limited to the code block in which the declaration
-appears.  Two variables with the same name cannot be declared in the same
-block.  <strong>Shadowing</strong> of variables, where a variable has the same name as
-a variable in an outer scope, is also not allowed in Swift.  This language
-design decision is intended to eliminate some common programming errors.</p></div>
+same statement.  In the first two cases, the type of the variable is
+explicitly specified by the programmer.  In the last case, where the
+type of the variable is omitted and there was no prior declaration of
+the variable, then the type of the variable is automatically inferred
+based on the type of the expression on the right hand side of the
+assignment.</p></div>
+<div class="paragraph"><p>The scope of a variable is limited to the code block in which the
+declaration appears.  Two variables with the same name cannot be
+declared in the same block.  <strong>Shadowing</strong> of variables, where a
+variable has the same name as a variable in an outer scope, is also
+not allowed in Swift.  This language design decision is intended to
+eliminate some common programming errors.</p></div>
 <div class="paragraph"><p>This is shadowing and will result in a compile error:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1325,8 +1345,8 @@ design decision is intended to eliminate some common programming errors.</p></di
   int x;
 }</code></pre>
 </div></div>
-<div class="paragraph"><p>This is not shadowing, because the scopes of the two declarations of x do not
-overlap, and is allowed:</p></div>
+<div class="paragraph"><p>This is not shadowing, because the scopes of the two declarations of x
+do not overlap, and is allowed:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>{
@@ -2972,7 +2992,8 @@ Attempt to find a file with the given name in the filesystem: return
 Reads the whole file, returning each line as a separate entry in the
 output array.  The <code>comment</code> argument is optional and defaults to
 <code>"#"</code> .  Comments are excised, leading and trailing whitespace is
-trimmed, and blank lines are omitted.
+trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
+disabled.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4595,6 +4616,14 @@ Space-separated list of Swift/T extension (Tcl) package locations.
 Either variable name may be used.
 </p>
 </dd>
+<dt class="hdlist1">
+<code>TURBINE_USER_LIB</code>
+</dt>
+<dd>
+<p>
+Alias for <code>SWIFT_PATH</code>.  Deprecated but retained for compatibility.
+</p>
+</dd>
 </dl></div>
 <div class="paragraph"><p><a id="env_swift_tmp"></a></p></div>
 <div class="dlist"><dl>
@@ -4619,14 +4648,6 @@ By default, Swift/T deletes
 <a href="#unmapped_files">unmapped files</a> when they are no longer used.
 Setting this to 0 logs these temporary files when created and prevents
 Swift/T from automatically deleting them.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>TURBINE_USER_LIB</code>
-</dt>
-<dd>
-<p>
-Alias for <code>SWIFT_PATH</code>.  Deprecated but retained for compatibility.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4706,7 +4727,7 @@ with it enabled)
 </dt>
 <dd>
 <p>
-Provide other arguments to <code>mpiexec</code>, such as a machine file, etc.
+Provide other arguments to <code>mpiexec</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5554,7 +5575,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-09-07 15:02:56 CDT
+ 2017-09-21 11:25:25 CDT
 </div>
 </div>
 
