@@ -130,7 +130,7 @@ xlb_hostnames_fill(struct xlb_hostnames *hostnames,
   return ADLB_SUCCESS;
 }
 
-const char *
+const char*
 xlb_hostnames_lookup(const struct xlb_hostnames *hostnames, int rank)
 {
   assert(hostnames->all_names != NULL);
