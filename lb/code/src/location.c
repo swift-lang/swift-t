@@ -349,7 +349,7 @@ ADLB_Hostmap_list(char* output, unsigned int max,
                   unsigned int offset, int* actual)
 {
   ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
-            "ADLB_Hostmap_list: hostmap is disabled!");
+                 "ADLB_Hostmap_list: hostmap is disabled!");
   // Number of chars written
   int count = 0;
   // Number of hostnames written
