@@ -49,6 +49,7 @@
 #   JOB_ID_FILE: Path to jobid.txt
 #   MAIL_ENABLED: If mail is enabled, 1, else 0.  Default 0.
 #   MAIL_ADDRESS: If mail is enabled, an email address.
+#   DRY_RUN: If 1, generate submit scripts but do not execute
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
@@ -117,6 +118,7 @@ fi
 SETTINGS=0
 export MAIL_ENABLED=0
 export MAIL_ADDRESS=0
+export DRY_RUN=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -127,7 +129,7 @@ env=()
 export ENV env
 
 # Get options
-while getopts "d:D:e:i:M:n:o:s:t:VxX" OPTION
+while getopts "d:D:e:i:M:n:o:s:t:VxXY" OPTION
  do
   case ${OPTION}
    in
@@ -161,6 +163,8 @@ while getopts "d:D:e:i:M:n:o:s:t:VxX" OPTION
     x) export EXEC_SCRIPT=1
        ;;
     X) export TURBINE_STATIC_EXEC=1
+       ;;
+    Y) DRY_RUN=1
        ;;
     *) print "abort"
        exit 1
