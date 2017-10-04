@@ -39,7 +39,7 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
-DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 
 # Scheduler script options (for PBS, Cobalt, etc.)
