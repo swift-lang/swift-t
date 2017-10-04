@@ -75,5 +75,5 @@ COMMAND="getenv(COMMAND)"
 # Use this on Midway:
 # module load openmpi gcc/4.9
 
-${TURBINE_LAUNCHER} ${COMMAND}
+${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) ${COMMAND}
 # Return exit code from mpirun
