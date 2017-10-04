@@ -14,6 +14,7 @@ else
   STC_TOP=${STC_HOME}
 fi
 source "${STC_TOP}/etc/stc-config.sh"
+source "${STC_TOP}/bin/helpers.zsh"
 
 STC=${STC_HOME}/bin/stc
 TURBINE=${TURBINE_HOME}/bin/turbine
@@ -78,9 +79,9 @@ EXEC_STRING=""
 IMPORT_STRING=""
 
 # Process all flags: split among this script, STC, or Turbine
-SWIFT_T_CHARS="hE:i:o:t:vV"
-STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:uU:"
-TURBINE_CHARS="e:i:lm:M:n:s:xX"
+SWIFT_T_CHARS="hE:o:t:vV"
+STC_CHARS="A:C:d:D:f:F:I:i:j:L:O:pr:uU:"
+TURBINE_CHARS="e:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
@@ -90,7 +91,6 @@ do
 
     # Swift/T arguments:
     E) EXEC_STRING+=${OPTARG} ;;
-    i) IMPORT_STRING+="import ${OPTARG};" ;;
     h) help ; exit 0 ;;
     v) report_version ;;
     V) (( ++VERBOSE ))
@@ -98,7 +98,7 @@ do
     o) PROGRAM_TCL=${OPTARG} ;;
 
     # STC arguments:
-    A) ;& d) ;& D) ;& F) ;& f) ;& I) ;&
+    A) ;& d) ;& D) ;& F) ;& f) ;& I) ;& i) ;&
     j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
@@ -110,7 +110,7 @@ do
       ;;
 
     # Turbine arguments
-    e) ;& i) ;& l) ;& m) ;& M) ;& n) ;& s) ;& x) ;& X)
+    e) ;& l) ;& m) ;& M) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
@@ -160,44 +160,6 @@ verbose_cmd()
 }
 
 verbose "Swift/T"
-
-# Handle temp file creation across platforms
-# Always has .SUFFIX somewhere, preferably at the end
-make_temp()
-{
-  local SUFFIX=$1
-  local PROGRAM_DIR=$2
-  local NAME=$3
-  local MKTEMP_TYPE=""
-  local SUFFIX_ARG=""
-
-  # Attempt to determine mktemp version
-  # Mac mktemp does not support -V
-  if mktemp -V >& /dev/null
-  then
-    # Linux:
-    MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
-    if (( ${MKTEMP_VERSION} > 2 ))
-    then
-      MKTEMP_TYPE="Linux"
-    else
-      MKTEMP_TYPE="BSD"
-    fi
-  else
-    MKTEMP_TYPE="Mac"
-  fi
-
-  if [[ ${MKTEMP_TYPE} == "Linux" ]]
-  then
-      # Modern mktemp.  .tic at the end.
-      SUFFIX_ARG=( --suffix .${SUFFIX} )
-  else
-      # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
-      NAME=${NAME}.${SUFFIX}
-  fi
-
-  mktemp ${SUFFIX_ARG} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
-}
 
 DELETE_PROGRAM_SWIFT=0
 EXEC_SWIFT=""
