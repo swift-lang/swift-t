@@ -11,6 +11,8 @@ Swift/T may be installed following one of these methods:
 * A +configure+/+make+ source build (recommended for exotic systems)
 * A script (+build-all.sh+) that automates the +configure+/+make+ process (recommended)
 
+Installation notes are here: http://swift-lang.github.io/swift-t/guide.html#_installation
+
 == Links
 
 * http://swift-lang.org/Swift-T[The Swift/T front page]
