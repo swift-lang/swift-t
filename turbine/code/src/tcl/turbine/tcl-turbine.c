@@ -611,6 +611,21 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/* Currently unused:
+
+static int
+Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+*/
+
 static int
 Turbine_Normalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                       int objc, Tcl_Obj *const objv[])
@@ -1775,6 +1790,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
+  // COMMAND("log_time",    Turbine_LogTime_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);

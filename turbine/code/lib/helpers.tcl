@@ -145,6 +145,10 @@ proc putsn { args } {
     puts [ join $args "\n" ]
 }
 
+proc printf { fmt args } {
+    puts [ format $fmt {*}$args ]
+}
+
 # Remove and return element 0 from list
 proc list_pop_first { L_name } {
     upvar $L_name L
@@ -173,5 +177,5 @@ namespace eval turbine {
 
 # Local Variables:
 # mode: tcl
-# tcl-indent-level: 4
+# tcl-indent-level: 2
 # End:
