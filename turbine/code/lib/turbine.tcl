@@ -565,7 +565,7 @@ namespace eval turbine {
             adlb::finalize 1
         }
       if [ debug_enabled SHUTDOWN ] {
-          printf "adlb finalized at: %0.4f" [ c::log_time ]
+          printf_local "adlb finalized at: %0.4f" [ c::log_time ]
       }
     }
 
