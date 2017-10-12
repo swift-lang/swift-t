@@ -609,6 +609,16 @@ namespace eval turbine {
             return 0
         }
     }
+
+  # Return Tcl time in seconds as float
+  # If argument is provided, subtract that from current time
+  proc tcl-time { args } {
+    set t [ expr [ clock milliseconds ] / 1000.0 ]
+    if [ llength $args ] {
+      set t [ expr $t - $args ]
+    }
+    return $t
+  }
 }
 
 # Local Variables:
