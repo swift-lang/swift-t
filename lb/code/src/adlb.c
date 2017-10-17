@@ -1857,7 +1857,7 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 
   if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
-  
+
   *key_type = t[0];
   *val_type = t[1];
   return ADLB_SUCCESS;
@@ -2109,7 +2109,7 @@ ADLBP_Finalize()
   int flag;
   MPI_Finalized(&flag);
   ADLB_CHECK_MSG(!flag,
-            "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
+                 "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
 
 #ifdef XLB_ENABLE_XPT
   // Finalize checkpoints before shutting down data
