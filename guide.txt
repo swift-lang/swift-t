@@ -1315,6 +1315,8 @@ respectively
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
+[[stats]]
+
 *Import:* +stats+
 
 +sum_integer(int[]) -> int+::
