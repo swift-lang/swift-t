@@ -1317,8 +1317,14 @@ Obtain random integer from +start+, inclusive, to +end+, exclusive
 
 *Import:* +stats+
 
-+sum_integer(int[]) -> int+:: Sum
-+avg(int|float[]) -> float+:: Average
++sum_integer(int[]) -> int+::
+Sum
+
++avg(int|float[]) -> float+::
+Average
+
++std(float[]) -> float+::
+Standard deviation
 
 === System
 
