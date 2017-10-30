@@ -1347,6 +1347,12 @@ Obtain time since the Unix epoch in whole seconds.
 +INT_MAX() -> int+::
 Obtain the largest integer representable on the current platform.
 
++system(string[]) -> int+::
+Run the command (string array), return its exit code.
+
++system1(string) -> int+::
+Run the command (simple string), return its exit code.
+
 [[argv]]
 ==== Command line
 
