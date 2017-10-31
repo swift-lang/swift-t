@@ -624,6 +624,19 @@ Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+
+
+static int
+Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time_absolute();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 */
 
 static int
