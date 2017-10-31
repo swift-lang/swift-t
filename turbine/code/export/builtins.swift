@@ -155,6 +155,7 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 (int o) ftoi(float i) "turbine" "0.0.2" "float2int";
 
 // I/O
+@dispatch=WORKER
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
     [ "turbine::trace_impl <<args>>" ];
 (void o) sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"

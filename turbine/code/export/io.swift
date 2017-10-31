@@ -19,6 +19,7 @@
 #ifndef IO_SWIFT
 #define IO_SWIFT
 
+@dispatch=WORKER
 (void z)
 printf(string fmt, int|float|string|boolean... args)
     "turbine" "0.0.2" "printf"
