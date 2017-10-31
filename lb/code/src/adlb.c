@@ -247,7 +247,6 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
     ADLB_CHECK(code);
 
     code = xlb_setup_leaders(&xlb_s.layout, hostmap,
-                             hostnames.my_name,
                              comm, &xlb_s.leader_comm);
     ADLB_CHECK(code);
 
@@ -296,6 +295,13 @@ MPI_Comm
 ADLB_GetComm_leaders()
 {
   return xlb_s.leader_comm;
+}
+
+void
+ADLB_Leaders(int* leaders, int* count)
+{
+  xlb_get_leader_ranks(&xlb_s.layout,  xlb_s.hostmap,
+                       false, leaders, count);
 }
 
 // Server to target with work
@@ -2165,6 +2171,7 @@ ADLBP_Finalize()
   if (xlb_s.worker_comm != MPI_COMM_NULL)
     MPI_Comm_free(&xlb_s.worker_comm);
   MPI_Group_free(&adlb_group);
+  free(xlb_s.my_name);
 
   xlb_data_types_finalize();
 

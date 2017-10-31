@@ -45,6 +45,8 @@ struct xlb_state {
   MPI_Comm worker_comm;
   MPI_Comm leader_comm;
 
+  char* my_name;
+
   /**
      Start time from MPI_Wtime()
      Note: this is used by debugging output

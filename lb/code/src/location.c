@@ -44,11 +44,8 @@ report_ranks(MPI_Comm comm)
   getenv_integer("ADLB_DEBUG_RANKS", 0, &debug_ranks);
   if (!debug_ranks) return;
 
-  struct utsname u;
-  uname(&u);
-
   printf("ADLB_DEBUG_RANKS: rank: %i nodename: %s\n",
-         rank, u.nodename);
+         rank, xlb_s.my_name);
 }
 
 adlb_code
@@ -56,14 +53,15 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
 
+  struct utsname u;
+  uname(&u);
+  xlb_s.my_name = strdup(u.nodename);
+
   report_ranks(comm);
 
   int comm_size;
   rc = MPI_Comm_size(comm, &comm_size);
   MPI_CHECK(rc);
-
-  struct utsname u;
-  uname(&u);
 
   adlb_code ac = hostnames_alloc(hostnames, comm_size,
                                   sizeof(u.nodename));
@@ -226,7 +224,6 @@ static inline void set_rank_envs(xlb_layout* layout,
 
 adlb_code
 xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
-                  char* my_name,
                   MPI_Comm comm, MPI_Comm* leader_comm)
 {
   // Cannot be more leaders than hosts
@@ -235,6 +232,21 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
   int* leader_ranks = malloc((size_t)(max_leaders) * sizeof(int));
   int leader_rank_count = 0;
 
+  xlb_get_leader_ranks(layout, hosts, true, leader_ranks, &leader_rank_count);
+
+  create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
+  free(leader_ranks);
+
+  return ADLB_SUCCESS;
+}
+
+/**
+
+ */
+void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                          bool setenvs, int* leader_ranks, int* count)
+{
+  int leader_rank_count = 0;
   TABLE_FOREACH(&hosts->map, table_item)
   {
     char* name = table_item->key;
@@ -260,16 +272,12 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
         DEBUG("am leader");
       }
 
-      if (strcmp(my_name, name) == 0)
+      if (setenvs && strcmp(xlb_s.my_name, name) == 0)
         set_rank_envs(layout, list_item, leader_rank);
     }
     // else the node has only servers!
   }
-
-  create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
-  free(leader_ranks);
-
-  return ADLB_SUCCESS;
+  *count = leader_rank_count;
 }
 
 /** Set environment variables for user code */

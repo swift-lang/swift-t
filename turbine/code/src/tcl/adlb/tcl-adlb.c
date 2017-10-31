@@ -930,6 +930,28 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Leaders_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+
+  int* leaders = malloc(adlb_comm_size * sizeof(int));
+  int count;
+  ADLB_Leaders(leaders, &count);
+
+  Tcl_Obj* dict = Tcl_NewDictObj();
+
+  for (int i = 0; i < count; i++)
+  {
+    Tcl_Obj* index =  Tcl_NewIntObj(i);
+    Tcl_Obj* leader = Tcl_NewIntObj(leaders[i]);
+    Tcl_DictObjPut(interp, dict, index, leader);
+  }
+  Tcl_SetObjResult(interp, dict);
+  return TCL_OK;
+}
+
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
                     <parallelism> [<soft target>]
@@ -5965,6 +5987,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("get_priority",   ADLB_Get_Priority_Cmd);
   COMMAND("reset_priority", ADLB_Reset_Priority_Cmd);
   COMMAND("set_priority",   ADLB_Set_Priority_Cmd);
+  COMMAND("leaders",   ADLB_Leaders_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("spawn",     ADLB_Spawn_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
