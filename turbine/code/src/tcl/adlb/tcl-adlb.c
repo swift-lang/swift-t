@@ -779,6 +779,24 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+ADLB_CommDup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2)
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+  MPI_Comm comm = (MPI_Comm) comm_int;
+
+  MPI_Comm newcomm;
+  MPI_Comm_dup(comm, &newcomm);
+  Tcl_WideInt newcomm_int = newcomm;
+  Tcl_Obj* result = Tcl_NewWideIntObj(newcomm_int);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
 ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
@@ -788,7 +806,7 @@ ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (strcmp(comm_name, "world") == 0)
     comm = MPI_COMM_WORLD;
   else if (strcmp(comm_name, "adlb") == 0)
-    comm = MPI_COMM_WORLD;
+    comm = ADLB_GetComm(); // MPI_COMM_WORLD;
   else if (strcmp(comm_name, "null") == 0)
     comm = MPI_COMM_NULL;
   else if (strcmp(comm_name, "leaders") == 0)
@@ -5974,6 +5992,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_CommRank_Cmd);
   COMMAND("size",      ADLB_CommSize_Cmd);
+  COMMAND("comm_dup",  ADLB_CommDup_Cmd);
   COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);

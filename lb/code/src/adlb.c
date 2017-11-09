@@ -286,6 +286,12 @@ ADLB_Version(version* output)
 }
 
 MPI_Comm
+ADLB_GetComm()
+{
+  return xlb_s.comm;
+}
+
+MPI_Comm
 ADLB_GetComm_workers()
 {
   return xlb_s.worker_comm;

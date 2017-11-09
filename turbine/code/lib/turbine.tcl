@@ -144,6 +144,11 @@ namespace eval turbine {
 
         c::normalize
 
+        set dup [ adlb::comm_dup [ adlb::comm_get adlb ] ]
+        puts "$dup from [ adlb::comm_get adlb ]"
+        set rc [ sds_init $dup 1 ]
+        check { $rc == 0 } "sds_init failed!"
+
         argv_init
     }
 
