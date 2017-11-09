@@ -77,9 +77,10 @@ namespace eval turbine {
     # rank_config: If an empty string, configure ranks based on environment.
     #     If an integer, interpret as a server count and do old-style
     #     worker/server split for backwards compatibility.
-    #     Otherwise interpret as a custom rank ayout object as documented by
+    #     Otherwise interpret as a custom rank layout object as documented by
     #     the rank_allocation function
-    # lang: language to use in error messages
+    # lang: language to use in error messages:
+    #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
         # Initialise debugging in case other functions want to debug
         c::init_debug
