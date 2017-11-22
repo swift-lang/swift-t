@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.3.0,</span>
-<span id="revdate">July 2017</span>
+<span id="revdate">November 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1057,7 +1057,7 @@ Optional arguments passed to <code>sbatch</code>.  These arguments may include
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Mail</strong></p></div>
-<div class="paragraph"><p>(Currently supported systems: <code>slurm</code>)</p></div>
+<div class="paragraph"><p>(Currently supported systems: <code>cobalt</code>, <code>slurm</code>)</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>MAIL_ENABLED</code>
@@ -2284,10 +2284,10 @@ Run with:
 Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
-$ export PROJECT=... QUEUE=...
+<pre><code>$ GCC=/opt/gcc/6.3.0/snos/lib64
+$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
 </div></div>
 </div>
@@ -2629,7 +2629,7 @@ be in <code>/lustre</code>.</p></div>
 <h4 id="_public_installation_13">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_5">Login nodes</h5>
-<div class="paragraph"><p><strong>As of: Swift/T 1.2.0, January 2017</strong></p></div>
+<div class="paragraph"><p><strong>As of: Swift/T 1.3.0, October 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.  It has
 <a href="http://swift-lang.github.io/swift-t/guide.html#leaf_python">Python</a>
 and
@@ -2637,13 +2637,15 @@ and
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/soft/swift-t/login/2017-01/stc/bin
-/soft/swift-t/login/2017-01/turbine/bin</code></pre>
+<pre><code>/soft/swift-t/login/2017-10/stc/bin
+/soft/swift-t/login/2017-10/turbine/bin</code></pre>
 </div></div>
 <div class="paragraph"><p>Add to <code>LD_LIBRARY_PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/soft/swift-t/deps/R-3.3.2/lib64/R/lib</code></pre>
+<pre><code>/soft/swift-t/deps/R-3.3.2/lib64/R/lib
+/soft/swift-t/deps/Python-2.7.10/lib
+/opt/gcc/4.9.2/snos/lib64</code></pre>
 </div></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -3363,7 +3365,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer-text">
 Version 1.3.0<br />
 Last updated
- 2017-07-19 12:43:19 CDT
+ 2017-11-22 12:34:41 CST
 </div>
 </div>
 </body>
