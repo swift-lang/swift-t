@@ -144,10 +144,7 @@ namespace eval turbine {
 
         c::normalize
 
-        set dup [ adlb::comm_dup [ adlb::comm_get adlb ] ]
-        puts "$dup from [ adlb::comm_get adlb ]"
-        set rc [ sds_init $dup 1 ]
-        check { $rc == 0 } "sds_init failed!"
+        turbine::init_cmds
 
         argv_init
     }
@@ -613,6 +610,15 @@ namespace eval turbine {
         } else {
             set result $dflt
             return 0
+        }
+    }
+
+    # Initialize user modules
+    proc init_cmds { } {
+        global turbine_init_cmds
+        if { ! [ info exists turbine_init_cmds ] } return
+        foreach cmd $turbine_init_cmds {
+            eval $cmd
         }
     }
 }
