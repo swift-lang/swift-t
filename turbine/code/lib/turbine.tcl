@@ -501,6 +501,7 @@ namespace eval turbine {
 
     proc finalize { } {
         log "turbine finalizing"
+        turbine::final_cmds
         mktemp_cleanup
         turbine::c::finalize
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
@@ -618,6 +619,15 @@ namespace eval turbine {
         global turbine_init_cmds
         if { ! [ info exists turbine_init_cmds ] } return
         foreach cmd $turbine_init_cmds {
+            eval $cmd
+        }
+    }
+
+    # Finalize user modules
+    proc final_cmds { } {
+        global turbine_final_cmds
+        if { ! [ info exists turbine_final_cmds ] } return
+        foreach cmd $turbine_final_cmds {
             eval $cmd
         }
     }
