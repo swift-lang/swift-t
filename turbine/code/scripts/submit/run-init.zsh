@@ -138,7 +138,7 @@ while getopts "d:D:e:i:M:n:o:s:t:VxXY" OPTION
     D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e) KV=${OPTARG}
-       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       if [[ ! ${KV} =~ ".*=.*" ]]
        then
          # Look up unset environment variables
          KV="${KV}=${(P)KV}"
@@ -291,8 +291,39 @@ fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
+set -x
+
 export ENV
 export ENV_PAIRS="${env}"
+
+ENV_ASSOC="declare -A EA\n"
+for kv in ${env}
+do
+  # Transform k=v into k="v"
+  kv="EA[${kv/=/]=\"}\""
+  ENV_ASSOC+="${kv}\n"
+done
+
+# Automatic environment variables (AEVs) (see sites.txt)
+AEV=(
+  TURBINE_OUTPUT
+  TURBINE_JOBNAME
+  TURBINE_LOG
+  TURBINE_DEBUG
+  MPI_LABEL
+  TURBINE_WORKERS
+  ADLB_SERVERS
+  TCLLIBPATH
+  LD_LIBRARY_PATH
+  WALLTIME
+)
+for k in ${AEV}
+do
+  # Insert the k="v" for each AEV, defaulting to empty string ""
+  ENV_ASSOC+="EA[${k}]=\"${(P)k:-}\"\n"
+done
+
+export ENV_ASSOC
 
 ## Local Variables:
 ## mode: sh

@@ -68,18 +68,51 @@ echo "PPN:          ${PPN}"
 echo
 
 # Put environment variables from run-init into 'aprun -e' format
-ENV_LIST="getenv(ENV_LIST)"
-APRUN_ENVS=""
-for KV in ${ENV_LIST}
+# ENV_LIST="getenv(ENV_LIST)"
+# APRUN_ENVS=""
+# for KV in ${ENV_LIST}
+# do
+#     APRUN_ENVS+="-e ${KV} "
+# done
+
+
+# Expands to shell code containing the environment variables
+# in associative array EA
+getenv(ENV_ASSOC)
+
+APRUN_ENVS=()
+
+for k in "${!EA[@]}"
 do
-    APRUN_ENVS+="-e ${KV} "
+    echo key $k
+    echo value ${EA[$k]}
+    v=${EA[$k]}
+    APRUN_ENVS+=( -e $k=\"$v\" )
 done
 
-# echo APRUN_ENVS: $APRUN_ENVS
+echo APRUN_ENVS: $APRUN_ENVS
+
+SWIFT_PROCS=$(( PROCS - 1 ))
+
+DSS=/home/wozniak/Public/sfw/theta/dataspaces-1.6.4/bin/dataspaces_server
+
+printenv | sort
+
+set -x
+
+# Run DataSpaces
+aprun -n 1 $DSS -s -c 0 & # $SWIFT_PROCS
+
+## Give some time for the DataSpaces servers to load and startup
+while [ ! -f conf ]; do
+    sleep 1s
+done
+sleep 5s  ## wait server to fill up the conf file
 
 # Run Turbine:
-aprun -n ${PROCS} -N ${PPN} \
-      ${APRUN_ENVS} \
+# ${SWIFT_PROCS} ${PPN}
+eval aprun -n 4 -N 2 \
+      "${APRUN_ENVS[*]}" \
       ${VALGRIND} ${COMMAND}
 CODE=${?}
 

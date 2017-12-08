@@ -38,18 +38,18 @@ then
   QUEUE_ARG=( -q ${QUEUE} )
 fi
 
-env+=( TCLLIBPATH="${TCLLIBPATH}"
-       TURBINE_WORKERS=${TURBINE_WORKERS}
-       ADLB_SERVERS=${ADLB_SERVERS}
-       ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME}
-       ADLB_PRINT_TIME=${ADLB_PRINT_TIME}
-       TURBINE_OUTPUT=${TURBINE_OUTPUT}
-       TURBINE_LOG=${TURBINE_LOG}
-       TURBINE_DEBUG=${TURBINE_DEBUG}
-       ADLB_DEBUG=${ADLB_DEBUG}
-       MPIRUN_LABEL=1
-       TURBINE_CACHE_SIZE=0
-     )
+# env+=( TCLLIBPATH="${TCLLIBPATH}"
+#        TURBINE_WORKERS=${TURBINE_WORKERS}
+#        ADLB_SERVERS=${ADLB_SERVERS}
+#        ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME}
+#        ADLB_PRINT_TIME=${ADLB_PRINT_TIME}
+#        TURBINE_OUTPUT=${TURBINE_OUTPUT}
+#        TURBINE_LOG=${TURBINE_LOG}
+#        TURBINE_DEBUG=${TURBINE_DEBUG}
+#        ADLB_DEBUG=${ADLB_DEBUG}
+#        MPIRUN_LABEL=1
+#        TURBINE_CACHE_SIZE=0
+#      )
 
 if [[ ${CHANGE_DIRECTORY} == "" ]]
 then
@@ -65,8 +65,8 @@ then
 fi
 
 # Create the environment list in a format Cobalt can support
-ENV_LIST=${env}
-export ENV_LIST
+# ENV_LIST=${env}
+# export ENV_LIST
 
 # Launch it
 export COMMAND
