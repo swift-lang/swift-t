@@ -1,5 +1,6 @@
 changecom(`dnl')#!/bin/bash
 # We use changecom to change the M4 comment to dnl, not hash
+set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -45,7 +46,7 @@ echo
 cd ${TURBINE_OUTPUT}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
-COMMAND=getenv(COMMAND)
+COMMAND="getenv(COMMAND)"
 
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
@@ -53,10 +54,19 @@ export PYTHONPATH=getenv(PYTHONPATH)
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
+DSS=/home/wozniak/sfw/blues/login/dataspaces-1.6.4/bin/dataspaces_server
+$DSS -s $DS_SERVERS -c $DS_CLIENTS &
+DS_PID=$!
+# echo DS_PID: $DS_PID
+
 START=$( date +%s.%N )
-${TURBINE_LAUNCHER} ${COMMAND}
+${TURBINE_LAUNCHER} -l -n $DS_CLIENTS ${COMMAND}
 STOP=$( date +%s.%N )
+date +%s.%N
+
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 echo "MPIEXEC TIME: ${DURATION}"
+
+kill -1 $DS_PID || true  # Ignore errors here
