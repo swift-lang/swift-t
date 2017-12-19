@@ -85,3 +85,7 @@
 (string results[]) hostmap_list() {
   results = hostmapList();
 }
+
+(int results[]) hostmapLeaders()
+"turbine" "1.0"
+[ "set <<results>> [ ::adlb::leaders ]" ];

@@ -1,0 +1,5 @@
+
+DIR := scripts/submit/theta
+
+SCRIPTS_SUBMIT += $(DIR)/turbine-theta-run.zsh
+SCRIPTS_SUBMIT += $(DIR)/turbine-theta.sh.m4

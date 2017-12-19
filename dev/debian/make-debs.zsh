@@ -5,6 +5,14 @@ set -eu
 # Main user interface to make all Swift/T DEBs
 # Warning: this installs the created DEBs
 
+# Naming note:
+# We are making a PACKAGE (PKG)
+# The PKG_TYPE is deb-dev or deb-bin (not src or spack)
+#    Thus, package names are DEB/{DEV,BIN}
+#    Thus, the Makefile targets are deb or deb-dev
+# The resulting files are *.deb or *-dev.deb
+#    Thus, file names are {BIN,DEV}/DEB
+
 # Options:
 # -b : Make bundle containing all DEBs and an installer script
 # -c : Clean DEBs
@@ -20,9 +28,9 @@ TGZ=swift-t-debs-${SWIFT_T_VERSION}.tar.gz
 
 # The DEB module names, types, Makefile targets, and versions
 typeset -A MODULES DEBS TYPES VERSIONS
-MODULES=(  c-utils exmcutils lb adlbx   turbine turbine stc stc )
-TYPES=(    c-utils -dev      lb -dev    turbine ""      stc "" )
-DEBS=(     c-utils dev-deb   lb dev-deb turbine deb     stc deb )
+MODULES=(  c-utils exmcutils lb adlbx   turbine turbine stc stc     )
+TYPES=(    c-utils -dev      lb -dev    turbine ""      stc ""      )
+DEBS=(     c-utils deb-dev   lb deb-dev turbine deb-bin stc deb-bin )
 VERSIONS=( c-utils ${CUTILS_VERSION}
            lb      ${ADLBX_VERSION}
            turbine ${TURBINE_VERSION}
@@ -34,7 +42,8 @@ then
   do
     pushd ${M}/code
     N=${MODULES[${M}]}
-    rm -fv ${N}*.tar.gz ${N}*.deb
+    rm0 -v ${N}*.tar.gz ${N}*.deb
+    rm0 -r .deb-work-*
     popd
   done
   return
@@ -70,9 +79,9 @@ do
   pushd ${M}/code
   print "Making DEB in ${PWD}..."
   uptodate configure configure.ac bootstrap || ./bootstrap
-  uptodate Makefile configure || ./configure
+  uptodate Makefile configure || ./configure --enable-debian-build
   D=${DEBS[${M}]}
-  make ${D}
+  @ make PKG_TYPE=${D} ${D}
   N=${MODULES[${M}]}
   T=${TYPES[${M}]}
   V=${VERSIONS[${M}]}

@@ -4,12 +4,6 @@ set -e
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
-if (( MAKE_CLEAN )); then
-  if [ -f Makefile ]; then
-      make clean
-  fi
-fi
-
 if (( RUN_AUTOTOOLS )); then
   ./bootstrap
 elif [ ! -f configure ]; then
@@ -42,8 +36,8 @@ if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
 fi
 
-if (( PYTHON_EXE )); then
-  EXTRA_ARGS+=" --with-python=${PYTHON_EXE}"
+if (( ${#PYTHON_EXE} > 0 )); then
+  EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
 fi
 
 if (( ENABLE_R )); then
@@ -156,7 +150,7 @@ if (( CONFIGURE )); then
   fi
   rm -f config.cache
   (
-    set -x
+    set -ex
     ./configure --config-cache \
                 --with-adlb=${LB_INSTALL} \
                 ${CRAY_ARGS} \
@@ -165,6 +159,10 @@ if (( CONFIGURE )); then
                 ${EXTRA_ARGS} \
                 --disable-log
     )
+fi
+
+if (( ! RUN_MAKE )); then
+  exit
 fi
 
 if (( MAKE_CLEAN ))
@@ -177,17 +175,13 @@ then
   fi
 fi
 
-if (( ! RUN_MAKE )); then
-  exit
-fi
-
 if ! make -j ${MAKE_PARALLELISM}
 then
-  rm -fv deps_contents.txt
   echo
   echo Make failed.  The following may be useful:
   echo
   set -x
+  rm -fv deps_contents.txt
   make check_includes
   exit 1
 fi

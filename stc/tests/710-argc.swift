@@ -1,9 +1,8 @@
 
+import assert;
 import io;
 import string;
 import sys;
-
-argv_accept("v", "a", "exec", "help");
 
 string program = argp(0);
 printf("program: %s", program);
@@ -30,5 +29,8 @@ if (argv_contains("v"))
 {
   printf("has: v");
 }
+
+string n = argv("n");
+assert(n == "n=3", "received wrong argument n!");
 
 printf("args: %s", args());

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Turbine builtin functions
+# Misc. Turbine builtin functions
 
 # All builtins will have signature:
 #   f <OUTPUT LIST> <INPUT LIST>
@@ -520,7 +520,8 @@ namespace eval turbine {
             lappend inputs $v
         }
 
-        rule $inputs [ list make_void_body $o $inputs ] name make_void-$o
+        rule $inputs [ list make_void_body $o $inputs ] \
+            name make_void-$o
     }
 
     proc make_void_body { output inputs } {
@@ -540,6 +541,44 @@ namespace eval turbine {
     proc zero_body { output input } {
         read_refcount_decr $input
         store_integer $output 0
+    }
+
+    proc pick_integer_string { outputs inputs } {
+        rule $inputs "pick_integer_string_body $outputs $inputs"
+    }
+    proc pick_integer_string_body { args } {
+        lassign $args result A indices
+        set picks [ adlb::enumerate $indices members all 0 ]
+        set L [ list ]
+        # Output list:
+        foreach pick $picks {
+            set s [ adlb::lookup $A $pick ]
+            lappend L $s
+        }
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
+    }
+
+    proc pick_stable_integer_string { outputs inputs } {
+        rule $inputs "pick_stable_integer_string_body $outputs $inputs"
+    }
+    proc pick_stable_integer_string_body { args } {
+        lassign $args result A indices
+        set D [ adlb::enumerate $indices dict all 0 ]
+        # Indices in stable order:
+        set stable [ list ]
+        set N [ dict size $D ]
+        for { set i 0 } { $i < $N } { incr i } {
+            lappend stable [ dict get $D $i ]
+        }
+        # Output list:
+        set L [ list ]
+        foreach index $stable {
+            set s [ adlb::lookup $A $index ]
+            lappend L $s
+        }
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
     }
 }
 

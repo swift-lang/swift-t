@@ -611,6 +611,34 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/* Currently unused:
+
+static int
+Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+
+
+static int
+Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time_absolute();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+*/
+
 static int
 Turbine_Normalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                       int objc, Tcl_Obj *const objv[])
@@ -859,7 +887,7 @@ Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
-  Tcl_Obj* result = Tcl_NewLongObj(turbine_task_comm);
+  Tcl_Obj* result = Tcl_NewWideIntObj((long long int) turbine_task_comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -1702,8 +1730,8 @@ Turbine_CopyTo_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(4);
-  int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   const char* name_in  = Tcl_GetString(objv[2]);
   const char* name_out = Tcl_GetString(objv[3]);
@@ -1722,8 +1750,8 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Unpack
   TCL_ARGS(4);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   int root;
   rc = Tcl_GetIntFromObj(interp, objv[2], &root);
@@ -1775,6 +1803,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
+  // COMMAND("log_time",    Turbine_LogTime_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);

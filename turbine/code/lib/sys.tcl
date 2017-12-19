@@ -63,14 +63,14 @@ namespace eval turbine {
             set arg [ lindex $L $i ]
             # String replacement may cause early break:
             if [ string equal $arg "" ] break
-            set tokens [ ::split $arg = ]
+            set tokens [ split_first $arg = ]
             set token [ lindex $tokens 0 ]
             if { [ string index $token 0 ] == "-" } {
                 set key [ string range $token 1 end ]
                 if { [ string index $key 0 ] == "-" } {
                     set key [ string range $key 1 end ]
                 }
-                set value [ lindex $tokens 1 ]
+                set value [ lrange $tokens 1 end ]
                 dict set turbine_argv $key $value
             } else {
                 lappend turbine_argp $arg
@@ -372,6 +372,35 @@ namespace eval turbine {
         while { [ clock microseconds ] < [ expr {$start + $us}] } {
             # Spin
         }
+    }
+
+    proc system { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        set tokens [ list ]
+        set n [ dict size $command ]
+        for { set i 0 } { $i < $n } { incr i } {
+            lappend tokens [ dict get $command $i ]
+        }
+        if [ catch { set s [ exec {*}$tokens ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
+    }
+
+    proc system1 { command output exit_code } {
+        upvar $output o
+        upvar $exit_code ec
+        if [ catch { set s [ exec {*}$command ] } e options ] {
+            set o  ""
+            set ec [ dict get $options -code ]
+            return
+        }
+        set o  $s
+        set ec 0
     }
 }
 

@@ -26,9 +26,21 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
+
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 if [[ ${prefix} == "NONE" ]]
 then
-  AC_MSG_ERROR("You must provide --prefix")
+  if (( ! DEBIAN_BUILD ))
+  then
+    AC_MSG_ERROR("You must provide --prefix")
+  fi
 fi
 
 AC_MSG_RESULT([PREFIX: ${prefix}])
@@ -70,14 +82,6 @@ then
   DPKG_ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
-
-DEBIAN_BUILD=0
-AC_ARG_ENABLE(debian-build,
-  AS_HELP_STRING(
-    [--enable-debian-build], [configure for a Debian package]),
-    [DEBIAN_BUILD=1]
-)
-AC_SUBST(DEBIAN_BUILD)
 
 # Check for CC
 AC_PROG_CC
@@ -163,7 +167,7 @@ USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
     AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
     [
-        AC_MSG_CHECKING([${withval}/include/c-utils.h])
+        AC_MSG_CHECKING([for ${withval}/include/c-utils.h])
         [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
         if [[ ${USE_C_UTILS} == 0 ]]
         then
@@ -193,7 +197,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
+AC_MSG_CHECKING([for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
@@ -242,7 +246,7 @@ AC_ARG_ENABLE(custom-mpi,
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [name in PATH or full path to job launcher
+                   [full path to job launcher
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
@@ -1293,6 +1297,7 @@ AC_CONFIG_FILES(
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
+        scripts/submit/theta/module.mk
         scripts/turbine-config.sh
         scripts/turbine-build-config.sh
         tests/module.mk

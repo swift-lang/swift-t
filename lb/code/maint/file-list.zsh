@@ -2,9 +2,9 @@
 set -eu
 
 # ADLB/X FILE LIST
-# Produces list of files for make-release-pkg and mk-upstream-tgz
+# Produces list of files for make-release-pkg and mk-src-tgz
 # Also makes a soft link to the Debian package files,
-# either for the bin or dev package
+# either for the Debian bin or dev package
 
 print bootstrap configure configure.ac Makefile.in install-sh
 print config.h.in
@@ -17,6 +17,7 @@ print version.txt NOTICE
 
 if [[ ${PKG_TYPE} == deb-* ]]
 then
-  ln -sfT maint/debian-${PKG_TYPE} debian
+  DEB_TYPE=${PKG_TYPE#deb-} # Chop off "deb-"
+  ln -sfT maint/debian-${DEB_TYPE} debian
   print debian/*[^~]
 fi

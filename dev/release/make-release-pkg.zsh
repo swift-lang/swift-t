@@ -32,8 +32,8 @@ export USE_MASTER=0
 # If ENABLE_COASTER, enable coaster support
 export ENABLE_COASTER=0
 
-# If PACKAGE_DEBIAN=1, build Debian binary packages instead
-PACKAGE_DEBIAN=0
+# Signal to lower-level scripts that this is a source package
+export PKG_TYPE=src
 
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
@@ -46,9 +46,8 @@ setopt PUSHD_SILENT KSH_GLOB
 while getopts "bcpt" opt
 do
   case ${opt} in
-    b) BOOTSTRAP=0 ;;
+    b) BOOTSTRAP=0      ;;
     c) ENABLE_COASTER=1 ;;
-    p) PACKAGE_DEBIAN=1 ;;
     t) USE_MASTER=1     ;;
     \?)
       echo "make-release-package.zsh: unknown option: ${OPTARG}"
@@ -57,7 +56,7 @@ do
   esac
 done
 
-source ${THIS}/../build/get-versions.sh
+source ${THIS}/../get-versions.sh
 
 # Define tokens (location in SVN or Git):
 # If using release paths, use "release/version" or git branch/tag name

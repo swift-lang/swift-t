@@ -39,6 +39,23 @@ namespace eval turbine {
         store_string $result $total
     }
 
+    proc join_args { result inputs } {
+        rule $inputs "join_args_body $result $inputs" \
+            name "join_args-$result"
+    }
+    proc join_args_body { result args } {
+
+        set separator [ list_pop_first args ]
+        set separator_value [ retrieve_decr $separator ]
+        set L [ list ]
+        foreach input $args {
+            set t [ retrieve_decr $input ]
+            lappend L $t
+        }
+        set total [ join $L $separator_value ]
+        store_string $result $total
+    }
+
     # usage: dircat <result> <args>* => arg1/arg2/arg3
     proc dircat { result inputs } {
         rule $inputs "dircat_body $result $inputs" \
@@ -361,6 +378,22 @@ namespace eval turbine {
             lappend A [ dict get $container $i ]
         }
         return [ join $A $separator ]
+    }
+
+    proc pick_regexp { pattern L } {
+        set result [ dict create ]
+        dict for { k v } $L {
+            if [ catch {
+                if [ regexp $pattern $v ] {
+                    dict set result $k $v
+                }
+            } e ] {
+                turbine_error "error in pick_regexp(): "        \
+                              "pattern='$pattern' value='$v'\n" \
+                              "details: $e"
+            }
+        }
+        return $result
     }
 }
 

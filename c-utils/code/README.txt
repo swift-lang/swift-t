@@ -9,7 +9,7 @@ To build:
 
 Type
 
-./setup.sh
+./bootstrap
 ./configure
 make
 

@@ -77,9 +77,10 @@ namespace eval turbine {
     # rank_config: If an empty string, configure ranks based on environment.
     #     If an integer, interpret as a server count and do old-style
     #     worker/server split for backwards compatibility.
-    #     Otherwise interpret as a custom rank ayout object as documented by
+    #     Otherwise interpret as a custom rank layout object as documented by
     #     the rank_allocation function
-    # lang: language to use in error messages
+    # lang: language to use in error messages:
+    #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
         # Initialise debugging in case other functions want to debug
         c::init_debug
@@ -143,6 +144,8 @@ namespace eval turbine {
 
         c::normalize
 
+        turbine::init_cmds
+
         argv_init
     }
 
@@ -175,6 +178,12 @@ namespace eval turbine {
         set n_workers_by_type [ dict create ]
         set n_workers [ expr { $adlb_size - $n_servers } ]
 
+        if { $n_workers == 0 } {
+            turbine_fail "You have 0 workers!\n" \
+                "Check your MPI configuration. " \
+                "There may be a mix of MPICH and OpenMPI."
+        }
+
         set workers_running_sum 0
 
         variable addtl_work_types
@@ -198,11 +207,11 @@ namespace eval turbine {
         }
 
         if { $workers_running_sum >= $n_workers } {
-          error "Too many workers allocated to executor types: \
-                  {$n_workers_by_type}.\n \
-                  Have $n_workers total workers, allocated
-                  $workers_running_sum already, need at least one to \
-                  serve as regular worker"
+          turbine_fail "Too many workers allocated to custom work types! \n" \
+              "counts: " [ report_work_type_counts $n_workers_by_type ] "\n" \
+              "Total workers:  $n_workers \n" \
+              "Custom workers: $workers_running_sum \n" \
+              "Need at least one regular worker."
         }
 
         # Remainder goes to regular workers
@@ -213,6 +222,14 @@ namespace eval turbine {
 
         return [ dict create servers $n_servers workers $n_workers \
                              workers_by_type $n_workers_by_type ]
+    }
+
+    proc report_work_type_counts { n_workers_by_type } {
+        set result [ list ]
+        dict for { k v } $n_workers_by_type {
+            lappend result "${k}:${v}"
+        }
+        return $result
     }
 
     # Return names of all registered async executors
@@ -367,7 +384,10 @@ namespace eval turbine {
         foreach exec_name $exec_names {
             if { ( ! [ dict exists $n_workers_by_type $exec_name ] ) ||
                  [ dict get $n_workers_by_type $exec_name ] <= 0 } {
-              error "Executor $exec_name has no assigned workers"
+                turbine_fail "Custom work types error: " \
+                        "Executor $exec_name has no assigned workers!\n" \
+                        "Set environment variable TURBINE_${exec_name}_WORKERS " \
+                        "to some number of workers."
             }
         }
     }
@@ -433,6 +453,13 @@ namespace eval turbine {
         }
     }
 
+    proc turbine_fail { args } {
+        if { [ adlb::rank ] == 0 } {
+            puts* {*}$args
+        }
+        exit 1
+    }
+
     # Turbine logging contains string values (possibly long)
     # Setting TURBINE_LOG_STRING_MODE truncates these strings
     proc setup_log_string { } {
@@ -474,6 +501,7 @@ namespace eval turbine {
 
     proc finalize { } {
         log "turbine finalizing"
+        turbine::final_cmds
         mktemp_cleanup
         turbine::c::finalize
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
@@ -583,6 +611,24 @@ namespace eval turbine {
         } else {
             set result $dflt
             return 0
+        }
+    }
+
+    # Initialize user modules
+    proc init_cmds { } {
+        global turbine_init_cmds
+        if { ! [ info exists turbine_init_cmds ] } return
+        foreach cmd $turbine_init_cmds {
+            eval $cmd
+        }
+    }
+
+    # Finalize user modules
+    proc final_cmds { } {
+        global turbine_final_cmds
+        if { ! [ info exists turbine_final_cmds ] } return
+        foreach cmd $turbine_final_cmds {
+            eval $cmd
         }
     }
 }

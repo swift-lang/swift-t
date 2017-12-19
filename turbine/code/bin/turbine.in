@@ -39,15 +39,21 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
-DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "f:hlm:M:n:vVxXC:d:e:i:o:s:St:" OPTION
+while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:Y" OPTION
 do
   case ${OPTION} in
+    c)
+      PRINT_CONFIG=1
+      ;;
+    C)
+      PRINT_BUILD_CONFIG=1
+      ;;
     f)
       MACHINE_FILE=${OPTARG}
       ;;
@@ -63,9 +69,6 @@ do
     n)
       PROCS=${OPTARG}
       ;;
-    S)
-      PRINT_SETTINGS=1
-      ;;
     v)
       REPORT_VERSION=1
       ;;
@@ -79,7 +82,7 @@ do
       EXEC_SCRIPT=1
       ;;
     # Pass through to scheduler script:
-    C) ;& d) ;& i) ;& M) ;& o) ;& s) ;& t)
+    d) ;& D) ;& i) ;& M) ;& o) ;& s) ;& t) ;& Y)
       SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     e)
@@ -111,7 +114,12 @@ then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
 
-if (( PRINT_SETTINGS ))
+if (( PRINT_CONFIG ))
+then
+  echo ${TURBINE_HOME}/scripts/turbine-config.sh
+  exit 0
+fi
+if (( PRINT_BUILD_CONFIG ))
 then
   echo ${TURBINE_HOME}/scripts/turbine-build-config.sh
   exit 0
@@ -156,8 +164,8 @@ fi
 print_help()
 {
   cat ${TURBINE_HOME}/etc/help/header.txt
-  # These options are available from swift-t
   printf "OPTIONS\n\n"
+  # These options are available from swift-t
   cat ${TURBINE_HOME}/etc/help/options-1.txt
   # These options are not available from swift-t
   cat ${TURBINE_HOME}/etc/help/options-2.txt

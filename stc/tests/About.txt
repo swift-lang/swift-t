@@ -104,7 +104,9 @@ The tests are numbered for lexical sorting by shell glob.
 *        710: argc/argv
 *        729: math
 *        730: stdio
+*        735: Priorities
 *        740: Misc. libraries
+*        745: Clock
 *        750: Pragmas
 *        760: Advanced I/O
 *        780: MPE

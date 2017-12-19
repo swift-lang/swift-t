@@ -25,8 +25,24 @@ changecom(`dnl')#!/bin/bash -l
 define(`getenv', `esyscmd(printf -- "$`$1'")')
 define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 
-# Other key settings are on the sbatch command line
-# See turbine-slurm-run.zsh
+#SBATCH --output=getenv(OUTPUT_FILE)
+#SBATCH --error=getenv(OUTPUT_FILE)
+
+ifelse(getenv(QUEUE),`',,
+#SBATCH --partition=getenv(QUEUE)
+)
+
+ifelse(getenv(PROJECT),`',,
+#SBATCH --account=getenv(PROJECT)
+)
+
+# TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
+ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
+#SBATCH getenv(TURBINE_SBATCH_ARGS)
+)
+
+#SBATCH --job-name=getenv(TURBINE_JOBNAME)
+
 #SBATCH --time=getenv(WALLTIME)
 #SBATCH --nodes=getenv(NODES)
 #SBATCH --ntasks-per-node=getenv(PPN)
@@ -59,5 +75,5 @@ COMMAND="getenv(COMMAND)"
 # Use this on Midway:
 # module load openmpi gcc/4.9
 
-${TURBINE_LAUNCHER} ${COMMAND}
+${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) ${COMMAND}
 # Return exit code from mpirun

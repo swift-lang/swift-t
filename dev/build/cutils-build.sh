@@ -31,7 +31,7 @@ fi
 if (( CONFIGURE )); then
   rm -f config.cache
   (
-    set -x
+    set -eux
     ./configure --config-cache \
                 --prefix=${C_UTILS_INSTALL} \
                 --enable-shared \
@@ -49,6 +49,14 @@ fi
 
 if (( ! RUN_MAKE )); then
   exit
+fi
+
+if (( MAKE_CLEAN ))
+then
+  if [ -f Makefile ]
+  then
+    make clean
+  fi
 fi
 
 make -j ${MAKE_PARALLELISM}

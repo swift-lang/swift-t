@@ -42,9 +42,11 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        leader_hook
+        leader_hook_startup
 
         c::worker_loop $WORK_TYPE($mode) $keyword_args
+
+        leader_hook_shutdown
     }
 
     proc custom_worker { rules startup_cmd mode } {
@@ -117,15 +119,32 @@ namespace eval turbine {
         }
     }
 
-    proc leader_hook { } {
+    proc leader_hook_startup { } {
         if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
             # I am not a leader
             return
         }
         global env
-        if [ info exists env(TURBINE_LEADER_HOOK) ] {
-            log "TURBINE_LEADER_HOOK: $env(TURBINE_LEADER_HOOK)"
-            eval $env(TURBINE_LEADER_HOOK)
+        if [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] {
+            log "TURBINE_LEADER_HOOK_STARTUP: $env(TURBINE_LEADER_HOOK_STARTUP)"
+            eval $env(TURBINE_LEADER_HOOK_STARTUP)
+        }
+    }
+
+    proc leader_hook_shutdown { } {
+        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
+            # I am not a leader
+            return
+        }
+        global env
+        if [ info exists env(TURBINE_LEADER_HOOK_SHUTDOWN) ] {
+            log "TURBINE_LEADER_HOOK_SHUTDOWN: $env(TURBINE_LEADER_HOOK_SHUTDOWN)"
+            eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
         }
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

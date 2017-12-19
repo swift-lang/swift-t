@@ -114,9 +114,21 @@ blobutils_cast_to_ptr(int i)
 }
 
 void*
+blobutils_cast_lli_to_ptr(long long int i)
+{
+  return (void*) (size_t) i;
+}
+
+void*
 blobutils_cast_int64_to_ptr(int64_t i)
 {
   return (void*) i;
+}
+
+void*
+blobutils_cast_char_ptrptr_to_ptr(char** p)
+{
+  return (void*) p;
 }
 
 void**
@@ -135,6 +147,12 @@ char**
 blobutils_cast_to_char_ptrptr(void* p)
 {
   return (char**) p;
+}
+
+char***
+blobutils_cast_to_char_ppp(void* p)
+{
+  return (char***) p;
 }
 
 void*
@@ -163,9 +181,9 @@ blobutils_cast_to_long(void* p)
 }
 
 long long
-blobutils_cast_to_long_long(void* p)
+blobutils_cast_to_lli(void* p)
 {
-  long long result = (long long) p;
+  long long int result = (long long int) p;
   return result;
 }
 
@@ -469,4 +487,3 @@ blobutils_hdf_write(const char* output, const char* dataset,
   return false;
 }
 #endif // HAVE_HDF
-
