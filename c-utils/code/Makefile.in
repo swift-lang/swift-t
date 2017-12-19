@@ -116,6 +116,7 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 ### FLAGS
 
 CC = @CC@
+DEP_CC = gcc
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 CFLAGS += -I $(srcdir) -I $(srcdir)/src $(STD) $(WARNS)
@@ -137,7 +138,7 @@ deps: $(DEPS)
 # Default rule for generating dependency files (deps)
 %.d: %.c
 	$(Q) "  DEP		$@"
-	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
+	$(E) CC="$(DEP_CC)" $(srcdir)/maint/depend.sh \
              $(call dirname, $*) $(CFLAGS) $< > $@
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
