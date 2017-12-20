@@ -4573,6 +4573,8 @@ In place of of program.tic, run standalone Turbine executable
 </p>
 </dd>
 </dl></div>
+<div class="sect3">
+<h4 id="turbine_env">17.3.1. Environment variables</h4>
 <div class="paragraph"><p>The user controls the Turbine run time configuration through
 environment variables:</p></div>
 <div class="dlist"><dl>
@@ -4764,7 +4766,7 @@ process rank for each process, giving reproducible results.  If set to
 an integer <code>seed</code>, the random number generator seed for each process
 will be set to <code>seed</code> + <code>rank</code>.
 </p>
-<div class="paragraph" id="turbine_launch_options"><p>For non-reproducible random results, use the following shell commands:</p></div>
+<div class="paragraph"><p>For non-reproducible random results, use the following shell commands:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>export TURBINE_SRAND=$( date +%s )
@@ -4842,6 +4844,7 @@ Enable GDB debugging.  Cf. <a href="#gdb">GDB</a>.
 </p>
 </dd>
 </dl></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="Build_configuration">17.4. Build configuration</h3>
@@ -5598,7 +5601,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-12-20 14:08:25 CST
+Last updated 2017-12-20 14:22:54 CST
 </div>
 </div>
 
