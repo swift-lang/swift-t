@@ -5,7 +5,7 @@
 # Set these for your system:
 
 # Get Turbine's build settings
-source $( turbine -S )
+source $( turbine -C )
 export TCL_INCLUDE_SPEC TCL_HOME
 
 # Set BLAS here

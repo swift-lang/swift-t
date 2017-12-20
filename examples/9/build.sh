@@ -4,7 +4,7 @@ set -eu
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-source $( turbine -S)
+source $( turbine -C )
 
 TURBINE_INCLUDE=${TURBINE_HOME}/include
 TURBINE_LIB=${TURBINE_HOME}/lib

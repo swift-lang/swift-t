@@ -1,5 +1,8 @@
 #!/bin/sh -eu
 
+THIS=$( dirname $0 )
+cd $THIS
+
 echo "Stand-alone"
 ./test-mvm.sh
 
