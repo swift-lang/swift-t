@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.3.0, July 2017
+v1.3.0, December 2017
 
 
 == How to use this guide
@@ -1507,7 +1507,7 @@ nice swift-t workflow.swift
 [[cori_compute]]
 ===== Compute nodes
 
-There are two Swift/T installations for two different Python installations:
+There are multiple Swift/T installations for different Python installations:
 
 *Python and R (I)*
 
@@ -1541,6 +1541,18 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
+
+*Python and R (III)*
+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-12-19/stc/bin+
+
+Cori uses SLURM.  Run with
+----
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/intel-tensorflow
+LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
+----
 
 ==== Build instructions
 
