@@ -2594,6 +2594,9 @@ Turbine accepts the following arguments:
 +-X+:: In place of of program.tic, run standalone Turbine executable
         (created by <<mkstatic,+mkstatic.tcl+>>)
 
+[[turbine_env]]
+==== Environment variables
+
 The user controls the Turbine run time configuration through
 environment variables:
 
@@ -2675,7 +2678,6 @@ execution.
 To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
 with it enabled)
 
-[[turbine_launch_options]]
 +TURBINE_LAUNCH_OPTIONS+::
 Provide other arguments to +mpiexec+.
 
