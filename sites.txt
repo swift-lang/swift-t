@@ -218,6 +218,13 @@ Optional arguments passed to +sbatch+.  These arguments may include
 +MAIL_ENABLED+:: If 1, send email on job completion.
 +MAIL_ADDRESS+:: If +MAIL_ENABLED+, send the email to the given address.
 
+[[variables_other]]
+==== Other settings
+
+The http://swift-lang.github.io/swift-t/guide.html#turbine_env[Turbine
+environment variable] +TURBINE_LAUNCH_OPTIONS+ will be applied to
++mpiexec+, +srun+, or +aprun+ as appropriate.
+
 [[options]]
 === Turbine scheduler script options
 
