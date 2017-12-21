@@ -297,6 +297,14 @@ JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 export ENV
 export ENV_PAIRS="${env}"
 
+if (( ${MAIL_ENABLED:-0} == 1 ))
+then
+  if [[ ${MAIL_ADDRESS:-} == "" ]]
+  then
+    print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
+  fi
+fi
+
 ## Local Variables:
 ## mode: sh
 ## End:

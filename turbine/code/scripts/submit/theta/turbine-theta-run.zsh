@@ -58,10 +58,9 @@ else
   export WORK_DIRECTORY=${CHANGE_DIRECTORY}
 fi
 
-export MAIL_ARG=""
 if (( MAIL_ENABLED ))
 then
-  MAIL_ARG=( -M ${MAIL_ADDRESS} )
+  export MAIL_ARG="-M ${MAIL_ADDRESS}"
 fi
 
 # Create the environment list in a format Cobalt can support
