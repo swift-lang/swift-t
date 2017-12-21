@@ -1,15 +1,17 @@
 #!/bin/bash -l
-#COBALT -A getenv(PROJECT)
-#COBALT -q getenv(QUEUE)
-#COBALT -n getenv(NODES)
+ifelse(getenv_nospace(PROJECT), `',,#COBALT -A getenv_nospace(PROJECT)
+)ifelse(getenv_nospace(QUEUE), `',,#COBALT -q getenv(QUEUE)
+)#COBALT -n getenv(NODES)
 #COBALT -t getenv(WALLTIME)
 #COBALT --cwd getenv(WORK_DIRECTORY)
 #COBALT -o getenv_nospace(TURBINE_OUTPUT)/output.txt
 #COBALT -e getenv_nospace(TURBINE_OUTPUT)/output.txt
 #COBALT --jobname getenv(TURBINE_JOBNAME)
-#COBALT getenv(MAIL_ARG)
+ifelse(getenv_nospace(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
+)
 
 # These COBALT directives have to stay right at the top of the file!
+# No blank lines are allowed, making this look cluttered.
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
