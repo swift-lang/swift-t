@@ -84,8 +84,6 @@ do
     APRUN_ENVS+="-e ${KV} "
 done
 
-# echo APRUN_ENVS: $APRUN_ENVS
-
 # Run Turbine:
 aprun -n ${PROCS} -N ${PPN} \
       ${APRUN_ENVS} \
