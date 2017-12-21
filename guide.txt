@@ -594,8 +594,8 @@ may be set with environment variable +TMPDIR+ which defaults to
 middle or as a suffix, depending on +mktemp+ implementation.
 
 8.6:: Implemented with a Tcl builtin.  The default directory is
-+/tmp+, set environment variable +SWIFT_TMP+ to change this.  The file
-always has suffix +.turbine+.
++/tmp+, set environment variable +TMP+ or +SWIFT_TMP+ to change this.
+The file always has suffix +.turbine+.
 
 Swift/T assumes that the file system is shared among all nodes.  Set
 +SWIFT_TMP+ to a shared file system for best results when running
