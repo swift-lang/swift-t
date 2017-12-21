@@ -213,8 +213,8 @@ fi
 
 START=$( date +%s )
 
-if [[ ${PROCS} == 0 ]]
-  then
+if (( ${PROCS} == 0 ))
+then
   print "The process count was not specified!"
   print "Use the -n argument or set environment variable PROCS."
   exit 1
