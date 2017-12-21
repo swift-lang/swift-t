@@ -119,6 +119,7 @@ SETTINGS=0
 export MAIL_ENABLED=0
 export MAIL_ADDRESS=0
 export DRY_RUN=0
+WAIT_FOR_JOB=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -129,7 +130,7 @@ env=()
 export ENV env
 
 # Get options
-while getopts "d:D:e:i:M:n:o:s:t:VxXY" OPTION
+while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
  do
   case ${OPTION}
    in
@@ -159,6 +160,8 @@ while getopts "d:D:e:i:M:n:o:s:t:VxXY" OPTION
     t) WALLTIME=${OPTARG}
        ;;
     V) VERBOSE=1
+       ;;
+    w) WAIT_FOR_JOB=1
        ;;
     x) export EXEC_SCRIPT=1
        ;;

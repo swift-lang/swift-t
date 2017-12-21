@@ -53,12 +53,12 @@ env+=( TCLLIBPATH="${TCLLIBPATH}"
 
 if [[ ${CHANGE_DIRECTORY} == "" ]]
 then
-  WORK_DIRECTORY=${TURBINE_OUTPUT}
+  export WORK_DIRECTORY=${TURBINE_OUTPUT}
 else
-  WORK_DIRECTORY=${CHANGE_DIRECTORY}
+  export WORK_DIRECTORY=${CHANGE_DIRECTORY}
 fi
 
-MAIL_ARG=""
+export MAIL_ARG=""
 if (( MAIL_ENABLED ))
 then
   MAIL_ARG=( -M ${MAIL_ADDRESS} )
@@ -70,25 +70,18 @@ export ENV_LIST
 
 # Launch it
 export COMMAND
+COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 TURBINE_THETA_M4=${TURBINE_HOME}/scripts/submit/theta/turbine-theta.sh.m4
 TURBINE_THETA=${TURBINE_OUTPUT}/turbine-theta.sh
-m4 ${TURBINE_THETA_M4} > ${TURBINE_THETA}
+m4 ${COMMON_M4} ${TURBINE_THETA_M4} > ${TURBINE_THETA}
 print "wrote: ${TURBINE_THETA}"
 chmod u+x ${TURBINE_OUTPUT}/turbine-theta.sh
-qsub -n ${NODES}                          \
-     -t ${WALLTIME}                       \
-     ${QUEUE_ARG}                         \
-     --cwd ${WORK_DIRECTORY}              \
-     ${MAIL_ARG}                          \
-     -o ${TURBINE_OUTPUT}/output.txt      \
-     -e ${TURBINE_OUTPUT}/output.txt      \
-     --jobname ${TURBINE_JOBNAME}         \
-     ${TURBINE_OUTPUT}/turbine-theta.sh | \
-  read JOB_ID
+print "running qsub ..."
+qsub ${TURBINE_OUTPUT}/turbine-theta.sh | read JOB_ID
 
-if [[ ${JOB_ID} == "" ]]
+if [[ ${pipestatus[1]} != 0 ]] || [[ ${JOB_ID} == "" ]]
 then
-  abort "qsub failed!"
+  abort "qsub failed! ${JOB_ID}" # JOB_ID may have an error message
 fi
 
 declare JOB_ID
@@ -98,6 +91,11 @@ turbine_log >> ${LOG_FILE}
 
 # Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
+
+if (( ! WAIT_FOR_JOB ))
+then
+  exit 0
+fi
 
 # Wait for job completion
 cqwait ${JOB_ID}
@@ -114,11 +112,11 @@ print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG_FILE}
 
 # This does not work in MODE=cluster (Tukey)
 # Report non-zero job result codes
-# if ! grep "code: 0" ${OUTPUT_FILE}
-# then
-#   print "JOB CRASHED" | tee -a ${LOG_FILE}
-#   grep "job result code:" ${OUTPUT_FILE} >> ${LOG_FILE}
-#   exit 1
-# fi
+if ! grep "CODE: 0" ${OUTPUT_FILE}
+then
+  print "JOB CRASHED" | tee -a ${LOG_FILE}
+  grep "job result code:" ${OUTPUT_FILE} >> ${LOG_FILE}
+  exit 1
+fi
 
 exit 0

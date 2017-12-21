@@ -107,7 +107,7 @@ namespace eval turbine {
     set retry [ expr $tries <= $app_retries ]
     if { ! $retry } {
       turbine_error "app execution failed" on: [ c_utils::hostname ] \
-          "\n $msg" "\n command: $cmd"
+          "\n $msg" "\n command: $cmd $args"
     }
     app_retry $msg $tries
   }
