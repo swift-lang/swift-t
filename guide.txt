@@ -2,6 +2,8 @@
 ////
 Swift/T guide, asciidoc format
 http://swift-lang.github.io/swift-t/guide.html
+
+This document is filled at column 70 by emacs auto-fill-mode.
 ////
 
 :toc:
@@ -18,13 +20,14 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-July 2017
+October 2017
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
-concurrently.  It is implemented with a compiler and runtime system; the Swift/Turbine Compiler (STC) allows you to write Swift programs and
-run them using Turbine.  At runtime, Swift/T programs are MPI programs
-capable of utilizing very large supercomputers.
+concurrently.  It is implemented with a compiler and runtime system;
+the Swift/Turbine Compiler (STC) allows you to write Swift programs
+and run them using Turbine.  At runtime, Swift/T programs are MPI
+programs capable of utilizing very large supercomputers.
 
 [[support]]
 == Support
@@ -235,11 +238,16 @@ swift-t -n 4 program.swift
 In this case, +program.tic+ is created in a temporary file and then
 deleted after execution.
 
-+swift-t+ accepts arguments for both STC and Turbine.
-Provide +-h+ to any tool (+swift-t+, +stc+, +turbine+) to obtain help.
+Provide +-h+ to any command (+swift-t+, +stc+, +turbine+) to obtain
+help.
 
-See the <<Turbine,Turbine section>> for more information about
-running the program.
++swift-t+ accepts arguments for both STC and Turbine.  If there is a
+conflict between the +stc+ argument and the +turbine+ argument, +stc+
+receives the argument.  Use:
+----
+swift-t -t <flag>[:<value>]+
+----
+to pass +-<flag> [<value>]+ to +turbine+
 
 [[stc_arguments]]
 STC accepts the following arguments:
@@ -277,6 +285,19 @@ Additional arguments for advanced users/developers:
 +-f+:: Enable a specific optimization.  See <<Optimizations>>
 +-F+:: Disable a specific compiler optimization.  See <<Optimizations>>
 
+See the <<Turbine,Turbine section>> for more information about
+arguments for run time.
+
+[[swift-t-t]]
+Use +swift-t -t <flag>[:<value>]+ to pass-through to +turbine+.  A
+common use case for this is +-f+, which is a compiler option flag for
++stc+ (analogous to +gcc -f+) and a runtime flag for +turbine+
+(analogous to +mpiexec -f+).  For example, to pass a MPICH hosts file
+from +swift-t+ to +turbine+, use:
+----
+swift-t -t f:hosts.txt workflow.swift ...
+----
+
 == Program structure
 
 Swift is a language with C-like syntax. Hello world is written as:
@@ -305,7 +326,8 @@ in the Swift source code.  E.g. a function defined on line 100
 of a Swift source file can be called at line 10.
 
 STC input is preprocessed by
-https://gcc.gnu.org/onlinedocs/cpp[+cpp+], the C preprocessor.
+https://gcc.gnu.org/onlinedocs/cpp[+cpp+], the C preprocessor,
+<<cpp,by default>>.
 
 == Comments
 
@@ -365,7 +387,6 @@ Swift is a statically and strongly typed language.  Thus, every variable
 in the program must have a fixed type at compile time and types are,
 with limited exceptions, not automatically converted.
 
-
 To declare a variable in Swift code, you must declare it with
 one of following variations of the variable declaration syntax:
 --------------------------------------
@@ -382,18 +403,19 @@ x = 1;
 --------------------------------------
 
 In the last two cases, the variable is declared and assigned in the
-same statement.
-In the first two cases, the type of the variable is explicitly specified
-by the programmer.  In the last case, where the type of the variable is
-omitted and there was no prior declaration of the variable, then the
-type of the variable is automatically inferred based on the type of the
-expression on the right hand side of the assignment.
+same statement.  In the first two cases, the type of the variable is
+explicitly specified by the programmer.  In the last case, where the
+type of the variable is omitted and there was no prior declaration of
+the variable, then the type of the variable is automatically inferred
+based on the type of the expression on the right hand side of the
+assignment.
 
-The scope of a variable is limited to the code block in which the declaration
-appears.  Two variables with the same name cannot be declared in the same
-block.  *Shadowing* of variables, where a variable has the same name as
-a variable in an outer scope, is also not allowed in Swift.  This language
-design decision is intended to eliminate some common programming errors.
+The scope of a variable is limited to the code block in which the
+declaration appears.  Two variables with the same name cannot be
+declared in the same block.  *Shadowing* of variables, where a
+variable has the same name as a variable in an outer scope, is also
+not allowed in Swift.  This language design decision is intended to
+eliminate some common programming errors.
 
 This is shadowing and will result in a compile error:
 -------------------------------------------
@@ -403,8 +425,8 @@ int x;
 }
 -------------------------------------------
 
-This is not shadowing, because the scopes of the two declarations of x do not
-overlap, and is allowed:
+This is not shadowing, because the scopes of the two declarations of x
+do not overlap, and is allowed:
 -------------------------------------------
 {
   int x;
@@ -981,10 +1003,10 @@ In general, execution ordering in Swift/T is implicit and driven by
 data dependencies.  In some cases it is useful to add explicit data
 dependencies, for example if you want to print a message to indicate
 that variable was assigned.  It is possible for the programmer to
-express additional execution ordering using two constructs: the +wait+
-statement and the +\=>+ chaining operator.
+express additional execution ordering using three constructs: the
++wait+ and +wait deep+ statements and the +\=>+ chaining operator.
 
-In a wait statement, a block of code is executed after
+In a +wait+ statement, a block of code is executed after
 one or more variables are closed.
 ----
 x = f();
@@ -996,6 +1018,19 @@ wait(x, y) {
   trace("x and y are closed!");
 }
 ----
+
+In a +wait deep+ statement, a block of code is executed after all
+elements of an array have been closed:
+----
+int A[];
+A = [f(), g()];
+
+wait deep (A) {
+  trace("All elements of A are closed!");
+}
+
+----
+
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
@@ -1280,10 +1315,18 @@ respectively
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
 
+[[stats]]
+
 *Import:* +stats+
 
-+sum_integer(int[]) -> int+:: Sum
-+avg(int|float[]) -> float+:: Average
++sum_integer(int[]) -> int+::
+Sum
+
++avg(int|float[]) -> float+::
+Average
+
++std(float[]) -> float+::
+Standard deviation
 
 === System
 
@@ -1303,6 +1346,12 @@ Obtain time since the Unix epoch in whole seconds.
 
 +INT_MAX() -> int+::
 Obtain the largest integer representable on the current platform.
+
++system(string[]) -> int+::
+Run the command (string array), return its exit code.
+
++system1(string) -> int+::
+Run the command (simple string), return its exit code.
 
 [[argv]]
 ==== Command line
@@ -1428,11 +1477,13 @@ Available glob symbols include:
 Attempt to find a file with the given name in the filesystem: return
 +true+ if found, else +false+.
 
-+file_lines(file) -> string[]+::
++file_lines(file, comment="#") -> string[]+::
 
 Reads the whole file, returning each line as a separate entry in the
-output array.  Comments with +#+ are excised, leading and trailing
-whitespace is trimmed, and blank lines are omitted.
+output array.  The +comment+ argument is optional and defaults to
++"#"+ .  Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.  If +comment==""+, comments are
+disabled.
 
 +file_mtime(string) -> int+::
 
@@ -2106,7 +2157,7 @@ code is passed to Python for evaluation.  The output is:
 
 ===== Python state
 
-The +python()+ function reset the Python interpreter at the end of
+The +python()+ function resets the Python interpreter at the end of
 each task.  If you want to access state from a previous Python task,
 use +python_persist()+, which leaves the Python interpreter in memory.
 Global variables and other state in Python will be accessible from
@@ -2543,6 +2594,9 @@ Turbine accepts the following arguments:
 +-X+:: In place of of program.tic, run standalone Turbine executable
         (created by <<mkstatic,+mkstatic.tcl+>>)
 
+[[turbine_env]]
+==== Environment variables
+
 The user controls the Turbine run time configuration through
 environment variables:
 
@@ -2573,15 +2627,16 @@ goes to standard output by default.
 
 +SWIFT_PATH+::
 +TURBINE_PATH+::
-
 Space-separated list of Swift/T extension (Tcl) package locations.
 Either variable name may be used.
+
++TURBINE_USER_LIB+::
+Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 
 anchor:env_swift_tmp[]
 
 +SWIFT_TMP+::
 +TMP+::
-
 Directory location for <<unmapped_files,unmapped files>>.
 +SWIFT_TMP+ overrides +TMP+.  The default is +/tmp+.
 
@@ -2590,9 +2645,6 @@ Directory location for <<unmapped_files,unmapped files>>.
 Setting this to 0 logs these temporary files when created and prevents
 Swift/T from automatically deleting them.
 
-+TURBINE_USER_LIB+::
-
-Alias for +SWIFT_PATH+.  Deprecated but retained for compatibility.
 
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
@@ -2627,7 +2679,7 @@ To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
 with it enabled)
 
 +TURBINE_LAUNCH_OPTIONS+::
-Provide other arguments to +mpiexec+, such as a machine file, etc.
+Provide other arguments to +mpiexec+.
 
 +TURBINE_SRAND+::
 If unset or empty, the random number generator seed will be set to the
@@ -3152,6 +3204,47 @@ Swift/T provides some tools to process MPE logs.  They are available
 and
 https://github.com/swift-lang/swift-t/tree/master/mpe[documented here].  See also
 http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013[this paper].
+
+=== Startup/shutdown hooks
+
+Turbine has hooks that can be accessed to execute shell scripts, Tcl
+code, or C/C++ code on each node at startup and shutdown.
+
+==== Shell or Tcl hooks
+
+By simply setting environment variables, you can trigger fragments of
+Tcl or shell code to execute on each node of the Swift/T run at
+startup and/or shutdown.  In this example:
+
+----
+$ export TURBINE_LEADER_HOOK_STARTUP=" puts [ exec $PWD/hook-startup.sh ]"
+$ export TURBINE_LEADER_HOOK_SHUTDOWN="puts [ exec $PWD/hook-shutdown.sh ]"
+$ swift-t workflow.swift
+----
+
+the Tcl fragments in double quotes will be run at startup and shutdown
+respectively.  In this case, the Tcl fragments simply +exec+ the given
+shell scripts.
+
+These fragments are run on the _leader_ ranks of each node.  These are
+the lowest ranks on the node.
+
+A typical use of this feature is to copy data into node-local storage
+before workflow execution, and remove it on workflow completion.
+
+==== C/C++ hooks
+
+If you are calling C/C\++ native code from Swift/T, you can use the
+provided C/C\++ shutdown hook to clean up at the end of the workflow.
+The function signature is in +turbine-finalizers.h+:
+
+----
+int turbine_register_finalizer(void (*func)(void*),
+                               void* context);
+----
+
+The +func()+ will be called once per rank at the end of the workflow.
+Multiple functions can be registered.
 
 == Model exploration workflows
 

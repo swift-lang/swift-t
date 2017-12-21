@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.3.0, July 2017
+v1.3.0, December 2017
 
 
 == How to use this guide
@@ -213,10 +213,17 @@ Optional arguments passed to +sbatch+.  These arguments may include
 
 *Mail*
 
-(Currently supported systems: +slurm+)
+(Currently supported systems: +cobalt+, +slurm+)
 
 +MAIL_ENABLED+:: If 1, send email on job completion.
 +MAIL_ADDRESS+:: If +MAIL_ENABLED+, send the email to the given address.
+
+[[variables_other]]
+==== Other settings
+
+The http://swift-lang.github.io/swift-t/guide.html#turbine_env[Turbine
+environment variable] +TURBINE_LAUNCH_OPTIONS+ will be applied to
++mpiexec+, +srun+, or +aprun+ as appropriate.
 
 [[options]]
 === Turbine scheduler script options
@@ -1045,10 +1052,10 @@ Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 Run with:
 ----
-$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
-$ export PROJECT=... QUEUE=...
+$ GCC=/opt/gcc/6.3.0/snos/lib64
+$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
 ----
 
@@ -1507,7 +1514,7 @@ nice swift-t workflow.swift
 [[cori_compute]]
 ===== Compute nodes
 
-There are two Swift/T installations for two different Python installations:
+There are multiple Swift/T installations for different Python installations:
 
 *Python and R (I)*
 
@@ -1541,6 +1548,18 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 
 The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
 cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
+
+*Python and R (III)*
+
+Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-12-19/stc/bin+
+
+Cori uses SLURM.  Run with
+----
+export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/intel-tensorflow
+LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
+----
 
 ==== Build instructions
 

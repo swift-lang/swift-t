@@ -590,7 +590,15 @@ The Turbine API is a Tcl API.  Some of the features are defined in
 Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
 Tcl extensions.
 
+* The Swift/T standard library functions are defined in +export/*.swift+
 * All Tcl source is in +lib+
+** Turbine core functionality is in:
+*** +turbine.tcl+: Initialization and rank management, error
+    utilities, etc.
+*** +container.tcl+: Array operation implementations
+*** +worker.tcl+: Worker functionality
+** All other Tcl files support the Swift/T standard library and
+   correspond to the Swift/T functions defined in +export/*.swift+
 * Turbine C code, e.g. for caches and the worker loop is in +src/turbine+
 * Tcl extensions are in +src/tcl+
 ** +src/tcl/turbine+ wraps up Turbine C code for Tcl

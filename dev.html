@@ -1782,8 +1782,44 @@ Tcl extensions.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
+The Swift/T standard library functions are defined in <code>export/*.swift</code>
+</p>
+</li>
+<li>
+<p>
 All Tcl source is in <code>lib</code>
 </p>
+<div class="ulist"><ul>
+<li>
+<p>
+Turbine core functionality is in:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>turbine.tcl</code>: Initialization and rank management, error
+    utilities, etc.
+</p>
+</li>
+<li>
+<p>
+<code>container.tcl</code>: Array operation implementations
+</p>
+</li>
+<li>
+<p>
+<code>worker.tcl</code>: Worker functionality
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+All other Tcl files support the Swift/T standard library and
+   correspond to the Swift/T functions defined in <code>export/*.swift</code>
+</p>
+</li>
+</ul></div>
 </li>
 <li>
 <p>
@@ -3686,7 +3722,7 @@ Test package on Linux and Mac
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-06-29 10:40:18 CDT
+ 2017-08-18 13:00:44 CDT
 </div>
 </div>
 </body>

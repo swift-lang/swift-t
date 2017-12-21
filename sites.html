@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.3.0,</span>
-<span id="revdate">July 2017</span>
+<span id="revdate">December 2017</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1057,7 +1057,7 @@ Optional arguments passed to <code>sbatch</code>.  These arguments may include
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Mail</strong></p></div>
-<div class="paragraph"><p>(Currently supported systems: <code>slurm</code>)</p></div>
+<div class="paragraph"><p>(Currently supported systems: <code>cobalt</code>, <code>slurm</code>)</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>MAIL_ENABLED</code>
@@ -1076,6 +1076,12 @@ If <code>MAIL_ENABLED</code>, send the email to the given address.
 </p>
 </dd>
 </dl></div>
+</div>
+<div class="sect3">
+<h4 id="variables_other">Other settings</h4>
+<div class="paragraph"><p>The <a href="http://swift-lang.github.io/swift-t/guide.html#turbine_env">Turbine
+environment variable</a> <code>TURBINE_LAUNCH_OPTIONS</code> will be applied to
+<code>mpiexec</code>, <code>srun</code>, or <code>aprun</code> as appropriate.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -2284,10 +2290,10 @@ Run with:
 Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ PY=/home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$PY/lib:$R/lib:$LD_LIBRARY_PATH
-$ export PROJECT=... QUEUE=...
+<pre><code>$ GCC=/opt/gcc/6.3.0/snos/lib64
+$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
+$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
+$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
 $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
 </div></div>
 </div>
@@ -2808,7 +2814,7 @@ nice swift-t workflow.swift</code></pre>
 </div>
 <div class="sect4">
 <h5 id="cori_compute">Compute nodes</h5>
-<div class="paragraph"><p>There are two Swift/T installations for two different Python installations:</p></div>
+<div class="paragraph"><p>There are multiple Swift/T installations for different Python installations:</p></div>
 <div class="paragraph"><p><strong>Python and R (I)</strong></p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
 <div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
@@ -2836,6 +2842,16 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 </div></div>
 <div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
 cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
+<div class="paragraph"><p><strong>Python and R (III)</strong></p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-2017-12-19/stc/bin</code></p></div>
+<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
+export PYTHONHOME=/usr/common/software/intel-tensorflow
+LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
+swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift</code></pre>
+</div></div>
 </div>
 </div>
 <div class="sect3">
@@ -3362,8 +3378,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.3.0<br />
-Last updated
- 2017-07-19 12:43:19 CDT
+Last updated 2017-12-20 14:24:48 CST
 </div>
 </div>
 </body>
