@@ -97,3 +97,7 @@ echo "COMPLETE: $(date)"
 
 # Return exit code from launcher (aprun)
 exit ${CODE}
+
+# Local Variables:
+# mode: m4
+# End:
