@@ -95,5 +95,5 @@ echo "Turbine Theta launcher done."
 echo "CODE: ${CODE}"
 echo "COMPLETE: $(date)"
 
-# Return exit code from launcher (mpiexec)
+# Return exit code from launcher (aprun)
 exit ${CODE}
