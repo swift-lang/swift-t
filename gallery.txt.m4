@@ -25,7 +25,7 @@ Links:
 
 * link:guide.html[General documentation for Swift/T]
 
-* Post to https://lists.ci.uchicago.edu/cgi-bin/mailman/listinfo/swift-user[the Swift
+* Post to https://groups.google.com/forum/#!forum/swift-t-user[the Swift
   user list] with questions about these examples.
 
 * These example scripts may be link:downloads/gallery.tar.gz[downloaded
