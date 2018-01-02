@@ -133,6 +133,8 @@ Run it as:
 
 EXAMPLE(fib/run.sh)
 
+Each recursive call to +fib()+ is spawned as a concurrent task.
+
 The +sys+ module provides the +argv()+ function, which provides a
 handy key/value interface for input values.
 
