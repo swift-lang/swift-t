@@ -122,6 +122,8 @@ is part of the Swift/T standard library in module +unix+.
 
 == Swift/T for recursive algorithms
 
+=== Fibonacci
+
 This script computes the given
 link:https://en.wikipedia.org/wiki/Fibonacci_number[Fibonacci number]:
 
@@ -133,6 +135,8 @@ EXAMPLE(fib/run.sh)
 
 The +sys+ module provides the +argv()+ function, which provides a
 handy key/value interface for input values.
+
+=== Merge sort
 
 This script implements a parallel
 link:https://en.wikipedia.org/wiki/Merge_sort[merge sort].  The data
