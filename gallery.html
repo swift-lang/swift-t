@@ -983,6 +983,7 @@ trace(fib(n));</code></pre>
 <pre><code>#!/bin/sh -e
 swift-t fib.swift -n=7</code></pre>
 </div></div>
+<div class="paragraph"><p>Each recursive call to <code>fib()</code> is spawned as a concurrent task.</p></div>
 <div class="paragraph"><p>The <code>sys</code> module provides the <code>argv()</code> function, which provides a
 handy key/value interface for input values.</p></div>
 </div>
@@ -1142,7 +1143,7 @@ mpicc -static  -o hello.x hello_main.o ${TURBINE_LIBS} ${TURBINE_RPATH}</code></
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-01-02 10:24:30 CST
+Last updated 2018-01-02 10:26:26 CST
 </div>
 </div>
 </body>
