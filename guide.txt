@@ -1143,10 +1143,10 @@ block again until +A[key]+ is stored.
 
 Select items from an array.
 
-pick_integer_string(string A[], int indices[]) -> string result[]::
++pick_integer_string(string A[], int indices[]) -> string result[]+::
 Select the +indices+ from +A+.  The +result+ may be reordered.
 
-pick_stable_integer_string(string A[], int indices[]) -> string result[]::
++pick_stable_integer_string(string A[], int indices[]) -> string result[]+::
 Select the +indices+ from +A+.
 The ordering of +result+ will be the same as in +A+.
 
