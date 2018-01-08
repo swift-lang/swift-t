@@ -1150,6 +1150,11 @@ Select the +indices+ from +A+.  The +result+ may be reordered.
 Select the +indices+ from +A+.
 The ordering of +result+ will be the same as in +A+.
 
++pick_regexp(string pattern, string A[]) -> string result[]+::
+Select strings from +A+ matching regular expression +pattern+.
+(This function is implemented with the Tcl regular expressions
+https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm[documented here].)
+
 === Type conversion
 
 ////
