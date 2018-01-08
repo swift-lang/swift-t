@@ -264,7 +264,8 @@ specify it with +-D+.  To prevent this from happening, specify
 
 +-e <key>=<value>+::
 Set an environment variable in the job environment.  This may be used
-multiple times.
+multiple times.  <<automatic_env,Automatic environment variables>>
+need not be specified here.
 
 +-i <script>+::
 Set an initialization script to run before launching Turbine.  This
