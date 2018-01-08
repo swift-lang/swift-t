@@ -33,14 +33,16 @@ swift-t.list.adoc: $(BIBGEN) $(BIB) swift-t.list $(GENERATOR) build.mk
 
 pubs.html: swift-t.list.adoc
 
+DOCS_M4 = gallery.txt
+
 # Gallery has extra dependencies and uses M4 to assemble
 GALLERY_SWIFT = $(shell find gallery -name "*.swift")
 GALLERY_SH    = $(shell find gallery -name "*.sh")
 GALLERY_CODE = $(GALLERY_SWIFT) $(GALLERY_SH)
 
 # This file is an intermediate artifact
-gallery.txt: code.m4 gallery.txt.m4
-	@ echo M4 $(<)
+$(DOCS_M4): %.txt: code.m4 %.txt.m4
+	@ echo M4 $(@)
 	@ m4 $(^) > $(@)
 
 gallery.html: gallery.txt $(GALLERY_CODE)
