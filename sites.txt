@@ -225,6 +225,28 @@ The http://swift-lang.github.io/swift-t/guide.html#turbine_env[Turbine
 environment variable] +TURBINE_LAUNCH_OPTIONS+ will be applied to
 +mpiexec+, +srun+, or +aprun+ as appropriate.
 
+[[automatic_env]]
+==== Automatic environment variables
+
+These variables are automatically passed to the job, and are available
+in Swift/T via +getenv()+.
+
+* PROJECT
+* WALLTIME
+* QUEUE
+* TURBINE_OUTPUT
+* TURBINE_JOBNAME
+* TURBINE_LOG
+* TURBINE_DEBUG
+* MPI_LABEL
+* TURBINE_WORKERS
+* ADLB_SERVERS
+* TCLLIBPATH
+* LD_LIBRARY_PATH
+
+NOTE: +TCLLIBPATH+ should not be set directly by the user,
+see +SWIFT_PATH+/+TURBINE_PATH+
+
 [[options]]
 === Turbine scheduler script options
 
