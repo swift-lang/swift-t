@@ -1501,6 +1501,10 @@ Returns a string giving the type of file, which will be one of
 +"file"+, +"directory"+, +"characterSpecial"+, +"blockSpecial"+,
 +"fifo"+, +"link"+, or +"socket"+.
 
++file_type_string(string) -> string+::
+
+As +file_type()+ but accepts a +string+.
+
 +dirname_string(string) -> string+::
 
 Returns the directory part of the given string path.
