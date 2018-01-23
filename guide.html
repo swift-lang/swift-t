@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">October 2017</span><br />
+<span id="author">January 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1675,8 +1675,8 @@ middle or as a suffix, depending on <code>mktemp</code> implementation.
 <dd>
 <p>
 Implemented with a Tcl builtin.  The default directory is
-<code>/tmp</code>, set environment variable <code>SWIFT_TMP</code> to change this.  The file
-always has suffix <code>.turbine</code>.
+<code>/tmp</code>, set environment variable <code>TMP</code> or <code>SWIFT_TMP</code> to change this.
+The file always has suffix <code>.turbine</code>.
 </p>
 </dd>
 </dl></div>
@@ -2229,7 +2229,7 @@ block again until <code>A[key]</code> is stored.
 <div class="paragraph"><p>Select items from an array.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-pick_integer_string(string A[], int indices[]) &#8594; string result[]
+<code>pick_integer_string(string A[], int indices[]) &#8594; string result[]</code>
 </dt>
 <dd>
 <p>
@@ -2237,12 +2237,22 @@ Select the <code>indices</code> from <code>A</code>.  The <code>result</code> ma
 </p>
 </dd>
 <dt class="hdlist1">
-pick_stable_integer_string(string A[], int indices[]) &#8594; string result[]
+<code>pick_stable_integer_string(string A[], int indices[]) &#8594; string result[]</code>
 </dt>
 <dd>
 <p>
 Select the <code>indices</code> from <code>A</code>.
 The ordering of <code>result</code> will be the same as in <code>A</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>pick_regexp(string pattern, string A[]) &#8594; string result[]</code>
+</dt>
+<dd>
+<p>
+Select strings from <code>A</code> matching regular expression <code>pattern</code>.
+(This function is implemented with the Tcl regular expressions
+<a href="https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm">documented here</a>.)
 </p>
 </dd>
 </dl></div>
@@ -3037,6 +3047,14 @@ its POSIX modification time in seconds since the Unix epoch.
 Returns a string giving the type of file, which will be one of
 <code>"file"</code>, <code>"directory"</code>, <code>"characterSpecial"</code>, <code>"blockSpecial"</code>,
 <code>"fifo"</code>, <code>"link"</code>, or <code>"socket"</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>file_type_string(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+As <code>file_type()</code> but accepts a <code>string</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5601,7 +5619,8 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-12-20 14:22:54 CST
+Last updated
+ 2018-01-23 14:32:38 CST
 </div>
 </div>
 
