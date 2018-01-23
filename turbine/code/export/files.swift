@@ -44,6 +44,11 @@
 "turbine" "0.0.2"
 [ "set <<t>> [ file type [ lindex <<f>> 0 ] ]" ];
 
+@pure
+(string t) file_type_string(string f)
+"turbine" "1.0"
+[ "set <<t>> [ file type <<f>> ]" ];
+
 (boolean o) file_exists(string f)
 "turbine" "0.1"
 [ "set <<o>> [ file exists <<f>> ]" ];
