@@ -1229,7 +1229,7 @@ Urbana-Champaign.
 
 ==== Public installation
 
-*As of:*  2017/01
+*As of:*  2017/09
 
 ===== Login nodes
 
