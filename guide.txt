@@ -1613,6 +1613,11 @@ hostmap and return one rank running on that host with +HARD+, +RANK+.
 +hostmapOneWorkerRank(string) -> int+:: Lookup the string as a host
 in the hostmap and return one of the worker ranks running on that host.
 
++hostmapLeaders() -> int[]+::
+
+Obtain ranks of all "leaders"- the lowest worker rank on each node of
+the run.  Can be used to send a task to each node.
+
 [[library_unix]]
 === Unix tools
 
