@@ -1561,32 +1561,45 @@ Obtain new temporary file, return its name as a string.
 
 *Import:* +blob+
 
-+blob_size(blob) -> int+:: Obtain the size of a blob in bytes.
++blob_size(blob) -> int+::
 
-+blob_null() -> blob+:: Obtain an empty blob of size 0.
+Obtain the size of a blob in bytes.
 
-+string2blob(string) -> blob+:: Convert a string into a blob.
++blob_null() -> blob+::
 
-+blob2string(blob) -> string+:: Convert a blob into a string.  If
-the blob is not NULL-terminated, this function appends the
-NULL-terminator.
+Obtain an empty blob of size 0.
 
-+floats2blob(float[]) -> blob+:: Convert an array of Swift floats
-(implemented as doubles) to blob containing the C-formatted array of
-doubles .
++string2blob(string) -> blob+::
 
-+blob2floats(blob) -> float[]+:: Convert blob containing the
-C-formatted array of doubles to an array of Swift floats
-(implemented as doubles).
+Convert a string into a blob.
 
-+ints2blob(int i[]) -> blob+:: Convert blob containing the
-C-formatted array of ints to an array of Swift ints (implemented
-as 64-bit integers).
++blob2string(blob) -> string+::
 
-+blob_read(file) -> blob+:: Reads whole file, returning it as a
-blob.
+Convert a blob into a string.  If the blob is not NULL-terminated,
+this function appends the NULL-terminator.
 
-+blob_write(blob) -> file+:: Writes whole file with given blob.
++floats2blob(float[]) -> blob+::
+
+Convert an array of Swift floats (implemented as doubles) to blob
+containing the C-formatted array of doubles .
+
++blob2floats(blob) -> float[]+::
+
+Convert blob containing the C-formatted array of doubles to an array
+of Swift floats (implemented as doubles).
+
++ints2blob(int i[]) -> blob+::
+
+Convert blob containing the C-formatted array of ints to an array of
+Swift ints (implemented as 64-bit integers).
+
++blob_read(file) -> blob+::
+
+Reads whole file, returning it as a blob.
+
++blob_write(blob) -> file+::
+
+Writes whole file with given blob.
 
 [[library_location]]
 === Location
@@ -1595,23 +1608,33 @@ See the section about <<location,location>>.
 
 *Import:* +location+
 
-+rank2location(int) -> location+:: Convert the rank integer to a
-+location+ variable compatible with +@location+ with +HARD+, +RANK+.
-(Alias: +locationFromRank()+.)
++rank2location(int) -> location+::
 
-+randomWorker() -> location+:: Obtain a worker at random with +HARD+,
-+RANK+.
+Convert the rank integer to a +location+ variable compatible with
++@location+ with +HARD+, +RANK+.  (Alias: +locationFromRank()+.)
 
-+randomWorkerRank() -> int+:: Obtain a random worker rank.
++randomWorker() -> location+::
 
-+hostmapList() -> string[]+:: Obtain the whole hostmap as an array
-with integer keys and string hostname values.
+Obtain a worker at random with +HARD+, +RANK+.
 
-+hostmapOne(string) -> location+:: Lookup the string as a host in the
-hostmap and return one rank running on that host with +HARD+, +RANK+.
++randomWorkerRank() -> int+::
 
-+hostmapOneWorkerRank(string) -> int+:: Lookup the string as a host
-in the hostmap and return one of the worker ranks running on that host.
+Obtain a random worker rank.
+
++hostmapList() -> string[]+::
+
+Obtain the whole hostmap as an array with integer keys and string
+hostname values.
+
++hostmapOne(string) -> location+::
+
+Lookup the string as a host in the hostmap and return one rank running
+on that host with +HARD+, +RANK+.
+
++hostmapOneWorkerRank(string) -> int+::
+
+Lookup the string as a host in the hostmap and return one of the
+worker ranks running on that host.
 
 +hostmapLeaders() -> int[]+::
 
