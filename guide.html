@@ -2933,6 +2933,8 @@ Obtain the name of a file created with
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Import:</strong> <code>files</code></p></div>
+<div class="sect3">
+<h4 id="_i_o_with_files">13.7.1. I/O with files</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>read(file) &#8594; string</code>
@@ -2973,6 +2975,23 @@ This is more efficient than <code>write(join(A))</code> for large <code>A</code>
 but slower than <code>write_array_string()</code> (which is not ordered).
 </p>
 </dd>
+<dt class="hdlist1">
+<code>file_lines(file, comment="#") &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Reads the whole file, returning each line as a separate entry in the
+output array.  The <code>comment</code> argument is optional and defaults to
+<code>"#"</code> .  Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
+disabled.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_finding_files">13.7.2. Finding files</h4>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>glob(string) &#8594; file[]</code>
 </dt>
@@ -3018,18 +3037,11 @@ Attempt to find a file with the given name in the filesystem: return
 <code>true</code> if found, else <code>false</code>.
 </p>
 </dd>
-<dt class="hdlist1">
-<code>file_lines(file, comment="#") &#8594; string[]</code>
-</dt>
-<dd>
-<p>
-Reads the whole file, returning each line as a separate entry in the
-output array.  The <code>comment</code> argument is optional and defaults to
-<code>"#"</code> .  Comments are excised, leading and trailing whitespace is
-trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
-disabled.
-</p>
-</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_file_metadata">13.7.3. File metadata</h4>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>file_mtime(string) &#8594; int</code>
 </dt>
@@ -3057,6 +3069,11 @@ Returns a string giving the type of file, which will be one of
 As <code>file_type()</code> but accepts a <code>string</code>.
 </p>
 </dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_file_name_manipulation">13.7.4. File name manipulation</h4>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>dirname_string(string) &#8594; string</code>
 </dt>
@@ -3123,6 +3140,28 @@ Returns the filename extension part of the given file path.
 </dd>
 </dl></div>
 </div>
+<div class="sect3">
+<h4 id="mktemp">13.7.5. Temporary files</h4>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>mktemp() &#8594; file</code>
+</dt>
+<dd>
+<p>
+Obtain new temporary file.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>mktemp_string() &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain new temporary file, return its name as a string.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
 <div class="sect2">
 <h3 id="library_blobs">13.8. Blobs</h3>
 <div class="paragraph"><p><strong>Import:</strong> <code>blob</code></p></div>
@@ -3156,9 +3195,8 @@ Convert a string into a blob.
 </dt>
 <dd>
 <p>
-Convert a blob into a string.  If
-the blob is not NULL-terminated, this function appends the
-NULL-terminator.
+Convert a blob into a string.  If the blob is not NULL-terminated,
+this function appends the NULL-terminator.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3166,9 +3204,8 @@ NULL-terminator.
 </dt>
 <dd>
 <p>
-Convert an array of Swift floats
-(implemented as doubles) to blob containing the C-formatted array of
-doubles .
+Convert an array of Swift floats (implemented as doubles) to blob
+containing the C-formatted array of doubles .
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3176,9 +3213,8 @@ doubles .
 </dt>
 <dd>
 <p>
-Convert blob containing the
-C-formatted array of doubles to an array of Swift floats
-(implemented as doubles).
+Convert blob containing the C-formatted array of doubles to an array
+of Swift floats (implemented as doubles).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3186,9 +3222,8 @@ C-formatted array of doubles to an array of Swift floats
 </dt>
 <dd>
 <p>
-Convert blob containing the
-C-formatted array of ints to an array of Swift ints (implemented
-as 64-bit integers).
+Convert blob containing the C-formatted array of ints to an array of
+Swift ints (implemented as 64-bit integers).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3196,8 +3231,7 @@ as 64-bit integers).
 </dt>
 <dd>
 <p>
-Reads whole file, returning it as a
-blob.
+Reads whole file, returning it as a blob.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3220,9 +3254,8 @@ Writes whole file with given blob.
 </dt>
 <dd>
 <p>
-Convert the rank integer to a
-<code>location</code> variable compatible with <code>@location</code> with <code>HARD</code>, <code>RANK</code>.
-(Alias: <code>locationFromRank()</code>.)
+Convert the rank integer to a <code>location</code> variable compatible with
+<code>@location</code> with <code>HARD</code>, <code>RANK</code>.  (Alias: <code>locationFromRank()</code>.)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3230,8 +3263,7 @@ Convert the rank integer to a
 </dt>
 <dd>
 <p>
-Obtain a worker at random with <code>HARD</code>,
-<code>RANK</code>.
+Obtain a worker at random with <code>HARD</code>, <code>RANK</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3247,8 +3279,8 @@ Obtain a random worker rank.
 </dt>
 <dd>
 <p>
-Obtain the whole hostmap as an array
-with integer keys and string hostname values.
+Obtain the whole hostmap as an array with integer keys and string
+hostname values.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3256,8 +3288,8 @@ with integer keys and string hostname values.
 </dt>
 <dd>
 <p>
-Lookup the string as a host in the
-hostmap and return one rank running on that host with <code>HARD</code>, <code>RANK</code>.
+Lookup the string as a host in the hostmap and return one rank running
+on that host with <code>HARD</code>, <code>RANK</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3265,8 +3297,17 @@ hostmap and return one rank running on that host with <code>HARD</code>, <code>R
 </dt>
 <dd>
 <p>
-Lookup the string as a host
-in the hostmap and return one of the worker ranks running on that host.
+Lookup the string as a host in the hostmap and return one of the
+worker ranks running on that host.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>hostmapLeaders() &#8594; int[]</code>
+</dt>
+<dd>
+<p>
+Obtain ranks of all "leaders"- the lowest worker rank on each node of
+the run.  Can be used to send a task to each node.
 </p>
 </dd>
 </dl></div>
@@ -4679,7 +4720,8 @@ Alias for <code>SWIFT_PATH</code>.  Deprecated but retained for compatibility.
 </dt>
 <dd>
 <p>
-Directory location for <a href="#unmapped_files">unmapped files</a>.
+Directory location for <a href="#unmapped_files">unmapped files</a> and
+<a href="#mktemp"><code>mktemp()</code></a>.
 <code>SWIFT_TMP</code> overrides <code>TMP</code>.  The default is <code>/tmp</code>.
 </p>
 </dd>
@@ -5619,8 +5661,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated
- 2018-01-23 14:32:38 CST
+Last updated 2018-02-02 14:18:39 CST
 </div>
 </div>
 
