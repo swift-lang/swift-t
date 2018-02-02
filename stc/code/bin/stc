@@ -478,6 +478,11 @@ check_deps()
   local DEP
   for DEP in ${DEPS}
   do
+    if [[ ! -f ${DEP} ]]
+    then
+      print "stc: WARNING: Dependency -U ${DEP} does not exist!"
+      continue
+    fi
     if [[ ${DEP} -nt ${OUTPUT} ]]
     then
       verbose "Dependency file (${DEP}) is newer than output (${OUTPUT})."
