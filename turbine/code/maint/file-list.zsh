@@ -24,6 +24,7 @@ print scripts/main-wrap/settings/*.sh
 print scripts/mkstatic/*.{sh,template}
 print scripts/mkstatic/About.txt
 print scripts/submit/*.*sh*
+print scripts/submit/common.m4
 print scripts/submit/cray/*.*sh*
 print scripts/submit/cobalt/*turbine*.*sh*
 print scripts/submit/ec2/turbine-setup-ec2.zsh
