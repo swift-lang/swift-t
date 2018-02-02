@@ -213,7 +213,7 @@ Optional arguments passed to +sbatch+.  These arguments may include
 
 *Mail*
 
-(Currently supported systems: +cobalt+, +slurm+)
+(Currently supported systems: +cobalt+, +slurm+, +theta+)
 
 +MAIL_ENABLED+:: If 1, send email on job completion.
 +MAIL_ADDRESS+:: If +MAIL_ENABLED+, send the email to the given address.
