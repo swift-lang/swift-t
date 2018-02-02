@@ -1448,6 +1448,8 @@ automatic operations and optimizations are disabled
 
 *Import:* +files+
 
+==== I/O with files
+
 +read(file) -> string+::
 Read file as a string
 
@@ -1467,6 +1469,16 @@ Write strings in +A+ to output file in order.
 This is more efficient than +write(join(A))+ for large +A+,
 but slower than +write_array_string()+ (which is not ordered).
 
++file_lines(file, comment="#") -> string[]+::
+
+Reads the whole file, returning each line as a separate entry in the
+output array.  The +comment+ argument is optional and defaults to
++"#"+ .  Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.  If +comment==""+, comments are
+disabled.
+
+==== Finding files
+
 +glob(string) -> file[]+::
 Perform glob operation, returning files that match.
 Available glob symbols include:
@@ -1482,13 +1494,7 @@ Available glob symbols include:
 Attempt to find a file with the given name in the filesystem: return
 +true+ if found, else +false+.
 
-+file_lines(file, comment="#") -> string[]+::
-
-Reads the whole file, returning each line as a separate entry in the
-output array.  The +comment+ argument is optional and defaults to
-+"#"+ .  Comments are excised, leading and trailing whitespace is
-trimmed, and blank lines are omitted.  If +comment==""+, comments are
-disabled.
+==== File metadata
 
 +file_mtime(string) -> int+::
 
@@ -1504,6 +1510,8 @@ Returns a string giving the type of file, which will be one of
 +file_type_string(string) -> string+::
 
 As +file_type()+ but accepts a +string+.
+
+==== File name manipulation
 
 +dirname_string(string) -> string+::
 
@@ -1536,6 +1544,17 @@ Returns the filename extension part of the given string path.
 +extension(file) -> string+::
 
 Returns the filename extension part of the given file path.
+
+[[mktemp]]
+==== Temporary files
+
++mktemp() -> file+::
+
+Obtain new temporary file.
+
++mktemp_string() -> string+::
+
+Obtain new temporary file, return its name as a string.
 
 [[library_blobs]]
 === Blobs
@@ -2646,7 +2665,8 @@ anchor:env_swift_tmp[]
 
 +SWIFT_TMP+::
 +TMP+::
-Directory location for <<unmapped_files,unmapped files>>.
+Directory location for <<unmapped_files,unmapped files>> and
+<<mktemp,+mktemp()+>>.
 +SWIFT_TMP+ overrides +TMP+.  The default is +/tmp+.
 
 +SWIFT_TMP_AUTODELETE=0+:: By default, Swift/T deletes
