@@ -289,6 +289,8 @@ lookup_java()
     fi
   fi
 
+  verbose "using JVM: ${JVM}"
+
   if [[ ! -x ${JVM} ]]
   then
     # Broken Java: User gave bad stc -j argument
@@ -476,6 +478,11 @@ check_deps()
   local DEP
   for DEP in ${DEPS}
   do
+    if [[ ! -f ${DEP} ]]
+    then
+      print "stc: WARNING: Dependency -U ${DEP} does not exist!"
+      continue
+    fi
     if [[ ${DEP} -nt ${OUTPUT} ]]
     then
       verbose "Dependency file (${DEP}) is newer than output (${OUTPUT})."
@@ -519,12 +526,10 @@ if (( ${#IMPORT_STRINGS} )) {
 
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG:-} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
-(( VERBOSE )) && set -x
 ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 # Return the exit code from the java process
 EXITCODE=${?}
 
-(( VERBOSE )) && set +x
 if (( DELETE_INPUT )) {
      verbose "Deleting: ${INPUT}"
      rm ${INPUT}

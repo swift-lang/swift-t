@@ -235,6 +235,11 @@ then
   which ${TURBINE_LAUNCHER}
 fi
 
+if (( ${#TURBINE_USE_PYTHON} ))
+then
+  export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+fi
+
 check_machine()
 # Confirm that we have a script for this machine type
 {

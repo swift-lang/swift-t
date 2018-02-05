@@ -41,7 +41,7 @@ ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
 #SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
-#SBATCH --job-name=${TURBINE_JOBNAME}
+#SBATCH --job-name=getenv(TURBINE_JOBNAME)
 
 #SBATCH --time=getenv(WALLTIME)
 #SBATCH --nodes=getenv(NODES)
