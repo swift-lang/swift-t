@@ -42,14 +42,11 @@ import python;
   }
 }
 
-(string t) json_get(file f, string path)
+(string t) json_get(string J, string path)
 {
-  wait (f)
-  {
     t = python_persist("from helpers import *",
                        "json_get('%s','%s')" %
-                       (filename(f), path));
-  }
+                       (J, path));
 }
 
 (string t) json_dict_entries(file f, string path)

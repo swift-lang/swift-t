@@ -31,11 +31,14 @@ def set_key_type(k):
         result = k
     return result
 
-def json_path(filename, path):
-    """ Reusable function to search a JSON tree """
-    fp = open(filename, "r")
-    J = json.load(fp)
+# def json_path(filename, path):
+#     """ Reusable function to search a JSON tree """
+#     fp = open(filename, "r")
+#     J = json.load(fp)
 
+def json_path(s, path):
+    """ Reusable function to search a JSON tree """
+    J = json.loads(s)
     P = path.split(",")
     for p in P:
         k = set_key_type(p)
