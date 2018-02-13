@@ -46,7 +46,7 @@ if { $amserver == 0 } {
     set rank [ adlb::rank ]
     if { $rank == 0 } {
         for { set i 0 } { $i < $PUTS } { incr i } {
-            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "wu-$i" 0
+            adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "wu-$i" 0 1
         }
     } else {
         after 5000

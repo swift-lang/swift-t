@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright 2013 University of Chicago and Argonne National Laboratory
+# Copyright 2015 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,21 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-source tests/test-helpers.sh
-
-set -x
-
-THIS=$0
-SCRIPT=${THIS%.sh}.tcl
-OUTPUT=${THIS%.sh}.out
-
-#bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
-turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}    #Azza's system tests
-
-[[ ${?} == 0 ]] || test_result 1
+# Test basic sync_exec functionality
 
 
-LINES=$( grep -c ' OK$' ${OUTPUT} )
-[[ ${LINES} == 3 ]] || test_result 1
+package require turbine 1.0
+namespace import turbine::*
 
-test_result 0
+enum WORK_TYPE { T } 
+adlb::init 1 1 
+
+proc echo-app-leaf1 { } {
+	turbine::c::sync_exec "" "" ""  echo Hello World
+	puts "hi"
+	turbine::c::log "hello!"
+}
+
+turbine::c::log "hello!"
+set amserver [ adlb::amserver ]
+if { $amserver == 0 } {
+	set rank [ adlb::rank ]
+	set tcltmp:prio [ turbine::get_priority ]
+	adlb::put 3 0 "echo-app-leaf1" ${tcltmp:prio} 1
+
+} else {
+	adlb::server
+
+}
+
+

@@ -34,7 +34,8 @@ export ADLB_PERF_COUNTERS=true
 # Test failed with deadlock - time limit it
 TIME_LIMIT=240
 
-bin/turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &
+#bin/turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &
+turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &  #For testing in Azza's environment
 pid=$!
 for i in `seq $TIME_LIMIT`; do
   sleep 1

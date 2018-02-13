@@ -1074,45 +1074,33 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
-  if (child == 0)
-  {
+  if (child == 0)   {
     // Setup redirects
-    if (stdin_file[0] != '\0')
-    {
+    if (stdin_file[0] != '\0')   {
       int in_fd = open(stdin_file, O_RDONLY);
       if (in_fd == -1) redirect_error_exit(stdin_file, "input redirection");
-
       rc = dup2(in_fd, 0);
       if (rc == -1) dup2_error_exit("input redirection");
-
       rc = close(in_fd);
       if (rc == -1) close_error_exit("input redirection");
     }
-
-    if (stdout_file[0] != '\0')
-    {
+    if (stdout_file[0] != '\0')    {
       int out_fd = open(stdout_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
       if (out_fd == -1) redirect_error_exit(stdin_file, "output redirection");
-
       rc = dup2(out_fd, 1);
       if (rc == -1) dup2_error_exit("output redirection");
-
       rc = close(out_fd);
       if (rc == -1) close_error_exit("output redirection");
     }
-
-    if (stderr_file[0] != '\0')
-    {
+    if (stderr_file[0] != '\0')     {
       int err_fd = open(stderr_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
       if (err_fd == -1) redirect_error_exit(stdin_file, "output redirection");
-
       rc = dup2(err_fd, 2);
       if (rc == -1) dup2_error_exit("output redirection");
-
       rc = close(err_fd);
       if (rc == -1) close_error_exit("output redirection");
     }
-
+    printf("Azza: This is when the app:- %s -is being executed\n\n", cmd);
     rc = execvp(cmd, cmd_argv);
     TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
                   strerror(errno));

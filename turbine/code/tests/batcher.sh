@@ -23,7 +23,8 @@ OUTPUT=${THIS%.sh}.out
 
 mkdir tests/data
 
-bin/turbine -l -n 4 ${SCRIPT} \
+#bin/turbine -l -n 4 ${SCRIPT} \
+turbine -l -n 4 ${SCRIPT} \  #Testing Azza's system
                     tests/batcher.txt >& ${OUTPUT}
 [[ ${?} == 0 ]] || test_result 1
 
