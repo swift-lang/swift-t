@@ -1010,14 +1010,14 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   DEBUG_ADLB("adlb::put: target_rank: %i type: %i \"%s\" %i",
              target_rank, work_type, cmd, opts.priority);
-  printf("Azza: This is when location directive is working: adlb::put: target_rank: %i type: %i, command: \"%s\", priority %i, strictness %i, accuracy %i, parallelism %i \n\n",
-             target_rank, work_type, cmd, opts.priority, opts.strictness, opts.accuracy, opts.parallelism);
+//  printf("Azza: This is when location directive is working: adlb::put: target_rank: %i type: %i, command: \"%s\", priority %i, strictness %i, accuracy %i, parallelism %i \n\n",
+//             target_rank, work_type, cmd, opts.priority, opts.strictness, opts.accuracy, opts.parallelism);
 
 
   adlb_code ac = ADLB_Put(cmd, cmd_len+1, target_rank, adlb_comm_rank,
                     work_type, opts);
   TCL_CONDITION(ac == ADLB_SUCCESS, "ADLB_Put failed!");
-  printf("Azza: Done with dispatching to rank %i\n", target_rank);
+//  printf("Azza: Done with dispatching to rank %i\n", target_rank);
   return TCL_OK;
 }
 

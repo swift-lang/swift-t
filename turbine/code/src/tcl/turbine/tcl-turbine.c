@@ -1100,7 +1100,7 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
       rc = close(err_fd);
       if (rc == -1) close_error_exit("output redirection");
     }
-    printf("Azza: This is when the app:- %s -is being executed\n\n", cmd);
+//    printf("Azza: This is when the app:- %s -is being executed\n\n", cmd);
     rc = execvp(cmd, cmd_argv);
     TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
                   strerror(errno));
