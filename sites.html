@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.3.0,</span>
-<span id="revdate">December 2017</span>
+<span id="revdate">February 2018</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1057,7 +1057,7 @@ Optional arguments passed to <code>sbatch</code>.  These arguments may include
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Mail</strong></p></div>
-<div class="paragraph"><p>(Currently supported systems: <code>cobalt</code>, <code>slurm</code>)</p></div>
+<div class="paragraph"><p>(Currently supported systems: <code>cobalt</code>, <code>slurm</code>, <code>theta</code>)</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>MAIL_ENABLED</code>
@@ -1082,6 +1082,82 @@ If <code>MAIL_ENABLED</code>, send the email to the given address.
 <div class="paragraph"><p>The <a href="http://swift-lang.github.io/swift-t/guide.html#turbine_env">Turbine
 environment variable</a> <code>TURBINE_LAUNCH_OPTIONS</code> will be applied to
 <code>mpiexec</code>, <code>srun</code>, or <code>aprun</code> as appropriate.</p></div>
+</div>
+<div class="sect3">
+<h4 id="automatic_env">Automatic environment variables</h4>
+<div class="paragraph"><p>These variables are automatically passed to the job, and are available
+in Swift/T via <code>getenv()</code>.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+PROJECT
+</p>
+</li>
+<li>
+<p>
+WALLTIME
+</p>
+</li>
+<li>
+<p>
+QUEUE
+</p>
+</li>
+<li>
+<p>
+TURBINE_OUTPUT
+</p>
+</li>
+<li>
+<p>
+TURBINE_JOBNAME
+</p>
+</li>
+<li>
+<p>
+TURBINE_LOG
+</p>
+</li>
+<li>
+<p>
+TURBINE_DEBUG
+</p>
+</li>
+<li>
+<p>
+MPI_LABEL
+</p>
+</li>
+<li>
+<p>
+TURBINE_WORKERS
+</p>
+</li>
+<li>
+<p>
+ADLB_SERVERS
+</p>
+</li>
+<li>
+<p>
+TCLLIBPATH
+</p>
+</li>
+<li>
+<p>
+LD_LIBRARY_PATH
+</p>
+</li>
+</ul></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content"><code>TCLLIBPATH</code> should not be set directly by the user,
+see <code>SWIFT_PATH</code>/<code>TURBINE_PATH</code></td>
+</tr></table>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -1114,7 +1190,8 @@ specify it with <code>-D</code>.  To prevent this from happening, specify
 <dd>
 <p>
 Set an environment variable in the job environment.  This may be used
-multiple times.
+multiple times.  <a href="#automatic_env">Automatic environment variables</a>
+need not be specified here.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1740,59 +1817,55 @@ Configure Turbine with:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_tukey">Tukey</h3>
-<div class="paragraph"><p><a href="https://www.alcf.anl.gov/user-guides/tukey">Tukey</a> is a 96-node x86
-cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
-the Cobalt scheduler.</p></div>
-<div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
+<h3 id="_bebop">Bebop</h3>
+<div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/bebop">Bebop</a> is a 1024-node x86
+cluster at ANL.  It uses SLURM.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> Master, 2018/02/21</p></div>
 <div class="sect3">
-<h4 id="_public_installation_4">Public installation</h4>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<h4 id="_installation_for_pacc">Installation for PACC</h4>
 <div class="ulist"><ul>
 <li>
 <p>
-STC: <code>~wozniak/Public/sfw/x86/stc/bin</code>
+<code>~wozniak/Public/sfw/bebop/compute/swift-t-pacc/stc/bin/swift-t</code>
 </p>
 </li>
 <li>
 <p>
-Turbine submit script: <code>~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt</code>
+<code>~wozniak/Public/sfw/bebop/compute/swift-t-pacc/turbine/bin/turbine</code>
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>To run:</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export MODE=cluster
-export QUEUE=pubnet
-export PROJECT=...
-turbine-cobalt-run.zsh -n 3 program.tic</code></pre>
+<pre><code>$ swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_3">Build procedure</h4>
-<div class="ulist"><ul>
+<h4 id="_build_instructions_2">Build instructions</h4>
+<div class="olist arabic"><ol class="arabic">
 <li>
 <p>
-Check that the system-provided MVAPICH <code>mpicc</code> is in your <code>PATH</code>
+Load modules <code>gcc/7.1.0 mpich/3.2-bsq4vhr</code>
 </p>
 </li>
 <li>
 <p>
-Configure c-utils with <code>gcc</code>
+Configure c-utils and ADLB as usual
 </p>
 </li>
 <li>
 <p>
-Configure ADLB with <code>CC=mpicc --enable-mpi-2</code>
+Configure Turbine with
+<code>--with-tcl=/home/wozniak/Public/sfw/bebop/login/tcl-8.6.5</code>
 </p>
 </li>
 <li>
 <p>
-Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec</code>
+Install STC as usual
 </p>
 </li>
-</ul></div>
+</ol></div>
 </div>
 </div>
 <div class="sect2">
@@ -1801,7 +1874,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 cluster at ANL.  It uses PBS.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Master, 8/17/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_5">Public installation</h4>
+<h4 id="_public_installation_4">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1841,7 +1914,7 @@ turbine-pbs-run.zsh -n 8 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_4">Build procedure</h4>
+<h4 id="_build_procedure_3">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.8.2 and MVAPICH 2.0:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1861,7 +1934,7 @@ $ which mpicc
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> is a 320-node x86
 cluster at ANL.  It uses PBS.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_6">Public installation</h4>
+<h4 id="_public_installation_5">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1880,7 +1953,7 @@ $ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 
 <a href="#options">Turbine run script options</a> for additional settings.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_5">Build procedure</h4>
+<h4 id="_build_procedure_4">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1906,7 +1979,7 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 architecture and MPI library are the same &#x1f632;.  The only potential
 gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_7">Public installation</h4>
+<h4 id="_public_installation_6">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
 <div class="sect4">
@@ -1939,7 +2012,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_2">Build instructions</h4>
+<h4 id="_build_instructions_3">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1971,145 +2044,6 @@ The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
 </p>
 </li>
 </ul></div>
-<div class="sect2">
-<h3 id="_blue_gene_p">Blue Gene/P</h3>
-<div class="sect3">
-<h4 id="_surveyor_intrepid_challenger">Surveyor/Intrepid/Challenger</h4>
-<div class="paragraph"><p>These machines were at the Argonne Leadership Computing Facility
-(ALCF).  Other existing Blue Gene/P systems may be configured in a
-similar way.</p></div>
-<div class="sect4">
-<h5 id="_public_installation_8">Public installation</h5>
-<div class="ulist"><ul>
-<li>
-<p>
-Based on trunk
-</p>
-</li>
-<li>
-<p>
-STC: <code>~wozniak/Public/stc-trunk/bin/stc</code>
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>To run:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic</code></pre>
-</div></div>
-</div>
-<div class="sect4">
-<h5 id="_build_procedure_6">Build procedure</h5>
-<div class="paragraph"><p>To run on the <a href="#login_node">login node</a>:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Install MPICH for the login nodes
-</p>
-</li>
-<li>
-<p>
-Configure Tcl and c-utils with gcc
-</p>
-</li>
-<li>
-<p>
-Configure ADLB with your MPICH
-</p>
-</li>
-<li>
-<p>
-Configure Turbine with
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>--enable-bgp LDFLAGS=-shared-libgcc</code></pre>
-</div></div>
-<div class="paragraph"><p>This makes adjustments for some Blue Gene quirks.</p></div>
-</li>
-<li>
-<p>
-Then, simply use the <code>bin/turbine</code> program to run.  Be cautious in
-  your use of the login nodes to avoid affecting other users.
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p><em>To run on the compute nodes under IBM CNK:</em></p></div>
-<div class="paragraph"><p>In this mode, you cannot use <code>app</code> functions to launch external
-programs because CNK does not support this.  See ZeptoOS below.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure Tcl with mpixlc
-</p>
-</li>
-<li>
-<p>
-Configure c-utils with gcc
-</p>
-</li>
-<li>
-<p>
-Configure ADLB with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>--enable-xlc
-CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
---enable-custom
---with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
-See the script header for usage.</p></div>
-<div class="paragraph"><p><em>To run on the compute nodes under ZeptoOS:</em></p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure Tcl with zmpicc
-</p>
-</li>
-<li>
-<p>
-Configure c-utils with gcc
-</p>
-</li>
-<li>
-<p>
-Configure ADLB with
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>CC=zmpicc --enable-mpi-2</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure Turbine with
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
---enable-custom
---with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
-See the script header for usage.</p></div>
-</div>
-</div>
-</div>
 <div class="sect2">
 <h3 id="_blue_gene_q">Blue Gene/Q</h3>
 <div class="sect3">
@@ -2183,7 +2117,7 @@ Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_7">Build procedure</h4>
+<h4 id="_build_procedure_5">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
 <div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
 <div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
@@ -2279,7 +2213,7 @@ Run with:
 /home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_public_installation_9">Public installation</h4>
+<h4 id="_public_installation_7">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes">Login nodes</h5>
 </div>
@@ -2299,7 +2233,7 @@ $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pr
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_3">Build instructions</h4>
+<h4 id="_build_instructions_4">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2017/06/07</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2341,7 +2275,7 @@ $ ./configure CC=gcc ...</code></pre>
 <h3 id="_titan">Titan</h3>
 <div class="paragraph"><p>Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_10">Public installation</h4>
+<h4 id="_public_installation_8">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 8/27/2014</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2404,7 +2338,7 @@ turbine-aprun-run.zsh -n 64 helloworld.tcl</code></pre>
 <a href="#options">settings file</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_8">Build procedure</h4>
+<h4 id="_build_procedure_6">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong> 7/23/2015</p></div>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
@@ -2461,8 +2395,8 @@ turbine-aprun-run.zsh -n 32 helloworld.tcl</code></pre>
 <div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_11">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
+<h4 id="_public_installation_9">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong>  2017/09</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_3">Login nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
@@ -2492,7 +2426,7 @@ swift-t -m cray workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_9">Build procedure</h4>
+<h4 id="_build_procedure_7">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
@@ -2546,7 +2480,7 @@ it as follows (for a single node/32 processes per node):</p></div>
 <div class="paragraph"><p>JYC is a small Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_12">Public installation</h4>
+<h4 id="_public_installation_10">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_4">Login nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
@@ -2591,7 +2525,7 @@ $ swift-t -n 8 workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_10">Build procedure</h4>
+<h4 id="_build_procedure_8">Build procedure</h4>
 <div class="sect4">
 <h5 id="_compute_nodes_5">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
@@ -2632,10 +2566,10 @@ Configure Turbine with:
 install Turbine and its libraries in <code>/lustre</code>.  Also, your data must
 be in <code>/lustre</code>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_13">Public installation</h4>
+<h4 id="_public_installation_11">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_5">Login nodes</h5>
-<div class="paragraph"><p><strong>As of: Swift/T 1.2.0, January 2017</strong></p></div>
+<div class="paragraph"><p><strong>As of: Swift/T 1.3.0, October 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.  It has
 <a href="http://swift-lang.github.io/swift-t/guide.html#leaf_python">Python</a>
 and
@@ -2643,13 +2577,15 @@ and
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/soft/swift-t/login/2017-01/stc/bin
-/soft/swift-t/login/2017-01/turbine/bin</code></pre>
+<pre><code>/soft/swift-t/login/2017-10/stc/bin
+/soft/swift-t/login/2017-10/turbine/bin</code></pre>
 </div></div>
 <div class="paragraph"><p>Add to <code>LD_LIBRARY_PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/soft/swift-t/deps/R-3.3.2/lib64/R/lib</code></pre>
+<pre><code>/soft/swift-t/deps/R-3.3.2/lib64/R/lib
+/soft/swift-t/deps/Python-2.7.10/lib
+/opt/gcc/4.9.2/snos/lib64</code></pre>
 </div></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -2716,7 +2652,7 @@ Run Swift:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_11">Build procedure</h4>
+<h4 id="_build_procedure_9">Build procedure</h4>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
 <div class="ulist"><ul>
@@ -2783,7 +2719,7 @@ is a Cray XC40 at NERSC.</p></div>
 ~wozniak/Public/sfw/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_public_installation_14">Public installation</h4>
+<h4 id="_public_installation_12">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_6">Login nodes</h5>
 <div class="paragraph"><p><strong>Python</strong></p></div>
@@ -2855,7 +2791,7 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_4">Build instructions</h4>
+<h4 id="_build_instructions_5">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2017/07/11</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2901,7 +2837,7 @@ export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
 <div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_15">Public installation</h4>
+<h4 id="_public_installation_13">Public installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2926,7 +2862,7 @@ SWIG: <code>/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig</code>
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_12">Build procedure</h4>
+<h4 id="_build_procedure_10">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2970,7 +2906,7 @@ Compile STC as usual.
 <h3 id="_raven">Raven</h3>
 <div class="paragraph"><p>Raven is a Cray XE6/XK7 at Cray.</p></div>
 <div class="sect3">
-<h4 id="_build_procedure_13">Build procedure</h4>
+<h4 id="_build_procedure_11">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3040,7 +2976,7 @@ module load swift-t</code></pre>
 <h3 id="_edison">Edison</h3>
 <div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_16">Public Installation</h4>
+<h4 id="_public_installation_14">Public Installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -3049,7 +2985,7 @@ module load swift-t</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_14">Build Procedure</h4>
+<h4 id="_build_procedure_12">Build Procedure</h4>
 <div class="paragraph"><p>Load (and unload) appropriate modules:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3373,12 +3309,213 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_archive">Archive</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>These notes are for historical value.</p></div>
+<div class="sect2">
+<h3 id="_blue_gene_p">Blue Gene/P</h3>
+<div class="sect3">
+<h4 id="_surveyor_intrepid_challenger">Surveyor/Intrepid/Challenger</h4>
+<div class="paragraph"><p>These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.</p></div>
+<div class="sect4">
+<h5 id="_public_installation_15">Public installation</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Based on trunk
+</p>
+</li>
+<li>
+<p>
+STC: <code>~wozniak/Public/stc-trunk/bin/stc</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_build_procedure_13">Build procedure</h5>
+<div class="paragraph"><p>To run on the <a href="#login_node">login node</a>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Install MPICH for the login nodes
+</p>
+</li>
+<li>
+<p>
+Configure Tcl and c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with your MPICH
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-bgp LDFLAGS=-shared-libgcc</code></pre>
+</div></div>
+<div class="paragraph"><p>This makes adjustments for some Blue Gene quirks.</p></div>
+</li>
+<li>
+<p>
+Then, simply use the <code>bin/turbine</code> program to run.  Be cautious in
+  your use of the login nodes to avoid affecting other users.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><em>To run on the compute nodes under IBM CNK:</em></p></div>
+<div class="paragraph"><p>In this mode, you cannot use <code>app</code> functions to launch external
+programs because CNK does not support this.  See ZeptoOS below.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Tcl with mpixlc
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--enable-xlc
+CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
+See the script header for usage.</p></div>
+<div class="paragraph"><p><em>To run on the compute nodes under ZeptoOS:</em></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Tcl with zmpicc
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with gcc
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=zmpicc --enable-mpi-2</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run, use <code>scripts/submit/bgp/turbine-cobalt.zsh</code>
+See the script header for usage.</p></div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tukey">Tukey</h3>
+<div class="paragraph"><p><a href="https://www.alcf.anl.gov/user-guides/tukey">Tukey</a> is a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+the Cobalt scheduler.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
+<div class="sect3">
+<h4 id="_public_installation_16">Public installation</h4>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/x86/stc/bin</code>
+</p>
+</li>
+<li>
+<p>
+Turbine submit script: <code>~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=cluster
+export QUEUE=pubnet
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tic</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_14">Build procedure</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Check that the system-provided MVAPICH <code>mpicc</code> is in your <code>PATH</code>
+</p>
+</li>
+<li>
+<p>
+Configure c-utils with <code>gcc</code>
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpicc --enable-mpi-2</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec</code>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.3.0<br />
-Last updated 2017-12-20 14:24:48 CST
+Last updated 2018-02-21 11:01:58 CST
 </div>
 </div>
 </body>
