@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.3.0, January 2018
+v1.3.0, February 2018
 
 
 == How to use this guide
@@ -682,6 +682,32 @@ turbine-cobalt-run.zsh -n 3 program.tic
 * Configure c-utils with +gcc+
 * Configure ADLB with +CC=mpicc --enable-mpi-2+
 * Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
+
+=== Bebop
+
+http://www.lcrc.anl.gov/about/bebop[Bebop] is a 1024-node x86
+cluster at ANL.  It uses SLURM.
+
+*As of:* Master, 2018/02/21
+
+==== Installation for PACC
+
+* +~wozniak/Public/sfw/bebop/compute/swift-t-pacc/stc/bin/swift-t+
+* +~wozniak/Public/sfw/bebop/compute/swift-t-pacc/turbine/bin/turbine+
+
+Run with:
+
+----
+$ swift-t -m slurm workflow.swift
+----
+
+==== Build instructions
+
+. Load modules +gcc/7.1.0 mpich/3.2-bsq4vhr+
+. Configure c-utils and ADLB as usual
+. Configure Turbine with
++--with-tcl=/home/wozniak/Public/sfw/bebop/login/tcl-8.6.5+
+. Install STC as usual
 
 === Blues
 
