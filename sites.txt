@@ -653,36 +653,6 @@ LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
  --with-mpi-lib-name=mpi
 ----
 
-=== Tukey
-
-https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
-cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
-the Cobalt scheduler.
-
-*As of:* Trunk, 4/9/2014
-
-==== Public installation
-
-Add to +PATH+:
-
-* STC: +~wozniak/Public/sfw/x86/stc/bin+
-* Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
-
-To run:
-----
-export MODE=cluster
-export QUEUE=pubnet
-export PROJECT=...
-turbine-cobalt-run.zsh -n 3 program.tic
-----
-
-==== Build procedure
-
-* Check that the system-provided MVAPICH +mpicc+ is in your +PATH+
-* Configure c-utils with +gcc+
-* Configure ADLB with +CC=mpicc --enable-mpi-2+
-* Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
-
 === Bebop
 
 http://www.lcrc.anl.gov/about/bebop[Bebop] is a 1024-node x86
@@ -868,87 +838,6 @@ systems>> that use Cobalt.
 * The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
 * Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
 * The Cobalt log is placed in +TURBINE_OUTPUT+
-
-=== Blue Gene/P
-
-==== Surveyor/Intrepid/Challenger
-
-These machines were at the Argonne Leadership Computing Facility
-(ALCF).  Other existing Blue Gene/P systems may be configured in a
-similar way.
-
-===== Public installation
-
-* Based on trunk
-* STC: +~wozniak/Public/stc-trunk/bin/stc+
-
-To run:
-
-----
-~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic
-----
-
-===== Build procedure
-
-To run on the <<login_node,login node>>:
-
-* Install MPICH for the login nodes
-* Configure Tcl and c-utils with gcc
-* Configure ADLB with your MPICH
-* Configure Turbine with
-+
-----
---enable-bgp LDFLAGS=-shared-libgcc
-----
-+
-This makes adjustments for some Blue Gene quirks.
-
-* Then, simply use the +bin/turbine+ program to run.  Be cautious in
-  your use of the login nodes to avoid affecting other users.
-
-_To run on the compute nodes under IBM CNK:_
-
-In this mode, you cannot use +app+ functions to launch external
-programs because CNK does not support this.  See ZeptoOS below.
-
-* Configure Tcl with mpixlc
-* Configure c-utils with gcc
-* Configure ADLB with:
-+
-----
---enable-xlc
-CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc
-----
-* Configure Turbine with:
-+
-----
-CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
---enable-custom
---with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
-----
-
-To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
-See the script header for usage.
-
-_To run on the compute nodes under ZeptoOS:_
-
-* Configure Tcl with zmpicc
-* Configure c-utils with gcc
-* Configure ADLB with
-+
-----
-CC=zmpicc --enable-mpi-2
-----
-* Configure Turbine with
-+
-----
-CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
---enable-custom
---with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
-----
-
-To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
-See the script header for usage.
 
 === Blue Gene/Q
 
@@ -2027,6 +1916,121 @@ to solve the problem, you make a one-line change in the Tcl source
 file +unix/tclLoadDl.c+ to ensure that +dlopenflags |= RTLD_GLOBAL+,
 thus, it will always use +dlopen(..., RTLD_NOW | RTLD_GLOBAL)+.  For
 example, in Tcl 8.6.6, change line 90 to +if (1) {+.
+
+== Archive
+
+These notes are for historical value.
+
+=== Blue Gene/P
+
+==== Surveyor/Intrepid/Challenger
+
+These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.
+
+===== Public installation
+
+* Based on trunk
+* STC: +~wozniak/Public/stc-trunk/bin/stc+
+
+To run:
+
+----
+~wozniak/Public/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tic
+----
+
+===== Build procedure
+
+To run on the <<login_node,login node>>:
+
+* Install MPICH for the login nodes
+* Configure Tcl and c-utils with gcc
+* Configure ADLB with your MPICH
+* Configure Turbine with
++
+----
+--enable-bgp LDFLAGS=-shared-libgcc
+----
++
+This makes adjustments for some Blue Gene quirks.
+
+* Then, simply use the +bin/turbine+ program to run.  Be cautious in
+  your use of the login nodes to avoid affecting other users.
+
+_To run on the compute nodes under IBM CNK:_
+
+In this mode, you cannot use +app+ functions to launch external
+programs because CNK does not support this.  See ZeptoOS below.
+
+* Configure Tcl with mpixlc
+* Configure c-utils with gcc
+* Configure ADLB with:
++
+----
+--enable-xlc
+CC=/bgsys/drivers/ppcfloor/comm/bin/mpixlc
+----
+* Configure Turbine with:
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
+_To run on the compute nodes under ZeptoOS:_
+
+* Configure Tcl with zmpicc
+* Configure c-utils with gcc
+* Configure ADLB with
++
+----
+CC=zmpicc --enable-mpi-2
+----
+* Configure Turbine with
++
+----
+CC=/soft/apps/gcc-4.3.2/gnu-linux/bin/powerpc-bgp-linux-gcc
+--enable-custom
+--with-mpi-include=/bgsys/drivers/V1R4M2_200_2010-100508P/ppc/comm/default/include
+----
+
+To run, use +scripts/submit/bgp/turbine-cobalt.zsh+
+See the script header for usage.
+
+=== Tukey
+
+https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+the Cobalt scheduler.
+
+*As of:* Trunk, 4/9/2014
+
+==== Public installation
+
+Add to +PATH+:
+
+* STC: +~wozniak/Public/sfw/x86/stc/bin+
+* Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
+
+To run:
+----
+export MODE=cluster
+export QUEUE=pubnet
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tic
+----
+
+==== Build procedure
+
+* Check that the system-provided MVAPICH +mpicc+ is in your +PATH+
+* Configure c-utils with +gcc+
+* Configure ADLB with +CC=mpicc --enable-mpi-2+
+* Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
 
 ////
 Local Variables:
