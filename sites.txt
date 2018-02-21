@@ -2004,8 +2004,8 @@ See the script header for usage.
 
 === Tukey
 
-https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
-cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
+https://www.alcf.anl.gov/user-guides/tukey[Tukey] was a 96-node x86
+cluster at the Argonne Leadership Computing Facility (ALCF).  It used
 the Cobalt scheduler.
 
 *As of:* Trunk, 4/9/2014
