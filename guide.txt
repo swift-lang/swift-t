@@ -2779,6 +2779,11 @@ anchor:env_hostmap_disable[]
 
 +GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.
 
+anchor:env_mpi_thread[]
++TURBINE_MPI_THREAD=1+::
+Enables +MPI_THREAD_MULTIPLE+.  Allows exotic user tasks that use MPI
+functions while using threads.
+
 [[Build_configuration]]
 === Build configuration
 
