@@ -371,25 +371,24 @@ ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[]);
+
 /*
  * Setup the ADLB communicator
  *
  * comm: if NULL, use MPI_COMM_WORLD
+ * @return A Tcl error code
  */
-static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                           MPI_Comm *comm)
+static int adlb_setup_comm(Tcl_Interp* interp, Tcl_Obj* const objv[],
+                           MPI_Comm* comm)
 {
   TCL_CONDITION(!adlb_comm_init, "ADLB Communicator already initialized");
-  int rc;
 
   if (comm == NULL)
   {
-    // Start with MPI_Init() and MPI_COMM_WORLD
-    int argc = 0;
-    char** argv = NULL;
     must_comm_free = true;
-    rc = MPI_Init(&argc, &argv);
-    assert(rc == MPI_SUCCESS);
+    int rc = do_mpi_init(interp, objv);
+    TCL_CHECK_MSG(rc, "Failed to set up MPI!");
     MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
   }
   else
@@ -405,6 +404,36 @@ static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/**
+ Initialize MPI
+ @arg interp: Just for errors
+ @return A Tcl error code
+*/
+static int
+do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[])
+{
+  // Start with MPI_Init() and MPI_COMM_WORLD
+  int argc = 0;
+  char** argv = NULL;
+
+  int rc;
+  int use_thread_multiple;
+  rc = getenv_integer("TURBINE_MPI_THREAD", 0, &use_thread_multiple);
+  TCL_CONDITION(rc, "invalid setting for TURBINE_MPI_THREAD: %s",
+                getenv("TURBINE_MPI_THREAD"));
+
+  if (use_thread_multiple)
+  {
+    int provided;
+    rc = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+    TCL_CONDITION((provided == MPI_THREAD_MULTIPLE),
+                  "MPI_THREAD_MULTIPLE is not supported by this MPI!");
+  }
+  else
+    rc = MPI_Init(&argc, &argv);
+  assert(rc == MPI_SUCCESS);
+  return TCL_OK;
+}
 
 /**
    usage: adlb::init <servers> <types> [<comm>]?
