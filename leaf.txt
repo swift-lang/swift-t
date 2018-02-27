@@ -217,7 +217,7 @@ First, we run SWIG on the header:
 include::examples/2/swig-g.sh[]
 ----
 SWIG produces +g_wrap.c+.  Compile this and create a Tcl package
-(+test-swig-g.sh+):
+(+compile-swig-g.sh+):
 ----
 include::examples/2/compile-swig-g.sh[]
 ----
