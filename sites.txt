@@ -1058,14 +1058,12 @@ Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 This installation is for use on the <<login_node,login node>>.
 
-Add to PATH:
-+
+Add to PATH: +
 ----
 ~wozniak/Public/sfw/login/swift-t/stc/bin
 ----
-+
-Run with, e.g.:
-+
+
+Run with, e.g.: +
 ----
 $ nice swift-t -E 'trace("Hello world!");'
 ----
@@ -1081,14 +1079,12 @@ This uses:
 This installation is for the general public, particularly INSPIRE and
 CANDLE users.
 
-Add to PATH:
-+
+Add to PATH: +
 ----
 /lustre/atlas/world-shared/csc249/shared/swift-t/stc/bin
 ----
-+
-Run with, e.g.:
-+
+
+Run with, e.g.: +
 ----
 $ export PROJECT=...
 $ export QUEUE=debug
