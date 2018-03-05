@@ -116,14 +116,14 @@ then
     # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
     echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
     set -x
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi
