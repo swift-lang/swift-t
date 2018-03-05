@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.3.0,</span>
-<span id="revdate">February 2018</span>
+<span id="revdate">March 2018</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2276,34 +2276,82 @@ $ ./configure CC=gcc ...</code></pre>
 <div class="paragraph"><p>Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_8">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> 8/27/2014</p></div>
+<div class="sect4">
+<h5 id="_dependencies">Dependencies</h5>
 <div class="ulist"><ul>
 <li>
 <p>
-Swift/T trunk - 8/27/2013
+SWIG: <code>~wozniak/Public/sfw/swig-3.0.2</code>
 </p>
 </li>
 <li>
 <p>
-Turbine: <code>/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh</code>
+Tcl (login):  <code>~wozniak/Public/sfw/tcl-8.6.2</code>
 </p>
 </li>
 <li>
 <p>
-STC: <code>/lustre/atlas2/mat049/proj-shared/sfw/compute/stc/bin/stc</code>
-</p>
-</li>
-<li>
-<p>
-SWIG: <code>/lustre/atlas2/mat049/proj-shared/sfw/swig-3.0.2</code>
-</p>
-</li>
-<li>
-<p>
-Tcl:  <code>/lustre/atlas2/mat049/proj-shared/sfw/tcl-8.6.2</code>
+Tcl (compute):  <code>/lustre/atlas/world-shared/csc249/shared/tcl-8.6.2</code>
 </p>
 </li>
 </ul></div>
+</div>
+<div class="sect4">
+<h5 id="_login_nodes_3">Login nodes</h5>
+<div class="paragraph"><p><strong>As of:</strong> 2018/03/05</p></div>
+<div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.</p></div>
+<div class="paragraph"><p>Add to PATH:</p></div>
+<div class="paragraph"><p>+</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>+
+Run with, e.g.:</p></div>
+<div class="paragraph"><p>+</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ nice swift-t -E 'trace("Hello world!");'</code></pre>
+</div></div>
+<div class="paragraph"><p>This uses:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+MPICH: <code>~/Public/sfw/login/mpich-3.1.3</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_3">Compute nodes</h5>
+<div class="paragraph"><p><strong>As of:</strong> 2018/03/05</p></div>
+<div class="paragraph"><p>This installation is for the general public, particularly INSPIRE and
+CANDLE users.</p></div>
+<div class="paragraph"><p>Add to PATH:</p></div>
+<div class="paragraph"><p>+</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/lustre/atlas/world-shared/csc249/shared/swift-t/stc/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>+
+Run with, e.g.:</p></div>
+<div class="paragraph"><p>+</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export PROJECT=...
+$ export QUEUE=debug
+$ export TITAN=true
+$ swift-t -m cray 'trace("Hello world!");'</code></pre>
+</div></div>
+<div class="paragraph"><p>This uses:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Cray MPI: <code>/opt/cray/mpt/default/gni/mpich-gnu/49</code>
+</p>
+</li>
+</ul></div>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_submitting_jobs">Submitting jobs</h4>
@@ -2321,18 +2369,17 @@ directives to other Cray systems.  It does not support the <code>#PBS -l ppn:</c
 directive. The correct directive is:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>#PBS -l nodes=32</code></pre>
+<pre><code>#PBS -l nodes=2</code></pre>
 </div></div>
-<div class="paragraph"><p><code>PPN</code> is handled by setting the <code>-n</code> argument.</p></div>
-<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Titan.  You can invoke
-it as follows (for a 2 nodes, 32 processes per node):</p></div>
+<div class="paragraph"><p>Swift/T supports this with a special environment variable <code>TITAN=true</code>.
+An example use of Swift/T on Titan is thus:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export PROJECT=MAT049
-export QUEUE=debug
+<pre><code>export PROJECT=...    # Some valid project
+export QUEUE=debug    # or another queue
 export TITAN=true
-export PPN=32
-turbine-aprun-run.zsh -n 64 helloworld.tcl</code></pre>
+export PPN=32         # Thus 2 nodes, 32 processes per node
+swift-t -m cray -n 64 workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>These environment variables may be placed in your <code>-s</code>
 <a href="#options">settings file</a>.</p></div>
@@ -2398,7 +2445,7 @@ Urbana-Champaign.</p></div>
 <h4 id="_public_installation_9">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong>  2017/09</p></div>
 <div class="sect4">
-<h5 id="_login_nodes_3">Login nodes</h5>
+<h5 id="_login_nodes_4">Login nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2407,7 +2454,7 @@ Urbana-Champaign.</p></div>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_3">Compute nodes</h5>
+<h5 id="_compute_nodes_4">Compute nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2482,7 +2529,7 @@ Urbana-Champaign.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_10">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_4">Login nodes</h5>
+<h5 id="_login_nodes_5">Login nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -2492,7 +2539,7 @@ Urbana-Champaign.</p></div>
 <div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_dependencies">Dependencies</h5>
+<h5 id="_dependencies_2">Dependencies</h5>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2513,7 +2560,7 @@ Urbana-Champaign.</p></div>
 </ul></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_4">Compute nodes</h5>
+<h5 id="_compute_nodes_5">Compute nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
@@ -2527,7 +2574,7 @@ $ swift-t -n 8 workflow.swift</code></pre>
 <div class="sect3">
 <h4 id="_build_procedure_8">Build procedure</h4>
 <div class="sect4">
-<h5 id="_compute_nodes_5">Compute nodes</h5>
+<h5 id="_compute_nodes_6">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
 <div class="paragraph"><p>(Same as Blue Waters.)</p></div>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
@@ -2568,7 +2615,7 @@ be in <code>/lustre</code>.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_11">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_5">Login nodes</h5>
+<h5 id="_login_nodes_6">Login nodes</h5>
 <div class="paragraph"><p><strong>As of: Swift/T 1.3.0, October 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.  It has
 <a href="http://swift-lang.github.io/swift-t/guide.html#leaf_python">Python</a>
@@ -2594,7 +2641,7 @@ and
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_6">Compute nodes</h5>
+<h5 id="_compute_nodes_7">Compute nodes</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2721,7 +2768,7 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_12">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_6">Login nodes</h5>
+<h5 id="_login_nodes_7">Login nodes</h5>
 <div class="paragraph"><p><strong>Python</strong></p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
 <div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
@@ -2799,11 +2846,11 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 <pre><code>module load gcc</code></pre>
 </div></div>
 <div class="sect4">
-<h5 id="_login_nodes_7">Login nodes</h5>
+<h5 id="_login_nodes_8">Login nodes</h5>
 <div class="paragraph"><p>No special configuration is necessary.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_7">Compute nodes</h5>
+<h5 id="_compute_nodes_8">Compute nodes</h5>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
 to configure the MPI library.</p></div>
 <div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
@@ -3515,7 +3562,8 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer">
 <div id="footer-text">
 Version 1.3.0<br />
-Last updated 2018-02-21 11:09:26 CST
+Last updated
+ 2018-03-05 13:18:42 CST
 </div>
 </div>
 </body>
