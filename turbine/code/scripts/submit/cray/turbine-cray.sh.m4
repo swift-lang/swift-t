@@ -121,7 +121,6 @@ then
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
     set -x
     ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
