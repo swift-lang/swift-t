@@ -65,6 +65,10 @@ set -e
 VERBOSE=getenv(VERBOSE)
 (( VERBOSE )) && set -x
 
+# Allow the user to specify aprun in the environment
+APRUN=getenv(APRUN)
+APRUN=${APRUN:-aprun}
+
 # Set variables required for turbine-config.sh
 export TURBINE_HOME=getenv(TURBINE_HOME)
 TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
