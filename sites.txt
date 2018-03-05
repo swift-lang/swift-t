@@ -14,7 +14,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v1.3.0, February 2018
+v1.3.0, March 2018
 
 
 == How to use this guide
@@ -1046,13 +1046,59 @@ Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 ==== Public installation
 
-*As of:* 8/27/2014
+===== Dependencies
 
-* Swift/T trunk - 8/27/2013
-* Turbine: +/lustre/atlas2/mat049/proj-shared/sfw/compute/turbine/scripts/submit/cray/turbine-cray-run.zsh+
-* STC: +/lustre/atlas2/mat049/proj-shared/sfw/compute/stc/bin/stc+
-* SWIG: +/lustre/atlas2/mat049/proj-shared/sfw/swig-3.0.2+
-* Tcl:  +/lustre/atlas2/mat049/proj-shared/sfw/tcl-8.6.2+
+* SWIG: +~wozniak/Public/sfw/swig-3.0.2+
+* Tcl (login):  +~wozniak/Public/sfw/tcl-8.6.2+
+* Tcl (compute):  +/lustre/atlas/world-shared/csc249/shared/tcl-8.6.2+
+
+===== Login nodes
+
+*As of:* 2018/03/05
+
+This installation is for use on the <<login_node,login node>>.
+
+Add to PATH:
++
+----
+~wozniak/Public/sfw/login/swift-t/stc/bin
+----
++
+Run with, e.g.:
++
+----
+$ nice swift-t -E 'trace("Hello world!");'
+----
+
+This uses:
+
+* MPICH: +~/Public/sfw/login/mpich-3.1.3+
+
+===== Compute nodes
+
+*As of:* 2018/03/05
+
+This installation is for the general public, particularly INSPIRE and
+CANDLE users.
+
+Add to PATH:
++
+----
+/lustre/atlas/world-shared/csc249/shared/swift-t/stc/bin
+----
++
+Run with, e.g.:
++
+----
+$ export PROJECT=...
+$ export QUEUE=debug
+$ export TITAN=true
+$ swift-t -m cray 'trace("Hello world!");'
+----
+
+This uses:
+
+* Cray MPI: +/opt/cray/mpt/default/gni/mpich-gnu/49+
 
 ==== Submitting jobs
 
@@ -1072,19 +1118,18 @@ directives to other Cray systems.  It does not support the +#PBS -l ppn:+
 directive. The correct directive is:
 
 ----
-#PBS -l nodes=32
+#PBS -l nodes=2
 ----
 
-+PPN+ is handled by setting the +-n+ argument.
+Swift/T supports this with a special environment variable +TITAN=true+.
+An example use of Swift/T on Titan is thus:
 
-The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
-it as follows (for a 2 nodes, 32 processes per node):
 ----
-export PROJECT=MAT049
-export QUEUE=debug
+export PROJECT=...    # Some valid project
+export QUEUE=debug    # or another queue
 export TITAN=true
-export PPN=32
-turbine-aprun-run.zsh -n 64 helloworld.tcl
+export PPN=32         # Thus 2 nodes, 32 processes per node
+swift-t -m cray -n 64 workflow.swift
 ----
 
 These environment variables may be placed in your +-s+
