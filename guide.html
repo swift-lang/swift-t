@@ -1364,9 +1364,35 @@ where it has been shadowed).</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_dataflow_evaluation">8. Dataflow evaluation</h2>
+<h2 id="dataflow">8. Dataflow evaluation</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Swift expressions are evaluated in <em>dataflow</em> order:</p></div>
+<div class="paragraph"><p>Swift expressions are evaluated in <em>dataflow</em> order.  This allows the
+system to run workflows with the maximum possible concurrency, limited only
+by the data dependencies in the workflow and available resources
+(workers and CPUs).</p></div>
+<div class="paragraph"><p>Consider the following code:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int a=1,b=2;
+f(a);
+g(b);</code></pre>
+</div></div>
+<div class="paragraph"><p>In this case, <code>f(a)</code> and <code>g(b)</code> are eligible to run at the same time.
+They will be distributed to different workers in the system and run in
+parallel.  If all workers are currently busy, they will be queued for
+execution as soon as workers are available.</p></div>
+<div class="paragraph"><p>This dataflow mechanism allows Swift/T to execute loops, recursive function
+calls, and so on with maximal concurrency.</p></div>
+<div class="paragraph"><p>Consider the following code:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>int a;
+int b = f(a);
+g(b);</code></pre>
+</div></div>
+<div class="paragraph"><p>In this case, a simple data dependency on <code>b</code> forces <code>g()</code> to wait for
+<code>b</code> to be set before it can be released for execution.</p></div>
+<div class="paragraph"><p>Consider this more complicated example:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>int z1,z2;
@@ -1379,7 +1405,7 @@ int output = r(z1,z2);</code></pre>
 </div></div>
 <div class="paragraph"><p>This allows code to execute as concurrently as possible, limited
 only by data availability.  In this example, <code>g()</code> runs first, because it
-is dependent only on a literal.  When <code>y</code> is set, <code>f()</code> runs, setting
+is dependent only on a literal.  After <code>y</code> is set, <code>f()</code> runs, setting
 <code>x</code>.  Then, two invocations of <code>h()</code> execute.  Finally, <code>z1</code> and <code>z2</code>
 are set, allowing <code>r()</code> to run.</p></div>
 <div class="paragraph"><p>Variables may be assigned only once.  Multiple assignment is often
@@ -1390,6 +1416,8 @@ is never assigned during the course of program execution, these
 expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.</p></div>
+<div class="paragraph"><p>If you need to enforce a certain order that you cannot express with
+dataflow, see the section on <a href="#execution_order">explicit execution order</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -2050,7 +2078,7 @@ loop iterations are independent and can simply be executed in parallel.</p></div
 </div>
 </div>
 <div class="sect2">
-<h3 id="_explicit_data_dependent_execution">11.3. Explicit data-dependent execution</h3>
+<h3 id="execution_order">11.3. Explicit execution ordering</h3>
 <div class="paragraph"><p>In general, execution ordering in Swift/T is implicit and driven by
 data dependencies.  In some cases it is useful to add explicit data
 dependencies, for example if you want to print a message to indicate
@@ -5674,7 +5702,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-02-23 18:22:25 CST
+ 2018-03-16 10:41:16 CDT
 </div>
 </div>
 
