@@ -1517,7 +1517,8 @@ Reads the whole file, returning each line as a separate entry in the
 output array.  The +comment+ argument is optional and defaults to
 +"#"+ .  Comments are excised, leading and trailing whitespace is
 trimmed, and blank lines are omitted.  If +comment==""+, comments are
-disabled.
+disabled (that is, you will receive the whole file, nothing will be
+excised).
 
 ==== Finding files
 
