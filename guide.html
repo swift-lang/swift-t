@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">January 2018</span><br />
+<span id="author">March 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1403,11 +1403,10 @@ z1 = h(x,y,1);
 z2 = h(x,y,2);
 int output = r(z1,z2);</code></pre>
 </div></div>
-<div class="paragraph"><p>This allows code to execute as concurrently as possible, limited
-only by data availability.  In this example, <code>g()</code> runs first, because it
-is dependent only on a literal.  After <code>y</code> is set, <code>f()</code> runs, setting
-<code>x</code>.  Then, two invocations of <code>h()</code> execute.  Finally, <code>z1</code> and <code>z2</code>
-are set, allowing <code>r()</code> to run.</p></div>
+<div class="paragraph"><p>In this example, <code>g()</code> runs first, because it is dependent only on a
+literal.  After <code>y</code> is set, <code>f()</code> runs, setting <code>x</code>.  Then, two
+invocations of <code>h()</code> execute.  Finally, <code>z1</code> and <code>z2</code> are set,
+allowing <code>r()</code> to run.</p></div>
 <div class="paragraph"><p>Variables may be assigned only once.  Multiple assignment is often
 detected at compile time, and will always be detected at run time,
 resulting in a run time error.  If variable is not assigned,
@@ -1416,8 +1415,14 @@ is never assigned during the course of program execution, these
 expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.</p></div>
-<div class="paragraph"><p>If you need to enforce a certain order that you cannot express with
-dataflow, see the section on <a href="#execution_order">explicit execution order</a>.</p></div>
+<div class="paragraph"><p>In summary, there is no instruction pointer in Swift/T.  All
+statements in the workflow are eligible to run as soon as their input
+data is available.</p></div>
+<div class="paragraph"><p>Some applications have side effects, such as creating or modifying
+files that another task must wait for.  It is a best practice to
+represent these data items with the Swift/T <code>file</code> type.  But if you
+need to enforce a certain order that you cannot express with dataflow,
+see the section on <a href="#execution_order">explicit execution order</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -5702,7 +5707,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-03-16 10:41:16 CDT
+ 2018-03-16 10:47:42 CDT
 </div>
 </div>
 
