@@ -442,9 +442,40 @@ the specific case when a local variable has the same name as a global function
 (although it will not be possible to use the function within the scope
 where it has been shadowed).
 
+[[dataflow]]
 == Dataflow evaluation
 
-Swift expressions are evaluated in _dataflow_ order:
+Swift expressions are evaluated in _dataflow_ order.  This allows the
+system to run workflows with the maximum possible concurrency, limited only
+by the data dependencies in the workflow and available resources
+(workers and CPUs).
+
+Consider the following code:
+----
+int a=1,b=2;
+f(a);
+g(b);
+----
+
+In this case, +f(a)+ and +g(b)+ are eligible to run at the same time.
+They will be distributed to different workers in the system and run in
+parallel.  If all workers are currently busy, they will be queued for
+execution as soon as workers are available.
+
+This dataflow mechanism allows Swift/T to execute loops, recursive function
+calls, and so on with maximal concurrency.
+
+Consider the following code:
+----
+int a;
+int b = f(a);
+g(b);
+----
+
+In this case, a simple data dependency on +b+ forces +g()+ to wait for
++b+ to be set before it can be released for execution.
+
+Consider this more complicated example:
 
 ----
 int z1,z2;
@@ -458,7 +489,7 @@ int output = r(z1,z2);
 
 This allows code to execute as concurrently as possible, limited
 only by data availability.  In this example, +g()+ runs first, because it
-is dependent only on a literal.  When +y+ is set, +f()+ runs, setting
+is dependent only on a literal.  After +y+ is set, +f()+ runs, setting
 +x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
 are set, allowing +r()+ to run.
 
@@ -470,6 +501,9 @@ is never assigned during the course of program execution, these
 expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.
+
+If you need to enforce a certain order that you cannot express with
+dataflow, see the section on <<execution_order,explicit execution order>>.
 
 [[composite_functions]]
 == Composite functions
@@ -997,7 +1031,8 @@ loop body.
 *Performance Tip:* use the +foreach+ loop instead of +for+ if your
 loop iterations are independent and can simply be executed in parallel.
 
-=== Explicit data-dependent execution
+[[execution_order]]
+=== Explicit execution ordering
 
 In general, execution ordering in Swift/T is implicit and driven by
 data dependencies.  In some cases it is useful to add explicit data
@@ -1030,7 +1065,6 @@ wait deep (A) {
 }
 
 ----
-
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
