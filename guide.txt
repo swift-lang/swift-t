@@ -487,11 +487,10 @@ z2 = h(x,y,2);
 int output = r(z1,z2);
 ----
 
-This allows code to execute as concurrently as possible, limited
-only by data availability.  In this example, +g()+ runs first, because it
-is dependent only on a literal.  After +y+ is set, +f()+ runs, setting
-+x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
-are set, allowing +r()+ to run.
+In this example, +g()+ runs first, because it is dependent only on a
+literal.  After +y+ is set, +f()+ runs, setting +x+.  Then, two
+invocations of +h()+ execute.  Finally, +z1+ and +z2+ are set,
+allowing +r()+ to run.
 
 Variables may be assigned only once.  Multiple assignment is often
 detected at compile time, and will always be detected at run time,
@@ -502,8 +501,15 @@ expressions will never execute.  Upon program completion, Swift/T will
 report the error and print debug information about any unexecuted
 expressions and identifiers of corresponding unassigned variables.
 
-If you need to enforce a certain order that you cannot express with
-dataflow, see the section on <<execution_order,explicit execution order>>.
+In summary, there is no instruction pointer in Swift/T.  All
+statements in the workflow are eligible to run as soon as their input
+data is available.
+
+Some applications have side effects, such as creating or modifying
+files that another task must wait for.  It is a best practice to
+represent these data items with the Swift/T +file+ type.  But if you
+need to enforce a certain order that you cannot express with dataflow,
+see the section on <<execution_order,explicit execution order>>.
 
 [[composite_functions]]
 == Composite functions
