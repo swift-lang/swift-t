@@ -1420,9 +1420,10 @@ statements in the workflow are eligible to run as soon as their input
 data is available.</p></div>
 <div class="paragraph"><p>Some applications have side effects, such as creating or modifying
 files that another task must wait for.  It is a best practice to
-represent these data items with the Swift/T <code>file</code> type.  But if you
-need to enforce a certain order that you cannot express with dataflow,
-see the section on <a href="#execution_order">explicit execution order</a>.</p></div>
+represent these data items with the
+<a href="#section_files">Swift/T <code>file</code> type</a>.
+But if you need to enforce a certain order that you cannot express
+with dataflow, see the section on <a href="#execution_order">explicit execution order</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1667,7 +1668,7 @@ file y &lt;"/home/user/out.txt"&gt;; // Declare a mapped file
 y = x; // Do the copy</code></pre>
 </div></div>
 <div class="paragraph"><p>A range of functions to work with files are provided in the
-<code>files</code> library module.</p></div>
+<a href="#library_files"><code>files</code> library module</a>.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>// Initialize an array of files from a range of files on disk with glob
@@ -3017,7 +3018,8 @@ Reads the whole file, returning each line as a separate entry in the
 output array.  The <code>comment</code> argument is optional and defaults to
 <code>"#"</code> .  Comments are excised, leading and trailing whitespace is
 trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
-disabled.
+disabled (that is, you will receive the whole file, nothing will be
+excised).
 </p>
 </dd>
 </dl></div>
@@ -5707,7 +5709,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-03-16 10:47:42 CDT
+ 2018-03-16 11:00:41 CDT
 </div>
 </div>
 
