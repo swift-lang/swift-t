@@ -23,8 +23,7 @@ OUTPUT=${THIS%.sh}.out
 
 export ADLB_EXHAUST_TIME=1
 
-#bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
-turbine -l -n 4 ${SCRIPT} >& ${OUTPUT} #For testing in Azza's sytem
+bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
 
 [[ ${?} == 0 ]] || test_result 1
 

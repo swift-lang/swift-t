@@ -24,8 +24,7 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 set -x
 
 export PROCS=5
-#bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-turbine -l -n $PROCS ${SCRIPT} >> ${OUTPUT} 2>&1 #Azza testing
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 
 cat $OUTPUT
 #[[ ${?} == 0 ]] || test_result 1

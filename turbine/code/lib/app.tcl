@@ -22,13 +22,13 @@ namespace eval turbine {
   proc app_init { } {
     variable app_initialized
     variable app_retries
-#    variable app_backoff
+    variable app_backoff
 
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRIES 0 app_retries
-#    set app_backoff 0.1
+    set app_backoff 0.1
   }
 
   # Build up a log message with stdio information
@@ -67,24 +67,22 @@ namespace eval turbine {
     # Begin retry loop: break on success
     while { true } {
       incr tries
-#      log "shell: Azaa: while loop for -$cmd- @- TRIES count: $tries"
       log "shell: $cmd $args $stdios"
       set start [ clock milliseconds ]
       variable app_retries
       if { $tries == 1 } {
-#         log "shell Azza: $cmd, case tries == 1"
          app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries
          continue
       } else {
-         # case tries > 1: dispatch execution to a random rank, then see what happens
+         # case tries > 1: dispatch execution to a random rank
          set target_rank [ turbine::random_worker ]
-#         log "shell Azza: case tries (= $tries) > 1, relocate on $target_rank"
+	 app_delay $tries
          set tcltmp:prio [ turbine::get_priority ]
          adlb::put $target_rank 0 [ list app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries ]  ${tcltmp:prio} 1
 #        Remember {adlb::put my_rank WORK_TYPE "tcl function name" priority parallelism} I still need to code for WORK_TYPE and parallelism
-      	 if { $tries > $app_retries } { break }
+      	 if { $tries >= $app_retries } { break }
       }  
-    } ;# End while loop
+    } ; # End while loop
     set stop [ clock milliseconds ]
     set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
     log "shell command duration: $duration"
@@ -93,13 +91,13 @@ namespace eval turbine {
   proc app_run { stdin stdout stderr cmd args tries total_retries } {
     global tcl_version 
     if { $tcl_version >= 8.6 } {
-#       log "shell Azza: app_run with cmd = $cmd, tries = $tries on rank = [ adlb::rank ]"
        try {
          c::sync_exec $stdin $stdout $stderr $cmd {*}$args
 	 return -code break
        } trap {TURBINE ERROR} { results } {
          # Error: try again
          app_error $tries $total_retries $results $cmd $args 
+
        }
     } else {
       # Tcl 8.5
@@ -125,22 +123,19 @@ namespace eval turbine {
     }
     # variable app_retries
     set retry [ expr $tries <= $app_retries ]
-#    log "shell Azza: here, app_error on cmd = $cmd, with tries = $tries, app_retries = $app_retries, retry = $retry: $tries <= $app_retries, on rank = [ adlb::rank ] "
     if { ! $retry } {
-#      log "shell Azza: case where retry fails (retry = $retry)"
       turbine_error "app execution failed" on: [ c_utils::hostname ] \
-          "\n $msg" "\n command: $cmd $args"
+      	  rank [ adlb::rank ] "\n $msg" "\n command: $cmd $args"
+    } else {
+      log "$msg: retries: $tries/$app_retries on: 
+                [ c_utils::hostname ], rank [ adlb::rank ]"
     }
-    app_retry $msg $tries $app_retries
   }
 
-  proc app_retry { msg tries app_retries} {
-#    log "shell Azza: here app_retry, with tries = $tries, app_retries = $app_retries, on rank = [ adlb::rank ]"
+  proc app_delay { tries } {
     # Retry:
-    # variable app_retries
-    # variable app_backoff
-    set app_backoff 0.1
-    log "$msg: retries: $tries/$app_retries on: [ c_utils::hostname ], rank [ adlb::rank ] "
+    variable app_retries
+    variable app_backoff
     set delay [ expr { $app_backoff * pow(2, $tries) * rand() } ]
     after [ expr round(1000 * $delay) ]
   }

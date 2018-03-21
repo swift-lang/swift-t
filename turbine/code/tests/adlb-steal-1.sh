@@ -21,8 +21,7 @@ THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-#bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
-turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}    #Azza's system tests
+bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
 
 [[ ${?} == 0 ]] || test_result 1
 
