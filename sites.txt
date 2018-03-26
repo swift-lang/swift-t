@@ -276,10 +276,10 @@ Had to do a passthrough manual anchor to get this to work right:
 +-i <script>+::
 Set an 'initialization script' to run before launching Turbine.  This
 script will have +TURBINE_OUTPUT+ in the environment, so you may
-perform additional configuration just before job launch.  + Other
-available environment variables include +PROCS+ (the total number of
-MPI processes), +TURBINE_WORKERS+ (the number of Turbine worker
-processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
+perform additional configuration just before job launch.
+Other available environment variables include +PROCS+ (the total
+number of MPI processes), +TURBINE_WORKERS+ (the number of Turbine
+worker processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
 +WALLTIME+, +NODES+, +PPN+, etc.  See +run-init.zsh+ for other
 variables.  Also, all environment variables from +turbine-config.sh+
 (i.e., Turbine installation information) are available.  The
