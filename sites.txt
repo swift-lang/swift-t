@@ -282,7 +282,10 @@ MPI processes), +TURBINE_WORKERS+ (the number of Turbine worker
 processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
 +WALLTIME+, +NODES+, +PPN+, etc.  See +run-init.zsh+ for other
 variables.  Also, all environment variables from +turbine-config.sh+
-(i.e., Turbine installation information) are available.
+(i.e., Turbine installation information) are available.  The
+initialization script is usually a simply shell script but can be any
+program, use the Unix hash bang (e.g., +#!/bin/sh+) syntax as usual in
+shell scripting.
 
 +-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
 
@@ -291,10 +294,10 @@ default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
 +-s <script>+::
-Source this file (called the 'settings file') for environment
-variables.  These variables override any other <<variables,Turbine
-scheduler variables>>, including +TURBINE_OUTPUT+.  You may place
-arbitrary shell code in this script.  This script is run before the
+Source this 'settings file' for environment variables.  These
+variables override any other <<variables,Turbine scheduler
+variables>>, including +TURBINE_OUTPUT+.  You may place arbitrary
+shell code in this script.  This script is run before the
 initialization script (+turbine -i+).
 
 +-t <time>+:: Set scheduler walltime.  The argument format is passed
