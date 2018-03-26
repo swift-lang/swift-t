@@ -267,7 +267,12 @@ Set an environment variable in the job environment.  This may be used
 multiple times.  <<automatic_env,Automatic environment variables>>
 need not be specified here.
 
-[[init_script]]
+////
+Had to do a passthrough manual anchor to get this to work right:
+////
+++++
+<a name="init_script"></a>
+++++
 +-i <script>+::
 Set an 'initialization script' to run before launching Turbine.  This
 script will have +TURBINE_OUTPUT+ in the environment, so you may
