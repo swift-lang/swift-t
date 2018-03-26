@@ -1210,7 +1210,10 @@ MPI processes), <code>TURBINE_WORKERS</code> (the number of Turbine worker
 processes), <code>SCRIPT</code> and <code>ARGS</code> (the Swift/Turbine command),
 <code>WALLTIME</code>, <code>NODES</code>, <code>PPN</code>, etc.  See <code>run-init.zsh</code> for other
 variables.  Also, all environment variables from <code>turbine-config.sh</code>
-(i.e., Turbine installation information) are available.
+(i.e., Turbine installation information) are available.  The
+initialization script is usually a simply shell script but can be any
+program, use the Unix hash bang (e.g., <code>#!/bin/sh</code>) syntax as usual in
+shell scripting.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1236,9 +1239,9 @@ the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
 </dt>
 <dd>
 <p>
-Source this file (called the <em>settings file</em>) for environment
-variables.  These variables override any other <a href="#variables">Turbine scheduler variables</a>, including <code>TURBINE_OUTPUT</code>.  You may place
-arbitrary shell code in this script.  This script is run before the
+Source this <em>settings file</em> for environment variables.  These
+variables override any other <a href="#variables">Turbine scheduler variables</a>, including <code>TURBINE_OUTPUT</code>.  You may place arbitrary
+shell code in this script.  This script is run before the
 initialization script (<code>turbine -i</code>).
 </p>
 </dd>
@@ -3565,7 +3568,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer-text">
 Version 1.3.0<br />
 Last updated
- 2018-03-26 11:12:36 CDT
+ 2018-03-26 11:20:16 CDT
 </div>
 </div>
 </body>
