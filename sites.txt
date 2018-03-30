@@ -283,7 +283,7 @@ worker processes), +SCRIPT+ and +ARGS+ (the Swift/Turbine command),
 +WALLTIME+, +NODES+, +PPN+, etc.  See +run-init.zsh+ for other
 variables.  Also, all environment variables from +turbine-config.sh+
 (i.e., Turbine installation information) are available.  The
-initialization script is usually a simply shell script but can be any
+initialization script is usually a simple shell script but can be any
 program, use the Unix hash bang (e.g., +#!/bin/sh+) syntax as usual in
 shell scripting.
 
