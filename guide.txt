@@ -1220,7 +1220,8 @@ DEPRECATED:
 +float2string(float)  -> string+:: Convert float to string
 +string2float(string) -> float+::  Convert string to float (alias: +parseFloat()+)
 +int2float(int)       -> float+::  Convert integer to float
-+float2int(float)     -> int+::    Convert float to integer
++float2int(float)     -> int+::    Convert float to integer +
+(Retains integer part, rounds toward 0.  Implemented with Tcl +int()+)
 +boolean2string(boolean) -> string+:: Convert boolean to string
 +string2boolean(string)  -> int+::    Convert string to boolean.  Case-insensitive.
 Accepts for +true+: +"true"+, +"yes"+, +"y"+, any non-zero number as a string.
@@ -1348,7 +1349,9 @@ respectively
 +floor(float) -> float+:: Round down
 +ceil(float) -> float+:: Round up
 +round(float) -> float+:: Round nearest
-+log(float) -> float+:: Natural logarithm
++ln(float) -> float+:: Natural logarithm
++log10(float) -> float+:: Base-10 logarithm
++log(float x, float b) -> float+:: Base-+b+ logarithm of +x+
 +exp(float) -> float+:: Natural exponentiation: e^i^
 +sqrt(float) -> float+:: Square root
 +is_nan(float) -> boolean+:: Check for NaN
