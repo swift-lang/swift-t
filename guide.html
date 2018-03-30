@@ -2340,7 +2340,8 @@ Convert integer to float
 </dt>
 <dd>
 <p>
-Convert float to integer
+Convert float to integer<br />
+(Retains integer part, rounds toward 0.  Implemented with Tcl <code>int()</code>)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2643,11 +2644,27 @@ Round nearest
 </p>
 </dd>
 <dt class="hdlist1">
-<code>log(float) &#8594; float</code>
+<code>ln(float) &#8594; float</code>
 </dt>
 <dd>
 <p>
 Natural logarithm
+</p>
+</dd>
+<dt class="hdlist1">
+<code>log10(float) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Base-10 logarithm
+</p>
+</dd>
+<dt class="hdlist1">
+<code>log(float x, float b) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Base-<code>b</code> logarithm of <code>x</code>
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5709,7 +5726,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-03-16 11:00:41 CDT
+ 2018-03-30 11:58:18 CDT
 </div>
 </div>
 
