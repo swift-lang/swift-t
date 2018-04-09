@@ -141,27 +141,32 @@ mpiexec tclsh program.tic
 ----
 
 On more complex, scheduled systems, users do not invoke +mpiexec+
-directly.  Thus, sample scripts are provided below.
+directly; Turbine run scripts are provided by Swift/T.
 
 [[scheduled_systems]]
 == Submitting Turbine jobs on scheduled systems
 
-On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
+On scheduled systems (PBS, SLURM, LSF, Cobalt, etc.), Turbine is launched
 with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
 it with the job submission program (e.g., +qsub+).
 
 === Turbine run scripts
 
+Turbine includes the following scheduler support, and the associated
+shell run scripts:
+
 PBS:: +turbine-pbs-run.zsh+
 Cobalt:: +turbine-cobalt-run.zsh+
 Cray/APRUN:: +turbine-cray-run.zsh+ (PBS with Cray's +aprun+)
 SLURM:: +turbine-slurm-run.zsh+
+Theta:: +turbine-theta-run.zsh+ (Cobalt with Cray's +aprun+)
+LSF:: +turbine-lsf-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
 
-The +swift-t+ and +turbine+ programs have a +-m+ option that accepts
-+pbs+, +cobalt+, +cray+, or +slurm+.
+The +swift-t+ and +turbine+ programs have a +-m+ (machine) option that accepts
++pbs+, +cobalt+, +cray+, +lsf+, +theta+, or +slurm+.
 
 A typical invocation is (one step compile-and-run):
 ----
@@ -198,8 +203,8 @@ processes per node), submitted by PBS to queue +bigqueue+.
 === Turbine scheduler variables
 
 For scheduled systems, Turbine accepts a common set of environment
-variables.  These may be placed in +settings.sh+ or set by the user in
-any other way.
+variables.  These may be placed in the <<settings_file,settings file>>
+or set by the user in any other way.
 
 +PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
@@ -1923,6 +1928,61 @@ Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT 
 cat $TURBINE_OUTPUT/joined4.txt
 ----
 
+== IBM
+
+=== Summit-dev
+
+https://www.olcf.ornl.gov/for-users/system-user-guides/summitdev-quickstart-guide/#system-overview[Summit-dev]
+is a 54-node IBM POWER8 x2 plus NVIDIA Tesla P100 x4 system at OLCF.
+It uses LSF.
+
+==== Public installation
+
+Add to +PATH+:
+
+----
+/lustre/atlas/world-shared/csc249/sfw/sdev/swift-t/stc/bin
+/lustre/atlas/world-shared/csc249/sfw/sdev/swift-t/turbine/bin
+----
+
+Run with:
+
+----
+$ swift-t -m lsf workflow.swift
+----
+
+==== Build instructions
+
+First, apply the <<rtld_global,RTLD_GLOBAL>> fix to Tcl,
+or use the dependency below.
+
+Dependencies are in:
+----
+/lustre/atlas/world-shared/csc249/sfw/sdev/ant-1.9.11
+/lustre/atlas/world-shared/csc249/sfw/sdev/tcl-8.6.2
+/usr/lib/jvm/java-1.7.0/bin/java
+----
+
+Load modules:
+----
+module load gcc
+module load spectrum-mpi/10.1.0.4-20170915
+module load lsf-tools/1.0
+----
+
+. Compile c-utils as usual.
+. Configure ADLB/X with +CC=mpicc+ and compile
+. Configure Turbine with:
++
+----
+--with-mpi=/autofs/nccs-svm1_sw/summitdev/.swci/1-compute/opt/spack/20171006/linux-rhel7-ppc64le/gcc-6.3.1/spectrum-mpi-10.1.0.4-20170915-mwst4ujoupnioe3kqzbeqh2efbptssqz
+--with-mpi-lib-name=mpi_ibm
+--with-tcl=/lustre/atlas/world-shared/csc249/sfw/sdev/tcl-8.6.2
+----
++
+and compile.
++
+. Compile STC as usual.
 
 == Cloud
 
@@ -1977,6 +2037,7 @@ other single system.
 This section contains miscellaneous notes about compiling and running
 Swift/T.
 
+[[rtld_global]]
 === RTLD_GLOBAL
 
 Some Python compiled packages including Numpy do not immediately work
