@@ -822,6 +822,32 @@ Join the <a href="https://groups.google.com/forum/#!forum/swift-t-user"><code>sw
 </div>
 </div>
 <div class="sect1">
+<h2 id="_quickstart">Quickstart</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>On a scheduled system, you typically need to simply:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Set some environment variables, such as your queue, project account, etc.
+</p>
+</li>
+<li>
+<p>
+Run Swift/T with the name of the scheduler, e.g.:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m pbs workflow.swift</code></pre>
+</div></div>
+</li>
+</ol></div>
+<div class="paragraph"><p>The <a href="#variables">environment variables</a> are typically placed in a wrapper shell
+script that sets the environment variables for your case and finally
+calls <code>swift-t</code>.  Alternatively, they may be placed in a
+<a href="#settings_file">settings file</a>.</p></div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_swift_turbine_compilation">Swift-Turbine compilation</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Swift/T usage starts with developing and testing a Swift/T script.
@@ -878,18 +904,20 @@ script wrapper that configures Turbine and essentially runs:</p></div>
 <pre><code>mpiexec tclsh program.tic</code></pre>
 </div></div>
 <div class="paragraph"><p>On more complex, scheduled systems, users do not invoke <code>mpiexec</code>
-directly.  Thus, sample scripts are provided below.</p></div>
+directly; Turbine run scripts are provided by Swift/T.</p></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="scheduled_systems">Submitting Turbine jobs on scheduled systems</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
+<div class="paragraph"><p>On scheduled systems (PBS, SLURM, LSF, Cobalt, etc.), Turbine is launched
 with a customized <em>run script</em> (<code>turbine-&lt;name&gt;-run</code>) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
 it with the job submission program (e.g., <code>qsub</code>).</p></div>
 <div class="sect2">
 <h3 id="_turbine_run_scripts">Turbine run scripts</h3>
+<div class="paragraph"><p>Turbine includes the following scheduler support, and the associated
+shell run scripts:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 PBS
@@ -923,10 +951,26 @@ SLURM
 <code>turbine-slurm-run.zsh</code>
 </p>
 </dd>
+<dt class="hdlist1">
+Theta
+</dt>
+<dd>
+<p>
+<code>turbine-theta-run.zsh</code> (Cobalt with Cray&#8217;s <code>aprun</code>)
+</p>
+</dd>
+<dt class="hdlist1">
+LSF
+</dt>
+<dd>
+<p>
+<code>turbine-lsf-run.zsh</code>
+</p>
+</dd>
 </dl></div>
 <div class="paragraph"><p>Each script accepts input via environment variables and command-line options.</p></div>
-<div class="paragraph"><p>The <code>swift-t</code> and <code>turbine</code> programs have a <code>-m</code> option that accepts
-<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, or <code>slurm</code>.</p></div>
+<div class="paragraph"><p>The <code>swift-t</code> and <code>turbine</code> programs have a <code>-m</code> (machine) option that accepts
+<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, <code>lsf</code>, <code>theta</code>, or <code>slurm</code>.</p></div>
 <div class="paragraph"><p>A typical invocation is (one step compile-and-run):</p></div>
 <div class="listingblock">
 <div class="content">
@@ -960,8 +1004,8 @@ processes per node), submitted by PBS to queue <code>bigqueue</code>.</p></div>
 <div class="sect2">
 <h3 id="variables">Turbine scheduler variables</h3>
 <div class="paragraph"><p>For scheduled systems, Turbine accepts a common set of environment
-variables.  These may be placed in <code>settings.sh</code> or set by the user in
-any other way.</p></div>
+variables.  These may be placed in the <a href="#settings_file">settings file</a>
+or set by the user in any other way.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>PROCS</code>
@@ -1090,62 +1134,62 @@ in Swift/T via <code>getenv()</code>.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-PROJECT
+<code>PROJECT</code>
 </p>
 </li>
 <li>
 <p>
-WALLTIME
+<code>WALLTIME</code>
 </p>
 </li>
 <li>
 <p>
-QUEUE
+<code>QUEUE</code>
 </p>
 </li>
 <li>
 <p>
-TURBINE_OUTPUT
+<code>TURBINE_OUTPUT</code>
 </p>
 </li>
 <li>
 <p>
-TURBINE_JOBNAME
+<code>TURBINE_JOBNAME</code>
 </p>
 </li>
 <li>
 <p>
-TURBINE_LOG
+<code>TURBINE_LOG</code>
 </p>
 </li>
 <li>
 <p>
-TURBINE_DEBUG
+<code>TURBINE_DEBUG</code>
 </p>
 </li>
 <li>
 <p>
-MPI_LABEL
+<code>MPI_LABEL</code>
 </p>
 </li>
 <li>
 <p>
-TURBINE_WORKERS
+<code>TURBINE_WORKERS</code>
 </p>
 </li>
 <li>
 <p>
-ADLB_SERVERS
+<code>ADLB_SERVERS</code>
 </p>
 </li>
 <li>
 <p>
-TCLLIBPATH
+<code>TCLLIBPATH</code>
 </p>
 </li>
 <li>
 <p>
-LD_LIBRARY_PATH
+<code>LD_LIBRARY_PATH</code>
 </p>
 </li>
 </ul></div>
@@ -1155,7 +1199,7 @@ LD_LIBRARY_PATH
 <div class="title">Note</div>
 </td>
 <td class="content"><code>TCLLIBPATH</code> should not be set directly by the user,
-see <code>SWIFT_PATH</code>/<code>TURBINE_PATH</code></td>
+see <a href="guide.html#swift_path"><code>SWIFT_PATH</code></a></td>
 </tr></table>
 </div>
 </div>
@@ -1234,6 +1278,9 @@ default Turbine output directories are automatically created based on
 the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
 </p>
 </dd>
+</dl></div>
+<a name="settings_file"></a>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>-s &lt;script&gt;</code>
 </dt>
@@ -1242,7 +1289,8 @@ the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
 Source this <em>settings file</em> for environment variables.  These
 variables override any other <a href="#variables">Turbine scheduler variables</a>, including <code>TURBINE_OUTPUT</code>.  You may place arbitrary
 shell code in this script.  This script is run before the
-initialization script (<code>turbine -i</code>).
+initialization script (<code>turbine -i</code>).  This is an alternative to
+placing the environment variables in a wrapper script
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3223,6 +3271,79 @@ JOB_ID=2835290.edique02</code></pre>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_ibm">IBM</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_summit_dev">Summit-dev</h3>
+<div class="paragraph"><p><a href="https://www.olcf.ornl.gov/for-users/system-user-guides/summitdev-quickstart-guide/#system-overview">Summit-dev</a>
+is a 54-node IBM POWER8 x2 plus NVIDIA Tesla P100 x4 system at OLCF.
+It uses LSF.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_15">Public installation</h4>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/lustre/atlas/world-shared/csc249/sfw/sdev/swift-t/stc/bin
+/lustre/atlas/world-shared/csc249/sfw/sdev/swift-t/turbine/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m lsf workflow.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_6">Build instructions</h4>
+<div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
+or use the dependency below.</p></div>
+<div class="paragraph"><p>Dependencies are in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/lustre/atlas/world-shared/csc249/sfw/sdev/ant-1.9.11
+/lustre/atlas/world-shared/csc249/sfw/sdev/tcl-8.6.2
+/usr/lib/jvm/java-1.7.0/bin/java</code></pre>
+</div></div>
+<div class="paragraph"><p>Load modules:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load gcc
+module load spectrum-mpi/10.1.0.4-20170915
+module load lsf-tools/1.0</code></pre>
+</div></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Compile c-utils as usual.
+</p>
+</li>
+<li>
+<p>
+Configure ADLB/X with <code>CC=mpicc</code> and compile
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--with-mpi=/autofs/nccs-svm1_sw/summitdev/.swci/1-compute/opt/spack/20171006/linux-rhel7-ppc64le/gcc-6.3.1/spectrum-mpi-10.1.0.4-20170915-mwst4ujoupnioe3kqzbeqh2efbptssqz
+--with-mpi-lib-name=mpi_ibm
+--with-tcl=/lustre/atlas/world-shared/csc249/sfw/sdev/tcl-8.6.2</code></pre>
+</div></div>
+<div class="paragraph"><p>and compile.</p></div>
+</li>
+<li>
+<p>
+Compile STC as usual.
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_cloud">Cloud</h2>
 <div class="sectionbody">
 <div class="sect2">
@@ -3347,7 +3468,7 @@ MPI: You may use any MPI implementation
 <div class="paragraph"><p>This section contains miscellaneous notes about compiling and running
 Swift/T.</p></div>
 <div class="sect2">
-<h3 id="_rtld_global">RTLD_GLOBAL</h3>
+<h3 id="rtld_global">RTLD_GLOBAL</h3>
 <div class="paragraph"><p>Some Python compiled packages including Numpy do not immediately work
 with Swift/T, or any C code that instantiated Python through its C
 interface. See
@@ -3373,7 +3494,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 (ALCF).  Other existing Blue Gene/P systems may be configured in a
 similar way.</p></div>
 <div class="sect4">
-<h5 id="_public_installation_15">Public installation</h5>
+<h5 id="_public_installation_16">Public installation</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3511,7 +3632,7 @@ cluster at the Argonne Leadership Computing Facility (ALCF).  It used
 the Cobalt scheduler.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
 <div class="sect3">
-<h4 id="_public_installation_16">Public installation</h4>
+<h4 id="_public_installation_17">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3567,7 +3688,8 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer">
 <div id="footer-text">
 Version 1.3.0<br />
-Last updated 2018-03-28 23:09:52 CDT
+Last updated
+ 2018-04-09 15:44:11 CDT
 </div>
 </div>
 </body>
