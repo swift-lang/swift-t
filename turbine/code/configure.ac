@@ -1294,6 +1294,7 @@ AC_CONFIG_FILES(
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk
         scripts/submit/ec2/module.mk
+        scripts/submit/lsf/module.mk
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
