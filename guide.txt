@@ -2727,6 +2727,13 @@ your Swift program.
 logging, assuming logging was not disabled at configure time.  Logging
 goes to standard output by default.
 
+////
+Had to do a passthrough manual anchor to get this to work right:
+////
+++++
+<a name="swift_path"></a>
+++++
+
 +SWIFT_PATH+::
 +TURBINE_PATH+::
 Space-separated list of Swift/T extension (Tcl) package locations.

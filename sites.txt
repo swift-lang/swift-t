@@ -252,21 +252,21 @@ environment variable] +TURBINE_LAUNCH_OPTIONS+ will be applied to
 These variables are automatically passed to the job, and are available
 in Swift/T via +getenv()+.
 
-* PROJECT
-* WALLTIME
-* QUEUE
-* TURBINE_OUTPUT
-* TURBINE_JOBNAME
-* TURBINE_LOG
-* TURBINE_DEBUG
-* MPI_LABEL
-* TURBINE_WORKERS
-* ADLB_SERVERS
-* TCLLIBPATH
-* LD_LIBRARY_PATH
+* +PROJECT+
+* +WALLTIME+
+* +QUEUE+
+* +TURBINE_OUTPUT+
+* +TURBINE_JOBNAME+
+* +TURBINE_LOG+
+* +TURBINE_DEBUG+
+* +MPI_LABEL+
+* +TURBINE_WORKERS+
+* +ADLB_SERVERS+
+* +TCLLIBPATH+
+* +LD_LIBRARY_PATH+
 
 NOTE: +TCLLIBPATH+ should not be set directly by the user,
-see +SWIFT_PATH+/+TURBINE_PATH+
+see link:guide.html#swift_path[+SWIFT_PATH+]
 
 [[options]]
 === Turbine scheduler script options
@@ -314,12 +314,21 @@ shell scripting.
 default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
+
+////
+Had to do a passthrough manual anchor to get this to work right:
+////
+++++
+<a name="settings_file"></a>
+++++
+
 +-s <script>+::
 Source this 'settings file' for environment variables.  These
 variables override any other <<variables,Turbine scheduler
 variables>>, including +TURBINE_OUTPUT+.  You may place arbitrary
 shell code in this script.  This script is run before the
-initialization script (+turbine -i+).
+initialization script (+turbine -i+).  This is an alternative to
+placing the environment variables in a wrapper script.
 
 +-t <time>+:: Set scheduler walltime.  The argument format is passed
 through to the scheduler
@@ -332,7 +341,7 @@ system scheduler (e.g., +qsub+).
        (reduces number of files that must be read from file system).
 
 +-X+:: Run standalone Turbine executable
-        (created by link:guide.html#mkstatic[mkstatic.tcl]) instead of
+        (created by link:guide.html#mkstatic[+mkstatic.tcl+]) instead of
         +program.tic+.
 
 [[turbine_output]]
