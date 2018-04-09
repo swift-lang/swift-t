@@ -79,6 +79,22 @@ To report a problem, simply email swift-t-user@googlegroups.com .
 * See the link:./guide.html[Swift/T Guide] for more information about Swift/T.
 * Join the https://groups.google.com/forum/#!forum/swift-t-user[+swift-user+ mailing list].
 
+== Quickstart
+
+On a scheduled system, you typically need to simply:
+
+. Set some environment variables, such as your queue, project account, etc.
+. Run Swift/T with the name of the scheduler, e.g.:
++
+----
+$ swift-t -m pbs workflow.swift
+----
+
+The <<variables,environment variables>> are typically placed in a wrapper shell
+script that sets the environment variables for your case and finally
+calls +swift-t+.  Alternatively, they may be placed in a
+<<settings_file,settings file>>.
+
 == Swift-Turbine compilation
 
 Swift/T usage starts with developing and testing a Swift/T script.
