@@ -53,11 +53,13 @@ static void info_get_envs_error(MPI_Comm comm, const char* message);
 
 /**
  * Return 1 on success, 0 on error.
+ * OUT: envs, envs_length
  * If there are no environment variables, *envs=NULL, envs_length=0.
+ * Reads info object, puts all environment variables in envs,
+ * envs_length is number of environment variables found.
  * */
 static int info_get_envs(MPI_Comm comm, MPI_Info info,
 		char** envs, int* envs_length) {
-	int found = 0;
 	int flag = 0;
 	char* result;
 	if(MPI_INFO_NULL == info) {
@@ -89,7 +91,7 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 		total += len+2;
 	}
 	result = malloc(total);
-	memset(result, total, 0);
+	memset(result, 0, total);
 	strcpy(result, env_word);
 	char* p = result+env_word_length;
 	for(i=0; i<count; i++) {
@@ -136,6 +138,8 @@ static double info_get_timeout(MPI_Comm comm, MPI_Info info) {
 	return timeout;
 }
 
+static inline void chdir_checked(MPI_Comm comm, const char* d);
+
 static void info_chdir(MPI_Comm comm, MPI_Comm info) {
 
 	// Did the user set chdir=dir ?
@@ -150,13 +154,7 @@ static void info_chdir(MPI_Comm comm, MPI_Comm info) {
 	// Do the chdir()
 	char dir_string[len+1];
 	MPI_Info_get(info,"chdir",len+1,dir_string,&flag);
-	int rc = chdir(dir_string);
-	if (rc != 0) {
-		printf("MPIX_Comm_launch(): info key chdir=%s\n", dir_string);
-		printf("                    Could not change directories!\n");
-		perror("MPIX_Comm_launch: ");
-		MPI_Abort(comm, 1);
-	}
+	chdir_checked(comm, dir_string);
 }
 
 /**
@@ -199,6 +197,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		int* exit_code) {
 
 	int r;
+	// allhosts must be initialized before the gotos are reached
+	char* allhosts = NULL;
 
 	// get the name of this host
 	char procname[MPI_MAX_PROCESSOR_NAME+1];
@@ -207,11 +207,10 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 	r = MPI_Get_processor_name(procname, &procname_len);
 	if(r) goto fn_error;
 
-	// gather all names at process 0;
+	// gather all names at process root;
 	int size, rank;
 	MPI_Comm_rank(comm,&rank);
 	MPI_Comm_size(comm,&size);
-	char* allhosts = NULL;
 	if(rank == root) {
 		allhosts = (char*)malloc(sizeof(char)*(MPI_MAX_PROCESSOR_NAME+1)*size);
 		if(!allhosts) goto fn_error;
@@ -321,7 +320,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		unsetenv("TURBINE_LAUNCH_OPTIONS");
 
 		if (old_pwd != NULL) {
-			chdir(old_pwd);
+			chdir_checked(comm, old_pwd);
 			free(old_pwd);
 			old_pwd = NULL;
 		}
@@ -343,6 +342,17 @@ fn_error:
 
 	// Unreachable - for Eclipse:
 	return -1;
+}
+
+static inline void
+chdir_checked(MPI_Comm comm, const char* d) {
+	int rc = chdir(d);
+	if (rc != 0) {
+		printf("MPIX_Comm_launch(): info key chdir=%s\n", d);
+		printf("                    Could not change directories!\n");
+		perror("MPIX_Comm_launch: ");
+		MPI_Abort(comm, 1);
+	}
 }
 
 // Local Variables:

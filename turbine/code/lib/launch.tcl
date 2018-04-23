@@ -1,9 +1,22 @@
 
-# LAUNCH.TCL
+# Copyright 2018 University of Chicago and Argonne National Laboratory
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License
 
-package require turbine
+# LAUNCH TCL
+# MPIX_Comm_launch functionality
 
-namespace eval launch {
+namespace eval turbine {
   proc launch_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
     rule $inputs "launch::launch_tcl_body $exit_code $inputs" \
@@ -73,7 +86,7 @@ namespace eval launch {
 
   proc launch_turbine_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
-    rule $inputs "launch::launch_turbine_tcl_body $exit_code $inputs" \
+    rule $inputs "turbine::launch_turbine_tcl_body $exit_code $inputs" \
         {*}$args type $turbine::WORK
   }
   proc launch_turbine_tcl_body { exit_code args } {
@@ -98,7 +111,7 @@ namespace eval launch {
 
   proc launch_multi_tcl { outputs inputs args } {
 	set exit_code [ lindex $outputs 0 ]
-    rule $inputs "launch::launch_multi_tcl_body $exit_code $inputs" \
+    rule $inputs "turbine::launch_multi_tcl_body $exit_code $inputs" \
         {*}$args type $turbine::WORK
   }
   proc launch_multi_tcl_body { exit_code args } {
@@ -153,7 +166,7 @@ namespace eval launch {
     }
 
     set color_setting_value [ retrieve $color_setting ]
-    
+
     # show envc_dict
 
     # Receive MPI task information
