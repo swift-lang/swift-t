@@ -1283,6 +1283,7 @@ AC_CONFIG_FILES(
         src/tcl/mpe/module.mk
         src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
+        src/tcl/launch/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/static-pkg/module.mk

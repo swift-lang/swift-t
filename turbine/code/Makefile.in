@@ -462,6 +462,7 @@ include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
 include src/tcl/jvm/module.mk
+include src/tcl/launch/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
