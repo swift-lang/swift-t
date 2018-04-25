@@ -592,26 +592,32 @@ namespace eval turbine {
     # Asserts it is an integer
     # Returns 0 if used default, else 1
     proc getenv_integer { key dflt output } {
+        upvar $output result
+        return [ getenv_type $key $dflt result integer ]
+    }
+
+    proc getenv_double { key dflt output } {
         global env
         upvar $output result
-        if { [ info exists env($key) ] } {
-            if { [ string is integer $env($key) ] } {
-                if { [ string length $env($key) ] == 0 } {
-                    set result $dflt
-                    return 0
-                } else {
-                    set result $env($key)
-                    return 1
-                }
-            } else {
-                turbine_error \
-                    "Environment variable $key must be an integer. " \
-                    "Value: '$env($key)'"
-            }
-        } else {
+        return [ getenv_type $key $dflt result double ]
+    }
+
+    proc getenv_type { key dflt output type } {
+
+        if { ! [ info exists env($key) ] ||
+             [ string length $env($key) ] == 0 } {
             set result $dflt
             return 0
         }
+        if { ! [ string is $type $env($key) ] } {
+            turbine_error \
+                "Environment variable $key must be of type $type. " \
+                "Value: '$env($key)'"
+        }
+
+        # Normal case: variable exists and is of correct type
+        set result $env($key)
+        return 1
     }
 
     # Initialize user modules

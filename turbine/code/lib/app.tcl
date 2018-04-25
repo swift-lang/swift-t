@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
+
 # Turbine APP.TCL
 
 # Functions for launching external apps
@@ -23,11 +24,14 @@ namespace eval turbine {
     variable app_initialized
     variable app_retries
     variable app_backoff
+    # Artificial random delay just before launching each app
+    variable app_delay
 
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRIES 0 app_retries
+    getenv_float   TURBINE_APP_DELAY   0 app_delay
     set app_backoff 0.1
   }
 
@@ -58,6 +62,7 @@ namespace eval turbine {
     global tcl_version
 
     app_init
+    after [ expr $app_delay * 1000.0 ]
 
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
