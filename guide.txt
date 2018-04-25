@@ -1170,15 +1170,21 @@ If a function is described below an *Import:* label, be sure to
 
 === General
 
-+xor(boolean,boolean) -> boolean+:: Exclusive logical or
++xor(boolean,boolean) -> boolean+::
+Exclusive logical or
+
 +propagate(int|float|string|boolean|void|file...) -> void+::
 Create a void value. +
 (+make_void()+ and +makeVoid()+ are deprecated
 aliases for this function.)
-+size(A[]) -> int+:: Obtain the size of array +A+
-+contains(A[], key) -> boolean+:: Test that future +A[key]+ exists.
-This function blocks until +A+ is closed.  Consumers of +A[key]+ may
-block again until +A[key]+ is stored.
+
++size(A[]) -> int+::
+Obtain the size of array +A+
+
++contains(A[], key) -> boolean+::
+Test that future +A[key]+ exists.  This function blocks until +A+ is
+closed.  Consumers of +A[key]+ may block again until +A[key]+ is
+stored.
 
 [[pick]]
 ==== Pick functions
@@ -2754,7 +2760,6 @@ Directory location for <<unmapped_files,unmapped files>> and
 <<unmapped_files,unmapped files>> when they are no longer used.
 Setting this to 0 logs these temporary files when created and prevents
 Swift/T from automatically deleting them.
-
 
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
