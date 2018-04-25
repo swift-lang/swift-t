@@ -92,10 +92,15 @@ proc readfile { filename } {
 
 # Debugging helper
 proc show { args } {
-    foreach v $args {
-        upvar $v t
-        puts "$v: $t"
+  foreach v $args {
+    upvar $v t
+
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
     }
+
+    puts "$v: $t"
+  }
 }
 
 set KB 1024
