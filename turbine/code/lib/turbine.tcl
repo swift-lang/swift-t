@@ -597,12 +597,14 @@ namespace eval turbine {
     }
 
     proc getenv_double { key dflt output } {
-        global env
+
         upvar $output result
         return [ getenv_type $key $dflt result double ]
     }
 
     proc getenv_type { key dflt output type } {
+        global env
+        upvar $output result
 
         if { ! [ info exists env($key) ] ||
              [ string length $env($key) ] == 0 } {

@@ -24,14 +24,20 @@ namespace eval turbine {
     variable app_initialized
     variable app_retries
     variable app_backoff
-    # Artificial random delay just before launching each app
-    variable app_delay
+    # Artificial random delay (seconds) just before launching each app
+    variable app_delay_time
 
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRIES 0 app_retries
-    getenv_float   TURBINE_APP_DELAY   0 app_delay
+    getenv_double  TURBINE_APP_DELAY   0 app_delay_time
+
+    if { $app_delay_time > 0 } {
+      if { [ adlb::rank ] == 0 } {
+        log "TURBINE_APP_DELAY: $app_delay_time"
+      }
+    }
     set app_backoff 0.1
   }
 
@@ -62,7 +68,7 @@ namespace eval turbine {
     global tcl_version
 
     app_init
-    after [ expr $app_delay * 1000.0 ]
+    app_delay
 
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
@@ -115,6 +121,15 @@ namespace eval turbine {
           "\n $msg" "\n command: $cmd $args"
     }
     app_retry $msg $tries
+  }
+
+  proc app_delay { } {
+    variable app_delay_time
+
+    # Apply random delay if user asked for it
+    if { $app_delay_time > 0 } {
+      after [ expr round($app_delay_time * 1000.0 * rand()) ]
+    }
   }
 
   proc app_retry { msg tries } {
