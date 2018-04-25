@@ -77,7 +77,7 @@ if [ ! -z "$TCL_VERSION" ]; then
 fi
 
 if [ ! -z "$TCLSH_LOCAL" ]; then
-  EXTRA_ARGS+=" --with-tcl-local=${TCLSH_LOCAL}"
+  EXTRA_ARGS+=" --with-tclsh-local=${TCLSH_LOCAL}"
 fi
 
 if [ ! -z "$TCL_LIB_DIR" ]; then
