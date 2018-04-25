@@ -2815,6 +2815,13 @@ The seed is recorded in the log.
 If set to a positive integer, +app+ functions will be retried that
 many times they produce exit code 0.  Cf. <<app_retry, App retry>>.
 
+anchor:app_delay[]
+
++TURBINE_APP_DELAY+::
+If set to a positive floating point number +N+,
++app+ functions will be delayed a number of seconds drawn uniformly
+between 0 and +N+.
+
 +ADLB_DEBUG_RANKS=1+:: Enable a report showing the rank and hostname
 of each process.  This allows you to determine whether your process
 layout on a given machine is as intended.
