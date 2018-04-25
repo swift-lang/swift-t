@@ -1283,6 +1283,7 @@ AC_CONFIG_FILES(
         src/tcl/mpe/module.mk
         src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
+        src/tcl/launch/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/static-pkg/module.mk
@@ -1294,6 +1295,7 @@ AC_CONFIG_FILES(
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk
         scripts/submit/ec2/module.mk
+        scripts/submit/lsf/module.mk
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk

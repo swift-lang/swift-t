@@ -462,6 +462,7 @@ include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
 include src/tcl/jvm/module.mk
+include src/tcl/launch/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
@@ -477,6 +478,7 @@ TURBINE_SRC += $(TCL_MPE_SRC)
 TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
+TURBINE_SRC += $(TCL_LAUNCH_SRC)
 TURBINE_SRC += $(JVM_SCRIPT_SRC)
 TURBINE_SRC += $(TCL_JVM_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
