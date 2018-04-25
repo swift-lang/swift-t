@@ -2252,9 +2252,9 @@ Obtain the size of array <code>A</code>
 </dt>
 <dd>
 <p>
-Test that future <code>A[key]</code> exists.
-This function blocks until <code>A</code> is closed.  Consumers of <code>A[key]</code> may
-block again until <code>A[key]</code> is stored.
+Test that future <code>A[key]</code> exists.  This function blocks until <code>A</code> is
+closed.  Consumers of <code>A[key]</code> may block again until <code>A[key]</code> is
+stored.
 </p>
 </dd>
 </dl></div>
@@ -4898,6 +4898,19 @@ If set to a positive integer, <code>app</code> functions will be retried that
 many times they produce exit code 0.  Cf. <a href="#app_retry">App retry</a>.
 </p>
 </dd>
+</dl></div>
+<div class="paragraph"><p><a id="app_delay"></a></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_APP_DELAY</code>
+</dt>
+<dd>
+<p>
+If set to a positive floating point number <code>N</code>,
+<code>app</code> functions will be delayed a number of seconds drawn uniformly
+between 0 and <code>N</code>.
+</p>
+</dd>
 <dt class="hdlist1">
 <code>ADLB_DEBUG_RANKS=1</code>
 </dt>
@@ -5729,7 +5742,7 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-04-09 15:43:40 CDT
+ 2018-04-25 13:37:02 CDT
 </div>
 </div>
 
