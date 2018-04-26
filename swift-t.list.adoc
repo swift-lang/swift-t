@@ -27,7 +27,6 @@ Proc. EuroPar 2017.  +
 *High Performance Machine Learning and Evolutionary Computing to Develop Personalized Therapeutics* +
 Chase Cockrell, Jonathan Ozik, Nick Collier, Justin Wozniak, and Gary An. +
 University of Chicago MindBytes Posters 2017. (Best poster, scalability and performance.) +
- +
  Poster: [http://www.mcs.anl.gov/~wozniak/papers/MindBytes_2017.pdf[PDF]]
 
 * [[FOAP_2017]]
