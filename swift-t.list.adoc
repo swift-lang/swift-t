@@ -26,7 +26,7 @@ Proc. EuroPar 2017.  +
 * [[MindBytes_2017]]
 *High Performance Machine Learning and Evolutionary Computing to Develop Personalized Therapeutics* +
 Chase Cockrell, Jonathan Ozik, Nick Collier, Justin Wozniak, and Gary An. +
-University of Chicago MindBytes Posters 2017. (Best poster XXX, scalability and performance.) This gastrointestinal agent-based modeling study explored an extremely large combinatorial search space of possible disease interventions and classifications. +
+University of Chicago MindBytes Posters 2017. (Best poster, scalability and performance.) +
  +
  Poster: [http://www.mcs.anl.gov/~wozniak/papers/MindBytes_2017.pdf[PDF]]
 
@@ -46,6 +46,7 @@ Parallel Computing 61, 2017. +
 *From desktop to large-scale model exploration with Swift/T* +
 Jonathan Ozik, Nicholson Collier, and Justin M. Wozniak. +
 Proc. Winter Simulation Conference 2016.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/EMEWS_2016.pdf[PDF]]
 
 * [[Cancer2_2016]]
 *High performance model exploration of mutation patterns in an agent-based model of colorectal cancer* +
