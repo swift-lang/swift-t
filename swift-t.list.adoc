@@ -1,4 +1,47 @@
 
+* [[Launch_2017]]
+*Launching MPI applications inside MPI applications* +
+Matthieu Dorier, Justin M. Wozniak, and Robert Ross. +
+Proc. WORKS @ SC 2017.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/Launch_2017.pdf[PDF]]
+
+* [[CANDLE_2017]]
+*CANDLE/Supervisor: A workflow framework for machine learning applied to cancer research* +
+Justin M. Wozniak, Rajeev Jain, Prasanna Balaprakash, Jonathan Ozik, Nicholson Collier, John Bauer, Fangfang Xia, Thomas Brettin, Rick Stevens, Jamaludin Mohd-Yusof, Cristina Garcia Cardona, Brian Van Essen, and Matthew Baughman. +
+Proc. Computational Approaches for Cancer @ SC 2017.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/CANDLE_2017.pdf[PDF]]
+
+* [[PhysiCell_2017]]
+*High-throughput cancer hypothesis testing with an integrated PhysiCell-EMEWS workflow* +
+Jonathan Ozik, Nicholas Collier, Justin M. Wozniak, Charles Macal, Chase Cockrell, Samuel H. Friedman, Ahmadreza Ghaffarizadeh, Randy Heiland, Gary An, and Paul Macklin. +
+Proc. Computational Approaches for Cancer @ SC 2017.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/PhysiCell_2017.pdf[PDF]]
+
+* [[CODAR_2017]]
+*Computing just what you need: Online data analysis and reduction at extreme scales* +
+Ian Foster, Mark Ainsworth, Bryce Allen, Julie Bessac, Franck Cappello, Jong Youl Choi, Emil Constantinescu, Philip E. Davis, Sheng Di, Wendy Di, Hanqi Guo, Scott Klasky, Kerstin Kleese Van Dam, Tahsin Kurc, Qing Liu, Abid Malik, Kshitij Mehta, Klaus Mueller, Todd Munson, George Ostouchov, Manish Parashar, Tom Peterka, Line Pouchard, Dingwen Tao, Ozan Tugluk, Stefan Wild, Matthew Wolf, Justin M. Wozniak, Wei Xu, and Shinjae Yoo. +
+Proc. EuroPar 2017.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/CODAR_2017.pdf[PDF]]
+
+* [[MindBytes_2017]]
+*High Performance Machine Learning and Evolutionary Computing to Develop Personalized Therapeutics* +
+Chase Cockrell, Jonathan Ozik, Nick Collier, Justin Wozniak, and Gary An. +
+University of Chicago MindBytes Posters 2017. (Best poster XXX, scalability and performance.) This gastrointestinal agent-based modeling study explored an extremely large combinatorial search space of possible disease interventions and classifications. +
+ +
+ Poster: [http://www.mcs.anl.gov/~wozniak/papers/MindBytes_2017.pdf[PDF]]
+
+* [[FOAP_2017]]
+*Streaming supercomputing needs workflow-enabled programming-in-the-large* +
+Justin M. Wozniak, Jonathan Ozik, Daniel S. Katz, and Michael Wilde. +
+Workshop on a Future Online Analysis Platform 2017.  +
+
+* [[Hercules_2017]]
+*Experimental evaluation of a flexible I/O architecture for accelerating workflow engines in ultrascale environments* +
+Francisco Rodrigo Duro, Javier Garcia Blas, Florin Isaila, Jesus Carretero, Justin M. Wozniak, and Robert Ross. +
+Parallel Computing 61, 2017. +
+ [http://www.mcs.anl.gov/~wozniak/papers/Hercules_2017.pdf[PDF]]
+ [http://www.mcs.anl.gov/~wozniak/http://dx.doi.org/10.1016/j.parco.2016.10.003[DOI]]
+
 * [[EMEWS_2016]]
 *From desktop to large-scale model exploration with Swift/T* +
 Jonathan Ozik, Nicholson Collier, and Justin M. Wozniak. +
@@ -7,7 +50,7 @@ Proc. Winter Simulation Conference 2016.  +
 * [[Cancer2_2016]]
 *High performance model exploration of mutation patterns in an agent-based model of colorectal cancer* +
 Jonathan Ozik, Nicholson Collier, Justin M. Wozniak, Charles Macal, Chase Cockrell, Melinda Stack, and Gary An. +
-Computational Approaches for Cancer Workshop at SC 2016. (Best paper.) +
+Computational Approaches for Cancer Workshop @ SC 2016. (Best paper.) +
  [http://www.mcs.anl.gov/~wozniak/papers/Cancer2_2016.pdf[PDF]]
 
 * [[Cancer1_2016]]
@@ -48,13 +91,13 @@ Proc. MTAGS at SC 2015.  +
 * [[Workflows_2015]]
 *Lessons learned from building in situ coupling frameworks* +
 Matthieu Dorier, Matthieu Dreher, Tom Peterka, Justin M. Wozniak, Gabriel Antoniu, and Bruno Raffin. +
-Proc. In Situ Infrastructures for Enabling Extreme-scale Analysis and Visualization at SC 2015.  +
+Proc. In Situ Infrastructures for Enabling Extreme-scale Analysis and Visualization @ SC 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Workflows_2015.pdf[PDF]]
 
 * [[Swift_2015]]
 *Interlanguage parallel scripting for distributed-memory scientific computing* +
 Justin M. Wozniak, Timothy G. Armstrong, Ketan C. Maheshwari, Daniel S. Katz, Michael Wilde, and Ian T. Foster. +
-WORKS '15: Proceedings of the 10th Workshop in Support of Large-Scale Science 2015.  +
+Proc. WORKS @ SC 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/Swift_2015.pdf[PDF]]
 
 * [[ProgrammingModels_2015]]
@@ -70,7 +113,7 @@ Justin M. Wozniak. +
 
 * [[ExperimentFeedback_2015]]
 *Accelerating the experimental feedback loop: Data streams at the APS* +
-Ian Foster, Tekin Bicer, Raj Kettimuthu, Michael Wilde, Justin M. Wozniak, Francesco de Carlo, Ben Blaiszik, Kyle Chard, Francesco de Carlo, and Ray Osborn. +
+Ian Foster, Tekin Bicer, Raj Kettimuthu, Michael Wilde, Justin M. Wozniak, Francesco de Carlo, Ben Blaiszik, Kyle Chard, and Ray Osborn. +
 Proc. STREAM 2015.  +
  [http://www.mcs.anl.gov/~wozniak/papers/ExperimentFeedback_2015.pdf[PDF]]
 
@@ -177,7 +220,7 @@ Proc. HPDC 2014.  +
 * [[ScientificDataCloud_2014]]
 *Evaluating storage systems for scientific data in the cloud* +
 Ketan Maheshwari, Justin M. Wozniak, Hao Yang, Daniel S. Katz, Matei Ripeanu, Victor Zavala, and Michael Wilde. +
-Proc. ScienceCloud 2014. (Best&nbsp;paper awardee) +
+Proc. ScienceCloud 2014. (Best paper.) +
  [http://www.mcs.anl.gov/~wozniak/papers/ScientificStorageCloud_2014.pdf[PDF]]
 
 * [[GeMTC_Cloud_2014]]
