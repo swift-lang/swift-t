@@ -83,7 +83,7 @@ SWIFT_T_CHARS="hE:o:t:vV"
 STC_CHARS="A:C:d:D:f:F:I:i:j:L:O:pr:uU:"
 TURBINE_CHARS="e:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
-while getopts ${CHARS} OPTION
+while getopts :${CHARS} OPTION
 do
   # declare OPTION
   # Note: We make heavy use of the rarely-used ;& in the following
@@ -127,7 +127,7 @@ do
 
     # Errors
     *)
-      # ZSH prints an error message
+      print "swift-t: invalid option: ${OPTARG}"
       usage
       exit 1
   esac

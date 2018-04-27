@@ -66,6 +66,7 @@ INSTALL_INCLUDE = $(INSTALL_TOP)/include
 INSTALL_LIB     = $(INSTALL_TOP)/lib
 INSTALL_SCRIPTS = $(INSTALL_TOP)/scripts
 INSTALL_EXPORT  = $(INSTALL_TOP)/export
+INSTALL_PY      = $(INSTALL_TOP)/py
 # The submit scripts are loaded from their respective module.mk files
 SCRIPTS_SUBMIT  :=
 
@@ -461,6 +462,7 @@ include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
 include src/tcl/jvm/module.mk
+include src/tcl/launch/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
@@ -476,6 +478,7 @@ TURBINE_SRC += $(TCL_MPE_SRC)
 TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
+TURBINE_SRC += $(TCL_LAUNCH_SRC)
 TURBINE_SRC += $(JVM_SCRIPT_SRC)
 TURBINE_SRC += $(TCL_JVM_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
@@ -742,9 +745,14 @@ PROVENANCE = version.txt source.txt config.log
 install: install.txt
 
 # Installed files:
-DIRECTORIES = $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
+DIRECTORIES := $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
+
+ifeq ($(HAVE_PYTHON),1)
+	DIRECTORIES += $(INSTALL_PY)
+endif
+
 TURBINE_HEADERS := src/turbine/turbine.h      \
                    src/turbine/turbine-finalizers.h \
                    src/tcl/turbine/tcl-turbine.h \
@@ -763,7 +771,8 @@ ifeq ($(ENABLE_STATIC_PKG),1)
 endif
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) $(SCRIPTS_SUBMIT) )
+		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) \
+		     $(SCRIPTS_SUBMIT) py/*.py )
 
 install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
               $(TURBINE_HEADERS) $(SCRIPTS) $(SCRIPTS_SUBMIT)
@@ -783,6 +792,9 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_TOP)
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
+ifeq ($(HAVE_PYTHON),1)
+	$(E) cp $(CP_ARGS) py/*.py $(INSTALL_PY)
+endif
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) $(CP_PARENTS) $(CP_ARGS) etc/help/*.txt $(INSTALL_TOP)
 	@echo

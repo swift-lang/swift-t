@@ -1,0 +1,7 @@
+
+# LSF MODULE
+
+DIR := scripts/submit/lsf
+
+SCRIPTS_SUBMIT += $(DIR)/turbine-lsf-run.zsh \
+                  $(DIR)/turbine-lsf.sh.m4

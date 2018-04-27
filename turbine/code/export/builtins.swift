@@ -115,6 +115,12 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure
 (string o) toString(boolean i)  "turbine" "0.8.0"
   [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
+@pure
+(string o) boolean2string(boolean i)  "turbine" "0.8.0"
+  [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
+@pure
+(string o) bool2string(boolean i)  "turbine" "0.8.0"
+  [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
 
 /// Parsing of strings
 // string2int
@@ -136,6 +142,9 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 // string2bool
 @pure
 (boolean b) string2bool(string s)  "turbine" "0.8.0"
+  [ "set <<b>> [ turbine::string2bool_impl <<s>> ]" ];
+@pure
+(boolean b) string2boolean(string s)  "turbine" "0.8.0"
   [ "set <<b>> [ turbine::string2bool_impl <<s>> ]" ];
 
 /// Numeric conversions

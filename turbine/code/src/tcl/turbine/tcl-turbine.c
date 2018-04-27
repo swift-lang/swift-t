@@ -1196,10 +1196,11 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
                        "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
-// We assume SWIG correctly generates this function
+// We assume SWIG correctly generates these functions
 // See the tcl/blob module
 int Blob_Init(Tcl_Interp* interp);
-
+// See the tcl/launch module
+int Launch_Init(Tcl_Interp* interp);
 
 /*
   turbine::noop_exec_register
@@ -1783,6 +1784,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_python_init(interp);
   tcl_r_init(interp);
   Blob_Init(interp);
+  Launch_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("init_debug",  Turbine_Init_Debug_Cmd);
