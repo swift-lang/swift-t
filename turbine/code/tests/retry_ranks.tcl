@@ -1,4 +1,4 @@
-# Test for deep rule based on STC generated code
+# Test for app retries when resources not available
 
 package require turbine 1.0
 namespace import turbine::*

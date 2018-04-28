@@ -24,8 +24,6 @@ export PROCS=5
 
 source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
-./infinite_loop.sh &
-
 set -x
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1

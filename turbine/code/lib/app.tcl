@@ -87,7 +87,7 @@ namespace eval turbine {
       } else {
          # case tries > 1: dispatch execution to a random rank
          set target_rank [ turbine::random_worker ]
-	 app_delay $tries
+	 app_delay_retries $tries
          set tcltmp:prio [ turbine::get_priority ]
          adlb::put $target_rank 0 [ list app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries ]  ${tcltmp:prio} 1
 #        Remember {adlb::put my_rank WORK_TYPE "tcl function name" priority parallelism} I still need to code for WORK_TYPE and parallelism
@@ -152,8 +152,8 @@ namespace eval turbine {
     }
   }
 
+  proc app_delay_retries { tries } { 
 
-  proc app_delay { tries } {
     # Retry:
     variable app_retries
     variable app_backoff
