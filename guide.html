@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">March 2018</span><br />
+<span id="author">May 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -4315,6 +4315,185 @@ the <code>java</code> program (which may be done by using a normal Swift
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_parallel_tasks_libraries">14.7. Parallel tasks: Libraries</h3>
+<div class="paragraph"><p>Swift/T can be used to invoke parallel libraries by creating a
+communicator for them with <code>MPI_Comm_create_group()</code> and passing this
+to a user Tcl function that accepts this communicator.  See the
+<a href="leaf.html">Swift/T Leaf Function Guide</a> for more details.  This
+method works well for software that is easy to invoke as a library.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_parallel_tasks_external_programs">14.8. Parallel tasks: External programs</h3>
+<div class="paragraph"><p>If you cannot invoke your parallel code as a library, you may use the
+<code>launch()</code> function to invoke a parallel code.</p></div>
+<div class="paragraph"><p>Use <code>import launch;</code> for the <code>launch</code> module to access these features.</p></div>
+<div class="sect3">
+<h4 id="_single_parallel_tasks">14.8.1. Single parallel tasks</h4>
+<div class="paragraph"><p>Single parallel tasks can be launched with the <code>launch()</code> function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>string a1[] = [ "arg1", "arg2" ];
+@par=3 launch("echo", a1);</code></pre>
+</div></div>
+<div class="paragraph"><p>This will invoke the <code>echo</code> program as:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec -n 3 echo arg1 arg2</code></pre>
+</div></div>
+<div class="paragraph"><p>on three worker ranks within the Swift/T run.</p></div>
+<div class="paragraph"><p>To provide environment variables to the task, use the <code>launch_envs()</code> function:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>string envs[] = [ "var1=3", "var2=7", "swift_chdir=/tmp" ];
+@par=8 launch_envs("printenv", a1, envs2);</code></pre>
+</div></div>
+<div class="paragraph"><p>This will invoke:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd /tmp
+mpiexec -n 8 env var1=3 var2=7 printenv</code></pre>
+</div></div>
+<div class="paragraph"><p>as the <code>swift_chdir</code> environment variable is handled specially by
+Swift/T.</p></div>
+<div class="paragraph"><p>The special environment variables include:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>launcher=<em>path</em>/mpiexec</code>
+</dt>
+<dd>
+<p>
+The path to <code>mpiexec</code>.  Defaults to <code>mpiexec</code> (in <code>PATH</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>swift_chdir=<em>directory</em></code>
+</dt>
+<dd>
+<p>
+Change to the given directory before executing.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>swift_timeout=<em>seconds</em></code>
+</dt>
+<dd>
+<p>
+The command will timeout with exit code 124 after the given number of
+seconds.  This is implemented with the shell command <code>timeout</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>swift_write_hosts=<em>filename</em></code>
+</dt>
+<dd>
+<p>
+Writes the hosts obtained for the task to the given filename.
+This may be useful for applications that need host information or
+desire to invoke <code>mpiexec</code> themselves.
+</p>
+</dd>
+</dl></div>
+<div class="sect4">
+<h5 id="_return_value">Return value</h5>
+<div class="paragraph"><p>The return value of these functions is the exit code.  The <code>launch</code>
+module provides the following symbols to test the exit code:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>global const int EXIT_SUCCESS  = 0;
+global const int EXIT_TIMEOUT  = 124; // cf. 'man timeout'
+global const int EXIT_NOTFOUND = 127; // cf. 'man system(3)'</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_multiple_parallel_tasks">14.8.2. Multiple parallel tasks</h4>
+<div class="paragraph"><p>Swift/T can launch multiple parallel tasks concurrently with the
+<code>launch_multi()</code> function.  This forces these tasks to run together,
+for example, so they can communicate.</p></div>
+<div class="paragraph"><p>The signature for <code>launch_multi()</code> is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>@par
+(int status) launch_multi(int procs[],
+                          string cmd[],
+                          string argvs[][],
+                          string envs[][],
+                          string color_setting="");</code></pre>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>procs</code>
+</dt>
+<dd>
+<p>
+An array of process counts.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>cmd</code>
+</dt>
+<dd>
+<p>
+An array of programs to run.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>argvs</code>
+</dt>
+<dd>
+<p>
+The array of command line argument arrays.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>envs</code>
+</dt>
+<dd>
+<p>
+An array of environment variable arrays, as in <code>launch_envs</code>.
+Use <code>EMPTY_SS</code> (empty string-string) to specify no changes in the
+environment.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>color_setting</code>
+</dt>
+<dd>
+<p>
+This is optional and may be omitted.  If included, it allows the
+programmer to specify the rank layout of the MPI programs.  This
+allows the programmer to take advantage of node topology.
+If the workflow is running <em>N</em> tasks (<code>size(procs)</code>==<em>N</em>) it should
+have <em>N</em> semicolon separated terms.  Each term is a comma-separated
+list or hyphen-separated array of integers.  Spaces are ignored.
+Each term specifies the rank numbers for the corresponding <code>cmd</code>.
+For example:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>int procs[] = [ 6, 2, 6, 2, 8 ];
+string cmd[] = ... ;
+string argvs[] = ... ;
+string color_settings_array[] = [ " 0- 5", " 6, 7",
+                                  " 8-13", "14,15",
+                                           "16-23" ];
+color_settings = join(color_settings_array, ";");
+exit_code =
+  @par=sum_integer(procs)
+  launch_multi(procs, cmd, argvs, EMPTY_SS, color_setting);</code></pre>
+</div></div>
+<div class="paragraph"><p>would run <code>cmd[0]</code> on ranks 0-5 of the child communicator,
+<code>cmd[1]</code> on ranks 6 and 7, and so on, with the corresponding arguments
+and an unmodified environment.</p></div>
+</dd>
+</dl></div>
+<div class="sect4">
+<h5 id="_return_value_2">Return value</h5>
+<div class="paragraph"><p>The return value of <code>launch_multi()</code> is the sum of the exit codes.</p></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5737,12 +5916,32 @@ building and running advanced model exploration workflows in Swift/T.</p></div>
 <div class="paragraph"><p>For more information, see the <a href="pubs.html">Swift/T Publications</a>.</p></div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="citing">21. Citing Swift/T</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>If you are using Swift/T as a computer science reference, please cite:</p></div>
+<div class="paragraph"><p><strong>Compiler techniques for massively scalable implicit task parallelism</strong><br />
+Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster.<br />
+Proc. SC 2014. <br />
+ [<a href="http://www.mcs.anl.gov/~wozniak/papers/Swift_2014.pdf">PDF</a>]</p></div>
+<div class="paragraph"><p><strong>Swift/T: Scalable data flow programming for distributed-memory task-parallel applications</strong><br />
+Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Daniel S. Katz, Ewing Lusk, and Ian T. Foster.<br />
+Proc. CCGrid 2013. <br />
+ [<a href="http://www.mcs.anl.gov/~wozniak/papers/Swift_2013.pdf">PDF</a>]</p></div>
+<div class="paragraph"><p>If you are using Swift/T to support your application workflows, you
+can simply cite this guide:</p></div>
+<div class="paragraph"><p><strong>Swift/T Guide</strong><br />
+Justin M. Wozniak.<br />
+URL: <a href="http://swift-lang.github.io/swift-t/guide.html">http://swift-lang.github.io/swift-t/guide.html</a><br />
+Technical Report ANL/DSL-TM-377, 2018.</p></div>
+</div>
+</div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-04-25 13:37:02 CDT
+ 2018-05-09 15:15:34 CDT
 </div>
 </div>
 
