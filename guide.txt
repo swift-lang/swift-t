@@ -2448,6 +2448,142 @@ to the JVM as a shared library, enabling better performance than calling
 the +java+ program (which may be done by using a normal Swift
 <<app_functions,app function>>).
 
+=== Parallel tasks: Libraries
+
+Swift/T can be used to invoke parallel libraries by creating a
+communicator for them with +MPI_Comm_create_group()+ and passing this
+to a user Tcl function that accepts this communicator.  See the
+link:leaf.html[Swift/T Leaf Function Guide] for more details.  This
+method works well for software that is easy to invoke as a library.
+
+=== Parallel tasks: External programs
+
+If you cannot invoke your parallel code as a library, you may use the
++launch()+ function to invoke a parallel code.
+
+Use +import launch;+ for the +launch+ module to access these features.
+
+==== Single parallel tasks
+
+Single parallel tasks can be launched with the +launch()+ function:
+
+----
+string a1[] = [ "arg1", "arg2" ];
+@par=3 launch("echo", a1);
+----
+
+This will invoke the +echo+ program as:
+
+----
+mpiexec -n 3 echo arg1 arg2
+----
+
+on three worker ranks within the Swift/T run.
+
+To provide environment variables to the task, use the +launch_envs()+ function:
+
+----
+string envs[] = [ "var1=3", "var2=7", "swift_chdir=/tmp" ];
+@par=8 launch_envs("printenv", a1, envs2);
+----
+
+This will invoke:
+----
+cd /tmp
+mpiexec -n 8 env var1=3 var2=7 printenv
+----
+as the +swift_chdir+ environment variable is handled specially by
+Swift/T.
+
+The special environment variables include:
+
++launcher=_path_/mpiexec+::
+The path to +mpiexec+.  Defaults to +mpiexec+ (in +PATH+).
+
++swift_chdir=_directory_+::
+Change to the given directory before executing.
+
++swift_timeout=_seconds_+::
+The command will timeout with exit code 124 after the given number of
+seconds.  This is implemented with the shell command +timeout+.
+
++swift_write_hosts=_filename_+::
+Writes the hosts obtained for the task to the given filename.
+This may be useful for applications that need host information or
+desire to invoke +mpiexec+ themselves.
+
+===== Return value
+
+The return value of these functions is the exit code.  The +launch+
+module provides the following symbols to test the exit code:
+
+----
+global const int EXIT_SUCCESS  = 0;
+global const int EXIT_TIMEOUT  = 124; // cf. 'man timeout'
+global const int EXIT_NOTFOUND = 127; // cf. 'man system(3)'
+----
+
+==== Multiple parallel tasks
+
+Swift/T can launch multiple parallel tasks concurrently with the
++launch_multi()+ function.  This forces these tasks to run together,
+for example, so they can communicate.
+
+The signature for +launch_multi()+ is:
+----
+@par
+(int status) launch_multi(int procs[],
+                          string cmd[],
+                          string argvs[][],
+                          string envs[][],
+                          string color_setting="");
+----
+
++procs+::
+An array of process counts.
+
++cmd+::
+An array of programs to run.
+
++argvs+::
+The array of command line argument arrays.
+
++envs+::
+An array of environment variable arrays, as in +launch_envs+.
+Use +EMPTY_SS+ (empty string-string) to specify no changes in the
+environment.
+
++color_setting+::
+This is optional and may be omitted.  If included, it allows the
+programmer to specify the rank layout of the MPI programs.  This
+allows the programmer to take advantage of node topology.
+If the workflow is running _N_ tasks (+size(procs)+==_N_) it should
+have _N_ semicolon separated terms.  Each term is a comma-separated
+list or hyphen-separated array of integers.  Spaces are ignored.
+Each term specifies the rank numbers for the corresponding +cmd+.
+For example:
++
+----
+int procs[] = [ 6, 2, 6, 2, 8 ];
+string cmd[] = ... ;
+string argvs[] = ... ;
+string color_settings_array[] = [ " 0- 5", " 6, 7",
+                                  " 8-13", "14,15",
+                                           "16-23" ];
+color_settings = join(color_settings_array, ";");
+exit_code =
+  @par=sum_integer(procs)
+  launch_multi(procs, cmd, argvs, EMPTY_SS, color_setting);
+----
++
+would run +cmd[0]+ on ranks 0-5 of the child communicator,
++cmd[1]+ on ranks 6 and 7, and so on, with the corresponding arguments
+and an unmodified environment.
+
+===== Return value
+
+The return value of +launch_multi()+ is the sum of the exit codes.
+
 == More about functions
 In this section we discuss more advanced features for defining and
 calling functions.
