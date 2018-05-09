@@ -26,6 +26,10 @@ may be used before TGZ generation or SVN operations.
 
 To just build the simple docs, see build.sh/build.mk .
 
+To make PDF, use:
+
+wkhtmltopdf -s Letter guide.html guide.pdf
+
 ////
 Local Variables:
 mode: doc
