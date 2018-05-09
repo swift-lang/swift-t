@@ -3523,6 +3523,29 @@ For more information, see the link:dev.html[Developers' Guide].
 
 For more information, see the link:pubs.html[Swift/T Publications].
 
+[[citing]]
+== Citing Swift/T
+
+If you are using Swift/T as a computer science reference, please cite:
+
+*Compiler techniques for massively scalable implicit task parallelism* +
+Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
+Proc. SC 2014.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/Swift_2014.pdf[PDF]]
+
+*Swift/T: Scalable data flow programming for distributed-memory task-parallel applications* +
+Justin M. Wozniak, Timothy G. Armstrong, Michael Wilde, Daniel S. Katz, Ewing Lusk, and Ian T. Foster. +
+Proc. CCGrid 2013.  +
+ [http://www.mcs.anl.gov/~wozniak/papers/Swift_2013.pdf[PDF]]
+
+If you are using Swift/T to support your application workflows, you
+can simply cite this guide:
+
+*Swift/T Guide* +
+Justin M. Wozniak. +
+URL: http://swift-lang.github.io/swift-t/guide.html +
+Technical Report ANL/DSL-TM-377, 2018.
+
 ////
 Local Variables:
 mode: doc
