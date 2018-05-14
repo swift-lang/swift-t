@@ -156,7 +156,7 @@ HI
 At first glance, Turbine is simply a parallel Tcl interpreter.
 However, Turbine also provides the +turbine+ Tcl package, which
 contains the contents of the +lib/+ directory: Tcl scripts and a
-shared object.  These provide all the TIC features nencessary for STC.
+shared object.  These provide all the TIC features necessary for STC.
 
 == Build systems
 
