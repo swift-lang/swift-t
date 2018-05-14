@@ -451,7 +451,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
-  turbine_debug_init();
 
   int rc;
 
