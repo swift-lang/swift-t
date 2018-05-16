@@ -19,7 +19,7 @@
 namespace eval turbine {
   proc launch_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
-    rule $inputs "launch::launch_tcl_body $exit_code $inputs" \
+    rule $inputs "turbine::launch_tcl_body $exit_code $inputs" \
         {*}$args type $turbine::WORK
   }
   proc launch_tcl_body { exit_code args } {

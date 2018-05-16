@@ -291,7 +291,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		strcat(mpicmd, timeout_string);
 		if (envs != NULL)
 			strcat(mpicmd, envs);
-		printf("envs: '%s'\n", envs);
+		// printf("envs: '%s'\n", envs);
 
 		strcat(mpicmd, cmd);
 		strcat(mpicmd, " ");
@@ -306,7 +306,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		// concatenate the redirection
 		strcat(mpicmd, redirect);
 
-		printf("mpicmd: %s\n", mpicmd); fflush(stdout);
+		// printf("mpicmd: %s\n", mpicmd); fflush(stdout);
 
 		// calls the system command
 		*exit_code = system(mpicmd);
