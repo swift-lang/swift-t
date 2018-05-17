@@ -451,7 +451,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
-  turbine_debug_init();
 
   int rc;
 
@@ -5950,6 +5949,8 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = field_name_objs_finalize(interp, objv);
   TCL_CHECK(rc);
 
+  log_printf("ADLB_Finalize_Cmd() start");
+
   rc = ADLB_Finalize();
   if (rc != ADLB_SUCCESS)
     printf("WARNING: ADLB_Finalize() failed!\n");
@@ -5963,12 +5964,16 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_comm_init = false;
   adlb_init = false;
 
+  log_printf("MPI_Finalize start");
   if (b)
     MPI_Finalize();
+  log_printf("MPI_Finalize stop");
   turbine_debug_finalize();
 
   rc = blob_cache_finalize();
   TCL_CHECK(rc);
+
+  log_printf("ADLB_Finalize_Cmd() stop");
 
   return TCL_OK;
 }
