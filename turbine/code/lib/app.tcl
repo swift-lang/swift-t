@@ -30,7 +30,7 @@ namespace eval turbine {
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
-    getenv_integer TURBINE_APP_RETRIES 0 app_retries
+    getenv_integer TURBINE_APP_RETRY_REPUT 0 app_retries
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
 
     if { $app_delay_time > 0 } {

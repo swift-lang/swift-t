@@ -18,7 +18,7 @@ source tests/test-helpers.sh
 THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
-export TURBINE_APP_RETRIES=5
+export TURBINE_APP_RETRY_REPUT=5
 export TURBINE_LOG=1
 export PROCS=5
 
