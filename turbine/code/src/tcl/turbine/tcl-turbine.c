@@ -439,7 +439,8 @@ rule_set_opts_default(struct rule_opts* opts,
                       int buffer_size)
 {
   opts->name = buffer;
-  if (action != NULL) {
+  if (action != NULL) 
+  {
     assert(opts->name != NULL);
     rule_set_name_default(opts->name, buffer_size, action);
   }
@@ -515,7 +516,8 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
                               objs[keypos], objs[valpos]);
     TCL_CHECK(rc);
   }
-  if (opts->name == NULL) {
+  if (opts->name == NULL) 
+  {
     rule_set_name_default(name_buffer, name_buffer_size, action);
     opts->name = name_buffer;
   }
@@ -1074,9 +1076,11 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
-  if (child == 0)   {
+  if (child == 0)  
+  {
     // Setup redirects
-    if (stdin_file[0] != '\0')   {
+    if (stdin_file[0] != '\0')  
+    {
       int in_fd = open(stdin_file, O_RDONLY);
       if (in_fd == -1) redirect_error_exit(stdin_file, "input redirection");
       rc = dup2(in_fd, 0);
@@ -1084,7 +1088,8 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
       rc = close(in_fd);
       if (rc == -1) close_error_exit("input redirection");
     }
-    if (stdout_file[0] != '\0')    {
+    if (stdout_file[0] != '\0')   
+    {
       int out_fd = open(stdout_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
       if (out_fd == -1) redirect_error_exit(stdin_file, "output redirection");
       rc = dup2(out_fd, 1);
@@ -1092,7 +1097,8 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
       rc = close(out_fd);
       if (rc == -1) close_error_exit("output redirection");
     }
-    if (stderr_file[0] != '\0')     {
+    if (stderr_file[0] != '\0')    
+    {
       int err_fd = open(stderr_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
       if (err_fd == -1) redirect_error_exit(stdin_file, "output redirection");
       rc = dup2(err_fd, 2);
@@ -1696,7 +1702,8 @@ static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
       const char *staging_mode_s = Tcl_GetString(value);
       bool valid_staging_mode = false;
       for (int i = 0; i < num_staging_modes; i++) {
-        if (strcmp(staging_mode_s, staging_modes[i].name) == 0) {
+        if (strcmp(staging_mode_s, staging_modes[i].name) == 0)
+       	{
           *staging_mode = staging_modes[i].mode;
           valid_staging_mode = true;
           break;
