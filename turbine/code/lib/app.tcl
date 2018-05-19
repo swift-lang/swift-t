@@ -22,6 +22,7 @@ namespace eval turbine {
 
   proc app_init { } {
     variable app_initialized
+    variable app_retries_local
     variable app_retries_reput
     variable app_backoff
     # Artificial random delay (seconds) just before launching each app
@@ -32,10 +33,8 @@ namespace eval turbine {
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRY_LOCAL 0 app_retries_local
     getenv_integer TURBINE_APP_RETRY_REPUT 0 app_retries_reput
-    getenv_double  TURBINE_APP_DELAY   0 app_delay_time
-    log "app_retries_reput is: $app_retries_reput"
-    log "app_retries_local is: $app_retries_local"
 
+    getenv_double  TURBINE_APP_DELAY   0 app_delay_time
     if { $app_delay_time > 0 } {
       if { [ adlb::rank ] == 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
@@ -83,20 +82,24 @@ namespace eval turbine {
       incr tries
       log "shell: $cmd $args $stdios"
       set start [ clock milliseconds ]
+      variable app_retries_local
       variable app_retries_reput
-      if { $tries == 1 } {
-         app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_reput
-         continue
-      } else {
-         # case tries > 1: dispatch execution to a random rank
+      if { $app_retries_reput > 0 & $app_retries_local == 0 } {
+         if { $tries == 1 } { 
+             app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_reput 
+             continue 
+         }
          set target_rank [ turbine::random_worker ]
-	 app_delay_retries $tries
          set tcltmp:prio [ turbine::get_priority ]
          adlb::put $target_rank 0 [ list app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_reput ]  ${tcltmp:prio} 1
-#        Remember {adlb::put my_rank WORK_TYPE "tcl function name" priority parallelism} I still need to code for WORK_TYPE and parallelism
-      	 if { $tries >= $app_retries_reput } { break }
-      }  
+       	 if { $tries >= $app_retries_reput } { break }
+      } else {
+        app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_local
+        if { $tries >= $app_retries_local } { break }
+      }
+      app_delay_retries $tries
     } ; # End while loop
+    
     set stop [ clock milliseconds ]
     set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
     log "shell command duration: $duration"
@@ -156,8 +159,6 @@ namespace eval turbine {
   }
 
   proc app_delay_retries { tries } { 
-
-    # Retry:
     variable app_retries_reput
     variable app_backoff
     set delay [ expr { $app_backoff * pow(2, $tries) * rand() } ]
