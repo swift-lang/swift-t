@@ -22,7 +22,7 @@ namespace eval turbine {
 
   proc app_init { } {
     variable app_initialized
-    variable app_retries
+    variable app_retries_reput
     variable app_backoff
     # Artificial random delay (seconds) just before launching each app
     variable app_delay_time
@@ -30,8 +30,11 @@ namespace eval turbine {
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
-    getenv_integer TURBINE_APP_RETRY_REPUT 0 app_retries
+    getenv_integer TURBINE_APP_RETRY_LOCAL 0 app_retries_local
+    getenv_integer TURBINE_APP_RETRY_REPUT 0 app_retries_reput
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
+    log "app_retries_reput is: $app_retries_reput"
+    log "app_retries_local is: $app_retries_local"
 
     if { $app_delay_time > 0 } {
       if { [ adlb::rank ] == 0 } {
@@ -80,18 +83,18 @@ namespace eval turbine {
       incr tries
       log "shell: $cmd $args $stdios"
       set start [ clock milliseconds ]
-      variable app_retries
+      variable app_retries_reput
       if { $tries == 1 } {
-         app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries
+         app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_reput
          continue
       } else {
          # case tries > 1: dispatch execution to a random rank
          set target_rank [ turbine::random_worker ]
 	 app_delay_retries $tries
          set tcltmp:prio [ turbine::get_priority ]
-         adlb::put $target_rank 0 [ list app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries ]  ${tcltmp:prio} 1
+         adlb::put $target_rank 0 [ list app_run $stdin_src $stdout_dst $stderr_dst $cmd $args $tries $app_retries_reput ]  ${tcltmp:prio} 1
 #        Remember {adlb::put my_rank WORK_TYPE "tcl function name" priority parallelism} I still need to code for WORK_TYPE and parallelism
-      	 if { $tries >= $app_retries } { break }
+      	 if { $tries >= $app_retries_reput } { break }
       }  
     } ; # End while loop
     set stop [ clock milliseconds ]
@@ -123,7 +126,7 @@ namespace eval turbine {
     } 
   }
 
-  proc app_error { tries app_retries options cmd args } {
+  proc app_error { tries app_retries_reput options cmd args } {
     global tcl_version
     if { $tcl_version >= 8.6 } {
       set msg $options
@@ -132,13 +135,13 @@ namespace eval turbine {
       set errorinfo [ dict get $options -errorinfo ]
       set msg "$errorinfo"
     }
-    # variable app_retries
-    set retry [ expr $tries <= $app_retries ]
+    # variable app_retries_reput
+    set retry [ expr $tries <= $app_retries_reput ]
     if { ! $retry } {
       turbine_error "app execution failed" on: [ c_utils::hostname ] \
       	  rank [ adlb::rank ] "\n $msg" "\n command: $cmd $args"
     } else {
-      log "$msg: retries: $tries/$app_retries on: 
+      log "$msg: retries: $tries/$app_retries_reput on: 
                 [ c_utils::hostname ], rank [ adlb::rank ]"
     }
   }
@@ -155,7 +158,7 @@ namespace eval turbine {
   proc app_delay_retries { tries } { 
 
     # Retry:
-    variable app_retries
+    variable app_retries_reput
     variable app_backoff
     set delay [ expr { $app_backoff * pow(2, $tries) * rand() } ]
     after [ expr round(1000 * $delay) ]
