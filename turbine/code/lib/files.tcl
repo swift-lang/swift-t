@@ -676,7 +676,9 @@ namespace eval turbine {
         set length [ lindex $blob 1 ]
         set b [ blobutils_create $ptr $length ]
         upvar $local_file_name local_file
-        blobutils_write [ local_file_path $local_file ] $b
+        set f [ local_file_path $local_file ]
+        log "blob_write: $f $length"
+        blobutils_write $f $b
         delete_turbine_blob $b
     }
 

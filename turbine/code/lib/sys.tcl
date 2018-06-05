@@ -63,14 +63,14 @@ namespace eval turbine {
             set arg [ lindex $L $i ]
             # String replacement may cause early break:
             if [ string equal $arg "" ] break
-            set tokens [ ::split $arg = ]
+            set tokens [ split_first $arg = ]
             set token [ lindex $tokens 0 ]
             if { [ string index $token 0 ] == "-" } {
                 set key [ string range $token 1 end ]
                 if { [ string index $key 0 ] == "-" } {
                     set key [ string range $key 1 end ]
                 }
-                set value [ lindex $tokens 1 ]
+                set value [ lrange $tokens 1 end ]
                 dict set turbine_argv $key $value
             } else {
                 lappend turbine_argp $arg

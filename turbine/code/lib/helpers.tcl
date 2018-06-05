@@ -92,10 +92,15 @@ proc readfile { filename } {
 
 # Debugging helper
 proc show { args } {
-    foreach v $args {
-        upvar $v t
-        puts "$v: $t"
+  foreach v $args {
+    upvar $v t
+
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
     }
+
+    puts "$v: $t"
+  }
 }
 
 set KB 1024
@@ -145,6 +150,10 @@ proc putsn { args } {
     puts [ join $args "\n" ]
 }
 
+proc printf { fmt args } {
+    puts [ format $fmt {*}$args ]
+}
+
 # Remove and return element 0 from list
 proc list_pop_first { L_name } {
     upvar $L_name L
@@ -171,7 +180,20 @@ namespace eval turbine {
 
 }
 
+# Split value into two parts around given token
+# If token is not found, return [ list value "" ]
+proc split_first { value token } {
+  # p0 is first character of token in value
+  set p0 [ string first $token $value ]
+  if { $p0 == -1 } { return [ list $value "" ]}
+  # p1 is just past last character of token in value
+  set p1 [ expr $p0 + [ string length $token ] ]
+  set r0 [ string range $value 0 [ expr $p0 - 1 ] ]
+  set r1 [ string range $value $p1 end ]
+  return [ list $r0 $r1 ]
+}
+
 # Local Variables:
 # mode: tcl
-# tcl-indent-level: 4
+# tcl-indent-level: 2
 # End:

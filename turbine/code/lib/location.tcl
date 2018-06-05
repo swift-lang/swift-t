@@ -68,9 +68,13 @@ namespace eval turbine {
   }
 
   proc hostmap_list { } {
-      # There is no input
-      set names [ adlb::hostmap_list ]
-
-      return [ list2dict $names ]
+    # There is no input
+    set names [ adlb::hostmap_list ]
+    return [ list2dict $names ]
   }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 2
+# End:

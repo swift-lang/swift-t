@@ -247,7 +247,6 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
     ADLB_CHECK(code);
 
     code = xlb_setup_leaders(&xlb_s.layout, hostmap,
-                             hostnames.my_name,
                              comm, &xlb_s.leader_comm);
     ADLB_CHECK(code);
 
@@ -287,6 +286,12 @@ ADLB_Version(version* output)
 }
 
 MPI_Comm
+ADLB_GetComm()
+{
+  return xlb_s.comm;
+}
+
+MPI_Comm
 ADLB_GetComm_workers()
 {
   return xlb_s.worker_comm;
@@ -296,6 +301,13 @@ MPI_Comm
 ADLB_GetComm_leaders()
 {
   return xlb_s.leader_comm;
+}
+
+void
+ADLB_Leaders(int* leaders, int* count)
+{
+  xlb_get_leader_ranks(&xlb_s.layout,  xlb_s.hostmap,
+                       false, leaders, count);
 }
 
 // Server to target with work
@@ -1857,7 +1869,7 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 
   if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
-  
+
   *key_type = t[0];
   *val_type = t[1];
   return ADLB_SUCCESS;
@@ -2109,7 +2121,7 @@ ADLBP_Finalize()
   int flag;
   MPI_Finalized(&flag);
   ADLB_CHECK_MSG(!flag,
-            "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
+                 "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
 
 #ifdef XLB_ENABLE_XPT
   // Finalize checkpoints before shutting down data
@@ -2165,6 +2177,7 @@ ADLBP_Finalize()
   if (xlb_s.worker_comm != MPI_COMM_NULL)
     MPI_Comm_free(&xlb_s.worker_comm);
   MPI_Group_free(&adlb_group);
+  free(xlb_s.my_name);
 
   xlb_data_types_finalize();
 

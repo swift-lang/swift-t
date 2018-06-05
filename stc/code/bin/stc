@@ -21,6 +21,7 @@ else
   STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 fi
 source "$STC_HOME/etc/stc-config.sh"
+source "$STC_HOME/bin/helpers.zsh"
 
 COMPILER_OPTS=()
 O0_OPTS=()
@@ -58,6 +59,8 @@ STC_ARGS=()
 CHECK_DEPS=0
 # If CHECK_DEPS, we check against these files
 DEPS=()
+
+IMPORT_STRINGS=()
 
 function get_compiler_opt_name() {
     case $1
@@ -286,6 +289,8 @@ lookup_java()
     fi
   fi
 
+  verbose "using JVM: ${JVM}"
+
   if [[ ! -x ${JVM} ]]
   then
     # Broken Java: User gave bad stc -j argument
@@ -310,7 +315,7 @@ report_version()
 # Set default options before processing args
 set_opt_level 2
 
-while getopts "A:C:d:D:Ef:F:hI:j:L:pO:o:r:uU:vVx" OPTION
+while getopts "A:C:d:D:Ef:F:hI:i:j:L:pO:o:r:uU:vVx" OPTION
 do
   case ${OPTION}
     in
@@ -335,7 +340,9 @@ do
       help
       ;;
     I) STC_ARGS+="-I${OPTARG}"
-      ;;
+       ;;
+    i) IMPORT_STRINGS+="import ${OPTARG};"
+       ;;
     j) JVM=${OPTARG}
       ;;
     L) LOGFILE=${OPTARG}
@@ -471,6 +478,11 @@ check_deps()
   local DEP
   for DEP in ${DEPS}
   do
+    if [[ ! -f ${DEP} ]]
+    then
+      print "stc: WARNING: Dependency -U ${DEP} does not exist!"
+      continue
+    fi
     if [[ ${DEP} -nt ${OUTPUT} ]]
     then
       verbose "Dependency file (${DEP}) is newer than output (${OUTPUT})."
@@ -498,10 +510,29 @@ JVM_FLAGS+="-enableassertions"
 # Include any from environment (overriding defaults)
 JVM_FLAGS+=${=STC_JVM_FLAGS:-}
 
+# Handle import strings (-i)
+DELETE_INPUT=0
+TMP_SWIFT=""
+if (( ${#IMPORT_STRINGS} )) {
+     TOKEN=$( basename ${INPUT} )
+     TMP_SWIFT=$( make_temp swift /tmp ${TOKEN%.swift} )
+     { print ${IMPORT_STRINGS}
+       cat ${INPUT} } > ${TMP_SWIFT}
+     verbose "created: ${TMP_SWIFT}"
+
+     INPUT=${TMP_SWIFT}
+     DELETE_INPUT=1
+}
+
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG:-} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
-(( VERBOSE )) && set -x
 ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 # Return the exit code from the java process
 EXITCODE=${?}
+
+if (( DELETE_INPUT )) {
+     verbose "Deleting: ${INPUT}"
+     rm ${INPUT}
+}
+
 return ${EXITCODE}

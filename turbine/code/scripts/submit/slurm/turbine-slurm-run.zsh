@@ -40,18 +40,6 @@ m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
-QUEUE_ARG=""
-if (( ${+QUEUE} ))
-then
-  QUEUE_ARG="--partition=${QUEUE}"
-fi
-
-ACCOUNT_ARG=""
-if (( ${+PROJECT} ))
-then
-  ACCOUNT_ARG="--account=${PROJECT}"
-fi
-
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine-slurm-run -e K=V settings here:
 for kv in ${env}
@@ -59,18 +47,15 @@ do
   eval export ${kv}
 done
 
-SUBMIT_COMMAND=( sbatch
-                 --output=${OUTPUT_FILE}
-                 --error=${OUTPUT_FILE}
-                 ${QUEUE_ARG}
-                 ${ACCOUNT_ARG}
-                 # TURBINE_SBATCH_ARGS could include
-                 # --exclusive, --constraint=..., etc.
-                 ${TURBINE_SBATCH_ARGS:-}
-                 --job-name=${TURBINE_JOBNAME}
-                 ${TURBINE_SLURM} )
+SUBMIT_COMMAND=( sbatch ${TURBINE_SLURM} )
 
-print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.txt
+print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh
+chmod u+x ${TURBINE_OUTPUT}/submit.sh
+
+if (( DRY_RUN )) {
+     print "turbine: dry run: submit with ${TURBINE_OUTPUT}/submit.sh"
+     return 0
+}
 
 ${SUBMIT_COMMAND} | read __ __ __ JOB_ID
 

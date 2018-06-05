@@ -44,11 +44,8 @@ report_ranks(MPI_Comm comm)
   getenv_integer("ADLB_DEBUG_RANKS", 0, &debug_ranks);
   if (!debug_ranks) return;
 
-  struct utsname u;
-  uname(&u);
-
   printf("ADLB_DEBUG_RANKS: rank: %i nodename: %s\n",
-         rank, u.nodename);
+         rank, xlb_s.my_name);
 }
 
 adlb_code
@@ -56,14 +53,15 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
 
+  struct utsname u;
+  uname(&u);
+  xlb_s.my_name = strdup(u.nodename);
+
   report_ranks(comm);
 
   int comm_size;
   rc = MPI_Comm_size(comm, &comm_size);
   MPI_CHECK(rc);
-
-  struct utsname u;
-  uname(&u);
 
   adlb_code ac = hostnames_alloc(hostnames, comm_size,
                                   sizeof(u.nodename));
@@ -130,7 +128,7 @@ xlb_hostnames_fill(struct xlb_hostnames *hostnames,
   return ADLB_SUCCESS;
 }
 
-const char *
+const char*
 xlb_hostnames_lookup(const struct xlb_hostnames *hostnames, int rank)
 {
   assert(hostnames->all_names != NULL);
@@ -165,7 +163,6 @@ xlb_hostmap_init(const xlb_layout *layout,
 
     if (layout->rank == 0 && debug_hostmap)
       printf("HOSTMAP: %s -> %i\n", name, rank);
-
 
     if (!table_contains(&(*hostmap)->map, name))
     {
@@ -221,12 +218,13 @@ static inline void create_leader_comm(MPI_Comm comm,
                                       int leader_rank_count,
                                       int* leader_ranks,
                                       MPI_Comm* leader_comm);
-static inline void set_rank_envs(int layout_rank, int leader_rank);
+static inline void set_rank_envs(xlb_layout* layout,
+                                 struct list_i_item* list_item,
+                                 int leader_rank);
 
 adlb_code
-xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
-                  char* my_name,
-                  MPI_Comm comm, MPI_Comm *leader_comm)
+xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
+                  MPI_Comm comm, MPI_Comm* leader_comm)
 {
   // Cannot be more leaders than hosts
   int max_leaders = hosts->map.size;
@@ -234,13 +232,28 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
   int* leader_ranks = malloc((size_t)(max_leaders) * sizeof(int));
   int leader_rank_count = 0;
 
+  xlb_get_leader_ranks(layout, hosts, true, leader_ranks, &leader_rank_count);
+
+  create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
+  free(leader_ranks);
+
+  return ADLB_SUCCESS;
+}
+
+/**
+
+ */
+void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                          bool setenvs, int* leader_ranks, int* count)
+{
+  int leader_rank_count = 0;
   TABLE_FOREACH(&hosts->map, table_item)
   {
     char* name = table_item->key;
-    struct list_i *rank_list = table_item->data;
+    struct list_i* rank_list = table_item->data;
     assert(rank_list->size > 0);
 
-    struct list_i_item *list_item = rank_list->head;
+    struct list_i_item* list_item = rank_list->head;
 
     // Find lowest non-server
     while (list_item != NULL &&
@@ -259,27 +272,37 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
         DEBUG("am leader");
       }
 
-      if (strcmp(my_name, name) == 0)
-        set_rank_envs(layout->rank, leader_rank);
+      if (setenvs && strcmp(xlb_s.my_name, name) == 0)
+        set_rank_envs(layout, list_item, leader_rank);
     }
     // else the node has only servers!
   }
-
-  create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
-  free(leader_ranks);
-
-  return ADLB_SUCCESS;
+  *count = leader_rank_count;
 }
 
 /** Set environment variables for user code */
 static inline void
-set_rank_envs(int layout_rank, int leader_rank)
+set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
+              int leader_rank)
 {
+  // Count offset between leader and myself
+  int offset = 0;
+  while (true)
+  {
+    assert(list_item != NULL);
+    if (list_item->data == layout->rank) break;
+    if (! xlb_is_server(layout, list_item->data))
+      offset++;
+    list_item = list_item->next;
+  }
+
   char t[64];
-  sprintf(t, "%i", layout_rank);
+  sprintf(t, "%i", layout->rank);
   setenv("ADLB_RANK_SELF", t, 1);
   sprintf(t, "%i", leader_rank);
   setenv("ADLB_RANK_LEADER", t, 1);
+  sprintf(t, "%i", offset);
+  setenv("ADLB_RANK_OFFSET", t, 1);
 }
 
 /** Use MPI groups to create the leader communicator */
@@ -334,7 +357,7 @@ ADLB_Hostmap_list(char* output, unsigned int max,
                   unsigned int offset, int* actual)
 {
   ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
-            "ADLB_Hostmap_list: hostmap is disabled!");
+                 "ADLB_Hostmap_list: hostmap is disabled!");
   // Number of chars written
   int count = 0;
   // Number of hostnames written

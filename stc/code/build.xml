@@ -319,7 +319,7 @@
       <filelist
           id="binfiles"
           dir="bin"
-          files="stc,swift-t"/>
+          files="stc,swift-t,helpers.zsh"/>
       <filterset>
         <filter token="DEBIAN_BUILD" value="${debian_build}"/>
       </filterset>

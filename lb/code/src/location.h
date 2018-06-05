@@ -82,7 +82,16 @@ void xlb_hostmap_free(struct xlb_hostmap *hostmap);
  */
 adlb_code
 xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
-                  char* my_name,
                   MPI_Comm comm, MPI_Comm *leader_comm);
+
+/**
+   List ranks in ADLB comm that are in the leader comm
+   @param setenvs: If true, set environment variables for user code
+                   This only need be done at initialization time
+   @return results in leader_ranks, which should be preallocated to hold ints
+                   for all of the ADLB comm.  The leader rank count will go in count
+ */
+void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                          bool setenvs, int* leader_ranks, int* count);
 
 #endif

@@ -39,13 +39,13 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
-DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:" OPTION
+while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:wY" OPTION
 do
   case ${OPTION} in
     c)
@@ -82,7 +82,7 @@ do
       EXEC_SCRIPT=1
       ;;
     # Pass through to scheduler script:
-    d) ;& D) ;& i) ;& M) ;& o) ;& s) ;& t)
+    d) ;& D) ;& i) ;& M) ;& o) ;& s) ;& t) ;& w) ;& Y)
       SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     e)
@@ -233,6 +233,11 @@ OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
 if (( VERBOSE ))
 then
   which ${TURBINE_LAUNCHER}
+fi
+
+if (( ${#TURBINE_USE_PYTHON} ))
+then
+  export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
 fi
 
 check_machine()

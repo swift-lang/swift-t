@@ -49,6 +49,7 @@
 #   JOB_ID_FILE: Path to jobid.txt
 #   MAIL_ENABLED: If mail is enabled, 1, else 0.  Default 0.
 #   MAIL_ADDRESS: If mail is enabled, an email address.
+#   DRY_RUN: If 1, generate submit scripts but do not execute
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
@@ -107,16 +108,16 @@ CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
-(( ! ${+PROCS} )) && PROCS=0
-[[ ${PROCS} == "" ]] && PROCS=0
-export PROCS
+export PROCS=${PROCS:-0}
 if (( ! ${+TURBINE_OUTPUT_ROOT} ))
 then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
-export MAIL_ENABLED=0
-export MAIL_ADDRESS=0
+export MAIL_ENABLED=${MAIL_ENABLED:-0}
+export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
+export DRY_RUN=0
+WAIT_FOR_JOB=0
 
 # Place to store output directory name
 OUTPUT_TOKEN_FILE=turbine-directory.txt
@@ -127,7 +128,7 @@ env=()
 export ENV env
 
 # Get options
-while getopts "d:D:e:i:M:n:o:s:t:VxX" OPTION
+while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
  do
   case ${OPTION}
    in
@@ -158,9 +159,13 @@ while getopts "d:D:e:i:M:n:o:s:t:VxX" OPTION
        ;;
     V) VERBOSE=1
        ;;
+    w) WAIT_FOR_JOB=1
+       ;;
     x) export EXEC_SCRIPT=1
        ;;
     X) export TURBINE_STATIC_EXEC=1
+       ;;
+    Y) DRY_RUN=1
        ;;
     *) print "abort"
        exit 1
@@ -206,8 +211,8 @@ fi
 
 START=$( date +%s )
 
-if [[ ${PROCS} == 0 ]]
-  then
+if (( ${PROCS} == 0 ))
+then
   print "The process count was not specified!"
   print "Use the -n argument or set environment variable PROCS."
   exit 1
@@ -289,6 +294,14 @@ JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
 export ENV
 export ENV_PAIRS="${env}"
+
+if (( ${MAIL_ENABLED:-0} == 1 ))
+then
+  if [[ ${MAIL_ADDRESS:-} == "" ]]
+  then
+    print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
+  fi
+fi
 
 ## Local Variables:
 ## mode: sh
