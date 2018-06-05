@@ -840,25 +840,6 @@ else
     AC_MSG_RESULT([Coaster integration disabled])
 fi
 
-# tclsh is used in the build process (cf. debug-auto.tcl)
-# Allow user to specify a native tclsh for use when cross-compiling
-# The user has not yet provided tclsh-local (default to USE_TCLSH):
-USE_TCLSH_LOCAL=0
-AC_ARG_WITH(tclsh-local,
-    AS_HELP_STRING(
-        [--with-tclsh-local],
-        [name of tclsh compatible with build system]),
-    [
-        AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
-        if [[ ${?} != 0 ]]
-        then
-            AC_MSG_ERROR([failed!])
-        fi
-        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
-    ],
-    [])
-
 ENABLE_SHARED=1
 AC_ARG_ENABLE(shared,
     AS_HELP_STRING([--enable-shared],
@@ -902,14 +883,32 @@ AC_SUBST(ENABLE_STATIC)
 AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
 AC_PROG_RANLIB
 
+# Tcl version is initially unknown (needed by find-tcl.sh)
+export TCL_VERSION=0
+
 # In order from most to least preferred
 TCL_VERSION_PREFS="8.6 8.5"
+
+AC_ARG_WITH(tcl-version,
+    AS_HELP_STRING([--with-tcl-version],
+                   [Tcl version. Minimum is 8.5. If not specified,
+                    use highest version we can find]),
+    [
+        TCL_VERSION=${withval}
+        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
+        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
+    ],
+    [
+        AC_MSG_NOTICE([Tcl version is not specified.])
+    ]
+)
 
 USE_TCL=0
 # Set USE_TCL
 AC_ARG_WITH(tcl,
     AS_HELP_STRING([--with-tcl], [location of Tcl]),
     [
+        AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
     ],
     [
@@ -937,20 +936,6 @@ AC_ARG_WITH(tcl,
     ]
 )
 
-# Sniff out default Tcl version and library path
-TCL_VERSION=0
-
-AC_ARG_WITH(tcl-version,
-    AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.5. If not specified,
-                    use highest version we can find]),
-    [
-        TCL_VERSION=${withval}
-        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
-        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
-    ]
-)
-
 USE_TCL_LIB_DIR=0
 
 AC_ARG_WITH(tcl-lib-dir,
@@ -966,6 +951,25 @@ then
   # We have locked in a version choice
   TCL_VERSION_PREFS=${TCL_VERSION}
 fi
+
+# tclsh is used in the build process (cf. debug-auto.tcl)
+# Allow user to specify a native tclsh for use when cross-compiling
+# The user has not yet provided tclsh-local (default to USE_TCLSH):
+USE_TCLSH_LOCAL=0
+AC_ARG_WITH(tclsh-local,
+    AS_HELP_STRING(
+        [--with-tclsh-local],
+        [name of tclsh compatible with build system]),
+    [
+        AC_MSG_CHECKING([for Tcl (version: $TCL_VERSION) local executable in: ${withval}])
+        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
+        if [[ ${?} != 0 ]]
+        then
+            AC_MSG_ERROR([failed!])
+        fi
+        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
+    ],
+    [])
 
 # Can always use static Tcl library
 TCL_LIB_SUFFIX_PREFS="a"
@@ -1089,9 +1093,6 @@ then
       Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
-# TCL_VERSION needed by find-tcl.sh
-export TCL_VERSION
-
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
@@ -1150,7 +1151,7 @@ then
 
   # Try to find out the library directory from tclsh
   echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
-  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH} $tmp_script )
+  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH_LOCAL} $tmp_script )
   TCLSH_EXIT=$?
   rm $tmp_script
   if [[ $? != 0 ]]; then
