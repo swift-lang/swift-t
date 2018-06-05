@@ -213,13 +213,14 @@ get_tcl_version()
 
 /*
   Initialises Turbine debug logging.
-  turbine::init_debug
+  Tcl name is turbine::c::init_debug
  */
 static int
 Turbine_Init_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
+
   turbine_debug_init();
 
   return TCL_OK;
@@ -611,8 +612,6 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/* Currently unused:
-
 static int
 Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
@@ -624,11 +623,10 @@ Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
-
+/* UNUSED
 static int
 Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
+                       int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
   double t = log_time_absolute();
@@ -636,7 +634,6 @@ Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
-
 */
 
 static int
@@ -1209,10 +1206,11 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
                        "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
-// We assume SWIG correctly generates this function
+// We assume SWIG correctly generates these functions
 // See the tcl/blob module
 int Blob_Init(Tcl_Interp* interp);
-
+// See the tcl/launch module
+int Launch_Init(Tcl_Interp* interp);
 
 /*
   turbine::noop_exec_register
@@ -1796,6 +1794,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_python_init(interp);
   tcl_r_init(interp);
   Blob_Init(interp);
+  Launch_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("init_debug",  Turbine_Init_Debug_Cmd);
@@ -1803,7 +1802,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
-  // COMMAND("log_time",    Turbine_LogTime_Cmd);
+  COMMAND("log_time",    Turbine_LogTime_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);

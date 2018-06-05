@@ -37,7 +37,7 @@ PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 module load alps
 
-which aprun
+set -eu
 
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
@@ -67,7 +67,6 @@ echo "TURBINE SETTINGS"
 echo "JOB_ID:  ${COBALT_JOBID}"
 echo "DATE:    $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "COMMAND: ${COMMAND}"
 echo "PROCS:   ${PROCS}"
 echo "PPN:${PPN}"
 # echo "TCLLIBPATH:   ${TCLLIBPATH}"
@@ -84,10 +83,15 @@ do
     APRUN_ENVS+="-e ${KV} "
 done
 
+TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
+
 # Run Turbine:
+set -x
 aprun -n ${PROCS} -N ${PPN} \
+      ${TURBINE_LAUNCH_OPTIONS:-} \
       ${APRUN_ENVS} \
-      ${VALGRIND} ${COMMAND}
+      ${VALGRIND} \
+      ${COMMAND}
 CODE=${?}
 
 echo

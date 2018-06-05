@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -e
+changecom(`dnl')#!/bin/bash -l
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -60,8 +60,14 @@ ifelse(getenv(TITAN), `true',
 # User directives:
 getenv(TURBINE_DIRECTIVE)
 
+set -e
+
 VERBOSE=getenv(VERBOSE)
 (( VERBOSE )) && set -x
+
+# Allow the user to specify aprun in the environment
+APRUN=getenv(APRUN)
+APRUN=${APRUN:-aprun}
 
 # Set variables required for turbine-config.sh
 export TURBINE_HOME=getenv(TURBINE_HOME)
@@ -74,7 +80,6 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 SCRIPT=getenv(SCRIPT)
 ARGS="getenv(ARGS)"
 NODES=getenv(NODES)
-WALLTIME=getenv(WALLTIME)
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 
 export TURBINE_USER_LIB=getenv(TURBINE_USER_LIB)
@@ -111,14 +116,13 @@ then
     # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
     set -x
-    aprun -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

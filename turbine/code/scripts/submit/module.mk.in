@@ -9,6 +9,7 @@ SCRIPTS_SUBMIT += $(SCRIPTS_SUBMIT_DIR)/run-init.zsh \
 include $(SCRIPTS_SUBMIT_DIR)/cobalt/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/cray/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/ec2/module.mk
+include $(SCRIPTS_SUBMIT_DIR)/lsf/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/pbs/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/slurm/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/sge/module.mk
