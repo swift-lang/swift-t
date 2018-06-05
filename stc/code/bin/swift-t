@@ -61,7 +61,6 @@ help()
   exit 0
 }
 
-
 report_version()
 {
   ${STC} -v
@@ -84,7 +83,6 @@ TURBINE_CHARS="e:i:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
 while getopts ${CHARS} OPTION
 do
-  # declare OPTION
   # Note: We make heavy use of the rarely-used ;& in the following
   case ${OPTION} in
 
@@ -264,7 +262,10 @@ then
   verbose "Compiling: ${PROGRAM_SWIFT}"
   verbose "       to: ${PROGRAM_TCL}"
   verbose_cmd ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
-  sync
+  if [[ ${SWIFT_T_SYNC:-} == 1 ]]
+  then
+    sync
+  fi
 fi
 
 # Run Turbine
