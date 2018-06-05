@@ -218,6 +218,7 @@ USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
+ENABLE_MPI_CHECKS=1
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -254,6 +255,14 @@ AC_ARG_WITH(launcher,
                       AC_MSG_ERROR("Launcher not found!"))
     ])
 
+# Allow user to disable MPI checks (useful on Cray)
+AC_ARG_ENABLE(mpi-checks,
+    AC_HELP_STRING([--disable-mpi-checks],
+                   [Turbine checks for mpi.h and MPI libs to obtain
+                    the MPI version and enforce sanity.  This flag
+                    disables these checks.]),
+    [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
+
 # Set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]]
 then
@@ -265,7 +274,7 @@ then
        USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-   elif (( ! ENABLE_CUSTOM_MPI ))
+   elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
    then
        AC_MSG_ERROR([Turbine requires --with-mpi or
                                   --enable-custom-mpi or
@@ -342,15 +351,6 @@ AC_ARG_WITH(mpi-lib-extra,
       MPI_EXTRA_LIBS=$(echo "${withval}" | tr "," " ")
     ],
     [])
-
-# Allow user to disable MPI checks (useful on Cray)
-ENABLE_MPI_CHECKS=yes
-AC_ARG_ENABLE(mpi-checks,
-    AC_HELP_STRING([--disable-mpi-checks],
-                   [Turbine checks for mpi.h and MPI libs to obtain
-                    the MPI version and enforce sanity.  This flag
-                    disables these checks.]),
-    [ ENABLE_MPI_CHECKS=${enableval} ])
 
 # Now check MPI settings
 
@@ -476,7 +476,7 @@ MPI_IMPL=unknown
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ${ENABLE_MPI_CHECKS} ))
 then
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
@@ -502,7 +502,7 @@ then
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
-fi # ENABLE_MPI_CHECKS==yes
+fi # ENABLE_MPI_CHECKS==1
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
