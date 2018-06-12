@@ -85,7 +85,7 @@ namespace eval turbine {
           c::sync_exec $stdin_src $stdout_dst $stderr_dst $cmd {*}$args
           break
         } trap {TURBINE ERROR} { msg } {
-          # Error: try again
+          # Error: possibly try again
           app_error $tries $msg $cmd $args
           continue
         }
@@ -96,7 +96,7 @@ namespace eval turbine {
                      results options ] } {
           break
         }
-        # Error: try again
+        # Error: possibly try again
         app_error $tries $options $cmd {*}$args
       }
     }
@@ -115,6 +115,9 @@ namespace eval turbine {
   }
 
   proc app_error { tries options cmd args } {
+    # If there are retries remaining,
+    #      we delay and continue the retry loop
+    # Else, we throw an error
     global tcl_version
     if { $tcl_version >= 8.6 } {
       set msg $options
@@ -124,8 +127,7 @@ namespace eval turbine {
       set msg "$errorinfo"
     }
     variable app_retries
-    set retry [ expr $tries <= $app_retries ]
-    if { ! $retry } {
+    if { $tries >= $app_retries } {
       turbine_error "app execution failed" on: [ c_utils::hostname ] \
           "\n $msg" "\n command: $cmd $args"
     }

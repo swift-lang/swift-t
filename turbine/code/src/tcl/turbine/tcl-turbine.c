@@ -1048,6 +1048,8 @@ close_error_exit(const char *purpose)
   exit(1);
 }
 
+static int pid_status(Tcl_Interp* interp, pid_t child);
+
 static int
 Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
@@ -1115,11 +1117,14 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
                   strerror(errno));
   }
 
-  return pid_status(child);
+  return pid_status(interp, child);
 }
 
-static int pid_status(pid_t child, Tcl_Interp* interp)
+static int child_error(Tcl_Interp* interp, const char* message);
+
+static int pid_status(Tcl_Interp* interp, pid_t child)
 {
+  int rc;
   int status;
   char message[1024];
   rc = waitpid(child, &status, 0);
@@ -1130,14 +1135,14 @@ static int pid_status(pid_t child, Tcl_Interp* interp)
     if (exitcode != 0)
     {
       sprintf(message,
-              "shell: Command failed with exit code: %i", exitcode);
+              "shell: Command failed with exit code: %i ", exitcode);
       return child_error(interp, message);
     }
   }
   else if (WIFSIGNALED(status))
   {
     int sgnl = WTERMSIG(status);
-    sprintf(message, "shell: Child killed by signal: %i\n", sgnl);
+    sprintf(message, "shell: Child killed by signal: %i ", sgnl);
     return child_error(interp, message);
   }
   else
@@ -1153,7 +1158,7 @@ static int child_error(Tcl_Interp* interp, const char* message)
 {
   if (tcl_version > 8.5)
   {
-    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf(message) };
+    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("%s", message) };
     return turbine_user_error(interp, 1, msgs);
   }
   else // Tcl 8.5
