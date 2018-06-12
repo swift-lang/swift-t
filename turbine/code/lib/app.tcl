@@ -78,7 +78,7 @@ namespace eval turbine {
     # Begin retry loop: break on success
     while { true } {
       incr tries
-      log "shell: $cmd $args $stdios"
+      log "shell \[[c_utils::hostname ]\]: $cmd $args $stdios"
       set start [ clock milliseconds ]
       if { $tcl_version >= 8.6 } {
         try {
