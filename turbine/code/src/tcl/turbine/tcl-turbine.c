@@ -1115,7 +1115,13 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
                   strerror(errno));
   }
 
+  return pid_status(child);
+}
+
+static int pid_status(pid_t child, Tcl_Interp* interp)
+{
   int status;
+  char message[1024];
   rc = waitpid(child, &status, 0);
   assert(rc > 0);
   if (WIFEXITED(status))
@@ -1123,36 +1129,38 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
     int exitcode = WEXITSTATUS(status);
     if (exitcode != 0)
     {
-      if (tcl_version > 8.5)
-      {
-        Tcl_Obj *msgs[1] = {
-          Tcl_ObjPrintf("shell: Command failed with exit code: %i",
-                        exitcode)
-        };
-        return turbine_user_error(interp, 1, msgs);
-      }
-      else
-      {
-        // Tcl 8.5
-        char t[128];
-        sprintf(t, "shell: Command failed with exit code: %i", exitcode);
-        Tcl_AddErrorInfo(interp, t);
-        return TCL_ERROR;
-      }
+      sprintf(message,
+              "shell: Command failed with exit code: %i", exitcode);
+      return child_error(interp, message);
     }
   }
   else if (WIFSIGNALED(status))
   {
-    printf("child killed by signal!\n");
-    exit(1);
+    int sgnl = WTERMSIG(status);
+    sprintf(message, "shell: Child killed by signal: %i\n", sgnl);
+    return child_error(interp, message);
   }
   else
   {
-    printf("WHAT HAPPENED?\n");
+    printf("TURBINE: UNKNOWN ERROR in pid_status()\n");
     exit(1);
   }
 
   return TCL_OK;
+}
+
+static int child_error(Tcl_Interp* interp, const char* message)
+{
+  if (tcl_version > 8.5)
+  {
+    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf(message) };
+    return turbine_user_error(interp, 1, msgs);
+  }
+  else // Tcl 8.5
+  {
+    Tcl_AddErrorInfo(interp, message);
+    return TCL_ERROR;
+  }
 }
 
 /*
