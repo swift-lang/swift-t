@@ -105,6 +105,15 @@ namespace eval turbine {
     log "shell command duration: $duration"
   }
 
+  proc app_delay { } {
+    variable app_delay_time
+
+    # Apply random delay if user asked for it
+    if { $app_delay_time > 0 } {
+      after [ expr round($app_delay_time * 1000.0 * rand()) ]
+    }
+  }
+
   proc app_error { tries options cmd args } {
     global tcl_version
     if { $tcl_version >= 8.6 } {
@@ -121,15 +130,6 @@ namespace eval turbine {
           "\n $msg" "\n command: $cmd $args"
     }
     app_retry $msg $tries
-  }
-
-  proc app_delay { } {
-    variable app_delay_time
-
-    # Apply random delay if user asked for it
-    if { $app_delay_time > 0 } {
-      after [ expr round($app_delay_time * 1000.0 * rand()) ]
-    }
   }
 
   proc app_retry { msg tries } {
