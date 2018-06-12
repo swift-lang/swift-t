@@ -1111,32 +1111,45 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
 
     rc = execvp(cmd, cmd_argv);
-    TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
+    TCL_CONDITION(rc != -1, "Error exec()ing command %s: %s", cmd,
                   strerror(errno));
   }
 
   int status;
-  waitpid(child, &status, 0);
-  int exitcode = WEXITSTATUS(status);
-
-  if (exitcode != 0)
+  rc = waitpid(child, &status, 0);
+  assert(rc > 0);
+  if (WIFEXITED(status))
   {
-    if (tcl_version > 8.5)
+    int exitcode = WEXITSTATUS(status);
+    if (exitcode != 0)
     {
-      Tcl_Obj *msgs[1] = {
-        Tcl_ObjPrintf("shell: Command failed with exit code: %i",
-                      exitcode)
-      };
-      return turbine_user_error(interp, 1, msgs);
+      if (tcl_version > 8.5)
+      {
+        Tcl_Obj *msgs[1] = {
+          Tcl_ObjPrintf("shell: Command failed with exit code: %i",
+                        exitcode)
+        };
+        return turbine_user_error(interp, 1, msgs);
+      }
+      else
+      {
+        // Tcl 8.5
+        char t[128];
+        sprintf(t, "shell: Command failed with exit code: %i", exitcode);
+        Tcl_AddErrorInfo(interp, t);
+        return TCL_ERROR;
+      }
     }
-    else
-    {
-      // Tcl 8.5
-      char t[128];
-      sprintf(t, "shell: Command failed with exit code: %i", exitcode);
-      Tcl_AddErrorInfo(interp, t);
-      return TCL_ERROR;
-    }
+  }
+  else if (WIFSIGNALED(status))
+  {
+    printf("child killed by signal!\n");
+    exit(1);
+  }
+  else
+  {
+    printf("WHAT HAPPENED?\n");
+    exit(1);
   }
 
   return TCL_OK;
