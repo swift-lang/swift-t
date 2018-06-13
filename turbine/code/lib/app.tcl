@@ -32,13 +32,13 @@ namespace eval turbine {
     set app_initialized 1
     getenv_integer TURBINE_APP_RETRIES 0 app_retries
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
+    getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
     if { $app_delay_time > 0 } {
       if { [ adlb::rank ] == 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
       }
     }
-    set app_backoff 0.1
   }
 
   # Build up a log message with stdio information
