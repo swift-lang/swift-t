@@ -103,14 +103,12 @@ namespace eval turbine {
             $cmd $args $tries_local
       } trap {TURBINE ERROR} { message } {
         set success false
-        log "app: exhausted local tries"
         try {
           app_retry_reput $message $tries_reput [adlb::rank] \
               $stdin_src $stdout_dst $stderr_dst \
               $cmd $args
           break
         } trap {TURBINE ERROR} { message } {
-          log "app: exhausted reput tries"
           turbine_error $message
         }
       }
@@ -143,11 +141,6 @@ namespace eval turbine {
                              stdin_src stdout_dst stderr_dst \
                              cmd args  } {
     variable app_retries_reput
-    if { $app_retries_reput == 0 } {
-      # User did not request reputs
-      return
-    }
-
     incr tries_reput
 
     # Throws an error when exhausted
@@ -205,14 +198,22 @@ namespace eval turbine {
   # tries: tries of this type so far
   # max: maximal number of tries of this type
   # message: the last error message from trying to run cmd+args
-  proc app_retry_check { type msg tries max cmd args } {
+  proc app_retry_check { type message tries max cmd args } {
     if { $tries < $max } {
-      log [ cat "$msg: retries $type: $tries/$max " \
+      log [ cat "$message: retries $type: $tries/$max " \
                 "[ c_utils::hostname ] rank [ adlb::rank ]" ]
     } else {
+      if { $max > 0 } {
+        log "app: exhausted $type tries"
+      }
       if { $args eq "{{{}}}" } { set args {} }
-      turbine_error "app: execution failed on:" [ c_utils::hostname ] \
-          rank [ adlb::rank ] "\n $msg" "\n command: $cmd $args"
+      if { $type eq "local" } {
+        turbine_error "app: execution failed on:" [ c_utils::hostname ] \
+            rank [ adlb::rank ] "\n $message" "\n command: $cmd $args"
+      } else {
+        # We already have the complete error message:
+        turbine_error $message
+      }
     }
   }
 
