@@ -15,16 +15,13 @@
  */
 
 /*
- * Functions to manager Turbine 
+ * Functions to manage services running alongside Turbine
  * Authors: wozniak, armstrong
  */
 
-#ifndef __TURBINE_SERVICES_H_
-#define __TURBINE_SERVICES_H_
+#pragma once
 
 #include "src/turbine/turbine-defs.h"
 
-turbine_code turbine_service_init();
-void turbine_service_finalize();
-
-#endif //__TURBINE_SERVICES_H_
+turbine_code turbine_service_init(void);
+void turbine_service_finalize(void);
