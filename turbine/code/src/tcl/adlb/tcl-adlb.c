@@ -694,6 +694,7 @@ set_namespace_constants(Tcl_Interp* interp)
 {
   turbine_tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
   turbine_tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
+  turbine_tcl_set_integer(interp, "::adlb::RANK_NULL", ADLB_RANK_NULL);
   turbine_tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
 }
 

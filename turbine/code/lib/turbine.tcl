@@ -126,8 +126,10 @@ namespace eval turbine {
 
         reset_priority
 
+        # These are the user work types
         set work_types [ work_types_from_allocation $rank_allocation ]
-
+        # REPUT is a special internal work type used by app.tcl reputs
+        lappend work_types REPUT
         debug "work_types: $work_types"
         # Set up work types
         enum WORK_TYPE $work_types
@@ -282,7 +284,8 @@ namespace eval turbine {
     # Setup which mode this and other ranks will be running in
     #
     # rank_allocation: a rank allocation object
-    # work_types: list of ADLB work type names (matching those in rank_allocation)
+    # work_types: list of ADLB work type names
+    #             (matching those in rank_allocation)
     #             with list index corresponding to integer ADLB work type
     #
     # Sets n_workers, n_workers_by_type, and n_adlb_servers variables
@@ -358,9 +361,12 @@ namespace eval turbine {
             turbine_error "No workers!"
         }
 
-        # Report on how workers are subdivided
+        # Remove REPUT for the following log message
+        set work_types_user [ lreplace $work_types end-1 end ]
+
+        # Report on how workers are subdivided for user work types
         set curr_rank 0
-        foreach work_type $work_types {
+        foreach work_type $work_types_user {
           set n_x_workers [ dict get $n_workers_by_type $work_type ]
           set first_x_worker $curr_rank
           incr curr_rank $n_x_workers

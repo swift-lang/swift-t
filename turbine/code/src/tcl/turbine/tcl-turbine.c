@@ -1132,17 +1132,19 @@ static int pid_status(Tcl_Interp* interp, pid_t child)
   if (WIFEXITED(status))
   {
     int exitcode = WEXITSTATUS(status);
+    // printf("exitcode: %i\n", exitcode);
+
     if (exitcode != 0)
     {
       sprintf(message,
-              "shell: Command failed with exit code: %i ", exitcode);
+              "app: Command failed with exit code: %i ", exitcode);
       return child_error(interp, message);
     }
   }
   else if (WIFSIGNALED(status))
   {
     int sgnl = WTERMSIG(status);
-    sprintf(message, "shell: Child killed by signal: %i ", sgnl);
+    sprintf(message, "app: Child killed by signal: %i ", sgnl);
     return child_error(interp, message);
   }
   else
@@ -1158,6 +1160,7 @@ static int child_error(Tcl_Interp* interp, const char* message)
 {
   if (tcl_version > 8.5)
   {
+    // printf("child_error: \n");
     Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("%s", message) };
     return turbine_user_error(interp, 1, msgs);
   }
