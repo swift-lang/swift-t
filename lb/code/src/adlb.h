@@ -95,11 +95,11 @@ adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
  */
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, adlb_put_opts opts, const char *name,
-        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id *wait_ids, int wait_id_count,
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 adlb_code ADLB_Dput(const void* payload, int length, int target,
         int answer, int type, adlb_put_opts opts, const char *name,
-        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id *wait_ids, int wait_id_count,
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 
 /*
@@ -156,7 +156,7 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
 
 /*
   Same as ADLB_Aget except initiates multiple requests at once.
-  
+
   nreqs: number of requests to initiate
   wait: wait for first request to be filled (or shutdown to occur),
        Return immediately if 0 requests.
@@ -237,19 +237,19 @@ adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
                              adlb_struct_type struct_type, adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
-                                adlb_data_type key_type, 
-                                adlb_data_type val_type, 
+                                adlb_data_type key_type,
+                                adlb_data_type val_type,
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_multiset(adlb_datum_id id,
-                                adlb_data_type val_type, 
+                                adlb_data_type val_type,
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
 /*
   Add debug symbol entry, overwriting any existing entry.
   Only adds to local table (not on other ranks).
-  
+
   symbol: debug symbol identifier, should not be ADLB_DSYM_NULL
   data: associated null-terminated data string, will be copied.
  */
@@ -258,7 +258,7 @@ adlb_code ADLB_Add_dsym(adlb_dsym symbol, adlb_dsym_data data);
 
 /*
   Retrieve debug symbol entry from local debug symbol table.
-  
+
   symbol: a debug symbol identifier
   return: entry previous added for symbol, or NULL values if not present
  */
@@ -304,7 +304,7 @@ adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
 
 /*
    Retrieve contents of datum.
-    
+
    refcounts: specify how reference counts should be changed
       read_refcount: decrease read refcount of this datum
       incr_read_referand: increase read refcount of referands,
@@ -322,7 +322,7 @@ adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
 
 /*
    List contents of container
-   
+
    data: binary encoded keys and values (if requested), with each member
           encoded as follows:
         - key length encoded with vint_encode()
@@ -464,4 +464,3 @@ adlb_code ADLB_Fail(int code);
 void ADLB_Abort(int code);
 
 #endif
-
