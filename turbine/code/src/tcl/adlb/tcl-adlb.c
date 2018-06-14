@@ -1138,57 +1138,9 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_type;
 
   void* payload = NULL;
-#ifdef USE_ADLB
-  int work_handle[ADLB_HANDLE_SIZE];
-#endif
   int work_len = 1000*1000*1000; // 1 GB
   int answer_rank;
-#ifdef USE_ADLB
 
-  int req_types[4];
-  int work_prio;
-
-  req_types[0] = req_type;
-  req_types[1] = req_types[2] = req_types[3] = -1;
-
-  DEBUG_ADLB("enter reserve: type=%i", req_types[0]);
-  rc = ADLB_Reserve(req_types, &work_type, &work_prio,
-                    work_handle, &work_len, &answer_rank);
-  DEBUG_ADLB("exit reserve");
-  if (rc == ADLB_DONE_BY_EXHAUSTION)
-  {
-    DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_MORE_WORK ) {
-    DEBUG_ADLB("ADLB_NO_MORE_WORK!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_CURRENT_WORK) {
-    DEBUG_ADLB("ADLB_NO_CURRENT_WORK");
-    payload[0] = '\0';
-  }
-  else if (rc < 0) {
-    DEBUG_ADLB("rc < 0");
-    payload[0] = '\0';
-  }
-  else
-  {
-    DEBUG_ADLB("work is reserved.");
-    rc = ADLB_Get_reserved(payload, work_handle);
-    if (rc == ADLB_NO_MORE_WORK)
-    {
-      puts("No more work on Get_reserved()!");
-      payload[0] = '\0';
-    }
-    else
-      found_work = true;
-  }
-  if (payload[0] == '\0')
-    answer_rank = -1;
-#endif
-
-#ifdef USE_XLB
   MPI_Comm task_comm;
   int rc = ADLB_Get(req_type, &payload, &work_len, work_len,
                     &answer_rank, &work_type, &task_comm);
@@ -1206,7 +1158,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     free(payload);
   }
   turbine_task_comm = task_comm;
-#endif
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
