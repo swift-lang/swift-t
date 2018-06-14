@@ -93,13 +93,42 @@ proc readfile { filename } {
 # Debugging helper
 proc show { args } {
   foreach v $args {
-    upvar $v t
+    show_token $v
 
+    upvar $v t
     if { ! [ info exists v ] } {
       error "show: variable does not exist: $v"
     }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts "$v: $s"
+  }
+}
 
-    puts "$v: $t"
+proc showln { args } {
+  foreach v $args {
+    show_token $v
+
+    # Actual variable
+    upvar $v t
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
+    }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts -nonewline "$v=$s "
+  }
+  puts ""
+}
+
+proc show_token { v } {
+  # Token
+  if { [ string first "@" $v ] == 0 } {
+    set s [ string range $v 1 end ]
+    puts -nonewline "$s "
+    return -code continue
   }
 }
 
@@ -144,6 +173,17 @@ proc cat { args } {
 
 proc puts* { args } {
     puts [ join $args "" ]
+}
+
+proc puts** { args } {
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      puts -nonewline "'' "
+    } else {
+      puts -nonewline "$a "
+    }
+  }
+  puts ""
 }
 
 proc putsn { args } {
