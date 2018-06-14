@@ -15,6 +15,7 @@
 # Turbine APP.TCL
 
 # Functions for launching external apps
+# retry_reput logic credit to Azza Ahmed
 
 namespace eval turbine {
 
