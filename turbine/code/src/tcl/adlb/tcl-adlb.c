@@ -1022,6 +1022,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (target_rank >= 0)
   {
+    // Defaults: may be written below
     opts.strictness = ADLB_TGT_STRICT_HARD;
     opts.accuracy = ADLB_TGT_ACCRY_RANK;
   }

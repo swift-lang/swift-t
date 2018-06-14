@@ -15,8 +15,6 @@
  */
 
 /*
- * Functions to manage services running alongside Turbine
- *
  * Extracted from worker code: Jun 27 2014
  *
  * Authors: wozniak, armstrong
