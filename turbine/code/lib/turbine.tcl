@@ -146,14 +146,12 @@ namespace eval turbine {
 
         setup_mode $rank_allocation $work_types
 
+        # Initialize Turbine features
         turbine::init_rng
-
         turbine::init_file_types
-
         c::normalize
-
+        app_init
         turbine::init_cmds
-
         argv_init
     }
 

@@ -86,6 +86,9 @@ struct xlb_state {
       ranks r such that r % par_mod == 0
    */
   int par_mod;
+
+  /** Overall status */
+  adlb_status status;
 };
 
 /** Global system state */

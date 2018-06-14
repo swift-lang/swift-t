@@ -37,6 +37,8 @@ adlb_code ADLB_Init(int nservers, int ntypes, int type_vect[],
 
 adlb_code ADLB_Server(long max_memory);
 
+adlb_status ADLB_Status(void);
+
 adlb_code ADLB_Version(version* output);
 
 MPI_Comm ADLB_GetComm(void);
