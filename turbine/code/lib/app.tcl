@@ -257,7 +257,7 @@ namespace eval turbine {
   # based on parameters present in provided dictionary
   # For use of Turbine's C-based sync_exec command
   proc setup_redirects_c { kwopts stdin_var stdout_var stderr_var } {
-    upvar 1 $stdin_var stdin_src
+    upvar 1 $stdin_var  stdin_src
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
 

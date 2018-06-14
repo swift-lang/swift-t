@@ -1001,7 +1001,7 @@ ADLB_Leaders_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
-                    <parallelism> [<soft target>]
+                    <parallelism> [<soft> <target>]
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
