@@ -1137,14 +1137,14 @@ static int pid_status(Tcl_Interp* interp, pid_t child)
     if (exitcode != 0)
     {
       sprintf(message,
-              "app: Command failed with exit code: %i ", exitcode);
+              "Child exited with code: %i", exitcode);
       return child_error(interp, message);
     }
   }
   else if (WIFSIGNALED(status))
   {
     int sgnl = WTERMSIG(status);
-    sprintf(message, "app: Child killed by signal: %i ", sgnl);
+    sprintf(message, "Child killed by signal: %i", sgnl);
     return child_error(interp, message);
   }
   else
