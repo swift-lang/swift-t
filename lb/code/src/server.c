@@ -720,7 +720,7 @@ servers_idle()
   xlb_idle_check_attempt++;
   DEBUG("Master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
-  
+
   // Arrays containing request and work counts from all servers
   // The counts from each server are stored contiguously
   int *request_counts = malloc(sizeof(int) *

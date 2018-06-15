@@ -421,7 +421,7 @@ wu_array_try_remove_untargeted(uint32_t wu_idx, int type, int priority)
     {
       modified_priority = soft_target_priority(modified_priority);
     }
-    
+
     if (modified_priority == priority) {
       ptr_array_remove(&wu_array, wu_idx);
       return wu;
