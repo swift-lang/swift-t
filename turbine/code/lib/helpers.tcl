@@ -194,6 +194,22 @@ proc printf { fmt args } {
     puts [ format $fmt {*}$args ]
 }
 
+proc log* { args } {
+  turbine::c::log [ join $args "" ]
+}
+
+proc log** { args } {
+  set msg ""
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      append msg "'' "
+    } else {
+      append msg "$a "
+    }
+  }
+  log* $msg
+}
+
 # Remove and return element 0 from list
 proc list_pop_first { L_name } {
     upvar $L_name L
