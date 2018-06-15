@@ -45,8 +45,7 @@ proc outln { args } {
 outln
 outln "// Header created by debug-auto.tcl at: [exec date]\n"
 
-outln "#ifndef DEBUG_H"
-outln "#define DEBUG_H\n"
+outln "#pragma once\n"
 
 out "void turbine_debug_init(void);\n\n"
 
@@ -83,8 +82,5 @@ foreach token [ array names tokens ] {
     outln "#define $macro" "(format, args...)"
     outln "#endif\n"
 }
-
-out "\n"
-out "#endif\n"
 
 close $fd
