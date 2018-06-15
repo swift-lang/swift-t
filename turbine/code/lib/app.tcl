@@ -138,6 +138,7 @@ namespace eval turbine {
     }
   }
 
+  # Try to send this task to another worker
   proc app_retry_reput { message tries_reput reply \
                              stdin_src stdout_dst stderr_dst \
                              cmd args  } {
