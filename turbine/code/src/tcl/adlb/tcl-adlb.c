@@ -1066,6 +1066,12 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.priority = ADLB_curr_priority;
 
+  if (ADLB_Status() == ADLB_STATUS_SHUTDOWN)
+  {
+    printf("turbine: warning: canceling task spawn\n");
+    return TCL_OK;
+  }
+
   DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i",
              work_type, cmd, opts.priority);
   int rc = ADLB_Put(cmd, cmd_len+1, ADLB_RANK_ANY, adlb_comm_rank,

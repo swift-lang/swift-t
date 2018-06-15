@@ -44,9 +44,22 @@ namespace eval turbine {
 
         leader_hook_startup
 
-        c::worker_loop $WORK_TYPE($mode) $keyword_args
+        set success true
+        try {
+            c::worker_loop $WORK_TYPE($mode) $keyword_args
+        } trap "TURBINE ERROR" e {
+            set success false
+            puts "worker loop exited with error"
+        } on error e {
+            puts "WORKER ERROR: $::errorInfo"
+        }
 
         leader_hook_shutdown
+
+        if { ! $success } {
+            puts "worker throwing error: "
+            error "worker loop error"
+        }
     }
 
     proc custom_worker { rules startup_cmd mode } {

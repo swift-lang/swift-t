@@ -415,14 +415,14 @@ namespace eval turbine {
             set startup_cmd ""
         }
 
-        set failed 0
+        set success true
         if { [ catch { enter_mode $rules $startup_cmd } e d ] } {
-          set failed 1
+          set success false
         }
 
         turbine::xpt_finalize2
 
-        if { $failed } {
+        if { ! $success } {
             fail $e $d
         }
     }
@@ -444,7 +444,13 @@ namespace eval turbine {
     proc enter_mode_unchecked { rules startup_cmd } {
         variable mode
         switch $mode {
-            SERVER  { adlb::server }
+            SERVER  {
+              try {
+                adlb::server
+              } on error e {
+                turbine_error "ADLB server exited with error"
+              }
+            }
             WORK  { standard_worker $rules $startup_cmd }
             default {
               custom_worker $rules $startup_cmd $mode
