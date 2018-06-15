@@ -242,12 +242,14 @@ ADLB_Server(long max_memory)
     check_steal();
   }
 
+  adlb_code result;
+
   // Print stats, then cleanup all modules
   print_final_stats();
-  server_shutdown();
+  result = server_shutdown();
 
   TRACE_END;
-  return ADLB_SUCCESS;
+  return result;
 }
 
 // Track current backoff amount for adaptive backoff
@@ -863,9 +865,10 @@ xlb_server_shutdown()
 static adlb_code
 server_shutdown()
 {
+  bool success = true;
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
-  xlb_workq_finalize();
+  success = xlb_workq_finalize();
   xlb_steal_finalize();
   xlb_sync_finalize();
 
@@ -876,6 +879,8 @@ server_shutdown()
            xlb_server_ready_work.count);
   free(xlb_server_ready_work.work);
 
+  if (!success)
+    return ADLB_ERROR;
   return ADLB_SUCCESS;
 }
 

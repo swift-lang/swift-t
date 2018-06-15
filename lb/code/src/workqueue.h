@@ -152,7 +152,7 @@ static inline void xlb_work_unit_free(xlb_work_unit* wu)
 
 void xlb_print_workq_perf_counters(void);
 
-void xlb_workq_finalize(void);
+bool xlb_workq_finalize(void);
 
 
 typedef struct {

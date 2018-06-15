@@ -57,7 +57,7 @@ static inline heap_iu32_t *targeted_work_heap(int rank, int type);
 static inline heap_iu32_t *host_targeted_work_heap(int host_idx, int type);
 static inline int host_idx_from_rank2(int rank);
 
-static void wu_array_finalize(void);
+static bool wu_array_finalize(void);
 static inline xlb_work_unit *
 wu_array_try_remove_untargeted(uint32_t wu_idx, int type, int priority);
 static inline xlb_work_unit *
@@ -362,8 +362,9 @@ static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
   return ADLB_SUCCESS;
 }
 
-static void wu_array_finalize(void)
+static bool wu_array_finalize(void)
 {
+  bool success = true;
   bool unmatched_serial = false;
   for (int i = 0; i < wu_array.capacity; i++)
   {
@@ -373,8 +374,9 @@ static void wu_array_finalize(void)
       // TODO: pass waiting tasks to higher-level handling code
       if (!unmatched_serial)
       {
-        printf("WARNING: server contains work that was never received!\n");
+        printf("ERROR: server contains work that was never received!\n");
         unmatched_serial = true;
+        success = false;
       }
       if (wu->target < 0)
       {
@@ -389,6 +391,7 @@ static void wu_array_finalize(void)
   }
 
   ptr_array_clear(&wu_array);
+  return success;
 }
 
 /*
@@ -899,14 +902,15 @@ void xlb_print_workq_perf_counters(void)
   }
 }
 
-void
+bool
 xlb_workq_finalize()
 {
+  bool success = true;
   TRACE_START;
 
   // Remove unmatched serial work
   // Clear array and report unmatched serial work
-  wu_array_finalize();
+  success = wu_array_finalize();
 
   // Clear up targeted_work heaps
   for (int i = 0; i < targeted_work_size; i++)
@@ -936,9 +940,12 @@ xlb_workq_finalize()
   {
     // TODO: pass waiting tasks to higher-level handling code
     if (parallel_work[i].size > 0)
-      printf("WARNING: server contains %i "
+    {
+      printf("ERROR: server contains %i "
              "parallel work units of type %i:\n",
              parallel_work[i].size, i);
+      success = false;
+    }
     rbtree_clear_callback(&parallel_work[i], wu_rbtree_clear_callback);
   }
   free(parallel_work);
@@ -950,4 +957,5 @@ xlb_workq_finalize()
     xlb_task_counters = NULL;
   }
   TRACE_END;
+  return success;
 }
