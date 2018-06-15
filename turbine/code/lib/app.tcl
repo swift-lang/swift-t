@@ -76,7 +76,7 @@ namespace eval turbine {
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
     exec_local 0 -1 \
         $stdin_src $stdout_dst $stderr_dst \
-        $cmd $args
+        $cmd {*}$args
   }
 
   proc exec_local { tries_reput reply \
@@ -88,7 +88,7 @@ namespace eval turbine {
     }
 
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
-    log "app: \[[c_utils::hostname ]\] $cmd $args $stdios"
+    log** "app:" "\[[c_utils::hostname]\]" io=$stdios ":" $cmd {*}$args
 
     # Begin local retry loop: break on success
     # On failure, throw an error
@@ -100,14 +100,14 @@ namespace eval turbine {
       # Assume success
       set success true
       try {
-        app_try $stdin_src $stdout_dst $stderr_dst \
-            $cmd $args $tries_local
+        app_try $tries_local $stdin_src $stdout_dst $stderr_dst \
+            $cmd {*}$args
       } trap {TURBINE ERROR} { message } {
         set success false
         try {
           app_retry_reput $message $tries_reput [adlb::rank] \
               $stdin_src $stdout_dst $stderr_dst \
-              $cmd $args
+              $cmd {*}$args
           break
         } trap {TURBINE ERROR} { message } {
           turbine_error $message
@@ -119,16 +119,16 @@ namespace eval turbine {
       # app success on this rank!
       set stop [ clock milliseconds ]
       set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
-      log "app: command duration: $duration"
+      log "app: duration: $duration"
     }
 
     # If this was a reput, we need to reply and not report duration
     retry_reply $reply
   }
 
-  proc app_try { stdin stdout stderr cmd args tries } {
+  proc app_try { tries stdin stdout stderr cmd args } {
     try {
-      log "app: exec: $cmd $args"
+      log** "app: exec:" $cmd {*}$args
       c::sync_exec $stdin $stdout $stderr $cmd {*}$args
       # Success: break out of local retry loop
       return -code break
@@ -148,16 +148,14 @@ namespace eval turbine {
     app_retry_check "reput" $message $tries_reput $app_retries_reput \
         $cmd $args
 
-    log "app: reput to ADLB: '$cmd $args'"
-
-    # Prevent Tcl string escape weirdness
-    if { $args eq "{{}}" } { set args {} }
+    log** "app: reput to ADLB:" $cmd $args
+    set payload [ list exec_local $tries_reput [adlb::rank] ]
+    lappend payload $stdin_src $stdout_dst $stderr_dst
+    lappend payload $cmd {*}$args
     global WORK_TYPE
-    adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) \
-        [ list exec_local $tries_reput [adlb::rank] \
-              $stdin_src $stdout_dst $stderr_dst \
-              $cmd $args ] 1 1
+    adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) $payload 1 1
 
+    # Wait for response from the receiving worker
     set msg [ adlb::get $WORK_TYPE(REPUT) answer_rank ]
     if { $answer_rank == $adlb::RANK_NULL } {
       log "app: received SHUTDOWN while waiting for reput reply"
@@ -190,7 +188,7 @@ namespace eval turbine {
   proc app_retry_local { message tries cmd args } {
 
     variable app_retries_local
-    app_retry_check "local" $message $tries $app_retries_local $cmd $args
+    app_retry_check "local" $message $tries $app_retries_local $cmd {*}$args
     app_delay_retry $tries
   }
 
@@ -209,8 +207,10 @@ namespace eval turbine {
       }
       if { $args eq "{{{}}}" } { set args {} }
       if { $type eq "local" } {
-        turbine_error "app: execution failed on:" [ c_utils::hostname ] \
-            rank [ adlb::rank ] "\n $message" "\n command: $cmd $args"
+        set    m "app: error: "
+        append m "<" $message "> "
+        append m "command: " $cmd " " {*}$args
+        turbine_error $m
       } else {
         # We already have the complete error message:
         turbine_error $message
