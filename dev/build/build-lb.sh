@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-set -e
+set -eu
+
+# BUILD LB
 
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
 
-if (( RUN_AUTOTOOLS )) || [ ! -f configure ]; then
-  # Attempt to run autotools
+if (( RUN_BOOTSTRAP )) || [ ! -f configure ]; then
   ./bootstrap
 fi
 
-EXTRA_ARGS=
+EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast "
 fi
@@ -26,7 +27,7 @@ if (( ENABLE_MPE )); then
     EXTRA_ARGS+="--with-mpe=${MPE_INSTALL} "
 fi
 
-if (( SWIFT_T_STATIC_BUILD )); then
+if (( DISABLE_SHARED )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
@@ -46,7 +47,8 @@ if (( DISABLE_ZLIB )); then
   EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
-if [ ! -z "$ZLIB_INSTALL" ]; then
+if [[ ${ZLIB_INSTALL:-} != "" ]]
+then
   EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
 fi
 
@@ -54,10 +56,11 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
-if (( CONFIGURE )); then
+if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
+then
   (
     rm -f config.cache
-    set -ex
+    set -eux
     ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
@@ -66,7 +69,8 @@ if (( CONFIGURE )); then
   )
 fi
 
-if (( ! RUN_MAKE )); then
+if (( ! RUN_MAKE ))
+then
   exit
 fi
 
@@ -80,4 +84,9 @@ then
 fi
 
 make -j ${MAKE_PARALLELISM}
+
+if (( ! RUN_MAKE_INSTALL ))
+then
+  exit
+fi
 make install

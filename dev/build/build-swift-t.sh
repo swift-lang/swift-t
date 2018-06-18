@@ -3,6 +3,7 @@ set -eu
 
 # BUILD SWIFT-T
 
+# Main user interface
 # Swift/T build script: runs configuration and compilation
 # See options.sh for options
 

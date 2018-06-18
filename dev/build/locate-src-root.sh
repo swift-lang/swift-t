@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+
 # Helper script to automatically find source root by searching
 # upwards from the specified directory.
 
 set -e
-THISDIR=`dirname $0`
+THIS=$( dirname $0 )
 STARTDIR=$1
 MAX_HEIGHT=$2
 
