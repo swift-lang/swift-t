@@ -743,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">May 2018</span><br />
+<span id="author">June 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -876,7 +876,7 @@ Other MPI implementations are <a href="#Build_configuration">supported</a> as we
 </p>
 <div class="paragraph"><p>Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set <code>MPI_VERSION=2</code> (if using the <code>build-all.sh</code> build process),
+you must set <code>MPI_VERSION=2</code> (if using the <code>build.sh</code> build process),
 or provide the <code>--enable-mpi-2</code> configure option (if using
 the <a href="#build_manual">manual build process</a>).</p></div>
 </li>
@@ -980,13 +980,14 @@ enabling/disabling features, debug or optimized builds, etc.</p></div>
 </li>
 <li>
 <p>
-Run the setup script
+Run the build script
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>dev/build/build-all.sh</code></pre>
+<pre><code>dev/build/build.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>See <code>dev/build/README.md</code> for more notes and build options.</p></div>
+<div class="paragraph"><p>See <code>dev/build/README.md</code> for more notes and build options.<br />
+Use <code>build.sh -h</code> for help.</p></div>
 <div class="paragraph"><p>If <code>build-all.sh</code> does not succeed on your system, see Section
 <a href="#Build_configuration">Build configuration</a> below.</p></div>
 <div class="admonitionblock">
@@ -5174,7 +5175,7 @@ functions while using threads.
 on more complex systems.</p></div>
 <div class="sect3">
 <h4 id="_build_troubleshooting">17.4.1. Build troubleshooting</h4>
-<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed, you may need to change how it
+<div class="paragraph"><p>If <code>build.sh</code> does not succeed, you may need to change how it
 tries to configure and compile Swift/T.</p></div>
 <div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
 step is to determine why the build failed.  <code>build-all.sh</code> will usually
@@ -5207,11 +5208,11 @@ If the options in <code>swift-t-settings.sh</code> do not give sufficient contro
 </div>
 <div class="sect3">
 <h4 id="build_manual">17.4.2. Manual configuration</h4>
-<div class="paragraph"><p><code>build-all.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
+<div class="paragraph"><p><code>build.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
 install Swift/T from the downloadable package or from a Git clone.
 However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C, Tcl) techniques.  You can more directly control
+Autotools/Makefile &#169; techniques.  You can more directly control
 the configuration when building through the arguments to <code>ant</code> or
 <code>configure</code>.</p></div>
 <div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
@@ -5944,7 +5945,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-06-18 11:14:59 CDT
+ 2018-06-18 14:52:16 CDT
 </div>
 </div>
 
