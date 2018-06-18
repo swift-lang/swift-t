@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+# INTERNAL BUILD ALL
+
 THIS=$( cd $(dirname $0) && pwd )
 
 ${THIS}/check-tools.sh
