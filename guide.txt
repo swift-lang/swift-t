@@ -861,14 +861,8 @@ This means that you can write functions that are more strictly
 typechecked, for example, you can ensure that certain +app+ functions
 will only receive particular types of files.
 
-////
-*Note:* This feature is immature, so you will have a higher probability
-of encountering compiler bugs or limitations.
-////
-
 ----
-
-typedef sorted_file file;
+type sorted_file file;
 app (sorted_file out) sort (file i) {
   "/usr/bin/sort" "-o" out i
 }
@@ -1446,7 +1440,8 @@ compiled for a particular set of arguments.  See the +-A
 _name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
 argument is re-specified at run-time, an error will occur.
 +
-If argument +a+ is not provided, the +default+ value is used.  So:
+If an argument is not provided, the +default+ value is used.  So,
+since +b+ is not in the command line above:
 +
 +argv("b", "f0.txt") -> "f0.txt"+
 
@@ -2469,7 +2464,7 @@ Single parallel tasks can be launched with the +launch()+ function:
 
 ----
 string a1[] = [ "arg1", "arg2" ];
-@par=3 launch("echo", a1);
+int exitcode = @par=3 launch("echo", a1);
 ----
 
 This will invoke the +echo+ program as:
@@ -2478,13 +2473,14 @@ This will invoke the +echo+ program as:
 mpiexec -n 3 echo arg1 arg2
 ----
 
-on three worker ranks within the Swift/T run.
+on three worker ranks within the Swift/T run.  The exit code from the
+run will be stored in +exitcode+.
 
 To provide environment variables to the task, use the +launch_envs()+ function:
 
 ----
 string envs[] = [ "var1=3", "var2=7", "swift_chdir=/tmp" ];
-@par=8 launch_envs("printenv", a1, envs2);
+@par=8 launch_envs("printenv", a1, envs);
 ----
 
 This will invoke:
@@ -2685,7 +2681,7 @@ trace(msg("test", 1, 2.0));
 Optional arguments, unlike non-optional arguments, can also be provided
 as *keyword arguments*.  For example:
 ----
-trace(msg("test", y=2.0));
+trace(msg("test", c=2.0));
 ----
 ==== Variable-length argument lists
 <<swift_extension_functions,Swift extension functions>> support variable
