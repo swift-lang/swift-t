@@ -1502,7 +1502,7 @@ Read file as a string
 +write(string) -> file+::
 Write string to file
 
-+write_array_string(string[] A, int chunk=100, boolean indices=false) -> file+::
++write_array_string(string A[], int chunk=100, boolean indices=false) -> file+::
 Write strings in +A+ to output file, +chunk+ at a time
 (+chunk+ defaults to 100).
 There is no ordering on the output.
