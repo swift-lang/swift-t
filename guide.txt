@@ -124,7 +124,7 @@ package manager for your system.
 +
 Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set +MPI_VERSION=2+ (if using the +build-all.sh+ build process),
+you must set +MPI_VERSION=2+ (if using the +build.sh+ build process),
 or provide the +--enable-mpi-2+ configure option (if using
 the <<build_manual,manual build process>>).
 +
@@ -188,13 +188,14 @@ enabling/disabling features, debug or optimized builds, etc.
 +
 TIP: Save your +swift-t-settings.sh+ when you download a new package
 +
-5. Run the setup script
+5. Run the build script
 +
 ----
-dev/build/build-all.sh
+dev/build/build.sh
 ----
 +
-See +dev/build/README.md+ for more notes and build options.
+See +dev/build/README.md+ for more notes and build options. +
+Use +build.sh -h+ for help.
 +
 If +build-all.sh+ does not succeed on your system, see Section
 <<Build_configuration, Build configuration>> below.
@@ -2991,7 +2992,7 @@ on more complex systems.
 
 ==== Build troubleshooting
 
-If +build-all.sh+ does not succeed, you may need to change how it
+If +build.sh+ does not succeed, you may need to change how it
 tries to configure and compile Swift/T.
 
 Troubleshooting a build problem can require a few steps.  The first
@@ -3013,11 +3014,11 @@ these steps to resolve the problem:
 [[build_manual]]
 ==== Manual configuration
 
-+build-all.sh+ and +swift-t-settings.sh+ provide a convenient way to
++build.sh+ and +swift-t-settings.sh+ provide a convenient way to
 install Swift/T from the downloadable package or from a Git clone.
 However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C, Tcl) techniques.  You can more directly control
+Autotools/Makefile (C) techniques.  You can more directly control
 the configuration when building through the arguments to +ant+ or
 +configure+.
 
