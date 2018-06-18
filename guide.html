@@ -1911,7 +1911,7 @@ typechecked, for example, you can ensure that certain <code>app</code> functions
 will only receive particular types of files.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>typedef sorted_file file;
+<pre><code>type sorted_file file;
 app (sorted_file out) sort (file i) {
   "/usr/bin/sort" "-o" out i
 }
@@ -2864,7 +2864,8 @@ time.  This allows a specialized, optimized version of code to be
 compiled for a particular set of arguments.  See the <code>-A
 <em>name</em>=<em>value</em></code> <a href="#stc_arguments">argument</a> to <code>stc</code>.  Note that if the
 argument is re-specified at run-time, an error will occur.</p></div>
-<div class="paragraph"><p>If argument <code>a</code> is not provided, the <code>default</code> value is used.  So:</p></div>
+<div class="paragraph"><p>If an argument is not provided, the <code>default</code> value is used.  So,
+since <code>b</code> is not in the command line above:</p></div>
 <div class="paragraph"><p><code>argv("b", "f0.txt") &#8594; "f0.txt"</code></p></div>
 </dd>
 <dt class="hdlist1">
@@ -4334,19 +4335,20 @@ method works well for software that is easy to invoke as a library.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>string a1[] = [ "arg1", "arg2" ];
-@par=3 launch("echo", a1);</code></pre>
+int exitcode = @par=3 launch("echo", a1);</code></pre>
 </div></div>
 <div class="paragraph"><p>This will invoke the <code>echo</code> program as:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>mpiexec -n 3 echo arg1 arg2</code></pre>
 </div></div>
-<div class="paragraph"><p>on three worker ranks within the Swift/T run.</p></div>
+<div class="paragraph"><p>on three worker ranks within the Swift/T run.  The exit code from the
+run will be stored in <code>exitcode</code>.</p></div>
 <div class="paragraph"><p>To provide environment variables to the task, use the <code>launch_envs()</code> function:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>string envs[] = [ "var1=3", "var2=7", "swift_chdir=/tmp" ];
-@par=8 launch_envs("printenv", a1, envs2);</code></pre>
+@par=8 launch_envs("printenv", a1, envs);</code></pre>
 </div></div>
 <div class="paragraph"><p>This will invoke:</p></div>
 <div class="listingblock">
@@ -4614,7 +4616,7 @@ trace(msg("test", 1, 2.0));</code></pre>
 as <strong>keyword arguments</strong>.  For example:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>trace(msg("test", y=2.0));</code></pre>
+<pre><code>trace(msg("test", c=2.0));</code></pre>
 </div></div>
 </div>
 <div class="sect3">
@@ -5942,7 +5944,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-06-12 12:11:45 CDT
+ 2018-06-18 11:06:21 CDT
 </div>
 </div>
 
