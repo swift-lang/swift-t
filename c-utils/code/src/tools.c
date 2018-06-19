@@ -234,9 +234,9 @@ getenv_ulong(const char* name, unsigned long dflt,
 }
 
 bool
-getenv_boolean(const char *env_var, bool dflt, bool *result)
+getenv_boolean(const char* name, bool dflt, bool* result)
 {
-  char* s = getenv(env_var);
+  char* s = getenv(name);
   if (s == NULL || strlen(s) == 0)
   {
     // Undefined or empty: return default
@@ -280,7 +280,7 @@ getenv_boolean(const char *env_var, bool dflt, bool *result)
 
   error:
   printf("Invalid boolean environment variable value: %s=\"%s\"\n",
-         env_var, s);
+         name, s);
   return false;
 }
 
