@@ -23,7 +23,7 @@ check_make()
 
 make_clean()
 {
-  if (( MAKE_CLEAN ))
+  if (( RUN_MAKE_CLEAN ))
   then
     if [ -f Makefile ]
     then

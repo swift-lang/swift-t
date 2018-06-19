@@ -13,7 +13,7 @@ echo "JAVA_HOME: '${JAVA_HOME:-}'"
 echo "ANT_HOME:  '${ANT_HOME:-}'"
 echo
 
-if (( MAKE_CLEAN )); then
+if (( RUN_MAKE_CLEAN )); then
   ${ANT} clean
 fi
 
@@ -22,6 +22,10 @@ if (( ! RUN_MAKE )); then
 fi
 
 ${ANT} ${STC_ANT_ARGS}
+
+if (( ! RUN_MAKE_INSTALL )); then
+  exit
+fi
 
 if [ ! -z "${STC_INSTALL}" ]
 then
