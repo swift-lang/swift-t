@@ -63,7 +63,7 @@ namespace eval turbine {
     # Whether read reference counting is enabled.  Default to off
     variable read_refcounting_on
 
-    # The language driving the run (default Turbine, may be Swift)
+    # The language driving the run (default "Turbine", may be "Swift")
     # Used for error messages
     variable language
     set language Turbine
