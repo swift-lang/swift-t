@@ -213,13 +213,14 @@ get_tcl_version()
 
 /*
   Initialises Turbine debug logging.
-  turbine::init_debug
+  Tcl name is turbine::c::init_debug
  */
 static int
 Turbine_Init_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
+
   turbine_debug_init();
 
   return TCL_OK;
@@ -611,8 +612,6 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/* Currently unused:
-
 static int
 Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
                     int objc, Tcl_Obj *const objv[])
@@ -624,11 +623,10 @@ Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-
-
+/* UNUSED
 static int
 Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
-                    int objc, Tcl_Obj *const objv[])
+                       int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
   double t = log_time_absolute();
@@ -636,7 +634,6 @@ Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
-
 */
 
 static int
@@ -1051,6 +1048,8 @@ close_error_exit(const char *purpose)
   exit(1);
 }
 
+static int pid_status(Tcl_Interp* interp, pid_t child);
+
 static int
 Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
@@ -1114,35 +1113,62 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
 
     rc = execvp(cmd, cmd_argv);
-    TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
+    TCL_CONDITION(rc != -1, "Error exec()ing command %s: %s", cmd,
                   strerror(errno));
   }
 
-  int status;
-  waitpid(child, &status, 0);
-  int exitcode = WEXITSTATUS(status);
+  return pid_status(interp, child);
+}
 
-  if (exitcode != 0)
+static int child_error(Tcl_Interp* interp, const char* message);
+
+static int pid_status(Tcl_Interp* interp, pid_t child)
+{
+  int rc;
+  int status;
+  char message[1024];
+  rc = waitpid(child, &status, 0);
+  assert(rc > 0);
+  if (WIFEXITED(status))
   {
-    if (tcl_version > 8.5)
+    int exitcode = WEXITSTATUS(status);
+    // printf("exitcode: %i\n", exitcode);
+
+    if (exitcode != 0)
     {
-      Tcl_Obj *msgs[1] = {
-        Tcl_ObjPrintf("shell: Command failed with exit code: %i",
-                      exitcode)
-      };
-      return turbine_user_error(interp, 1, msgs);
+      sprintf(message,
+              "Child exited with code: %i", exitcode);
+      return child_error(interp, message);
     }
-    else
-    {
-      // Tcl 8.5
-      char t[128];
-      sprintf(t, "shell: Command failed with exit code: %i", exitcode);
-      Tcl_AddErrorInfo(interp, t);
-      return TCL_ERROR;
-    }
+  }
+  else if (WIFSIGNALED(status))
+  {
+    int sgnl = WTERMSIG(status);
+    sprintf(message, "Child killed by signal: %i", sgnl);
+    return child_error(interp, message);
+  }
+  else
+  {
+    printf("TURBINE: UNKNOWN ERROR in pid_status()\n");
+    exit(1);
   }
 
   return TCL_OK;
+}
+
+static int child_error(Tcl_Interp* interp, const char* message)
+{
+  if (tcl_version > 8.5)
+  {
+    // printf("child_error: \n");
+    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("%s", message) };
+    return turbine_user_error(interp, 1, msgs);
+  }
+  else // Tcl 8.5
+  {
+    Tcl_AddErrorInfo(interp, message);
+    return TCL_ERROR;
+  }
 }
 
 /*
@@ -1209,10 +1235,11 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
                        "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
-// We assume SWIG correctly generates this function
+// We assume SWIG correctly generates these functions
 // See the tcl/blob module
 int Blob_Init(Tcl_Interp* interp);
-
+// See the tcl/launch module
+int Launch_Init(Tcl_Interp* interp);
 
 /*
   turbine::noop_exec_register
@@ -1796,6 +1823,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_python_init(interp);
   tcl_r_init(interp);
   Blob_Init(interp);
+  Launch_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("init_debug",  Turbine_Init_Debug_Cmd);
@@ -1803,7 +1831,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
-  // COMMAND("log_time",    Turbine_LogTime_Cmd);
+  COMMAND("log_time",    Turbine_LogTime_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);

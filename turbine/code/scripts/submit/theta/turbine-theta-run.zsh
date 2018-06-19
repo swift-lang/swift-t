@@ -96,8 +96,12 @@ then
   exit 0
 fi
 
+print "waiting for job completion..."
+
 # Wait for job completion
 cqwait ${JOB_ID}
+
+print "job complete."
 
 STOP=$( date +%s )
 TOTAL_TIME=$( tformat $(( STOP-START )) )

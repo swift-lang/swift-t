@@ -29,6 +29,9 @@ source /opt/modules/default/init/bash
 module load modules
 PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
+module load alps
+
+set -eu
 
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
@@ -109,11 +112,22 @@ while [ ! -f conf ]; do
 done
 sleep 5s  ## wait server to fill up the conf file
 
+TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
+
 # Run Turbine:
+<<<<<<< HEAD
 # ${SWIFT_PROCS} ${PPN}
 eval aprun -n 4 -N 2 \
       "${APRUN_ENVS[*]}" \
       ${VALGRIND} ${COMMAND}
+=======
+set -x
+aprun -n ${PROCS} -N ${PPN} \
+      ${TURBINE_LAUNCH_OPTIONS:-} \
+      ${APRUN_ENVS} \
+      ${VALGRIND} \
+      ${COMMAND}
+>>>>>>> 5b956d5bc8aa3e4c78e35aaff9e3602f3cd66227
 CODE=${?}
 
 echo

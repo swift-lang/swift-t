@@ -45,7 +45,7 @@ DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:Y" OPTION
+while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:wY" OPTION
 do
   case ${OPTION} in
     c)
@@ -82,7 +82,7 @@ do
       EXEC_SCRIPT=1
       ;;
     # Pass through to scheduler script:
-    d) ;& D) ;& i) ;& M) ;& o) ;& s) ;& t) ;& Y)
+    d) ;& D) ;& i) ;& M) ;& o) ;& s) ;& t) ;& w) ;& Y)
       SCHED_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
     e)

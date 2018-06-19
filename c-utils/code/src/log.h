@@ -59,6 +59,8 @@ void log_normalize(void);
  */
 double log_time(void);
 
+double log_time_absolute(void);
+
 void   log_printf(char* format, ...);
 
 void   log_finalize(void);

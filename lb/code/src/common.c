@@ -38,7 +38,7 @@
 
 char xlb_xfer[ADLB_XFER_SIZE];
 
-struct xlb_state xlb_s;
+struct xlb_state xlb_s = { .status = ADLB_STATUS_PROTO };
 
 int
 xlb_random_server()

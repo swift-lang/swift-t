@@ -58,6 +58,14 @@ typedef enum
  ADLB_DONE = -6,
 } adlb_code;
 
+typedef enum
+{
+ ADLB_STATUS_PROTO = 1, // Before startup
+ ADLB_STATUS_RUNNING,
+ ADLB_STATUS_ERROR,
+ ADLB_STATUS_SHUTDOWN
+} adlb_status;
+
 /**
   Buffer for work payload data.
  */

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
-# BUILD ALL
+# BUILD SWIFT-T
 
+# Main user interface
 # Swift/T build script: runs configuration and compilation
+# See options.sh for options
 
 THIS=$( dirname $0 )
 

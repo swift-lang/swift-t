@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
-# STC BUILD
+# BUILD STC
 
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
@@ -9,8 +9,8 @@ source ${THISDIR}/swift-t-settings.sh
 echo "Ant and Java settings:"
 which $ANT java
 
-echo "JAVA_HOME: $JAVA_HOME"
-echo "ANT_HOME:  $ANT_HOME"
+echo "JAVA_HOME: '${JAVA_HOME:-}'"
+echo "ANT_HOME:  '${ANT_HOME:-}'"
 echo
 
 if (( MAKE_CLEAN )); then

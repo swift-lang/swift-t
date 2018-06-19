@@ -44,9 +44,22 @@ namespace eval turbine {
 
         leader_hook_startup
 
-        c::worker_loop $WORK_TYPE($mode) $keyword_args
+        set success true
+        try {
+            c::worker_loop $WORK_TYPE($mode) $keyword_args
+        } trap "TURBINE ERROR" e {
+            set success false
+            puts "worker loop exited with error"
+        } on error e {
+            puts "WORKER ERROR: $::errorInfo"
+        }
 
         leader_hook_shutdown
+
+        if { ! $success } {
+            puts "worker throwing error: "
+            error "worker loop error"
+        }
     }
 
     proc custom_worker { rules startup_cmd mode } {
@@ -126,8 +139,15 @@ namespace eval turbine {
         }
         global env
         if [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] {
-            log "TURBINE_LEADER_HOOK_STARTUP: $env(TURBINE_LEADER_HOOK_STARTUP)"
-            eval $env(TURBINE_LEADER_HOOK_STARTUP)
+            puts "TURBINE_LEADER_HOOK_STARTUP: $env(TURBINE_LEADER_HOOK_STARTUP)"
+            try {
+                eval $env(TURBINE_LEADER_HOOK_STARTUP)
+            } on error e {
+                puts ""
+                puts "Error in TURBINE_LEADER_HOOK_STARTUP: $e"
+                puts ""
+                exit 1
+            }
         }
     }
 
@@ -138,8 +158,15 @@ namespace eval turbine {
         }
         global env
         if [ info exists env(TURBINE_LEADER_HOOK_SHUTDOWN) ] {
-            log "TURBINE_LEADER_HOOK_SHUTDOWN: $env(TURBINE_LEADER_HOOK_SHUTDOWN)"
-            eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
+            puts "TURBINE_LEADER_HOOK_SHUTDOWN: $env(TURBINE_LEADER_HOOK_SHUTDOWN)"
+            try {
+                eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
+            } on error e {
+                puts ""
+                puts "Error in TURBINE_LEADER_HOOK_SHUTDOWN: $e"
+                puts ""
+                exit 1
+            }
         }
     }
 }

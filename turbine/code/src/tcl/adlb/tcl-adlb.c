@@ -371,25 +371,24 @@ ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[]);
+
 /*
  * Setup the ADLB communicator
  *
  * comm: if NULL, use MPI_COMM_WORLD
+ * @return A Tcl error code
  */
-static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                           MPI_Comm *comm)
+static int adlb_setup_comm(Tcl_Interp* interp, Tcl_Obj* const objv[],
+                           MPI_Comm* comm)
 {
   TCL_CONDITION(!adlb_comm_init, "ADLB Communicator already initialized");
-  int rc;
 
   if (comm == NULL)
   {
-    // Start with MPI_Init() and MPI_COMM_WORLD
-    int argc = 0;
-    char** argv = NULL;
     must_comm_free = true;
-    rc = MPI_Init(&argc, &argv);
-    assert(rc == MPI_SUCCESS);
+    int rc = do_mpi_init(interp, objv);
+    TCL_CHECK_MSG(rc, "Failed to set up MPI!");
     MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
   }
   else
@@ -405,6 +404,36 @@ static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/**
+ Initialize MPI
+ @arg interp: Just for errors
+ @return A Tcl error code
+*/
+static int
+do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[])
+{
+  // Start with MPI_Init() and MPI_COMM_WORLD
+  int argc = 0;
+  char** argv = NULL;
+
+  int rc;
+  int use_thread_multiple;
+  rc = getenv_integer("TURBINE_MPI_THREAD", 0, &use_thread_multiple);
+  TCL_CONDITION(rc, "invalid setting for TURBINE_MPI_THREAD: %s",
+                getenv("TURBINE_MPI_THREAD"));
+
+  if (use_thread_multiple)
+  {
+    int provided;
+    rc = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+    TCL_CONDITION((provided == MPI_THREAD_MULTIPLE),
+                  "MPI_THREAD_MULTIPLE is not supported by this MPI!");
+  }
+  else
+    rc = MPI_Init(&argc, &argv);
+  assert(rc == MPI_SUCCESS);
+  return TCL_OK;
+}
 
 /**
    usage: adlb::init <servers> <types> [<comm>]?
@@ -422,7 +451,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
-  turbine_debug_init();
 
   int rc;
 
@@ -666,6 +694,7 @@ set_namespace_constants(Tcl_Interp* interp)
 {
   turbine_tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
   turbine_tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
+  turbine_tcl_set_integer(interp, "::adlb::RANK_NULL", ADLB_RANK_NULL);
   turbine_tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
 }
 
@@ -972,7 +1001,7 @@ ADLB_Leaders_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
-                    <parallelism> [<soft target>]
+                    <parallelism> [<soft> <target>]
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -993,6 +1022,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (target_rank >= 0)
   {
+    // Defaults: may be written below
     opts.strictness = ADLB_TGT_STRICT_HARD;
     opts.accuracy = ADLB_TGT_ACCRY_RANK;
   }
@@ -1035,6 +1065,12 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.priority = ADLB_curr_priority;
+
+  if (ADLB_Status() == ADLB_STATUS_SHUTDOWN)
+  {
+    printf("turbine: warning: canceling task spawn\n");
+    return TCL_OK;
+  }
 
   DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i",
              work_type, cmd, opts.priority);
@@ -1108,57 +1144,9 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_type;
 
   void* payload = NULL;
-#ifdef USE_ADLB
-  int work_handle[ADLB_HANDLE_SIZE];
-#endif
   int work_len = 1000*1000*1000; // 1 GB
   int answer_rank;
-#ifdef USE_ADLB
 
-  int req_types[4];
-  int work_prio;
-
-  req_types[0] = req_type;
-  req_types[1] = req_types[2] = req_types[3] = -1;
-
-  DEBUG_ADLB("enter reserve: type=%i", req_types[0]);
-  rc = ADLB_Reserve(req_types, &work_type, &work_prio,
-                    work_handle, &work_len, &answer_rank);
-  DEBUG_ADLB("exit reserve");
-  if (rc == ADLB_DONE_BY_EXHAUSTION)
-  {
-    DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_MORE_WORK ) {
-    DEBUG_ADLB("ADLB_NO_MORE_WORK!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_CURRENT_WORK) {
-    DEBUG_ADLB("ADLB_NO_CURRENT_WORK");
-    payload[0] = '\0';
-  }
-  else if (rc < 0) {
-    DEBUG_ADLB("rc < 0");
-    payload[0] = '\0';
-  }
-  else
-  {
-    DEBUG_ADLB("work is reserved.");
-    rc = ADLB_Get_reserved(payload, work_handle);
-    if (rc == ADLB_NO_MORE_WORK)
-    {
-      puts("No more work on Get_reserved()!");
-      payload[0] = '\0';
-    }
-    else
-      found_work = true;
-  }
-  if (payload[0] == '\0')
-    answer_rank = -1;
-#endif
-
-#ifdef USE_XLB
   MPI_Comm task_comm;
   int rc = ADLB_Get(req_type, &payload, &work_len, work_len,
                     &answer_rank, &work_type, &task_comm);
@@ -1176,7 +1164,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     free(payload);
   }
   turbine_task_comm = task_comm;
-#endif
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -5921,6 +5908,8 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = field_name_objs_finalize(interp, objv);
   TCL_CHECK(rc);
 
+  log_printf("ADLB_Finalize_Cmd() start");
+
   rc = ADLB_Finalize();
   if (rc != ADLB_SUCCESS)
     printf("WARNING: ADLB_Finalize() failed!\n");
@@ -5934,12 +5923,16 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_comm_init = false;
   adlb_init = false;
 
+  log_printf("MPI_Finalize start");
   if (b)
     MPI_Finalize();
+  log_printf("MPI_Finalize stop");
   turbine_debug_finalize();
 
   rc = blob_cache_finalize();
   TCL_CHECK(rc);
+
+  log_printf("ADLB_Finalize_Cmd() stop");
 
   return TCL_OK;
 }

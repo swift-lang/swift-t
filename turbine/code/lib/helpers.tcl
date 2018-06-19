@@ -92,10 +92,44 @@ proc readfile { filename } {
 
 # Debugging helper
 proc show { args } {
-    foreach v $args {
-        upvar $v t
-        puts "$v: $t"
+  foreach v $args {
+    show_token $v
+
+    upvar $v t
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
     }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts "$v: $s"
+  }
+}
+
+proc showln { args } {
+  foreach v $args {
+    show_token $v
+
+    # Actual variable
+    upvar $v t
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
+    }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts -nonewline "$v=$s "
+  }
+  puts ""
+}
+
+proc show_token { v } {
+  # Token
+  if { [ string first "@" $v ] == 0 } {
+    set s [ string range $v 1 end ]
+    puts -nonewline "$s "
+    return -code continue
+  }
 }
 
 set KB 1024
@@ -141,12 +175,39 @@ proc puts* { args } {
     puts [ join $args "" ]
 }
 
+proc puts** { args } {
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      puts -nonewline "'' "
+    } else {
+      puts -nonewline "$a "
+    }
+  }
+  puts ""
+}
+
 proc putsn { args } {
     puts [ join $args "\n" ]
 }
 
 proc printf { fmt args } {
     puts [ format $fmt {*}$args ]
+}
+
+proc log* { args } {
+  turbine::c::log [ join $args "" ]
+}
+
+proc log** { args } {
+  set msg ""
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      append msg "'' "
+    } else {
+      append msg "$a "
+    }
+  }
+  log* $msg
 }
 
 # Remove and return element 0 from list

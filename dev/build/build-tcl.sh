@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+set -e
+
 # Run this script from inside extracted tcl source distribution
 # E.g
-#   tar xvzf tcl8.5.12-src.tar.gz 
+#   tar xvzf tcl8.5.12-src.tar.gz
 #   cd tcl8.5.12
-#   ~/exm/sfw/dev/tcl_build.sh
-set -e
+#   ~/swift-t/dev/build/build-tcl.sh
+
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 

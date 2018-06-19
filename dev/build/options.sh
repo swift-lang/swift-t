@@ -2,17 +2,65 @@
 # OPTIONS.SH
 # Extract command-line options
 
-# Defaults
-export FORCE_BOOTSTRAP=0
-export RUN_MAKE=1
+help()
+{
+  cat <<EOF
+usage: build-swift-t.sh [-Bcfhm]
 
-while getopts "Bcm" OPT
+build-swift-t.sh reads the swift-t-settings.sh file as edited by the user.
+
+The C build process for c-utils, lb, and turbine is:
+./bootstrap # Run autoconf, etc.
+./configure ...
+make
+make install
+
+For STC, it is simply:
+
+ant ... install
+
+The ... indicates various options, all set by swift-t-settings.sh .
+
+With no options, build.sh only runs bootstrap
+if configure does not exist.
+
+Then, it runs configure, make, and make install.
+
+The following options change this behavior:
+
+-B    Force run ./bootstrap
+-C    Do not run ./configure
+-c    Do not 'make clean' or 'ant clean'
+-f    Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
+      Same as -Cc
+-h    This help message
+-m    Do not run 'make'
+-y    Do not run 'make install' (dry-run)
+
+Later options override earlier options.
+
+EOF
+}
+
+# Defaults
+export RUN_BOOTSTRAP=0
+export RUN_CONFIGURE=1
+export RUN_MAKE=1
+export MAKE_CLEAN=1
+export RUN_MAKE_INSTALL=1
+
+while getopts "BcCfhmy" OPTION
 do
-  case $OPT in
-    B) FORCE_BOOTSTRAP=1 ;;
-    c) MAKE_CLEAN=0      ;;
-    m) RUN_MAKE=0        ;;
-    ?) echo exit 1       ;;
-    *) exit 1            ;; # Bash prints an error message
+  case $OPTION in
+    B) RUN_BOOTSTRAP=1    ;;
+    c) MAKE_CLEAN=0       ;;
+    C) RUN_CONFIGURE=0    ;;
+    f) # Fast
+      MAKE_CLEAN=0
+      RUN_CONFIGURE=0     ;;
+    h) help ; exit 0      ;;
+    m) RUN_MAKE=0         ;;
+    y) RUN_MAKE_INSTALL=0 ;;
+    *) exit 1             ;; # Bash prints an error message
   esac
 done
