@@ -95,9 +95,6 @@ log_time_absolute()
   return result;
 }
 
-/**
-   Reset the original time to now
- */
 void
 log_normalize()
 {

@@ -51,6 +51,9 @@ bool log_file_set(const char* f);
 */
 void log_rank_set(int rank);
 
+/**
+   Reset the original time to now
+ */
 void log_normalize(void);
 
 /**
