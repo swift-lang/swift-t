@@ -499,8 +499,6 @@ TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
-TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
-			     $(TURBINE_EXECUTABLE_MANIFESTS))
 
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
@@ -508,9 +506,6 @@ TEST_SRC_MANIFEST :=
 TEST_SRC_C :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC_C))
-ifeq ($(ENABLE_STATIC_PKG),1)
-	TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
-endif
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
@@ -671,8 +666,9 @@ TEST_SCRIPTS = $(patsubst %.c, %.sh, $(TEST_SRC_C))
 TEST_OUTPUT  := $(patsubst %.c,   %.out, $(TEST_SRC_C))
 TEST_OUTPUT  += $(patsubst %.tcl, %.out, $(TEST_SRC_TCL))
 # Test case results
-TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
-TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
+TEST_RESULTS := $(patsubst %.c,        %.result, $(TEST_SRC_C))
+TEST_RESULTS += $(patsubst %.tcl,      %.result, $(TEST_SRC_TCL))
+TEST_RESULTS += $(patsubst %.manifest, %.result, $(TEST_SRC_MANIFEST))
 ifeq ($(ENABLE_STATIC_PKG),1)
     TEST_STATIC_PREREQS = $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 else
