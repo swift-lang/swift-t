@@ -96,10 +96,13 @@ DISABLE_XPT=1
 
 # Manual zlib setup: required for checkpointing
 DISABLE_ZLIB=1
-ZLIB_INSTALL=/path/to/zlib
+# ZLIB_INSTALL=/path/to/zlib
 
 # Disable build of static libraries and executables
 DISABLE_STATIC=1
+
+# Disable build of static package feature
+DISABLE_STATIC_PKG=1
 
 # Disable build of shared libraries and executables
 DISABLE_SHARED=0
@@ -163,6 +166,14 @@ STC_INSTALL=${SWIFT_T_PREFIX}/stc
 #+======================================+
 # Verify integrity of bundled data
 ENABLE_MKSTATIC_CRC=0
+
+#+======================================+
+#|| Environment Modules                ||
+#+======================================+
+
+# Cori:
+# module swap PrgEnv-intel PrgEnv-gnu
+# export CRAYPE_LINK_TYPE=dynamic
 
 # Local Variables:
 # mode: sh

@@ -5,10 +5,9 @@ set -eu
 
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
+source ${THISDIR}/functions.sh
 
-if (( RUN_BOOTSTRAP )) || [ ! -f configure ]; then
-  ./bootstrap
-fi
+run_bootstrap
 
 EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
@@ -69,24 +68,7 @@ then
   )
 fi
 
-if (( ! RUN_MAKE ))
-then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  rm -fv config.cache
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
+check_make
+make_clean
 make -j ${MAKE_PARALLELISM}
-
-if (( ! RUN_MAKE_INSTALL ))
-then
-  exit
-fi
-make install
+make_install

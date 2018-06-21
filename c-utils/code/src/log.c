@@ -29,6 +29,7 @@
 #include <sys/time.h>
 
 #include "src/log.h"
+#include "tools.h"
 
 static FILE* output;
 static char* filename = NULL;
@@ -41,12 +42,17 @@ static bool rank_enabled;
 /** If rank_enabled, this is our rank */
 static int  rank;
 
+/** If true, flush during every log_printf() */
+static bool log_flush = true;
+
 void
 log_init()
 {
   log_enabled = true;
   output = stdout;
   rank_enabled = false;
+
+  getenv_boolean("LOG_FLUSH", true, &log_flush);
 }
 
 void
@@ -89,9 +95,6 @@ log_time_absolute()
   return result;
 }
 
-/**
-   Reset the original time to now
- */
 void
 log_normalize()
 {
@@ -128,6 +131,8 @@ log_printf(char* format, ...)
     fprintf(output, "%*.3f %s\n", precision, t, line);
   else
     fprintf(output, "[%i] %*.3f %s\n", rank, precision, t, line);
+  if (log_flush)
+    fflush(output);
   va_end(ap);
 }
 

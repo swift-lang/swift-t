@@ -5,12 +5,9 @@ set -eu
 
 THISDIR=$( dirname $0 )
 source ${THISDIR}/swift-t-settings.sh
+source ${THISDIR}/functions.sh
 
-if (( RUN_BOOTSTRAP )); then
-  ./bootstrap
-elif [ ! -f configure ]; then
-  ./bootstrap
-fi
+run_bootstrap
 
 EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
@@ -103,6 +100,10 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
+if (( DISABLE_STATIC_PKG )); then
+  EXTRA_ARGS+=" --disable-static-pkg"
+fi
+
 if [[ "${MPI_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
 fi
@@ -159,22 +160,8 @@ then
     )
 fi
 
-if (( ! RUN_MAKE )); then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  rm -fv deps_contents.txt
-  rm -fv config.cache
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
-if ! make -j ${MAKE_PARALLELISM}
-then
+report_turbine_includes()
+{
   echo
   echo Make failed.  The following may be useful:
   echo
@@ -182,6 +169,12 @@ then
   rm -fv deps_contents.txt
   make check_includes
   exit 1
-fi
+}
 
-make install
+check_make
+make_clean
+if ! make -j ${MAKE_PARALLELISM}
+then
+  report_turbine_includes
+fi
+make_install
