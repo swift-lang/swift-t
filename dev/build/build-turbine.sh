@@ -154,7 +154,6 @@ then
                 --prefix=${TURBINE_INSTALL} \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
-                ${CRAY_ARGS} \
                 ${EXTRA_ARGS} \
                 --disable-log
     )
