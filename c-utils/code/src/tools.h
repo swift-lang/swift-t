@@ -39,6 +39,38 @@
 #endif
 
 /**
+   Reset this pointer
+   NOTE: Pass in the address of the pointer you want to modify
+         (Thus actually a pointer-pointer.  We
+          do this because of C auto-casting limits.)
+
+*/
+static inline void null(void* p)
+{
+  void** pp = (void**) p;
+  free(*pp);
+  *pp = NULL;
+}
+
+/**
+   null-predicated: Reset this pointer if not already NULL
+   Return true if the pointer was non-NULL and is now NULL,
+   else return false
+   NOTE: Pass in the address of the pointer you want to modify
+         (Thus actually a pointer-pointer.  We
+          do this because of C auto-casting limits.)
+*/
+static inline bool nullp(void* p)
+{
+  void** pp = (void**) p;
+  if (*pp == NULL)
+    return false;
+  free(*pp);
+  *pp = NULL;
+  return true;
+}
+
+/**
    Determine the length of an array of pointers ending in NULL
  */
 int array_length(const void** array);
