@@ -37,28 +37,29 @@ static double log_start = 0;
 
 bool log_enabled;
 
-/** If true, prepend an MPI-like rank identifier */
-static bool rank_enabled;
-/** If rank_enabled, this is our rank */
-static int  rank;
+/** If non-NULL, this is our prefix */
+static char* prefix;
 
 /** If true, flush during every log_printf() */
-static bool log_flush = true;
+static bool log_flush_auto = true;
 
 void
 log_init()
 {
   log_enabled = true;
   output = stdout;
-  rank_enabled = false;
-
-  getenv_boolean("LOG_FLUSH", true, &log_flush);
+  prefix = NULL;
 }
 
 void
 log_enable(bool b)
 {
   log_enabled = b;
+}
+
+void log_flush_auto_enable(bool b)
+{
+  log_flush_auto = b;
 }
 
 static void log_cleanup(void);
@@ -79,10 +80,13 @@ log_file_set(const char* f)
 }
 
 void
-log_rank_set(int r)
+log_prefix_set(const char* p)
 {
-  rank_enabled = true;
-  rank = r;
+  nullp(&prefix);
+  if (p == NULL)
+    return;
+
+  prefix = strdup(p);
 }
 
 double
@@ -127,20 +131,26 @@ log_printf(char* format, ...)
   static char line[1024];
   vsnprintf(line, 1024, format, ap);
   int precision = t > 10000 ? 15 : 8;
-  if (! rank_enabled)
+  if (prefix == NULL)
     fprintf(output, "%*.3f %s\n", precision, t, line);
   else
-    fprintf(output, "[%i] %*.3f %s\n", rank, precision, t, line);
-  if (log_flush)
+    fprintf(output, "%s %*.3f %s\n", prefix, precision, t, line);
+  if (log_flush_auto)
     fflush(output);
   va_end(ap);
+}
+
+void
+log_flush()
+{
+  fflush(output);
 }
 
 static void
 log_cleanup()
 {
-  if (filename != NULL)
-    free(filename);
+  nullp(&prefix);
+  nullp(&filename);
   if (output != stdout)
     fclose(output);
 }
