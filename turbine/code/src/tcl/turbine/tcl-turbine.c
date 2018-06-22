@@ -131,8 +131,6 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
 
 static void set_namespace_constants(Tcl_Interp* interp);
 
-static int log_setup(int rank);
-
 int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
 
@@ -196,8 +194,6 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
   }
 
-  log_setup(rank);
-
   return TCL_OK;
 }
 
@@ -222,43 +218,6 @@ Turbine_Init_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(1);
 
   turbine_debug_init();
-
-  return TCL_OK;
-}
-
-/**
-   @return Tcl error code
-*/
-static int
-log_setup(int rank)
-{
-  log_init();
-  log_normalize();
-
-  // Did the user enable logging?
-  int enabled;
-  getenv_integer("TURBINE_LOG", 0, &enabled);
-  if (enabled)
-  {
-    // Should we use a specific log file?
-    char* filename = getenv("TURBINE_LOG_FILE");
-    if (filename != NULL && strlen(filename) > 0)
-    {
-      bool b = log_file_set(filename);
-      if (!b)
-      {
-        printf("Could not set log file: %s", filename);
-        return TCL_ERROR;
-      }
-    }
-    // Should we prepend the MPI rank (emulate "mpiexec -l")?
-    int log_rank_enabled;
-    getenv_integer("TURBINE_LOG_RANKS", 0, &log_rank_enabled);
-    if (log_rank_enabled)
-      log_rank_set(rank);
-  }
-  else
-    log_enable(false);
 
   return TCL_OK;
 }
