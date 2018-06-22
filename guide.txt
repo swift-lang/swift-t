@@ -2836,7 +2836,7 @@ Turbine accepts the following arguments:
         (created by <<mkstatic,+mkstatic.tcl+>>)
 
 [[turbine_env]]
-==== Environment variables
+==== Environment variables used by Swift/T
 
 The user controls the Turbine run time configuration through
 environment variables:
@@ -2983,6 +2983,20 @@ anchor:env_mpi_thread[]
 +TURBINE_MPI_THREAD=1+::
 Enables +MPI_THREAD_MULTIPLE+.  Allows exotic user tasks that use MPI
 functions while using threads.
+
+[[turbine_env2]]
+==== Environment variables set by Swift/T
+
+These variables may be accessed by code called from Swift/T.
+
++ADLB_RANK_SELF+::
+The current MPI rank.
+
++ADLB_RANK_OFFSET+::
+A unique number for each rank on a node.
+
++ADLB_RANK_LEADER+::
+The rank of the leader process on this node (cf. <<hooks,hooks>>).
 
 [[Build_configuration]]
 === Build configuration
@@ -3467,6 +3481,7 @@ and
 https://github.com/swift-lang/swift-t/tree/master/mpe[documented here].  See also
 http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013[this paper].
 
+[[hooks]]
 === Startup/shutdown hooks
 
 Turbine has hooks that can be accessed to execute shell scripts, Tcl
