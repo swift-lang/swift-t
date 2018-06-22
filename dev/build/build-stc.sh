@@ -3,8 +3,13 @@ set -eu
 
 # BUILD STC
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
+
+cd ${STC_SRC}
 
 echo "Ant and Java settings:"
 which $ANT java

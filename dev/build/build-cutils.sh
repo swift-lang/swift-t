@@ -4,8 +4,12 @@ set -eu
 # BUILD C-UTILS
 
 THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
+
+cd ${C_UTILS_SRC}
 
 run_bootstrap
 

@@ -3,9 +3,13 @@ set -eu
 
 # BUILD LB
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
-source ${THISDIR}/functions.sh
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
+
+cd ${LB_SRC}
 
 run_bootstrap
 

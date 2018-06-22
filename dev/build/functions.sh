@@ -3,6 +3,11 @@
 
 # Code reuse for build scripts
 
+if (( ${FUNCTIONS_DONE:-0} ))
+then
+  return
+fi
+
 run_bootstrap()
 {
   if (( RUN_BOOTSTRAP )) || [[ ! -f configure ]]
@@ -39,3 +44,5 @@ make_install()
     make install
   fi
 }
+
+FUNCTIONS_DONE=1
