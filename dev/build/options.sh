@@ -34,14 +34,15 @@ Then, it runs configure, make, and make install.
 
 The following options change this behavior:
 
--B    Force run ./bootstrap
--C    Do not run ./configure
--c    Do not 'make clean' or 'ant clean'
--f    Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
-      Same as -Cc
--h    This help message
--m    Do not run 'make'
--y    Do not run 'make install' (dry-run)
+-B     Force run ./bootstrap
+-C     Do not run ./configure
+-c     Do not 'make clean' or 'ant clean'
+-f     Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
+       Same as -Cc
+-h     This help message
+-m     Do not run 'make'
+-s T|S Skip Turbine (T) or STC (S)
+-y     Do not run 'make install' (dry-run)
 
 Later options override earlier options.
 
@@ -54,8 +55,9 @@ export RUN_CONFIGURE=1
 export RUN_MAKE=1
 export RUN_MAKE_CLEAN=1
 export RUN_MAKE_INSTALL=1
+export SKIP=""
 
-while getopts "BcCfhmy" OPTION
+while getopts "BcCfhms:y" OPTION
 do
   case $OPTION in
     B) RUN_BOOTSTRAP=1    ;;
@@ -66,6 +68,7 @@ do
        RUN_CONFIGURE=0    ;;
     h) help ; exit 0      ;;
     m) RUN_MAKE=0         ;;
+    s) SKIP+=$OPTARG      ;;
     y) # DrY run
        RUN_MAKE_INSTALL=0 ;;
     *) exit 1             ;; # Bash prints an error message

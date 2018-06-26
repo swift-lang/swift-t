@@ -9,6 +9,7 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
 
+echo "Building Turbine"
 cd ${TURBINE_SRC}
 
 run_bootstrap

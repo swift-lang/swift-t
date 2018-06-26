@@ -9,6 +9,9 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
 
+[[ $SKIP == *S* ]] && exit
+
+echo "Building STC in $PWD"
 cd ${STC_SRC}
 
 echo "Ant and Java settings:"
