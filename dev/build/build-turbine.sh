@@ -112,6 +112,11 @@ if [[ "${MPI_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
 fi
 
+if (( ! SWIFT_T_CHECK_MPICC ))
+then
+  EXTRA_ARGS+=" --disable-mpi-checks"
+fi
+
 if (( SWIFT_T_CUSTOM_MPI )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi

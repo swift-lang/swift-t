@@ -54,6 +54,9 @@ export CC=mpicc
 MPI_VERSION=3
 
 # MPI custom layouts (uncomment below options to enable)
+# Check for mpicc (set to 0 to use, e.g., cc)
+SWIFT_T_CHECK_MPICC=1
+# Enable custom MPI settings
 SWIFT_T_CUSTOM_MPI=0
 # MPI_INCLUDE=/path/to/mpi/include
 # MPI_LIB_DIR=/path/to/mpi/lib
@@ -168,12 +171,19 @@ STC_INSTALL=${SWIFT_T_PREFIX}/stc
 ENABLE_MKSTATIC_CRC=0
 
 #+======================================+
-#|| Environment Modules                ||
+#|| Compilers & Environment Modules    ||
 #+======================================+
+
+# Any Cray:
+# export CRAYPE_LINK_TYPE=dynamic
 
 # Cori:
 # module swap PrgEnv-intel PrgEnv-gnu
 # export CRAYPE_LINK_TYPE=dynamic
+
+# Theta:
+# module swap PrgEnv-intel PrgEnv-gnu
+# module load gcc
 
 # Local Variables:
 # mode: sh
