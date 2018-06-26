@@ -146,14 +146,15 @@ MAKE_PARALLELISM=1
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 # Root of source directory. Default is current directory.
-# Override with EXM_SRC_ROOT environment variable
-EXM_SRC_ROOT=${EXM_SRC_ROOT:-$(${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3)}
+# Override with SWIFT_T_SRC_ROOT environment variable
+# This is exported to prevent future searches
+export SWIFT_T_SRC_ROOT=${SWIFT_T_SRC_ROOT:-$(${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3)}
 
 # Source subdirectories. Modify to match your layout if needed
-C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/code
-LB_SRC=${EXM_SRC_ROOT}/lb/code
-TURBINE_SRC=${EXM_SRC_ROOT}/turbine/code
-STC_SRC=${EXM_SRC_ROOT}/stc/code
+C_UTILS_SRC=${SWIFT_T_SRC_ROOT}/c-utils/code
+LB_SRC=${SWIFT_T_SRC_ROOT}/lb/code
+TURBINE_SRC=${SWIFT_T_SRC_ROOT}/turbine/code
+STC_SRC=${SWIFT_T_SRC_ROOT}/stc/code
 
 # Source subdirectory for external dependencies, if desired
 #COASTER_SRC=

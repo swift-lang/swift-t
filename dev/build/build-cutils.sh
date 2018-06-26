@@ -9,6 +9,9 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
 
+[[ $SKIP == *T* ]] && exit
+
+echo "Building c-utils"
 cd ${C_UTILS_SRC}
 
 run_bootstrap

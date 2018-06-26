@@ -9,6 +9,9 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
 
+[[ $SKIP == *T* ]] && exit
+
+echo "Building lb"
 cd ${LB_SRC}
 
 run_bootstrap
