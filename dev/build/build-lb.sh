@@ -3,12 +3,15 @@ set -eu
 
 # BUILD LB
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
 
-if (( RUN_BOOTSTRAP )) || [ ! -f configure ]; then
-  ./bootstrap
-fi
+cd ${LB_SRC}
+
+run_bootstrap
 
 EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
@@ -69,24 +72,7 @@ then
   )
 fi
 
-if (( ! RUN_MAKE ))
-then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  rm -fv config.cache
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
+check_make
+make_clean
 make -j ${MAKE_PARALLELISM}
-
-if (( ! RUN_MAKE_INSTALL ))
-then
-  exit
-fi
-make install
+make_install

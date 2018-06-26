@@ -3,8 +3,13 @@ set -eu
 
 # BUILD STC
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
+
+cd ${STC_SRC}
 
 echo "Ant and Java settings:"
 which $ANT java
@@ -13,7 +18,7 @@ echo "JAVA_HOME: '${JAVA_HOME:-}'"
 echo "ANT_HOME:  '${ANT_HOME:-}'"
 echo
 
-if (( MAKE_CLEAN )); then
+if (( RUN_MAKE_CLEAN )); then
   ${ANT} clean
 fi
 
@@ -22,6 +27,10 @@ if (( ! RUN_MAKE )); then
 fi
 
 ${ANT} ${STC_ANT_ARGS}
+
+if (( ! RUN_MAKE_INSTALL )); then
+  exit
+fi
 
 if [ ! -z "${STC_INSTALL}" ]
 then

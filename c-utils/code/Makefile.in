@@ -158,6 +158,14 @@ deps_contents.txt:
 	$(Q) "  SH		$(@)"
 	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
 
+### TAGS
+
+tags: TAGS
+
+TAGS: deps_contents.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps_contents.txt`
+
 ### COMPILE
 
 %.o: %.c

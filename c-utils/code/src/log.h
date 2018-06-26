@@ -39,18 +39,24 @@ log_is_enabled(void)
 }
 
 /**
+   If true, flush after every log_printf()
+*/
+void log_flush_auto_enable(bool b);
+
+/**
    Set log output file
    @return True on success, else false
  */
 bool log_file_set(const char* f);
 
 /**
-   Prepend this number to each output line (emulating mpiexec -l).
-   For systems that do not support this themselves.
-   (This is unnecessary for normal MPICH, OpenMPI systems)
-*/
-void log_rank_set(int rank);
+   Prepend this prefix to each output line
+ */
+void log_prefix_set(const char* prefix);
 
+/**
+   Reset the original time to now
+ */
 void log_normalize(void);
 
 /**
@@ -61,7 +67,15 @@ double log_time(void);
 
 double log_time_absolute(void);
 
+/**
+   Main log output function.
+*/
 void   log_printf(char* format, ...);
+
+/**
+   Flush whatever stream the log is using.
+*/
+void   log_flush(void);
 
 void   log_finalize(void);
 

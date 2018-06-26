@@ -4,18 +4,18 @@ set -eu
 # BUILD C-UTILS
 
 THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
+
+cd ${C_UTILS_SRC}
+
+run_bootstrap
 
 EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
-fi
-
-if (( RUN_BOOTSTRAP )); then
-  rm -rfv config.cache config.status autom4te.cache
-  ./bootstrap
-elif [ ! -f configure ] ; then
-  ./bootstrap
 fi
 
 if (( SWIFT_T_DEBUG_BUILD )); then
@@ -42,18 +42,7 @@ then
   )
 fi
 
-if (( ! RUN_MAKE ))
-then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
+check_make
+make_clean
 make -j ${MAKE_PARALLELISM}
-make install
+make_install

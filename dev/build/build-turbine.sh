@@ -3,14 +3,15 @@ set -eu
 
 # BUILD TURBINE
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
+source ${THIS}/functions.sh
 
-if (( RUN_BOOTSTRAP )); then
-  ./bootstrap
-elif [ ! -f configure ]; then
-  ./bootstrap
-fi
+cd ${TURBINE_SRC}
+
+run_bootstrap
 
 EXTRA_ARGS=""
 if (( SWIFT_T_OPT_BUILD )); then
@@ -103,8 +104,17 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
+if (( DISABLE_STATIC_PKG )); then
+  EXTRA_ARGS+=" --disable-static-pkg"
+fi
+
 if [[ "${MPI_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
+fi
+
+if (( ! SWIFT_T_CHECK_MPICC ))
+then
+  EXTRA_ARGS+=" --disable-mpi-checks"
 fi
 
 if (( SWIFT_T_CUSTOM_MPI )); then
@@ -154,28 +164,13 @@ then
                 --prefix=${TURBINE_INSTALL} \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
-                ${CRAY_ARGS} \
                 ${EXTRA_ARGS} \
                 --disable-log
     )
 fi
 
-if (( ! RUN_MAKE )); then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  rm -fv deps_contents.txt
-  rm -fv config.cache
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
-if ! make -j ${MAKE_PARALLELISM}
-then
+report_turbine_includes()
+{
   echo
   echo Make failed.  The following may be useful:
   echo
@@ -183,6 +178,12 @@ then
   rm -fv deps_contents.txt
   make check_includes
   exit 1
-fi
+}
 
-make install
+check_make
+make_clean
+if ! make -j ${MAKE_PARALLELISM}
+then
+  report_turbine_includes
+fi
+make_install
