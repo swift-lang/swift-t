@@ -382,4 +382,5 @@ turbine_finalize(Tcl_Interp *interp)
   turbine_cache_finalize();
   turbine_async_exec_finalize(interp);
   call_user_finalizers();
+  log_finalize();
 }
