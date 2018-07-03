@@ -10,6 +10,8 @@
 # Generally, settings that are given defaults here must not be left unset
 #     (we run under 'set -e').
 
+# Do not modify sections marked "Code:"
+
 #+======================+
 #|| Mandatory settings ||
 #+======================+
@@ -142,13 +144,17 @@ MAKE_PARALLELISM=1
 #+=====================================+
 # Specify non-standard source/install subdirectory locations
 
-# Code: work out current directory
+# Code: Find current directory
 SCRIPT_DIR=$(cd $(dirname $0); pwd)
+# Code: Find default source directory (current directory)
+src_default()
+{
+  ${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3
+}
 
 # Root of source directory. Default is current directory.
 # Override with SWIFT_T_SRC_ROOT environment variable
-# This is exported to prevent future searches
-export SWIFT_T_SRC_ROOT=${SWIFT_T_SRC_ROOT:-$(${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3)}
+export SWIFT_T_SRC_ROOT=${SWIFT_T_SRC_ROOT:-$(src_default)}
 
 # Source subdirectories. Modify to match your layout if needed
 C_UTILS_SRC=${SWIFT_T_SRC_ROOT}/c-utils/code
