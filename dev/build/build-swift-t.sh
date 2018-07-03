@@ -13,7 +13,10 @@ ${THIS}/check-settings.sh
 source ${THIS}/options.sh
 source ${THIS}/functions.sh
 source ${THIS}/swift-t-settings.sh
+
+LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"
+
 source ${THIS}/internal-build-all.sh
 
 LOG $LOG_INFO
-LOG $LOG_INFO "Swift/T build successful."
+LOG $LOG_WARN "Swift/T build successful."
