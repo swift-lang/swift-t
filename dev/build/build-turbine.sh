@@ -5,9 +5,9 @@ set -eu
 
 THIS=$( dirname $0 )
 ${THIS}/check-settings.sh
+source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
-source ${THIS}/functions.sh
 
 LOG $LOG_INFO "Building Turbine"
 cd ${TURBINE_SRC}

@@ -44,6 +44,12 @@ check_make()
   then
     exit
   fi
+
+  MAKE_QUIET=""
+  if (( VERBOSITY <= $LOG_WARN ))
+  then
+    MAKE_QUIET="--quiet"
+  fi
 }
 
 make_clean()
@@ -56,12 +62,6 @@ make_clean()
     fi
   fi
 }
-
-MAKE_QUIET=""
-if (( VERBOSITY <= $LOG_WARN ))
-then
-  MAKE_QUIET="--quiet"
-fi
 
 make_all()
 {
