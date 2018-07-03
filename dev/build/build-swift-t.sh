@@ -11,8 +11,9 @@ THIS=$( dirname $0 )
 
 ${THIS}/check-settings.sh
 source ${THIS}/options.sh
+source ${THIS}/functions.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/internal-build-all.sh
 
-echo
-echo "Swift/T build successful."
+LOG $LOG_INFO
+LOG $LOG_INFO "Swift/T build successful."

@@ -6,15 +6,16 @@ set -e
 THIS=$( cd $(dirname $0) && /bin/pwd )
 
 ${THIS}/check-tools.sh
+source ${THIS}/functions.sh
 
-echo
+LOG $LOG_INFO ""
 ${THIS}/build-cutils.sh
 
-echo
+LOG $LOG_INFO ""
 ${THIS}/build-lb.sh
 
-echo
+LOG $LOG_INFO ""
 ${THIS}/build-turbine.sh
 
-echo
+LOG $LOG_INFO ""
 ${THIS}/build-stc.sh

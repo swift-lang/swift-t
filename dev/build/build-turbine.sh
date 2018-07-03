@@ -9,7 +9,7 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 source ${THIS}/functions.sh
 
-echo "Building Turbine"
+LOG $LOG_INFO "Building Turbine"
 cd ${TURBINE_SRC}
 
 run_bootstrap
@@ -183,7 +183,7 @@ report_turbine_includes()
 
 check_make
 make_clean
-if ! make -j ${MAKE_PARALLELISM}
+if ! make_all
 then
   report_turbine_includes
 fi
