@@ -42,6 +42,7 @@ The following options change this behavior:
 -h     This help message
 -m     Do not run 'make'
 -s T|S Skip Turbine (T) or STC (S)
+-q     Quiet: omit some output
 -y     Do not run 'make install' (dry-run)
 
 Later options override earlier options.
@@ -56,22 +57,25 @@ export RUN_MAKE=1
 export RUN_MAKE_CLEAN=1
 export RUN_MAKE_INSTALL=1
 export SKIP=""
+export VERBOSITY=2
 
-while getopts "BcCfhms:y" OPTION
+while getopts "BcCfhmqs:y" OPTION
 do
   case $OPTION in
-    B) RUN_BOOTSTRAP=1    ;;
-    c) RUN_MAKE_CLEAN=0   ;;
-    C) RUN_CONFIGURE=0    ;;
+    B) RUN_BOOTSTRAP=1      ;;
+    c) RUN_MAKE_CLEAN=0     ;;
+    C) RUN_CONFIGURE=0      ;;
     f) # Fast
        RUN_MAKE_CLEAN=0
-       RUN_CONFIGURE=0    ;;
-    h) help ; exit 0      ;;
-    m) RUN_MAKE=0         ;;
-    s) SKIP+=$OPTARG      ;;
+       RUN_CONFIGURE=0      ;;
+    h) help ; exit 0        ;;
+    m) RUN_MAKE=0           ;;
+    q) # Quiet
+      : $(( VERBOSITY -- )) ;; # Do not error on zero (set -e)
+    s) SKIP+=$OPTARG        ;;
     y) # DrY run
-       RUN_MAKE_INSTALL=0 ;;
-    *) exit 1             ;; # Bash prints an error message
+       RUN_MAKE_INSTALL=0   ;;
+    *) exit 1               ;; # Bash prints an error message
   esac
 done
 

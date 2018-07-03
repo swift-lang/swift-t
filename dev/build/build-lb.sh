@@ -11,7 +11,7 @@ source ${THIS}/functions.sh
 
 [[ $SKIP == *T* ]] && exit
 
-echo "Building lb"
+LOG $LOG_INFO "Building lb"
 cd ${LB_SRC}
 
 run_bootstrap
@@ -77,5 +77,5 @@ fi
 
 check_make
 make_clean
-make -j ${MAKE_PARALLELISM}
+make_all
 make_install

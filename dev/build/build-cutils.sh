@@ -11,7 +11,7 @@ source ${THIS}/functions.sh
 
 [[ $SKIP == *T* ]] && exit
 
-echo "Building c-utils"
+LOG $LOG_INFO "Building c-utils"
 cd ${C_UTILS_SRC}
 
 run_bootstrap
@@ -47,5 +47,5 @@ fi
 
 check_make
 make_clean
-make -j ${MAKE_PARALLELISM}
+make_all
 make_install

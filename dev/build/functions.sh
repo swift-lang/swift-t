@@ -8,6 +8,26 @@ then
   return
 fi
 
+export LOG_FATAL=0
+export LOG_WARN=1
+export LOG_INFO=2
+export LOG_DEBUG=3
+
+LOG()
+{
+  if (( ${#} == 0 ))
+  then
+    echo "msg(): requires LVL !"
+    exit 1
+  fi
+  local LVL=$1
+  shift
+  if (( LVL <= VERBOSITY ))
+  then
+    echo $*
+  fi
+}
+
 run_bootstrap()
 {
   if (( RUN_BOOTSTRAP )) || [[ ! -f configure ]]
@@ -37,11 +57,22 @@ make_clean()
   fi
 }
 
+MAKE_QUIET=""
+if (( VERBOSITY <= $LOG_WARN ))
+then
+  MAKE_QUIET="--quiet"
+fi
+
+make_all()
+{
+  make -j ${MAKE_PARALLELISM} ${MAKE_QUIET}
+}
+
 make_install()
 {
   if (( RUN_MAKE_INSTALL ))
   then
-    make install
+    make ${MAKE_QUIET} install
   fi
 }
 
