@@ -5,7 +5,7 @@ set -e
 
 # Checks for missing system compilers and tools
 
-TOOLS=( ant autoconf make javac mpicc swig zsh )
+TOOLS=( ant autoconf make javac $CC swig zsh )
 declare -a MISSING
 
 for T in ${TOOLS[@]}
