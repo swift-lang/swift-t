@@ -24,7 +24,7 @@
  *
  *  Encoding format:
  *    We encode least significant bytes first (i.e. little-endian)
- *    first byte: 
+ *    first byte:
  *      lower 6 bits: bits of integer
  *      7th bit: sign byte (1 for negative)
  *      8th bit: 1 if more bytes follow
@@ -79,7 +79,7 @@ vint_bytes(int64_t val)
   vint_len_t len = 1;
   if (val < 0)
     val = -val;
-  val >>= 6; // Account for sign bit. 
+  val >>= 6; // Account for sign bit.
   while (val != 0) {
     val >>= 7;
     len++;
@@ -183,7 +183,7 @@ vint_decode(const void *buffer, size_t len, int64_t *val)
   vint_dec dec;
   int dec_rc = vint_decode_start(buffer2[0], &dec);
   int pos = 1; // Byte position
-  
+
   while (dec_rc == 1)
   {
     if (len <= pos)
@@ -210,7 +210,7 @@ static inline int vint_decode_unsigned(const void *buffer, size_t len,
   return vint_decode(buffer, len, (int64_t*)val);
 }
 
-static inline int vint_decode_size_t(const void *buffer, size_t len,  
+static inline int vint_decode_size_t(const void *buffer, size_t len,
                                      size_t *val)
 {
   uint64_t val64 = 0;
@@ -240,7 +240,7 @@ vint_file_decode(FILE *file, int64_t *val)
     return -1;
   }
   int dec_rc = vint_decode_start((unsigned char)b, &dec);
-  
+
   while (dec_rc == 1)
   {
     b = fgetc(file);
