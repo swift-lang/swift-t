@@ -37,6 +37,10 @@ export CC=mpicc
 # Tcl version: specify in case of multiple competing versions
 # TCL_VERSION=8.6
 
+# Host to use when cross-compiling
+# This is passed to configure as --host=CROSS_HOST
+# CROSS_HOST=
+
 # Specify details of non-standard Tcl layouts
 # name of tclsh compatible with build system
 # TCLSH_LOCAL=/usr/bin/tclsh
