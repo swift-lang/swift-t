@@ -307,4 +307,3 @@ size_t list_bp_tostring(char* str, size_t size,
 
   return (size_t)(ptr-str);
 }
-
