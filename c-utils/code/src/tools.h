@@ -71,6 +71,30 @@ static inline bool nullp(void* p)
 }
 
 /**
+   Used on non-GNU systems.
+   See: https://www.gnu.org/software/autoconf/manual/autoconf-2.60/html_node/Particular-Functions.html
+*/
+static inline void*
+rpl_malloc(size_t size)
+{
+  if (size == 0)
+    size = 1;
+  return malloc(size);
+}
+
+/**
+   Used on non-GNU systems.
+   See: https://www.gnu.org/software/autoconf/manual/autoconf-2.60/html_node/Particular-Functions.html
+*/
+static inline void*
+rpl_realloc(void* ptr, size_t size)
+{
+  if (size == 0)
+    size = 1;
+  return realloc(ptr, size);
+}
+
+/**
    Determine the length of an array of pointers ending in NULL
  */
 int array_length(const void** array);
