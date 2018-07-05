@@ -59,7 +59,7 @@ static void info_get_envs_error(MPI_Comm comm, const char* message);
  * envs_length is number of environment variables found.
  * */
 static int info_get_envs(MPI_Comm comm, MPI_Info info,
-		char** envs, int* envs_length) {
+		char** envs, size_t* envs_length) {
 	int flag = 0;
 	char* result;
 	if(MPI_INFO_NULL == info) {
@@ -79,8 +79,8 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 	long count = strtod(count_string, NULL);
 	int* lengths = alloca(count * sizeof(int));
 	char* env_word = "env ";
-	int env_word_length = strlen(env_word);
-	int total = env_word_length;
+	size_t env_word_length = strlen(env_word);
+	size_t total = env_word_length;
 	char key[16];
 	int i;
 	for(i=0; i<count; i++) {
@@ -120,7 +120,7 @@ static double TIMEOUT_NONE = -400;
    Hydra users can also use MPIEXEC_TIMEOUT
  */
 static double info_get_timeout(MPI_Comm comm, MPI_Info info) {
-	float timeout = TIMEOUT_NONE; int flag = 0;
+	float timeout = (float) TIMEOUT_NONE; int flag = 0;
 	if(MPI_INFO_NULL != info) {
 		int len;
 		MPI_Info_get_valuelen(info, "timeout", &len, &flag);
@@ -228,7 +228,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		// get output redirection string
 		char* redirect = info_get_output_redirection(info);
 		// get the timeout
-		float timeout = info_get_timeout(comm, info);
+		float timeout = (float) info_get_timeout(comm, info);
 		info_chdir(comm, info);
 
 		char timeout_string[64];
@@ -255,14 +255,14 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 
 		// get the environment
 		char* envs;
-		int env_length;
+		size_t env_length;
 		int rc = info_get_envs(comm, info, &envs, &env_length);
 		assert(rc);
 
 		write_hosts(info, allhosts, size);
 
 		// compute the size of the string to pass to system()
-		int s = strlen(cmd)+512;
+		size_t s = strlen(cmd)+512;
 		s += timeout_string_length;
 		s += env_length;
 

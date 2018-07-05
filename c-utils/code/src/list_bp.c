@@ -43,7 +43,6 @@ list_bp_add(struct list_bp* target, const void* key, size_t key_len,
             void* data)
 {
   assert(key);
-  assert(key_len >= 0);
 
   struct list_bp_item* new_item = malloc(sizeof(struct list_bp_item));
   if (! new_item)
