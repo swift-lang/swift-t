@@ -186,11 +186,13 @@ ENABLE_MKSTATIC_CRC=0
 
 # Cori:
 # module swap PrgEnv-intel PrgEnv-gnu
-# export CRAYPE_LINK_TYPE=dynamic
 
 # Theta:
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
+
+# Bebop:
+# module load mvapich2
 
 # Local Variables:
 # mode: sh
