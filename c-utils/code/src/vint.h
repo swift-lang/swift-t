@@ -98,7 +98,7 @@ vint_encode(int64_t val, void *buffer)
     val = -val;
 
   // First byte has 6 bits of number owing to sign bit
-  b = val & VINT_6BIT_MASK;
+  b = (unsigned char) (val & VINT_6BIT_MASK);
   val >>= 6;
 
   if (negative)
@@ -112,7 +112,7 @@ vint_encode(int64_t val, void *buffer)
   vint_len_t pos = 1;
   while (more)
   {
-    b = val & VINT_7BIT_MASK;
+    b = (unsigned char) (val & VINT_7BIT_MASK);
     val >>= 7;
     more = val != 0;
     if (more)
@@ -152,7 +152,7 @@ typedef struct
 static inline int
 vint_decode_start(unsigned char b, vint_dec *dec)
 {
-  dec->sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
+  dec->sign = (signed char) (((b & VINT_SIGN_MASK) != 0) ? -1 : 1);
   dec->accum = b & VINT_6BIT_MASK;
   dec->shift = 6;
   return ((b & VINT_MORE_MASK) != 0) ? 1 : 0;
