@@ -4868,7 +4868,7 @@ In place of of program.tic, run standalone Turbine executable
 </dd>
 </dl></div>
 <div class="sect3">
-<h4 id="turbine_env">17.3.1. Environment variables</h4>
+<h4 id="turbine_env">17.3.1. Environment variables used by Swift/T</h4>
 <div class="paragraph"><p>The user controls the Turbine run time configuration through
 environment variables:</p></div>
 <div class="dlist"><dl>
@@ -5181,6 +5181,36 @@ Enable GDB debugging.  Cf. <a href="#gdb">GDB</a>.
 <p>
 Enables <code>MPI_THREAD_MULTIPLE</code>.  Allows exotic user tasks that use MPI
 functions while using threads.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="turbine_env2">17.3.2. Environment variables set by Swift/T</h4>
+<div class="paragraph"><p>These variables may be accessed by code called from Swift/T.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ADLB_RANK_SELF</code>
+</dt>
+<dd>
+<p>
+The current MPI rank.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_RANK_OFFSET</code>
+</dt>
+<dd>
+<p>
+A unique number for each rank on a node.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ADLB_RANK_LEADER</code>
+</dt>
+<dd>
+<p>
+The rank of the leader process on this node (cf. <a href="#hooks">hooks</a>).
 </p>
 </dd>
 </dl></div>
@@ -5993,7 +6023,7 @@ and
 </div>
 </div>
 <div class="sect2">
-<h3 id="_startup_shutdown_hooks">17.9. Startup/shutdown hooks</h3>
+<h3 id="hooks">17.9. Startup/shutdown hooks</h3>
 <div class="paragraph"><p>Turbine has hooks that can be accessed to execute shell scripts, Tcl
 code, or C/C++ code on each node at startup and shutdown.</p></div>
 <div class="sect3">
@@ -6075,7 +6105,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-07-06 10:59:13 CDT
+ 2018-07-06 11:00:49 CDT
 </div>
 </div>
 
