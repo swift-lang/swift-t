@@ -2862,9 +2862,10 @@ Valid work types include:
 Generally you will need to allocate workers for any work type used in
 your Swift program.
 
-+TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
-logging, assuming logging was not disabled at configure time.  Logging
-goes to standard output by default.
++TURBINE_LOG=1+::
+Enable logging, assuming logging was not disabled at configure time.
++TURBINE_LOG=0+ or unset disables logging.  Logging
+goes to standard output by default.  Default: disabled.
 
 ////
 Had to do a passthrough manual anchor to get this to work right:
