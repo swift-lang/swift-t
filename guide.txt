@@ -197,10 +197,10 @@ dev/build/build-swift-t.sh
 See +dev/build/README.md+ for more notes and build options. +
 Use +build-swift-t.sh -h+ for help.
 +
-If +build-all.sh+ does not succeed on your system, see Section
+If +build-swift-t.sh+ does not succeed on your system, see Section
 <<Build_configuration, Build configuration>> below.
 +
-TIP: if you want more control than +build-all.sh+ provides, you can
+TIP: if you want more control than +build-swift-t.sh+ provides, you can
     build Swift/T with the
     <<build_manual,manual configure/make workflow>>.
 +
@@ -3002,13 +3002,59 @@ functions while using threads.
 The following describes how to run Swift/T programs in Turbine
 on more complex systems.
 
+==== Build features
+
+You may run these individually to rebuild particular modules:
+
+* +build-cutils.sh+
+* +build-lb.sh+
+* +build-turbine.sh+
+* +build-stc.sh+
+
+or +build-swift-t.sh+ to build them all.
+
+The following flags affect +build-*.sh+.
+
++-B+::
+Force run the +bootstrap+ scripts, which rebuild the +configure+
+scripts.  Use this if you change +configure.ac+, etc.
+
++-c+::
+Do not +make clean+.
+
++-C+::
+Do not +configure+.
+
++-f+::
+Fast: same as +-cC+.
+
++-h+::
+Report a help message.
+
++-m+::
+No +make+: +configure+ only.
+
++-q+::
+Reduce verbosity.  May be given more than once.
+
++-s <M>+::
+Skip module +M+, where +M+ is +S+ for STC or +T+ for Turbine
+(including ADLB and c-utils).
+Useful with +-f+ when you know what needs to be rebuilt.
+
++-v+::
+Increase verbosity.  May be given more than once.
+
++-y+::
+DrY run- do not +make install+.
+
 ==== Build troubleshooting
 
 If +build-swift-t.sh+ does not succeed, you may need to change how it
 tries to configure and compile Swift/T.
 
 Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  +build-all.sh+ will usually
+step is to determine why the build failed.  +build-swift-t.sh+ will usually
 report the step at which configuration failed.  For example, if it was unable
 to locate a valid Tcl install, it will report this.  Then  you can try
 these steps to resolve the problem:
@@ -3097,7 +3143,7 @@ If you are following the manual build process, configure Turbine with:
 
 To build Swift/T with Python, either:
 
-* When using +build-all.sh+: Set +ENABLE_PYTHON=1+ in
+* When using +build-swift-t.sh+: Set +ENABLE_PYTHON=1+ in
  +swift-t-settings.sh+.
 
 * When doing a <<build_manual,manual build>> provide the
@@ -3116,7 +3162,7 @@ export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7
 
 To build Swift/T with R, either:
 
-* When using +build-all.sh+: set +ENABLE_R=1+ in
+* When using +build-swift-t.sh+: set +ENABLE_R=1+ in
  +swift-t-settings.sh+.
 
 * When doing a <<build_manual,manual build>> provide the +--with-r+
@@ -3143,7 +3189,7 @@ Other notes:
 
 To build Swift/T with Julia, either:
 
-* When using +build-all.sh+: set +ENABLE_JULIA=1+ in
+* When using +build-swift-t.sh+: set +ENABLE_JULIA=1+ in
  +swift-t-settings.sh+.
 
 * When doing a <<build_manual,manual build>> provide the
