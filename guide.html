@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -743,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">June 2018</span><br />
+<span id="author">July 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -876,7 +877,7 @@ Other MPI implementations are <a href="#Build_configuration">supported</a> as we
 </p>
 <div class="paragraph"><p>Swift/T attempts to use MPI 3.0 functionality by default.  If you
 are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set <code>MPI_VERSION=2</code> (if using the <code>build.sh</code> build process),
+you must set <code>MPI_VERSION=2</code> (if using the <code>build-swift-t.sh</code> build process),
 or provide the <code>--enable-mpi-2</code> configure option (if using
 the <a href="#build_manual">manual build process</a>).</p></div>
 </li>
@@ -984,18 +985,18 @@ Run the build script
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>dev/build/build.sh</code></pre>
+<pre><code>dev/build/build-swift-t.sh</code></pre>
 </div></div>
 <div class="paragraph"><p>See <code>dev/build/README.md</code> for more notes and build options.<br />
-Use <code>build.sh -h</code> for help.</p></div>
-<div class="paragraph"><p>If <code>build-all.sh</code> does not succeed on your system, see Section
+Use <code>build-swift-t.sh -h</code> for help.</p></div>
+<div class="paragraph"><p>If <code>build-swift-t.sh</code> does not succeed on your system, see Section
 <a href="#Build_configuration">Build configuration</a> below.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
-<td class="content">if you want more control than <code>build-all.sh</code> provides, you can
+<td class="content">if you want more control than <code>build-swift-t.sh</code> provides, you can
     build Swift/T with the
     <a href="#build_manual">manual configure/make workflow</a>.</td>
 </tr></table>
@@ -4890,16 +4891,16 @@ Swift (<a href="#Turbine_information">Turbine information</a>).</p></div>
 <p>
 Number of workers of specified type.
 </p>
-</dd>
-</dl></div>
 <div class="paragraph"><p>Any workers not allocated to specific types are general-purpose workers
 that execute Swift/T control code and CPU-based tasks.  There must
-be at least one leftover worker to serve as a general-purpose worker.</p></div>
+be at least one leftover worker to serve as a general-purpose worker.
+Generally you will need to allocate workers for any specialized work
+type used in your Swift program.</p></div>
 <div class="paragraph"><p>Valid work types include:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-<code>TURBINE_COASTER_WORKERS</code>:: for Coaster workers.
+<code>TURBINE_COASTER_WORKERS</code>: for Coaster workers.
 </p>
 </li>
 <li>
@@ -4910,17 +4911,33 @@ A work type defined with <code>pragma worktypedef</code> in Swift.
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>Generally you will need to allocate workers for any work type used in
-your Swift program.</p></div>
-<div class="dlist"><dl>
+</dd>
 <dt class="hdlist1">
-<code>TURBINE_LOG=0</code>
+<code>TURBINE_LOG=1</code>
 </dt>
 <dd>
 <p>
-Disable logging. <code>TURBINE_LOG=1</code> or unset enables
-logging, assuming logging was not disabled at configure time.  Logging
-goes to standard output by default.
+Enable logging, assuming logging was not disabled at configure time.
+<code>TURBINE_LOG=0</code> or unset disables logging.  Logging
+goes to standard output by default.  Default: disabled.
+</p>
+</dd>
+</dl></div>
+<a name="turbine_stdout"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_STDOUT</code>
+</dt>
+<dd>
+<p>
+If unset, all Turbine processes write to the same <code>stdout</code> stream.  If
+set, processes will redirect their <code>stdout</code>/<code>stderr</code> streams to the
+given file name (via <code>freopen()</code>).  A specifier <code>%r</code> may be used in
+this file name.  The specifier will be replaced with the rank of the
+process, thus, the processes will write to different files.  This
+eases debugging in many cases.  Note that when running on scheduled
+system, you must provide <code>%%r</code> due to an implementation complexity
+with environment variables.
 </p>
 </dd>
 </dl></div>
@@ -5174,11 +5191,124 @@ functions while using threads.
 <div class="paragraph"><p>The following describes how to run Swift/T programs in Turbine
 on more complex systems.</p></div>
 <div class="sect3">
-<h4 id="_build_troubleshooting">17.4.1. Build troubleshooting</h4>
-<div class="paragraph"><p>If <code>build.sh</code> does not succeed, you may need to change how it
+<h4 id="_build_features">17.4.1. Build features</h4>
+<div class="paragraph"><p>You may run these individually to rebuild particular modules:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>build-cutils.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-lb.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-turbine.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-stc.sh</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>or <code>build-swift-t.sh</code> to build them all.</p></div>
+<div class="paragraph"><p>The following flags affect <code>build-*.sh</code>.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-B</code>
+</dt>
+<dd>
+<p>
+Force run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
+scripts.  Use this if you change <code>configure.ac</code>, etc.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-c</code>
+</dt>
+<dd>
+<p>
+Do not <code>make clean</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-C</code>
+</dt>
+<dd>
+<p>
+Do not <code>configure</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-f</code>
+</dt>
+<dd>
+<p>
+Fast: same as <code>-cC</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-h</code>
+</dt>
+<dd>
+<p>
+Report a help message.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-m</code>
+</dt>
+<dd>
+<p>
+No <code>make</code>: <code>configure</code> only.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-q</code>
+</dt>
+<dd>
+<p>
+Reduce verbosity.  May be given more than once.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-s &lt;M&gt;</code>
+</dt>
+<dd>
+<p>
+Skip module <code>M</code>, where <code>M</code> is <code>S</code> for STC or <code>T</code> for Turbine
+(including ADLB and c-utils).
+Useful with <code>-f</code> when you know what needs to be rebuilt.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-v</code>
+</dt>
+<dd>
+<p>
+Increase verbosity.  May be given more than once.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-y</code>
+</dt>
+<dd>
+<p>
+DrY run- do not <code>make install</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_build_troubleshooting">17.4.2. Build troubleshooting</h4>
+<div class="paragraph"><p>If <code>build-swift-t.sh</code> does not succeed, you may need to change how it
 tries to configure and compile Swift/T.</p></div>
 <div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  <code>build-all.sh</code> will usually
+step is to determine why the build failed.  <code>build-swift-t.sh</code> will usually
 report the step at which configuration failed.  For example, if it was unable
 to locate a valid Tcl install, it will report this.  Then  you can try
 these steps to resolve the problem:</p></div>
@@ -5207,8 +5337,8 @@ If the options in <code>swift-t-settings.sh</code> do not give sufficient contro
 </ol></div>
 </div>
 <div class="sect3">
-<h4 id="build_manual">17.4.2. Manual configuration</h4>
-<div class="paragraph"><p><code>build.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
+<h4 id="build_manual">17.4.3. Manual configuration</h4>
+<div class="paragraph"><p><code>build-swift-t.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
 install Swift/T from the downloadable package or from a Git clone.
 However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
@@ -5255,7 +5385,7 @@ for further options.</td>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_non_standard_mpi_locations">17.4.3. Non-standard MPI locations</h4>
+<h4 id="_non_standard_mpi_locations">17.4.4. Non-standard MPI locations</h4>
 <div class="paragraph"><p>Sometimes simply specifying the MPI directory is not enough to
 configure Swift/T.</p></div>
 <div class="paragraph"><p>You can modify these settings in <code>swift-t-settings.sh</code> to more
@@ -5277,14 +5407,14 @@ MPI_LIB_NAME=funny.mpi.a</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_external_scripting">17.4.4. External scripting</h4>
+<h4 id="_external_scripting">17.4.5. External scripting</h4>
 <div class="sect4">
 <h5 id="build_python">Python</h5>
 <div class="paragraph"><p>To build Swift/T with Python, either:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-When using <code>build-all.sh</code>: Set <code>ENABLE_PYTHON=1</code> in
+When using <code>build-swift-t.sh</code>: Set <code>ENABLE_PYTHON=1</code> in
  <code>swift-t-settings.sh</code>.
 </p>
 </li>
@@ -5313,7 +5443,7 @@ When running, you may need to set <code>PYTHONPATH</code> to the installation
 <div class="ulist"><ul>
 <li>
 <p>
-When using <code>build-all.sh</code>: set <code>ENABLE_R=1</code> in
+When using <code>build-swift-t.sh</code>: set <code>ENABLE_R=1</code> in
  <code>swift-t-settings.sh</code>.
 </p>
 </li>
@@ -5360,7 +5490,7 @@ When running, you may need to set the environment variable <code>LD_LIBRARY_PATH
 <div class="ulist"><ul>
 <li>
 <p>
-When using <code>build-all.sh</code>: set <code>ENABLE_JULIA=1</code> in
+When using <code>build-swift-t.sh</code>: set <code>ENABLE_JULIA=1</code> in
  <code>swift-t-settings.sh</code>.
 </p>
 </li>
@@ -5945,7 +6075,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-06-18 14:52:16 CDT
+ 2018-07-06 10:59:13 CDT
 </div>
 </div>
 
