@@ -2846,21 +2846,21 @@ environment variables:
 The remaining processes are workers.  These values are available to
 Swift (<<Turbine_information, Turbine information>>).
 
-+TURBINE_<type>_WORKERS+:: Number of workers of specified type.
-
++TURBINE_<type>_WORKERS+::
+Number of workers of specified type.
++
 Any workers not allocated to specific types are general-purpose workers
 that execute Swift/T control code and CPU-based tasks.  There must
 be at least one leftover worker to serve as a general-purpose worker.
-
+Generally you will need to allocate workers for any specialized work
+type used in your Swift program.
++
 Valid work types include:
-
-* +TURBINE_COASTER_WORKERS+:: for Coaster workers.
++
+* +TURBINE_COASTER_WORKERS+: for Coaster workers.
 * A work type defined with +pragma worktypedef+ in Swift.
   E.g. if you define +pragma worktypedef a_new_work_type;" in Swift,
   the environment variable is +TURBINE_A_NEW_WORK_TYPE_WORKERS+.
-
-Generally you will need to allocate workers for any work type used in
-your Swift program.
 
 +TURBINE_LOG=1+::
 Enable logging, assuming logging was not disabled at configure time.
