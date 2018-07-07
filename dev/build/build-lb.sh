@@ -17,24 +17,17 @@ cd ${LB_SRC}
 run_bootstrap
 
 EXTRA_ARGS=""
-if (( SWIFT_T_OPT_BUILD )); then
-    EXTRA_ARGS+="--enable-fast "
-fi
 
 if (( SWIFT_T_DEBUG_BUILD )); then
-    EXTRA_ARGS+="--enable-log-debug "
+    EXTRA_ARGS+=" --enable-log-debug"
 fi
 
 if (( SWIFT_T_TRACE_BUILD )); then
-    EXTRA_ARGS+="--enable-log-trace "
+    EXTRA_ARGS+=" --enable-log-trace"
 fi
 
 if (( ENABLE_MPE )); then
-    EXTRA_ARGS+="--with-mpe=${MPE_INSTALL} "
-fi
-
-if (( DISABLE_SHARED )); then
-  EXTRA_ARGS+=" --disable-shared"
+    EXTRA_ARGS+=" --with-mpe=${MPE_INSTALL}"
 fi
 
 if (( DISABLE_XPT )); then
@@ -58,9 +51,7 @@ then
   EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
 fi
 
-if (( DISABLE_STATIC )); then
-  EXTRA_ARGS+=" --disable-static"
-fi
+common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
 then

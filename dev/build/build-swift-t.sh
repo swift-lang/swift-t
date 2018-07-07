@@ -10,8 +10,8 @@ set -eu
 THIS=$( dirname $0 )
 
 ${THIS}/check-settings.sh
-source ${THIS}/options.sh
 source ${THIS}/functions.sh
+source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 
 LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"

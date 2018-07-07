@@ -15,16 +15,9 @@ cd ${TURBINE_SRC}
 run_bootstrap
 
 EXTRA_ARGS=""
-if (( SWIFT_T_OPT_BUILD )); then
-    EXTRA_ARGS+=" --enable-fast"
-fi
 
 if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
-fi
-
-if (( DISABLE_SHARED )); then
-  EXTRA_ARGS+=" --disable-shared"
 fi
 
 if (( ENABLE_PYTHON )); then
@@ -101,10 +94,6 @@ if (( SWIFT_T_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
-if (( DISABLE_STATIC )); then
-  EXTRA_ARGS+=" --disable-static"
-fi
-
 if (( DISABLE_STATIC_PKG )); then
   EXTRA_ARGS+=" --disable-static-pkg"
 fi
@@ -151,6 +140,8 @@ if [[ "${WITH_HDF5:-}" == "" ]]; then
 else
   EXTRA_ARGS+=" --with-hdf5=$WITH_HDF5"
 fi
+
+common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
 then

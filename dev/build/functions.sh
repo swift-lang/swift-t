@@ -10,8 +10,9 @@ fi
 
 export LOG_FATAL=0
 export LOG_WARN=1
-export LOG_INFO=2
+export LOG_INFO=2 # Default
 export LOG_DEBUG=3
+export LOG_TRACE=4
 
 LOG()
 {
@@ -28,6 +29,15 @@ LOG()
   fi
 }
 
+log_status()
+{
+  (( VERBOSITY > LOG_TRACE )) && VERBOSITY=$LOG_TRACE
+  (( VERBOSITY < LOG_FATAL )) && VERBOSITY=$LOG_FATAL
+
+  (( VERBOSITY == $LOG_DEBUG )) && echo "Logging at LOG_DEBUG"
+  (( VERBOSITY == $LOG_TRACE )) && echo "Logging at LOG_TRACE"
+}
+
 run_bootstrap()
 {
   if (( RUN_BOOTSTRAP )) || [[ ! -f configure ]]
@@ -35,6 +45,30 @@ run_bootstrap()
     rm -rfv config.cache config.status
     rm -rf  autom4te.cache
     ./bootstrap
+  fi
+}
+
+common_args()
+{
+  if (( SWIFT_T_OPT_BUILD )); then
+    EXTRA_ARGS+="--enable-fast"
+  fi
+
+  if (( SWIFT_T_DEBUG_BUILD )); then
+    export CFLAGS="-g -O0"
+  fi
+
+  if (( DISABLE_SHARED )); then
+    EXTRA_ARGS+=" --disable-shared"
+  fi
+
+  if (( DISABLE_STATIC )); then
+    EXTRA_ARGS+=" --disable-static"
+  fi
+
+  if [[ ${CROSS_HOST:-} != "" ]]
+  then
+    EXTRA_ARGS+=" --host=$CROSS_HOST"
   fi
 }
 
@@ -49,6 +83,12 @@ check_make()
   if (( VERBOSITY <= $LOG_WARN ))
   then
     MAKE_QUIET="--quiet"
+  fi
+
+  MAKE_V=""
+  if (( VERBOSITY == $LOG_TRACE ))
+  then
+    MAKE_V="V=1"
   fi
 }
 
@@ -65,7 +105,7 @@ make_clean()
 
 make_all()
 {
-  make -j ${MAKE_PARALLELISM} ${MAKE_QUIET}
+  make -j ${MAKE_PARALLELISM} ${MAKE_V} ${MAKE_QUIET}
 }
 
 make_install()

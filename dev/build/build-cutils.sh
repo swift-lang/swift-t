@@ -17,21 +17,8 @@ cd ${C_UTILS_SRC}
 run_bootstrap
 
 EXTRA_ARGS=""
-if (( SWIFT_T_OPT_BUILD )); then
-    EXTRA_ARGS+="--enable-fast"
-fi
 
-if (( SWIFT_T_DEBUG_BUILD )); then
-   export CFLAGS="-g -O0"
-fi
-
-if (( DISABLE_SHARED )); then
-  EXTRA_ARGS+=" --disable-shared"
-fi
-
-if (( DISABLE_STATIC )); then
-  EXTRA_ARGS+=" --disable-static"
-fi
+common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
 then
