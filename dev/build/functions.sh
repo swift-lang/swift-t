@@ -31,11 +31,23 @@ LOG()
 
 log_status()
 {
-  (( VERBOSITY > LOG_TRACE )) && VERBOSITY=$LOG_TRACE
-  (( VERBOSITY < LOG_FATAL )) && VERBOSITY=$LOG_FATAL
+  if (( VERBOSITY > LOG_TRACE ))
+  then
+    VERBOSITY=$LOG_TRACE
+  fi
+  if (( VERBOSITY < LOG_FATAL ))
+  then
+    VERBOSITY=$LOG_FATAL
+  fi
 
-  (( VERBOSITY == $LOG_DEBUG )) && echo "Logging at LOG_DEBUG"
-  (( VERBOSITY == $LOG_TRACE )) && echo "Logging at LOG_TRACE"
+  if (( VERBOSITY == $LOG_DEBUG ))
+  then
+    echo "Logging at LOG_DEBUG"
+  fi
+  if (( VERBOSITY == $LOG_TRACE ))
+  then
+    echo "Logging at LOG_TRACE"
+  fi
 }
 
 run_bootstrap()
