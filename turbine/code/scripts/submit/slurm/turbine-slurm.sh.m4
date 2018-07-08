@@ -75,7 +75,13 @@ COMMAND="getenv(COMMAND)"
 # Use this on Midway:
 # module load openmpi gcc/4.9
 
+# Use this on Bebop:
+module load icc
+module load mvapich2
+
+TURBINE_LAUNCHER=srun
+
 echo
 set -x
-${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) ${COMMAND}
+${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) ${VALGRIND} ${COMMAND}
 # Return exit code from mpirun

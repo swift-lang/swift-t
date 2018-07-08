@@ -96,7 +96,7 @@ static bool
 get_envs(int envc, char** envs, char* match, int* index, char** result) {
   int i;
   for (i=0; i<envc; i++) {
-    int n = strlen(envs[i]);
+    size_t n = strlen(envs[i]);
     char* p = &envs[i][0];
     char* q = strchr(envs[i], '=');
     if (q-p == n) return false;

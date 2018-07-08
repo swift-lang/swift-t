@@ -653,8 +653,9 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
+  adlb_data_type adlb_type = (adlb_data_type) type;
   Tcl_Obj* result = NULL;
-  int tcl_code = adlb_datum2tclobj(interp, objv, td, type,
+  int tcl_code = adlb_datum2tclobj(interp, objv, td, adlb_type,
                       ADLB_TYPE_EXTRA_NULL, data, length, &result);
   TCL_CHECK(tcl_code);
   Tcl_SetObjResult(interp, result);
@@ -695,12 +696,13 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
     return TCL_OK;
   }
 
-  adlb_data_type type;
+  adlb_data_type adlb_type;
   adlb_type_extra extra;
-  error = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  error = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &adlb_type,
                               &extra);
   TCL_CHECK(error);
 
+  turbine_type type = (turbine_type) adlb_type;
   TCL_CONDITION(argpos < objc, "not enough arguments");
   error = turbine_tclobj2bin(interp, objv, td, type, extra,
                          objv[argpos++], false, &data, &length);
@@ -725,7 +727,8 @@ turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
 {
   adlb_binary_data data;
 
-  int rc = adlb_tclobj2bin(interp, objv, type, extra, obj, canonicalize,
+  adlb_data_type adlb_type = (adlb_data_type) type;
+  int rc = adlb_tclobj2bin(interp, objv, adlb_type, extra, obj, canonicalize,
                           NULL, &data);
   TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: "
                 "\"%s\"", td, Tcl_GetString(obj));
