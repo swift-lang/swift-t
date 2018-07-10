@@ -101,6 +101,7 @@ turbine_log()
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
   print "WALLTIME:          ${WALLTIME}"
   print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
+  print "TURBINE_HOME:      ${TURBINE_HOME}"
 }
 
 # Defaults:
