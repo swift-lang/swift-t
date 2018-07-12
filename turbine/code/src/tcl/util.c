@@ -25,7 +25,7 @@
 #include "src/tcl/util.h"
 
 int
-turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
+turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj* args[])
 {
   assert(nargs >= 0);
 
