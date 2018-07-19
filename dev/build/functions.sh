@@ -14,6 +14,17 @@ export LOG_INFO=2 # Default
 export LOG_DEBUG=3
 export LOG_TRACE=4
 
+assert()
+{
+  local CODE=$1 MESSAGE=$2
+  if (( CODE != 0 ))
+  then
+    echo $MESSAGE
+    echo CODE=$CODE
+    exit 1
+  fi
+}
+
 LOG()
 {
   if (( ${#} == 0 ))

@@ -159,6 +159,7 @@ then
                 ${EXTRA_ARGS} \
                 --disable-log
     )
+  assert $? "Configure failed!"
 fi
 
 report_turbine_includes()
