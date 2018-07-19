@@ -198,6 +198,11 @@ ENABLE_MKSTATIC_CRC=0
 # Bebop:
 # module load mvapich2
 
+# Beagle:
+# module unload PrgEnv-gnu
+# module load PrgEnv-gnu
+# module load cray-mpich
+
 # Local Variables:
 # mode: sh
 # End:
