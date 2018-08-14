@@ -28,7 +28,7 @@ ant ... install
 
 The ... indicates various options, all set by swift-t-settings.sh .
 
-With no options, build.sh only runs bootstrap
+By default, build.sh only runs bootstrap
 if configure does not exist.
 
 Then, it runs configure, make, and make install.
