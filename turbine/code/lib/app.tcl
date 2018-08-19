@@ -70,13 +70,15 @@ namespace eval turbine {
   #         stdout=file stderr=file
   # args: command line args as strings
   # Note: We use sync_exec instead of the Tcl exec command due to
-  # an issue on the Cray.  Implemented in sync_exec.c
+  # an issue on the Cray.  Implemented in tcl-turbine.c
   proc exec_external { cmd kwopts args } {
     app_delay_before
+    # setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
+    # exec_local 0 -1 \
+    #     $stdin_src $stdout_dst $stderr_dst \
+    #    $cmd {*}$args
     setup_redirects_c $kwopts stdin_src stdout_dst stderr_dst
-    exec_local 0 -1 \
-        $stdin_src $stdout_dst $stderr_dst \
-        $cmd {*}$args
+    turbine::c::save_command $stdin_src $stdout_dst $stderr_dst $cmd {*}$args
   }
 
   proc exec_local { tries_reput reply \

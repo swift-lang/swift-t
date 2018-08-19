@@ -1086,16 +1086,13 @@ static int child_error(Tcl_Interp* interp, const char* message);
 
 static int pid_status(Tcl_Interp* interp, pid_t child)
 {
-  int rc;
-  int status;
   char message[1024];
-  rc = waitpid(child, &status, 0);
+  int status;
+  int rc = waitpid(child, &status, 0);
   assert(rc > 0);
   if (WIFEXITED(status))
   {
     int exitcode = WEXITSTATUS(status);
-    // printf("exitcode: %i\n", exitcode);
-
     if (exitcode != 0)
     {
       sprintf(message,
@@ -1765,6 +1762,34 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+Turbine_SaveCommand_Cmd(ClientData cdata, Tcl_Interp *interp,
+                        int objc, Tcl_Obj *const objv[])
+{
+  printf("SAVECOMMAND\n");
+
+  int i = 1;
+  turbine_worker_stdin_file  = strdup(Tcl_GetString(objv[i++]));
+  turbine_worker_stdout_file = strdup(Tcl_GetString(objv[i++]));
+  turbine_worker_stderr_file = strdup(Tcl_GetString(objv[i++]));
+
+  // Unpack
+  // Cf. worker.h
+  int command_size = objc - i + 1;
+  printf("command_size: %i\n", command_size);
+  turbine_worker_args = malloc(command_size * sizeof(char*));
+  int a;
+  for (a = 0; i < objc; i++)
+  {
+    printf("tcl_arg: %s\n", Tcl_GetString(objv[i]));
+    turbine_worker_args[a] = strdup(Tcl_GetString(objv[i]));
+    a++;
+  }
+  turbine_worker_args[a] = NULL;
+
+  return TCL_OK;
+}
+
 /**
    Called when Tcl loads this extension
  */
@@ -1820,6 +1845,8 @@ Tclturbine_Init(Tcl_Interp* interp)
 
   COMMAND("bcast",   Turbine_Bcast_Cmd);
   COMMAND("copy_to", Turbine_CopyTo_Cmd);
+
+  COMMAND("save_command", Turbine_SaveCommand_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "::turbine::c", NULL, 0);
