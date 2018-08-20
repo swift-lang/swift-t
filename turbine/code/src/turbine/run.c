@@ -64,7 +64,7 @@ turbine_run_interp(MPI_Comm comm, const char* script_file,
     return TURBINE_ERROR_INVALID;
   }
 
-  int rc =  turbine_run_string(comm, script, argc, argv, output, interp);
+  turbine_code rc = turbine_run_string(comm, script, argc, argv, output, interp);
   free(script);
   return rc;
 }

@@ -1,35 +1,23 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
-THISDIR=$( dirname $0 )
-source ${THISDIR}/swift-t-settings.sh
+# BUILD TURBINE
 
-if (( RUN_AUTOTOOLS )); then
-  ./bootstrap
-elif [ ! -f configure ]; then
-  ./bootstrap
-fi
+THIS=$( dirname $0 )
+${THIS}/check-settings.sh
+source ${THIS}/functions.sh
+source ${THIS}/options.sh
+source ${THIS}/swift-t-settings.sh
 
-EXTRA_ARGS=
-if (( SWIFT_T_OPT_BUILD )); then
-    EXTRA_ARGS+=" --enable-fast"
-fi
+LOG $LOG_INFO "Building Turbine"
+cd ${TURBINE_SRC}
+
+run_bootstrap
+
+EXTRA_ARGS=""
 
 if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
-fi
-
-if (( SWIFT_T_STATIC_BUILD )); then
-  EXTRA_ARGS+=" --disable-shared"
-fi
-
-if (( ENABLE_JVM_SCRIPTING )); then
-  echo "JVM Scripting enabled"
-  EXTRA_ARGS+=" --enable-jvm-scripting"
-fi
-
-if [ ! -z "$USE_JVM_SCRIPT_HOME" ]; then
-  EXTRA_ARGS+=" --with-jvm-scripting=${USE_JVM_SCRIPT_HOME}"
 fi
 
 if (( ENABLE_PYTHON )); then
@@ -43,20 +31,21 @@ fi
 if (( ENABLE_R )); then
   EXTRA_ARGS+=" --enable-r"
 fi
-if [ ! -z "$R_INSTALL" ]; then
+if [[ ${R_INSTALL:-} != "" ]]; then
   EXTRA_ARGS+=" --with-r=${R_INSTALL}"
 fi
 
-if [ ! -z "$RINSIDE_INSTALL" ]; then
+if [[ ${RINSIDE_INSTALL:-} != "" ]]; then
   EXTRA_ARGS+=" --with-rinside=${RINSIDE_INSTALL}"
 fi
 
-if [ ! -z "$RCPP_INSTALL" ]; then
+if [[ ${RCPP_INSTALL:-} != "" ]]
+then
   EXTRA_ARGS+=" --with-rcpp=${RCPP_INSTALL}"
 fi
 
 if (( ENABLE_JULIA )); then
-  if [ ! -z "$JULIA_INSTALL" ]; then
+  if [[ ${JULIA_INSTALL:-} != "" ]]; then
     EXTRA_ARGS+=" --with-julia=${JULIA_INSTALL}"
   else
     echo "Have to specify julia install directory if enabling"
@@ -64,31 +53,36 @@ if (( ENABLE_JULIA )); then
   fi
 fi
 
-if [ ! -z "$COASTER_INSTALL" ]; then
-  EXTRA_ARGS+=" --with-coaster=${COASTER_INSTALL}"
+if (( ENABLE_JVM_SCRIPTING )); then
+  echo "JVM Scripting enabled"
+  EXTRA_ARGS+=" --enable-jvm-scripting"
 fi
 
-if [ ! -z "$TCL_INSTALL" ]; then
+if [[ "${USE_JVM_SCRIPT_HOME:-}" != "" ]]; then
+  EXTRA_ARGS+=" --with-jvm-scripting=${USE_JVM_SCRIPT_HOME}"
+fi
+
+if [[ "${TCL_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl=${TCL_INSTALL}"
 fi
 
-if [ ! -z "$TCL_VERSION" ]; then
+if [[ "${TCL_VERSION:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
-if [ ! -z "$TCLSH_LOCAL" ]; then
-  EXTRA_ARGS+=" --with-tcl-local=${TCLSH_LOCAL}"
+if [[ "${TCLSH_LOCAL:-}" != "" ]]; then
+  EXTRA_ARGS+=" --with-tclsh-local=${TCLSH_LOCAL}"
 fi
 
-if [ ! -z "$TCL_LIB_DIR" ]; then
+if [[ "${TCL_LIB_DIR:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-lib-dir=${TCL_LIB_DIR}"
 fi
 
-if [ ! -z "$TCL_INCLUDE_DIR" ]; then
+if [[ "${TCL_INCLUDE_DIR:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-include=${TCL_INCLUDE_DIR}"
 fi
 
-if [ ! -z "$TCL_SYSLIB_DIR" ]; then
+if [[ "${TCL_SYSLIB_DIR:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-syslib-dir=${TCL_SYSLIB_DIR}"
 fi
 
@@ -100,27 +94,32 @@ if (( SWIFT_T_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
-if (( DISABLE_STATIC )); then
-  EXTRA_ARGS+=" --disable-static"
+if (( DISABLE_STATIC_PKG )); then
+  EXTRA_ARGS+=" --disable-static-pkg"
 fi
 
-if [ ! -z "$MPI_INSTALL" ]; then
+if [[ "${MPI_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
+fi
+
+if (( ! SWIFT_T_CHECK_MPICC ))
+then
+  EXTRA_ARGS+=" --disable-mpi-checks"
 fi
 
 if (( SWIFT_T_CUSTOM_MPI )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
-if [ ! -z "$MPI_INCLUDE" ]; then
+if [[ "${MPI_INCLUDE:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi-include=${MPI_INCLUDE}"
 fi
 
-if [ ! -z "$MPI_LIB_DIR" ]; then
+if [[ "${MPI_LIB_DIR:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi-lib-dir=${MPI_LIB_DIR}"
 fi
 
-if [ ! -z "$MPI_LIB_NAME" ]; then
+if [[ "${MPI_LIB_NAME:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi-lib-name=${MPI_LIB_NAME}"
 fi
 
@@ -128,7 +127,7 @@ if (( DISABLE_ZLIB )); then
   EXTRA_ARGS+=" --without-zlib --disable-checkpoint"
 fi
 
-if [ ! -z "$ZLIB_INSTALL" ]; then
+if [[ "${ZLIB_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
 fi
 
@@ -136,14 +135,16 @@ if (( ENABLE_MKSTATIC_CRC )); then
   EXTRA_ARGS+=" --enable-mkstatic-crc-check"
 fi
 
-if [ -z "$WITH_HDF5" ]; then
+if [[ "${WITH_HDF5:-}" == "" ]]; then
   EXTRA_ARGS+=" --with-hdf5=no"
 else
   EXTRA_ARGS+=" --with-hdf5=$WITH_HDF5"
 fi
 
-if (( CONFIGURE )); then
-  echo ${USE_JVM_SCRIPT_HOME}
+common_args
+
+if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
+then
   if (( ENABLE_JVM_SCRIPTING )); then
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml clean
     mvn -f ${USE_JVM_SCRIPT_HOME}/swift-jvm/pom.xml package -Dmaven.test.skip=true
@@ -152,31 +153,17 @@ if (( CONFIGURE )); then
   (
     set -ex
     ./configure --config-cache \
-                --with-adlb=${LB_INSTALL} \
-                ${CRAY_ARGS} \
-                --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${TURBINE_INSTALL} \
+                --with-c-utils=${C_UTILS_INSTALL} \
+                --with-adlb=${LB_INSTALL} \
                 ${EXTRA_ARGS} \
                 --disable-log
     )
+  assert $? "Configure failed!"
 fi
 
-if (( ! RUN_MAKE )); then
-  exit
-fi
-
-if (( MAKE_CLEAN ))
-then
-  rm -fv deps_contents.txt
-  rm -fv config.cache
-  if [ -f Makefile ]
-  then
-    make clean
-  fi
-fi
-
-if ! make -j ${MAKE_PARALLELISM}
-then
+report_turbine_includes()
+{
   echo
   echo Make failed.  The following may be useful:
   echo
@@ -184,6 +171,12 @@ then
   rm -fv deps_contents.txt
   make check_includes
   exit 1
-fi
+}
 
-make install
+check_make
+make_clean
+if ! make_all
+then
+  report_turbine_includes
+fi
+make_install

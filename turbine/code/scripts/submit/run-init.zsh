@@ -101,6 +101,7 @@ turbine_log()
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
   print "WALLTIME:          ${WALLTIME}"
   print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
+  print "TURBINE_HOME:      ${TURBINE_HOME}"
 }
 
 # Defaults:
@@ -108,16 +109,14 @@ CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
-(( ! ${+PROCS} )) && PROCS=0
-[[ ${PROCS} == "" ]] && PROCS=0
-export PROCS
+export PROCS=${PROCS:-0}
 if (( ! ${+TURBINE_OUTPUT_ROOT} ))
 then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
-export MAIL_ENABLED=0
-export MAIL_ADDRESS=0
+export MAIL_ENABLED=${MAIL_ENABLED:-0}
+export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
 export DRY_RUN=0
 WAIT_FOR_JOB=0
 

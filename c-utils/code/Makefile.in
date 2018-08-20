@@ -117,9 +117,11 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 
 CC = @CC@
 DEP_CC = gcc
+CPPFLAGS := @CPPFLAGS@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
-CFLAGS += -I $(srcdir) -I $(srcdir)/src $(STD) $(WARNS)
+CPPFLAGS += -I $(srcdir) -I $(srcdir)/src
+CFLAGS +=  $(STD) $(WARNS)
 ifeq ($(ENABLE_SHARED),1)
 	PIC = $(PIC_FLAG)
 	CFLAGS += $(PIC)
@@ -139,7 +141,7 @@ deps: $(DEPS)
 %.d: %.c
 	$(Q) "  DEP		$@"
 	$(E) CC="$(DEP_CC)" $(srcdir)/maint/depend.sh \
-             $(call dirname, $*) $(CFLAGS) $< > $@
+             $(call dirname, $*) $(CPPFLAGS) $< > $@
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS)
@@ -158,12 +160,20 @@ deps_contents.txt:
 	$(Q) "  SH		$(@)"
 	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
 
+### TAGS
+
+tags: TAGS
+
+TAGS: deps_contents.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps_contents.txt`
+
 ### COMPILE
 
 %.o: %.c
 #       This line causes a false autoscan warning on token 'CC' (C++)
 	$(Q) "  CC		$@"
-	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
+	$(E) $(CC) $(CPPFLAGS) $(CFLAGS) -c $(<) -o $(@)
 
 ### LINK
 

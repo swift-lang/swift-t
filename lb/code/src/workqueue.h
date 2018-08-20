@@ -39,7 +39,7 @@ typedef struct
 {
   /** Unique ID wrt this server */
   xlb_work_unit_id id;
-  /** Time at which this was enqueued 
+  /** Time at which this was enqueued
       NOTE: unused */
   // double timestamp;
   /** Work type */
@@ -55,9 +55,9 @@ typedef struct
   /** Additional flags */
   adlb_put_opts opts;
 
-  /** Bulk work unit data 
+  /** Bulk work unit data
       Payload kept contiguous with data to save memory allocation */
-  unsigned char payload[]; 
+  unsigned char payload[];
 } xlb_work_unit;
 
 
@@ -152,7 +152,7 @@ static inline void xlb_work_unit_free(xlb_work_unit* wu)
 
 void xlb_print_workq_perf_counters(void);
 
-void xlb_workq_finalize(void);
+bool xlb_workq_finalize(void);
 
 
 typedef struct {
@@ -162,10 +162,10 @@ typedef struct {
 
   /** Number of targeted tasks bypassing work queue */
   int64_t targeted_bypass;
-  
+
   /** Untargeted serial added to work queue */
   int64_t single_enqueued;
-  
+
   /** Number of untargeted serial tasks bypassing work queue */
   int64_t single_bypass;
 
@@ -174,7 +174,7 @@ typedef struct {
 
   /** Parallel tasks added to work queue */
   int64_t parallel_enqueued;
-  
+
   /** Number of parallel tasks bypassing work queue */
   int64_t parallel_bypass;
 
@@ -183,20 +183,20 @@ typedef struct {
 
   /*
    * Data-dependent task counters:
-   */ 
+   */
 
   /** Number of targeted tasks that must wait for input */
   int64_t targeted_data_wait;
 
   /** Number of targeted tasks that were ready immediately */
   int64_t targeted_data_no_wait;
-  
+
   /** Number of single tasks that must wait for input */
   int64_t single_data_wait;
 
   /** Number of single tasks that were ready immediately */
   int64_t single_data_no_wait;
-  
+
   /** Number of parallel tasks that must wait for input */
   int64_t parallel_data_wait;
 

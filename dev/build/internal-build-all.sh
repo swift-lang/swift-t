@@ -1,41 +1,21 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
-THIS=$( cd $(dirname $0) && pwd )
+# INTERNAL BUILD ALL
+
+THIS=$( cd $(dirname $0) && /bin/pwd )
 
 ${THIS}/check-tools.sh
+source ${THIS}/functions.sh
 
-pushd ${C_UTILS_SRC} > /dev/null
-echo
-echo "Building c-utils in $PWD"
-${THIS}/cutils-build.sh
-popd > /dev/null
+LOG $LOG_INFO ""
+${THIS}/build-cutils.sh
 
-pushd ${LB_SRC} > /dev/null
-echo
-echo "Building lb in $PWD"
-${THIS}/lb-build.sh
-popd > /dev/null
+LOG $LOG_INFO ""
+${THIS}/build-lb.sh
 
-if [ ! -z "$COASTER_SRC" -a ! -z "$COASTER_INSTALL" ]
-then
-  pushd ${COASTER_SRC}
-  echo
-  echo "Building Coaster C Client"
-  pwd
-  echo "========================="
-  ${THIS}/coaster-c-client-build.sh
-  popd
-fi
+LOG $LOG_INFO ""
+${THIS}/build-turbine.sh
 
-pushd ${TURBINE_SRC} > /dev/null
-echo
-echo "Building Turbine in $PWD"
-${THIS}/turbine-build.sh
-popd > /dev/null
-
-pushd ${STC_SRC} > /dev/null
-echo
-echo "Building STC in $PWD"
-${THIS}/stc-build.sh
-popd > /dev/null
+LOG $LOG_INFO ""
+${THIS}/build-stc.sh

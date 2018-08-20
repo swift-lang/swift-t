@@ -55,9 +55,6 @@ static void print_proc_self_status(void);
 
 void adlb_exit_handler(void);
 
-/** True after a Get() receives a shutdown code */
-static bool got_shutdown = false;
-
 /** Cached copy of ADLB world group */
 static MPI_Group adlb_group;
 
@@ -149,6 +146,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   MPI_CHECK(rc);
   ADLB_CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
+  xlb_s.status = ADLB_STATUS_RUNNING;
   xlb_s.start_time = MPI_Wtime();
 
   code = xlb_setup_layout(comm, nservers);
@@ -277,6 +275,11 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
   return ADLB_SUCCESS;
 }
 
+adlb_status
+ADLB_Status()
+{
+  return xlb_s.status;
+}
 
 adlb_code
 ADLB_Version(version* output)
@@ -553,7 +556,7 @@ ADLBP_Get(int type_requested, void** payload,
   if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Get(): SHUTDOWN");
-    got_shutdown = true;
+    xlb_s.status = ADLB_STATUS_SHUTDOWN;
     return ADLB_SHUTDOWN;
   }
 
@@ -642,7 +645,7 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Iget(): SHUTDOWN");
-    got_shutdown = true;
+    xlb_s.status = ADLB_STATUS_SHUTDOWN;
     return ADLB_SHUTDOWN;
   }
   if (g.code == ADLB_NOTHING)
@@ -2107,6 +2110,11 @@ ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
 static inline adlb_code
 ADLB_Shutdown(void)
 {
+  if (xlb_s.status == ADLB_STATUS_SHUTDOWN)
+    // Already got a SHUTDOWN message
+    return ADLB_SUCCESS;
+
+  // This worker is shutting itself down - notify its server
   TRACE_START;
   SEND_TAG(xlb_s.layout.my_server, ADLB_TAG_SHUTDOWN_WORKER);
   TRACE_END;
@@ -2140,11 +2148,8 @@ ADLBP_Finalize()
   else
   {
     // Worker:
-    if (!got_shutdown)
-    {
-      rc = ADLB_Shutdown();
-      ADLB_CHECK(rc);
-    }
+    rc = ADLB_Shutdown();
+    ADLB_CHECK(rc);
   }
 
   if (xlb_s.hostmap != NULL)

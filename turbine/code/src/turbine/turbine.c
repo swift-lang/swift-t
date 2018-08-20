@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -129,12 +131,18 @@ gdb_check(int rank)
 
 static bool setup_cache(void);
 
+static bool set_stdout(int rank, int size);
+
+static int log_setup(int rank);
+
 turbine_code
 turbine_init(int amserver, int rank, int size)
 {
   check_versions();
 
   gdb_check(rank);
+
+  log_setup(rank);
 
   if (!amserver)
   {
@@ -147,11 +155,62 @@ turbine_init(int amserver, int rank, int size)
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 
-  turbine_debug_init();
+  if (! set_stdout(rank, size))
+    return TURBINE_ERROR_IO;
 
   turbine_code tc = turbine_async_exec_initialize();
   turbine_check(tc);
   return TURBINE_SUCCESS;
+}
+
+/**
+   @return Tcl error code
+*/
+static int
+log_setup(int rank)
+{
+  log_init();
+  log_normalize();
+
+  // Did the user enable logging?
+  int enabled;
+  getenv_integer("TURBINE_LOG", 0, &enabled);
+  if (!enabled)
+  {
+    log_enable(false);
+    return TCL_OK;
+  }
+
+  bool b;
+
+  // Log is enabled.
+  // Should we use a specific log file?
+  char* filename = getenv("TURBINE_LOG_FILE");
+  if (filename != NULL && strlen(filename) > 0)
+  {
+    b = log_file_set(filename);
+    if (!b)
+    {
+      printf("Could not set log file: %s", filename);
+      return TCL_ERROR;
+    }
+  }
+
+  // Should we flush after every log message?
+  getenv_boolean("TURBINE_LOG_FLUSH", true, &b);
+  log_flush_auto_enable(b);
+
+  // Should we prepend the MPI rank (emulate "mpiexec -l")?
+  int log_rank_enabled;
+  getenv_integer("TURBINE_LOG_RANKS", 0, &log_rank_enabled);
+  if (log_rank_enabled)
+  {
+    char prefix[64];
+    sprintf(prefix, "[%i]", rank);
+    log_prefix_set(prefix);
+  }
+
+  return TCL_OK;
 }
 
 static bool
@@ -168,19 +227,57 @@ setup_cache()
     printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
     return false;
   }
-  if (mpi_rank == 0)
-    DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size);
+  /* if (mpi_rank == 0) */
+  /*   DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size); */
   b = getenv_ulong("TURBINE_CACHE_MAX", 10*1024*1024, &max_memory);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_MAX\n");
     return false;
   }
-  if (mpi_rank == 0)
-    DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory);
+  /* if (mpi_rank == 0) */
+  /*   DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory); */
 
   turbine_cache_init(size, max_memory);
 
+  return true;
+}
+
+/** return field width of integers up to max */
+static int get_pad(int max)
+{
+  return (int) rintl(ceil(log(max+1)/log(10)));
+}
+
+static bool
+set_stdout(int rank, int size)
+{
+  char tmpfname[PATH_MAX];
+  char filename[PATH_MAX];
+  char* s = getenv("TURBINE_STDOUT");
+  if (s == NULL || strlen(s) == 0)
+    return true;
+
+  strcpy(filename, s);
+
+  // Substitute rank (as zero-padded string r) for %r into filename
+  char* p;
+  if ((p = strstr(filename, "%r")))
+  {
+    ptrdiff_t c = p - &filename[0];
+    strcpy(tmpfname, filename);
+    char* q = &tmpfname[0] + c + 1;
+    *q = 's';
+    char r[64];
+    int pad = get_pad(size);
+    sprintf(r, "%0*i", pad, rank);
+    sprintf(filename, tmpfname, r);
+  }
+  log_printf("redirecting output to: %s", filename);
+  log_flush();
+
+  FILE* fp = freopen(filename, "w", stdout);
+  if (fp == NULL) return false;
   return true;
 }
 
@@ -285,4 +382,5 @@ turbine_finalize(Tcl_Interp *interp)
   turbine_cache_finalize();
   turbine_async_exec_finalize(interp);
   call_user_finalizers();
+  log_finalize();
 }

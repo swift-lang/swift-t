@@ -22,10 +22,10 @@ namespace eval turbine {
 
     namespace export init start finalize spawn_rule rule
 
-
     # Import adlb commands
-    namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY \
-            ::adlb::get_priority ::adlb::reset_priority ::adlb::set_priority
+    namespace import ::adlb::put ::adlb::get ::adlb::RANK_ANY    \
+                     ::adlb::get_priority ::adlb::reset_priority \
+                     ::adlb::set_priority
     # Re-export adlb commands
     namespace export put get RANK_ANY \
                      get_priority reset_priority set_priority
@@ -63,7 +63,7 @@ namespace eval turbine {
     # Whether read reference counting is enabled.  Default to off
     variable read_refcounting_on
 
-    # The language driving the run (default Turbine, may be Swift)
+    # The language driving the run (default "Turbine", may be "Swift")
     # Used for error messages
     variable language
     set language Turbine
@@ -72,6 +72,9 @@ namespace eval turbine {
     # Catches known errors from Turbine libraries via Tcl return/catch
     variable error_code
     set error_code 10
+
+    # The list of enabled debug categories
+    variable debug_categories
 
     # User function
     # rank_config: If an empty string, configure ranks based on environment.
@@ -82,8 +85,13 @@ namespace eval turbine {
     # lang: language to use in error messages:
     #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
-        # Initialise debugging in case other functions want to debug
+
+        # Initialize debugging in case other functions want to debug
+        variable debug_categories
         c::init_debug
+        set debug_categories [ list ]
+
+        debug_set SHUTDOWN true
 
         # Setup communicator so we can get size later
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
@@ -118,8 +126,10 @@ namespace eval turbine {
 
         reset_priority
 
+        # These are the user work types
         set work_types [ work_types_from_allocation $rank_allocation ]
-
+        # REPUT is a special internal work type used by app.tcl reputs
+        lappend work_types REPUT
         debug "work_types: $work_types"
         # Set up work types
         enum WORK_TYPE $work_types
@@ -138,14 +148,12 @@ namespace eval turbine {
 
         setup_mode $rank_allocation $work_types
 
+        # Initialize Turbine features
         turbine::init_rng
-
         turbine::init_file_types
-
         c::normalize
-
+        app_init
         turbine::init_cmds
-
         argv_init
     }
 
@@ -276,7 +284,8 @@ namespace eval turbine {
     # Setup which mode this and other ranks will be running in
     #
     # rank_allocation: a rank allocation object
-    # work_types: list of ADLB work type names (matching those in rank_allocation)
+    # work_types: list of ADLB work type names
+    #             (matching those in rank_allocation)
     #             with list index corresponding to integer ADLB work type
     #
     # Sets n_workers, n_workers_by_type, and n_adlb_servers variables
@@ -352,9 +361,12 @@ namespace eval turbine {
             turbine_error "No workers!"
         }
 
-        # Report on how workers are subdivided
+        # Remove REPUT for the following log message
+        set work_types_user [ lreplace $work_types end-1 end ]
+
+        # Report on how workers are subdivided for user work types
         set curr_rank 0
-        foreach work_type $work_types {
+        foreach work_type $work_types_user {
           set n_x_workers [ dict get $n_workers_by_type $work_type ]
           set first_x_worker $curr_rank
           incr curr_rank $n_x_workers
@@ -403,14 +415,14 @@ namespace eval turbine {
             set startup_cmd ""
         }
 
-        set failed 0
+        set success true
         if { [ catch { enter_mode $rules $startup_cmd } e d ] } {
-          set failed 1
+          set success false
         }
 
         turbine::xpt_finalize2
 
-        if { $failed } {
+        if { ! $success } {
             fail $e $d
         }
     }
@@ -432,7 +444,13 @@ namespace eval turbine {
     proc enter_mode_unchecked { rules startup_cmd } {
         variable mode
         switch $mode {
-            SERVER  { adlb::server }
+            SERVER  {
+              try {
+                adlb::server
+              } on error e {
+                turbine_error "ADLB server exited with error"
+              }
+            }
             WORK  { standard_worker $rules $startup_cmd }
             default {
               custom_worker $rules $startup_cmd $mode
@@ -495,8 +513,59 @@ namespace eval turbine {
       adlb::enable_read_refcount
     }
 
-    proc debug { msg } {
-        c::debug $msg
+    # Basic debugging function
+    # If #args == 1, then just print that as a message
+    # If #args == 2, the first argument is the category,
+    #                the second argument is the message,
+    #                and only print the message if the category
+    #                has been enabled with debug_set
+    proc debug { args } {
+      variable debug_categories
+      set argc [ llength $args ]
+      if { $argc == 1 } {
+        c::debug $args
+      } elseif { $argc == 2 } {
+        lassign $args category msg
+        if { [ lsearch $debug_categories $category ] >= 0 } {
+          c::debug $msg
+        }
+      } else {
+        error "Bad arguments to debug (count=$argc) : $args"
+      }
+    }
+
+    # Enable debugging on the given category
+    # category: any string
+    # enabled: true to enable, false to disable
+    proc debug_set { category enabled } {
+      variable debug_categories
+      if $enabled {
+        if { [ lsearch $debug_categories $category ] == -1 } {
+          lappend debug_categories $category
+        } else {
+          debug [ cat "debug: warning: " \
+                      "duplicate enable of debug category: $category" ]
+        }
+      } else {
+        set index [ lsearch $debug_categories $category ]
+        if { $index == -1 } {
+          debug [ cat "debug: warning: " \
+                      "attempted removal of non-existent category: " \
+                      $category ]
+        } else {
+          set debug_categories \
+              [ lreplace debug_categories $index $index ]
+        }
+      }
+    }
+
+    proc debug_enabled { category } {
+      variable debug_categories
+      if { [ lsearch $debug_categories $category ] == -1 } {
+        return false
+      } else {
+        return true
+      }
     }
 
     proc finalize { } {
@@ -509,6 +578,9 @@ namespace eval turbine {
         } else {
             adlb::finalize 1
         }
+      if [ debug_enabled SHUTDOWN ] {
+        # printf_local "adlb finalized at: %0.4f" [ c::log_time ]
+      }
     }
 
     # DEPRECATED
@@ -592,26 +664,34 @@ namespace eval turbine {
     # Asserts it is an integer
     # Returns 0 if used default, else 1
     proc getenv_integer { key dflt output } {
+        upvar $output result
+        return [ getenv_type $key $dflt result integer ]
+    }
+
+    proc getenv_double { key dflt output } {
+
+        upvar $output result
+        return [ getenv_type $key $dflt result double ]
+    }
+
+    proc getenv_type { key dflt output type } {
         global env
         upvar $output result
-        if { [ info exists env($key) ] } {
-            if { [ string is integer $env($key) ] } {
-                if { [ string length $env($key) ] == 0 } {
-                    set result $dflt
-                    return 0
-                } else {
-                    set result $env($key)
-                    return 1
-                }
-            } else {
-                turbine_error \
-                    "Environment variable $key must be an integer. " \
-                    "Value: '$env($key)'"
-            }
-        } else {
+
+        if { ! [ info exists env($key) ] ||
+             [ string length $env($key) ] == 0 } {
             set result $dflt
             return 0
         }
+        if { ! [ string is $type $env($key) ] } {
+            turbine_error \
+                "Environment variable $key must be of type $type. " \
+                "Value: '$env($key)'"
+        }
+
+        # Normal case: variable exists and is of correct type
+        set result $env($key)
+        return 1
     }
 
     # Initialize user modules
@@ -631,9 +711,19 @@ namespace eval turbine {
             eval $cmd
         }
     }
+
+  # Return Tcl time in seconds as float
+  # If argument is provided, subtract that from current time
+  proc tcl-time { args } {
+    set t [ expr [ clock milliseconds ] / 1000.0 ]
+    if [ llength $args ] {
+      set t [ expr $t - $args ]
+    }
+    return $t
+  }
 }
 
 # Local Variables:
 # mode: tcl
-# tcl-indent-level: 4
+# tcl-indent-level: 2
 # End:

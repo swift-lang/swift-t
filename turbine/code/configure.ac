@@ -218,6 +218,7 @@ USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
+ENABLE_MPI_CHECKS=1
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -254,6 +255,14 @@ AC_ARG_WITH(launcher,
                       AC_MSG_ERROR("Launcher not found!"))
     ])
 
+# Allow user to disable MPI checks (useful on Cray)
+AC_ARG_ENABLE(mpi-checks,
+    AC_HELP_STRING([--disable-mpi-checks],
+                   [Turbine checks for mpi.h and MPI libs to obtain
+                    the MPI version and enforce sanity.  This flag
+                    disables these checks.]),
+    [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
+
 # Set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]]
 then
@@ -265,7 +274,7 @@ then
        USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-   elif (( ! ENABLE_CUSTOM_MPI ))
+   elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
    then
        AC_MSG_ERROR([Turbine requires --with-mpi or
                                   --enable-custom-mpi or
@@ -342,15 +351,6 @@ AC_ARG_WITH(mpi-lib-extra,
       MPI_EXTRA_LIBS=$(echo "${withval}" | tr "," " ")
     ],
     [])
-
-# Allow user to disable MPI checks (useful on Cray)
-ENABLE_MPI_CHECKS=yes
-AC_ARG_ENABLE(mpi-checks,
-    AC_HELP_STRING([--disable-mpi-checks],
-                   [Turbine checks for mpi.h and MPI libs to obtain
-                    the MPI version and enforce sanity.  This flag
-                    disables these checks.]),
-    [ ENABLE_MPI_CHECKS=${enableval} ])
 
 # Now check MPI settings
 
@@ -476,7 +476,7 @@ MPI_IMPL=unknown
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ${ENABLE_MPI_CHECKS} ))
 then
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
@@ -502,7 +502,7 @@ then
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
-fi # ENABLE_MPI_CHECKS==yes
+fi # ENABLE_MPI_CHECKS==1
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
@@ -840,25 +840,6 @@ else
     AC_MSG_RESULT([Coaster integration disabled])
 fi
 
-# tclsh is used in the build process (cf. debug-auto.tcl)
-# Allow user to specify a native tclsh for use when cross-compiling
-# The user has not yet provided tclsh-local (default to USE_TCLSH):
-USE_TCLSH_LOCAL=0
-AC_ARG_WITH(tclsh-local,
-    AS_HELP_STRING(
-        [--with-tclsh-local],
-        [name of tclsh compatible with build system]),
-    [
-        AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
-        if [[ ${?} != 0 ]]
-        then
-            AC_MSG_ERROR([failed!])
-        fi
-        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
-    ],
-    [])
-
 ENABLE_SHARED=1
 AC_ARG_ENABLE(shared,
     AS_HELP_STRING([--enable-shared],
@@ -902,14 +883,32 @@ AC_SUBST(ENABLE_STATIC)
 AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
 AC_PROG_RANLIB
 
+# Tcl version is initially unknown (needed by find-tcl.sh)
+export TCL_VERSION=0
+
 # In order from most to least preferred
 TCL_VERSION_PREFS="8.6 8.5"
+
+AC_ARG_WITH(tcl-version,
+    AS_HELP_STRING([--with-tcl-version],
+                   [Tcl version. Minimum is 8.5. If not specified,
+                    use highest version we can find]),
+    [
+        TCL_VERSION=${withval}
+        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
+        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
+    ],
+    [
+        AC_MSG_NOTICE([Tcl version is not specified.])
+    ]
+)
 
 USE_TCL=0
 # Set USE_TCL
 AC_ARG_WITH(tcl,
     AS_HELP_STRING([--with-tcl], [location of Tcl]),
     [
+        AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
     ],
     [
@@ -937,20 +936,6 @@ AC_ARG_WITH(tcl,
     ]
 )
 
-# Sniff out default Tcl version and library path
-TCL_VERSION=0
-
-AC_ARG_WITH(tcl-version,
-    AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.5. If not specified,
-                    use highest version we can find]),
-    [
-        TCL_VERSION=${withval}
-        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
-        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
-    ]
-)
-
 USE_TCL_LIB_DIR=0
 
 AC_ARG_WITH(tcl-lib-dir,
@@ -966,6 +951,25 @@ then
   # We have locked in a version choice
   TCL_VERSION_PREFS=${TCL_VERSION}
 fi
+
+# tclsh is used in the build process (cf. debug-auto.tcl)
+# Allow user to specify a native tclsh for use when cross-compiling
+# The user has not yet provided tclsh-local (default to USE_TCLSH):
+USE_TCLSH_LOCAL=0
+AC_ARG_WITH(tclsh-local,
+    AS_HELP_STRING(
+        [--with-tclsh-local],
+        [name of tclsh compatible with build system]),
+    [
+        AC_MSG_CHECKING([for Tcl (version: $TCL_VERSION) local executable in: ${withval}])
+        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
+        if [[ ${?} != 0 ]]
+        then
+            AC_MSG_ERROR([failed!])
+        fi
+        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
+    ],
+    [])
 
 # Can always use static Tcl library
 TCL_LIB_SUFFIX_PREFS="a"
@@ -1089,9 +1093,6 @@ then
       Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
-# TCL_VERSION needed by find-tcl.sh
-export TCL_VERSION
-
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
@@ -1150,7 +1151,7 @@ then
 
   # Try to find out the library directory from tclsh
   echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
-  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH} $tmp_script )
+  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH_LOCAL} $tmp_script )
   TCLSH_EXIT=$?
   rm $tmp_script
   if [[ $? != 0 ]]; then
@@ -1283,6 +1284,7 @@ AC_CONFIG_FILES(
         src/tcl/mpe/module.mk
         src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
+        src/tcl/launch/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/static-pkg/module.mk
@@ -1294,6 +1296,7 @@ AC_CONFIG_FILES(
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk
         scripts/submit/ec2/module.mk
+        scripts/submit/lsf/module.mk
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
