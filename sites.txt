@@ -344,6 +344,11 @@ system scheduler (e.g., +qsub+).
         (created by link:guide.html#mkstatic[+mkstatic.tcl+]) instead of
         +program.tic+.
 
++-Y+:: Create a batch submission file, report its name,
+       and exit before submitting it.  Useful for users that need
+       to edit the batch file before submission. +
+       (Currently supported systems: +slurm+)
+
 [[turbine_output]]
 === Turbine output directory
 
