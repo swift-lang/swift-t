@@ -25,7 +25,19 @@ the +minor+ version number.
 [[stable]]
 == Current/stable: Series 1.4
 
-* Release 1.4
+* Release 1.4.1
+
+** http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.1.tar.gz[swift-t-1.4.1.tar.gz] (9.0 MB)
+* 2018/08/20
+
+*Changes:*
+
+* Support for IBM LSF (e.g., Summitdev)
+* Improved +build-swift-t+ and related scripts
+* New +launch()+ function for MPI programs
+* Support for +MPI_THREAD_MULTIPLE+
+
+=== 1.4
 ** http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.tar.gz[swift-t-1.4.tar.gz] (9.0 MB)
 * 2018/02/02
 
