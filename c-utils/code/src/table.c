@@ -34,7 +34,7 @@ table_dump2(const char* format, const struct table* target,
 static table_entry*
 find_bucket(const struct table* T, const char* key, size_t *key_strlen);
 
-static bool 
+static bool
 bucket_add_head(table_entry *head, char* key, void* data);
 
 static bool
@@ -321,7 +321,7 @@ bucket_add_tail(table_entry *head, table_entry *entry, bool copy_entry)
    Note: duplicates internal copy of key
  */
 bool
-table_add(struct table *target, const char* key, void* data)
+table_add(struct table* target, const char* key, void* data)
 {
   // Check to resize hash table
   if (target->size > target->resize_threshold)
@@ -331,13 +331,13 @@ table_add(struct table *target, const char* key, void* data)
       return false;
   }
 
-  /* 
+  /*
    * Add at head of list to avoid traversing list.  This means that in
    * case of duplicate keys, the newest is returned
    */
   size_t key_strlen;
   table_entry *head = find_bucket(target, key, &key_strlen);
-    
+
   char *key_repr = malloc(key_strlen + 1);
   if (key_repr == NULL)
   {
@@ -418,8 +418,8 @@ table_set(struct table* target, const char* key,
 
 /**
    @param value: this is used to return the value if found
-   @return true if found, false if not 
-   
+   @return true if found, false if not
+
    if value is NULL and return is true, this means that the key exists
    but the value is NULL
 */
@@ -488,7 +488,7 @@ table_remove(struct table* table, const char* key, void** data)
     *data = e->data; // Store data for caller
     free(e->key);
 
-    table_remove_entry(e, prev); 
+    table_remove_entry(e, prev);
     table->size--;
     return true;
   }
@@ -511,12 +511,12 @@ table_expand(struct table *T)
   {
     return false;
   }
-  
+
   for (int i = 0; i < new_capacity; i++)
   {
     table_clear_entry(&new_array[i]);
   }
-  
+
   // Rehash and move all entries from old table
   for (int i = 0; i < T->capacity; i++)
   {
@@ -554,7 +554,7 @@ table_expand(struct table *T)
       }
     }
   }
-  
+
   free(T->array);
   T->array = new_array;
   T->capacity = new_capacity;
@@ -688,7 +688,7 @@ bucket_tostring(char *result, size_t size, const char *format,
     return 0;
   }
   char* p = result;
-  
+
   p += sprintf(p, "[");
 
   // Check for empty bucket

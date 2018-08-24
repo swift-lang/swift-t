@@ -24,9 +24,11 @@ print scripts/main-wrap/settings/*.sh
 print scripts/mkstatic/*.{sh,template}
 print scripts/mkstatic/About.txt
 print scripts/submit/*.*sh*
+print scripts/submit/common.m4
 print scripts/submit/cray/*.*sh*
 print scripts/submit/cobalt/*turbine*.*sh*
 print scripts/submit/ec2/turbine-setup-ec2.zsh
+print scripts/submit/lsf/{turbine-lsf-run.zsh,turbine-lsf.sh.m4}
 print scripts/submit/pbs/{turbine-pbs-run.zsh,turbine.pbs.m4}
 print scripts/submit/slurm/*turbine*.*sh*
 print scripts/submit/sge/turbine{-sge-run.zsh,.sge.m4}
