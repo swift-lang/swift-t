@@ -29,7 +29,7 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
 #BSUB -J getenv(TURBINE_JOBNAME)
-#BSUB -nnodes=getenv_nospace(NODES)
+#BSUB -nnodes getenv_nospace(NODES)
 #BSUB -W getenv(WALLTIME)
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
@@ -49,6 +49,7 @@ cd ${TURBINE_OUTPUT}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
+PROCS=getenv(PROCS)
 
 # Start the user environment variables pasted by M4
 getenv(USER_ENVS_CODE)
@@ -68,12 +69,17 @@ export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 module load gcc/6.3.1-20170301
-module load spectrum-mpi/10.1.0.4-20170915
-PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
+module load spectrum-mpi # /10.1.0.4-20170915
+# PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
 
+set -x
 echo
+which jsrun
+
 START=$( date +%s.%N )
-jsrun -n getenv(PROCS) -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
+hostname
+jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
+# ~/mcs/ste/mpi/t.x # bash -c hostname
 CODE=$?
 echo
 echo EXIT CODE: $CODE
