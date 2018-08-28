@@ -93,6 +93,7 @@ $ spack install stc
 
 This will install all necessary dependencies.
 
+[install_source]
 === From source
 
 Writing and running Swift/Turbine programs requires multiple packages.
@@ -2452,6 +2453,7 @@ to a user Tcl function that accepts this communicator.  See the
 link:leaf.html[Swift/T Leaf Function Guide] for more details.  This
 method works well for software that is easy to invoke as a library.
 
+[[launch]]
 === Parallel tasks: External programs
 
 If you cannot invoke your parallel code as a library, you may use the
