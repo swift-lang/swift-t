@@ -1411,7 +1411,7 @@ Run the command (simple string), return its standard output as
 +string+ and exit code as +int+.
 The input string is simply split on whitespace,
 the first token is used as the command and the remaining tokens
-are used as whitespace.
+are used as arguments.
 This function does not allow for arguments with white space-
 use +system()+ for more complex cases.
 
