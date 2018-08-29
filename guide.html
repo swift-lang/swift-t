@@ -828,7 +828,7 @@ $ spack install stc</code></pre>
 <div class="paragraph"><p>This will install all necessary dependencies.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_from_source">2.3. From source</h3>
+<h3 id="install_source">2.3. From source</h3>
 <div class="paragraph"><p>Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
@@ -2758,7 +2758,7 @@ Standard deviation
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_system">13.6. System</h3>
+<h3 id="stdlib_system">13.6. System</h3>
 <div class="paragraph"><p><strong>Import:</strong> <code>sys</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -2802,19 +2802,28 @@ Obtain the largest integer representable on the current platform.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>system(string[]) &#8594; int</code>
+<code>system(string[]) &#8594; string,int</code>
 </dt>
 <dd>
 <p>
-Run the command (string array), return its exit code.
+Run the command (string array), return its standard output as
+<code>string</code> and exit code as <code>int</code>.
+The first string in the array will be used as the command to run and
+the remaining strings are used as arguments.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>system1(string) &#8594; int</code>
+<code>system1(string) &#8594; string,int</code>
 </dt>
 <dd>
 <p>
-Run the command (simple string), return its exit code.
+Run the command (simple string), return its standard output as
+<code>string</code> and exit code as <code>int</code>.
+The input string is simply split on whitespace,
+the first token is used as the command and the remaining tokens
+are used as whitespace.
+This function does not allow for arguments with white space-
+use <code>system()</code> for more complex cases.
 </p>
 </dd>
 </dl></div>
@@ -6105,7 +6114,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-08-28 12:53:05 CDT
+ 2018-08-29 13:41:00 CDT
 </div>
 </div>
 
