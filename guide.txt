@@ -93,7 +93,7 @@ $ spack install stc
 
 This will install all necessary dependencies.
 
-[install_source]
+[[install_source]]
 === From source
 
 Writing and running Swift/Turbine programs requires multiple packages.
@@ -1380,6 +1380,7 @@ Average
 +std(float[]) -> float+::
 Standard deviation
 
+[[stdlib_system]]
 === System
 
 *Import:* +sys+
@@ -1399,11 +1400,20 @@ Obtain time since the Unix epoch in whole seconds.
 +INT_MAX() -> int+::
 Obtain the largest integer representable on the current platform.
 
-+system(string[]) -> int+::
-Run the command (string array), return its exit code.
++system(string[]) -> string,int+::
+Run the command (string array), return its standard output as
++string+ and exit code as +int+.
+The first string in the array will be used as the command to run and
+the remaining strings are used as arguments.
 
-+system1(string) -> int+::
-Run the command (simple string), return its exit code.
++system1(string) -> string,int+::
+Run the command (simple string), return its standard output as
++string+ and exit code as +int+.
+The input string is simply split on whitespace,
+the first token is used as the command and the remaining tokens
+are used as whitespace.
+This function does not allow for arguments with white space-
+use +system()+ for more complex cases.
 
 [[argv]]
 ==== Command line
