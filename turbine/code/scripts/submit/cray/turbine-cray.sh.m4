@@ -98,6 +98,8 @@ export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
+ENV_PAIRS="getenv(ENV_PAIRS)"
+
 # Output header
 echo "Turbine: turbine-cray.sh"
 date "+%Y/%m/%d %I:%M%p"
@@ -110,19 +112,38 @@ cd ${TURBINE_OUTPUT}
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
+MODULESHOME=/sw/xk6/environment-modules/3.2.10.3/sles11.3_gnu4.9.0
+source $MODULESHOME/init/bash
+module load alps
+
+APRUN_ENV=""
+for KV in $ENV_PAIRS
+do
+    APRUN_ENV+="-e $KV "
+done
+APRUN_ENV+="-e TURBINE_OUTPUT=$TURBINE_OUTPUT"
+
+# LD_LIBRARY_PATH=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/lib:/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/cuda/lib64:/opt/gcc/4.9.3/snos/lib64
+# PYTHONPATH=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/lib/python3.6/site-packages:/sw/xk6/xalt/0.7.5/site:/sw/xk6/xalt/0.7.5/libexec
+
+module load deeplearning
+
+# printenv | sort
+
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
     # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
+    # echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
     set -x
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

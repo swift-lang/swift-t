@@ -54,6 +54,13 @@ m4 ${TURBINE_CRAY_M4} > ${TURBINE_CRAY}
 chmod u+x ${TURBINE_CRAY}
 print "wrote: ${TURBINE_CRAY}"
 
+# If the user specified a queue, we use it:
+QUEUE_ARG=""
+if (( ${+QUEUE} ))
+then
+  QUEUE_ARG="-q ${QUEUE}"
+fi
+
 (( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
 # qsub -V forwards the environment to turbine-cray.sh
