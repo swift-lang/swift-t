@@ -1142,7 +1142,7 @@ Run with, e.g.: +
 $ export PROJECT=...
 $ export QUEUE=debug
 $ export TITAN=true
-$ swift-t -m cray 'trace("Hello world!");'
+$ swift-t -m cray -E 'trace("Hello world!");'
 ----
 
 This uses:
