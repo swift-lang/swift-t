@@ -1102,7 +1102,7 @@ Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 * SWIG: +~wozniak/Public/sfw/swig-3.0.2+
 * Tcl (login):  +~wozniak/Public/sfw/tcl-8.6.2+
-* Tcl (compute):  +/lustre/atlas/world-shared/csc249/shared/tcl-8.6.2+
+* Tcl (compute): +/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6+
 
 ===== Login nodes
 
@@ -1126,14 +1126,14 @@ This uses:
 
 ===== Compute nodes
 
-*As of:* 2018/03/05
+*As of:* 2018/09/11
 
 This installation is for the general public, particularly INSPIRE and
 CANDLE users.
 
 Add to PATH: +
 ----
-/lustre/atlas/world-shared/csc249/shared/swift-t/stc/bin
+/ccs/proj/csc249/CANDLE/Public/sfw/swift-t/2018-09-11/stc/bin
 ----
 
 Run with, e.g.: +
@@ -1146,7 +1146,7 @@ $ swift-t -m cray 'trace("Hello world!");'
 
 This uses:
 
-* Cray MPI: +/opt/cray/mpt/default/gni/mpich-gnu/49+
+* Cray MPI: +/opt/cray/lib64/libmpich_gnu_51.so.3+
 
 ==== Submitting jobs
 
@@ -1185,25 +1185,42 @@ These environment variables may be placed in your +-s+
 
 ==== Build procedure
 
-*As of:* 7/23/2015
+*As of:* 2018/09/11
 
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
+. Use the link:guide.html#install_source[+dev/build+ scripts].
+. Run +init-settings.sh+ as usual
+. Edit +swift-t-settings.sh+ to set:
+.. Set +SWIFT_T_PREFIX+ to the desired installation directory
+.. This is a Tcl compiled for the compute nodes: +
+   +TCL_INSTALL=/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6+
+.. This is a Tcl compiled for the login nodes: +
+   +TCLSH_LOCAL=/usr/bin/tclsh+
+.. Disable search for Python in +PATH+: +
+   +ENABLE_PYTHON=0+
+.. If you want Python: +
+   +PYTHON_EXE=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/bin/python+ +
+   or else leave that set to empty string.
+.. Speed up the build: +
+   +MAKE_PARALLELISM=8+
+.. Uncomment the Cray link type variable at the end of the script:
 +
 ----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
---enable-mpi-2
+export CRAYPE_LINK_TYPE=dynamic
 ----
 +
-* In the Turbine configure step, replace the +--with-mpi+ option with:
+.. Uncomment the Titan modules at the end of the script (also shown
+here):
 +
 ----
---enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+module load java
+module load deeplearning # If you want Python
+module swap PrgEnv-pgi PrgEnv-gnu
+----
++
+. Run:
++
+----
+$ nice dev/build/build-swift-t.sh
 ----
 
 ==== Submitting jobs
@@ -1216,15 +1233,14 @@ directive. The correct directive is:
 #PBS -l nodes=32
 ----
 
-+PPN+ is handled by setting the +-n+ argument.
++PPN+ is handled by setting the +mppnppn+ argument.
 
-The +turbine-aprun-run.zsh+ script supports Titan.  You can invoke
-it as follows (for a single node/32 processes per node):
+The +turbine-cray.sh.m4+ job script template supports Titan.
+Use it as follows (for single node/32 processes per node):
 ----
 export QUEUE=normal
 export TITAN=true
 export PPN=32
-turbine-aprun-run.zsh -n 32 helloworld.tcl
 ----
 
 These environment variables may be placed in your
