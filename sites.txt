@@ -1094,7 +1094,8 @@ $ ./configure
 
 === Titan
 
-Titan is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
+https://www.olcf.ornl.gov/olcf-resources/compute-systems/titan[Titan]
+is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 ==== Public installation
 
