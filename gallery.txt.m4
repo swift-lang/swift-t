@@ -23,7 +23,7 @@ common application patterns.
 
 Links:
 
-* link:guide.html[General documentation for Swift/T]
+* http://swift-lang.github.io/swift-t/guide.html[General documentation for Swift/T]
 
 * Post to https://groups.google.com/forum/#!forum/swift-t-user[the Swift
   user list] with questions about these examples.
@@ -38,7 +38,7 @@ EXAMPLE(hello-world/hello-world.swift)
 == Swift/T for shell users
 
 Swift/T has a powerful shell interface in its
-link:guide.html#app_functions[app function] syntax.  Here are some
+http://swift-lang.github.io/swift-t/guide.html#app_functions[app function] syntax.  Here are some
 advanced examples:
 
 To pass a whole command line into a generic app function, use:
@@ -56,11 +56,11 @@ can be accessed like this:
 EXAMPLE(sh-c/sh-2.swift)
 
 You can put the "program configuration" section in a separate file and
-link:guide.html#modules[+import+] it.
+http://swift-lang.github.io/swift-t/guide.html#modules[+import+] it.
 
 If you prefer, you could also put separate definitions of +program+ in
-separate files and link:guide.html#cpp_macro[conditionally +#include+]
-them with STC support for the link:guide.html#cpp[C preprocessor].
+separate files and http://swift-lang.github.io/swift-t/guide.html#cpp_macro[conditionally +#include+]
+them with STC support for the http://swift-lang.github.io/swift-t/guide.html#cpp[C preprocessor].
 
 This script converts itself to octal in +mtc.octal+.
 
@@ -72,7 +72,7 @@ _i_ +.txt+
 EXAMPLE(mtc/mtc2.swift)
 
 Note that each +/bin/echo+ is eligible to run concurrently.  See
-link:guide.html#_invocation[Invocation] for how to run with many
+http://swift-lang.github.io/swift-t/guide.html#_invocation[Invocation] for how to run with many
 processes.
 
 == Swift/T for cluster users
@@ -164,7 +164,7 @@ Python-wrapped native code- just set +PYTHONPATH+ and +import+ what
 you need.
 
 See this section for information about calling Python or Numpy:
-link:guide.html#_external_scripting_support[Swift/T Guide: Python]
+http://swift-lang.github.io/swift-t/guide.html#_external_scripting_support[Swift/T Guide: Python]
 
 [[swift_tcl]]
 == Swift/T for Tcl users
@@ -199,7 +199,7 @@ dependencies from function outputs to inputs.
 == Static executables
 
 This section demonstrates a complete, concrete example of the optional
-link:guide.html#mkstatic[static executable] feature.  First, compose a
+http://swift-lang.github.io/swift-t/guide.html#mkstatic[static executable] feature.  First, compose a
 Swift script.
 
 EXAMPLE(static-exec/hello.swift)
