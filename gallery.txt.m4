@@ -25,7 +25,7 @@ Links:
 
 * http://swift-lang.github.io/swift-t/guide.html[General documentation for Swift/T]
 
-* Post to https://groups.google.com/forum/#!forum/swift-t-user[the Swift
+* Post to https://groups.google.com/forum/#!forum/swift-t-user[the Swift/T
   user list] with questions about these examples.
 
 * These example scripts may be link:downloads/gallery.tar.gz[downloaded
