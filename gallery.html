@@ -757,7 +757,7 @@ common application patterns.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-<a href="guide.html">General documentation for Swift/T</a>
+<a href="http://swift-lang.github.io/swift-t/guide.html">General documentation for Swift/T</a>
 </p>
 </li>
 <li>
@@ -791,7 +791,7 @@ printf("Hello world!");</code></pre>
 <h2 id="_swift_t_for_shell_users">2. Swift/T for shell users</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Swift/T has a powerful shell interface in its
-<a href="guide.html#app_functions">app function</a> syntax.  Here are some
+<a href="http://swift-lang.github.io/swift-t/guide.html#app_functions">app function</a> syntax.  Here are some
 advanced examples:</p></div>
 <div class="paragraph"><p>To pass a whole command line into a generic app function, use:</p></div>
 <div class="paragraph"><p><strong>File:</strong> <code>sh-c/sh-1.swift</code></p></div>
@@ -838,10 +838,10 @@ tokens = ["this","is","my","message"];
 f(string_join(tokens," "));</code></pre>
 </div></div>
 <div class="paragraph"><p>You can put the "program configuration" section in a separate file and
-<a href="guide.html#modules"><code>import</code></a> it.</p></div>
+<a href="http://swift-lang.github.io/swift-t/guide.html#modules"><code>import</code></a> it.</p></div>
 <div class="paragraph"><p>If you prefer, you could also put separate definitions of <code>program</code> in
-separate files and <a href="guide.html#cpp_macro">conditionally <code>#include</code></a>
-them with STC support for the <a href="guide.html#cpp">C preprocessor</a>.</p></div>
+separate files and <a href="http://swift-lang.github.io/swift-t/guide.html#cpp_macro">conditionally <code>#include</code></a>
+them with STC support for the <a href="http://swift-lang.github.io/swift-t/guide.html#cpp">C preprocessor</a>.</p></div>
 <div class="paragraph"><p>This script converts itself to octal in <code>mtc.octal</code>.</p></div>
 <div class="paragraph"><p><strong>File:</strong> <code>mtc/mtc1.swift</code></p></div>
 <div class="listingblock">
@@ -875,7 +875,7 @@ foreach line,i in lines
 }</code></pre>
 </div></div>
 <div class="paragraph"><p>Note that each <code>/bin/echo</code> is eligible to run concurrently.  See
-<a href="guide.html#_invocation">Invocation</a> for how to run with many
+<a href="http://swift-lang.github.io/swift-t/guide.html#_invocation">Invocation</a> for how to run with many
 processes.</p></div>
 </div>
 </div>
@@ -1040,7 +1040,7 @@ bundled interpreter!  You can load Python packages, including
 Python-wrapped native code- just set <code>PYTHONPATH</code> and <code>import</code> what
 you need.</p></div>
 <div class="paragraph"><p>See this section for information about calling Python or Numpy:
-<a href="guide.html#_external_scripting_support">Swift/T Guide: Python</a></p></div>
+<a href="http://swift-lang.github.io/swift-t/guide.html#_external_scripting_support">Swift/T Guide: Python</a></p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1098,7 +1098,7 @@ dependencies from function outputs to inputs.</p></div>
 <h2 id="_static_executables">8. Static executables</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>This section demonstrates a complete, concrete example of the optional
-<a href="guide.html#mkstatic">static executable</a> feature.  First, compose a
+<a href="http://swift-lang.github.io/swift-t/guide.html#mkstatic">static executable</a> feature.  First, compose a
 Swift script.</p></div>
 <div class="paragraph"><p><strong>File:</strong> <code>static-exec/hello.swift</code></p></div>
 <div class="listingblock">
@@ -1143,7 +1143,7 @@ mpicc -static  -o hello.x hello_main.o ${TURBINE_LIBS} ${TURBINE_RPATH}</code></
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2018-01-02 10:28:22 CST
+Last updated 2018-09-13 15:17:06 CDT
 </div>
 </div>
 </body>
