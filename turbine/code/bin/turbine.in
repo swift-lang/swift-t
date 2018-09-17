@@ -127,7 +127,7 @@ fi
 
 # Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   echo "Turbine installation is broken!"
   exit 1
