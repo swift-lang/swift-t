@@ -895,7 +895,7 @@ AC_ARG_WITH(tcl-version,
                     use highest version we can find]),
     [
         TCL_VERSION=${withval}
-        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
+        AC_MSG_NOTICE([user specified Tcl version ${TCL_VERSION}])
         LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
     ],
     [
@@ -961,7 +961,7 @@ AC_ARG_WITH(tclsh-local,
         [--with-tclsh-local],
         [name of tclsh compatible with build system]),
     [
-        AC_MSG_CHECKING([for Tcl (version: $TCL_VERSION) local executable in: ${withval}])
+        AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION) local executable in: ${withval}])
         USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
         if [[ ${?} != 0 ]]
         then
@@ -1096,10 +1096,11 @@ fi
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
+    AC_MSG_RESULT([checking for Tcl executable in ${USE_TCL} ...])
     USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary in ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable in ${USE_TCL}!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
@@ -1107,7 +1108,7 @@ else
     USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary at ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable at ${USE_TCL}!])
     fi
 fi
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
