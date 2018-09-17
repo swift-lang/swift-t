@@ -9,6 +9,8 @@ source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 
+[[ $SKIP == *T* ]] && exit
+
 LOG $LOG_INFO "Building Turbine"
 cd ${TURBINE_SRC}
 
