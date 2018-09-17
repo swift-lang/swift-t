@@ -8,12 +8,6 @@ set -eu
 # Currently used by configure
 # This should support the minimal POSIX shell
 
-DIR=$1
-NO_RUN=${NO_RUN:-0}
-
-THIS=$( dirname $0 )
-SWIFT_T=$( cd $THIS/../../.. ; /bin/pwd )
-
 # Copied from /dev/helpers.sh: Cannot source that file (#111)
 crash()
 {
@@ -26,6 +20,11 @@ if [ ${#} = 0 ]
 then
   crash "Not given: Tcl directory"
 fi
+DIR=$1
+NO_RUN=${NO_RUN:-0}
+
+THIS=$( dirname $0 )
+SWIFT_T=$( cd $THIS/../../.. ; /bin/pwd )
 
 if ! [ -d $DIR ]
 then
@@ -37,7 +36,7 @@ then
   crash "Not set: TCL_VERSION"
 fi
 
-# Loop over F: the tclsh executable file
+# Loop over F: the possible tclsh executable files
 FILES="$DIR/bin/tclsh$TCL_VERSION $DIR/bin/tclsh"
 for F in $FILES
 do
