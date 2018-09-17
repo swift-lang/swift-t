@@ -78,12 +78,3 @@ def json_get(filename, path):
     J = json_path(filename, path)
     return str(J)
 
-# Turn this on for test runs
-test = False
-
-if test:
-    print json_type("/home/wozniak/test.json", "main")
-    print json_list_length("/home/wozniak/test.json", "main")
-    print json_get("/home/wozniak/test.json", "main")
-    print json_dict_entries("/home/wozniak/test.json", "repository")
-    print json_get("/home/wozniak/test.json", "repository,url")
