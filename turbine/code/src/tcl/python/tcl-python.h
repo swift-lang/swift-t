@@ -21,9 +21,6 @@
  *      Author: wozniak
  */
 
-#ifndef TCL_PYTHON_H
-#define TCL_PYTHON_H
+#pragma once
 
 void tcl_python_init(Tcl_Interp* interp);
-
-#endif
