@@ -233,8 +233,7 @@ ADLB_Server(long max_memory)
 
     update_cached_time(); // Periodically refresh timestamp
 
-    adlb_code code;
-    code = serve_several();
+    adlb_code code = serve_several();
     ADLB_CHECK(code);
 
     update_cached_time(); // Periodically refresh timestamp
@@ -242,11 +241,9 @@ ADLB_Server(long max_memory)
     check_steal();
   }
 
-  adlb_code result;
-
   // Print stats, then cleanup all modules
   print_final_stats();
-  result = server_shutdown();
+  adlb_code result = server_shutdown();
 
   TRACE_END;
   return result;
