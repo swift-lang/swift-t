@@ -893,7 +893,7 @@ xlb_recheck_single_queues(void)
 }
 
 /**
-  Try to match parallel tasks between work queue and reqeust queue
+  Try to match parallel tasks between work queue and request queue
   return ADLB_SUCCESS if any matches, ADLB_NOTHING if no matches
  */
 static adlb_code
