@@ -46,6 +46,7 @@
 
 #if HAVE_PYTHON==1
 
+/** @return A Tcl return code */
 static int
 handle_python_exception(bool exceptions_are_errors)
 {
@@ -88,7 +89,8 @@ static PyObject* local_dict  = NULL;
 
 static bool initialized = false;
 
-static int python_init(void)
+static int
+python_init(void)
 {
 /* Loading python library symbols so that dynamic extensions don't throw symbol not found error.
            Ref Link: http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
@@ -214,14 +216,36 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   printf("code: %s\n", code);
   printf("expr: %s\n", expr);
 
+
+  int rc;
+  rc = python_init();
+  assert(rc == TCL_OK);
+
+  PyRun_String("print(\"warmup\")", Py_file_input, main_dict, local_dict);
+  if (PyErr_Occurred()) { printf("ERROR\n"); }
+  printf("warmup ok.\n");   fflush(stdout);
+
+  long long int task_comm_int = (long long int) comm;
+  PyObject* globals = PyEval_GetGlobals();
+  PyObject* key = PyBytes_FromString("task_comm");
+  PyObject* task_comm = PyLong_FromLong(task_comm_int);
+  PyObject_SetItem(globals, key, task_comm);
+
+  printf("comm ok.\n");   fflush(stdout);
+
+  // PyObject* globals = PyEval_GetGlobals();
   char* output;
-  int rc = python_eval(true, true, code, expr, &output);
+  rc = python_eval(true, true, code, expr, &output);
   if (rc != TCL_OK)
   {
     printf("python parallel task failed!\n");
     exit(EXIT_FAILURE);
   }
 
+  printf("eval ok.\n");   fflush(stdout);
+
+  // Py_DECREF(task_comm);
+  // Py_DECREF(globals);
   MPI_Comm_free(&comm);
   if (task_rank == 0)
     // Return a real value
