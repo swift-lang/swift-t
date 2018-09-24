@@ -3,7 +3,8 @@ set -eu
 
 # MK UPSTREAM TGZ
 # For Debian package or Spack: Make the upstream or source TGZ
-# Used internally by Makefiles
+# Used internally by Makefiles for Debian
+# Used by dev/build-spacks.sh
 # This is used for one individual module at a time:
 #      ExM c-utils, ADLB/X, Turbine, or STC.
 
