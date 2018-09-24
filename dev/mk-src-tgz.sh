@@ -4,8 +4,8 @@ set -eu
 # MK UPSTREAM TGZ
 # For Debian package or Spack: Make the upstream or source TGZ
 # Used internally by Makefiles
-
-echo "Building upstream TGZ..."
+# This is used for one individual module at a time:
+#      ExM c-utils, ADLB/X, Turbine, or STC.
 
 if [ ${#} != 5 ]
 then
@@ -19,6 +19,8 @@ TGZ=$2             # Output TGZ file
 NAME=$3            # TGZ name
 VERSION=$4         # TGZ version
 FILE_LIST=$5       # Program that produces list of files to include
+
+echo "Building upstream TGZ for $NAME ..."
 
 # Export PKG_TYPE and DEB_TYPE to FILE_LIST program
 export PKG_TYPE=$PKG_TYPE
@@ -37,7 +39,10 @@ then
   NAME=$NAME-dev
 fi
 
-echo NAME: $NAME
+if ! [ -f configure ] || [ configure.ac -nt configure ]
+then
+  ./bootstrap
+fi
 
 D=$( mktemp -d .$NAME-$DEB_TYPE-tgz-XXX )
 mkdir -v $D/$NAME-$VERSION
@@ -53,3 +58,4 @@ tar cfz $TGZ -C $D $NAME-$VERSION
 
 echo "Created $PWD $TGZ"
 rm -r $D
+echo
