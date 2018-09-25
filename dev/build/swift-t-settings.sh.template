@@ -78,7 +78,8 @@ SWIFT_T_TRACE_BUILD=0
 
 # Enable Python integration
 ENABLE_PYTHON=0 # Finds Python in PATH
-# or specify the Python interpreter executable
+# Specify the Python interpreter executable below;
+# if empty, looks for python in PATH
 PYTHON_EXE=""
 # PYTHON_EXE=$HOME/sfw/Python-2.7.10/bin/python
 
