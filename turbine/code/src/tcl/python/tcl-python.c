@@ -36,7 +36,9 @@
 #include <dlfcn.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
+#include <mpi.h>
 #include <tcl.h>
 
 #include "src/util/debug.h"
@@ -107,6 +109,7 @@ python_init(void)
 
   if (initialized) return TCL_OK;
   DEBUG_TCL_TURBINE("python: initializing...");
+  printf("python: initializing...\n");
   Py_InitializeEx(1);
   main_module  = PyImport_AddModule("__main__");
   if (main_module == NULL) return handle_python_exception(true);
@@ -151,11 +154,13 @@ python_eval(bool persist, bool exceptions_are_errors,
 
   // Execute code:
   DEBUG_TCL_TURBINE("python: code: %s", code);
+  printf("python: code: %s\n", code); fflush(stdout);
   PyRun_String(code, Py_file_input, main_dict, local_dict);
   if (PyErr_Occurred()) EXCEPTION(exceptions_are_errors);
 
   // Evaluate expression:
   DEBUG_TCL_TURBINE("python: expr: %s", expr);
+  printf("python: expr: %s\n", expr); fflush(stdout);
   PyObject* o = PyRun_String(expr, Py_eval_input,
                              main_dict, local_dict);
   if (o == NULL) EXCEPTION(exceptions_are_errors);
@@ -216,24 +221,15 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   printf("code: %s\n", code);
   printf("expr: %s\n", expr);
 
+  long long int task_comm_int = (long long int) comm;
+  char task_comm_string[64];
+  sprintf(task_comm_string, "%lli", task_comm_int);
+  setenv("task_comm", task_comm_string, true);
 
   int rc;
   rc = python_init();
   assert(rc == TCL_OK);
 
-  PyRun_String("print(\"warmup\")", Py_file_input, main_dict, local_dict);
-  if (PyErr_Occurred()) { printf("ERROR\n"); }
-  printf("warmup ok.\n");   fflush(stdout);
-
-  long long int task_comm_int = (long long int) comm;
-  PyObject* globals = PyEval_GetGlobals();
-  PyObject* key = PyBytes_FromString("task_comm");
-  PyObject* task_comm = PyLong_FromLong(task_comm_int);
-  PyObject_SetItem(globals, key, task_comm);
-
-  printf("comm ok.\n");   fflush(stdout);
-
-  // PyObject* globals = PyEval_GetGlobals();
   char* output;
   rc = python_eval(true, true, code, expr, &output);
   if (rc != TCL_OK)
@@ -244,13 +240,9 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
 
   printf("eval ok.\n");   fflush(stdout);
 
-  // Py_DECREF(task_comm);
-  // Py_DECREF(globals);
   MPI_Comm_free(&comm);
   if (task_rank == 0)
-    // Return a real value
     return output;
-  // Return a placeholder
   free(output);
   return NULL;
 }
