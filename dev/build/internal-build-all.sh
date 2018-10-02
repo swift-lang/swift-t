@@ -7,6 +7,7 @@ THIS=$( cd $(dirname $0) && /bin/pwd )
 
 ${THIS}/check-tools.sh
 source ${THIS}/functions.sh
+source ${THIS}/options.sh
 
 LOG $LOG_INFO ""
 ${THIS}/build-cutils.sh
