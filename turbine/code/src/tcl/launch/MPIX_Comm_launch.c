@@ -140,7 +140,7 @@ static double info_get_timeout(MPI_Comm comm, MPI_Info info) {
 
 static inline void chdir_checked(MPI_Comm comm, const char* d);
 
-static void info_chdir(MPI_Comm comm, MPI_Comm info) {
+static void info_chdir(MPI_Comm comm, MPI_Info info) {
 
 	// Did the user set chdir=dir ?
 	if(MPI_INFO_NULL == info) return;
