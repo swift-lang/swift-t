@@ -251,7 +251,7 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
 #else // Python disabled
 
 static int
-Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp
+Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
   return turbine_user_errorv(interp,

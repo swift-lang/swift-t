@@ -471,8 +471,12 @@ AC_SUBST(USE_MPI_LIB_A)
 AC_SUBST(USE_MPI_LIB_EXTRA_A)
 
 # Discover MPI implementation:
-# MPI_IMPL will be unknown, OpenMPI, or MPICH
+# MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
+# 2018/09/29: We no longer put version information in these tokens
+#             Add new variables if we need that.
 MPI_IMPL=unknown
+HAVE_MPI_IMPL_MPICH=0
+HAVE_MPI_IMPL_OPENMPI=0
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
@@ -487,9 +491,10 @@ fi
 AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
+   HAVE_MPI_IMPL_OPENMPI=1
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
-   MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
+   MPI_IMPL="OpenMPI"
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
      LINE_PREFIX="-tag-output"
@@ -498,11 +503,16 @@ then
    fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
-   MPI_IMPL=MPICH2
+   HAVE_MPI_IMPL_MPICH=0
+   MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 fi # ENABLE_MPI_CHECKS==1
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
+                   ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
+                   ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
