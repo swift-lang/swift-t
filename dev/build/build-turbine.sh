@@ -3,7 +3,9 @@ set -eu
 
 # BUILD TURBINE
 
-THIS=$( dirname $0 )
+THIS=$(   dirname  $0 )
+SCRIPT=$( basename $0 )
+
 ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
 source ${THIS}/options.sh
