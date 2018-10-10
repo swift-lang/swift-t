@@ -258,6 +258,19 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                      "Turbine not compiled with Python support");
 }
 
+char*
+python_parallel_persist(MPI_Comm comm, char* code, char* expr)
+{
+  int task_rank, task_size;
+  MPI_Comm_rank(comm, &task_rank);
+  MPI_Comm_size(comm, &task_size);
+  printf("python_parallel_persist: "
+         "Turbine not compiled with Python support");
+  if (task_rank == 0)
+    return strdup("__ERROR__");
+  return NULL;
+}
+
 #endif
 
 
