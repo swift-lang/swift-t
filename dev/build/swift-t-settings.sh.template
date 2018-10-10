@@ -208,6 +208,9 @@ ENABLE_MKSTATIC_CRC=0
 # module swap PrgEnv-pgi PrgEnv-gnu
 # module load java
 
+# Summitdev:
+# module load spectrum-mpi
+
 # Local Variables:
 # mode: sh
 # End:
