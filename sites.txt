@@ -40,7 +40,7 @@ These are maintained by the Swift/T team.  Because they may become out
 of date after a release, the release version and a timestamp are
 recorded below.
 
-To request maintenance on a public installation, simply email
+To request maintenance on a public installation, simply email +
 swift-t-user@googlegroups.com .
 
 === Build procedures
@@ -1132,7 +1132,7 @@ This uses:
 This installation is for the general public, particularly INSPIRE and
 CANDLE users.
 
-Add to PATH: +
+Add to +PATH+: +
 ----
 /ccs/proj/csc249/CANDLE/Public/sfw/swift-t/2018-09-11/stc/bin
 ----
