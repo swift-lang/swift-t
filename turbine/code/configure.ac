@@ -219,6 +219,11 @@ USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
 ENABLE_MPI_CHECKS=1
+# The label is just for 'turbine -v' output
+# It may be "(unknown)" if MPI checks are disabled
+MPI_LABEL=""
+MPI_LABEL_DIR=""
+MPI_LABEL_LIB=""
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -230,6 +235,7 @@ AC_ARG_WITH(mpi,
         fi
         USE_MPI_DIR=${withval}
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
     [])
@@ -280,6 +286,7 @@ then
                                   --enable-custom-mpi or
                                   or mpicc in PATH .])
    fi
+   MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
@@ -326,15 +333,17 @@ AC_ARG_WITH(mpi-lib-dir,
                    [directory containing MPI lib (usually libmpich)]),
     [
         USE_MPI_LIB_DIR=${withval}
+        MPI_LABEL_DIR="${USE_MPI_LIB_DIR}"
     ],
     [])
 
 AC_ARG_WITH(mpi-lib-name,
     AS_HELP_STRING([--with-mpi-lib-name],
-                   [name of MPI lib (usually mpich) -
+                   [name of MPI lib (usually mpi or mpich) -
                     assumes mpi-lib-dir has been given]),
     [
         USE_MPI_LIB_NAME=${withval}
+	MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
     ],
     [])
 
@@ -354,7 +363,7 @@ AC_ARG_WITH(mpi-lib-extra,
 
 # Now check MPI settings
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ENABLE_MPI_CHECKS ))
 then
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
@@ -366,7 +375,7 @@ MPI_LIB_FOUND=0
 if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
   MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-
+  echo MPI_LIB_DIR_ALTS $MPI_LIB_DIR_ALTS
   if [[ ! -z "${DPKG_ARCH}" ]]
   then
     MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
@@ -395,6 +404,8 @@ do
       MPI_LIB_FOUND=1
       USE_MPI_LIB_DIR="${MPI_LIB_DIR_ALT}"
       USE_MPI_LIB_NAME="${MPI_LIB_NAME_ALT}"
+      MPI_LABEL_DIR=${USE_MPI_LIB_DIR}
+      MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
       break 2
     else
       AC_MSG_RESULT([no])
@@ -407,6 +418,15 @@ then
   AC_MSG_ERROR([Could not find MPI library in any alternative locations])
 fi
 fi
+
+# Set MPI_LABEL
+if [[ -n "${MPI_LABEL_DIR}${MPI_LABEL_LIB}" ]]
+then
+  MPI_LABEL="${MPI_LABEL_DIR} ${MPI_LABEL_LIB}"
+else
+  MPI_LABEL="(unknown)"
+fi
+echo MPI_LABEL $MPI_LABEL
 
 # Set MPI options
 
@@ -460,6 +480,8 @@ then
 fi
 fi
 
+MPI_LABEL=${MPI_LABEL:-(unknown)}
+
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
@@ -469,6 +491,7 @@ AC_SUBST(USE_MPI_LIB_NAME)
 AC_SUBST(USE_MPI_LIB_SPEC)
 AC_SUBST(USE_MPI_LIB_A)
 AC_SUBST(USE_MPI_LIB_EXTRA_A)
+AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
 # MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
