@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">July 2018</span><br />
+<span id="author">October 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -821,7 +821,7 @@ Install:
 <div class="paragraph"><p>Simply clone Spack and install STC.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ git clone https://github.com/llnl/spack.git
+<pre><code>$ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
 $ spack install stc</code></pre>
 </div></div>
@@ -935,7 +935,7 @@ Obtain the Swift/T source package from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.1.tar.gz</code></pre>
+<pre><code>wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.3.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -944,8 +944,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-1.4.1.tar.gz
-cd swift-t-1.4.1</code></pre>
+<pre><code>tar xfz swift-t-1.4.3.tar.gz
+cd swift-t-1.4.3</code></pre>
 </div></div>
 </li>
 <li>
@@ -5226,396 +5226,7 @@ The rank of the leader process on this node (cf. <a href="#hooks">hooks</a>).
 </div>
 </div>
 <div class="sect2">
-<h3 id="Build_configuration">17.4. Build configuration</h3>
-<div class="paragraph"><p>The following describes how to run Swift/T programs in Turbine
-on more complex systems.</p></div>
-<div class="sect3">
-<h4 id="_build_features">17.4.1. Build features</h4>
-<div class="paragraph"><p>You may run these individually to rebuild particular modules:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<code>build-cutils.sh</code>
-</p>
-</li>
-<li>
-<p>
-<code>build-lb.sh</code>
-</p>
-</li>
-<li>
-<p>
-<code>build-turbine.sh</code>
-</p>
-</li>
-<li>
-<p>
-<code>build-stc.sh</code>
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>or <code>build-swift-t.sh</code> to build them all.</p></div>
-<div class="paragraph"><p>The following flags affect <code>build-*.sh</code>.</p></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>-B</code>
-</dt>
-<dd>
-<p>
-Force run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
-scripts.  Use this if you change <code>configure.ac</code>, etc.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-c</code>
-</dt>
-<dd>
-<p>
-Do not <code>make clean</code>.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-C</code>
-</dt>
-<dd>
-<p>
-Do not <code>configure</code>.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-f</code>
-</dt>
-<dd>
-<p>
-Fast: same as <code>-cC</code>.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-h</code>
-</dt>
-<dd>
-<p>
-Report a help message.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-m</code>
-</dt>
-<dd>
-<p>
-No <code>make</code>: <code>configure</code> only.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-q</code>
-</dt>
-<dd>
-<p>
-Reduce verbosity.  May be given more than once.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-s &lt;M&gt;</code>
-</dt>
-<dd>
-<p>
-Skip module <code>M</code>, where <code>M</code> is <code>S</code> for STC or <code>T</code> for Turbine
-(including ADLB and c-utils).
-Useful with <code>-f</code> when you know what needs to be rebuilt.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-v</code>
-</dt>
-<dd>
-<p>
-Increase verbosity.  May be given more than once.
-</p>
-</dd>
-<dt class="hdlist1">
-<code>-y</code>
-</dt>
-<dd>
-<p>
-DrY run- do not <code>make install</code>.
-</p>
-</dd>
-</dl></div>
-</div>
-<div class="sect3">
-<h4 id="_build_troubleshooting">17.4.2. Build troubleshooting</h4>
-<div class="paragraph"><p>If <code>build-swift-t.sh</code> does not succeed, you may need to change how it
-tries to configure and compile Swift/T.</p></div>
-<div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  <code>build-swift-t.sh</code> will usually
-report the step at which configuration failed.  For example, if it was unable
-to locate a valid Tcl install, it will report this.  Then  you can try
-these steps to resolve the problem:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-If your system is covered by the <a href="sites.html">Sites Guide</a>,
-   check to see if the problem and solution are described there.
-</p>
-</li>
-<li>
-<p>
-Inspect <code>swift-t-settings.sh</code> settings related to the reported problem.
-  For example, if locating a Tcl install failed, setting
-  the <code>TCL_INSTALL</code> and <code>TCL_VERSION</code> variables to the correct location
-  and version may help.
-</p>
-</li>
-<li>
-<p>
-If the options in <code>swift-t-settings.sh</code> do not give sufficient control to
-  fix the problem, you may need to manually configure some components
-  of Swift/T, as described in the next section.
-</p>
-</li>
-</ol></div>
-</div>
-<div class="sect3">
-<h4 id="build_manual">17.4.3. Manual configuration</h4>
-<div class="paragraph"><p><code>build-swift-t.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
-install Swift/T from the downloadable package or from a Git clone.
-However, this method does not allow full control over
-the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile &#169; techniques.  You can more directly control
-the configuration when building through the arguments to <code>ant</code> or
-<code>configure</code>.</p></div>
-<div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
-distribution package or clone from
-<a href="https://github.com/swift-lang/swift-t">GitHub</a> and do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>cd c-utils/code
-./configure ...
-make install
-
-cd ../../lb/code
-./configure ...
-make install
-
-cd ../../turbine/code
-./configure ...
-make install
-
-cd ../../stc/code
-ant install -Ddist.dir=... -Dturbine.home=...</code></pre>
-</div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">Use <code>./configure --help</code> and the <a href="sites.html">Sites Guide</a>
-for further options.</td>
-</tr></table>
-</div>
-<div class="paragraph"><p>To obtain the latest source from GitHub, do:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>git clone https://github.com/swift-lang/swift-t.git</code></pre>
-</div></div>
-<div class="sect4">
-<h5 id="_makefile_debugging">Makefile debugging</h5>
-<div class="paragraph"><p>Use <code>make V=1</code> to get verbose output from our Makefiles.</p></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_non_standard_mpi_locations">17.4.4. Non-standard MPI locations</h4>
-<div class="paragraph"><p>Sometimes simply specifying the MPI directory is not enough to
-configure Swift/T.</p></div>
-<div class="paragraph"><p>You can modify these settings in <code>swift-t-settings.sh</code> to more
-precisely define locations of MPI resources:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>EXM_CUSTOM_MPI=1
-MPI_INCLUDE=/path/to/mpi.h/include
-MPI_LIB_DIR=/path/to/mpi_lib/lib
-MPI_LIB_NAME=funny.mpi.a</code></pre>
-</div></div>
-<div class="paragraph"><p>If you are following the manual build process, configure Turbine with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code> --enable-custom-mpi
- --with-mpi-include=/path/to/mpi.h/include
- --with-mpi-lib-dir=/path/to/mpi_lib/lib
- --with-mpi-lib-name=funny.mpi.a</code></pre>
-</div></div>
-</div>
-<div class="sect3">
-<h4 id="_external_scripting">17.4.5. External scripting</h4>
-<div class="sect4">
-<h5 id="build_python">Python</h5>
-<div class="paragraph"><p>To build Swift/T with Python, either:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-When using <code>build-swift-t.sh</code>: Set <code>ENABLE_PYTHON=1</code> in
- <code>swift-t-settings.sh</code>.
-</p>
-</li>
-<li>
-<p>
-When doing a <a href="#build_manual">manual build</a> provide the
- <code>--enable-python</code> argument to <code>configure</code>.
- See <code>./configure --help</code> for further options.
-</p>
-</li>
-<li>
-<p>
-When running, you may need to set <code>PYTHONPATH</code> to the installation
-  directory.  For example:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7</code></pre>
-</div></div>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="build_r">R</h5>
-<div class="paragraph"><p>To build Swift/T with R, either:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-When using <code>build-swift-t.sh</code>: set <code>ENABLE_R=1</code> in
- <code>swift-t-settings.sh</code>.
-</p>
-</li>
-<li>
-<p>
-When doing a <a href="#build_manual">manual build</a> provide the <code>--with-r</code>
- argument to <code>configure</code>.  See <code>./configure&nbsp;--help</code> for further
- options.
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>Other notes:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-When installing R from a binary package, be sure to include the
-  <code>devel</code> package.
-</p>
-</li>
-<li>
-<p>
-When installing R from source, configure R with <code>--enable-R-shlib</code>.
-</p>
-</li>
-<li>
-<p>
-When running, you may need to set the environment variable <code>R_HOME</code>
- to the directory containing the R installation.  For the APT package,
- this is <code>/usr/lib/R</code>.
-</p>
-</li>
-<li>
-<p>
-When running, you may need to set the environment variable <code>LD_LIBRARY_PATH</code>
- to include the directory containing the R shared library.  For a
- source R build on Linux, this is <code>R_HOME/lib/R/lib</code>.
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="build_julia">Julia</h5>
-<div class="paragraph"><p>To build Swift/T with Julia, either:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-When using <code>build-swift-t.sh</code>: set <code>ENABLE_JULIA=1</code> in
- <code>swift-t-settings.sh</code>.
-</p>
-</li>
-<li>
-<p>
-When doing a <a href="#build_manual">manual build</a> provide the
- <code>--enable-julia</code> argument to <code>configure</code>.  See <code>./configure --help</code>
- for further options.
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="build_jvm">JVM languages module</h5>
-<div class="ulist"><ul>
-<li>
-<p>
-Using the JVM languages currently requires a <a href="#build_manual">manual build</a>.
-</p>
-</li>
-<li>
-<p>
-Clone the Swift/T JVM Engine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>cd turbine/code
-git clone                                                            \
-  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
-  swift-t-jvm</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Build the Swift/T JVM Engine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>cd swift-t-jvm
-./bootstrap
-./configure
-make</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Build Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>cd turbine/code
-./configure --enable-jvm-scripting
-make install</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-At runtime, set environment variable <code>LD_LIBRARY_PATH</code> to contain
-the JVM lib and the Swift/T JVM Engine lib (where <code>SWIFT_T</code> is your
-Swift/T source directory):
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export LD_LIBRARY_PATH=
-LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
-LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-At runtime, set environment variable <code>SWIFT_JVM_USER_LIB</code> to contain
-Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source directory):
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes</code></pre>
-</div></div>
-</li>
-</ul></div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_performance_enhancements">17.5. Performance enhancements</h3>
+<h3 id="_performance_enhancements">17.4. Performance enhancements</h3>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
@@ -5675,7 +5286,7 @@ Use <a href="#mkstatic"><code>mkstatic.tcl</code></a> to create a standalone exe
 </ol></div>
 </div>
 <div class="sect2">
-<h3 id="mkstatic">17.6. Building standalone executables with <code>mkstatic.tcl</code></h3>
+<h3 id="mkstatic">17.5. Building standalone executables with <code>mkstatic.tcl</code></h3>
 <div class="paragraph"><p>It is possible to build a fully self-contained executable, including
 all Tcl scripts and compiled code, provided that all dependencies support
 static linking.  If not, it is also possible to build an executable with
@@ -5860,7 +5471,7 @@ Pretend empty manifest present
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="debugging">17.7. Debugging Swift/T runs</h3>
+<h3 id="debugging">17.6. Debugging Swift/T runs</h3>
 <div class="paragraph"><p>Applying the debugger allows you to debug native code linked to Swift/T
 from a normal debugger.  This allows you to step through your leaf
 function code (and the Swift/T run time libraries).</p></div>
@@ -5880,7 +5491,7 @@ When using <code>mkstatic</code>, you generate a complete executable.  You can
 </li>
 </ul></div>
 <div class="sect3">
-<h4 id="valgrind">17.7.1. Valgrind</h4>
+<h4 id="valgrind">17.6.1. Valgrind</h4>
 <div class="paragraph"><p>The Swift/T launcher scripts support <a href="http://valgrind.org">valgrind</a>.
 Simply set the environment variable <code>VALGRIND</code> to the valgrind command
 you wish to use.  A suppressions file is distributed with Turbine to
@@ -5893,7 +5504,7 @@ swift-t program.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="gdb">17.7.2. GDB</h4>
+<h4 id="gdb">17.6.2. GDB</h4>
 <div class="paragraph"><p>The Turbine library provides a convenient attachment mechanism
 compatible with debuggers like GDB, Eclipse, etc.  You attach to a
 Turbine execution by using the <code>GDB_RANK</code> variable:</p></div>
@@ -5910,7 +5521,7 @@ waiting for the debugger to attach.  When you attach, set the variable
 </div>
 </div>
 <div class="sect2">
-<h3 id="mpe">17.8. Profiling with the Message Passing Environment (MPE)</h3>
+<h3 id="mpe">17.7. Profiling with the Message Passing Environment (MPE)</h3>
 <div class="paragraph"><p>The Message Passing Environment
 (<a href="http://www.mcs.anl.gov/research/projects/perfvis/software/MPE">MPE</a>)
 is a profiling library for MPI-based applications like Swift/T.  By
@@ -5919,7 +5530,7 @@ Swift/T internals and your user tasks.</p></div>
 <div class="paragraph"><p>MPE works closely with MPI, it intercepts MPI API calls to capture the
 profiling data.</p></div>
 <div class="sect3">
-<h4 id="_compiling_for_mpe">17.8.1. Compiling for MPE</h4>
+<h4 id="_compiling_for_mpe">17.7.1. Compiling for MPE</h4>
 <div class="paragraph"><p>(Thanks to Azza Ahmed for producing these instructions.)</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -6013,7 +5624,7 @@ $ make install</code></pre>
 </ol></div>
 </div>
 <div class="sect3">
-<h4 id="_runtime_usage">17.8.2. Runtime usage</h4>
+<h4 id="_runtime_usage">17.7.2. Runtime usage</h4>
 <div class="paragraph"><p>Now, when you run, ADLB will create a MPE CLOG file in <code>PWD</code>.  You can
 process it with the normal MPE tools such as Jumpshot.  It will
 contain customized ADLB-specific information.  See ADLB
@@ -6024,7 +5635,7 @@ functions with the similar names in
 such as task puts and gets, and data stores and retrieves.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_log_processing">17.8.3. Log processing</h4>
+<h4 id="_log_processing">17.7.3. Log processing</h4>
 <div class="paragraph"><p>Swift/T provides some tools to process MPE logs.  They are available
 and
 <a href="https://github.com/swift-lang/swift-t/tree/master/mpe">documented here</a>.  See also
@@ -6032,11 +5643,11 @@ and
 </div>
 </div>
 <div class="sect2">
-<h3 id="hooks">17.9. Startup/shutdown hooks</h3>
+<h3 id="hooks">17.8. Startup/shutdown hooks</h3>
 <div class="paragraph"><p>Turbine has hooks that can be accessed to execute shell scripts, Tcl
 code, or C/C++ code on each node at startup and shutdown.</p></div>
 <div class="sect3">
-<h4 id="_shell_or_tcl_hooks">17.9.1. Shell or Tcl hooks</h4>
+<h4 id="_shell_or_tcl_hooks">17.8.1. Shell or Tcl hooks</h4>
 <div class="paragraph"><p>By simply setting environment variables, you can trigger fragments of
 Tcl or shell code to execute on each node of the Swift/T run at
 startup and/or shutdown.  In this example:</p></div>
@@ -6055,7 +5666,7 @@ the lowest ranks on the node.</p></div>
 before workflow execution, and remove it on workflow completion.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_c_c_hooks">17.9.2. C/C++ hooks</h4>
+<h4 id="_c_c_hooks">17.8.2. C/C++ hooks</h4>
 <div class="paragraph"><p>If you are calling C/C++ native code from Swift/T, you can use the
 provided C/C++ shutdown hook to clean up at the end of the workflow.
 The function signature is in <code>turbine-finalizers.h</code>:</p></div>
@@ -6071,26 +5682,468 @@ Multiple functions can be registered.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_model_exploration_workflows">18. Model exploration workflows</h2>
+<h2 id="Build_configuration">18. Build configuration</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following describes how to run Swift/T programs in Turbine
+on more complex systems.</p></div>
+<div class="sect2">
+<h3 id="_build_features">18.1. Build features</h3>
+<div class="paragraph"><p>You may run these individually to rebuild particular modules:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>build-cutils.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-lb.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-turbine.sh</code>
+</p>
+</li>
+<li>
+<p>
+<code>build-stc.sh</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>or <code>build-swift-t.sh</code> to build them all.</p></div>
+<div class="paragraph"><p>The following flags affect <code>build-*.sh</code>.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>-B</code>
+</dt>
+<dd>
+<p>
+Force run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
+scripts.  Use this if you change <code>configure.ac</code>, etc.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-c</code>
+</dt>
+<dd>
+<p>
+Do not <code>make clean</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-C</code>
+</dt>
+<dd>
+<p>
+Do not <code>configure</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-f</code>
+</dt>
+<dd>
+<p>
+Fast: same as <code>-cC</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-h</code>
+</dt>
+<dd>
+<p>
+Report a help message.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-m</code>
+</dt>
+<dd>
+<p>
+No <code>make</code>: <code>configure</code> only.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-q</code>
+</dt>
+<dd>
+<p>
+Reduce verbosity.  May be given more than once.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-s &lt;M&gt;</code>
+</dt>
+<dd>
+<p>
+Skip module <code>M</code>, where <code>M</code> is <code>S</code> for STC or <code>T</code> for Turbine
+(including ADLB and c-utils).
+Useful with <code>-f</code> when you know what needs to be rebuilt.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-v</code>
+</dt>
+<dd>
+<p>
+Increase verbosity.  May be given more than once.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-y</code>
+</dt>
+<dd>
+<p>
+DrY run- do not <code>make install</code>.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_build_troubleshooting">18.2. Build troubleshooting</h3>
+<div class="paragraph"><p>If <code>build-swift-t.sh</code> does not succeed, you may need to change how it
+tries to configure and compile Swift/T.</p></div>
+<div class="paragraph"><p>Troubleshooting a build problem can require a few steps.  The first
+step is to determine why the build failed.  <code>build-swift-t.sh</code> will usually
+report the step at which configuration failed.  For example, if it was unable
+to locate a valid Tcl install, it will report this.  Then  you can try
+these steps to resolve the problem:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+If your system is covered by the <a href="sites.html">Sites Guide</a>,
+   check to see if the problem and solution are described there.
+</p>
+</li>
+<li>
+<p>
+Inspect <code>swift-t-settings.sh</code> settings related to the reported problem.
+  For example, if locating a Tcl install failed, setting
+  the <code>TCL_INSTALL</code> and <code>TCL_VERSION</code> variables to the correct location
+  and version may help.
+</p>
+</li>
+<li>
+<p>
+If the options in <code>swift-t-settings.sh</code> do not give sufficient control to
+  fix the problem, you may need to manually configure some components
+  of Swift/T, as described in the next section.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="build_manual">18.3. Manual configuration</h3>
+<div class="paragraph"><p><code>build-swift-t.sh</code> and <code>swift-t-settings.sh</code> provide a convenient way to
+install Swift/T from the downloadable package or from a Git clone.
+However, this method does not allow full control over
+the configuration.  Swift/T is built with standard Ant (Java) and
+Autotools/Makefile &#169; techniques.  You can more directly control
+the configuration when building through the arguments to <code>ant</code> or
+<code>configure</code>.</p></div>
+<div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
+distribution package or clone from
+<a href="https://github.com/swift-lang/swift-t">GitHub</a> and do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd c-utils/code
+./configure ...
+make install
+
+cd ../../lb/code
+./configure ...
+make install
+
+cd ../../turbine/code
+./configure ...
+make install
+
+cd ../../stc/code
+ant install -Ddist.dir=... -Dturbine.home=...</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Use <code>./configure --help</code> and the <a href="sites.html">Sites Guide</a>
+for further options.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>To obtain the latest source from GitHub, do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>git clone https://github.com/swift-lang/swift-t.git</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_makefile_debugging">18.3.1. Makefile debugging</h4>
+<div class="paragraph"><p>Use <code>make V=1</code> to get verbose output from our Makefiles.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_non_standard_mpi_locations">18.4. Non-standard MPI locations</h3>
+<div class="paragraph"><p>Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.</p></div>
+<div class="paragraph"><p>You can modify these settings in <code>swift-t-settings.sh</code> to more
+precisely define locations of MPI resources:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a</code></pre>
+</div></div>
+<div class="paragraph"><p>If you are following the manual build process, configure Turbine with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> --enable-custom-mpi
+ --with-mpi-include=/path/to/mpi.h/include
+ --with-mpi-lib-dir=/path/to/mpi_lib/lib
+ --with-mpi-lib-name=funny.mpi.a</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_external_scripting">18.5. External scripting</h3>
+<div class="sect3">
+<h4 id="build_python">18.5.1. Python</h4>
+<div class="paragraph"><p>To build Swift/T with Python, either:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+When using <code>build-swift-t.sh</code>: Set <code>ENABLE_PYTHON=1</code> in
+ <code>swift-t-settings.sh</code>.
+</p>
+</li>
+<li>
+<p>
+When doing a <a href="#build_manual">manual build</a> provide the
+ <code>--enable-python</code> argument to <code>configure</code>.
+ See <code>./configure --help</code> for further options.
+</p>
+</li>
+<li>
+<p>
+When running, you may need to set <code>PYTHONPATH</code> to the installation
+  directory.  For example:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="build_r">18.5.2. R</h4>
+<div class="paragraph"><p>To build Swift/T with R, either:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+When using <code>build-swift-t.sh</code>: set <code>ENABLE_R=1</code> in
+ <code>swift-t-settings.sh</code>.
+</p>
+</li>
+<li>
+<p>
+When doing a <a href="#build_manual">manual build</a> provide the <code>--with-r</code>
+ argument to <code>configure</code>.  See <code>./configure&nbsp;--help</code> for further
+ options.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Other notes:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+When installing R from a binary package, be sure to include the
+  <code>devel</code> package.
+</p>
+</li>
+<li>
+<p>
+When installing R from source, configure R with <code>--enable-R-shlib</code>.
+</p>
+</li>
+<li>
+<p>
+When running, you may need to set the environment variable <code>R_HOME</code>
+ to the directory containing the R installation.  For the APT package,
+ this is <code>/usr/lib/R</code>.
+</p>
+</li>
+<li>
+<p>
+When running, you may need to set the environment variable <code>LD_LIBRARY_PATH</code>
+ to include the directory containing the R shared library.  For a
+ source R build on Linux, this is <code>R_HOME/lib/R/lib</code>.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="build_julia">18.5.3. Julia</h4>
+<div class="paragraph"><p>To build Swift/T with Julia, either:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+When using <code>build-swift-t.sh</code>: set <code>ENABLE_JULIA=1</code> in
+ <code>swift-t-settings.sh</code>.
+</p>
+</li>
+<li>
+<p>
+When doing a <a href="#build_manual">manual build</a> provide the
+ <code>--enable-julia</code> argument to <code>configure</code>.  See <code>./configure --help</code>
+ for further options.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="build_jvm">18.5.4. JVM languages module</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Using the JVM languages currently requires a <a href="#build_manual">manual build</a>.
+</p>
+</li>
+<li>
+<p>
+Clone the Swift/T JVM Engine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd turbine/code
+git clone                                                            \
+  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
+  swift-t-jvm</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Build the Swift/T JVM Engine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd swift-t-jvm
+./bootstrap
+./configure
+make</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Build Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>cd turbine/code
+./configure --enable-jvm-scripting
+make install</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At runtime, set environment variable <code>LD_LIBRARY_PATH</code> to contain
+the JVM lib and the Swift/T JVM Engine lib (where <code>SWIFT_T</code> is your
+Swift/T source directory):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export LD_LIBRARY_PATH=
+LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
+LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At runtime, set environment variable <code>SWIFT_JVM_USER_LIB</code> to contain
+Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source directory):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_spack_tips">18.6. Spack tips</h3>
+<div class="paragraph"><p>Spack will try to install a lot of software that is already installed
+on your system.  To avoid this, add entries to your
+<code>~/.spack/packages.yaml</code> file for software that is already installed,
+such as the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>preferred packages:
+  all:
+    providers:
+      mpi: [mpich]
+  m4:
+    paths:
+      m4@1.4.18%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  mpich:
+    paths:
+      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /home/?/sfw/mpich-3.2.1
+    buildable: False
+  jdk:
+    paths:
+      jdk@10.0.2 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  tcl:
+    paths:
+      tcl@8.6.8%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  zsh:
+    paths:
+      zsh@5.4.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  swig:
+    paths:
+      swig@3.0.12%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  ant:
+    paths:
+      ant@1.10.3%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False</code></pre>
+</div></div>
+<div class="paragraph"><p>You will need to substitute the <code>arch=linux-ubuntu18.04-x86_64</code>
+<code>gcc@7.3.0</code> specifiers with the correct settings for your system.  The
+versions of each package must be close but do not have to be an exact
+match.  In the case above, we are using a custom-build MPICH for MPI,
+you may use <code>/usr</code> if MPICH or OpenMPI was installed using a package
+manager.</p></div>
+<div class="paragraph"><p>See the
+<a href="https://spack.readthedocs.io/en/latest/build_settings.html">Spack notes
+on Build customization</a> for more information.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_model_exploration_workflows">19. Model exploration workflows</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The <a href="http://www.mcs.anl.gov/~emews/tutorial">EMEWS Tutorial</a> covers
 building and running advanced model exploration workflows in Swift/T.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_developers_guide">19. Developers' guide</h2>
+<h2 id="_developers_guide">20. Developers' guide</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>For more information, see the <a href="dev.html">Developers' Guide</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_publications">20. Publications</h2>
+<h2 id="_publications">21. Publications</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>For more information, see the <a href="pubs.html">Swift/T Publications</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="citing">21. Citing Swift/T</h2>
+<h2 id="citing">22. Citing Swift/T</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>If you are using Swift/T as a computer science reference, please cite:</p></div>
 <div class="paragraph"><p><strong>Compiler techniques for massively scalable implicit task parallelism</strong><br />
@@ -6114,7 +6167,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-08-29 14:02:45 CDT
+ 2018-10-11 14:49:11 CDT
 </div>
 </div>
 
