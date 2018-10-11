@@ -31,3 +31,8 @@
                                boolean exceptions_are_errors=true)
 "turbine" "0.1.0"
 [ "set <<output>> [ turbine::python 1 <<exceptions_are_errors>> <<code>> <<expr>> ]" ];
+
+
+@par @dispatch=WORKER (string s)
+python_parallel_persist(string code, string expr)
+"turbine" "1.0" "python_parallel_tcl" ;

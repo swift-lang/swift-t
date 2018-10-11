@@ -5,7 +5,7 @@
 # TURBINE_USER_LIB - directory for user library code
 # TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
-DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 if (( DEBIAN_BUILD ))
 then
@@ -22,6 +22,7 @@ export ADLB=@USE_ADLB@
 export USE_CC=@USE_CC@
 export MPI_IMPL=@MPI_IMPL@
 export MPI_LIB=@USE_MPI_LIB_DIR@
+export MPI_LABEL="@MPI_LABEL@"
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 export TURBINE_LINE_OUTPUT_FLAG=@MPI_LINE_OUTPUT_FLAG@
 export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh

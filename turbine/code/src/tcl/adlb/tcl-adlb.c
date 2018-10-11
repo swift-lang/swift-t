@@ -819,7 +819,8 @@ ADLB_CommDup_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   MPI_Comm newcomm;
   MPI_Comm_dup(comm, &newcomm);
-  Tcl_WideInt newcomm_int = newcomm;
+  // This should work for MPICH or OpenMPI:
+  Tcl_WideInt newcomm_int = (long long int) newcomm;
   Tcl_Obj* result = Tcl_NewWideIntObj(newcomm_int);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;

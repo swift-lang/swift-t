@@ -25,11 +25,11 @@ if (( ENABLE_MPE )); then
 fi
 
 if (( ENABLE_PYTHON )); then
-  EXTRA_ARGS+=" --enable-python"
-fi
-
-if (( ${#PYTHON_EXE} > 0 )); then
-  EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
+  if (( ${#PYTHON_EXE} > 0 )); then
+    EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
+  else
+    EXTRA_ARGS+=" --enable-python"
+  fi
 fi
 
 if (( ENABLE_R )); then
