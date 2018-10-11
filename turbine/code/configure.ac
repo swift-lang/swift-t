@@ -688,6 +688,7 @@ then
     AC_SUBST(PYTHON_LIB_FLAGS)
     AC_SUBST(PYTHON_LIBDIR)
     AC_SUBST(PYTHON_NAME)
+    AC_DEFINE_UNQUOTED([PYTHON_NAME],"$PYTHON_NAME",[Provides Python Name])
 else
     AC_MSG_RESULT([Python disabled])
 fi

@@ -8,48 +8,7 @@ then
   return
 fi
 
-help()
-{
-  cat <<EOF
-usage: build-swift-t.sh [-Bcfhm]
-
-build-swift-t.sh reads the swift-t-settings.sh file as edited by the user.
-
-The C build process for c-utils, lb, and turbine is:
-
-./bootstrap # Run autoconf, etc.
-./configure ...
-make
-make install
-
-For STC, it is simply:
-
-ant ... install
-
-The ... indicates various options, all set by swift-t-settings.sh .
-
-By default, build.sh only runs bootstrap
-if configure does not exist.
-
-Then, it runs configure, make, and make install.
-
-The following options change this behavior:
-
--B     Force run ./bootstrap
--C     Do not run ./configure
--c     Do not 'make clean' or 'ant clean'
--f     Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
-       Same as -Cc
--h     This help message
--m     Do not compile with 'make' or 'ant'
--s T|S Skip Turbine (T) or STC (S)
--q     Quiet: omit some output
--y     Do not run 'make install' or 'ant install' (dry-run)
-
-Later options override earlier options.
-
-EOF
-}
+source $THIS/help.sh
 
 # Defaults
 export RUN_BOOTSTRAP=0

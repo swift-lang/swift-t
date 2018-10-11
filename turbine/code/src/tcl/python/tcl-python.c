@@ -97,13 +97,13 @@ python_init(void)
 /* Loading python library symbols so that dynamic extensions don't throw symbol not found error.
            Ref Link: http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
         */
-  char str_python_lib[17];
+  char str_python_lib[32];
 #ifdef _WIN32
-  sprintf(str_python_lib, "libpython%d.%d.dll", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.dll", PYTHON_NAME);
 #elif defined __unix__
-  sprintf(str_python_lib, "libpython%d.%d.so", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.so", PYTHON_NAME);
 #elif defined __APPLE__
-  sprintf(str_python_lib, "libpython%d.%d.dylib", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.dylib", PYTHON_NAME);
 #endif
   dlopen(str_python_lib, RTLD_NOW | RTLD_GLOBAL);
 
