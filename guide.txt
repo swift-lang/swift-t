@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-July 2018
+October 2018
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -86,7 +86,7 @@ $ ./install-debs.sh
 Simply clone Spack and install STC.
 
 ----
-$ git clone https://github.com/llnl/spack.git
+$ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
 $ spack install stc
 ----
@@ -158,14 +158,14 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.1.tar.gz
+wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.3.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-tar xfz swift-t-1.4.1.tar.gz
-cd swift-t-1.4.1
+tar xfz swift-t-1.4.3.tar.gz
+cd swift-t-1.4.3
 ----
 +
 3. Create a settings file by running:
@@ -3022,257 +3022,6 @@ A unique number for each rank on a node.
 +ADLB_RANK_LEADER+::
 The rank of the leader process on this node (cf. <<hooks,hooks>>).
 
-[[Build_configuration]]
-=== Build configuration
-
-The following describes how to run Swift/T programs in Turbine
-on more complex systems.
-
-==== Build features
-
-You may run these individually to rebuild particular modules:
-
-* +build-cutils.sh+
-* +build-lb.sh+
-* +build-turbine.sh+
-* +build-stc.sh+
-
-or +build-swift-t.sh+ to build them all.
-
-The following flags affect +build-*.sh+.
-
-+-B+::
-Force run the +bootstrap+ scripts, which rebuild the +configure+
-scripts.  Use this if you change +configure.ac+, etc.
-
-+-c+::
-Do not +make clean+.
-
-+-C+::
-Do not +configure+.
-
-+-f+::
-Fast: same as +-cC+.
-
-+-h+::
-Report a help message.
-
-+-m+::
-No +make+: +configure+ only.
-
-+-q+::
-Reduce verbosity.  May be given more than once.
-
-+-s <M>+::
-Skip module +M+, where +M+ is +S+ for STC or +T+ for Turbine
-(including ADLB and c-utils).
-Useful with +-f+ when you know what needs to be rebuilt.
-
-+-v+::
-Increase verbosity.  May be given more than once.
-
-+-y+::
-DrY run- do not +make install+.
-
-==== Build troubleshooting
-
-If +build-swift-t.sh+ does not succeed, you may need to change how it
-tries to configure and compile Swift/T.
-
-Troubleshooting a build problem can require a few steps.  The first
-step is to determine why the build failed.  +build-swift-t.sh+ will usually
-report the step at which configuration failed.  For example, if it was unable
-to locate a valid Tcl install, it will report this.  Then  you can try
-these steps to resolve the problem:
-
-1. If your system is covered by the link:sites.html[Sites Guide],
-   check to see if the problem and solution are described there.
-2. Inspect +swift-t-settings.sh+ settings related to the reported problem.
-  For example, if locating a Tcl install failed, setting
-  the +TCL_INSTALL+ and +TCL_VERSION+ variables to the correct location
-  and version may help.
-3. If the options in +swift-t-settings.sh+ do not give sufficient control to
-  fix the problem, you may need to manually configure some components
-  of Swift/T, as described in the next section.
-
-[[build_manual]]
-==== Manual configuration
-
-+build-swift-t.sh+ and +swift-t-settings.sh+ provide a convenient way to
-install Swift/T from the downloadable package or from a Git clone.
-However, this method does not allow full control over
-the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C) techniques.  You can more directly control
-the configuration when building through the arguments to +ant+ or
-+configure+.
-
-To perform the installation using +configure+/+make+, simply untar the
-distribution package or clone from
-https://github.com/swift-lang/swift-t[GitHub] and do:
-
-----
-cd c-utils/code
-./configure ...
-make install
-
-cd ../../lb/code
-./configure ...
-make install
-
-cd ../../turbine/code
-./configure ...
-make install
-
-cd ../../stc/code
-ant install -Ddist.dir=... -Dturbine.home=...
-----
-
-NOTE: Use +./configure --help+ and the link:sites.html[Sites Guide]
-for further options.
-
-To obtain the latest source from GitHub, do:
-----
-git clone https://github.com/swift-lang/swift-t.git
-----
-
-===== Makefile debugging
-
-Use +make V=1+ to get verbose output from our Makefiles.
-
-==== Non-standard MPI locations
-
-Sometimes simply specifying the MPI directory is not enough to
-configure Swift/T.
-
-You can modify these settings in +swift-t-settings.sh+ to more
-precisely define locations of MPI resources:
-
-----
-EXM_CUSTOM_MPI=1
-MPI_INCLUDE=/path/to/mpi.h/include
-MPI_LIB_DIR=/path/to/mpi_lib/lib
-MPI_LIB_NAME=funny.mpi.a
-----
-
-If you are following the manual build process, configure Turbine with:
-----
- --enable-custom-mpi
- --with-mpi-include=/path/to/mpi.h/include
- --with-mpi-lib-dir=/path/to/mpi_lib/lib
- --with-mpi-lib-name=funny.mpi.a
-----
-
-==== External scripting
-
-[[build_python]]
-===== Python
-
-To build Swift/T with Python, either:
-
-* When using +build-swift-t.sh+: Set +ENABLE_PYTHON=1+ in
- +swift-t-settings.sh+.
-
-* When doing a <<build_manual,manual build>> provide the
- +--enable-python+ argument to +configure+.
- See +./configure --help+ for further options.
-
-* When running, you may need to set +PYTHONPATH+ to the installation
-  directory.  For example:
-+
-----
-export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7
-----
-
-[[build_r]]
-===== R
-
-To build Swift/T with R, either:
-
-* When using +build-swift-t.sh+: set +ENABLE_R=1+ in
- +swift-t-settings.sh+.
-
-* When doing a <<build_manual,manual build>> provide the +--with-r+
- argument to +configure+.  See +./configure&nbsp;--help+ for further
- options.
-
-Other notes:
-
-* When installing R from a binary package, be sure to include the
-  +devel+ package.
-
-* When installing R from source, configure R with +--enable-R-shlib+.
-
-* When running, you may need to set the environment variable +R_HOME+
- to the directory containing the R installation.  For the APT package,
- this is +/usr/lib/R+.
-
-* When running, you may need to set the environment variable +LD_LIBRARY_PATH+
- to include the directory containing the R shared library.  For a
- source R build on Linux, this is +R_HOME/lib/R/lib+.
-
-[[build_julia]]
-===== Julia
-
-To build Swift/T with Julia, either:
-
-* When using +build-swift-t.sh+: set +ENABLE_JULIA=1+ in
- +swift-t-settings.sh+.
-
-* When doing a <<build_manual,manual build>> provide the
- +--enable-julia+ argument to +configure+.  See +./configure --help+
- for further options.
-
-[[build_jvm]]
-===== JVM languages module
-
-* Using the JVM languages currently requires a <<build_manual,manual build>>.
-
-* Clone the Swift/T JVM Engine with:
-+
-----
-cd turbine/code
-git clone                                                            \
-  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
-  swift-t-jvm
-----
-////
-We use the character backslash to wrap the clone command across lines readably
-////
-
-* Build the Swift/T JVM Engine with:
-+
-----
-cd swift-t-jvm
-./bootstrap
-./configure
-make
-----
-
-* Build Turbine with:
-+
-----
-cd turbine/code
-./configure --enable-jvm-scripting
-make install
-----
-
-* At runtime, set environment variable +LD_LIBRARY_PATH+ to contain
-the JVM lib and the Swift/T JVM Engine lib (where +SWIFT_T+ is your
-Swift/T source directory):
-+
-----
-export LD_LIBRARY_PATH=
-LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
-LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs
-----
-
-* At runtime, set environment variable +SWIFT_JVM_USER_LIB+ to contain
-Swift/T JVM Engine classes (where +SWIFT_T+ is your Swift/T source directory):
-+
-----
-export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes
-----
-
 === Performance enhancements
 
 1. Disable logging/debugging via environment
@@ -3592,6 +3341,310 @@ int turbine_register_finalizer(void (*func)(void*),
 
 The +func()+ will be called once per rank at the end of the workflow.
 Multiple functions can be registered.
+
+[[Build_configuration]]
+== Build configuration
+
+The following describes how to run Swift/T programs in Turbine
+on more complex systems.
+
+=== Build features
+
+You may run these individually to rebuild particular modules:
+
+* +build-cutils.sh+
+* +build-lb.sh+
+* +build-turbine.sh+
+* +build-stc.sh+
+
+or +build-swift-t.sh+ to build them all.
+
+The following flags affect +build-*.sh+.
+
++-B+::
+Force run the +bootstrap+ scripts, which rebuild the +configure+
+scripts.  Use this if you change +configure.ac+, etc.
+
++-c+::
+Do not +make clean+.
+
++-C+::
+Do not +configure+.
+
++-f+::
+Fast: same as +-cC+.
+
++-h+::
+Report a help message.
+
++-m+::
+No +make+: +configure+ only.
+
++-q+::
+Reduce verbosity.  May be given more than once.
+
++-s <M>+::
+Skip module +M+, where +M+ is +S+ for STC or +T+ for Turbine
+(including ADLB and c-utils).
+Useful with +-f+ when you know what needs to be rebuilt.
+
++-v+::
+Increase verbosity.  May be given more than once.
+
++-y+::
+DrY run- do not +make install+.
+
+=== Build troubleshooting
+
+If +build-swift-t.sh+ does not succeed, you may need to change how it
+tries to configure and compile Swift/T.
+
+Troubleshooting a build problem can require a few steps.  The first
+step is to determine why the build failed.  +build-swift-t.sh+ will usually
+report the step at which configuration failed.  For example, if it was unable
+to locate a valid Tcl install, it will report this.  Then  you can try
+these steps to resolve the problem:
+
+1. If your system is covered by the link:sites.html[Sites Guide],
+   check to see if the problem and solution are described there.
+2. Inspect +swift-t-settings.sh+ settings related to the reported problem.
+  For example, if locating a Tcl install failed, setting
+  the +TCL_INSTALL+ and +TCL_VERSION+ variables to the correct location
+  and version may help.
+3. If the options in +swift-t-settings.sh+ do not give sufficient control to
+  fix the problem, you may need to manually configure some components
+  of Swift/T, as described in the next section.
+
+[[build_manual]]
+=== Manual configuration
+
++build-swift-t.sh+ and +swift-t-settings.sh+ provide a convenient way to
+install Swift/T from the downloadable package or from a Git clone.
+However, this method does not allow full control over
+the configuration.  Swift/T is built with standard Ant (Java) and
+Autotools/Makefile (C) techniques.  You can more directly control
+the configuration when building through the arguments to +ant+ or
++configure+.
+
+To perform the installation using +configure+/+make+, simply untar the
+distribution package or clone from
+https://github.com/swift-lang/swift-t[GitHub] and do:
+
+----
+cd c-utils/code
+./configure ...
+make install
+
+cd ../../lb/code
+./configure ...
+make install
+
+cd ../../turbine/code
+./configure ...
+make install
+
+cd ../../stc/code
+ant install -Ddist.dir=... -Dturbine.home=...
+----
+
+NOTE: Use +./configure --help+ and the link:sites.html[Sites Guide]
+for further options.
+
+To obtain the latest source from GitHub, do:
+----
+git clone https://github.com/swift-lang/swift-t.git
+----
+
+==== Makefile debugging
+
+Use +make V=1+ to get verbose output from our Makefiles.
+
+=== Non-standard MPI locations
+
+Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.
+
+You can modify these settings in +swift-t-settings.sh+ to more
+precisely define locations of MPI resources:
+
+----
+EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a
+----
+
+If you are following the manual build process, configure Turbine with:
+----
+ --enable-custom-mpi
+ --with-mpi-include=/path/to/mpi.h/include
+ --with-mpi-lib-dir=/path/to/mpi_lib/lib
+ --with-mpi-lib-name=funny.mpi.a
+----
+
+=== External scripting
+
+[[build_python]]
+==== Python
+
+To build Swift/T with Python, either:
+
+* When using +build-swift-t.sh+: Set +ENABLE_PYTHON=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the
+ +--enable-python+ argument to +configure+.
+ See +./configure --help+ for further options.
+
+* When running, you may need to set +PYTHONPATH+ to the installation
+  directory.  For example:
++
+----
+export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7
+----
+
+[[build_r]]
+==== R
+
+To build Swift/T with R, either:
+
+* When using +build-swift-t.sh+: set +ENABLE_R=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the +--with-r+
+ argument to +configure+.  See +./configure&nbsp;--help+ for further
+ options.
+
+Other notes:
+
+* When installing R from a binary package, be sure to include the
+  +devel+ package.
+
+* When installing R from source, configure R with +--enable-R-shlib+.
+
+* When running, you may need to set the environment variable +R_HOME+
+ to the directory containing the R installation.  For the APT package,
+ this is +/usr/lib/R+.
+
+* When running, you may need to set the environment variable +LD_LIBRARY_PATH+
+ to include the directory containing the R shared library.  For a
+ source R build on Linux, this is +R_HOME/lib/R/lib+.
+
+[[build_julia]]
+==== Julia
+
+To build Swift/T with Julia, either:
+
+* When using +build-swift-t.sh+: set +ENABLE_JULIA=1+ in
+ +swift-t-settings.sh+.
+
+* When doing a <<build_manual,manual build>> provide the
+ +--enable-julia+ argument to +configure+.  See +./configure --help+
+ for further options.
+
+[[build_jvm]]
+==== JVM languages module
+
+* Using the JVM languages currently requires a <<build_manual,manual build>>.
+
+* Clone the Swift/T JVM Engine with:
++
+----
+cd turbine/code
+git clone                                                            \
+  https://github.com/isislab-unisa/swift-lang-swift-t-jvm-engine.git \
+  swift-t-jvm
+----
+////
+We use the character backslash to wrap the clone command across lines readably
+////
+
+* Build the Swift/T JVM Engine with:
++
+----
+cd swift-t-jvm
+./bootstrap
+./configure
+make
+----
+
+* Build Turbine with:
++
+----
+cd turbine/code
+./configure --enable-jvm-scripting
+make install
+----
+
+* At runtime, set environment variable +LD_LIBRARY_PATH+ to contain
+the JVM lib and the Swift/T JVM Engine lib (where +SWIFT_T+ is your
+Swift/T source directory):
++
+----
+export LD_LIBRARY_PATH=
+LD_LIBRARY_PATH+=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:
+LD_LIBRARY_PATH+=SWIFT_T/turbine/code/swift-t-jvm/src/.libs
+----
+
+* At runtime, set environment variable +SWIFT_JVM_USER_LIB+ to contain
+Swift/T JVM Engine classes (where +SWIFT_T+ is your Swift/T source directory):
++
+----
+export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes
+----
+
+=== Spack tips
+
+Spack will try to install a lot of software that is already installed
+on your system.  To avoid this, add entries to your
++~/.spack/packages.yaml+ file for software that is already installed,
+such as the following:
+
+----
+preferred packages:
+  all:
+    providers:
+      mpi: [mpich]
+  m4:
+    paths:
+      m4@1.4.18%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  mpich:
+    paths:
+      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /home/?/sfw/mpich-3.2.1
+    buildable: False
+  jdk:
+    paths:
+      jdk@10.0.2 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  tcl:
+    paths:
+      tcl@8.6.8%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  zsh:
+    paths:
+      zsh@5.4.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  swig:
+    paths:
+      swig@3.0.12%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  ant:
+    paths:
+      ant@1.10.3%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+----
+
+You will need to substitute the +arch=linux-ubuntu18.04-x86_64+
++gcc@7.3.0+ specifiers with the correct settings for your system.  The
+versions of each package must be close but do not have to be an exact
+match.  In the case above, we are using a custom-build MPICH for MPI,
+you may use +/usr+ if MPICH or OpenMPI was installed using a package
+manager.
+
+See the
+https://spack.readthedocs.io/en/latest/build_settings.html[Spack notes
+on Build customization] for more information.
 
 == Model exploration workflows
 
