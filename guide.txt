@@ -3595,8 +3595,15 @@ export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-b
 
 === Spack tips
 
-Spack will try to install a lot of software that is already installed
-on your system.  To avoid this, add entries to your
+Running
+----
+$ spack install stc
+----
+will download, compile, and install all necessary dependencies,
+including an MPI implementation.
+
+Spack, by default, will try to install a lot of software that is
+already installed on your system.  To avoid this, add entries to your
 +~/.spack/packages.yaml+ file for software that is already installed,
 such as the following:
 
@@ -3635,12 +3642,12 @@ preferred packages:
     buildable: False
 ----
 
-You will need to substitute the +arch=linux-ubuntu18.04-x86_64+
-+gcc@7.3.0+ specifiers with the correct settings for your system.  The
-versions of each package must be close but do not have to be an exact
-match.  In the case above, we are using a custom-build MPICH for MPI,
-you may use +/usr+ if MPICH or OpenMPI was installed using a package
-manager.
+You will need to replace the +gcc@7.3.0+ and
++arch=linux-ubuntu18.04-x86_64+ specifiers with the correct settings
+for your system.  The versions of the packages (e.g., +m4@1.4.18+)
+should be close but do not have to be an exact match.  In the case
+above, we are using a custom-build MPICH for MPI, you may use +/usr+
+if MPICH or OpenMPI was installed using a package manager.
 
 See the
 https://spack.readthedocs.io/en/latest/build_settings.html[Spack notes
