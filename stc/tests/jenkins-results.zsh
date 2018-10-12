@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 # STC TESTS JENKINS-RESULTS.ZSH
 

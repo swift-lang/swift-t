@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 # ADLB JENKINS.ZSH
 # Run on the Jenkins server

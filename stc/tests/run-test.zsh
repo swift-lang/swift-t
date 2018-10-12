@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh -f
 set -eu
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
