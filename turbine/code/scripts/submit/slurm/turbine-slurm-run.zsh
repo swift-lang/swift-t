@@ -57,7 +57,7 @@ if (( DRY_RUN )) {
      return 0
 }
 
-JOB_ID=$( echo $( ${SUBMIT_COMMAND} )| grep -o "[1-9][0-9]*$" )
+JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
 
 # JOB_ID must be an integer:
 if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
