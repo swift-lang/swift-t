@@ -1,5 +1,5 @@
-#!/usr/bin/env zsh -f
-# We use zsh -f to avoid reloading user startup files and
+#!/usr/bin/env zsh
+# We use zsh to avoid reloading user startup files and
 # resetting environment, e.g., LD_LIBRARY_PATH.
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
