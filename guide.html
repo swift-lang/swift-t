@@ -6085,7 +6085,7 @@ already installed on your system.  To avoid this, add entries to your
 such as the following:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>preferred packages:
+<pre><code>packages:
   all:
     providers:
       mpi: [mpich]
@@ -6095,7 +6095,8 @@ such as the following:</p></div>
     buildable: False
   mpich:
     paths:
-      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /home/?/sfw/mpich-3.2.1
+      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: &gt;-
+                          /home/myself/sfw/mpich-3.2.1
     buildable: False
   jdk:
     paths:
@@ -6122,7 +6123,7 @@ such as the following:</p></div>
 <code>arch=linux-ubuntu18.04-x86_64</code> specifiers with the correct settings
 for your system.  The versions of the packages (e.g., <code>m4@1.4.18</code>)
 should be close but do not have to be an exact match.  In the case
-above, we are using a custom-build MPICH for MPI, you may use <code>/usr</code>
+above, we are using a custom-build MPICH for MPI, but you may use <code>/usr</code>
 if MPICH or OpenMPI was installed using a package manager.</p></div>
 <div class="paragraph"><p>See the
 <a href="https://spack.readthedocs.io/en/latest/build_settings.html">Spack notes
@@ -6174,7 +6175,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-10-11 14:57:31 CDT
+ 2018-10-12 13:51:29 CDT
 </div>
 </div>
 
