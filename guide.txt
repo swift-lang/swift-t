@@ -3608,7 +3608,7 @@ already installed on your system.  To avoid this, add entries to your
 such as the following:
 
 ----
-preferred packages:
+packages:
   all:
     providers:
       mpi: [mpich]
@@ -3618,7 +3618,8 @@ preferred packages:
     buildable: False
   mpich:
     paths:
-      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /home/?/sfw/mpich-3.2.1
+      mpich@3.2%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: >-
+                          /home/myself/sfw/mpich-3.2.1
     buildable: False
   jdk:
     paths:
@@ -3646,7 +3647,7 @@ You will need to replace the +gcc@7.3.0+ and
 +arch=linux-ubuntu18.04-x86_64+ specifiers with the correct settings
 for your system.  The versions of the packages (e.g., +m4@1.4.18+)
 should be close but do not have to be an exact match.  In the case
-above, we are using a custom-build MPICH for MPI, you may use +/usr+
+above, we are using a custom-build MPICH for MPI, but you may use +/usr+
 if MPICH or OpenMPI was installed using a package manager.
 
 See the
