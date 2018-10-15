@@ -91,7 +91,22 @@ $ . spack/share/spack/setup-env.sh
 $ spack install stc
 ----
 
-This will install all necessary dependencies.
+This will install all necessary dependencies.  See the
+<<_spack_tips,Spack tips>> to reduce the number of dependencies that
+Spack will install from source.
+
+[[conda]]
+=== From Conda
+
+Simply install with the +conda+ tool:
+
+----
+$ conda install -c lightsource2-tag swift-t
+----
+
+This version includes <<leaf_python,Python support>>.
+
+Thanks to Maksim Rakitin for producing this installer.
 
 [[install_source]]
 === From source
