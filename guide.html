@@ -825,10 +825,22 @@ Install:
 $ . spack/share/spack/setup-env.sh
 $ spack install stc</code></pre>
 </div></div>
-<div class="paragraph"><p>This will install all necessary dependencies.</p></div>
+<div class="paragraph"><p>This will install all necessary dependencies.  See the
+<a href="#_spack_tips">Spack tips</a> to reduce the number of dependencies that
+Spack will install from source.</p></div>
 </div>
 <div class="sect2">
-<h3 id="install_source">2.3. From source</h3>
+<h3 id="conda">2.3. From Conda</h3>
+<div class="paragraph"><p>Simply install with the <code>conda</code> tool:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ conda install -c lightsource2-tag swift-t</code></pre>
+</div></div>
+<div class="paragraph"><p>This version will include <a href="#leaf_python">Python support</a> by default.</p></div>
+<div class="paragraph"><p>Thanks to Maksim Rakitin for producing this installer.</p></div>
+</div>
+<div class="sect2">
+<h3 id="install_source">2.4. From source</h3>
 <div class="paragraph"><p>Writing and running Swift/Turbine programs requires multiple packages.
 This section provides generic instructions for installing Swift/T
 on a range of systems.  We first cover locating and/or installing
@@ -838,7 +850,7 @@ from a source package.</p></div>
 is a accompanying resource for configuration settings and preinstalled software
 for specific systems.</p></div>
 <div class="sect3">
-<h4 id="_prerequisites">2.3.1. Prerequisites</h4>
+<h4 id="_prerequisites">2.4.1. Prerequisites</h4>
 <div class="paragraph"><p>All Swift/T prerequisites can be installed using the appropriate
 package manager for your system.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -924,7 +936,7 @@ If you have difficulties with compiler compatibility,
 please <a href="#support">contact us</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_installation_of_swift_t_from_source">2.3.2. Installation of Swift/T from Source</h4>
+<h4 id="_installation_of_swift_t_from_source">2.4.2. Installation of Swift/T from Source</h4>
 <div class="paragraph"><p>Once you have found all prerequisites, we can continue with building
 Swift/T from source.</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -6175,7 +6187,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-10-12 13:51:29 CDT
+ 2018-10-15 14:22:59 CDT
 </div>
 </div>
 
