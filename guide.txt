@@ -2303,6 +2303,12 @@ exceptions, provide an optional 3rd argument to +python()+ or
 stack trace will still be reported, but the function will return
 successfully with value +"&#95;&#95;EXCEPTION&#95;&#95;"+.
 
+===== Additional packages
+
+Python packages can be installed and accessed from Swift/T as
+expected.  You can also set the environment variable +PYTHONPATH+ as
+desired, this will be picked up by the Swift/T features.
+
 NOTE: To use this, Turbine must be <<build_python,configured and
 compiled with Python enabled>>.  This feature is implemented by
 linking to Python as a shared library, enabling better performance
@@ -2365,6 +2371,11 @@ exceptions, provide an optional 3rd argument to +R()+:
 +exceptions_are_errors=false+.  The exception stack trace will still
 be reported, but the function will return successfully with value
 +"&#95;&#95;EXCEPTION&#95;&#95;"+.
+
+===== Additional packages
+
+R packages can be installed and accessed from Swift/T as
+expected.
 
 NOTE: To use this, Turbine must be <<build_r,configured and compiled
 with R enabled>>.  This feature is implemented by linking to R as a
@@ -3665,9 +3676,39 @@ should be close but do not have to be an exact match.  In the case
 above, we are using a custom-build MPICH for MPI, but you may use +/usr+
 if MPICH or OpenMPI was installed using a package manager.
 
+Generally, you will want to use your existing MPI and JDK to avoid
+installation problems.  The other Spack package dependencies listed
+here are smaller and less likely to cause installation problems.
+
+You may also use external installations of Python and R, if so, you
+must ensure that the same compiler is used to install Python, R, MPI,
+and Swift/T itself, as they are all linked together at runtime.
+
 See the
 https://spack.readthedocs.io/en/latest/build_settings.html[Spack notes
 on Build customization] for more information.
+
+==== Spack variants
+
+Spack package variants for <<leaf_python,Python support>> and <<leaf_r,R
+support>> are available.  Simply use:
+
+----
+$ spack install turbine+python
+$ spack install turbine+r
+$ spack install turbine+python+r
+----
+
+as desired.  If +turbine+ is already installed, you have to do
+----
+$ spack uninstall stc turbine
+----
+before installing +turbine+ with the desired variants (this will not
+affect your +python+ or +r+ installations).
+
+Additional Python or R packages may be installed using Spack or the
+language-specific package installers (Python +pip+, R
++install.packages+) as desired.
 
 == Model exploration workflows
 
