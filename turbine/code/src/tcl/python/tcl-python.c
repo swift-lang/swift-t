@@ -109,7 +109,6 @@ python_init(void)
 
   if (initialized) return TCL_OK;
   DEBUG_TCL_TURBINE("python: initializing...");
-  printf("python: initializing...\n");
   Py_InitializeEx(1);
   main_module  = PyImport_AddModule("__main__");
   if (main_module == NULL) return handle_python_exception(true);
@@ -154,13 +153,11 @@ python_eval(bool persist, bool exceptions_are_errors,
 
   // Execute code:
   DEBUG_TCL_TURBINE("python: code: %s", code);
-  printf("python: code: %s\n", code); fflush(stdout);
   PyRun_String(code, Py_file_input, main_dict, local_dict);
   if (PyErr_Occurred()) EXCEPTION(exceptions_are_errors);
 
   // Evaluate expression:
   DEBUG_TCL_TURBINE("python: expr: %s", expr);
-  printf("python: expr: %s\n", expr); fflush(stdout);
   PyObject* o = PyRun_String(expr, Py_eval_input,
                              main_dict, local_dict);
   if (o == NULL) EXCEPTION(exceptions_are_errors);
@@ -168,8 +165,7 @@ python_eval(bool persist, bool exceptions_are_errors,
   // Convert Python result to C string
   rc = PyArg_Parse(o, "s", &s);
   if (rc != 1) return handle_python_non_string(o);
-  // DEBUG_TCL_TURBINE
-  printf("python: result: %s\n", s);
+  DEBUG_TCL_TURBINE("python: result: %s\n", s);
   *result = strdup(s);
 
   // Clean up and return:
@@ -204,7 +200,6 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = python_eval(persist, exceptions_are_errors,
                    code, expr, &output);
   TCL_CHECK(rc);
-  printf("python: output: %s\n", output);
   Tcl_Obj* result = Tcl_NewStringObj(output, -1);
   Tcl_SetObjResult(interp, result);
   free(output);
