@@ -112,8 +112,10 @@ cd ${TURBINE_OUTPUT}
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
-MODULESHOME=/sw/xk6/environment-modules/3.2.10.3/sles11.3_gnu4.9.0
-source $MODULESHOME/init/bash
+# MODULESHOME=/sw/xk6/environment-modules/3.2.10.3/sles11.3_gnu4.9.0
+# source $MODULESHOME/init/bash
+
+# Works on Swan w/o MODULESHOME/source:
 module load alps
 
 APRUN_ENV=""
@@ -126,7 +128,7 @@ APRUN_ENV+="-e TURBINE_OUTPUT=$TURBINE_OUTPUT"
 # LD_LIBRARY_PATH=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/lib:/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/cuda/lib64:/opt/gcc/4.9.3/snos/lib64
 # PYTHONPATH=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/lib/python3.6/site-packages:/sw/xk6/xalt/0.7.5/site:/sw/xk6/xalt/0.7.5/libexec
 
-module load deeplearning
+# module load deeplearning
 
 # printenv | sort
 
