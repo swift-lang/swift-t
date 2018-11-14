@@ -52,10 +52,11 @@ SUBMIT_COMMAND=( sbatch ${TURBINE_SLURM} )
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh
 chmod u+x ${TURBINE_OUTPUT}/submit.sh
 
-if (( DRY_RUN )) {
-     print "turbine: dry run: submit with ${TURBINE_OUTPUT}/submit.sh"
-     return 0
-}
+if (( DRY_RUN ))
+then
+  print "turbine: dry run: submit with ${TURBINE_OUTPUT}/submit.sh"
+  return 0
+fi
 
 JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
 
