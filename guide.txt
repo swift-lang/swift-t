@@ -309,7 +309,8 @@ arguments for run time.
 Use +swift-t -t <flag>[:<value>]+ to pass-through to +turbine+.  A
 common use case for this is +-f+, which is a compiler option flag for
 +stc+ (analogous to +gcc -f+) and a runtime flag for +turbine+
-(analogous to +mpiexec -f+).  For example, to pass a MPICH hosts file
+(analogous to the MPICH flag +mpiexec&nbsp;-f+).
+For example, to pass a MPICH hosts file
 from +swift-t+ to +turbine+, use:
 ----
 swift-t -t f:hosts.txt workflow.swift ...
@@ -2849,6 +2850,7 @@ limited by the following factors:
   Adding more servers can improve performance for applications with
   small tasks or complex data dependencies but ties up processes
 
+[[invocation]]
 === Invocation
 
 The form of a Turbine invocation for STC-generated
@@ -2862,16 +2864,27 @@ The program arguments are available to Swift (<<argv>>).
 
 Turbine accepts the following arguments:
 
-+-f <file>+:: Provide a machine file to +mpiexec+
-+-h+:: Print a help message
-+-l+:: Enable +mpiexec -l+ ranked output formatting
-+-n <procs>+:: The total number of Turbine MPI processes
-+-v+:: Report the Turbine version number
-+-V+:: Make the Turbine launch script verbose
-+-x+:: Use turbine_sh launcher with compiled-in libraries instead of tclsh
-       (reduces number of files that must be read from file system)
-+-X+:: In place of of program.tic, run standalone Turbine executable
-        (created by <<mkstatic,+mkstatic.tcl+>>)
++-f <file>+::
+Provide a machine or host file to +mpiexec+.
+This is a convenience, you may alternatively
+use <<turbine_launch_options,+TURBINE_LAUNCH_OPTIONS+>>.
+See <<mpi_impl,MPI details>> for more information.
++-h+::
+Print a help message
++-l+::
+Enable +mpiexec -l+ ranked output formatting
++-n <procs>+::
+The total number of Turbine MPI processes
++-v+::
+Report the Turbine version number
++-V+::
+Make the Turbine launch script verbose
++-x+::
+Use turbine_sh launcher with compiled-in libraries instead of tclsh
+(reduces number of files that must be read from file system)
++-X+::
+In place of of program.tic, run standalone Turbine executable
+(created by <<mkstatic,+mkstatic.tcl+>>)
 
 [[turbine_env]]
 ==== Environment variables used by Swift/T
@@ -2976,6 +2989,9 @@ execution.
 To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
 with it enabled)
 
+++++
+<a name="turbine_launch_options"></a>
+++++
 +TURBINE_LAUNCH_OPTIONS+::
 Provide other arguments to +mpiexec+.
 
@@ -3047,6 +3063,46 @@ A unique number for each rank on a node.
 
 +ADLB_RANK_LEADER+::
 The rank of the leader process on this node (cf. <<hooks,hooks>>).
+
+[[mpi_impl]]
+==== MPI implementation-specific details
+
+*OpenMPI oversubscription checks:*  By default, OpenMPI will refuse to
+run more processes than the number of cores on your system.  See here
+for more information:
+
+https://www.open-mpi.org/faq/?category=running#oversubscribing
+
+The solution is to use a hosts file and provide it to the
+<<invocation,Turbine invocation>>.  See the transcript below:
+
+----
+# Count my processors:
+$ grep processor /proc/cpuinfo
+processor       : 0
+# I only have one processor.
+# Therefore OpenMPI will refuse to run 2 processes:
+$ mpiexec -n 2 hostname
+There are not enough slots available in the system ...
+# Set up more slots in a hosts file:
+$ cat hosts.txt
+localhost slots=4
+# Provide to mpiexec
+$ mpiexec -n 2 --hostfile hosts.txt hostname
+host
+host
+# That worked.
+# Now try with Swift/T, which uses a minimum of two processes:
+$ swift-t -E 'trace("Hello World");'
+There are not enough slots available in the system
+# Fails as expected.  Provide the host file :
+$ swift-t -t f:hosts.txt -E 'trace("Hello World");'
+trace: Hello World
+# Success.
+----
+
+The +-t f:hosts.txt+ combination uses the
+<<swift-t-t,Turbine pass-through>>.
 
 === Performance enhancements
 
