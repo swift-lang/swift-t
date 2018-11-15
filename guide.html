@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">October 2018</span><br />
+<span id="author">November 2018</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1206,7 +1206,8 @@ arguments for run time.</p></div>
 <div class="paragraph" id="swift-t-t"><p>Use <code>swift-t -t &lt;flag&gt;[:&lt;value&gt;]</code> to pass-through to <code>turbine</code>.  A
 common use case for this is <code>-f</code>, which is a compiler option flag for
 <code>stc</code> (analogous to <code>gcc -f</code>) and a runtime flag for <code>turbine</code>
-(analogous to <code>mpiexec -f</code>).  For example, to pass a MPICH hosts file
+(analogous to the MPICH flag <code>mpiexec&nbsp;-f</code>).
+For example, to pass a MPICH hosts file
 from <code>swift-t</code> to <code>turbine</code>, use:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4822,7 +4823,7 @@ The number of servers available to control the Turbine run.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_invocation">17.3. Invocation</h3>
+<h3 id="invocation">17.3. Invocation</h3>
 <div class="paragraph"><p>The form of a Turbine invocation for STC-generated
 <code>program.tic</code> is:</p></div>
 <div class="listingblock">
@@ -4837,7 +4838,10 @@ The number of servers available to control the Turbine run.
 </dt>
 <dd>
 <p>
-Provide a machine file to <code>mpiexec</code>
+Provide a machine or host file to <code>mpiexec</code>.
+This is a convenience, you may alternatively
+use <a href="#turbine_launch_options"><code>TURBINE_LAUNCH_OPTIONS</code></a>.
+See <a href="#mpi_impl">MPI details</a> for more information.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4886,7 +4890,7 @@ Make the Turbine launch script verbose
 <dd>
 <p>
 Use turbine_sh launcher with compiled-in libraries instead of tclsh
-       (reduces number of files that must be read from file system)
+(reduces number of files that must be read from file system)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -4895,7 +4899,7 @@ Use turbine_sh launcher with compiled-in libraries instead of tclsh
 <dd>
 <p>
 In place of of program.tic, run standalone Turbine executable
-        (created by <a href="#mkstatic"><code>mkstatic.tcl</code></a>)
+(created by <a href="#mkstatic"><code>mkstatic.tcl</code></a>)
 </p>
 </dd>
 </dl></div>
@@ -5094,6 +5098,9 @@ To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
 with it enabled)
 </p>
 </dd>
+</dl></div>
+<a name="turbine_launch_options"></a>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>TURBINE_LAUNCH_OPTIONS</code>
 </dt>
@@ -5246,6 +5253,42 @@ The rank of the leader process on this node (cf. <a href="#hooks">hooks</a>).
 </p>
 </dd>
 </dl></div>
+</div>
+<div class="sect3">
+<h4 id="mpi_impl">17.3.3. MPI implementation-specific details</h4>
+<div class="paragraph"><p><strong>OpenMPI oversubscription checks:</strong>  By default, OpenMPI will refuse to
+run more processes than the number of cores on your system.  See here
+for more information:</p></div>
+<div class="paragraph"><p><a href="https://www.open-mpi.org/faq/?category=running#oversubscribing">https://www.open-mpi.org/faq/?category=running#oversubscribing</a></p></div>
+<div class="paragraph"><p>The solution is to use a hosts file and provide it to the
+<a href="#invocation">Turbine invocation</a>.  See the transcript below:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Count my processors:
+$ grep processor /proc/cpuinfo
+processor       : 0
+# I only have one processor.
+# Therefore OpenMPI will refuse to run 2 processes:
+$ mpiexec -n 2 hostname
+There are not enough slots available in the system ...
+# Set up more slots in a hosts file:
+$ cat hosts.txt
+localhost slots=4
+# Provide to mpiexec
+$ mpiexec -n 2 --hostfile hosts.txt hostname
+host
+host
+# That worked.
+# Now try with Swift/T, which uses a minimum of two processes:
+$ swift-t -E 'trace("Hello World");'
+There are not enough slots available in the system
+# Fails as expected.  Provide the host file :
+$ swift-t -t f:hosts.txt -E 'trace("Hello World");'
+trace: Hello World
+# Success.</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>-t f:hosts.txt</code> combination uses the
+<a href="#swift-t-t">Turbine pass-through</a>.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -6224,7 +6267,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-10-15 15:01:49 CDT
+ 2018-11-14 20:32:36 CST
 </div>
 </div>
 
