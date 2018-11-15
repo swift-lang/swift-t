@@ -2,4 +2,4 @@
 DIR := scripts/submit/pbs
 
 SCRIPTS_SUBMIT += $(DIR)/turbine-pbs-run.zsh \
-                  $(DIR)/turbine.pbs.m4
+                  $(DIR)/turbine-pbs.sh.m4
