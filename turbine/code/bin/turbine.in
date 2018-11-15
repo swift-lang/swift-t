@@ -184,7 +184,12 @@ fi
 
 if [[ ${MACHINE_FILE} != 0 ]]
 then
-  TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
+  if [[ ${MPI_IMPL} == "OpenMPI" ]]
+  then
+    TURBINE_LAUNCH_OPTIONS+=( --hostfile ${MACHINE_FILE} )
+  else # MPICH
+    TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
+  fi
 fi
 
 shift $(( OPTIND-1 ))
