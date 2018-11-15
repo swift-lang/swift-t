@@ -276,12 +276,16 @@ For scheduled systems, Turbine accepts a common set of command line options.
 +-d <directory>+::
 Set the Turbine output directory.  (Overrides +TURBINE_OUTPUT+).
 
+////
+Had to do a passthrough manual anchor to get this to work right:
+////
+++++
+<a name="output_token_file"></a>
+++++
 +-D <file>+::
-Turbine writes the value of +TURBINE_OUTPUT+ into
-+turbine-directory.txt+ in +$PWD+.  This is a convenience feature for
-shell scripting.  To change the name of this file,
-specify it with +-D+.  To prevent this from happening, specify
-+-D /dev/null+.
+Writes the value of +TURBINE_OUTPUT+ into given +file+.
+This is a convenience feature for shell scripting.
+Provide +/dev/null+ to disable this feature.
 
 +-e <key>=<value>+::
 Set an environment variable in the job environment.  This may be used
@@ -383,6 +387,14 @@ subsequent Swift/T jobs in:
 
 Use an <<init_script,init script>> to set up the +TURBINE_OUTPUT+
 directory before the job starts.
+
+When you run any scheduled job, by default, Turbine stores a soft link
+to +TURBINE_OUTPUT+ in +$PWD/turbine-output+.
+This is a convenience feature for shell scripting.
+You can change this link name by assigning it to environment variable
++TURBINE_OUTPUT_SOFTLINK+, or disable it by setting
++TURBINE_OUTPUT_SOFTLINK=/dev/null+.  See also the
+<<output_token_file,Turbine output directory file>>.
 
 == x86 clusters
 
