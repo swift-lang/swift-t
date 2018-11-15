@@ -63,8 +63,10 @@
 #   JOB_ID: Job ID from the scheduler (not available at run time)
 
 # Files:
-# Creates TURBINE_OUTPUT containing:
+# Creates soft link in PWD pointing to TURBINE_OUTPUT
+# Creates directory TURBINE_OUTPUT containing:
 # Copy of the user TIC
+# turbine-*.sh: The script to be submitted to the scheduler
 # turbine.log: Summary of job metadata
 # jobid.txt: The JOB_ID from the scheduler
 # output.txt: The job stdout and stderr
@@ -120,8 +122,11 @@ export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
 export DRY_RUN=0
 WAIT_FOR_JOB=0
 
-# Place to store output directory name
-OUTPUT_TOKEN_FILE=turbine-directory.txt
+# Place to link to output directory
+# If
+OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
+# Turbine will also write the value of TURBINE_OUTPUT_HERE
+OUTPUT_TOKEN_FILE=/dev/null
 
 # Job environment:
 typeset -T ENV env
@@ -255,8 +260,16 @@ declare TURBINE_OUTPUT
 # All output from job, including error stream
 export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
-print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
+if [[ ${OUTPUT_SOFTLINK} != /dev/null ]]
+then
+  [[ -L ${OUTPUT_SOFTLINK} ]] && rm ${OUTPUT_SOFTLINK}
+  ln -s ${TURBINE_OUTPUT} ${OUTPUT_SOFTLINK}
+fi
+if [[ ${OUTPUT_TOKEN_FILE} != /dev/null ]]
+then
+  print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
+fi
 
 if [[ ${INIT_SCRIPT} != 0 ]]
 then
