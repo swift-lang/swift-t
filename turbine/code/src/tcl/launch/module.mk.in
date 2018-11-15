@@ -7,8 +7,12 @@ DIR := src/tcl/launch
 SWIG_C_FILE_LAUNCH = $(DIR)/launch_wrap.c
 
 TCL_LAUNCH_SRC := $(SWIG_C_FILE_LAUNCH)      \
-		  $(DIR)/launch.c          \
-		  $(DIR)/MPIX_Comm_launch.c
+		  $(DIR)/launch.c
+
+ifeq ($(CRAY),)
+  # Use this if not on a Cray
+  TCL_LAUNCH_SRC +=  $(DIR)/MPIX_Comm_launch.c
+endif
 
 # Disable conversion warnings for Swift-generated code
 ifeq ($(USE_XLC),0)

@@ -39,6 +39,15 @@ ifeq ($(ENABLE_STATIC_PKG),1)
   BUILD_ALL_TARGETS += $(TURBINE_EXECUTABLES)
 endif
 
+ifeq (${CRAY},1) # Cray MPIX_Comm_launch support
+  CFLAGS += -D CRAY
+  NRADCLIF = /home/users/nradclif/for_jwozniak/mpich2-gnudpm/lib
+  LDFLAGS += -L $(NRADCLIF) \
+             -l mpich_gnu_71_dpm \
+             -Wl,-rpath -Wl,$(NRADCLIF)
+  #   LDFLAGS += $(NRADCLIF)/libmpich_gnu_71_dpm.so
+endif
+
 all: $(BUILD_ALL_TARGETS) $(BINS)
 
 turbine: $(TURBINE)
@@ -592,9 +601,10 @@ ifeq ($(ENABLE_SHARED),0)
 	@exit 1
 endif
 	$(Q) "  LINK		$(@)"
-	$(E) $(LD) $(SHARED) $(LDFLAGS) -o $(@) \
+	$(E) $(LD) $(SHARED) -o $(@) \
              $(TURBINE_OBJS) \
              $(LIBS) \
+             $(LDFLAGS) \
              $(RPATHS) \
              $(MAC_NAME)
 	$(FIX_RINSIDE_INSTALL_NAME)

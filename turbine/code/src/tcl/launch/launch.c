@@ -20,7 +20,46 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <mpi.h>
+
+// Default meta API
+int launch_meta(const char* cmd, char** argv, MPI_Info info, int root,
+                MPI_Comm comm, int* exit_code);
+
+#ifndef CRAY // ANL version
+
 #include "MPIX_Comm_launch.h"
+
+#warning ANL
+
+int
+launch_meta(const char* cmd, char** argv, MPI_Info info, int root,
+            MPI_Comm comm, int* exit_code)
+{
+  return MPIX_Comm_launch(cmd, argv, info, root, comm, exit_code);
+}
+
+#else // Cray version
+
+#warning CRAY
+
+int MPIX_Comm_launch(const char* cmd, int argc, char** argv,
+                     MPI_Comm comm);
+
+int
+launch_meta(const char* cmd, char** argv, MPI_Info info, int root,
+            MPI_Comm comm, int* exit_code)
+{
+  // Count args
+  int argc = 0;
+  while (argv[++argc] != NULL) { }
+  MPIX_Comm_launch(cmd, argc, argv, comm);
+  *exit_code = 0; // Exit code is not yet returned on Cray
+  return MPI_SUCCESS;
+}
+
+#endif
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
   int status = 0;
@@ -30,7 +69,7 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
     argvc[i] = argv[i];
   }
   argvc[argc] = NULL;
-  MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
+  launch_meta(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
     MPI_Comm_free(&comm);
@@ -122,7 +161,7 @@ int launch_envs(MPI_Comm comm, char* cmd,
   argvc[argc] = NULL;
 
   MPI_Info info = envs2info(envc, envs);
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  launch_meta(cmd, argvc, info, 0, comm, &status);
   if (info != MPI_INFO_NULL) {
     MPI_Info_free(&info);
   }
@@ -144,7 +183,7 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   MPI_Info info;
   MPI_Info_create(&info);
   MPI_Info_set(info,"launcher","turbine");
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  launch_meta(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
