@@ -225,10 +225,10 @@ then
   LINE_PREFIX="${TURBINE_LINE_OUTPUT_FLAG}"
 fi
 
-OPTIONS=()
-OPTIONS+=${LINE_PREFIX}
-OPTIONS+=( -n ${PROCS} )
-OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
+LAUNCH_OPTIONS=()
+LAUNCH_OPTIONS+=${LINE_PREFIX}
+LAUNCH_OPTIONS+=( -n ${PROCS} )
+LAUNCH_OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
 
 if (( VERBOSE ))
 then
@@ -284,6 +284,7 @@ do
   export ${KV}
 done
 
-# Allows user to insert valgrind
-${TURBINE_LAUNCHER} ${OPTIONS} ${=VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+# TURBINE_INTERPOSER allows user to insert valgrind, strace, etc.
+${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS} ${=TURBINE_INTERPOSER} \
+                    ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
