@@ -1242,7 +1242,11 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        Makefile
         bin/turbine
+        bin/turbine-pilot
+        scripts/turbine-config.sh
+        scripts/turbine-build-config.sh
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1271,11 +1275,8 @@ AC_CONFIG_FILES(
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
         scripts/submit/theta/module.mk
-        scripts/turbine-config.sh
-        scripts/turbine-build-config.sh
         tests/module.mk
         tests/runbin.zsh
-	Makefile
 )
 
         #         $USE_JVM_SCRIPT_HOME/src/module.mk
