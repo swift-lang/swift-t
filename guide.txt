@@ -3444,17 +3444,17 @@ or +build-swift-t.sh+ to build them all.
 The following flags affect +build-*.sh+.
 
 +-B+::
-Force run the +bootstrap+ scripts, which rebuild the +configure+
-scripts.  Use this if you change +configure.ac+, etc.
+Do not run the +bootstrap+ scripts, which rebuild the +configure+
+scripts.  Use this to build faster
+
++-C+::
+Do not +configure+.  Enables +-B+.
 
 +-c+::
 Do not +make clean+.
 
-+-C+::
-Do not +configure+.
-
 +-f+::
-Fast: same as +-cC+.
+Fast: same as +-BCc+.
 
 +-h+::
 Report a help message.
