@@ -90,7 +90,7 @@ set -x
 aprun -n ${PROCS} -N ${PPN} \
       ${TURBINE_LAUNCH_OPTIONS:-} \
       ${APRUN_ENVS} \
-      ${VALGRIND} \
+      ${TURBINE_INTERPOSER} \
       ${COMMAND}
 CODE=${?}
 
