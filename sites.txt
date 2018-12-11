@@ -1010,60 +1010,36 @@ Dependencies are installed in:
 
 ===== Login nodes
 
-////
+Add to +PATH+: +
++/projects/Swift-T/public/sfw/login/swift-t/2018-02-27/stc/bin+
 
-*Python*
+This installation uses the Python 2.7.12 noted above.
 
-*As of:* 2017/03/07
-
-This installation was configured with the Python 2.7.12 at +
-+/usr/common/software/python/2.7-anaconda/envs/deeplearning+
-
-Add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
-
-Run with
 ----
-module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-nice swift-t workflow.swift
+$ swift-t -E 'trace(42);'
+trace: 42
 ----
-
-*Python and R*
-
-*As of:* 2017/05/03
-
-This installation was configured with the Python 2.7.12 at +
-+/usr/common/software/python/2.7-anaconda/envs/deeplearning+ and R 3.4.0
-
-Add to +PATH+: +~wozniak/Public/sfw/login/swift-t-r/stc/bin+
-
-Run with
-----
-module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-nice swift-t workflow.swift
-----
-
-////
 
 ===== Compute nodes
 
-Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc/bin+
+Add to +PATH+: +
++/projects/Swift-T/public/sfw/compute/swift-t/2018-12-10/stc/bin+
+
+This installation uses the Python 2.7.12 noted above.
 
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
+
 Run with:
 ----
-$ GCC=/opt/gcc/6.3.0/snos/lib64
-$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
-$ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
+
+$ PY=/projects/Candle_ECP/swift/deps/Python-2.7.12
+$ PYTHONPATH=$PYTHON/lib/python2.7
+$ swift-t -m theta -e PYTHONPATH=$PYTHONPATH workflow.swift
 ----
 
 ==== Build instructions
 
-*As of:* 2017/06/07
+*As of:* 2018-12-11
 
 Use
 
@@ -1073,35 +1049,27 @@ $ module load gcc
 
 ===== Login nodes
 
-////
 No special configuration is necessary.
-////
+
+You can use the MPICH installed here:
+
+----
+/gpfs/mira-home/wozniak/Public/sfw/theta/mpich-3.2
+----
 
 ===== Compute nodes
 
-Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
-to configure the MPI library.
+Use the link:guide.html#install_source[+dev/build+ scripts].
 
-Use +gcc+ .
-
-Configure ADLB with:
+. Edit +swift-t-settings.sh+
+.. Set: +CC=cc+
+.. Set: +SWIFT_T_CHECK_MPICC=0+
+.. Uncomment the +CRAYPE_LINK_TYPE+ setting
+.. Uncomment the +Theta:+ section at the end
+. Build with:
++
 ----
-$ MPI=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-$ export CFLAGS=-I$MPI/include
-$ export LDFLAGS="-L$MPI/lib -lmpich"
-$ ./configure CC=gcc ...
-----
-
-Configure Turbine with:
-----
-$ ./configure
-  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-  --with-tcl=/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-  --with-hdf5=no
-  --disable-static --disable-static-pkg
-  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
+$ nice dev/build/build-swift-t.sh
 ----
 
 === Titan
