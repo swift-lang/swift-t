@@ -1049,7 +1049,7 @@ nice swift-t workflow.swift
 
 ===== Compute nodes
 
-Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc+
+Add to +PATH+: +/home/wozniak/Public/sfw/theta/swift-t-pyr/stc/bin+
 
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 Run with:
