@@ -76,6 +76,8 @@ SWIFT_T_DEBUG_BUILD=0
 # Trace build (set to 1 to enable): Enables trace logging
 SWIFT_T_TRACE_BUILD=0
 
+# NOTE: Python detection may require PYTHONPATH and PYTHONHOME
+# in the environment
 # Enable Python integration
 ENABLE_PYTHON=0 # Finds Python in PATH
 # Specify the Python interpreter executable below;
@@ -208,6 +210,11 @@ ENABLE_MKSTATIC_CRC=0
 # module load deeplearning # If you want Python
 # module swap PrgEnv-pgi PrgEnv-gnu
 # module load java
+
+
+#+===================+
+#|| Editor settings ||
+#+===================+
 
 # Local Variables:
 # mode: sh
