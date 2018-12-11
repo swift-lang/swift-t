@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -745,8 +746,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.4.1,</span>
-<span id="revdate">September 2018</span>
+<span id="revnumber">version 1.4.2,</span>
+<span id="revdate">December 2018</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -916,8 +917,8 @@ on that system.  This produces a batch script if necessary and submits
 it with the job submission program (e.g., <code>qsub</code>).</p></div>
 <div class="sect2">
 <h3 id="_turbine_run_scripts">Turbine run scripts</h3>
-<div class="paragraph"><p>Turbine includes the following scheduler support, and the associated
-shell run scripts:</p></div>
+<div class="paragraph"><p>Turbine includes the following scheduler support,
+implemented with the associated shell run scripts:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 PBS
@@ -1216,16 +1217,17 @@ see <a href="guide.html#swift_path"><code>SWIFT_PATH</code></a></td>
 Set the Turbine output directory.  (Overrides <code>TURBINE_OUTPUT</code>).
 </p>
 </dd>
+</dl></div>
+<a name="output_token_file"></a>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>-D &lt;file&gt;</code>
 </dt>
 <dd>
 <p>
-Turbine writes the value of <code>TURBINE_OUTPUT</code> into
-<code>turbine-directory.txt</code> in <code>$PWD</code>.  This is a convenience feature for
-shell scripting.  To change the name of this file,
-specify it with <code>-D</code>.  To prevent this from happening, specify
-<code>-D /dev/null</code>.
+Writes the value of <code>TURBINE_OUTPUT</code> into given <code>file</code>.
+This is a convenience feature for shell scripting.
+Provide <code>/dev/null</code> to disable this feature.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1372,6 +1374,13 @@ subsequent Swift/T jobs in:</p></div>
 </div></div>
 <div class="paragraph"><p>Use an <a href="#init_script">init script</a> to set up the <code>TURBINE_OUTPUT</code>
 directory before the job starts.</p></div>
+<div class="paragraph"><p>When you run any scheduled job, by default, Turbine stores a soft link
+to <code>TURBINE_OUTPUT</code> in <code>$PWD/turbine-output</code>.
+This is a convenience feature for shell scripting.
+You can change this link name by assigning it to environment variable
+<code>TURBINE_OUTPUT_SOFTLINK</code>, or disable it by setting
+<code>TURBINE_OUTPUT_SOFTLINK=/dev/null</code>.  See also the
+<a href="#output_token_file">Turbine output directory file</a>.</p></div>
 </div>
 </div>
 </div>
@@ -2286,25 +2295,33 @@ Run with:
 <h4 id="_public_installation_7">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes">Login nodes</h5>
+<div class="paragraph"><p>Add to <code>PATH</code>:<br />
+<code>/projects/Swift-T/public/sfw/login/swift-t/2018-02-27/stc/bin</code></p></div>
+<div class="paragraph"><p>This installation uses the Python 2.7.12 noted above.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -E 'trace(42);'
+trace: 42</code></pre>
+</div></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes">Compute nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>/home/wozniak/Public/sfw/theta/swift-t-pyr/stc</code></p></div>
-<div class="paragraph"><p>Theta uses Cobalt/APRUN, which in Swift/T is machine type <code>theta</code>.
-Run with:</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:<br />
+<code>/projects/Swift-T/public/sfw/compute/swift-t/2018-12-10/stc/bin</code></p></div>
+<div class="paragraph"><p>This installation uses the Python 2.7.12 noted above.</p></div>
+<div class="paragraph"><p>Theta uses Cobalt/APRUN, which in Swift/T is machine type <code>theta</code>.</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ GCC=/opt/gcc/6.3.0/snos/lib64
-$ PY=/gpfs/mira-home/wozniak/Public/sfw/theta/Python-2.7.12
-$ R=/home/wozniak/Public/sfw/R-3.4.0/lib64/R
-$ export LD_LIBRARY_PATH=$GCC:$PY/lib:$R/lib:$LD_LIBRARY_PATH
-$ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+<pre><code>$ PY=/projects/Candle_ECP/swift/deps/Python-2.7.12
+$ PYTHONPATH=$PYTHON/lib/python2.7
+$ swift-t -m theta -e PYTHONPATH=$PYTHONPATH workflow.swift</code></pre>
 </div></div>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_4">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2017/06/07</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2018-12-11</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2312,32 +2329,54 @@ $ swift-t -m theta -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pr
 </div></div>
 <div class="sect4">
 <h5 id="_login_nodes_2">Login nodes</h5>
+<div class="paragraph"><p>No special configuration is necessary.</p></div>
+<div class="paragraph"><p>You can use the MPICH installed here:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/gpfs/mira-home/wozniak/Public/sfw/theta/mpich-3.2</code></pre>
+</div></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_2">Compute nodes</h5>
-<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
-to configure the MPI library.</p></div>
-<div class="paragraph"><p>Use <code>gcc</code> .</p></div>
-<div class="paragraph"><p>Configure ADLB with:</p></div>
+<div class="paragraph"><p>Use the <a href="guide.html#install_source"><code>dev/build</code> scripts</a>.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Set: <code>CC=cc</code>
+</p>
+</li>
+<li>
+<p>
+Set: <code>SWIFT_T_CHECK_MPICC=0</code>
+</p>
+</li>
+<li>
+<p>
+Uncomment the <code>CRAYPE_LINK_TYPE</code> setting
+</p>
+</li>
+<li>
+<p>
+Uncomment the <code>Theta:</code> section at the end
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Build with:
+</p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ MPI=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-$ export CFLAGS=-I$MPI/include
-$ export LDFLAGS="-L$MPI/lib -lmpich"
-$ ./configure CC=gcc ...</code></pre>
+<pre><code>$ nice dev/build/build-swift-t.sh</code></pre>
 </div></div>
-<div class="paragraph"><p>Configure Turbine with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ ./configure
-  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-  --with-tcl=/gpfs/mira-home/wozniak/Public/sfw/theta/tcl-8.6.1
-  --with-mpi=/opt/cray/pe/mpt/7.5.5/gni/mpich-gnu/5.1
-  --with-hdf5=no
-  --disable-static --disable-static-pkg
-  --with-python-exe=/home/wozniak/Public/sfw/theta/Python-2.7.12/bin/python
-  --with-r=/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R</code></pre>
-</div></div>
+</li>
+</ol></div>
 </div>
 </div>
 </div>
@@ -3757,9 +3796,9 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.4.1<br />
+Version 1.4.2<br />
 Last updated
- 2018-09-14 11:35:03 CDT
+ 2018-12-11 15:23:53 CST
 </div>
 </div>
 </body>
