@@ -153,8 +153,8 @@ it with the job submission program (e.g., +qsub+).
 
 === Turbine run scripts
 
-Turbine includes the following scheduler support, and the associated
-shell run scripts:
+Turbine includes the following scheduler support,
+implemented with the associated shell run scripts:
 
 PBS:: +turbine-pbs-run.zsh+
 Cobalt:: +turbine-cobalt-run.zsh+
