@@ -24,7 +24,8 @@ do
   case $OPTION in
     B) RUN_BOOTSTRAP=0      ;;
     c) RUN_MAKE_CLEAN=0     ;;
-    C) RUN_CONFIGURE=0      ;;
+    C) RUN_BOOTSTRAP=0
+       RUN_CONFIGURE=0      ;;
     f) # Fast
        RUN_BOOTSTRAP=0
        RUN_CONFIGURE=0
