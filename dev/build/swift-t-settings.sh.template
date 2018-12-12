@@ -42,7 +42,7 @@ export CC=mpicc
 # TCL_VERSION=8.6
 
 # Specify details of non-standard Tcl layouts
-# name of tclsh compatible with build system
+# name of tclsh runnable on build system
 # TCLSH_LOCAL=/usr/bin/tclsh
 # directory containing Tcl library
 # TCL_LIB_DIR=/path/to/tcl/lib
