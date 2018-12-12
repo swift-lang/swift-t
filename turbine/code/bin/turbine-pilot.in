@@ -1,4 +1,6 @@
-#!/usr/bin/env zsh
+#!/bin/bash
+set -eu
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Get the output only from the given rank
-# Assumes the output file is formatted via "mpiexec -l"
+# TURBINE PILOT
+# For launch by an external mpiexec, i.e.:
+# $ stc <WORKFLOW.SWIFT>
+# $ mpiexec -n <PROCS> turbine-pilot <WORKFLOW.TIC>
+# PROCS must be >= 2
 
-RANK=$1
-FILE=$2
+TURBINE_HOME='@prefix@'
 
-grep "\[${RANK}\]" < ${FILE} | less
+ARGS=( ${*} )
 
+source $TURBINE_HOME/scripts/turbine-config.sh
+
+$TCLSH ${ARGS[@]}

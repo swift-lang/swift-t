@@ -35,15 +35,17 @@ Then, it runs configure, make, and make install.
 
 The following options change this behavior:
 
--B     Force run ./bootstrap
+-B     Do not run ./bootstrap
 -C     Do not run ./configure
 -c     Do not 'make clean' or 'ant clean'
--f     Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
-       Same as -Cc
+-f     Fast mode: do not run ./bootstrap, do not run ./configure,
+       do not 'make clean' or 'ant clean'
+       Same as -BCc
 -h     This help message
 -m     Do not compile with 'make' or 'ant'
 -s T|S Skip Turbine (T) or STC (S)
--q     Quiet: omit some output
+-q     Quiet:   reduce   verbosity (may be given more than once)
+-v     Verbose: increase verbosity (may be given more than once)
 -y     Do not run 'make install' or 'ant install' (dry-run)
 
 Later options override earlier options.

@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh
 set -eu
 
 # ADLB/X FILE LIST

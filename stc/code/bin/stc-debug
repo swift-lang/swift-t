@@ -1,4 +1,4 @@
-#!/bin/zsh -eu
+#!/usr/bin/env zsh -eu
 
 TCLSH=""
 
