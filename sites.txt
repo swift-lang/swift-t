@@ -1000,8 +1000,13 @@ https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
 Dependencies are installed in:
 
 ----
-/home/wozniak/Public/sfw/theta/Python-2.7.12
+/projects/Swift-T/public/sfw/login/mpich-3.2
+/projects/Swift-T/public/sfw/compute/Python-2.7.12
+/projects/Swift-T/public/sfw/compute/tcl-8.6.6
 /home/wozniak/Public/sfw/theta/swig-3.0.12
+
+# Older locations follow...
+/home/wozniak/Public/sfw/theta/Python-2.7.12
 /home/wozniak/Public/sfw/theta/tcl-8.6.1
 /home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
 ----
@@ -1011,7 +1016,7 @@ Dependencies are installed in:
 ===== Login nodes
 
 Add to +PATH+: +
-+/projects/Swift-T/public/sfw/login/swift-t/2018-02-27/stc/bin+
++/projects/Swift-T/public/sfw/login/swift-t/2018-12-12/stc/bin+
 
 This installation uses the Python 2.7.12 noted above.
 
