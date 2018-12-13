@@ -1036,10 +1036,7 @@ Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 
 Run with:
 ----
-
-$ PY=/projects/Candle_ECP/swift/deps/Python-2.7.12
-$ PYTHONPATH=$PYTHON/lib/python2.7
-$ swift-t -m theta -e PYTHONPATH=$PYTHONPATH workflow.swift
+$ swift-t -m theta workflow.swift
 ----
 
 ==== Build instructions
