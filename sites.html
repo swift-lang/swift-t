@@ -2404,7 +2404,9 @@ Tcl (login):  <code>~wozniak/Public/sfw/tcl-8.6.2</code>
 </li>
 <li>
 <p>
-Tcl (compute): <code>/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6</code>
+Tcl (compute):<br />
+<code>/lustre/atlas2/med106/world-shared/sfw/titan/compute/tcl-8.6.6</code><br />
+<code># module PrgEnv-gnu</code>
 </p>
 </li>
 </ul></div>
@@ -2434,13 +2436,13 @@ MPICH: <code>~wozniak/Public/sfw/login/mpich-3.1.3</code>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_3">Compute nodes</h5>
-<div class="paragraph"><p><strong>As of:</strong> 2018/09/11</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2018-12-13</p></div>
 <div class="paragraph"><p>This installation is for the general public, particularly INSPIRE and
 CANDLE users.</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:<br /></p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/ccs/proj/csc249/CANDLE/Public/sfw/swift-t/2018-09-11/stc/bin</code></pre>
+<pre><code>/lustre/atlas2/med106/world-shared/sfw/titan/compute/swift-t/2018-12-12/stc/bin</code></pre>
 </div></div>
 <div class="paragraph"><p>Run with, e.g.:<br /></p></div>
 <div class="listingblock">
@@ -2454,7 +2456,7 @@ $ swift-t -m cray -E 'trace("Hello world!");'</code></pre>
 <div class="ulist"><ul>
 <li>
 <p>
-Cray MPI: <code>/opt/cray/lib64/libmpich_gnu_51.so.3</code>
+Cray MPI: <code>/opt/cray/mpt/default/gni/mpich-gnu/5.1</code>
 </p>
 </li>
 </ul></div>
@@ -2493,7 +2495,7 @@ swift-t -m cray -n 64 workflow.swift</code></pre>
 </div>
 <div class="sect3">
 <h4 id="_build_procedure_6">Build procedure</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2018/09/11</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2018-12-13</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
@@ -2518,13 +2520,13 @@ Set <code>SWIFT_T_PREFIX</code> to the desired installation directory
 <li>
 <p>
 This is a Tcl compiled for the compute nodes:<br />
-   <code>TCL_INSTALL=/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6</code>
+   <code>TCL_INSTALL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/compute/tcl-8.6.6</code>
 </p>
 </li>
 <li>
 <p>
 This is a Tcl compiled for the login nodes:<br />
-   <code>TCLSH_LOCAL=/usr/bin/tclsh</code>
+   <code>TCLSH_LOCAL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/login/tcl-8.6.6</code>+
 </p>
 </li>
 <li>
@@ -2548,24 +2550,8 @@ Speed up the build:<br />
 </li>
 <li>
 <p>
-Uncomment the Cray link type variable at the end of the script:
+Uncomment the <code>module load gcc</code> at the end of the script.
 </p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export CRAYPE_LINK_TYPE=dynamic</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Uncomment the Titan modules at the end of the script (also shown
-here):
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>module load java
-module load deeplearning # If you want Python
-module swap PrgEnv-pgi PrgEnv-gnu</code></pre>
-</div></div>
 </li>
 </ol></div>
 </li>
@@ -3801,7 +3787,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer-text">
 Version 1.4.2<br />
 Last updated
- 2018-12-13 13:39:53 CST
+ 2018-12-14 10:23:49 CST
 </div>
 </div>
 </body>
