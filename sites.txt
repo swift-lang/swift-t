@@ -1085,7 +1085,9 @@ is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
 
 * SWIG: +~wozniak/Public/sfw/swig-3.0.2+
 * Tcl (login):  +~wozniak/Public/sfw/tcl-8.6.2+
-* Tcl (compute): +/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6+
+* Tcl (compute): +
++/lustre/atlas2/med106/world-shared/sfw/titan/compute/tcl-8.6.6+ +
++# module PrgEnv-gnu+
 
 ===== Login nodes
 
@@ -1109,14 +1111,14 @@ This uses:
 
 ===== Compute nodes
 
-*As of:* 2018/09/11
+*As of:* 2018-12-13
 
 This installation is for the general public, particularly INSPIRE and
 CANDLE users.
 
 Add to +PATH+: +
 ----
-/ccs/proj/csc249/CANDLE/Public/sfw/swift-t/2018-09-11/stc/bin
+/lustre/atlas2/med106/world-shared/sfw/titan/compute/swift-t/2018-12-12/stc/bin
 ----
 
 Run with, e.g.: +
@@ -1129,7 +1131,7 @@ $ swift-t -m cray -E 'trace("Hello world!");'
 
 This uses:
 
-* Cray MPI: +/opt/cray/lib64/libmpich_gnu_51.so.3+
+* Cray MPI: +/opt/cray/mpt/default/gni/mpich-gnu/5.1+
 
 ==== Submitting jobs
 
@@ -1168,16 +1170,16 @@ These environment variables may be placed in your +-s+
 
 ==== Build procedure
 
-*As of:* 2018/09/11
+*As of:* 2018-12-13
 
 . Use the link:guide.html#install_source[+dev/build+ scripts].
 . Run +init-settings.sh+ as usual
 . Edit +swift-t-settings.sh+ to set:
 .. Set +SWIFT_T_PREFIX+ to the desired installation directory
 .. This is a Tcl compiled for the compute nodes: +
-   +TCL_INSTALL=/ccs/proj/csc249/CANDLE/Public/sfw/tcl-8.6.6+
+   +TCL_INSTALL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/compute/tcl-8.6.6+
 .. This is a Tcl compiled for the login nodes: +
-   +TCLSH_LOCAL=/usr/bin/tclsh+
+   +TCLSH_LOCAL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/login/tcl-8.6.6++
 .. Disable search for Python in +PATH+: +
    +ENABLE_PYTHON=0+
 .. If you want Python: +
@@ -1185,20 +1187,7 @@ These environment variables may be placed in your +-s+
    or else leave that set to empty string.
 .. Speed up the build: +
    +MAKE_PARALLELISM=8+
-.. Uncomment the Cray link type variable at the end of the script:
-+
-----
-export CRAYPE_LINK_TYPE=dynamic
-----
-+
-.. Uncomment the Titan modules at the end of the script (also shown
-here):
-+
-----
-module load java
-module load deeplearning # If you want Python
-module swap PrgEnv-pgi PrgEnv-gnu
-----
+.. Uncomment the +module load gcc+ at the end of the script.
 +
 . Run:
 +
