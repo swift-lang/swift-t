@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -e
+changecom(`dnl')#!/bin/bash -l
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -15,7 +15,10 @@ changecom(`dnl')#!/bin/bash -e
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE-APRUN.SH
+# TURBINE-CRAY.SH
+
+# Note: we assume the environment was forwarded here by qsub -V
+#       and will be picked up by aprun (works on Beagle)
 
 # Created: esyscmd(`date')
 
@@ -23,11 +26,13 @@ changecom(`dnl')#!/bin/bash -e
 # This simply does environment variable substition when m4 runs
 define(`getenv', `esyscmd(printf -- "$`$1'")')
 
-#PBS -N Swift
+#PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
-#PBS -A getenv(PROJECT))
+#PBS -A getenv(PROJECT)
+)
 ifelse(getenv(QUEUE), `',,
-#PBS -q getenv(QUEUE))
+#PBS -q getenv(QUEUE)
+)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
@@ -42,19 +47,27 @@ ifelse(getenv(TITAN), `true',
 #PBS -l nodes=getenv(NODES),
 ### Default aprun mode
 #PBS -l mppwidth=getenv(PROCS)
-#PBS -l mppnppn=getenv(PPN)))
+#PBS -l mppnppn=getenv(PPN)
+)
+)
 ### End job size directives selection
-
-# This is ineffective- we have to use 'aprun -e'
-# PBS -V
 
 # Merge stdout/stderr
 #PBS -j oe
 # Disable mail
 #PBS -m n
 
+# User directives:
+getenv(TURBINE_DIRECTIVE)
+
+set -e
+
 VERBOSE=getenv(VERBOSE)
 (( VERBOSE )) && set -x
+
+# Allow the user to specify aprun in the environment
+APRUN=getenv(APRUN)
+APRUN=${APRUN:-aprun}
 
 # Set variables required for turbine-config.sh
 export TURBINE_HOME=getenv(TURBINE_HOME)
@@ -67,7 +80,6 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 SCRIPT=getenv(SCRIPT)
 ARGS="getenv(ARGS)"
 NODES=getenv(NODES)
-WALLTIME=getenv(WALLTIME)
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 
 export TURBINE_USER_LIB=getenv(TURBINE_USER_LIB)
@@ -86,9 +98,11 @@ export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
+ENV_PAIRS="getenv(ENV_PAIRS)"
+
 # Output header
 echo "Turbine: turbine-cray.sh"
-date "+%m/%d/%Y %I:%M%p"
+date "+%Y/%m/%d %I:%M%p"
 echo
 
 PROCS=getenv(`PROCS')
@@ -98,28 +112,29 @@ cd ${TURBINE_OUTPUT}
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
-# Put environment variables from run-init into 'aprun -e' format
-ENVS=""
-for KV in ${ENV_PAIRS[@]}
-do
-    echo KV $KV
-    ENVS+="-e ${KV} "
-done
+module load alps
 
-echo ENVS $ENVS
+APRUN_ENV=""
+for KV in $ENV_PAIRS
+do
+    APRUN_ENV+="-e $KV "
+done
+APRUN_ENV+="-e TURBINE_OUTPUT=$TURBINE_OUTPUT"
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]
 then
+    # Default non-streaming output: usually unused
     echo "JOB OUTPUT:"
     echo
-    aprun -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS}
 else
     # Stream output to file for immediate viewing
     echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
-    aprun -n getenv(PROCS) -N getenv(PPN) ${ENVS} -cc none -d 1 \
+    # echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
+    set -x
+    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
           ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
                      2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
 fi

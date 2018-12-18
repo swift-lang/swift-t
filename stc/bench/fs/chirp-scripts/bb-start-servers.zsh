@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 # Start Chirp servers on all allocated Breadboard nodes
 

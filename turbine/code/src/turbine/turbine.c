@@ -20,13 +20,12 @@
  *  Created on: May 4, 2011
  *      Author: wozniak
  *
- * TD means Turbine Datum, which is a variable id stored in ADLB
- * TR means TRansform, the in-memory record from a rule
  * */
 
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +33,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -51,6 +51,9 @@
 #include "async_exec.h"
 #include "cache.h"
 #include "turbine.h"
+#include "turbine-finalizers.h"
+
+#include "src/tcl/adlb/tcl-adlb.h"
 
 MPI_Comm turbine_task_comm   = MPI_COMM_NULL;
 MPI_Comm turbine_leader_comm = MPI_COMM_NULL;
@@ -62,6 +65,14 @@ static bool initialized = false;
 
 static int mpi_size = -1;
 static int mpi_rank = -1;
+
+struct finalizer
+{
+  void (*func)(void*);
+  void* context;
+};
+/** List of user finalization work, each a struct finalizer. */
+static struct list* finalizers = NULL;
 
 static void
 check_versions()
@@ -82,7 +93,7 @@ check_versions()
    This is a separate function so we can set a function breakpoint
  */
 static void
-gdb_sleep(int* t, int i)
+gdb_sleep(volatile int* t, int i)
 {
   sleep(1);
   DEBUG_TURBINE("gdb_check: %i %i\n", *t, i);
@@ -109,7 +120,7 @@ gdb_check(int rank)
     {
       pid_t pid = getpid();
       printf("Waiting for gdb: rank: %i pid: %i\n", rank, pid);
-      int t = 0;
+      volatile int t = 0;
       int i = 0;
       while (!t)
         // In GDB, set t=1 to break out
@@ -120,12 +131,18 @@ gdb_check(int rank)
 
 static bool setup_cache(void);
 
+static bool set_stdout(int rank, int size);
+
+static int log_setup(int rank);
+
 turbine_code
 turbine_init(int amserver, int rank, int size)
 {
   check_versions();
 
   gdb_check(rank);
+
+  log_setup(rank);
 
   if (!amserver)
   {
@@ -138,11 +155,62 @@ turbine_init(int amserver, int rank, int size)
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 
-  turbine_debug_init();
+  if (! set_stdout(rank, size))
+    return TURBINE_ERROR_IO;
 
   turbine_code tc = turbine_async_exec_initialize();
   turbine_check(tc);
   return TURBINE_SUCCESS;
+}
+
+/**
+   @return Tcl error code
+*/
+static int
+log_setup(int rank)
+{
+  log_init();
+  log_normalize();
+
+  // Did the user enable logging?
+  int enabled;
+  getenv_integer("TURBINE_LOG", 0, &enabled);
+  if (!enabled)
+  {
+    log_enable(false);
+    return TCL_OK;
+  }
+
+  bool b;
+
+  // Log is enabled.
+  // Should we use a specific log file?
+  char* filename = getenv("TURBINE_LOG_FILE");
+  if (filename != NULL && strlen(filename) > 0)
+  {
+    b = log_file_set(filename);
+    if (!b)
+    {
+      printf("Could not set log file: %s", filename);
+      return TCL_ERROR;
+    }
+  }
+
+  // Should we flush after every log message?
+  getenv_boolean("TURBINE_LOG_FLUSH", true, &b);
+  log_flush_auto_enable(b);
+
+  // Should we prepend the MPI rank (emulate "mpiexec -l")?
+  int log_rank_enabled;
+  getenv_integer("TURBINE_LOG_RANKS", 0, &log_rank_enabled);
+  if (log_rank_enabled)
+  {
+    char prefix[64];
+    sprintf(prefix, "[%i]", rank);
+    log_prefix_set(prefix);
+  }
+
+  return TCL_OK;
 }
 
 static bool
@@ -152,29 +220,66 @@ setup_cache()
   unsigned long max_memory;
   bool b;
 
-  b = getenv_integer("TURBINE_CACHE_SIZE", 1024, &size);
+  // Cache is disabled by default:
+  b = getenv_integer("TURBINE_CACHE_SIZE", 0, &size);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_SIZE\n");
     return false;
   }
-  if (mpi_rank == 0)
-    DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size);
+  /* if (mpi_rank == 0) */
+  /*   DEBUG_TURBINE("TURBINE_CACHE_SIZE: %i", size); */
   b = getenv_ulong("TURBINE_CACHE_MAX", 10*1024*1024, &max_memory);
   if (!b)
   {
     printf("malformed integer in environment: TURBINE_CACHE_MAX\n");
     return false;
   }
-  if (mpi_rank == 0)
-    DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory);
+  /* if (mpi_rank == 0) */
+  /*   DEBUG_TURBINE("TURBINE_CACHE_MAX: %lu", max_memory); */
 
   turbine_cache_init(size, max_memory);
 
   return true;
 }
 
+/** return field width of integers up to max */
+static int get_pad(int max)
+{
+  return (int) rintl(ceil(log(max+1)/log(10)));
+}
 
+static bool
+set_stdout(int rank, int size)
+{
+  char tmpfname[PATH_MAX];
+  char filename[PATH_MAX];
+  char* s = getenv("TURBINE_STDOUT");
+  if (s == NULL || strlen(s) == 0)
+    return true;
+
+  strcpy(filename, s);
+
+  // Substitute rank (as zero-padded string r) for %r into filename
+  char* p;
+  if ((p = strstr(filename, "%r")))
+  {
+    ptrdiff_t c = p - &filename[0];
+    strcpy(tmpfname, filename);
+    char* q = &tmpfname[0] + c + 1;
+    *q = 's';
+    char r[64];
+    int pad = get_pad(size);
+    sprintf(r, "%0*i", pad, rank);
+    sprintf(filename, tmpfname, r);
+  }
+  log_printf("redirecting output to: %s", filename);
+  log_flush();
+
+  FILE* fp = freopen(filename, "w", stdout);
+  if (fp == NULL) return false;
+  return true;
+}
 
 void
 turbine_version(version* output)
@@ -239,10 +344,43 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
+int
+turbine_register_finalizer(void (*func)(void*), void* context)
+{
+  if (finalizers == NULL)
+    finalizers = list_create();
+  struct finalizer* fzr = malloc(sizeof(fzr));
+  fzr->func    = func;
+  fzr->context = context;
+  struct list_item* item = list_add(finalizers, fzr);
+  if (item == NULL)
+    return 0;
+  return 1;
+}
+
+static void
+call_user_finalizers(void)
+{
+  if (finalizers == NULL) return;
+  while (true)
+  {
+    struct finalizer* fzr = list_poll(finalizers);
+    if (fzr == NULL) break;
+    // Call user finalizer:
+    fzr->func(fzr->context);
+  }
+}
+
 void
 turbine_finalize(Tcl_Interp *interp)
 {
+  bool print_time;
+  getenv_boolean("ADLB_PRINT_TIME", false, &print_time);
+  if (print_time)
+    if (adlb_comm_rank == 0)
+      printf("turbine finalizing at: %0.3f\n", log_time());
   turbine_cache_finalize();
   turbine_async_exec_finalize(interp);
+  call_user_finalizers();
+  log_finalize();
 }
-

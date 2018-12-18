@@ -25,7 +25,7 @@
 #include "src/tcl/util.h"
 
 int
-turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj *args[])
+turbine_user_error(Tcl_Interp* interp, int nargs, Tcl_Obj* args[])
 {
   assert(nargs >= 0);
 
@@ -198,7 +198,7 @@ turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
 }
 
 Tcl_Obj*
-turbine_tcl_list_new(int count, const char** strings)
+turbine_tcl_list_new(int count, char const *const * strings)
 {
   Tcl_Obj* objs[count];
   for (int i = 0; i < count; i++)

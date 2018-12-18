@@ -22,7 +22,7 @@
 # f2[1] = f3;
 # // Print out contents of f1
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc rules { } {
 

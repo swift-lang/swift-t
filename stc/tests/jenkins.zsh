@@ -1,4 +1,5 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
+set -eu
 
 # STC TESTS JENKINS.ZSH
 
@@ -20,24 +21,9 @@
 
 # Any arguments to this script are passed to run-tests.zsh
 
-check_error()
-{
-  CODE=$1
-  MSG=$2
-  if (( CODE != 0 ))
-  then
-    print "Operation failed: ${MSG}"
-    print "Exit code: ${CODE}"
-    exit 1
-  fi
-  return 0
-}
-
-pwd
-
-print
-printf "DATE: "
-date "+%m/%d/%Y %I:%M%p"
+print "JENKINS.ZSH"
+print " in $(/bin/pwd)"
+printf "DATE: $(date "+%m/%d/%Y %I:%M%p")"
 print
 
 TESTS_SKIP=0
@@ -59,19 +45,39 @@ export TURBINE_HOME=${TURBINE_INSTALL}
 print "Using STC:         ${STC}"
 print "Using TURBINE:     ${TURBINE_INSTALL}"
 print "Using MPI install: ${MPICH_INSTALL}"
-${TURBINE_HOME}/bin/turbine -v
+print
 
-cd tests
+if (( ${+PARALLEL} ))
+then
+  print "PARALLEL enabled..."
+  # Seed with middle digits from current nanoseconds
+  S=$( date +%N )
+  RANDOM=${S:1:4}
+  export TEST_ADLB_SERVERS=$(( RANDOM %  5 + 1 ))
+  print "TEST_ADLB_SERVERS=${TEST_ADLB_SERVERS}"
+  export TEST_ADLB_WORKERS=0
+  while (( TEST_ADLB_WORKERS < TEST_ADLB_SERVERS ))
+  do
+    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 1 ))
+  done
+  print "TEST_ADLB_WORKERS=${TEST_ADLB_WORKERS}"
+fi
+
+print "stc -v"
+${STC} -v
+print
+
+cat ${TURBINE_INSTALL}/export/files.swift
 
 export ADLB_PERF_COUNTERS=0
-nice ./run-tests.zsh -O0 -O1 -O2 -O3 \
-      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
-      tee results.out
-check_error ${pipestatus[1]} "run-tests.zsh"
+nice ./run-tests.zsh -O0 -O1 -O2 -O3 -p 5671 \
+     -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
+     tee results.out
+print
 
+print "Aggregating results..."
 SUITE_RESULT="result_aggregate.xml";
 ./jenkins-results.zsh > ${SUITE_RESULT}
-check_error ${?} "jenkins-results.zsh"
 
 print
 print "SUITE RESULT XML:"

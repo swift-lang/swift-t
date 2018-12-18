@@ -19,18 +19,40 @@
 #ifndef UNIX_SWIFT
 #define UNIX_SWIFT
 
+import assert;
+
 app (file o) cp(file i)
 {
   "cp" i o;
 }
 
-// cat-print (to stdout)
-app catp(file f[])
+/*
+  cat-print (to stdout)
+  We fail if given an array of size 0 - /bin/cat will hang on no inputs.
+  Cf. #145
+*/
+catp(file f[])
+{
+  assert(size(f) > 0, "Attempt to call catp() on array of size 0!") =>
+    app_catp(f);
+}
+
+app app_catp(file f[])
 {
   "cat" f;
 }
 
-app (file o) cat(file f[])
+/*
+  We fail if given an array of size 0 - /bin/cat will hang on no inputs.
+  Cf. #145
+*/
+(file o) cat(file f[])
+{
+  assert(size(f) > 0, "Attempt to call cat() on array of size 0!") =>
+    o = app_cat(f);
+}
+
+app (file o) app_cat(file f[])
 {
   "cat" f @stdout=o;
 }
@@ -63,6 +85,11 @@ app (void v) sleep(int i)
 app (void v) mkdir(string dirname)
 {
   "mkdir" "-p" dirname;
+}
+
+app (void o) rm(string flags, string dirname)
+{
+  "rm" flags dirname;
 }
 
 #endif

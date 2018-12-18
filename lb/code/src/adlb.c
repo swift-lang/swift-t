@@ -55,9 +55,6 @@ static void print_proc_self_status(void);
 
 void adlb_exit_handler(void);
 
-/** True after a Get() receives a shutdown code */
-static bool got_shutdown = false;
-
 /** Cached copy of ADLB world group */
 static MPI_Group adlb_group;
 
@@ -149,6 +146,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   MPI_CHECK(rc);
   ADLB_CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
+  xlb_s.status = ADLB_STATUS_RUNNING;
   xlb_s.start_time = MPI_Wtime();
 
   code = xlb_setup_layout(comm, nservers);
@@ -246,8 +244,8 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
     code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);
     ADLB_CHECK(code);
 
-    code = xlb_setup_leaders(&xlb_s.layout, hostmap, comm,
-                             &xlb_s.leader_comm);
+    code = xlb_setup_leaders(&xlb_s.layout, hostmap,
+                             comm, &xlb_s.leader_comm);
     ADLB_CHECK(code);
 
     if (xlb_s.hostmap_mode == HOSTMAP_ENABLED)
@@ -277,12 +275,23 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
   return ADLB_SUCCESS;
 }
 
+adlb_status
+ADLB_Status()
+{
+  return xlb_s.status;
+}
 
 adlb_code
 ADLB_Version(version* output)
 {
   version_parse(output, ADLB_VERSION);
   return ADLB_SUCCESS;
+}
+
+MPI_Comm
+ADLB_GetComm()
+{
+  return xlb_s.comm;
 }
 
 MPI_Comm
@@ -295,6 +304,13 @@ MPI_Comm
 ADLB_GetComm_leaders()
 {
   return xlb_s.leader_comm;
+}
+
+void
+ADLB_Leaders(int* leaders, int* count)
+{
+  xlb_get_leader_ranks(&xlb_s.layout,  xlb_s.hostmap,
+                       false, leaders, count);
 }
 
 // Server to target with work
@@ -540,7 +556,7 @@ ADLBP_Get(int type_requested, void** payload,
   if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Get(): SHUTDOWN");
-    got_shutdown = true;
+    xlb_s.status = ADLB_STATUS_SHUTDOWN;
     return ADLB_SHUTDOWN;
   }
 
@@ -629,7 +645,7 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   if (g.code == ADLB_SHUTDOWN)
   {
     DEBUG("ADLB_Iget(): SHUTDOWN");
-    got_shutdown = true;
+    xlb_s.status = ADLB_STATUS_SHUTDOWN;
     return ADLB_SHUTDOWN;
   }
   if (g.code == ADLB_NOTHING)
@@ -1523,7 +1539,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refc change)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   rc = xlb_refcount_incr(id, change, &notifs);
-  ADLB_CHECK(rc);
+  ADLB_CHECK_MSG(rc, "failed to increment: ");
 
   rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);
@@ -1822,40 +1838,43 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
   MPI_Request request;
 
   int to_server_rank = ADLB_Locate(id);
-  IRECV(type, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  int t;
+  IRECV(&t, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Typeof "ADLB_PRID"=>%i",
-        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *type);
+  DEBUG("ADLB_Typeof "ADLB_PRID" => %i",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), t);
 
-  if (*type == -1)
+  if (t == -1)
     return ADLB_ERROR;
+  *type = t;
   return ADLB_SUCCESS;
 }
 
 adlb_code
 ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
-                                 adlb_data_type* val_type)
+                                         adlb_data_type* val_type)
 {
   MPI_Status status;
   MPI_Request request;
   // DEBUG("ADLB_Container_typeof: %li", id);
 
   int to_server_rank = ADLB_Locate(id);
-  adlb_data_type types[2];
-  IRECV(types, 2, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+
+  int t[2];
+  IRECV(t, 2, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_CONTAINER_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_typeof "ADLB_PRID"=>(%i,%i)",
-        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), types[0], types[1]);
+  DEBUG("ADLB_Container_typeof "ADLB_PRID" => (%i,%i)",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), t[0], t[1]);
 
-  if (types[0] == -1 || types[1] == -1)
+  if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
 
-  *key_type = types[0];
-  *val_type = types[1];
+  *key_type = t[0];
+  *val_type = t[1];
   return ADLB_SUCCESS;
 }
 
@@ -2091,6 +2110,11 @@ ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
 static inline adlb_code
 ADLB_Shutdown(void)
 {
+  if (xlb_s.status == ADLB_STATUS_SHUTDOWN)
+    // Already got a SHUTDOWN message
+    return ADLB_SUCCESS;
+
+  // This worker is shutting itself down - notify its server
   TRACE_START;
   SEND_TAG(xlb_s.layout.my_server, ADLB_TAG_SHUTDOWN_WORKER);
   TRACE_END;
@@ -2105,7 +2129,7 @@ ADLBP_Finalize()
   int flag;
   MPI_Finalized(&flag);
   ADLB_CHECK_MSG(!flag,
-            "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
+                 "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
 
 #ifdef XLB_ENABLE_XPT
   // Finalize checkpoints before shutting down data
@@ -2124,11 +2148,8 @@ ADLBP_Finalize()
   else
   {
     // Worker:
-    if (!got_shutdown)
-    {
-      rc = ADLB_Shutdown();
-      ADLB_CHECK(rc);
-    }
+    rc = ADLB_Shutdown();
+    ADLB_CHECK(rc);
   }
 
   if (xlb_s.hostmap != NULL)
@@ -2161,6 +2182,7 @@ ADLBP_Finalize()
   if (xlb_s.worker_comm != MPI_COMM_NULL)
     MPI_Comm_free(&xlb_s.worker_comm);
   MPI_Group_free(&adlb_group);
+  free(xlb_s.my_name);
 
   xlb_data_types_finalize();
 

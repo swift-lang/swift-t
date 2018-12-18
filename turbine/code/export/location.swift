@@ -3,6 +3,10 @@
  */
 
 @pure
+(location loc) rank2location(int rank) {
+  loc = location(rank, HARD, RANK);
+}
+@pure
 (location loc) locationFromRank(int rank) {
   loc = location(rank, HARD, RANK);
 }
@@ -81,3 +85,7 @@
 (string results[]) hostmap_list() {
   results = hostmapList();
 }
+
+(int results[]) hostmapLeaders()
+"turbine" "1.0"
+[ "set <<results>> [ ::adlb::leaders ]" ];

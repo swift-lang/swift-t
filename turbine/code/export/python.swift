@@ -21,9 +21,18 @@
 */
 
 @dispatch=WORKER
-(string output) python(string code) "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 0 <<code>> ]" ];
+(string output) python(string code, string expr="\"\"",
+                       boolean exceptions_are_errors=true)
+"turbine" "0.1.0"
+[ "set <<output>> [ turbine::python 0 <<exceptions_are_errors>> <<code>> <<expr>>  ]" ];
 
 @dispatch=WORKER
-(string output) python_persist(string code) "turbine" "0.1.0"
-    [ "set <<output>> [ turbine::python 1 <<code>> ]" ];
+(string output) python_persist(string code, string expr="\"\"",
+                               boolean exceptions_are_errors=true)
+"turbine" "0.1.0"
+[ "set <<output>> [ turbine::python 1 <<exceptions_are_errors>> <<code>> <<expr>> ]" ];
+
+
+@par @dispatch=WORKER (string s)
+python_parallel_persist(string code, string expr)
+"turbine" "1.0" "python_parallel_tcl" ;

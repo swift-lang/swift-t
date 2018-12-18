@@ -1,0 +1,122 @@
+
+= Swift/T MPE Tools
+
+:toc:
+:numbered:
+
+////
+Settings:
+////
+:miscellaneous.newline: \n
+
+== Overview
+
+This documents the MPE tools provided by Swift/T.  See the main http://swift-lang.github.io/swift-t/guide.html[Swift/T Guide] for more information, particularly the http://swift-lang.github.io/swift-t/guide.html#mpe[section on MPE].  Use the normal https://github.com/swift-lang/swift-t/issues[GitHub Swift/T issue tracker] to request additional documentation or report problems.
+
+These scripts started as Tcl scripts, which worked, but were too slow to process large (multi-GB) MPE log files.  So they were rewritten in C.  Both sets are still supported.
+
+* Many tools allow you to look at only one rank or all ranks.  "All ranks" is denoted as -1.
+
+* Many tools refer to +MPE_EVENTS+.  This is a space separated list, e.g.: +
+** Look for significant ADLB operations (task puts, data stores):
++
+----
+export MPE_EVENTS="ADLB_Put ADLB_Store"
+----
++
+** Look for example user leaf function "optimizer":
++
+----
+export MPE_EVENTS="optimizer"
+----
+
+== Extracting MPE log text
+
+1. MPE produces a CLOG2 file (+\*.clog2+).  This is a binary file
+2. You can generate a text version (CLOG.TXT) of this file with:
++
+----
+$ clog2_print adlb.clog2 > adlb.clog2.txt
+# or, on a shared file system this is much faster:
+$ clog2_print adlb.clog2 | dd bs=1M of=adlb.clog2.txt
+----
+
+== Tcl tools
+
+See the file headers for usage info.
+
+*Libraries*
+
++util.tcl+:: Library containing generic Tcl utilities
++mpe.tcl+::  Library containing MPE processing utilities
++turbine.tcl+:: Library containing MPE processing tools for Turbine/ADLB runs
+
+*Tools*
+
+The reader should look at the output of +clog2_print+ - it is a moderately readable key/value format.
+
+Each tool reads definitions using the +mpe.tcl+ utility.
+Then, the log is read again for script-specific events.
+
+Then, statistics are collected and output is generated.
+
++time-buckets.tcl+:: Count the occurrence of each event type in time intervals
++adlb-data-profile.tcl+:: Get statistics on ADLB data/task function calls
++worker-load.tcl+:: Get worker load (fraction of workers doing user work) over time
+
+=== Example
+
+----
+$ export TURBINE_TEST_PARAM_1=7
+$ turbine -l -n 6 test/fib-no-stack.tcl >& fib.out
+$ grep trace: fib.out
+trace: 13
+
+$ worker-load.tcl adlb.clog2 -1
+0 0
+1 1.00000
+2 1.00000
+3 1.00000
+4 1.00000
+5 1.00000
+6 1.00000
+7 1.00000
+8 0
+
+# All 4 workers were busy for 6 seconds
+
+$ export MPE_EVENTS="ADLB_Put ADLB_Get"
+$ time-buckets.tcl adlb.clog2 -1
+0 171
+1 12
+2 14
+3 18
+4 14
+5 27
+6 18
+7 0
+
+$ export MPE_EVENTS="ADLB_Store ADLB_Retrieve"
+$ time-buckets.tcl adlb.clog2 -1
+0 367
+1 4
+2 7
+3 13
+4 7
+5 31
+6 21
+7 0
+----
+
+Interpretation: Data operations outweigh task operations overall because they are so dense at the beginning.  However, task operations are more significant during the middle of the run.
+
+== C tools
+
+The tools must be compiled with the Swift/T C-utils package: see the +Makefile+ and edit the settings.  See the transcript above for a rough idea of how to use these programs.  The headers of the C files also provide usage information.
+
++decode.x+:: Simply decodes the CLOG.TXT file into slightly more human-readable form.  Produces a lot of output
++first-last.x+:: Simply reports the first and last events in +MPE_EVENTS+
++list-events.x+:: Simply reports all events defined in the log
++load.x+:: For the events in +MPE_EVENTS+, reports the number of ranks in that state over time
++profile.x+:: Report profile information for all events.  For each event in +MPE_EVENTS+, produces a list of all times spent in that state in +state.<event>.data+
++time-counts.x+:: Accumulates events over time

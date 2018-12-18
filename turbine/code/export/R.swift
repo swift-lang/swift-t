@@ -15,6 +15,7 @@
  */
 
 @dispatch=WORKER
-  (string output) R(string code, string return_expression)
-    "turbine" "0.1.0"
-    [ "set <<output>> [ r::eval <<code>> <<return_expression>> ]" ];
+(string output) R(string code, string return_expression="\"\"",
+                  boolean exceptions_are_errors=true)
+"turbine" "0.1.0"
+[ "set <<output>> [ r::eval <<exceptions_are_errors>> <<code>> <<return_expression>> ]" ];

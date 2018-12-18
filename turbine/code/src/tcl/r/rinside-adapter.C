@@ -4,7 +4,7 @@
 #include "rinside-adapter.h"
 
 static bool initialized = false;
-static RInside* R_interpreter = NULL; // (0, NULL);
+static RInside* R_interpreter = NULL;
 
 static inline void
 init(void)

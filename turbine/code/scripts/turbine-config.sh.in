@@ -5,15 +5,24 @@
 # TURBINE_USER_LIB - directory for user library code
 # TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
-TURBINE_HOME=@prefix@
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
+                            # if this is a Debian installation
+if (( DEBIAN_BUILD ))
+then
+  TURBINE_HOME=/usr/lib/turbine
+else
+  TURBINE_HOME='@prefix@'
+fi
 TURBINE_VERSION=@TURBINE_VERSION@
 export C_UTILS=@USE_C_UTILS@
 export TCL=@USE_TCL@
 export TCLSH=@USE_TCLSH@
 export ADLB=@USE_ADLB@
 
+export USE_CC=@USE_CC@
 export MPI_IMPL=@MPI_IMPL@
 export MPI_LIB=@USE_MPI_LIB_DIR@
+export MPI_LABEL="@MPI_LABEL@"
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 export TURBINE_LINE_OUTPUT_FLAG=@MPI_LINE_OUTPUT_FLAG@
 export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
@@ -63,7 +72,8 @@ export TCLLIBPATH
 
 export TURBINE_MACHINE=@USE_MACHINE@
 
-export TURBINE_USE_PYTHON=@USE_PYTHON_LIBDIR@
+export TURBINE_USE_PYTHON=@PYTHON_LIBDIR@
+export TURBINE_USE_PYTHON_NAME=@PYTHON_NAME@
 export TURBINE_USE_R=@USE_R@
 
 return 0

@@ -19,13 +19,12 @@
 # string s2 = "bye";
 # trace(s1,s2);
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc rules { } {
 
     turbine::create_string 11
     turbine::create_string 12
-    # c::string 3
 
     turbine::store_string 11 "hi"
     turbine::store_string 12 "bye"

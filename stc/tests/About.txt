@@ -78,6 +78,7 @@ The tests are numbered for lexical sorting by shell glob.
 
 000::       Script fragments, noops, assert()s
 100::       Basic function calls, errors
+*        180:: Globals
 200::       Conditionals, recursion, expressions
 300::       Arrays, structs
 400::       For
@@ -103,7 +104,9 @@ The tests are numbered for lexical sorting by shell glob.
 *        710: argc/argv
 *        729: math
 *        730: stdio
+*        735: Priorities
 *        740: Misc. libraries
+*        745: Clock
 *        750: Pragmas
 *        760: Advanced I/O
 *        780: MPE
@@ -113,11 +116,11 @@ The tests are numbered for lexical sorting by shell glob.
 *        900: MapReduce
 *        910: iterate - move to 400?
 *        920: wait() {}
-*        940: Globals
+*        940: SKA
 *        950: Stats
 *        960: Updateables
-*        970: PIPS snippets
-*        980: RDCEP snippets
+*        970: PIPS
+*        980: RDCEP
 *        990: NAMD
 
 == Adding a test

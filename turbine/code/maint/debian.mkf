@@ -1,0 +1,48 @@
+
+# Turbine Debian Makefile
+
+include maint/version.mkf
+
+TURBINE_DEB = turbine_$(VERSION)_amd64.deb
+
+deb-bin: $(TURBINE_DEB)
+
+# Turbine has only one Debian type, with headers, but this is still
+# called a bin
+PKG_TYPE = deb-bin
+DEB_TYPE = bin
+UPSTREAM_TGZ = turbine_$(VERSION).orig.tar.gz
+
+DEB_FILES = changelog compat control copyright rules
+DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
+
+FILE_LIST = maint/file-list.zsh
+
+ifeq ($(ENABLE_DEB),1) # Do this FS scan only if building a DEB
+FILE_ENTRIES = $(shell PKG_TYPE=$(PKG_TYPE) $(FILE_LIST))
+endif
+
+# Just for TGZ dependency
+DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
+		maint/debian.mkf
+
+# Put the version number in the changelog
+maint/debian/changelog: maint/debian/changelog.m4
+	m4 -D M4_TURBINE_VERSION=$(VERSION) $(<) > $(@)
+
+$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile $(FILE_ENTRIES)
+	../../dev/mk-src-tgz.sh $(PKG_TYPE) \
+		$(@) turbine $(VERSION) $(FILE_LIST)
+
+$(TURBINE_DEB): $(UPSTREAM_TGZ)
+	../../dev/debian/mk-debian.zsh ${DEB_TYPE} $(@) $(<) \
+		turbine $(VERSION)
+
+clean:: clean-deb
+
+clean-deb::
+	$(Q) "  CLEAN DEBIAN"
+# 	This may be a soft link (normal build) or a directory (mk-debian)
+	$(E) rm -rfv debian
+	$(E) rm -fv *.deb *.orig.tar.gz
+	$(E) rm -rf .deb-work-*

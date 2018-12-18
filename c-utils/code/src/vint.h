@@ -24,7 +24,7 @@
  *
  *  Encoding format:
  *    We encode least significant bytes first (i.e. little-endian)
- *    first byte: 
+ *    first byte:
  *      lower 6 bits: bits of integer
  *      7th bit: sign byte (1 for negative)
  *      8th bit: 1 if more bytes follow
@@ -79,7 +79,7 @@ vint_bytes(int64_t val)
   vint_len_t len = 1;
   if (val < 0)
     val = -val;
-  val >>= 6; // Account for sign bit. 
+  val >>= 6; // Account for sign bit.
   while (val != 0) {
     val >>= 7;
     len++;
@@ -98,7 +98,7 @@ vint_encode(int64_t val, void *buffer)
     val = -val;
 
   // First byte has 6 bits of number owing to sign bit
-  b = val & VINT_6BIT_MASK;
+  b = (unsigned char) (val & VINT_6BIT_MASK);
   val >>= 6;
 
   if (negative)
@@ -112,7 +112,7 @@ vint_encode(int64_t val, void *buffer)
   vint_len_t pos = 1;
   while (more)
   {
-    b = val & VINT_7BIT_MASK;
+    b = (unsigned char) (val & VINT_7BIT_MASK);
     val >>= 7;
     more = val != 0;
     if (more)
@@ -152,7 +152,7 @@ typedef struct
 static inline int
 vint_decode_start(unsigned char b, vint_dec *dec)
 {
-  dec->sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
+  dec->sign = (signed char) (((b & VINT_SIGN_MASK) != 0) ? -1 : 1);
   dec->accum = b & VINT_6BIT_MASK;
   dec->shift = 6;
   return ((b & VINT_MORE_MASK) != 0) ? 1 : 0;
@@ -183,7 +183,7 @@ vint_decode(const void *buffer, size_t len, int64_t *val)
   vint_dec dec;
   int dec_rc = vint_decode_start(buffer2[0], &dec);
   int pos = 1; // Byte position
-  
+
   while (dec_rc == 1)
   {
     if (len <= pos)
@@ -210,7 +210,7 @@ static inline int vint_decode_unsigned(const void *buffer, size_t len,
   return vint_decode(buffer, len, (int64_t*)val);
 }
 
-static inline int vint_decode_size_t(const void *buffer, size_t len,  
+static inline int vint_decode_size_t(const void *buffer, size_t len,
                                      size_t *val)
 {
   uint64_t val64 = 0;
@@ -240,7 +240,7 @@ vint_file_decode(FILE *file, int64_t *val)
     return -1;
   }
   int dec_rc = vint_decode_start((unsigned char)b, &dec);
-  
+
   while (dec_rc == 1)
   {
     b = fgetc(file);

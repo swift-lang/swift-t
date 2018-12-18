@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Turbine builtin functions
+# Misc. Turbine builtin functions
 
 # All builtins will have signature:
 #   f <OUTPUT LIST> <INPUT LIST>
@@ -321,25 +321,12 @@ namespace eval turbine {
         return $result
     }
 
-    # User function
-    proc toint { result input } {
-        rule $input "toint_body $input $result" \
-            name "toint-$input"
+    proc string2int { result inputs } {
+        rule $inputs [ list string2int_body {*}$inputs $result ] \
+            name "string2int-$inputs"
     }
 
-    proc toint_body { input result } {
-        set t [ retrieve_decr $input ]
-        set i [ toint_impl $t ]
-
-        store_integer $result $i
-    }
-
-    proc parse_int { result inputs } {
-        rule $inputs [ list parse_int_body {*}$inputs $result ] \
-            name "parse_int-$inputs"
-    }
-
-    proc parse_int_body { str base result } {
+    proc string2int_body { str base result } {
         set str_val [ retrieve_decr_string $str ]
         set base_val [ retrieve_decr_integer $base ]
         set i [ parse_int_impl $str_val $base_val ]
@@ -347,57 +334,75 @@ namespace eval turbine {
         store_integer $result $i
     }
 
-    proc fromint { result input } {
-        rule $input "fromint_body $result $input" \
-            name "fromint-$input-$result"
+    proc int2string { result input } {
+        rule $input "int2string_body $result $input" \
+            name "int2string-$input-$result"
     }
 
-    proc fromint_body { result input } {
+    proc int2string_body { result input } {
         set t [ retrieve_decr_integer $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
 
-    proc tofloat { result input } {
-        rule $input "tofloat_body $input $result" \
-            name "tofloat-$input"
+    proc string2float { result input } {
+        rule $input "string2float_body $input $result" \
+            name "string2float-$input"
     }
 
-    proc tofloat_body { input result } {
+    proc string2float_body { input result } {
         set t [ retrieve_decr $input ]
         #TODO: would be better if the accepted double types
         #     matched Swift float literals
-        store_float $result [ tofloat_impl $t ]
+        store_float $result [ string2float_impl $t ]
     }
 
-    proc tofloat_impl { input } {
+    proc string2float_impl { input } {
       if { ! [ string is double $input ] } {
-        error "could not convert string '${input}' to float"
+          turbine_error \
+              "string2float():" \
+              "could not convert string '${input}' to float"
       }
       return $input
     }
 
-    proc fromfloat { result input } {
-        rule $input "fromfloat_body $input $result"
+    proc float2string { result input } {
+        rule $input "float2string_body $input $result"
     }
 
-    proc fromfloat_body { input result } {
+    proc float2string_body { input result } {
         set t [ retrieve_decr $input ]
         # Tcl performs the conversion naturally
         store_string $result $t
     }
 
-    proc boolToString { result input } {
-        rule $input "boolToString_body $result $input"
+    proc bool2string { result input } {
+        rule $input "bool2string_body $result $input"
     }
 
-    proc boolToString_body { result input } {
+    proc bool2string_body { result input } {
         set v [ retrieve_decr_integer $input ]
-        store_string $result [ boolToString_impl $v ]
+        store_string $result [ bool2string_impl $v ]
     }
 
-    proc boolToString_impl { input } {
-      return [ expr {$input ? "true" : "false"} ]
+    proc bool2string_impl { input } {
+      return [ expr { $input ? "true" : "false" } ]
+    }
+
+    proc string2bool { result input } {
+        rule $input "string2bool_body $result $input"
+    }
+
+    proc string2bool_body { result input } {
+        set v [ retrieve_decr $input ]
+        store_integer $result [ string2bool_impl $v ]
+    }
+
+    proc string2bool_impl { input } {
+        if [ catch { set result [ expr { $input ? 1 : 0 } ] } e ] {
+            turbine_error "string2bool(): $e"
+        }
+        return $result
     }
 
     # Good for performance testing
@@ -515,7 +520,8 @@ namespace eval turbine {
             lappend inputs $v
         }
 
-        rule $inputs [ list make_void_body $o $inputs ] name make_void-$o
+        rule $inputs [ list make_void_body $o $inputs ] \
+            name make_void-$o
     }
 
     proc make_void_body { output inputs } {
@@ -535,6 +541,44 @@ namespace eval turbine {
     proc zero_body { output input } {
         read_refcount_decr $input
         store_integer $output 0
+    }
+
+    proc pick_integer_string { outputs inputs } {
+        rule $inputs "pick_integer_string_body $outputs $inputs"
+    }
+    proc pick_integer_string_body { args } {
+        lassign $args result A indices
+        set picks [ adlb::enumerate $indices members all 0 ]
+        set L [ list ]
+        # Output list:
+        foreach pick $picks {
+            set s [ adlb::lookup $A $pick ]
+            lappend L $s
+        }
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
+    }
+
+    proc pick_stable_integer_string { outputs inputs } {
+        rule $inputs "pick_stable_integer_string_body $outputs $inputs"
+    }
+    proc pick_stable_integer_string_body { args } {
+        lassign $args result A indices
+        set D [ adlb::enumerate $indices dict all 0 ]
+        # Indices in stable order:
+        set stable [ list ]
+        set N [ dict size $D ]
+        for { set i 0 } { $i < $N } { incr i } {
+            lappend stable [ dict get $D $i ]
+        }
+        # Output list:
+        set L [ list ]
+        foreach index $stable {
+            set s [ adlb::lookup $A $index ]
+            lappend L $s
+        }
+        # Construct Turbine array:
+        turbine::array_build $result $L 1 string
     }
 }
 

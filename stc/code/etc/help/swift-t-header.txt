@@ -1,0 +1,12 @@
+Swift/T Help
+
+swift-t <options> <program.swift>
+Compiles program.swift with STC and runs it with Turbine
+
+Swift/T Web Site: http://swift-lang.org/Swift-T
+
+You may provide STC and/or Turbine options.
+When there is a conflict, STC takes precedence.
+Use swift-t -t to pass arguments through to Turbine.
+For example, to provide an MPICH hosts file, use:
+swift-t -t f:hosts.txt program.swift

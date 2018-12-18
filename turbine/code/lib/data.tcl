@@ -409,7 +409,7 @@ namespace eval turbine {
 
     proc store_blob_string { id value } {
         log "store_blob_string: <$id>=[ log_string $value ]"
-        set b [ adlb::blob_from_string $value ]
+        set b [ adlb::string2blob $value ]
         adlb::store $id blob $b
         # Free memory
         adlb::local_blob_free $b
@@ -459,7 +459,7 @@ namespace eval turbine {
         } else {
           set blob [ adlb::retrieve $id blob ]
         }
-        set result [ adlb::blob_to_string $blob ]
+        set result [ adlb::blob2string $blob ]
         adlb::local_blob_free $blob
         debug "retrieve_string: <$id>=[ log_string $result ]"
         return $result

@@ -39,6 +39,23 @@ namespace eval turbine {
         store_string $result $total
     }
 
+    proc join_args { result inputs } {
+        rule $inputs "join_args_body $result $inputs" \
+            name "join_args-$result"
+    }
+    proc join_args_body { result args } {
+
+        set separator [ list_pop_first args ]
+        set separator_value [ retrieve_decr $separator ]
+        set L [ list ]
+        foreach input $args {
+            set t [ retrieve_decr $input ]
+            lappend L $t
+        }
+        set total [ join $L $separator_value ]
+        store_string $result $total
+    }
+
     # usage: dircat <result> <args>* => arg1/arg2/arg3
     proc dircat { result inputs } {
         rule $inputs "dircat_body $result $inputs" \
@@ -135,8 +152,25 @@ namespace eval turbine {
         foreach a $args {
             lappend L [ retrieve_decr $a ]
         }
-        set s [ eval format $L ]
+        set s [ sprintf_impl {*}$L ]
+
         store_string $result $s
+    }
+    proc sprintf_impl { args } {
+        if [ catch {
+            set s [ format {*}$args ]
+        } e ] {
+            sprintf_error $args $e
+        }
+        return $s
+    }
+    proc sprintf_error { L e } {
+        turbine_error \
+            "Error in usage of sprintf()" \
+            "or string format operator (%)\n" \
+            "format: \"" [ lindex $L 0 ] "\"\n" \
+            "arguments:" [ join [ lreplace $L 0 0 ] "," ] "\n" \
+            "details: $e"
     }
 
     proc find { result inputs } {
@@ -329,14 +363,14 @@ namespace eval turbine {
         rule $inputs "string_join_body $result $container $separator" \
             name "string_join-$result"
     }
-    
+
     # This is called when every entry in container is set
     proc string_join_body { result container separator } {
         set separator_value [ retrieve_decr_string $separator ]
         set container_val [ adlb::enumerate $container dict all 0 1 ]
         store_string $result [ string_join_impl $container_val $separator ]
     }
-    
+
     proc string_join_impl { container separator } {
         set A [ list ]
         set sorted_keys [ lsort -integer [ dict keys $container ] ]
@@ -345,4 +379,24 @@ namespace eval turbine {
         }
         return [ join $A $separator ]
     }
+
+    proc pick_regexp { pattern L } {
+        set result [ dict create ]
+        dict for { k v } $L {
+            if [ catch {
+                if [ regexp $pattern $v ] {
+                    dict set result $k $v
+                }
+            } e ] {
+                turbine_error "error in pick_regexp(): "        \
+                              "pattern='$pattern' value='$v'\n" \
+                              "details: $e"
+            }
+        }
+        return $result
+    }
 }
+
+# Local Variables:
+# tcl-indent-level: 4
+# End:

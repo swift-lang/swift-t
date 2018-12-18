@@ -61,10 +61,12 @@ public class BuiltinOps {
       return new Command(tclFn, argExpr);
     } else {
       if (op == BuiltinOpcode.SPRINTF) {
-        Square fmtArgs = new TclList(argExpr);
-        Square fmt = new Square(new Token("eval"), new Token("format"),
-                                                                  fmtArgs);
-        return new SetVariable(TclNamer.prefixVar(out.name()), fmt);
+        List<Expression> tokens = new ArrayList<>(argExpr.size()+1);
+        tokens.add(new Token("turbine::sprintf_impl"));
+        tokens.addAll(argExpr);
+        Square sq = new Square(tokens);
+        SetVariable sv = new SetVariable(TclNamer.prefixVar(out.name()), sq);
+        return sv;
       } else {
         assert(out != null);
         assert(Types.isPrimValue(out));

@@ -14,7 +14,9 @@
  * limitations under the License
  */
 
-// Swift/Turbine builtins defined here
+/** Swift/Turbine builtins defined here
+    These are automatically imported.
+*/
 
 // HACK: have preprocessor ignore this: now automatically included
 #define BUILTINS_SWIFT
@@ -94,40 +96,75 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure @minmax @builtin_op=MIN_FLOAT
 (float o) min(float i1, float i2) "turbine" "0.0.2" "min_float";
 
-// Conversions to strings
+/// Conversions to strings
+// int2string
 @pure @builtin_op=INTTOSTR
-(string o) fromint(int i)  "turbine" "0.0.2" "fromint";
+(string o) int2string(int i)  "turbine" "0.0.2" "int2string";
 @pure @builtin_op=INTTOSTR
-(string o) toString(int i)  "turbine" "0.0.2" "fromint";
+(string o) fromint(int i)  "turbine" "0.0.2" "int2string";
+@pure @builtin_op=INTTOSTR
+(string o) toString(int i)  "turbine" "0.0.2" "int2string";
+// float2string
 @pure @builtin_op=FLOATTOSTR
-(string o) fromfloat(float i)  "turbine" "0.0.2" "fromfloat";
+(string o) float2string(float i)  "turbine" "0.0.2" "float2string";
 @pure @builtin_op=FLOATTOSTR
-(string o) toString(float i)  "turbine" "0.0.2" "fromfloat";
+(string o) fromfloat(float i)  "turbine" "0.0.2" "float2string";
+@pure @builtin_op=FLOATTOSTR
+(string o) toString(float i)  "turbine" "0.0.2" "float2string";
+// bool2string
 @pure
-(string o) toString(boolean i)  "turbine" "0.8.0" "boolToString"
-  [ "set <<o>> [ turbine::boolToString_impl <<i>> ]" ];
+(string o) toString(boolean i)  "turbine" "0.8.0"
+  [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
+@pure
+(string o) boolean2string(boolean i)  "turbine" "0.8.0"
+  [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
+@pure
+(string o) bool2string(boolean i)  "turbine" "0.8.0"
+  [ "set <<o>> [ turbine::bool2string_impl <<i>> ]" ];
 
-// Parsing of strings
+/// Parsing of strings
+// string2int
+@pure @builtin_op=PARSE_INT
+(int o) string2int(string i, int base=10) "turbine" "0.0.2" "string2int";
 @pure
-(int o) toint(string i) {
-  o = parseInt(i, 10);
+(int o) toint(string _i) {
+  o = parseInt(_i, 10);
 }
 @pure @builtin_op=PARSE_INT
-(int o) parseInt(string i, int base=10) "turbine" "0.0.2" "parse_int";
+(int o) parseInt(string i, int base=10) "turbine" "0.0.2" "string2int";
+// string2float
 @pure @builtin_op=PARSE_FLOAT
-(float o) tofloat(string i)  "turbine" "0.0.2" "tofloat";
+(float o) string2float(string i)  "turbine" "0.0.2" "string2float";
 @pure @builtin_op=PARSE_FLOAT
-(float o) parseFloat(string i)  "turbine" "0.0.2" "tofloat";
+(float o) tofloat(string i)  "turbine" "0.0.2" "string2float";
+@pure @builtin_op=PARSE_FLOAT
+(float o) parseFloat(string i)  "turbine" "0.0.2" "string2float";
+// string2bool
+@pure
+(boolean b) string2bool(string s)  "turbine" "0.8.0"
+  [ "set <<b>> [ turbine::string2bool_impl <<s>> ]" ];
+@pure
+(boolean b) string2boolean(string s)  "turbine" "0.8.0"
+  [ "set <<b>> [ turbine::string2bool_impl <<s>> ]" ];
 
-// Numeric conversions
+/// Numeric conversions
+// int2float
 @pure @builtin_op=INTTOFLOAT
-(float o) itof(int i) "turbine"  "0.0.2" "itof";
+(float o) int2float(int i) "turbine"  "0.0.2" "int2float";
 @pure @builtin_op=INTTOFLOAT
-(float o) toFloat(int i) "turbine"  "0.0.2" "itof";
+(float o) itof(int i) "turbine"  "0.0.2" "int2float";
+@pure @builtin_op=INTTOFLOAT
+(float o) toFloat(int i) "turbine"  "0.0.2" "int2float";
+// float2int
 @pure @builtin_op=FLOATTOINT
-(int o) toInt(float i) "turbine" "0.0.2" "floattoint";
+(int o) float2int(float i) "turbine" "0.0.2" "float2int";
+@pure @builtin_op=FLOATTOINT
+(int o) toInt(float i) "turbine" "0.0.2" "float2int";
+@pure @builtin_op=FLOATTOINT
+(int o) ftoi(float i) "turbine" "0.0.2" "float2int";
 
 // I/O
+@dispatch=WORKER
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
     [ "turbine::trace_impl <<args>>" ];
 (void o) sleep_trace (float secs, int|float|string|boolean... args) "turbine" "0.0.2"
@@ -227,5 +264,14 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @builtin_op=SPRINTF
 (string o) __sprintf_op__(string fmt, int|float|string|boolean... args)
 "turbine" "0.0.2" "sprintf";
+
+@pure
+(string result[]) pick_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_integer_string";
+
+@pure
+(string result[]) pick_stable_integer_string(string A[], int indices[])
+"turbine" "0.4.0" "pick_stable_integer_string";
+
 
 #endif

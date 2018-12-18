@@ -56,14 +56,14 @@ exmcutils: $(EXM_CUTILS_LIBS)
 
 ### Autoconf sanity:
 
-configure: bootstrap
+configure: configure.ac bootstrap version.txt
 	@echo
 	@echo "Configuration is not up to date (bootstrap)!"
 	@echo "Run ./bootstrap and ./configure again."
 	@echo
 	@exit 1
 
-Makefile: configure.ac Makefile.in
+Makefile: configure Makefile.in
 	@echo
 	@echo "Configuration is not up to date (Makefile)!"
 	@echo "Run ./bootstrap and ./configure again."
@@ -108,15 +108,20 @@ SRCS :=
 DEPS :=
 OBJS :=
 include src/module.mk
+include tests/module.mk
+include maint/debian.mkf
 
 dirname = $(patsubst %/,%,$(dir $(1)))
 
 ### FLAGS
 
 CC = @CC@
+DEP_CC = gcc
+CPPFLAGS := @CPPFLAGS@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
-CFLAGS += -I $(srcdir) -I $(srcdir)/src $(STD) $(WARNS)
+CPPFLAGS += -I $(srcdir) -I $(srcdir)/src
+CFLAGS +=  $(STD) $(WARNS)
 ifeq ($(ENABLE_SHARED),1)
 	PIC = $(PIC_FLAG)
 	CFLAGS += $(PIC)
@@ -132,18 +137,18 @@ RANLIB  = @RANLIB@
 
 deps: $(DEPS)
 
-# default rule for generating dependency files (deps)
+# Default rule for generating dependency files (deps)
 %.d: %.c
 	$(Q) "  DEP		$@"
-	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
-             $(call dirname, $*) $(CFLAGS) $< > $@
+	$(E) CC="$(DEP_CC)" $(srcdir)/maint/depend.sh \
+             $(call dirname, $*) $(CPPFLAGS) $< > $@
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
   -include $(DEPS)
 endif
 
 # Check existing *.d files for files that do not exist
-# Useful when dependency file generation is failing
+# Useful when dependency file generation fails
 # Must "make clean" to re-check correctly
 EXISTING_D = $(shell find . -name *.d)
 
@@ -155,12 +160,20 @@ deps_contents.txt:
 	$(Q) "  SH		$(@)"
 	$(E) $(srcdir)/maint/collect.sh $(@) $(EXISTING_D)
 
+### TAGS
+
+tags: TAGS
+
+TAGS: deps_contents.txt
+	$(Q) "  TAGS "
+	$(E) etags `cat deps_contents.txt`
+
 ### COMPILE
 
 %.o: %.c
-	$(Q) "  CC		$@"
 #       This line causes a false autoscan warning on token 'CC' (C++)
-	$(E) $(CC) $(CFLAGS) -c $(<) -o $(@)
+	$(Q) "  CC		$@"
+	$(E) $(CC) $(CPPFLAGS) $(CFLAGS) -c $(<) -o $(@)
 
 ### LINK
 
@@ -180,37 +193,6 @@ $(EXM_CUTILS_A): $(OBJS)
 
 ### TEST
 
-TEST_SRC :=
-include tests/module.mk
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC))
-TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC))
-TESTS     = $(patsubst %.c, %.x, $(TEST_SRC))
-# Test case results
-TEST_SCRIPTS = $(patsubst %.c,  %.sh, $(TEST_SRC))
-# Test case outputs
-TEST_OUTPUT  = $(patsubst %.c, %.out, $(TEST_SRC))
-# Test case results
-TEST_RESULTS = $(patsubst %.c, %.result, $(TEST_SRC))
-
-# Target to just build all C tests
-tests: $(TESTS)
-
-# Run all tests
-test_results: $(TEST_RESULTS)
-
-# Test result rule for C tests
-%.result: %.sh %.x install.txt
-	$(Q) "  SH		$(@)"
-	$(E) rm -f $(@)
-	$(E) $(<) > $(*).tmp 2>&1
-	$(E) mv $(*).tmp $(@) 2>&1
-
-$(TESTS): %.x: %.o $(EXM_CUTILS_LIBS) install.txt
-	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
-                   -L$(INSTALL_LIB) -lexmcutils \
-                   -o $(@) \
-                   $(RPATH)
 
 ### INSTALL
 
@@ -232,17 +214,22 @@ $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS) $(HEADERS)
 	$(E) touch install.txt
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)
-	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
-	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
-#       Install the headers and library
+#       Install the headers (if not a binary package) and library
+ifeq ($(DEBIAN_BIN_PKG),)
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
+endif
 	$(E) cp $(CP_ARGS) $(EXM_CUTILS_LIBS) $(INSTALL_LIB)
-#       Finally, copy in the token install.txt file
+#       Finally, copy in the provenance files
+#       (if not making a Debian package)
+ifeq ($(DEBIAN_PKG),)
 	$(E) cp $(CP_ARGS) install.txt $(@)
+	$(E) mkdir -pv $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
+	$(E) cp $(CP_ARGS) install.txt $(INSTALL_ETC)
+endif
 
 # Maintaining the install.txt file is a simple way to
 # create a dependency on the installation
@@ -250,12 +237,11 @@ install: $(INSTALL_PREFIX)/install.txt
 
 ### CLEAN
 
-clean:
+clean::
 	$(Q) "  CLEAN:"
 	$(E) rm -fv $(DEPS) deps_contents.txt
 	$(E) rm -fv src/*.o
 	$(E) rm -fv $(EXM_CUTILS_SO) $(EXM_CUTILS_A)
-	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
 
 distclean: clean
 	@rm -fv Makefile **/*.mk

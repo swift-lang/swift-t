@@ -1,3 +1,0 @@
-SEE ALSO
-
-   http://swift-lang.org/Swift-T/guide.html#Turbine

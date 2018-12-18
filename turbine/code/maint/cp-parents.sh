@@ -1,19 +1,21 @@
-#!/bin/sh
+#!/bin/bash
 
+# CP-PARENTS
 # Substitute for cp --parents on non-GNU systems
+# We use bash because dash is not on the Mac by default
 
 usage()
 {
-  echo "usage: cp-parents.sh ARGS SRC/FILE DEST"
-  echo "Copies SRC/FILE to DEST/SRC/FILE"
-  echo "ARGS must start with dash and are passed to cp"
-  echo "Emulates GNU's cp --parents"
+  echo "usage: cp-parents.sh [ARGS] SRC/FILE* DEST"
+  echo "Copies SRC/FILE* to DEST/SRC/FILE"
+  echo "A single token ARGS is optional, and must start with dash"
+  echo "Emulates GNU's cp ARGS --parents SRC/FILE* DEST"
 }
 
 crash()
 {
   MSG=$1
-  echo ${MSG}
+  echo $MSG
   echo
   usage
   exit 1
@@ -22,17 +24,16 @@ crash()
 try()
 {
   COMMAND=${*}
-  ${COMMAND}
-  if [[ ${?} != 0 ]]
+  $COMMAND
+  if (( ${?} ))
   then
-    echo "cp-parents.sh: failed on command:"
-    echo "  ${COMMAND}"
-    exit 1
+    crash "cp-parents.sh: failed on command:\n  ${COMMAND}"
   fi
 }
 
-ARGS=
-if [[ $1 == -* ]]
+ARGS=""
+# This pattern requires bash (not dash):
+if [[ $1 = -* ]]
 then
   ARGS=$1
   shift
@@ -46,19 +47,18 @@ fi
 SRCS=
 while (( ${#*} > 1 ))
 do
-  # echo SRC: $1
-  SRCS+=" $1"
+  SRCS="$SRCS $1"
   shift
 done
 
 DEST=$1
 
-for SRC in ${SRCS[@]}
+for SRC in $SRCS
 do
-  TARGET=${DEST}/${SRC}
-  DIR=$( dirname ${TARGET} )
-  try mkdir -p ${DIR}
-  try cp ${ARGS} ${SRC} ${TARGET}
+  TARGET=$DEST/$SRC
+  DIR=$( dirname $TARGET )
+  try mkdir -p $DIR
+  try cp $ARGS $SRC $TARGET
 done
 
 exit 0

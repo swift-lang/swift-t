@@ -1,5 +1,12 @@
 
 # Valgrind memcheck suppressions file
+# Suppresses known memcheck leaks in Tcl and MPICH
+# Turbine/ADLB/C-Utils should have no leaks
+# No leaks as of 2018/06/28
+
+# Suppressions are listed with Tcl version and date of creation
+#    so that old suppressions can be removed if no longer necessary.
+
 # To use: set
 #   VALGRIND='valgrind --suppressions=turbine.supp --num-callers=$N'
 # Set N high for MPICH errors- these have deep call stacks
@@ -14,7 +21,7 @@
 # http://wiki.tcl.tk/3840
 # http://wiki.tcl.tk/3248
 
-# Use: export LANG=POSIX - helps a little
+# Use: export LANG=POSIX - helps a little (not anymore 2018/06)
 #      Tcl -DPURIFY - did not help
 # Configure MPICH with --enable-g=dbg,meminit
 #       meminit prevents uninitialized data warnings
@@ -31,6 +38,7 @@
   tcl-malloc-2
   Memcheck:Leak
   fun:malloc
+  ...
   fun:TclpAlloc
   ...
 }
@@ -42,6 +50,48 @@
   fun:GetBlocks
   fun:TclpAlloc
   ...
+}
+
+{
+  tcl-malloc-4
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:TclNREvalObjv
+  ...
+  # 8.6 2018/06
+}
+
+{
+  tcl-malloc-5
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:Tcl_RegisterConfig
+  ...
+  # 8.6 2018/06
+}
+
+{
+  tcl-malloc-6
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:Tcl_NewObj
+  fun:Tcl_CreateInterp
+  ...
+  # 8.6 2018/06
+}
+
+{
+  tcl-load-calloc-1
+  Memcheck:Leak
+  fun:calloc
+  fun:_dl_check_map_versions
+  ...
+  fun:Tcl_LoadFile
+  ...
+  # 8.6 2018/06
 }
 
 {
@@ -70,6 +120,18 @@
 }
 
 {
+  tcl-storage-malloc-1
+  Memcheck:Leak
+  fun:malloc
+  fun:TclThreadStorageKeySet
+  fun:Tcl_GetThreadData
+  fun:TclInitSubsystems
+  fun:Tcl_CreateInterp
+  fun:main
+  # 8.6 2018/06
+}
+
+{
   tcl-mutex-malloc-1
   Memcheck:Leak
   fun:malloc
@@ -90,7 +152,7 @@
   tcl-cache-calloc-1
   Memcheck:Leak
   fun:calloc
-  fun:GetCache
+  ...
   fun:TclpAlloc
   ...
 }
@@ -132,6 +194,42 @@
   fun:TclThreadStorageKeySet
   fun:Tcl_GetThreadData
   ...
+}
+
+{
+  tcl-callbacks-realloc-1
+  Memcheck:Leak
+  fun:realloc
+  ...
+  fun:Tcl_GetThreadData
+  ...
+  fun:TclNRRunCallbacks
+  ...
+  # 8.6 2018/06
+}
+
+{
+  tcl-callbacks-calloc-1
+  Memcheck:Leak
+  fun:calloc
+  ...
+  fun:_dlerror_run
+  ...
+  fun:TclNRRunCallbacks
+  ...
+  # 8.6 2018/06
+}
+
+{
+  tcl-callbacks-malloc-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:Tcl_GetThreadData
+  ...
+  fun:CreateInterp
+  ...
+  # 8.6 2018/06
 }
 
 {
@@ -228,6 +326,17 @@
 }
 
 {
+  mpi-reduce-local
+  Memcheck:Leak
+  fun:malloc
+  fun:allocate_dtv_entry
+  ...
+  fun:MPIR_Reduce_local_impl
+  ...
+  # 3.2.1 2018/06
+}
+
+{
   mpi-finalize-send
   Memcheck:Param
   writev(vector[...])
@@ -287,6 +396,6 @@
 }
 
 # Local Variables:
-# mode: sh-mode
+# mode: sh
 # sh-basic-offset: 2
 # End:

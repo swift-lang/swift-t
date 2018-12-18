@@ -36,7 +36,8 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   JOB_ID: Job ID from the scheduler
+#   ENV:       User environment variables "K1=V1:K2=V2 ..."
+#   ENV_PAIRS: User environment variables "K1=V1 K2=V2 ..."
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -46,6 +47,9 @@
 #   LOG_FILE:    Path to turbine.log
 #   OUTPUT_FILE: Path to output.txt
 #   JOB_ID_FILE: Path to jobid.txt
+#   MAIL_ENABLED: If mail is enabled, 1, else 0.  Default 0.
+#   MAIL_ADDRESS: If mail is enabled, an email address.
+#   DRY_RUN: If 1, generate submit scripts but do not execute
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
@@ -55,10 +59,14 @@
 #   TURBINE_LOG
 #   TURBINE_DEBUG
 #   ADLB_DEBUG
+# OTHER CONVENTIONS
+#   JOB_ID: Job ID from the scheduler (not available at run time)
 
 # Files:
-# Creates TURBINE_OUTPUT containing:
+# Creates soft link in PWD pointing to TURBINE_OUTPUT
+# Creates directory TURBINE_OUTPUT containing:
 # Copy of the user TIC
+# turbine-*.sh: The script to be submitted to the scheduler
 # turbine.log: Summary of job metadata
 # jobid.txt: The JOB_ID from the scheduler
 # output.txt: The job stdout and stderr
@@ -72,9 +80,9 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
 export ADLB_SERVERS=${ADLB_SERVERS:-1}
 export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
-export TURBINE_LOG=${TURBINE_LOG:-1}
-export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
-export ADLB_DEBUG=${ADLB_DEBUG:-1}
+export TURBINE_LOG=${TURBINE_LOG:-0}
+export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
+export ADLB_DEBUG=${ADLB_DEBUG:-0}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
 export VERBOSE=0
@@ -95,6 +103,7 @@ turbine_log()
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
   print "WALLTIME:          ${WALLTIME}"
   print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
+  print "TURBINE_HOME:      ${TURBINE_HOME}"
 }
 
 # Defaults:
@@ -102,17 +111,22 @@ CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
-(( ! ${+PROCS} )) && PROCS=0
-[[ ${PROCS} == "" ]] && PROCS=0
-export PROCS
+export PROCS=${PROCS:-0}
 if (( ! ${+TURBINE_OUTPUT_ROOT} ))
 then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 fi
 SETTINGS=0
+export MAIL_ENABLED=${MAIL_ENABLED:-0}
+export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
+export DRY_RUN=0
+WAIT_FOR_JOB=0
 
-# Place to store output directory name
-OUTPUT_TOKEN_FILE=turbine-directory.txt
+# Place to link to output directory
+# If
+OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
+# Turbine will also write the value of TURBINE_OUTPUT_HERE
+OUTPUT_TOKEN_FILE=/dev/null
 
 # Job environment:
 typeset -T ENV env
@@ -120,49 +134,48 @@ env=()
 export ENV env
 
 # Get options
-while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
+while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
  do
   case ${OPTION}
    in
-    C)
-      CHANGE_DIRECTORY=${OPTARG}
+    d) CHANGE_DIRECTORY=${OPTARG}
       ;;
-    d)
-      OUTPUT_TOKEN_FILE=${OPTARG}
+    D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
-    e)
-      KV=${OPTARG}
-      if [[ ! ${OPTARG} =~ ".*=.*" ]]
-      then
-        # Look up unset environment variables
-        KV="${KV}=${(P)KV}"
-      fi
-      env+="${KV}"
-      ;;
-    i)
-       INIT_SCRIPT=${OPTARG}
+    e) KV=${OPTARG}
+       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       then
+         # Look up unset environment variables
+         KV="${KV}=${(P)KV}"
+       fi
+       env+="${KV}"
+       ;;
+    i) INIT_SCRIPT=${OPTARG}
+       ;;
+    M) MAIL_ENABLED=1
+       MAIL_ADDRESS=${OPTARG}
        ;;
     n) PROCS=${OPTARG}
-      ;;
+       ;;
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
-      ;;
+       ;;
     s) SETTINGS=${OPTARG}
-      ;;
+       ;;
     t) WALLTIME=${OPTARG}
-      ;;
-    V)
-      VERBOSE=1
-      ;;
-    x)
-      export EXEC_SCRIPT=1
-      ;;
-    X)
-      export TURBINE_STATIC_EXEC=1
-      ;;
-    *)
-      print "abort"
-      exit 1
-      ;;
+       ;;
+    V) VERBOSE=1
+       ;;
+    w) WAIT_FOR_JOB=1
+       ;;
+    x) export EXEC_SCRIPT=1
+       ;;
+    X) export TURBINE_STATIC_EXEC=1
+       ;;
+    Y) DRY_RUN=1
+       ;;
+    *) print "abort"
+       exit 1
+       ;;
   esac
 done
 shift $(( OPTIND-1 ))
@@ -204,8 +217,8 @@ fi
 
 START=$( date +%s )
 
-if [[ ${PROCS} == 0 ]]
-  then
+if (( ${PROCS} == 0 ))
+then
   print "The process count was not specified!"
   print "Use the -n argument or set environment variable PROCS."
   exit 1
@@ -247,8 +260,16 @@ declare TURBINE_OUTPUT
 # All output from job, including error stream
 export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
-print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
+if [[ ${OUTPUT_SOFTLINK} != /dev/null ]]
+then
+  [[ -L ${OUTPUT_SOFTLINK} ]] && rm ${OUTPUT_SOFTLINK}
+  ln -s ${TURBINE_OUTPUT} ${OUTPUT_SOFTLINK}
+fi
+if [[ ${OUTPUT_TOKEN_FILE} != /dev/null ]]
+then
+  print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
+fi
 
 if [[ ${INIT_SCRIPT} != 0 ]]
 then
@@ -287,6 +308,14 @@ JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
 export ENV
 export ENV_PAIRS="${env}"
+
+if (( ${MAIL_ENABLED:-0} == 1 ))
+then
+  if [[ ${MAIL_ADDRESS:-} == "" ]]
+  then
+    print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
+  fi
+fi
 
 ## Local Variables:
 ## mode: sh

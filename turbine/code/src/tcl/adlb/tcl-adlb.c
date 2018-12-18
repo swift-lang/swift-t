@@ -371,25 +371,24 @@ ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[]);
+
 /*
  * Setup the ADLB communicator
  *
  * comm: if NULL, use MPI_COMM_WORLD
+ * @return A Tcl error code
  */
-static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                           MPI_Comm *comm)
+static int adlb_setup_comm(Tcl_Interp* interp, Tcl_Obj* const objv[],
+                           MPI_Comm* comm)
 {
   TCL_CONDITION(!adlb_comm_init, "ADLB Communicator already initialized");
-  int rc;
 
   if (comm == NULL)
   {
-    // Start with MPI_Init() and MPI_COMM_WORLD
-    int argc = 0;
-    char** argv = NULL;
     must_comm_free = true;
-    rc = MPI_Init(&argc, &argv);
-    assert(rc == MPI_SUCCESS);
+    int rc = do_mpi_init(interp, objv);
+    TCL_CHECK_MSG(rc, "Failed to set up MPI!");
     MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
   }
   else
@@ -405,6 +404,36 @@ static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/**
+ Initialize MPI
+ @arg interp: Just for errors
+ @return A Tcl error code
+*/
+static int
+do_mpi_init(Tcl_Interp* interp, Tcl_Obj* const objv[])
+{
+  // Start with MPI_Init() and MPI_COMM_WORLD
+  int argc = 0;
+  char** argv = NULL;
+
+  int rc;
+  int use_thread_multiple;
+  rc = getenv_integer("TURBINE_MPI_THREAD", 0, &use_thread_multiple);
+  TCL_CONDITION(rc, "invalid setting for TURBINE_MPI_THREAD: %s",
+                getenv("TURBINE_MPI_THREAD"));
+
+  if (use_thread_multiple)
+  {
+    int provided;
+    rc = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+    TCL_CONDITION((provided == MPI_THREAD_MULTIPLE),
+                  "MPI_THREAD_MULTIPLE is not supported by this MPI!");
+  }
+  else
+    rc = MPI_Init(&argc, &argv);
+  assert(rc == MPI_SUCCESS);
+  return TCL_OK;
+}
 
 /**
    usage: adlb::init <servers> <types> [<comm>]?
@@ -422,7 +451,6 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
-  turbine_debug_init();
 
   int rc;
 
@@ -666,6 +694,7 @@ set_namespace_constants(Tcl_Interp* interp)
 {
   turbine_tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
   turbine_tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
+  turbine_tcl_set_integer(interp, "::adlb::RANK_NULL", ADLB_RANK_NULL);
   turbine_tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
 }
 
@@ -705,8 +734,8 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   MPI_Comm comm = (MPI_Comm) comm_int;
 
@@ -748,9 +777,9 @@ ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   else if (objc == 2)
   {
-    int comm_int;
-    int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
-    TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+    Tcl_WideInt comm_int;
+    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
     MPI_Comm comm = (MPI_Comm) comm_int;
     MPI_Comm_rank(comm, &result);
   }
@@ -766,14 +795,58 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2)
-  int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %i", comm_int);
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
   MPI_Comm comm = (MPI_Comm) comm_int;
 
   int size;
   MPI_Comm_size(comm, &size);
   Tcl_Obj* result = Tcl_NewIntObj(size);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+ADLB_CommDup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2)
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+  MPI_Comm comm = (MPI_Comm) comm_int;
+
+  MPI_Comm newcomm;
+  MPI_Comm_dup(comm, &newcomm);
+  // This should work for MPICH or OpenMPI:
+  Tcl_WideInt newcomm_int = (long long int) newcomm;
+  Tcl_Obj* result = Tcl_NewWideIntObj(newcomm_int);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+static int
+ADLB_CommGet_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  char* comm_name = Tcl_GetString(objv[1]);
+  MPI_Comm comm;
+  if (strcmp(comm_name, "world") == 0)
+    comm = MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "adlb") == 0)
+    comm = ADLB_GetComm(); // MPI_COMM_WORLD;
+  else if (strcmp(comm_name, "null") == 0)
+    comm = MPI_COMM_NULL;
+  else if (strcmp(comm_name, "leaders") == 0)
+    comm = ADLB_GetComm_leaders();
+  else if (strcmp(comm_name, "workers") == 0)
+    comm = ADLB_GetComm_workers();
+  else
+    return turbine_user_errorv
+      (interp, "adlb::comm_get: error: unknown comm: %s", comm_name);
+  Tcl_Obj* result = Tcl_NewWideIntObj((long long int) comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -905,9 +978,31 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Leaders_Cmd(ClientData cdata, Tcl_Interp *interp,
+                 int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+
+  int* leaders = malloc(adlb_comm_size * sizeof(int));
+  int count;
+  ADLB_Leaders(leaders, &count);
+
+  Tcl_Obj* dict = Tcl_NewDictObj();
+
+  for (int i = 0; i < count; i++)
+  {
+    Tcl_Obj* index =  Tcl_NewIntObj(i);
+    Tcl_Obj* leader = Tcl_NewIntObj(leaders[i]);
+    Tcl_DictObjPut(interp, dict, index, leader);
+  }
+  Tcl_SetObjResult(interp, dict);
+  return TCL_OK;
+}
+
 /**
    usage: adlb::put <reserve_rank> <work type> <work unit> <priority>
-                    <parallelism> [<soft target>]
+                    <parallelism> [<soft> <target>]
 */
 static int
 ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -928,6 +1023,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (target_rank >= 0)
   {
+    // Defaults: may be written below
     opts.strictness = ADLB_TGT_STRICT_HARD;
     opts.accuracy = ADLB_TGT_ACCRY_RANK;
   }
@@ -970,6 +1066,12 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   opts.priority = ADLB_curr_priority;
+
+  if (ADLB_Status() == ADLB_STATUS_SHUTDOWN)
+  {
+    printf("turbine: warning: canceling task spawn\n");
+    return TCL_OK;
+  }
 
   DEBUG_ADLB("adlb::spawn: type: %i \"%s\" %i",
              work_type, cmd, opts.priority);
@@ -1043,57 +1145,9 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_type;
 
   void* payload = NULL;
-#ifdef USE_ADLB
-  int work_handle[ADLB_HANDLE_SIZE];
-#endif
   int work_len = 1000*1000*1000; // 1 GB
   int answer_rank;
-#ifdef USE_ADLB
 
-  int req_types[4];
-  int work_prio;
-
-  req_types[0] = req_type;
-  req_types[1] = req_types[2] = req_types[3] = -1;
-
-  DEBUG_ADLB("enter reserve: type=%i", req_types[0]);
-  rc = ADLB_Reserve(req_types, &work_type, &work_prio,
-                    work_handle, &work_len, &answer_rank);
-  DEBUG_ADLB("exit reserve");
-  if (rc == ADLB_DONE_BY_EXHAUSTION)
-  {
-    DEBUG_ADLB("ADLB_DONE_BY_EXHAUSTION!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_MORE_WORK ) {
-    DEBUG_ADLB("ADLB_NO_MORE_WORK!");
-    payload[0] = '\0';
-  }
-  else if (rc == ADLB_NO_CURRENT_WORK) {
-    DEBUG_ADLB("ADLB_NO_CURRENT_WORK");
-    payload[0] = '\0';
-  }
-  else if (rc < 0) {
-    DEBUG_ADLB("rc < 0");
-    payload[0] = '\0';
-  }
-  else
-  {
-    DEBUG_ADLB("work is reserved.");
-    rc = ADLB_Get_reserved(payload, work_handle);
-    if (rc == ADLB_NO_MORE_WORK)
-    {
-      puts("No more work on Get_reserved()!");
-      payload[0] = '\0';
-    }
-    else
-      found_work = true;
-  }
-  if (payload[0] == '\0')
-    answer_rank = -1;
-#endif
-
-#ifdef USE_XLB
   MPI_Comm task_comm;
   int rc = ADLB_Get(req_type, &payload, &work_len, work_len,
                     &answer_rank, &work_type, &task_comm);
@@ -1111,7 +1165,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     free(payload);
   }
   turbine_task_comm = task_comm;
-#endif
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -2972,8 +3025,8 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   size_t length;
-  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
-                     &length);
+  adlb_code ac = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
+                               &type, xfer, &length);
   CHECK_ADLB_RETRIEVE(ac, handle);
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
@@ -3732,10 +3785,10 @@ ADLB_Blob_From_Float_List_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_from_string <string value>
+   adlb::string2blob <string value> -> blob
  */
 static int
-ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_String2Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -3759,11 +3812,11 @@ ADLB_Blob_From_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   adlb::blob_to_string <blob value>
+   adlb::blob2string <blob value> -> string
    Convert null-terminated blob to string
  */
 static int
-ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
+ADLB_Blob2String_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
@@ -4882,7 +4935,7 @@ static int
 ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  int result; 
+  int result;
 #ifdef ENABLE_XPT
   result = 1;
 #else
@@ -4891,7 +4944,7 @@ ADLB_Xpt_Enabled_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
   return TCL_OK;
 }
-    
+
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
   filename: the filename of the checkpoint file.  If empty string,
@@ -5820,37 +5873,6 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb:comm_null
- */
-static int
-ADLB_GetCommNull_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
-{
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(MPI_COMM_NULL));
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommLeaders_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm leaders = ADLB_GetComm_leaders();
-  Tcl_Obj* result = Tcl_NewLongObj(leaders);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-static int
-ADLB_GetCommWorkers_Cmd(ClientData cdata, Tcl_Interp *interp,
-                       int objc, Tcl_Obj *const objv[])
-{
-  MPI_Comm workers = ADLB_GetComm_workers();
-  Tcl_Obj* result = Tcl_NewLongObj(workers);
-  Tcl_SetObjResult(interp, result);
-  return TCL_OK;
-}
-
-/**
    usage: adlb::fail
  */
 static int
@@ -5887,6 +5909,8 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = field_name_objs_finalize(interp, objv);
   TCL_CHECK(rc);
 
+  log_printf("ADLB_Finalize_Cmd() start");
+
   rc = ADLB_Finalize();
   if (rc != ADLB_SUCCESS)
     printf("WARNING: ADLB_Finalize() failed!\n");
@@ -5900,12 +5924,16 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_comm_init = false;
   adlb_init = false;
 
+  log_printf("MPI_Finalize start");
   if (b)
     MPI_Finalize();
+  log_printf("MPI_Finalize stop");
   turbine_debug_finalize();
 
   rc = blob_cache_finalize();
   TCL_CHECK(rc);
+
+  log_printf("ADLB_Finalize_Cmd() stop");
 
   return TCL_OK;
 }
@@ -5958,8 +5986,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("server",    ADLB_Server_Cmd);
   COMMAND("rank",      ADLB_CommRank_Cmd);
   COMMAND("size",      ADLB_CommSize_Cmd);
-  COMMAND("comm_workers", ADLB_GetCommWorkers_Cmd);
-  COMMAND("comm_leaders", ADLB_GetCommLeaders_Cmd);
+  COMMAND("comm_dup",  ADLB_CommDup_Cmd);
+  COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
@@ -5972,6 +6000,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("get_priority",   ADLB_Get_Priority_Cmd);
   COMMAND("reset_priority", ADLB_Reset_Priority_Cmd);
   COMMAND("set_priority",   ADLB_Set_Priority_Cmd);
+  COMMAND("leaders",   ADLB_Leaders_Cmd);
   COMMAND("put",       ADLB_Put_Cmd);
   COMMAND("spawn",     ADLB_Spawn_Cmd);
   COMMAND("get",       ADLB_Get_Cmd);
@@ -6000,8 +6029,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("store_blob_ints", ADLB_Blob_store_ints_Cmd);
   COMMAND("blob_from_float_list", ADLB_Blob_From_Float_List_Cmd);
   COMMAND("blob_from_int_list", ADLB_Blob_From_Int_List_Cmd);
-  COMMAND("blob_from_string", ADLB_Blob_From_String_Cmd);
-  COMMAND("blob_to_string", ADLB_Blob_To_String_Cmd);
+  COMMAND("string2blob", ADLB_String2Blob_Cmd);
+  COMMAND("blob2string", ADLB_Blob2String_Cmd);
   COMMAND("enable_read_refcount",  ADLB_Enable_Read_Refcount_Cmd);
   COMMAND("refcount_incr", ADLB_Refcount_Incr_Cmd);
   COMMAND("read_refcount_incr", ADLB_Read_Refcount_Incr_Cmd);
@@ -6043,7 +6072,6 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
   COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
   COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
-  COMMAND("comm_null", ADLB_GetCommNull_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);

@@ -292,15 +292,28 @@ namespace eval turbine {
         store_float $c $c_value
     }
 
-    proc floattoint { c a } {
-        rule "$a" "floattoint_body $c $a"
+    proc int2float { c a } {
+        rule "$a" "int2float_body $c $a"
+    }
+    proc int2float_body { c a } {
+        puts "int2float retreive a: $a"
+        set a_value [ retrieve_decr_integer $a ]
+        log "int2float: $a_value"
+        store_float $c $a_value
     }
 
-    proc floattoint_body { c a } {
-        set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {int(floor($a_value))} ]
-        log "floattoint: $a_value => $c_value"
-        store_integer $c $c_value
+    proc float2int { result input } {
+        rule $input "float2int_body $result $input " \
+            name "float2int-$input"
+    }
+    proc float2int_body { result input } {
+        puts "retrieve float $input"
+        set t [ retrieve_decr_float $input ]
+        set i [ float2int_impl $t ]
+        store_integer $result $i
+    }
+    proc float2int_impl { f } {
+        return [ expr int($f) ]
     }
 
     proc ceil { c a } {
@@ -341,9 +354,25 @@ namespace eval turbine {
 
     proc log_e_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {log($a_value)} ]
+        if [ catch { set c_value [ expr {log($a_value)} ] } e ] {
+            turbine_error "log_e($c_value): $e"
+        }
         log "log_e: $a_value => $c_value"
         store_float $c $c_value
+    }
+
+    proc log10_impl { v } {
+        if [ catch { set result [ ::tcl::mathfunc::log10 $v ] } e ] {
+            turbine_error "log10($v): $e"
+        }
+        return $result
+    }
+
+    proc log_base_impl { x base } {
+        if [ catch { set result [ expr {log($x)/log($base)} ] } e ] {
+            turbine_error "log($x,$base): $e"
+        }
+        return $result
     }
 
     proc exp { c a } {
@@ -363,7 +392,9 @@ namespace eval turbine {
 
     proc sqrt_body { c a } {
         set a_value [ retrieve_decr_float $a ]
-        set c_value [ expr {sqrt($a_value)} ]
+        if [ catch { set c_value [ expr {sqrt($a_value)} ] } e ] {
+            turbine_error "sqrt($a_value): $e"
+        }
         log "sqrt: $a_value => $c_value"
         store_float $c $c_value
     }
@@ -438,3 +469,8 @@ namespace eval turbine {
       store_integer $o [ expr {$i_value != $i_value} ]
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

@@ -195,7 +195,7 @@ public class OpEvaluator {
         case FLOATTOINT:
           return Arg.newInt((long)Math.floor(arg1));
         case FLOATTOSTR:
-          // TODO: format might not be consistent with TCL
+          // TODO: format might not be consistent with Tcl
           return Arg.newString(Double.toString(arg1));
         case IS_NAN:
           return Arg.newBool(Double.isNaN(arg1));

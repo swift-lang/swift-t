@@ -44,18 +44,22 @@
 "turbine" "0.0.2"
 [ "set <<t>> [ file type [ lindex <<f>> 0 ] ]" ];
 
+@pure
+(string t) file_type_string(string f)
+"turbine" "1.0"
+[ "set <<t>> [ file type <<f>> ]" ];
+
 (boolean o) file_exists(string f)
 "turbine" "0.1"
 [ "set <<o>> [ file exists <<f>> ]" ];
 
 (int o) file_mtime(string f)
-"turbine" "0.1"
-[ "set <<o>> [ file mtime <<f>> ]" ];
+"turbine" "0.1" [ "set <<o>> [ turbine::file_mtime_impl <<f>> ]" ];
 
 @pure
-(string s[]) file_lines(file f)
-    "turbine" "0.1" "file_lines"
-  [ "set <<s>> [ turbine::file_lines_impl <<f>> ] " ];
+(string s[]) file_lines(file f, string comment="#")
+    "turbine" "0.1"
+  [ "set <<s>> [ turbine::file_lines_impl <<f>> <<comment>> ] " ];
 
 @pure
 (string d) dirname_string(string p)
@@ -76,5 +80,43 @@
 (string f) basename(file p)
 "turbine" "0.0"
 [ "set <<f>> [ file tail <<p>> ]" ];
+
+@pure
+(string f) rootname_string(string p)
+"turbine" "0.0"
+[ "set <<f>> [ file rootname <<p>> ]" ];
+
+@pure
+(string f) rootname(file p)
+"turbine" "0.0"
+[ "set <<f>> [ file rootname <<p>> ]" ];
+
+@pure
+(string f) extension_string(string p)
+"turbine" "0.0"
+[ "set <<f>> [ file extension <<p>> ]" ];
+
+@pure
+(string f) extension(file p)
+"turbine" "0.0"
+[ "set <<f>> [ file extension <<p>> ]" ];
+
+(file o)
+write_array_string(string a[], int chunk)
+"turbine" "1.0" "write_array_string";
+
+(file o)
+write_array_string_ordered(string a[])
+"turbine" "1.0" "write_array_string_ordered";
+
+(string s)
+mktemp_string()
+"turbine" "1.0" "mktemp_string";
+
+(file o)
+mktemp()
+{
+  o = input(mktemp_string());
+}
 
 #endif // FILES_SWIFT

@@ -92,10 +92,44 @@ proc readfile { filename } {
 
 # Debugging helper
 proc show { args } {
-    foreach v $args {
-        upvar $v t
-        puts "$v: $t"
+  foreach v $args {
+    show_token $v
+
+    upvar $v t
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
     }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts "$v: $s"
+  }
+}
+
+proc showln { args } {
+  foreach v $args {
+    show_token $v
+
+    # Actual variable
+    upvar $v t
+    if { ! [ info exists v ] } {
+      error "show: variable does not exist: $v"
+    }
+    # Make copy for possible modification:
+    set s $t
+    if { [ string length $s ] == 0 } { set s "''" }
+    puts -nonewline "$v=$s "
+  }
+  puts ""
+}
+
+proc show_token { v } {
+  # Token
+  if { [ string first "@" $v ] == 0 } {
+    set s [ string range $v 1 end ]
+    puts -nonewline "$s "
+    return -code continue
+  }
 }
 
 set KB 1024
@@ -133,16 +167,62 @@ proc draw { L } {
     return [ lindex $L $i ]
 }
 
-# Tcl function
 proc cat { args } {
     return [ join $args " " ]
 }
 
+proc puts* { args } {
+    puts [ join $args "" ]
+}
+
+proc puts** { args } {
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      puts -nonewline "'' "
+    } else {
+      puts -nonewline "$a "
+    }
+  }
+  puts ""
+}
+
+proc putsn { args } {
+    puts [ join $args "\n" ]
+}
+
+proc printf { fmt args } {
+    puts [ format $fmt {*}$args ]
+}
+
+proc log* { args } {
+  turbine::c::log [ join $args "" ]
+}
+
+proc log** { args } {
+  set msg ""
+  foreach a $args {
+    if { [ string length $a ] == 0 } {
+      append msg "'' "
+    } else {
+      append msg "$a "
+    }
+  }
+  log* $msg
+}
+
+# Remove and return element 0 from list
+proc list_pop_first { L_name } {
+    upvar $L_name L
+    set result [ lindex $L 0 ]
+    set L [ lreplace $L 0 0 ]
+    return $result
+}
+
 namespace eval turbine {
-  
+
   # Create a dictionary with integer keys numbered from start with contents
   # of list
-  proc dict_from_list { l {start_index 0}} {
+  proc list2dict { l {start_index 0}} {
     set d [ dict create ]
     set i $start_index
 
@@ -155,3 +235,21 @@ namespace eval turbine {
   }
 
 }
+
+# Split value into two parts around given token
+# If token is not found, return [ list value "" ]
+proc split_first { value token } {
+  # p0 is first character of token in value
+  set p0 [ string first $token $value ]
+  if { $p0 == -1 } { return [ list $value "" ]}
+  # p1 is just past last character of token in value
+  set p1 [ expr $p0 + [ string length $token ] ]
+  set r0 [ string range $value 0 [ expr $p0 - 1 ] ]
+  set r1 [ string range $value $p1 end ]
+  return [ list $r0 $r1 ]
+}
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 2
+# End:

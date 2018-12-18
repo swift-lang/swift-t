@@ -72,6 +72,7 @@
 
 #include "src/tcl/c-utils/tcl-c-utils.h"
 #include "src/tcl/adlb/tcl-adlb.h"
+#include "src/tcl/jvm/tcl-jvm.h"
 #include "src/tcl/mpe/tcl-mpe.h"
 #include "src/tcl/julia/tcl-julia.h"
 #include "src/tcl/python/tcl-python.h"
@@ -129,8 +130,6 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
   }
 
 static void set_namespace_constants(Tcl_Interp* interp);
-
-static int log_setup(int rank);
 
 int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
@@ -195,8 +194,6 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
   }
 
-  log_setup(rank);
-
   return TCL_OK;
 }
 
@@ -212,51 +209,15 @@ get_tcl_version()
 
 /*
   Initialises Turbine debug logging.
-  turbine::init_debug
+  Tcl name is turbine::c::init_debug
  */
 static int
 Turbine_Init_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
+
   turbine_debug_init();
-
-  return TCL_OK;
-}
-
-/**
-   @return Tcl error code
-*/
-static int
-log_setup(int rank)
-{
-  log_init();
-  log_normalize();
-
-  // Did the user disable logging?
-  int enabled;
-  getenv_integer("TURBINE_LOG", 1, &enabled);
-  if (enabled)
-  {
-    // Should we use a specific log file?
-    char* filename = getenv("TURBINE_LOG_FILE");
-    if (filename != NULL && strlen(filename) > 0)
-    {
-      bool b = log_file_set(filename);
-      if (!b)
-      {
-        printf("Could not set log file: %s", filename);
-        return TCL_ERROR;
-      }
-    }
-    // Should we prepend the MPI rank (emulate "mpiexec -l")?
-    int log_rank_enabled;
-    getenv_integer("TURBINE_LOG_RANKS", 0, &log_rank_enabled);
-    if (log_rank_enabled)
-      log_rank_set(rank);
-  }
-  else
-    log_enable(false);
 
   return TCL_OK;
 }
@@ -611,6 +572,30 @@ Turbine_Log_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
+Turbine_LogTime_Cmd(ClientData cdata, Tcl_Interp *interp,
+                    int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/* UNUSED
+static int
+Turbine_LogTimeAbs_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  double t = log_time_absolute();
+  Tcl_Obj* result = Tcl_NewDoubleObj(t);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+*/
+
+static int
 Turbine_Normalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                       int objc, Tcl_Obj *const objv[])
 {
@@ -668,8 +653,9 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_code rc = turbine_cache_retrieve(td, &type, &data, &length);
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
+  adlb_data_type adlb_type = (adlb_data_type) type;
   Tcl_Obj* result = NULL;
-  int tcl_code = adlb_datum2tclobj(interp, objv, td, type,
+  int tcl_code = adlb_datum2tclobj(interp, objv, td, adlb_type,
                       ADLB_TYPE_EXTRA_NULL, data, length, &result);
   TCL_CHECK(tcl_code);
   Tcl_SetObjResult(interp, result);
@@ -710,12 +696,13 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
     return TCL_OK;
   }
 
-  adlb_data_type type;
+  adlb_data_type adlb_type;
   adlb_type_extra extra;
-  error = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  error = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &adlb_type,
                               &extra);
   TCL_CHECK(error);
 
+  turbine_type type = (turbine_type) adlb_type;
   TCL_CONDITION(argpos < objc, "not enough arguments");
   error = turbine_tclobj2bin(interp, objv, td, type, extra,
                          objv[argpos++], false, &data, &length);
@@ -740,7 +727,8 @@ turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
 {
   adlb_binary_data data;
 
-  int rc = adlb_tclobj2bin(interp, objv, type, extra, obj, canonicalize,
+  adlb_data_type adlb_type = (adlb_data_type) type;
+  int rc = adlb_tclobj2bin(interp, objv, adlb_type, extra, obj, canonicalize,
                           NULL, &data);
   TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: "
                 "\"%s\"", td, Tcl_GetString(obj));
@@ -858,7 +846,7 @@ Turbine_TaskComm_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
-  Tcl_Obj* result = Tcl_NewLongObj(turbine_task_comm);
+  Tcl_Obj* result = Tcl_NewWideIntObj((long long int) turbine_task_comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -1022,6 +1010,8 @@ close_error_exit(const char *purpose)
   exit(1);
 }
 
+static int pid_status(Tcl_Interp* interp, pid_t child);
+
 static int
 Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
@@ -1085,34 +1075,62 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
 
     rc = execvp(cmd, cmd_argv);
-    TCL_CONDITION(rc != -1, "Error executing command %s: %s", cmd,
+    TCL_CONDITION(rc != -1, "Error exec()ing command %s: %s", cmd,
                   strerror(errno));
   }
 
-  int exitcode;
-  waitpid(child, &exitcode, 0);
+  return pid_status(interp, child);
+}
 
-  if (exitcode != 0)
+static int child_error(Tcl_Interp* interp, const char* message);
+
+static int pid_status(Tcl_Interp* interp, pid_t child)
+{
+  int rc;
+  int status;
+  char message[1024];
+  rc = waitpid(child, &status, 0);
+  assert(rc > 0);
+  if (WIFEXITED(status))
   {
-    if (tcl_version > 8.5)
+    int exitcode = WEXITSTATUS(status);
+    // printf("exitcode: %i\n", exitcode);
+
+    if (exitcode != 0)
     {
-      Tcl_Obj *msgs[1] = {
-        Tcl_ObjPrintf("shell: Command failed with exit code: %i",
-                      exitcode)
-      };
-      return turbine_user_error(interp, 1, msgs);
+      sprintf(message,
+              "Child exited with code: %i", exitcode);
+      return child_error(interp, message);
     }
-    else
-    {
-      // Tcl 8.5
-      char t[128];
-      sprintf(t, "shell: Command failed with exit code: %i", exitcode);
-      Tcl_AddErrorInfo(interp, t);
-      return TCL_ERROR;
-    }
+  }
+  else if (WIFSIGNALED(status))
+  {
+    int sgnl = WTERMSIG(status);
+    sprintf(message, "Child killed by signal: %i", sgnl);
+    return child_error(interp, message);
+  }
+  else
+  {
+    printf("TURBINE: UNKNOWN ERROR in pid_status()\n");
+    exit(1);
   }
 
   return TCL_OK;
+}
+
+static int child_error(Tcl_Interp* interp, const char* message)
+{
+  if (tcl_version > 8.5)
+  {
+    // printf("child_error: \n");
+    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("%s", message) };
+    return turbine_user_error(interp, 1, msgs);
+  }
+  else // Tcl 8.5
+  {
+    Tcl_AddErrorInfo(interp, message);
+    return TCL_ERROR;
+  }
 }
 
 /*
@@ -1179,10 +1197,13 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
                        "turbine::c::" tcl_function, c_function,     \
                        NULL, NULL);
 
-// We assume SWIG correctly generates this function
+// We assume SWIG correctly generates these functions
 // See the tcl/blob module
 int Blob_Init(Tcl_Interp* interp);
-
+// See the tcl/launch module
+int Launch_Init(Tcl_Interp* interp);
+// See the tcl/python module
+int Python_Init(Tcl_Interp* interp);
 
 /*
   turbine::noop_exec_register
@@ -1700,8 +1721,8 @@ Turbine_CopyTo_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(4);
-  int comm_int;
-  int rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   const char* name_in  = Tcl_GetString(objv[2]);
   const char* name_out = Tcl_GetString(objv[3]);
@@ -1720,8 +1741,8 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Unpack
   TCL_ARGS(4);
   int rc;
-  int comm_int;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &comm_int);
+  Tcl_WideInt comm_int;
+  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
   TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
   int root;
   rc = Tcl_GetIntFromObj(interp, objv[2], &root);
@@ -1760,11 +1781,14 @@ Tclturbine_Init(Tcl_Interp* interp)
 
   tcl_c_utils_init(interp);
   tcl_adlb_init(interp);
+  tcl_jvm_init(interp);
   tcl_mpe_init(interp);
   tcl_julia_init(interp);
   tcl_python_init(interp);
   tcl_r_init(interp);
   Blob_Init(interp);
+  Launch_Init(interp);
+  Python_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("init_debug",  Turbine_Init_Debug_Cmd);
@@ -1772,6 +1796,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
+  COMMAND("log_time",    Turbine_LogTime_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);

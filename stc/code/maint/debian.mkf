@@ -1,0 +1,39 @@
+
+# STC Debian Makefile
+
+include maint/version.mkf
+
+STC_DEB = stc_$(VERSION)_amd64.deb
+
+deb-bin: $(STC_DEB)
+
+# STC has only one Debian type, but this is still called a bin
+DEB_TYPE = bin
+UPSTREAM_TGZ = stc_$(VERSION).orig.tar.gz
+
+DEB_FILES = changelog compat control copyright rules
+DEB_FILE_PATHS = $(patsubst %,maint/debian/%,$(DEB_FILES))
+FILE_LIST = maint/file-list.zsh
+
+# Just for TGZ dependency
+DEBIAN_STUFF = $(FILE_LIST) $(DEB_LIST) $(DEB_FILE_PATHS) \
+		maint/debian.mkf
+
+# Put the version number in the changelog
+maint/debian/changelog: maint/debian/changelog.m4
+	m4 -D M4_STC_VERSION=$(VERSION) $(<) > $(@)
+
+$(UPSTREAM_TGZ): $(DEBIAN_STUFF) configure Makefile build.xml
+	../../dev/mk-src-tgz.sh ${PKG_TYPE} \
+		$(@) stc $(VERSION) $(FILE_LIST)
+
+$(STC_DEB): $(UPSTREAM_TGZ)
+	../../dev/debian/mk-debian.zsh ${DEB_TYPE} $(@) $(<) \
+		stc $(VERSION)
+
+clean:: clean-deb
+
+clean-deb::
+	@echo "CLEAN DEBIAN"
+	@rm -fv *.deb *.orig.tar.gz
+	@rm -rf deb-work-*

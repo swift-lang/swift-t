@@ -1,9 +1,12 @@
+
+// SKIP-THIS-TEST
+
 import assert;
 
 // Basic test for checkpointing
 
 main {
- 
+
   trace(f(1));
   trace(f(2));
 

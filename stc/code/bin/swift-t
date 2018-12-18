@@ -1,19 +1,22 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh
+set -eu
 
 # SWIFT-T
 # Main user interface script
 
-set -eu
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
+if (( DEBIAN_BUILD ))
+then
+  STC_HOME=/usr
+  STC_TOP=/usr/lib/stc
+else
+  STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
+  STC_TOP=${STC_HOME}
+fi
+source "${STC_TOP}/etc/stc-config.sh"
+source "${STC_TOP}/bin/helpers.zsh"
 
-# Exit codes: (cf. ExitCode.java)
-EXIT_ERROR_SCRIPT=6
-
-STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 STC=${STC_HOME}/bin/stc
-STC_ENV="$STC_HOME/conf/stc-env.sh"
-
-source "$STC_HOME/scripts/stc-config.sh"
-
 TURBINE=${TURBINE_HOME}/bin/turbine
 
 STC_OPTS=()
@@ -26,27 +29,27 @@ usage()
 
 help()
 {
-  cat ${STC_HOME}/etc/help-swift-t-header.txt
+  cat ${STC_HOME}/etc/help/swift-t-header.txt
   print
   printf "STC OPTIONS\n\n"
   # These options are available from SWIFT-T or STC:
-  cat ${STC_HOME}/etc/help-options-1.txt
+  cat ${STC_HOME}/etc/help/options-1.txt
   print
   printf "TURBINE OPTIONS\n\n"
-  cat ${TURBINE_HOME}/etc/help-options-1.txt
+  cat ${TURBINE_TOP}/etc/help/options-1.txt
   print
   printf "SWIFT-T OPTIONS\n\n"
   printf "These options are available in the swift-t program but not stc.\n\n"
-  cat ${STC_HOME}/etc/help-options-3.txt
+  cat ${STC_HOME}/etc/help/options-3.txt
   print
   printf "TURBINE PASSTHROUGH OPTIONS\n\n"
   printf "You must use the pass-through feature to access these options.\n\n"
-  cat ${TURBINE_HOME}/etc/help-options-2.txt
+  cat ${TURBINE_TOP}/etc/help/options-2.txt
   print
-  cat ${TURBINE_HOME}/etc/help-env.txt
+  cat ${TURBINE_TOP}/etc/help/env.txt
   print
   # These are details about compiler flag terms
-  cat ${STC_HOME}/etc/help-option-terms.txt
+  cat ${STC_HOME}/etc/help/option-terms.txt
   print
   print "TOOL USAGE"
   print
@@ -54,11 +57,10 @@ help()
   print "Use 'stc -h' to see STC help and optimization list"
   print "Use 'turbine -h' to see Turbine help"
   print
-  cat ${STC_HOME}/etc/help-footer.txt
+  cat ${STC_HOME}/etc/help/footer.txt
   print
   exit 0
 }
-
 
 report_version()
 {
@@ -69,40 +71,44 @@ report_version()
 }
 
 PROGRAM_TCL=""
-CHECK_DATES=0
+CHECK_DEPS=0
+STC_DEPS_ARGS=()
 VERBOSE=0
 EXEC_STRING=""
 IMPORT_STRING=""
 
 # Process all flags: split among this script, STC, or Turbine
-SWIFT_T_CHARS="hE:i:o:t:vV"
-STC_CHARS="A:C:d:D:f:F:I:j:L:O:pr:u"
-TURBINE_CHARS="e:i:lm:n:s:xX"
+SWIFT_T_CHARS="hE:o:t:vV"
+STC_CHARS="A:C:d:D:f:F:I:i:j:L:O:pr:uU:"
+TURBINE_CHARS="e:lm:M:n:s:xX"
 CHARS=${SWIFT_T_CHARS}${STC_CHARS}${TURBINE_CHARS}
-while getopts ${CHARS} OPTION
+while getopts :${CHARS} OPTION
 do
-  # declare OPTION
   # Note: We make heavy use of the rarely-used ;& in the following
   case ${OPTION} in
 
     # Swift/T arguments:
     E) EXEC_STRING+=${OPTARG} ;;
-    i) IMPORT_STRING+="import ${OPTARG};" ;;
     h) help ; exit 0 ;;
     v) report_version ;;
     V) (( ++VERBOSE ))
        if (( VERBOSE == 2 )) ; then set -x ; fi ;;
     o) PROGRAM_TCL=${OPTARG} ;;
-    u) CHECK_DATES=1 ;;
 
     # STC arguments:
-    A) ;& d) ;& D) ;& F) ;& f) ;& I) ;&
+    A) ;& d) ;& D) ;& F) ;& f) ;& I) ;& i) ;&
     j) ;& L) ;& O) ;& p) ;& r)
       STC_OPTS+=( -${OPTION} ${OPTARG} )
       ;;
 
+    # STC deps arguments:
+    u) ;& U)
+      CHECK_DEPS=1
+      STC_DEPS_ARGS+=( -${OPTION} ${OPTARG} )
+      ;;
+
     # Turbine arguments
-    e) ;& i) ;& l) ;& m) ;& n) ;& s) ;& x) ;& X)
+    e) ;& l) ;& m) ;& M) ;& n) ;& s) ;& x) ;& X)
       TURBINE_OPTS+=( -${OPTION} "${OPTARG}" )
       ;;
 
@@ -119,15 +125,18 @@ do
 
     # Errors
     *)
-      # ZSH prints an error message
+      print "swift-t: invalid option: ${OPTARG}"
       usage
       exit 1
   esac
 done
 shift $(( OPTIND - 1 ))
 
+(( VERBOSE >= 1 )) && STC_OPTS+="-V"
+(( VERBOSE == 2 )) && TURBINE_OPTS+="-V"
+
 # Print a message when we are verbose.
-message()
+verbose()
 {
   local T
   zparseopts -D -E t=T # Accept -t for TAB
@@ -142,51 +151,13 @@ message()
 }
 
 # Print a command when we are verbose, then execute it
-verbose()
+verbose_cmd()
 {
-  message -t ${*}
+  verbose -t ${*}
   ${*}
 }
 
-message "Swift/T"
-
-# Handle temp file creation across platforms
-# Always has .SUFFIX somewhere, preferably at the end
-make_temp()
-{
-  local SUFFIX=$1
-  local PROGRAM_DIR=$2
-  local NAME=$3
-  local MKTEMP_TYPE=""
-  local SUFFIX_ARG=""
-
-  # Attempt to determine mktemp version
-  # Mac mktemp does not support -V
-  if mktemp -V >& /dev/null
-  then
-    # Linux:
-    MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
-    if (( ${MKTEMP_VERSION} > 2 ))
-    then
-      MKTEMP_TYPE="Linux"
-    else
-      MKTEMP_TYPE="BSD"
-    fi
-  else
-    MKTEMP_TYPE="Mac"
-  fi
-
-  if [[ ${MKTEMP_TYPE} == "Linux" ]]
-  then
-      # Modern mktemp.  .tic at the end.
-      SUFFIX_ARG=( --suffix .${SUFFIX} )
-  else
-      # Old (BSD?) mktemp.  .SUFFIX. will be in the middle of the name
-      NAME=${NAME}.${SUFFIX}
-  fi
-
-  mktemp ${SUFFIX_ARG} ${PROGRAM_DIR}/swift-t-${NAME}.XXX
-}
+verbose "Swift/T"
 
 DELETE_PROGRAM_SWIFT=0
 EXEC_SWIFT=""
@@ -204,7 +175,7 @@ elif [[ ${EXEC_STRING} == "" ]]
   then
   # Create/compile/run/delete imports + program.swift
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-  message "Writing: ${PROGRAM_SWIFT}"
+  verbose "Writing: ${PROGRAM_SWIFT}"
   echo ${IMPORT_STRING} >  ${PROGRAM_SWIFT}
   cat $1                >> ${PROGRAM_SWIFT}
   shift
@@ -212,7 +183,7 @@ elif [[ ${EXEC_STRING} == "" ]]
 else
   # Create/compile/run/delete -E string
   PROGRAM_SWIFT=$( make_temp "swift" /tmp exec )
-  message "Writing: ${PROGRAM_SWIFT}"
+  verbose "Writing: ${PROGRAM_SWIFT}"
   echo ${IMPORT_STRING} ${EXEC_STRING} >> ${PROGRAM_SWIFT}
   DELETE_PROGRAM_SWIFT=1
 fi
@@ -225,57 +196,57 @@ then
 fi
 
 make_stc_output()
+# If the user did not provide an output file, we make one
 {
-  # Set up STC file arguments
   if [[ ${PROGRAM_TCL} == "" ]]
   then
     PROGRAM_DIR=${PROGRAM_SWIFT:h}  # ZSH dirname
     PROGRAM_FILE=${PROGRAM_SWIFT:t} # ZSH basename
     NAME=${PROGRAM_FILE%.swift}
     PROGRAM_TCL=$( make_temp "tic" ${PROGRAM_DIR} ${NAME} )
-    DELETE_PROGRAM_TCL=1
+    DELETE_PROGRAM_TCL=1 # Delete this temporary file later
+    CHECK_DEPS=0 # We just made a stub file, it is not up-to-date!
   fi
 }
 
-DELETE_PROGRAM_TCL=0
-SKIP_COMPILE=0
-
-if (( CHECK_DATES ))
+# Set up output and deps arguments
+DELETE_PROGRAM_TCL=0 # Do not delete this by default
+make_stc_output
+if (( CHECK_DEPS ))
 then
-  if [[ -e ${PROGRAM_TCL} ]] && \
-     [[ ${PROGRAM_TCL} -nt ${PROGRAM_SWIFT} ]]
-  then
-    SKIP_COMPILE=1
-    message "${PROGRAM_TCL} is up-to-date."
-  fi
+  STC_OPTS+=( ${STC_DEPS_ARGS} )
 fi
 
 if (( ! SKIP_COMPILE ))
 then
   # Run STC
   make_stc_output
-  message "Compiling: ${PROGRAM_SWIFT}"
-  message "       to: ${PROGRAM_TCL}"
-  verbose ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+  verbose "Compiling: ${PROGRAM_SWIFT}"
+  verbose "       to: ${PROGRAM_TCL}"
+  verbose_cmd ${STC} ${STC_OPTS} ${PROGRAM_SWIFT} ${PROGRAM_TCL}
+  if [[ ${SWIFT_T_SYNC:-} == 1 ]]
+  then
+    sync
+  fi
 fi
 
 # Run Turbine
 EXITCODE=0
-message "Running:   ${PROGRAM_TCL}"
-verbose ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
+verbose "Running:   ${PROGRAM_TCL}"
+verbose_cmd ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
   EXITCODE=1
 
 # Clean up
 if (( DELETE_PROGRAM_TCL ))
 then
-  message "Removing: ${PROGRAM_TCL}"
+  verbose "Removing: ${PROGRAM_TCL}"
   rm ${PROGRAM_TCL}
 fi
 
 if (( DELETE_PROGRAM_SWIFT ))
 then
-  message "Removing: ${PROGRAM_SWIFT}"
+  verbose "Removing: ${PROGRAM_SWIFT}"
   rm ${PROGRAM_SWIFT}
 fi
 
-exit ${EXITCODE}
+return ${EXITCODE}

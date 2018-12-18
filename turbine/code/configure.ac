@@ -26,9 +26,21 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
+
+DEBIAN_BUILD=0
+AC_ARG_ENABLE(debian-build,
+  AS_HELP_STRING(
+    [--enable-debian-build], [configure for a Debian package]),
+    [DEBIAN_BUILD=1]
+)
+AC_SUBST(DEBIAN_BUILD)
+
 if [[ ${prefix} == "NONE" ]]
 then
-  AC_MSG_ERROR("You must provide --prefix")
+  if (( ! DEBIAN_BUILD ))
+  then
+    AC_MSG_ERROR("You must provide --prefix")
+  fi
 fi
 
 AC_MSG_RESULT([PREFIX: ${prefix}])
@@ -71,8 +83,16 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
-# Checks for programs
+# Check for CC
 AC_PROG_CC
+
+# Report location of CC
+USE_CC=$( which $CC )
+AC_MSG_RESULT([using CC=$USE_CC])
+AC_SUBST(USE_CC)
+
+# Checks for programs
+AC_PROG_LN_S
 LD=${CC}
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
@@ -135,9 +155,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
-AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
-AC_CHECK_FUNCS([uname])
+AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
+AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
+AC_CHECK_FUNCS([strtol strtoul uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -147,7 +167,7 @@ USE_C_UTILS=0
 AC_ARG_WITH(c-utils,
     AS_HELP_STRING([--with-c-utils], [location of ExM c-utils]),
     [
-        AC_MSG_CHECKING([${withval}/include/c-utils.h])
+        AC_MSG_CHECKING([for ${withval}/include/c-utils.h])
         [[ -r ${withval}/include/c-utils.h ]] && USE_C_UTILS=1
         if [[ ${USE_C_UTILS} == 0 ]]
         then
@@ -162,25 +182,26 @@ AC_ARG_WITH(c-utils,
         then
             AC_MSG_ERROR([Not found: ExM c-utils])
         fi
-        location=${SOFTWARE}/c-utils
-        AC_CHECK_FILE(${location}/include/c-utils.h,
-                      [USE_C_UTILS=1], [])
-        if [[ ${USE_C_UTILS} == 1 ]]
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            USE_C_UTILS=${location}
-        else
-            AC_MSG_ERROR([Not found: ExM c-utils])
+            USE_C_UTILS=/usr
+        else # We are doing a source installation
+             location=${SOFTWARE}/c-utils
+             AC_CHECK_FILE(${location}/include/c-utils.h,
+                           [USE_C_UTILS=${location}], [])
         fi
+        [[ ${USE_C_UTILS} == 0 ]] && AC_MSG_ERROR([Not found: ExM c-utils])
     ]
 )
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-AC_MSG_CHECKING([checking for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
+AC_MSG_CHECKING([for ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}])
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
   AC_MSG_RESULT([yes])
-else 
+else
   AC_MSG_RESULT([no])
 fi
 AC_SUBST(USE_LIBCUTILS_A)
@@ -197,6 +218,12 @@ USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
+ENABLE_MPI_CHECKS=1
+# The label is just for 'turbine -v' output
+# It may be "(unknown)" if MPI checks are disabled
+MPI_LABEL=""
+MPI_LABEL_DIR=""
+MPI_LABEL_LIB=""
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -208,6 +235,7 @@ AC_ARG_WITH(mpi,
         fi
         USE_MPI_DIR=${withval}
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
     [])
@@ -225,13 +253,21 @@ AC_ARG_ENABLE(custom-mpi,
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [name in PATH or full path to job launcher
+                   [full path to job launcher
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
         AC_CHECK_FILE(${USE_LAUNCHER}, [],
                       AC_MSG_ERROR("Launcher not found!"))
     ])
+
+# Allow user to disable MPI checks (useful on Cray)
+AC_ARG_ENABLE(mpi-checks,
+    AC_HELP_STRING([--disable-mpi-checks],
+                   [Turbine checks for mpi.h and MPI libs to obtain
+                    the MPI version and enforce sanity.  This flag
+                    disables these checks.]),
+    [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
 # Set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]]
@@ -244,12 +280,13 @@ then
        USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-   elif (( ! ENABLE_CUSTOM_MPI ))
+   elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
    then
        AC_MSG_ERROR([Turbine requires --with-mpi or
                                   --enable-custom-mpi or
                                   or mpicc in PATH .])
    fi
+   MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
@@ -296,15 +333,17 @@ AC_ARG_WITH(mpi-lib-dir,
                    [directory containing MPI lib (usually libmpich)]),
     [
         USE_MPI_LIB_DIR=${withval}
+        MPI_LABEL_DIR="${USE_MPI_LIB_DIR}"
     ],
     [])
 
 AC_ARG_WITH(mpi-lib-name,
     AS_HELP_STRING([--with-mpi-lib-name],
-                   [name of MPI lib (usually mpich) -
+                   [name of MPI lib (usually mpi or mpich) -
                     assumes mpi-lib-dir has been given]),
     [
         USE_MPI_LIB_NAME=${withval}
+	MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
     ],
     [])
 
@@ -322,18 +361,9 @@ AC_ARG_WITH(mpi-lib-extra,
     ],
     [])
 
-# Allow user to disable MPI checks (useful on Cray)
-ENABLE_MPI_CHECKS=yes
-AC_ARG_ENABLE(mpi-checks,
-    AC_HELP_STRING([--disable-mpi-checks],
-                   [Turbine checks for mpi.h and MPI libs to obtain
-                    the MPI version and enforce sanity.  This flag
-                    disables these checks.]),
-    [ ENABLE_MPI_CHECKS=${enableval} ])
-
 # Now check MPI settings
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ENABLE_MPI_CHECKS ))
 then
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
@@ -345,7 +375,7 @@ MPI_LIB_FOUND=0
 if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
   MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-
+  echo MPI_LIB_DIR_ALTS $MPI_LIB_DIR_ALTS
   if [[ ! -z "${DPKG_ARCH}" ]]
   then
     MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
@@ -374,6 +404,8 @@ do
       MPI_LIB_FOUND=1
       USE_MPI_LIB_DIR="${MPI_LIB_DIR_ALT}"
       USE_MPI_LIB_NAME="${MPI_LIB_NAME_ALT}"
+      MPI_LABEL_DIR=${USE_MPI_LIB_DIR}
+      MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
       break 2
     else
       AC_MSG_RESULT([no])
@@ -386,6 +418,15 @@ then
   AC_MSG_ERROR([Could not find MPI library in any alternative locations])
 fi
 fi
+
+# Set MPI_LABEL
+if [[ -n "${MPI_LABEL_DIR}${MPI_LABEL_LIB}" ]]
+then
+  MPI_LABEL="${MPI_LABEL_DIR} ${MPI_LABEL_LIB}"
+else
+  MPI_LABEL="(unknown)"
+fi
+echo MPI_LABEL $MPI_LABEL
 
 # Set MPI options
 
@@ -439,6 +480,8 @@ then
 fi
 fi
 
+MPI_LABEL=${MPI_LABEL:-(unknown)}
+
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
@@ -448,14 +491,19 @@ AC_SUBST(USE_MPI_LIB_NAME)
 AC_SUBST(USE_MPI_LIB_SPEC)
 AC_SUBST(USE_MPI_LIB_A)
 AC_SUBST(USE_MPI_LIB_EXTRA_A)
+AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
-# MPI_IMPL will be unknown, OpenMPI, or MPICH
+# MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
+# 2018/09/29: We no longer put version information in these tokens
+#             Add new variables if we need that.
 MPI_IMPL=unknown
+HAVE_MPI_IMPL_MPICH=0
+HAVE_MPI_IMPL_OPENMPI=0
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ${ENABLE_MPI_CHECKS} ))
 then
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
@@ -466,9 +514,10 @@ fi
 AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
+   HAVE_MPI_IMPL_OPENMPI=1
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
-   MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
+   MPI_IMPL="OpenMPI"
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
      LINE_PREFIX="-tag-output"
@@ -477,11 +526,16 @@ then
    fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
-   MPI_IMPL=MPICH2
+   HAVE_MPI_IMPL_MPICH=0
+   MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
-fi # ENABLE_MPI_CHECKS==yes
+fi # ENABLE_MPI_CHECKS==1
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
+                   ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
+                   ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
@@ -527,7 +581,7 @@ AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 AC_SUBST(USE_MPE_LIB_A)
 
-ENABLE_XPT=yes
+ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -544,9 +598,7 @@ AC_ARG_ENABLE(checkpoint,
     ], [])
 if [[ ${ENABLE_XPT} == yes ]]
 then
-    AC_MSG_RESULT([Checkpointing enabled]);
-else
-    AC_MSG_RESULT([Checkpointing disabled]);
+    AC_MSG_RESULT([Checkpointing enabled])
 fi
 AC_SUBST(ENABLE_XPT)
 
@@ -566,16 +618,16 @@ AC_ARG_WITH(adlb,
     ],
     [
         dnl If not given, look in SOFTWARE, if valid
-        if [[ ${SOFTWARE} == 0 ]]
+        [[ ${SOFTWARE} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
+
+        if (( ${DEBIAN_BUILD} ))
         then
-            AC_MSG_ERROR([Not found: ADLB])
-        fi
-        location=${SOFTWARE}/lb
-        AC_CHECK_FILE(${location}/include/adlb.h,
-                      [USE_ADLB=${location}], [])
-        if [[ ${USE_ADLB} == 0 ]]
-        then
-            AC_MSG_ERROR([Not found: ADLB])
+            USE_ADLB=/usr
+        else # We are doing a source installation
+            location=${SOFTWARE}/lb
+            AC_CHECK_FILE(${location}/include/adlb.h,
+                          [USE_ADLB=${location}], [])
+            [[ ${USE_ADLB} == 0 ]] && AC_MSG_ERROR([Not found: ADLB])
         fi
     ]
 )
@@ -588,99 +640,55 @@ fi
 AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
-# By default, use default location and version 2.7
-USE_PY_VERSION_MAJOR=2
-USE_PY_VERSION_MINOR=7
-USE_PY_VERSION_SUFFIX=
-USE_PYTHON_INCLUDE=0
-USE_PYTHON_LIB=0
-USE_PYTHON_NAME=python${USE_PYTHON_VERSION}
-HAVE_PYTHON=0
-
-AC_ARG_WITH(python-version-major,
-   AS_HELP_STRING([--with-python-version-major],
-                   [Use this version (Default: 2)]),
-   [
-     USE_PY_VERSION_MAJOR=${withval}
-   ],[])
-AC_ARG_WITH(python-version-minor,
-   AS_HELP_STRING([--with-python-version-minor],
-                   [Use this version (Default: 7)]),
-   [
-     USE_PY_VERSION_MINOR=${withval}
-   ])
-AC_ARG_WITH(python-version-suffix,
-   AS_HELP_STRING([--with-python-version-suffix],
-                   [Use this version (Default: <none>)]),
-   [
-     USE_PY_VERSION_SUFFIX=${withval}
-   ])
-
 AC_ARG_ENABLE(python,
-    AS_HELP_STRING([--enable-python],
-                   [Enable calling python]),
-    [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
-      HAVE_PYTHON=1
-    ])
-
-AC_ARG_WITH(python,
-   AS_HELP_STRING([--with-python],
-                   [Use this python directory]),
+   AS_HELP_STRING([--enable-python],
+                  [Enable calling Python language (searches PATH for python executable)]),
   [
-      USE_PYTHON_VERSION=${USE_PY_VERSION_MAJOR}.${USE_PY_VERSION_MINOR}${USE_PY_VERSION_SUFFIX}
-      AC_MSG_RESULT([Trying Python version: ${USE_PYTHON_VERSION}])
-
       HAVE_PYTHON=1
-      AC_CHECK_FILE(${withval}/include/python${USE_PYTHON_VERSION}/Python.h, [],
-                    [AC_MSG_ERROR([Could not find python header!])])
-      USE_PYTHON_INCLUDE=${withval}/include
-      USE_PYTHON_LIBDIR=${withval}/lib
-      USE_PYTHON_NAME=libpython${USE_PYTHON_VERSION}.so
+      PYTHON_EXE=""
   ])
 
-AC_ARG_WITH(python-lib,
-    AS_HELP_STRING([--with-python-lib],
-                   [Use this python directory library -
-                    provide fully qualified path]),
-    [
+AC_ARG_WITH(python-exe,
+   AS_HELP_STRING([--with-python-exe],
+                  [Specify complete path to python executable]),
+  [
+      if test "x${withval}" == "xyes"; then
+          # Look for exe in PATH below
+          PYTHON_EXE=""
+      else
+          PYTHON_EXE=${withval}
+          if test "x$PYTHON_EXE" != "x"; then
+              AC_CHECK_FILE(${PYTHON_EXE}, [],
+                [AC_MSG_ERROR([Specified python exe not found!  Tried: $PYTHON_EXE])])
+          fi
+      fi
       HAVE_PYTHON=1
-      USE_PYTHON_LIB=${withval}
-      AC_CHECK_FILE(${USE_PYTHON_LIB}, [],
-                    [AC_MSG_ERROR([Could not find python!])])
-      USE_PYTHON_LIBDIR=$( dirname ${USE_PYTHON_LIB} )
-      USE_PYTHON_NAME=$( basename ${USE_PYTHON_LIB} )
-      USE_PYTHON=${USE_PYTHON_LIB} # Copy
-    ])
-
-if [[ ${HAVE_PYTHON} == 1 ]]
-then
-    USE_PYTHON_NAME=${USE_PYTHON_NAME#lib}
-    USE_PYTHON_NAME=${USE_PYTHON_NAME%.so}
-    AC_MSG_RESULT([Using Python lib directory: ${USE_PYTHON_LIBDIR}])
-    AC_MSG_RESULT([Using Python lib name:      ${USE_PYTHON_NAME}])
-fi
-
-AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MAJOR],
-                   $USE_PY_VERSION_MAJOR,[Python version: major])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_MINOR],
-                   $USE_PY_VERSION_MINOR,[Python version: minor])
-AC_DEFINE_UNQUOTED([USE_PY_VERSION_SUFFIX],
-                   $USE_PY_VERSION_SUFFIX,[Python version: suffix])
-AC_SUBST(USE_PY_VERSION_MAJOR)
-AC_SUBST(USE_PY_VERSION_MINOR)
-AC_SUBST(USE_PY_VERSION_SUFFIX)
-AC_SUBST(HAVE_PYTHON)
-AC_SUBST(USE_PYTHON_INCLUDE)
-AC_SUBST(USE_PYTHON_LIBDIR)
-AC_SUBST(USE_PYTHON_NAME)
+  ])
 
 if (( HAVE_PYTHON ))
 then
+    if test "x$PYTHON_EXE" == "x"; then
+        AC_PATH_PROG([PYTHON_EXE], [python], [NOT_FOUND])
+    fi
+    if test "x$PYTHON_EXE" == "xNOT_FOUND"; then
+        AC_MSG_ERROR([Unable to find given python executable in PATH])
+    fi
+    TURBINE_CODEDIR=`pwd`
+    PYTHON_INCLUDE_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --include-flags) || AC_MSG_ERROR([Failed to execute python-config.py --include-flags])
+    PYTHON_LIB_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-flags) || AC_MSG_ERROR([Failed to execute python-config.py --lib-flags])
+    PYTHON_LIBDIR=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-dir) || AC_MSG_ERROR([Failed to execute python-config --lib-dir])
+    PYTHON_NAME=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-name) || AC_MSG_ERROR([Failed to execute python-config --lib-name])
     AC_MSG_RESULT([Python enabled])
+    AC_MSG_RESULT([Using Python include flags: ${PYTHON_INCLUDE_FLAGS}])
+    AC_MSG_RESULT([Using Python lib flags:     ${PYTHON_LIB_FLAGS}])
+    AC_MSG_RESULT([Using Python lib dir:       ${PYTHON_LIBDIR}])
+    AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
+    AC_SUBST(HAVE_PYTHON)
+    AC_SUBST(PYTHON_INCLUDE_FLAGS)
+    AC_SUBST(PYTHON_LIB_FLAGS)
+    AC_SUBST(PYTHON_LIBDIR)
+    AC_SUBST(PYTHON_NAME)
+    AC_DEFINE_UNQUOTED([PYTHON_NAME],"$PYTHON_NAME",[Provides Python Name])
 else
     AC_MSG_RESULT([Python disabled])
 fi
@@ -688,13 +696,32 @@ fi
 # R is optional
 HAVE_R=0
 USE_R=0
+RCPP_PATH=0
+RINSIDE_PATH=0
+# Drop this?  Almost guaranteed to fail.
 AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
       HAVE_R=1
-      USE_R=""
+      USE_R="/usr" # Acceptable default?
     ])
+
+AC_ARG_WITH(rinside,
+   AS_HELP_STRING([--with-rinside],
+                   [Use this RInside directory]),
+   [
+      HAVE_R=1
+      RINSIDE_PATH=${withval}
+   ])
+
+AC_ARG_WITH(rcpp,
+   AS_HELP_STRING([--with-rcpp],
+                   [Use this Rcpp directory]),
+   [
+      HAVE_R=1
+      RCPP_PATH=${withval}
+   ])
 
 AC_ARG_WITH(r,
    AS_HELP_STRING([--with-r],
@@ -702,24 +729,114 @@ AC_ARG_WITH(r,
   [
       HAVE_R=1
       USE_R=${withval}
-      AC_CHECK_FILE(${USE_R}/include/R.h, [],
-                    [AC_MSG_ERROR([Could not find R header!])])
-      # C++ is only required if we enable R
-      AC_PROG_CXX
-      LD=${CXX}
   ])
 
+if [[ ${HAVE_R} == 1 ]]
+then
+  AC_MSG_RESULT([Adding to PATH: $USE_R/../../bin ])
+  PATH=$USE_R/../../bin:$PATH
+
+  AC_CHECK_FILE(${USE_R}/include/R.h, [],
+        [AC_MSG_ERROR([Could not find R header!])])
+  if [[ ${RINSIDE_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS=" ${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
+      done
+    else
+      RINSIDE_PATH=${USE_R}/RInside
+    fi
+  fi
+
+  if [[ ${RCPP_PATH} == 0 ]]
+  then
+    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+    if [[ ! -z ${RSCRIPT} ]]
+    then
+      R_LIB_PATHS="${USE_R} "
+      # returned in order of precedence so we want to
+      # reverse so that the last overrides the first
+      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      for p in $R_LIB_PATHS
+      do
+        AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
+      done
+    else
+      RCPP_PATH=${USE_R}/Rcpp
+    fi
+  fi
+
+  AC_CHECK_FILE(${RINSIDE_PATH}/include/RInside.h, [],
+                 [AC_MSG_ERROR([Could not find RInside header!])])
+  AC_CHECK_FILE(${RCPP_PATH}/include/Rcpp.h, [],
+                 [AC_MSG_ERROR([Could not find Rcpp header!])])
+
+  # C++ is only required if we enable R
+  AC_PROG_CXX
+  LD=${CXX}
+fi # if HAVE_R
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)
+AC_SUBST(RINSIDE_PATH)
+AC_SUBST(RCPP_PATH)
 
-if (( HAVE_R ))
+# JVM scripting support: Disabled by default
+HAVE_JVM_SCRIPT=0
+USE_JVM_SCRIPT_HOME=0
+AC_ARG_ENABLE(jvm-scripting,
+    AS_HELP_STRING([--enable-jvm-scripting],
+                   [Enable calling JVM scripting languages]),
+    [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=swift-t-jvm
+    ])
+AC_ARG_WITH(jvm-scripting,
+   AS_HELP_STRING([--with-jvm-scripting],
+                   [Use this JVM scripting plugin home directory]),
+  [
+      HAVE_JVM_SCRIPT=1
+      USE_JVM_SCRIPT_HOME=${withval}
+  ])
+if (( ${HAVE_JVM_SCRIPT} ))
 then
-    AC_MSG_RESULT([R enabled])
+    AC_CHECK_FILE(${USE_JVM_SCRIPT_HOME}/src/swift-jvm.h, [],
+                  [AC_MSG_ERROR([Could not find JVM scripting header!])])
+    AC_MSG_RESULT([JVM scripting enabled])
 else
-    AC_MSG_RESULT([R disabled])
+    AC_MSG_RESULT([JVM scripting disabled])
 fi
 
+AC_DEFINE_UNQUOTED([HAVE_JVM_SCRIPT],$HAVE_JVM_SCRIPT,[Enables JVM scripting])
+AC_SUBST(HAVE_JVM_SCRIPT)
+AC_SUBST(USE_JVM_SCRIPT_HOME)
+
+#JVM HOME
+AC_SUBST(JVMHOME,"/usr/lib/jvm/java-8-oracle")
+AC_ARG_WITH([jvm-home],
+            [AS_HELP_STRING([--with-jvm-home],
+               [Set up the jvm home directory (default: /usr/lib/jvm/java-8-oracle)])],
+            [AC_SUBST(JVMHOME,$withval)],
+            )
+
+#JVM SWIFT-T LIBs
+AC_SUBST(JVMLIB,$(pwd)"/swift-jvm/swift-jvm-build/target/swift-jvm-build-0.0.1-bin/swift-jvm/classes")
+AC_ARG_WITH([swift-jvm-engine-lib],
+            [AS_HELP_STRING([--with-swift-jvm-engine-lib],
+               [Set up the swift jvm engine lib (default: classes)])],
+            [AC_SUBST(JVMLIB,$withval)],
+            )
+# End of JVM scripting configuration
+
+# Julia: optional
 HAVE_JULIA=0
 USE_JULIA=0
 AC_ARG_WITH(julia,
@@ -734,13 +851,6 @@ AC_ARG_WITH(julia,
 AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])
 AC_SUBST(HAVE_JULIA)
 AC_SUBST(USE_JULIA)
-
-if (( HAVE_JULIA ))
-then
-    AC_MSG_RESULT([Julia enabled])
-else
-    AC_MSG_RESULT([Julia disabled])
-fi
 
 HAVE_COASTER=0
 USE_COASTER=0
@@ -763,25 +873,6 @@ then
 else
     AC_MSG_RESULT([Coaster integration disabled])
 fi
-
-# tclsh is used in the build process (cf. debug-auto.tcl)
-# Allow user to specify a native tclsh for use when cross-compiling
-# The user has not yet provided tclsh-local (default to USE_TCLSH):
-USE_TCLSH_LOCAL=0
-AC_ARG_WITH(tclsh-local,
-    AS_HELP_STRING(
-        [--with-tclsh-local],
-        [name of tclsh compatible with build system]),
-    [
-        AC_MSG_CHECKING([for Tcl local executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.zsh ${withval} )
-        if [[ ${?} != 0 ]]
-        then
-            AC_MSG_ERROR([failed!])
-        fi
-        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
-    ],
-    [])
 
 ENABLE_SHARED=1
 AC_ARG_ENABLE(shared,
@@ -826,14 +917,32 @@ AC_SUBST(ENABLE_STATIC)
 AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
 AC_PROG_RANLIB
 
+# Tcl version is initially unknown (needed by find-tcl.sh)
+export TCL_VERSION=0
+
 # In order from most to least preferred
 TCL_VERSION_PREFS="8.6 8.5"
+
+AC_ARG_WITH(tcl-version,
+    AS_HELP_STRING([--with-tcl-version],
+                   [Tcl version. Minimum is 8.5. If not specified,
+                    use highest version we can find]),
+    [
+        TCL_VERSION=${withval}
+        AC_MSG_NOTICE([user specified Tcl version ${TCL_VERSION}])
+        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
+    ],
+    [
+        AC_MSG_NOTICE([Tcl version is not specified.])
+    ]
+)
 
 USE_TCL=0
 # Set USE_TCL
 AC_ARG_WITH(tcl,
     AS_HELP_STRING([--with-tcl], [location of Tcl]),
     [
+        AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
     ],
     [
@@ -847,7 +956,6 @@ AC_ARG_WITH(tcl,
           AC_MSG_RESULT([yes: ${program}])
           USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
           AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
-          #AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
           break
         else
           AC_MSG_RESULT([no])
@@ -858,20 +966,6 @@ AC_ARG_WITH(tcl,
       then
         AC_MSG_ERROR([Could not find tclsh for any version: ${TCL_VERSION_PREFS}!])
       fi
-    ]
-)
-
-# Sniff out default Tcl version and library path
-TCL_VERSION=0
-
-AC_ARG_WITH(tcl-version,
-    AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.5. If not specified,
-                    use highest version we can find]),
-    [
-        TCL_VERSION=${withval}
-        AC_MSG_NOTICE([specified Tcl version ${TCL_VERSION}])
-        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
     ]
 )
 
@@ -890,6 +984,25 @@ then
   # We have locked in a version choice
   TCL_VERSION_PREFS=${TCL_VERSION}
 fi
+
+# tclsh is used in the build process (cf. debug-auto.tcl)
+# Allow user to specify a native tclsh for use when cross-compiling
+# The user has not yet provided tclsh-local (default to USE_TCLSH):
+USE_TCLSH_LOCAL=0
+AC_ARG_WITH(tclsh-local,
+    AS_HELP_STRING(
+        [--with-tclsh-local],
+        [name of tclsh compatible with build system]),
+    [
+        AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION) executable in: ${withval}])
+        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
+        if [[ ${?} != 0 ]]
+        then
+            AC_MSG_ERROR([failed!])
+        fi
+        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
+    ],
+    [])
 
 # Can always use static Tcl library
 TCL_LIB_SUFFIX_PREFS="a"
@@ -930,6 +1043,8 @@ do
   do
     for LIB_DIR in ${LIB_DIR_OPTS}
     do
+      test -d ${LIB_DIR} || continue
+      LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
       AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
@@ -1011,24 +1126,22 @@ then
       Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
-# TCL_VERSION needed by find-tcl.zsh
-export TCL_VERSION
-
 # Find tclsh binary name (may be tclsh8.5)
 if [[ ${USE_TCLSH_LOCAL} == 0 ]]
 then
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    AC_MSG_RESULT([checking for Tcl executable in ${USE_TCL} ...])
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary in ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable in ${USE_TCL}!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
     export NO_RUN=1
-    USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
+    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary at ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable at ${USE_TCL}!])
     fi
 fi
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
@@ -1045,70 +1158,6 @@ AC_ARG_WITH(tcl-include,
              TCL_INCLUDE_SPEC=-I${withval}
             ],
             [])
-
-AC_MSG_CHECKING([for Tcl system library directory with init.tcl])
-USE_TCL_SYSLIB_DIR=
-AC_ARG_WITH(tcl-syslib-dir,
-      AS_HELP_STRING(
-        [[--with-tcl-syslib-dir],
-         [tcl system library directory.  Must contain init.tcl in \
-          root or tcl${TCL_VERSION} subdirectory]]),
-        [USE_TCL_SYSLIB_DIR="${withval}"])
-
-mktemp_system()
-{
-    if [[ ${USE_MAC} == "no" ]]
-    then
-        mktemp
-    else
-        mktemp -t TURBINE
-    fi
-}
-
-if [[ -z "${USE_TCL_SYSLIB_DIR}" ]]
-then
-  # Put script in file as way to get tclsh to crash on invalid script
-  tmp_script=$(mktemp_system)
-
-  # Try to find out the library directory from tclsh
-  echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
-  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH} $tmp_script )
-  TCLSH_EXIT=$?
-  rm $tmp_script
-  if [[ $? != 0 ]]; then
-    AC_MSG_ERROR([tcl-syslib-dir not provided and could not determine \
-                  system library location by invoking ${USE_TCLSH}])
-  fi
-fi
-
-if [[ ! -d "${USE_TCL_SYSLIB_DIR}" ]]
-then
-  AC_MSG_ERROR([Error finding tcl-syslib-dir: ${USE_TCL_SYSLIB_DIR} \
-               not a directory])
-fi
-
-INIT_TCL_FOUND=0
-# Try to locate init.tcl.  In some layouts it's in the root, in others
-# it's in the tcl${TCL_VERSION} subdirectory
-for syslib_dir in "${USE_TCL_SYSLIB_DIR}" \
-                  "${USE_TCL_SYSLIB_DIR}/tcl${TCL_VERSION}"
-do
-  MAYBE_INIT_TCL="${syslib_dir}/init.tcl"
-  if [[ -f ${MAYBE_INIT_TCL} ]]
-  then
-    INIT_TCL_FOUND=1
-    AC_MSG_RESULT([yes])
-    AC_MSG_RESULT([Found init.tcl: ${MAYBE_INIT_TCL}])
-  fi
-done
-
-if (( ! INIT_TCL_FOUND ))
-then
-  AC_MSG_ERROR([could not locate init.tcl under ${USER_TCL_SYSLIB_DIR}:\
-          appears not to be a legimitate Tcl system library directory])
-fi
-
-AC_MSG_RESULT([using Tcl system library directory: ${USE_TCL_SYSLIB_DIR}])
 
 AC_SUBST(USE_TCL)
 AC_SUBST(USE_TCL_LIB_DIR)
@@ -1193,6 +1242,11 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        Makefile
+        bin/turbine
+        bin/turbine-pilot
+        scripts/turbine-config.sh
+        scripts/turbine-build-config.sh
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1202,7 +1256,9 @@ AC_CONFIG_FILES(
         src/tcl/blob/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/jvm/module.mk
         src/tcl/julia/module.mk
+        src/tcl/launch/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/static-pkg/module.mk
@@ -1214,14 +1270,20 @@ AC_CONFIG_FILES(
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk
         scripts/submit/ec2/module.mk
+        scripts/submit/lsf/module.mk
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
-        scripts/turbine-config.sh
-        scripts/turbine-build-config.sh
+        scripts/submit/theta/module.mk
         tests/module.mk
         tests/runbin.zsh
-	Makefile
 )
+
+        #         $USE_JVM_SCRIPT_HOME/src/module.mk
+
+# Debian stuff: noops
+AC_ARG_ENABLE([dependency-tracking])
+AC_ARG_ENABLE([maintainer-mode])
+AC_ARG_ENABLE([silent-rules])
 
 AC_OUTPUT

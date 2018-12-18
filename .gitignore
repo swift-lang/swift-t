@@ -1,4 +1,5 @@
-.gitignore
+# .gitignore
+
 *~
 *.o
 *.so
@@ -19,11 +20,18 @@ config.log
 Makefile
 *.mk
 
+# Debian stuff
+*.orig.tar.gz
+*.deb
+
 # STC output
 *.tic
 
 # Tcl packages
 pkgIndex.tcl
+
+# Scheduler output directory file
+turbine-directory.txt
 
 # Fortran output
 *.mod
@@ -40,3 +48,9 @@ pkgIndex.tcl
 .project
 .cproject
 .autotools
+
+# Auto-filtered Debian changelogs
+changelog
+
+# The Swift/T Debian distribution
+swift-t-debs-*.tgz

@@ -68,9 +68,9 @@ list_b_match(struct list_b_item *item, const void *data, size_t data_len)
     memcmp(item->data, data, data_len) == 0;
 }
 
-static bool
+static int
 list_b_cmp(const void *data1, size_t data_len1, 
-          const void *data2, size_t data_len2)
+           const void *data2, size_t data_len2)
 {
   size_t min_len = data_len1 <= data_len2 ? data_len1 : data_len2; 
 

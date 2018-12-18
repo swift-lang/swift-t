@@ -19,7 +19,7 @@
 # string s1 = blob_to_string(b1);
 # trace(s1);
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc rules { } {
 
@@ -37,7 +37,7 @@ proc rules { } {
     # close container
     adlb::write_refcount_decr $A
 
-    turbine::blob_from_floats $b $A
+    turbine::floats2blob $b $A
     puts DONE
 }
 

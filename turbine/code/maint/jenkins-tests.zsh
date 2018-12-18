@@ -1,11 +1,11 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 # Jenkins script - run Turbine test suite
 
 set -eu
 # set -x
 
-source maint/jenkins-configure.zsh
+source maint/jenkins-configure.sh
 
 rm -fv ./*.lastrun(.N)
 

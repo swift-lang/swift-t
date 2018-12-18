@@ -14,6 +14,15 @@
  * limitations under the License
  */
 
+/*
+ * BATCHER
+ *
+ * Simple demonstration of ADLB usage
+ * Reads an input text file, distributes each line (via ADLB_Put())
+ * for execution in the shell on a worker.
+ *
+ * Usage: mpiexec -n <PROCS> batcher.x <INPUT.TXT>
+ * */
 
 #include <assert.h>
 #include <stdbool.h>
@@ -140,7 +149,7 @@ main(int argc, char *argv[])
   MPI_Barrier(MPI_COMM_WORLD);
   double start_time = MPI_Wtime();
 
-  if (am_server )
+  if (am_server)
   {
     // server rank
     ADLB_Server(3000000);

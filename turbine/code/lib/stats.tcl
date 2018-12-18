@@ -94,7 +94,7 @@ namespace eval turbine {
         stats_impl $container $NULL $NULL $result $NULL $NULL $NULL $NULL $NULL
     }
 
-    # calculate mean of an array of floats or ints
+    # calculate std dev of an array of floats or ints
     proc std { result container } {
         set NULL 0
         stats_impl $container $NULL $NULL $NULL $NULL $NULL $result $NULL $NULL

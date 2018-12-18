@@ -223,7 +223,7 @@ class Turbine {
           turbFn("create_local_file_ref");
   private static final Token DECR_LOCAL_FILE_REFCOUNT =
           turbFn("decr_local_file_refcount");
-  private static final Token MKTEMP = turbFn("mktemp");
+  private static final Token MKTEMP = turbFn("mktemp_impl");
   private static final Token GET_FILENAME_VAL = turbFn("get_filename_val");
   private static final Token SET_FILENAME_VAL = turbFn("set_filename_val");
 
@@ -243,7 +243,7 @@ class Turbine {
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
   // Library function implementations
-  public static final Token TOFLOAT_IMPL = turbFn("tofloat_impl");
+  public static final Token TOFLOAT_IMPL = turbFn("string2float_impl");
   public static final Token PARSE_INT = turbFn("parse_int_impl");
   public static final Token SUBSTRING_IMPL = turbFn("substring_impl");
   public static final Token POW_INTEGER_IMPL = turbFn("pow_integer_impl");

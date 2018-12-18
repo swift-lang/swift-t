@@ -15,7 +15,7 @@
 # Test what happens if we do not catch a Tcl error
 # In a past buggy MPICH, this caused SEGVs
 
-package require turbine 0.0.1
+package require turbine 1.0
 adlb::init 1 1
 
 error "This is fatal"

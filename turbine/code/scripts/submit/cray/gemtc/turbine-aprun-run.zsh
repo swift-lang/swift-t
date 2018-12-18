@@ -1,4 +1,4 @@
-#!/bin/zsh -ef
+#!/usr/bin/env zsh -ef
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #

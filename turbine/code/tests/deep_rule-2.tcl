@@ -1,6 +1,6 @@
 # Test for deep rule based on STC generated code
 
-package require turbine 0.3.0
+package require turbine 1.0
 namespace import turbine::*
 
 

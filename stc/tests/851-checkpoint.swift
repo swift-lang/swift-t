@@ -1,3 +1,6 @@
+
+// SKIP-THIS-TEST
+
 // Test checkpointing for data structures
 import assert;
 import math;
@@ -23,7 +26,7 @@ main {
   ibag += 1;
   ibag += 2;
   ibag += 2;
-  
+
   foreach slist in g(baga) {
     trace("slist: " + string_join(slist, ", "));
   }

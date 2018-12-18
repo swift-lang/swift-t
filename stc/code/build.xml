@@ -194,9 +194,11 @@
     <echo message="${user.dir}${line.separator}" file="source.txt"/>
   </target>
 
+
   <!-- Config: setup config -->
+  <!--
   <target name="config">
-    <!-- Empty turbine home unless already provided -->
+    <- Empty turbine home unless already provided ->
     <property name="turbine.home"
               value=""/>
     <copy file="${stc.env.template}" toFile="${stc.env}"
@@ -205,7 +207,8 @@
         <filter token="TURBINE_HOME" value="${turbine.home}"/>
       </filterset>
     </copy>
-  </target>
+    </target>
+    -->
 
   <target name="test" depends="test.jar">
     <mkdir dir="${test.out.dir}"/>
@@ -280,9 +283,27 @@
     </jacoco:report>
   </target>
 
+
+  <!-- Determine if this is a Debian build or a source build -->
+  <condition property="debian_build"
+             value="1"
+             else="0">
+    <isset property="debian"/>
+  </condition>
+  <condition property="dist.bin"
+             value="${dist.dir}/../../bin"
+             else="${dist.dir}/bin">
+    <equals arg1="${debian_build}" arg2="1"/>
+  </condition>
+  <condition property="use_java_value"
+             value="${use.java}"
+             else="">
+    <isset property="use.java"/>
+  </condition>
+
   <!-- Install: User must have set dist.dir -->
   <target name="install"
-          depends="jar,source.txt,config">
+          depends="jar,source.txt">
 
     <fail unless="dist.dir"
           message="Target install requires -Ddist.dir=..."/>
@@ -293,19 +314,46 @@
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc"/>
     <mkdir dir="${dist.dir}/lib"/>
-    <copy verbose="${lf}" file="bin/stc"         todir="${dist.dir}/bin"/>
-    <copy verbose="${lf}" file="bin/swift-t"     todir="${dist.dir}/bin"/>
-    <copy verbose="${lf}" file="conf/stc-env.sh" todir="${dist.dir}/conf"/>
-    <copy verbose="${lf}" todir="${dist.dir}/etc">
-          <fileset dir="etc" includes="help*.txt"/>
+    <copy todir="${dist.bin}"
+          verbose="${lf}">
+      <filelist
+          id="binfiles"
+          dir="bin"
+          files="stc,swift-t,helpers.zsh"/>
+      <filterset>
+        <filter token="DEBIAN_BUILD" value="${debian_build}"/>
+      </filterset>
     </copy>
-    <copy verbose="${lf}" file="etc/version.txt" todir="${dist.dir}/etc"/>
-    <copy verbose="${lf}" file="source.txt"      todir="${dist.dir}/etc"/>
-    <copy verbose="${lf}" file="etc/turbine-version.txt" todir="${dist.dir}/etc"/>
-    <copy verbose="${lf}" file="scripts/stc-config.sh" todir="${dist.dir}/scripts"/>
+    <copy file="etc/stc-config.sh"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"        >
+      <filterset>
+        <filter token="DEBIAN_BUILD" value="${debian_build}"/>
+        <filter token="TURBINE_HOME" value="${turbine.home}"/>
+        <filter token="USE_JAVA"     value="${use_java_value}"/>
+      </filterset>
+    </copy>
 
-    <copy verbose="${lf}" todir="${dist.dir}/lib">
-      <fileset dir="lib" includes="*.jar" excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
+    <copy todir="${dist.dir}/etc"
+          verbose="${lf}">
+      <fileset dir="etc"
+               includes="help/*.txt"/>
+    </copy>
+    <copy file="etc/version.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
+    <copy file="source.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
+    <copy file="etc/turbine-version.txt"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
+
+    <copy todir="${dist.dir}/lib"
+          verbose="${lf}">
+      <fileset dir="lib"
+               includes="*.jar"
+               excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
     </copy>
     <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
     <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>

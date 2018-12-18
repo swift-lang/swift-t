@@ -45,6 +45,8 @@ struct xlb_state {
   MPI_Comm worker_comm;
   MPI_Comm leader_comm;
 
+  char* my_name;
+
   /**
      Start time from MPI_Wtime()
      Note: this is used by debugging output
@@ -57,7 +59,7 @@ struct xlb_state {
   xlb_layout layout;
 
   /**
-    Host to rank map
+    Map host to rank-list.  Ranks in the list are ordered lowest->highest
    */
   struct xlb_hostmap *hostmap;
 
@@ -79,6 +81,14 @@ struct xlb_state {
 
   /** Default placement policy to use for new data */
   adlb_placement placement;
+
+  /** If not 1, use par_mod mode where parallel tasks start on
+      ranks r such that r % par_mod == 0
+   */
+  int par_mod;
+
+  /** Overall status */
+  adlb_status status;
 };
 
 /** Global system state */

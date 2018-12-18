@@ -1,6 +1,6 @@
 # Test for id/subscript rule
 
-package require turbine 0.4.0
+package require turbine 1.0
 namespace import turbine::*
 
 # Check exists

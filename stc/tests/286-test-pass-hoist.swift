@@ -10,14 +10,14 @@ import string;
 // to hoist
 @pure
 (blob o) make_blob() "turbine" "0.0.1" [
-    "set <<o>> [ adlb::blob_from_string hello ]"
+    "set <<o>> [ adlb::string2blob hello ]"
 ];
 
 // hello is 6 bytes including null terminator
 global const int TEST_BLOB_SIZE = 6;
 
 // This should not be hoistable: not pure
-(int o) blob_size2(blob i) "turbine" "0.0.1" [ 
+(int o) blob_size2(blob i) "turbine" "0.0.1" [
     "set <<o>> [ lindex <<i>> 1 ]"
 ];
 

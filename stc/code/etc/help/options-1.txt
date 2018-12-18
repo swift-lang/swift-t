@@ -1,0 +1,46 @@
+    -A <argname>=<value>
+         Bind command-line argument at compile-time, allowing
+         creation of a compiled version of code specialized
+         for given setting
+    -C <output file>
+         Write intermediate representation to this file
+         (otherwise does not output it)
+    -d <PORT>
+       Use JDWP debugging on given PORT
+    -D <MACRO>
+       Define a CPP preprocessor macro
+    -h
+       Show all options
+    -f <option name>
+       toggle compiler option on
+    -F <option name>
+       toggle compiler option off
+    -I <DIRECTORY>
+       Add an include path
+       TURBINE_HOME/export is always included to get standard library
+    -j </path/to/java>
+       Set JVM location.  Defaults to PATH entry for java
+    -L <LOG>
+       Log stc progress to given LOG.  Set STC_LOG_TRACE environment
+       variable to "true" for trace-level logging
+    -O <Optimization level>
+       Set compiler optimization level:
+         0 - no optimizations
+         1,2,3 - standard optimizations (DEFAULT) (this will change later)
+    -o <output file>
+         Write output *.tic file here
+    -p
+       Disable preprocessing via CPP
+    -r <DIRECTORY>
+       Add an RPATH for a Swift/T extension
+    -u
+       Only compile if target is not up-to-date
+    -U <FILE>
+       Only compile if target is not up-to-date, including this FILE
+       as an additional dependency.  This is typically used for
+       imported or included *.swift source code, but can be anything.
+       Implies -u .  Use -V to trace the up-to-date checks.
+    -v
+       Output version and exit
+    -V
+       Increase verbosity.  May be given twice for extreme verbosity.

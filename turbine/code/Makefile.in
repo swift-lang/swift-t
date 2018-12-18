@@ -48,12 +48,25 @@ package: $(PACKAGE) libs
 USE_MAC = @USE_MAC@
 
 INSTALL_PREFIX  = @prefix@
-INSTALL_BIN     = $(INSTALL_PREFIX)/bin
-INSTALL_ETC     = $(INSTALL_PREFIX)/etc
-INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
-INSTALL_LIB     = $(INSTALL_PREFIX)/lib
-INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
-INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
+
+ifeq ($(DESTDIR),)
+# 	Regular build
+	ENABLE_DEB = 0
+	INSTALL_BIN = $(INSTALL_PREFIX)/bin
+	INSTALL_TOP = $(INSTALL_PREFIX)
+else
+# 	Debian installation
+	ENABLE_DEB = 1
+	INSTALL_BIN = $(DESTDIR)/bin
+	INSTALL_TOP = $(DESTDIR)/lib/turbine
+endif
+
+INSTALL_ETC     = $(INSTALL_TOP)/etc
+INSTALL_INCLUDE = $(INSTALL_TOP)/include
+INSTALL_LIB     = $(INSTALL_TOP)/lib
+INSTALL_SCRIPTS = $(INSTALL_TOP)/scripts
+INSTALL_EXPORT  = $(INSTALL_TOP)/export
+INSTALL_PY      = $(INSTALL_TOP)/py
 # The submit scripts are loaded from their respective module.mk files
 SCRIPTS_SUBMIT  :=
 
@@ -238,13 +251,19 @@ ifeq ($(ENABLE_XPT),yes)
   DEFINES += -D ENABLE_XPT
 endif
 
-HAVE_PYTHON        = @HAVE_PYTHON@
-USE_PYTHON_INCLUDE = @USE_PYTHON_INCLUDE@
-USE_PYTHON_LIBDIR  = @USE_PYTHON_LIBDIR@
-USE_PYTHON_NAME    = @USE_PYTHON_NAME@
+HAVE_JVM_SCRIPT    = @HAVE_JVM_SCRIPT@
+USE_JVM_SCRIPT_HOME= @USE_JVM_SCRIPT_HOME@
+
+HAVE_PYTHON          = @HAVE_PYTHON@
+PYTHON_INCLUDE_FLAGS = @PYTHON_INCLUDE_FLAGS@
+PYTHON_LIB_FLAGS     = @PYTHON_LIB_FLAGS@
+PYTHON_LIBDIR        = @PYTHON_LIBDIR@
+PYTHON_NAME          = @PYTHON_NAME@
 
 HAVE_R = @HAVE_R@
 USE_R  = @USE_R@
+RCPP_PATH = @RCPP_PATH@
+RINSIDE_PATH = @RINSIDE_PATH@
 
 HAVE_JULIA = @HAVE_JULIA@
 USE_JULIA  = @USE_JULIA@
@@ -270,14 +289,22 @@ ifeq ($(ENABLE_MPE),1)
 	INCLUDES += -I $(USE_MPE)/include
 endif
 ifeq ($(HAVE_PYTHON),1)
-	INCLUDES += -I $(USE_PYTHON_INCLUDE)
+	INCLUDES += $(PYTHON_INCLUDE_FLAGS)
 endif
 ifeq  ($(HAVE_R),1)
 ifneq ($(USE_R),)
-	INCLUDES += -I $(USE_R)/include
-        R_LIBRARY = $(USE_R)/library
-        INCLUDES += -I $(R_LIBRARY)/RInside/include
-        INCLUDES += -I $(R_LIBRARY)/Rcpp/include
+  INCLUDES += -I $(USE_R)/include
+  R_LIBRARY = $(USE_R)/library
+  ifneq ($(RINSIDE_PATH),)
+   INCLUDES += -I $(RINSIDE_PATH)/include
+  else
+   INCLUDES += -I $(R_LIBRARY)/RInside/include
+  endif
+  ifneq ($(RCPP_PATH),)
+   INCLUDES += -I $(RCPP_PATH)/include
+  else
+   INCLUDES += -I $(R_LIBRARY)/Rcpp/include
+  endif
 endif
 endif
 ifeq ($(HAVE_JULIA),1)
@@ -320,27 +347,43 @@ ifeq ($(ENABLE_MPE),1)
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
-  ifneq ($(USE_PYTHON_LIBDIR),0)
-    ifneq ($(USE_PYTHON_LIBDIR),)
-      ifeq ($(filter $(USE_PYTHON_LIBDIR),$(SYSTEM_LIBS)),)
-        LIBS += -L$(USE_PYTHON_LIBDIR)
-        RPATH_PYTHON = yes
-      endif
-    endif
-  endif
-  LIBS += -l$(USE_PYTHON_NAME)
+  LIBS += -L$(PYTHON_LIBDIR) $(PYTHON_LIB_FLAGS)
+  RPATH_PYTHON = yes
 endif
 ifeq ($(HAVE_R),1)
 ifneq ($(USE_R),)
   R_LIB = $(USE_R)/lib
-  ifeq ($(filter $(R_LIB),$(SYSTEM_LIBS)),)
-    LIBS += -L$(R_LIB)
-    RPATH_R = yes
+  LIBS += -L$(R_LIB)
+  RPATH_R = yes
+  ifneq ($(RINSIDE_PATH),)
+    RINSIDE_LIB = $(RINSIDE_PATH)/lib
+  else
+    RINSIDE_LIB = $(USE_R)/library/RInside/lib
   endif
-  RINSIDE_LIB = $(USE_R)/library/RInside/lib
   LIBS += -L$(RINSIDE_LIB)
 endif
 LIBS += -lRInside -lR
+
+ifeq ($(USE_MAC),yes)
+# if mac, the RInside library and python install name can be incorrect
+# when installed locally. This will fix that in tclturbine
+  RINSIDE_INSTALL_NAME=$(shell otool -D $(RINSIDE_PATH)/lib/libRInside.dylib | sed -n 2p)
+  FIX_RINSIDE_INSTALL_NAME = install_name_tool -change $(RINSIDE_INSTALL_NAME) $(RINSIDE_LIB)/libRInside.dylib $(TCL_TURBINE_SO)
+
+  ifneq ($(PYTHON_LIBDIR),)
+    PYTHON_LIB_NAME =  $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
+    PYTHON_INSTALL_NAME = $(shell otool -D $(PYTHON_LIB_NAME) | sed -n 2p)
+    FIX_PYTHON_INSTALL_NAME = install_name_tool -change $(PYTHON_INSTALL_NAME) $(PYTHON_LIB_NAME) $(TCL_TURBINE_SO)
+  endif
+else
+   FIX_RINSIDE_INSTALL_NAME =
+   FIX_PYTHON_INSTALL_NAME =
+endif
+
+endif
+ifeq ($(HAVE_JVM_SCRIPT),1)
+  SWIFTTJVM_LIB = $(USE_JVM_SCRIPT_HOME)/src
+  LIBS += -L$(SWIFTTJVM_LIB)/.libs -lswifttjvm
 endif
 ifeq ($(HAVE_JULIA),1)
   JULIA_LIB = $(USE_JULIA)/usr/lib
@@ -370,8 +413,6 @@ ifeq ($(strip $(TCL_LIB_SO)),)
   LIBS += $(TCL_LIB_DEPS)
 endif
 
-dirname = $(patsubst %/,%,$(dir $(1)))
-
 # Build RPath to link to libraries at runtime.
 # Avoid adding system directories to RPATH - this often causes the wrong
 # version of the library to be linked from the system path.
@@ -389,7 +430,7 @@ ifeq ($(RPATH_MPE),yes)
   RPATHS += -Wl,-rpath -Wl,$(USE_MPE)/lib
 endif
 ifeq ($(RPATH_PYTHON),yes)
-  RPATHS += -Wl,-rpath -Wl,$(USE_PYTHON_LIBDIR)
+  RPATHS += -Wl,-rpath -Wl,$(PYTHON_LIBDIR)
 endif
 ifeq ($(RPATH_R),yes)
   RPATHS += -Wl,-rpath -Wl,$(R_LIB)
@@ -420,12 +461,15 @@ include src/tcl/mpe/module.mk
 include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
+include src/tcl/jvm/module.mk
+include src/tcl/launch/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
 include scripts/main-wrap/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
+include maint/debian.mkf
 
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_C_UTILS_SRC)
@@ -434,6 +478,9 @@ TURBINE_SRC += $(TCL_MPE_SRC)
 TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
+TURBINE_SRC += $(TCL_LAUNCH_SRC)
+TURBINE_SRC += $(JVM_SCRIPT_SRC)
+TURBINE_SRC += $(TCL_JVM_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS := $(patsubst %.c, %.o, $(TURBINE_SRC)) $(TCL_R_OBJS)
 
@@ -452,8 +499,6 @@ TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
-TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
-			     $(TURBINE_EXECUTABLE_MANIFESTS))
 
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
@@ -461,9 +506,6 @@ TEST_SRC_MANIFEST :=
 TEST_SRC_C :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC_C))
-ifeq ($(ENABLE_STATIC_PKG),1)
-	TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
-endif
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
@@ -476,13 +518,17 @@ endif
 
 deps: $(DEPS)
 
+ifeq (${DEPCC},)
 # Assume we always have gcc for deps processing
 DEPCC = gcc
+endif
 
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
 	DEP_DROP = -d mpi.h
 endif
+
+dirname = $(patsubst %/,%,$(dir $(1)))
 
 %.d: %.c
 	$(Q) "  DEP		$(@)"
@@ -551,6 +597,8 @@ endif
              $(LIBS) \
              $(RPATHS) \
              $(MAC_NAME)
+	$(FIX_RINSIDE_INSTALL_NAME)
+	$(FIX_PYTHON_INSTALL_NAME)
 
 $(STATIC_PKG_A): $(STATIC_PKG_OBJS) $(STATIC_PKG_RESOURCE_O)
 	$(Q) "  AR		$(@)"
@@ -618,8 +666,9 @@ TEST_SCRIPTS = $(patsubst %.c, %.sh, $(TEST_SRC_C))
 TEST_OUTPUT  := $(patsubst %.c,   %.out, $(TEST_SRC_C))
 TEST_OUTPUT  += $(patsubst %.tcl, %.out, $(TEST_SRC_TCL))
 # Test case results
-TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
-TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
+TEST_RESULTS := $(patsubst %.c,        %.result, $(TEST_SRC_C))
+TEST_RESULTS += $(patsubst %.tcl,      %.result, $(TEST_SRC_TCL))
+TEST_RESULTS += $(patsubst %.manifest, %.result, $(TEST_SRC_MANIFEST))
 ifeq ($(ENABLE_STATIC_PKG),1)
     TEST_STATIC_PREREQS = $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 else
@@ -692,27 +741,35 @@ PROVENANCE = version.txt source.txt config.log
 install: install.txt
 
 # Installed files:
-DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
+DIRECTORIES := $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_SCRIPTS)
+
+ifeq ($(HAVE_PYTHON),1)
+	DIRECTORIES += $(INSTALL_PY)
+endif
+
 TURBINE_HEADERS := src/turbine/turbine.h      \
-		  src/tcl/turbine/tcl-turbine.h \
-		  src/tcl/static-pkg/static-pkg.h \
-                  src/turbine/turbine-defs.h \
-                  src/tcl/blob/blob.h
+                   src/turbine/turbine-finalizers.h \
+                   src/tcl/turbine/tcl-turbine.h \
+                   src/tcl/static-pkg/static-pkg.h \
+                   src/turbine/turbine-defs.h \
+                   src/tcl/blob/blob.h
 ifeq ($(ENABLE_STATIC_PKG),1)
   TURBINE_HEADERS += $(STATIC_PKG_RESOURCE_H)
 endif
 
-BINS := $(shell ls bin/turbine \
-                     bin/turbine-write-doubles \
-                     bin/turbine-read-doubles )
+BINS := $(shell ls bin/turbine               \
+                   bin/turbine-pilot         \
+                   bin/turbine-write-doubles \
+                   bin/turbine-read-doubles )
 ifeq ($(ENABLE_STATIC_PKG),1)
 	BINS += $(TURBINE_EXECUTABLES)
 endif
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) $(SCRIPTS_SUBMIT) )
+		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) \
+		     $(SCRIPTS_SUBMIT) py/*.py )
 
 install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
               $(TURBINE_HEADERS) $(SCRIPTS) $(SCRIPTS_SUBMIT)
@@ -720,6 +777,8 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
 	$(E) rm -f $(@)
+# 	Configure-generated files
+	$(E) chmod u+x bin/turbine bin/turbine-pilot
 #       Set up directories
 	$(E) mkdir -pv $(DIRECTORIES)
 #       Copy in build provenance files
@@ -727,20 +786,24 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
-	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
+	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)   $(INSTALL_LIB)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_TOP)
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
-	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
+	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
+ifeq ($(HAVE_PYTHON),1)
+	$(E) cp $(CP_ARGS) py/*.py $(INSTALL_PY)
+endif
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) etc/help*.txt         $(INSTALL_ETC)
+	$(E) $(CP_PARENTS) $(CP_ARGS) etc/help/*.txt $(INSTALL_TOP)
 	@echo
 	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
+	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
 	$(E) date "+DATE:   %m/%d/%Y %I:%M%p"    >> $(@)
-#       Use true to ignore errors (if this is not an SVN checkout)
-	$(E) ( svn info | grep Revision ; true ) >> $(@) 2>&1
-	$(E) cp $(CP_ARGS) $(@) $(INSTALL_PREFIX)
+#       Use true to ignore errors (e.g., if this is not an git clone)
+	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
+	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
 
 ### Autoconf sanity:
 
@@ -790,6 +853,7 @@ distclean:: clean
 	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
+# This line causes a false autoscan warning on token 'install'
 .PHONY: clean install package package_static libs test_results
 
 ### DEBUG BUILD SYSTEM

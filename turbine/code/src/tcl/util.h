@@ -138,7 +138,7 @@ turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
 /**
    Convenience function to construct Tcl list of strings
  */
-Tcl_Obj* turbine_tcl_list_new(int count, const char** strings);
+Tcl_Obj* turbine_tcl_list_new(int count, char const *const * strings);
 
 /**
    Convenience function to construct Tcl list of integers
@@ -148,7 +148,7 @@ Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
                                           int count);
 
 /**
-   Return error message for user consumption.
+   Return error message for cleaner handling.
    Message is created from concatenating args.
    Return value is error code.
  */
@@ -181,7 +181,7 @@ int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
     goto label;                                                  \
   }
 
-  
+
 
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.

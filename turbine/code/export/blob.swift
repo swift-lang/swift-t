@@ -24,21 +24,46 @@
 @pure
 (blob o)   blob_null() "turbine" "0.0.2" "blob_null"
  [ "set <<o>> [ turbine::blob_null ]" ];
+
+// string2blob
 @pure
-(blob o)   blob_from_string(string s) "turbine" "0.0.2" "blob_from_string"
- [ "set <<o>> [ adlb::blob_from_string <<s>> ]" ];
+(blob o)   string2blob(string s) "turbine" "0.0.2" "string2blob"
+ [ "set <<o>> [ adlb::string2blob <<s>> ]" ];
 @pure
-(string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob"
- [ "set <<o>> [ adlb::blob_to_string <<b>> ]" ];
+(blob o)   blob_from_string(string s) "turbine" "0.0.2" "string2blob"
+ [ "set <<o>> [ adlb::string2blob <<s>> ]" ];
+
+// blob2string
+@pure
+(string o) blob2string(blob b) "turbine" "0.0.2" "blob2string"
+ [ "set <<o>> [ adlb::blob2string <<b>> ]" ];
+@pure
+(string o) string_from_blob(blob b) "turbine" "0.0.2" "blob2string"
+ [ "set <<o>> [ adlb::blob2string <<b>> ]" ];
+
+// floats2blob
+@pure
+(blob o) floats2blob(float f[]) "turbine" "0.0.2"
+  [ "set <<o>> [ turbine::floats2blob_impl <<f>> ]" ];
 @pure
 (blob o) blob_from_floats(float f[]) "turbine" "0.0.2"
-  [ "set <<o>> [ turbine::blob_from_floats_impl <<f>> ]" ];
+  [ "set <<o>> [ turbine::floats2blob_impl <<f>> ] " ];
+
+// ints2blob
+@pure
+(blob o) ints2blob(int i[]) "turbine" "0.0.2"
+  [ "set <<o>> [ turbine::ints2blob_impl <<i>> ] " ];
 @pure
 (blob o) blob_from_ints(int i[]) "turbine" "0.0.2"
-  [ "set <<o>> [ turbine::blob_from_ints_impl <<i>> ] " ];
+  [ "set <<o>> [ turbine::ints2blob_impl <<i>> ] " ];
+
+// blob2floats
+@pure
+(float f[]) blob2floats(blob b) "turbine" "0.0.2"
+  [ "set <<f>> [ turbine::blob2floats_impl <<b>> ] " ];
 @pure
 (float f[]) floats_from_blob(blob b) "turbine" "0.0.2"
-  [ "set <<f>> [ turbine::floats_from_blob_impl <<b>> ] " ];
+  [ "set <<f>> [ turbine::blob2floats_impl <<b>> ] " ];
 
 // TODO: inline version of blob_read
 @pure @dispatch=WORKER

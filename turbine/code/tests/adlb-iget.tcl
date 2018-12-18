@@ -17,7 +17,7 @@
 
 # usage: mpiexec -l -n 3 bin/turbine test/adlb-putget.tcl
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 enum WORK_TYPE { T }
 

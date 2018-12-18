@@ -42,9 +42,24 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        leader_hook
+        leader_hook_startup
 
-        c::worker_loop $WORK_TYPE($mode) $keyword_args
+        set success true
+        try {
+            c::worker_loop $WORK_TYPE($mode) $keyword_args
+        } trap "TURBINE ERROR" e {
+            set success false
+            puts "worker loop exited with error"
+        } on error e {
+            puts "WORKER ERROR: $::errorInfo"
+        }
+
+        leader_hook_shutdown
+
+        if { ! $success } {
+            puts "worker throwing error: "
+            error "worker loop error"
+        }
     }
 
     proc custom_worker { rules startup_cmd mode } {
@@ -117,15 +132,46 @@ namespace eval turbine {
         }
     }
 
-    proc leader_hook { } {
-        if { [ adlb::comm_leaders ] == [ adlb::comm_null ] } {
+    proc leader_hook_startup { } {
+        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
             # I am not a leader
             return
         }
         global env
-        if [ info exists env(TURBINE_LEADER_HOOK) ] {
-            log "TURBINE_LEADER_HOOK: $env(TURBINE_LEADER_HOOK)"
-            eval $env(TURBINE_LEADER_HOOK)
+        if [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] {
+            puts "TURBINE_LEADER_HOOK_STARTUP: $env(TURBINE_LEADER_HOOK_STARTUP)"
+            try {
+                eval $env(TURBINE_LEADER_HOOK_STARTUP)
+            } on error e {
+                puts ""
+                puts "Error in TURBINE_LEADER_HOOK_STARTUP: $e"
+                puts ""
+                exit 1
+            }
+        }
+    }
+
+    proc leader_hook_shutdown { } {
+        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
+            # I am not a leader
+            return
+        }
+        global env
+        if [ info exists env(TURBINE_LEADER_HOOK_SHUTDOWN) ] {
+            puts "TURBINE_LEADER_HOOK_SHUTDOWN: $env(TURBINE_LEADER_HOOK_SHUTDOWN)"
+            try {
+                eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
+            } on error e {
+                puts ""
+                puts "Error in TURBINE_LEADER_HOOK_SHUTDOWN: $e"
+                puts ""
+                exit 1
+            }
         }
     }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

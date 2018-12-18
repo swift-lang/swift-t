@@ -1,9 +1,19 @@
-# BASH-formatted setup script processed by turbine/configure
+
+# TURBINE BUILD CONFIG
+
+# BASH-formatted setup script filtered by turbine/configure
 #
 # This contains variables relevant to compiling code that uses the 
 # Turbine C interface
 
-TURBINE_HOME='@prefix@'
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+                            # if this is a Debian installation
+if (( DEBIAN_BUILD ))
+then
+  TURBINE_HOME=/usr/lib/turbine
+else
+  TURBINE_HOME='@prefix@'
+fi
 TURBINE_VERSION='@TURBINE_VERSION@'
 C_UTILS_HOME='@USE_C_UTILS@'
 TCL_HOME='@USE_TCL@'
@@ -26,7 +36,6 @@ MPI_LIB_SPEC='@USE_MPI_LIB_SPEC@'
 ENABLE_MPE='@ENABLE_MPE@'
 MPE='@USE_MPE@'
 
-
 # TURBINE_INCLUDES has the flags for all non-system dependencies of 
 # Turbine that user code may reference
 TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS_HOME}/include \
@@ -35,10 +44,15 @@ if [ ! -z "$MPI_INCLUDE" -a "$MPI_INCLUDE" != 0 ]; then
   TURBINE_INCLUDES+=" -I$MPI_INCLUDE"
 fi
 
-# TURBINE_INCLUDES has the flags for all library dependencies of
+# Only use -ltclturbinestatic when static build is enabled
+TURBINE_STATIC=@ENABLE_STATIC@
+tclturbinestatic="-ltclturbinestatic"
+(( ! TURBINE_STATIC )) && tclturbinestatic=""
+
+# TURBINE_LIBS has the flags for all library dependencies of
 # Turbine that user code may reference
 TURBINE_LIBS="-L${TURBINE_HOME}/lib \
-              -ltclturbinestatic -ltclturbine \
+              ${tclturbinestatic} -ltclturbine \
               -L${ADLB_HOME}/lib -ladlb \
               -L${C_UTILS_HOME}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"

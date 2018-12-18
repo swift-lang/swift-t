@@ -59,6 +59,10 @@ turbine_worker_loop(Tcl_Interp* interp,
 
     MPI_Comm task_comm;
     int answer_rank, type_recved;
+
+    if (ADLB_Status() == ADLB_STATUS_SHUTDOWN)
+      break;
+
     adlb_code code = ADLB_Get(work_type, &payload, &task_size, MAX_TASK,
                               &answer_rank, &type_recved, &task_comm);
     if (code == ADLB_SHUTDOWN)

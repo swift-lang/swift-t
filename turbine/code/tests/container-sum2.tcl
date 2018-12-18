@@ -24,7 +24,7 @@
 # trace(sum(A));
 # this is same as previous test but we force different order
 
-package require turbine 0.0.1
+package require turbine 1.0
 
 proc insert_last { c i d } {
     turbine::container_immediate_insert $c $i $d integer

@@ -3,20 +3,20 @@ package provide sudoku 0.0
 
 # Dummy functions that emulate sudoku app
 namespace eval sudoku {
-    package require turbine 0.3.0
+    package require turbine 1.0
     namespace import ::turbine::*
 
     # Total squares on board
     proc board_size { } {
       return [ expr 9 * 9 ]
     }
-    
+
     proc parse_board { fname } {
         # initial value for board
         # to emulate the actual sudoku solver, we assume that the
         # secret solution is a string of all 0's with the length the
         # size of the board
-        return [ adlb::blob_from_string "0" ]
+        return [ adlb::string2blob "0" ]
     }
 
     # Check if string is all zeroes
@@ -39,7 +39,7 @@ namespace eval sudoku {
             return
         }
 
-        set board_str [ ::adlb::blob_to_string $board ]
+        set board_str [ ::adlb::blob2string $board ]
         puts "Working on board: \"${board_str}\""
 
         # build list of candidates based on input
@@ -58,7 +58,7 @@ namespace eval sudoku {
         puts stderr "Badsols: ${badsols}"
         for { set i 0 } { $i < $badsols } { incr i } {
             # random digit from 0 to 9
-            set fillval [ expr round(rand() * 9) ] 
+            set fillval [ expr round(rand() * 9) ]
             # random amount of characters to fill in
             set fillchars [ expr max(1, min($maxfill, round(rand() * 10))) ]
             set badsol "$board_str[ string repeat $fillval $fillchars ]"
@@ -78,7 +78,7 @@ namespace eval sudoku {
 
         set n [ llength $boardl ]
         puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
-        
+
         set output [ dict create ]
 
         for { set i 0 } { $i < $n } { incr i } {
@@ -87,7 +87,7 @@ namespace eval sudoku {
             puts stderr "Next board: \"${board}\" filled ${filled}"
 
             # Set the blob
-            set board_blob [ adlb::blob_from_string $board ]
+            set board_blob [ adlb::string2blob $board ]
             # TODO: free blob?
 
             set struct [ dict create "board" $board_blob "filledSquares" $filled ]
@@ -100,6 +100,6 @@ namespace eval sudoku {
 
     proc print_board_tcl { board } {
         # String was stored into blob, so just print string repr
-        puts [ ::adlb::blob_to_string $board ]
+        puts [ ::adlb::blob2string $board ]
     }
 }

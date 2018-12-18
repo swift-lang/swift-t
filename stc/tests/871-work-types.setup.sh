@@ -1,0 +1,2 @@
+export TURBINE_t0_WORKERS=1
+export PROCS=4

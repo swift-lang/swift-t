@@ -120,6 +120,7 @@ xlb_engine_work_array xlb_server_ready_work;
 
 static adlb_code setup_idle_time(void);
 static adlb_code setup_load_min(void);
+static adlb_code setup_par_mod(void);
 
 static inline int xlb_server_number(int rank);
 
@@ -165,6 +166,8 @@ xlb_server_init(const struct xlb_state *state)
   code = setup_idle_time();
   ADLB_CHECK(code);
   code = setup_load_min();
+  ADLB_CHECK(code);
+  code = setup_par_mod();
   ADLB_CHECK(code);
   // Set a default value for now:
   mm_set_max(mm_default, 10*MB);
@@ -230,8 +233,7 @@ ADLB_Server(long max_memory)
 
     update_cached_time(); // Periodically refresh timestamp
 
-    adlb_code code;
-    code = serve_several();
+    adlb_code code = serve_several();
     ADLB_CHECK(code);
 
     update_cached_time(); // Periodically refresh timestamp
@@ -241,10 +243,10 @@ ADLB_Server(long max_memory)
 
   // Print stats, then cleanup all modules
   print_final_stats();
-  server_shutdown();
+  adlb_code result = server_shutdown();
 
   TRACE_END;
-  return ADLB_SUCCESS;
+  return result;
 }
 
 // Track current backoff amount for adaptive backoff
@@ -548,6 +550,20 @@ setup_load_min()
 }
 
 adlb_code
+setup_par_mod()
+{
+  bool success = getenv_integer("ADLB_PAR_MOD", 1, &xlb_s.par_mod);
+  if (!success || xlb_s.par_mod < 0)
+  {
+    printf("Illegal value of ADLB_PAR_MOD!\n");
+    return ADLB_ERROR;
+  }
+  if (xlb_s.par_mod != 1)
+    printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
 xlb_shutdown_worker(int worker)
 {
   DEBUG("shutdown_worker(): %i", worker);
@@ -701,7 +717,7 @@ servers_idle()
   xlb_idle_check_attempt++;
   DEBUG("Master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
-  
+
   // Arrays containing request and work counts from all servers
   // The counts from each server are stored contiguously
   int *request_counts = malloc(sizeof(int) *
@@ -846,9 +862,10 @@ xlb_server_shutdown()
 static adlb_code
 server_shutdown()
 {
+  bool success = true;
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
-  xlb_workq_finalize();
+  success = xlb_workq_finalize();
   xlb_steal_finalize();
   xlb_sync_finalize();
 
@@ -859,6 +876,8 @@ server_shutdown()
            xlb_server_ready_work.count);
   free(xlb_server_ready_work.work);
 
+  if (!success)
+    return ADLB_ERROR;
   return ADLB_SUCCESS;
 }
 

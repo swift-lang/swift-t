@@ -1,10 +1,9 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh
+set -eu
 
 # STC RUN-TESTS
 
 # See About.txt for notes
-
-set -eu
 
 # Test error codes
 TEST_OK=0
@@ -20,7 +19,8 @@ SKIP_PATTERNS=()
 SKIP_COUNT=0
 
 COMPILE_ONLY=0
-RUN_DISABLED=0
+# If 1, run even tests that are skipped with SKIP-THIS-TEST
+RUN_SKIPPED_TESTS=0
 # If 1, show error outputs
 REPORT_ERRORS=0
 VERBOSE=0
@@ -37,7 +37,7 @@ JACOCO_AGENT_JAR=../code/lib/jacocoagent-0.7.2.jar
 # Save user JVM flags
 STC_JVM_FLAGS_USER=${STC_JVM_FLAGS:-}
 
-while getopts "cCDeJk:n:p:P:VO:f:F:alo:" OPTION
+while getopts "cCDef:F:hJk:ln:o:O:p:P:V" OPTION
 do
   case ${OPTION}
     in
@@ -50,24 +50,46 @@ do
       COMPILE_ONLY=1
       ;;
     D)
-      #Run disabled tests
-      RUN_DISABLED=1
+      RUN_SKIPPED_TESTS=1
       ;;
     e)
       # Show error outputs
       REPORT_ERRORS=1
       ;;
-    k)
-      # skip some tests
-      SKIP_COUNT=${OPTARG}
+    f)
+      ADDTL_STC_ARGS+="-f${OPTARG}"
+      ;;
+    F)
+      ADDTL_STC_ARGS+="-F${OPTARG}"
+      ;;
+    h)
+      print "See About.txt for usage."
+      exit
       ;;
     J)
       # Jacoco coverage
       JACOCO_COVERAGE=1
       ;;
+    k)
+      # skip some tests
+      SKIP_COUNT=${OPTARG}
+      ;;
+    l)
+      LEAK_CHECK=0
+      ;;
     n)
       # run a limited number of tests
       MAX_TESTS=${OPTARG}
+      ;;
+    o)
+      if [ ! -d ${OPTARG} ]; then
+        echo "${OPTARG} is not a directory"
+        exit 1
+      fi
+      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
+      ;;
+    O)
+      STC_OPT_LEVELS+=${OPTARG}
       ;;
     p)
       # run only tests that match one of the patterns
@@ -77,27 +99,8 @@ do
       # don't run tests that match one of the patterns
       SKIP_PATTERNS+=${OPTARG}
       ;;
-    f)
-      ADDTL_STC_ARGS+="-f${OPTARG}"
-      ;;
-    F)
-      ADDTL_STC_ARGS+="-F${OPTARG}"
-      ;;
     V)
       VERBOSE=1
-      ;;
-    O)
-      STC_OPT_LEVELS+=${OPTARG}
-      ;;
-    l)
-      LEAK_CHECK=0
-      ;;
-    o)
-      if [ ! -d ${OPTARG} ]; then
-        echo "${OPTARG} is not a directory"
-        exit 1
-      fi
-      STC_TESTS_OUT_DIR=$(cd ${OPTARG}; pwd)
       ;;
     *)
       # ZSH already prints an error message
@@ -131,37 +134,15 @@ crash()
   exit 1
 }
 
-STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
-STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
-
-if (( ! ${+STC} ))
+if (( ! ${+STC} )) # This environment variable is set by Jenkins.
 then
-  STC=""
-  for D in ${STC_TRIES}
-  do
-    if [[ -x ${D}/bin/stc && -r ${D}/conf/stc-env.sh ]]
-      then
-      STC=${D}/bin/stc
-      break
-    fi
-  done
-  if [[ ${STC} == "" ]]
-  then
-    STC=$( which stc )
-    [[ ${?} != 0 ]] && STC=""
-  fi
-  if [[ ${STC} == "" ]]
-  then
-    print "Could not find STC!"
-    exit 1
-  fi
+  STC=$( which stc 2> /dev/null )
+  (( ${#STC} == 0 )) && crash "Put stc in your PATH or set STC."
 fi
-print "using stc: ${STC}\n"
+print "using stc: '${STC}'\n"
 
 STC_HOME="$(dirname $(dirname ${STC} ))"
-STC_ENV="$STC_HOME/conf/stc-env.sh"
-
-source "$STC_HOME/scripts/stc-config.sh"
+STC_ENV="${STC_HOME}/etc/stc-config.sh"
 
 export TURBINE_HOME # needed by run-test.zsh
 
@@ -171,7 +152,7 @@ RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 export STC_TESTS_OUT_DIR=${STC_TESTS_OUT_DIR:-$STC_TESTS_DIR}
 mkdir -p ${STC_TESTS_OUT_DIR}
 
-export TURBINE_USER_LIB=${STC_TESTS_DIR}
+export SWIFT_PATH=${STC_TESTS_DIR}
 
 which tclsh > /dev/null
 if [[ ${?} != 0 ]]
@@ -248,7 +229,7 @@ run_test()
   # Get test command-line arguments
   if [[ -r ${ARGS_FILE} ]]
   then
-    ARGS=( $( < ${ARGS_FILE} ) ) 
+    ARGS=( $( < ${ARGS_FILE} ) )
   fi
 
   # Run the test from within the test directory
@@ -270,7 +251,7 @@ run_test()
     fi
 
     # RUN IT
-    print "running:   $( basename ${TCL_FILE} )"    
+    print "running:   $( basename ${TCL_FILE} )"
     if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     then
       CODE=${TEST_OK}
@@ -492,13 +473,13 @@ do
     fi
   fi
 
-  if (( RUN_DISABLED == 1 ))
+  if (( ! RUN_SKIPPED_TESTS ))
   then
-    :
-  elif grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
-  then
-    DISABLED_TESTS+=${TEST_NAME}
-    continue
+    if grep -F -q "SKIP-THIS-TEST" ${SWIFT_FILE}
+    then
+      DISABLED_TESTS+=${TEST_NAME}
+      continue
+    fi
   fi
 
   if [[ ${#SKIP_PATTERNS} > 0 ]]
@@ -520,23 +501,22 @@ do
   fi
 
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
-  for OPT_LEVEL in $STC_OPT_LEVELS
+  for OPT_LEVEL in ${STC_OPT_LEVELS}
   do
-    # Skip specific optimization levels
-    if (( RUN_DISABLED == 1 ))
+    if (( ! RUN_SKIPPED_TESTS ))
     then
-      :
-    elif grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
-    then
-      echo "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
-      DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
-      continue
+      # Skip specific optimization levels
+      if grep -F -q "SKIP-O${OPT_LEVEL}-TEST" ${SWIFT_FILE}
+      then
+        print "skip: ${SWIFT_FILE} at O${OPT_LEVEL}"
+        DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
+        continue
+      fi
     fi
-
 
     # Disambiguate test output of different opt levels
     TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}.O${OPT_LEVEL}"
-    
+
     TCL_FILE=${TEST_OUT_PATH}.tic
     STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
     STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
@@ -597,7 +577,7 @@ do
           printf "No warning in stc output\n"
       fi
     fi
-    
+
     if grep -F -q "THIS-TEST-SHOULD-NOT-CAUSE-WARNING" ${SWIFT_FILE}
     then
       if grep -q "^WARN" ${STC_ERR_FILE}

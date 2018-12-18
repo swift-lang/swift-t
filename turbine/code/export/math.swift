@@ -57,12 +57,12 @@ float E = 2.7182818284590452354;
 
 @pure
 (float o) log10 (float x) "turbine" "0.7.0" [
-  "set <<o>> [ ::tcl::mathfunc::log10 <<x>> ]"
+  "set <<o>> [ turbine::log10_impl <<x>> ]"
 ];
 
 @pure
 (float o) log (float x, float base) "turbine" "0.7.0" [
-  "set <<o>> [ expr {log(<<x>>)/log(<<base>>)} ]"
+  "set <<o>> [ turbine::log_base_impl <<x>> <<base>> ]"
 ];
 
 @pure

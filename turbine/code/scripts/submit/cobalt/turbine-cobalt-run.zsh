@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh
 set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -89,6 +89,12 @@ else
   WORK_DIRECTORY=${CHANGE_DIRECTORY}
 fi
 
+MAIL_ARG=""
+if (( MAIL_ENABLED ))
+then
+  MAIL_ARG=( -M ${MAIL_ADDRESS} )
+fi
+
 # Create the environment list in a format Cobalt can support
 ENV_LIST=${env}
 export ENV_LIST
@@ -109,6 +115,7 @@ then
        ${QUEUE_ARG}            \
        --cwd ${WORK_DIRECTORY} \
        ${=MODE_ARG}            \
+       ${MAIL_ARG}             \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \
@@ -121,6 +128,7 @@ else # Blue Gene
        --cwd ${WORK_DIRECTORY} \
        --env "${ENV}"          \
        ${=MODE_ARG}            \
+       ${MAIL_ARG}             \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
        --jobname ${TURBINE_JOBNAME}    \

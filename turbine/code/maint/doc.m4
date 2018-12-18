@@ -1,8 +1,10 @@
 m4_divert(`-1')
-m4_define(`DOCT', `m4_divert(0)m4_patsubst(`$1',`^ *',`') m4_divert(`-1')' )
-m4_define(`DOCN', `m4_divert(0)m4_patsubst(`$1',`^ *',`') 
+m4_define(`DOCSECTION', `m4_divert(0)m4_patsubst(`$1',`^ *',`== ')
 m4_divert(`-1')' )
-m4_define(`DOCNN', `m4_divert(0)m4_patsubst(`$1',`^ *',`') 
+m4_define(`DOCT', `m4_divert(0)m4_patsubst(`$1',`^ *',`') m4_divert(`-1')' )
+m4_define(`DOCN', `m4_divert(0)m4_patsubst(`$1',`^ *',`')
+m4_divert(`-1')' )
+m4_define(`DOCNN', `m4_divert(0)m4_patsubst(`$1',`^ *',`')
 
 m4_divert(`-1')' )
 m4_define(`DOCD', `m4_divert(0)
