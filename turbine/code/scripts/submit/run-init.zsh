@@ -61,6 +61,8 @@
 #   ADLB_DEBUG
 # OTHER CONVENTIONS
 #   JOB_ID: Job ID from the scheduler (not available at run time)
+# UTILITIES
+#   COMMON_M4: Common M4 utilities
 
 # Files:
 # Creates soft link in PWD pointing to TURBINE_OUTPUT
@@ -316,6 +318,9 @@ then
     print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
   fi
 fi
+
+# This is being phased in to capture common M4 functions (2018-12-18)
+COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 
 ## Local Variables:
 ## mode: sh

@@ -1,6 +1,6 @@
-changecom(`dnl')#!/bin/bash -l
+#!/bin/bash`'bash_l()
 # We changed the M4 comment to d-n-l, not hash
-# We need 'bash -l' for the module system
+# We may need 'bash -l' for the module system
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -20,70 +20,79 @@ changecom(`dnl')#!/bin/bash -l
 
 # Created: esyscmd(`date')
 
-# Define convenience macros
-# This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1'")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
-
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
-ifelse(getenv(QUEUE),`',,
+ifelse(getenv_nospace(QUEUE),`',,
 #SBATCH --partition=getenv(QUEUE)
 )
 
-ifelse(getenv(PROJECT),`',,
+ifelse(getenv_nospace(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
 # TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
+ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
 #SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
-#SBATCH --job-name=getenv(TURBINE_JOBNAME)
+#SBATCH --job-name=getenv_nospace(TURBINE_JOBNAME)
 
-#SBATCH --time=getenv(WALLTIME)
-#SBATCH --nodes=getenv(NODES)
-#SBATCH --ntasks-per-node=getenv(PPN)
-#SBATCH --workdir=getenv(TURBINE_OUTPUT)
+#SBATCH --time=getenv_nospace(WALLTIME)
+#SBATCH --nodes=getenv_nospace(NODES)
+#SBATCH --ntasks-per-node=getenv_nospace(PPN)
+#SBATCH --workdir=getenv_nospace(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
-ifelse(getenv(MAIL_ENABLED),`1',
-#SBATCH --mail-user=getenv(MAIL_ADDRESS)
+ifelse(getenv_nospace(MAIL_ENABLED),`1',
+#SBATCH --mail-user=getenv_nospace(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
 )
 
 # User directives:
-getenv(TURBINE_DIRECTIVE)
+getenv_nospace(TURBINE_DIRECTIVE)
 
 echo TURBINE-SLURM.SH
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
-VERBOSE=getenv(VERBOSE)
+VERBOSE=getenv_nospace(VERBOSE)
 if (( ${VERBOSE} ))
 then
  set -x
 fi
 
-TURBINE_HOME=getenv(TURBINE_HOME)
+TURBINE_HOME=getenv_nospace(TURBINE_HOME)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-COMMAND="getenv(COMMAND)"
+COMMAND="getenv_nospace(COMMAND)"
+
+# BEGIN TURBINE_PRELAUNCH
+# This code was inserted by TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 # Use this on Midway:
 # module load openmpi gcc/4.9
 
 # Use this on Bebop:
-module load icc
-module load mvapich2
+# module load icc
+# module load mvapich2
 
 TURBINE_LAUNCHER=srun
 
+for kv in ${envs}
+do
+  print kv: $kv
+done
+
 echo
 set -x
-${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
+${TURBINE_LAUNCHER} getenv_nospace(TURBINE_LAUNCH_OPTIONS) \
                     ${TURBINE_INTERPOSER:-} \
                     ${COMMAND}
 # Return exit code from mpirun
+
+# Local Variables:
+# mode: m4;
+# End:
