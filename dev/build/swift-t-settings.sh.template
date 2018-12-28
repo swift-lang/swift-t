@@ -88,8 +88,7 @@ PYTHON_EXE=""
 # Enable R integration
 ENABLE_R=0
 # R_INSTALL=/path/to/R
-# Define these if Rcpp and RInside are not
-# autodetected
+# Define these if Rcpp and RInside are not autodetected
 # RCPP_INSTALL=/path/to/Rcpp
 # RINSIDE_INSTALL=/path/to/RInside
 
