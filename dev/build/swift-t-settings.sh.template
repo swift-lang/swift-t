@@ -210,6 +210,8 @@ ENABLE_MKSTATIC_CRC=0
 # module swap PrgEnv-pgi PrgEnv-gnu
 # module load java
 
+# Midway:
+
 
 #+===================+
 #|| Editor settings ||
