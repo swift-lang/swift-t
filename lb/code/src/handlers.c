@@ -1611,7 +1611,7 @@ handle_typeof(int caller)
   long long i;
   RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
   id = i;
-  
+
   adlb_data_type type;
   int t;
   adlb_data_code dc = xlb_data_typeof(id, &type);
@@ -1636,7 +1636,7 @@ handle_container_typeof(int caller)
   long long i;
   RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
   id = i;
-  
+
   adlb_data_type types[2];
   int t[2];
   adlb_data_code dc =
