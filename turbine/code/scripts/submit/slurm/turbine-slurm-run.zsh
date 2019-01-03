@@ -37,6 +37,7 @@ TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
 m4 ${COMMON_M4} ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
