@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:wozniak@mcs.anl.gov">wozniak@mcs.anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.2,</span>
-<span id="revdate">December 2018</span>
+<span id="revdate">January 2019</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1053,8 +1053,8 @@ Wall time argument to pass to scheduler, typically <code>HH:MM:SS</code>
 </dt>
 <dd>
 <p>
-Directory in which to place Turbine output (if
-unset, a default value is automatically created)
+Directory in which to place Turbine output
+(if unset, a default value is automatically created)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1062,8 +1062,8 @@ unset, a default value is automatically created)
 </dt>
 <dd>
 <p>
-Directory under which Turbine will
-automatically create <code>TURBINE_OUTPUT</code> if necessary
+Directory under which Turbine will automatically create
+<code>TURBINE_OUTPUT</code> if necessary
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1071,8 +1071,50 @@ automatically create <code>TURBINE_OUTPUT</code> if necessary
 </dt>
 <dd>
 <p>
-Allows customization of the automatic
-output directory creation.  See <a href="#turbine_output">Turbine output</a>
+Allows customization of the automatic output directory creation.
+See <a href="#turbine_output">Turbine output</a>
+</p>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_BASH_L=0</code>
+</dt>
+<dd>
+<p>
+By default, Swift/T creates a Bash script for job submission that
+will be invoked with <code>#!/bin/bash -l</code> .
+Set <code>TURBINE_BASH_L=0</code> to run with <code>#!/bin/bash</code> .
+This can avoid problems with environment modules on certain systems.
+</p>
+</dd>
+</dl></div>
+<a name="turbine_directive"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_DIRECTIVE</code>
+</dt>
+<dd>
+<p>
+Paste the given text into the submit script just after the scheduler
+directives.
+Allows users to insert, e.g., reservation
+information into the script.
+For example, on PBS, this text will be inserted just after the last
+default <code>#PBS</code> .
+</p>
+</dd>
+</dl></div>
+<a name="turbine_prelaunch"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_PRELAUNCH</code>
+</dt>
+<dd>
+<p>
+Paste the given text into the submit script.
+Allows users to insert, e.g., <code>module&nbsp;load</code> statements
+into the script.
+These shell commands will be inserted just before the execution is
+launched via <code>mpiexec</code>, <code>aprun</code>, or equivalent.
 </p>
 </dd>
 </dl></div>
@@ -1081,16 +1123,6 @@ output directory creation.  See <a href="#turbine_output">Turbine output</a>
 <div class="paragraph"><p>These recently developed features are not yet available for all
 schedulers, feel free to request implementation.</p></div>
 <div class="dlist"><dl>
-<dt class="hdlist1">
-<code>TURBINE_DIRECTIVE</code>
-</dt>
-<dd>
-<p>
-Paste the given text into the submit script (currently supported
-systems: <code>cray</code>, <code>slurm</code>).  Allows users to insert, e.g., reservation
-information into the script.
-</p>
-</dd>
 <dt class="hdlist1">
 <code>TURBINE_SBATCH_ARGS</code>
 </dt>
@@ -3787,7 +3819,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer-text">
 Version 1.4.2<br />
 Last updated
- 2018-12-14 10:23:49 CST
+ 2019-01-03 13:21:16 CST
 </div>
 </div>
 </body>
