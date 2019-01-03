@@ -1729,7 +1729,8 @@ handle_container_reference(int caller)
 static adlb_code
 handle_container_size(int caller)
 {
-  adlb_code rc;
+  adlb_code ac;
+  int rc;
   MPI_Status status;
   struct packed_size_req req;
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_CONTAINER_SIZE);
@@ -1741,8 +1742,8 @@ handle_container_size(int caller)
 
   if (dc == ADLB_DATA_SUCCESS)
   {
-    rc = refcount_decr_helper(req.id, req.decr);
-    ADLB_CHECK(rc);
+    ac = refcount_decr_helper(req.id, req.decr);
+    ADLB_CHECK(ac);
   }
 
   if (dc != ADLB_DATA_SUCCESS)

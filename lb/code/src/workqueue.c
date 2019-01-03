@@ -829,7 +829,6 @@ void xlb_workq_type_counts(int *types, int size)
   assert(size >= xlb_s.types_size);
   for (int t = 0; t < xlb_s.types_size; t++)
   {
-    assert(untargeted_work[t].size >= 0);
     assert(parallel_work[t].size >= 0);
     // TODO: it's possible that this will miscount because of removed soft-targeted work
     types[t] = (int)untargeted_work[t].size + parallel_work[t].size;

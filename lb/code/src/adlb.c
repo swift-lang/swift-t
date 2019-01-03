@@ -1596,7 +1596,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        bool *result, bool *value_present,
                        void *data, size_t *length, adlb_data_type *type)
 {
-  int ac;
+  adlb_code ac;
   MPI_Status status;
   MPI_Request request;
   struct packed_insert_atomic_resp resp;
@@ -1848,7 +1848,8 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
 
   if (t == -1)
     return ADLB_ERROR;
-  *type = t;
+  adlb_data_type recvd = (adlb_data_type) t;
+  *type = recvd;
   return ADLB_SUCCESS;
 }
 
@@ -1873,8 +1874,11 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
 
-  *key_type = t[0];
-  *val_type = t[1];
+  adlb_data_type recvd;
+  recvd = (adlb_data_type) t[0];
+  *key_type = recvd;
+  recvd = (adlb_data_type) t[1];
+  *val_type = recvd;
   return ADLB_SUCCESS;
 }
 
