@@ -59,6 +59,7 @@ then
   return 0
 fi
 
+# Submit it!
 JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
 
 # JOB_ID must be an integer:
