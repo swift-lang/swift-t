@@ -241,6 +241,9 @@ Directory under which Turbine will automatically create
 Allows customization of the automatic output directory creation.
 See <<turbine_output,Turbine output>>
 
+++++
+<a name="turbine_bash_l"></a>
+++++
 +TURBINE_BASH_L=0+::
 By default, Swift/T creates a Bash script for job submission that
 will be invoked with +\#!/bin/bash -l+ .
