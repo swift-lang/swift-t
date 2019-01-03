@@ -2352,7 +2352,8 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     if (valid)
     {
       size_t data_offset = offset + 1;
-      const void *field_data = data + data_offset;
+      const char* field_data = (char*) data;
+      field_data += data_offset;
       size_t field_data_length;
       if (i == field_count - 1)
         field_data_length = length - data_offset;
@@ -3310,6 +3311,7 @@ ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
  * Construct cache key
  * Key may point to id or sub
+ * @return Tcl error code
  */
 static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           adlb_datum_id *id, adlb_subscript *sub,
@@ -3323,7 +3325,9 @@ static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
     *alloced = true;
 
     memcpy(*key, id, sizeof(*id));
-    memcpy(*key + sizeof(*id), sub->key, sub->length);
+    char* dest = (char*) *key;
+    dest += sizeof(*id);
+    memcpy(dest, sub->key, sub->length);
   }
   else
   {
@@ -4351,6 +4355,13 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
                     Tcl_GetString(objv[2]));
 
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
+
+  char* xfer;
+  adlb_code ac;
+
   // Check for no subscript
   TCL_CONDITION_GOTO(adlb_has_sub(handle.sub.val), exit_err,
                     "No subscript");
@@ -4366,10 +4377,6 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                               type, &type_extra);
     TCL_CHECK(rc);
   }
-
-  // Increments/decrements for outer and inner containers
-  // (default no extras)
-  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
   if (argpos < objc)
   {
@@ -4404,7 +4411,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     handle.id, (int)handle.sub.val.length, handle.sub.val.key);
 
   uint64_t xfer_size;
-  char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
+  xfer = tcl_adlb_xfer_buffer(&xfer_size);
 
   bool created, value_present;
   size_t value_len;
@@ -4412,7 +4419,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Initial trial at inserting.
   // Refcounts are only applied here if we got back the data
-  adlb_code ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
+  ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
             refcounts, &created, &value_present, xfer,
             &value_len, &outer_value_type);
 
@@ -5147,9 +5154,9 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
   TCL_CONDITION(type_arr != NULL, "Error allocating memory");
 
-  adlb_type_extra *extras = malloc(sizeof(adlb_type_extra) * types_size);
-  TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
   int to_consume = 1; // Min additional number that must be consumed
+  adlb_type_extra* extras = malloc(sizeof(adlb_type_extra) * types_size);
+  TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
 
   // Must consume at least the outermost type
   while (to_consume > 0) {
