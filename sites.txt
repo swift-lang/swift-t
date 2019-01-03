@@ -214,22 +214,20 @@ For scheduled systems, Turbine accepts a common set of environment
 variables.  These may be placed in the <<settings_file,settings file>>
 or set by the user in any other way.
 
-+PROCS+:: Number of processes to use
-+PPN+:: Number of processes per node
-+PROJECT+:: The project name to use with the system scheduler
-+QUEUE+:: Name of queue in which to run
-+WALLTIME+:: Wall time argument to pass to scheduler, typically +HH:MM:SS+
-+TURBINE_OUTPUT+:: Directory in which to place Turbine output (if
-unset, a default value is automatically created)
-+TURBINE_OUTPUT_ROOT+:: Directory under which Turbine will
-automatically create +TURBINE_OUTPUT+ if necessary
-+TURBINE_OUTPUT_FORMAT+:: Allows customization of the automatic
-output directory creation.  See <<turbine_output,Turbine output>>
++PROCS+::
+Number of processes to use
 
-==== Limited support
++PPN+::
+Number of processes per node
 
-These recently developed features are not yet available for all
-schedulers, feel free to request implementation.
++PROJECT+::
+The project name to use with the system scheduler
+
++QUEUE+::
+Name of queue in which to run
+
++WALLTIME+::
+Wall time argument to pass to scheduler, typically +HH:MM:SS+
 
 +TURBINE_DIRECTIVE+::
 Paste the given text into the submit script (currently supported
