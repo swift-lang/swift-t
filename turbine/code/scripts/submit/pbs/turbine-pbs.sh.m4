@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash
+changecom(`dnl')#!/bin/bash`'bash_l()
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -27,6 +27,10 @@ changecom(`dnl')#!/bin/bash
 #PBS -j oe
 #PBS -o getenv(OUTPUT_FILE)
 #PBS -V
+
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
 
 VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))

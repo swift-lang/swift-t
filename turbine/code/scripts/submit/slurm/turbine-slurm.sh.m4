@@ -18,7 +18,7 @@
 
 # TURBINE-SLURM.SH
 
-# Created: esyscmd(`date')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)

@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash`'bash_l()
 ifelse(getenv_nospace(PROJECT), `',,#COBALT -A getenv_nospace(PROJECT)
 )ifelse(getenv_nospace(QUEUE), `',,#COBALT -q getenv(QUEUE)
 )#COBALT -n getenv(NODES)

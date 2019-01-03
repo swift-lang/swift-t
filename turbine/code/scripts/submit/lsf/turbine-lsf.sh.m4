@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -l
+changecom(`dnl')#!/bin/bash`'bash_l()
 
 # We use changecom to change the M4 comment to dnl, not hash
 
@@ -20,7 +20,7 @@ changecom(`dnl')#!/bin/bash -l
 # The Turbine LSF template.  This is automatically filled in
 # by M4 in turbine-lsf-run.zsh
 
-# Created: esyscmd(`date')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
@@ -29,6 +29,11 @@ ifelse(getenv(PROJECT), `',,
 #BSUB -W getenv(WALLTIME)
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
+
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
+
 
 set -eu
 
