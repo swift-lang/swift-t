@@ -229,10 +229,49 @@ Name of queue in which to run
 +WALLTIME+::
 Wall time argument to pass to scheduler, typically +HH:MM:SS+
 
++TURBINE_OUTPUT+::
+Directory in which to place Turbine output
+(if unset, a default value is automatically created)
+
++TURBINE_OUTPUT_ROOT+::
+Directory under which Turbine will automatically create
++TURBINE_OUTPUT+ if necessary
+
++TURBINE_OUTPUT_FORMAT+::
+Allows customization of the automatic output directory creation.
+See <<turbine_output,Turbine output>>
+
++TURBINE_BASH_L=0+::
+By default, Swift/T creates a Bash script for job submission that
+will be invoked with +\#!/bin/bash -l+ .
+Set +TURBINE_BASH_L=0+ to run with +#!/bin/bash+ .
+This can avoid problems with environment modules on certain systems.
+
+++++
+<a name="turbine_directive"></a>
+++++
 +TURBINE_DIRECTIVE+::
-Paste the given text into the submit script (currently supported
-systems: +cray+, +slurm+).  Allows users to insert, e.g., reservation
+Paste the given text into the submit script just after the scheduler
+directives.
+Allows users to insert, e.g., reservation
 information into the script.
+For example, on PBS, this text will be inserted just after the last
+default +#PBS+ .
+
+++++
+<a name="turbine_prelaunch"></a>
+++++
++TURBINE_PRELAUNCH+::
+Paste the given text into the submit script.
+Allows users to insert, e.g., +module&nbsp;load+ statements
+into the script.
+These shell commands will be inserted just before the execution is
+launched via +mpiexec+, +aprun+, or equivalent.
+
+==== Limited support
+
+These recently developed features are not yet available for all
+schedulers, feel free to request implementation.
 
 +TURBINE_SBATCH_ARGS+::
 Optional arguments passed to +sbatch+.  These arguments may include
