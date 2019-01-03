@@ -2,6 +2,14 @@
 ////
 This file is on the web at:
 http://swift-lang.github.io/swift-t/sites.html
+
+The syntax:
+
+++++
+<a name="anchor_name"></a>
+++++
+
+is necessary for anchors to work inside of definition lists.
 ////
 
 :toc:
