@@ -29,7 +29,7 @@ ifelse(getenv_nospace(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 
 # TURBINE-THETA.SH
 
-# Created: esyscmd(`date')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 source /opt/modules/default/init/bash
 module load modules
@@ -69,23 +69,19 @@ echo "DATE:    $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "PROCS:   ${PROCS}"
 echo "PPN:${PPN}"
-# echo "TCLLIBPATH:   ${TCLLIBPATH}"
-# echo "LAUNCHER:${LAUNCHER}"
-#[[ -n ${VALGRIND} ]] && \
-# echo "VALGRIND:${VALGRIND}"
 echo
 
 # Put environment variables from run-init into 'aprun -e' format
-ENV_LIST="getenv(ENV_LIST)"
+ENV_LIST="getenv(USER_ENV_LIST)"
 APRUN_ENVS=""
-for KV in ${ENV_LIST}
+for KV in ${USER_ENV_LIST[@]}
 do
     APRUN_ENVS+="-e ${KV} "
 done
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
-# Run Turbine:
+# Run Turbine!
 set -x
 aprun -n ${PROCS} -N ${PPN} \
       ${TURBINE_LAUNCH_OPTIONS:-} \
@@ -98,7 +94,7 @@ set +x
 echo
 echo "Turbine Theta launcher done."
 echo "CODE: ${CODE}"
-echo "COMPLETE: $(date)"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
 
 # Return exit code from launcher (aprun)
 exit ${CODE}

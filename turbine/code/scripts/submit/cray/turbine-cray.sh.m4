@@ -22,10 +22,6 @@ changecom(`dnl')#!/bin/bash -l
 
 # Created: esyscmd(`date')
 
-# Define a convenience macro
-# This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1'")')
-
 #PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
 #PBS -A getenv(PROJECT)
@@ -98,7 +94,7 @@ export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
-ENV_PAIRS="getenv(ENV_PAIRS)"
+ENV_PAIRS="getenv(USER_ENV_PAIRS)"
 
 # Output header
 echo "Turbine: turbine-cray.sh"
@@ -115,11 +111,15 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 module load alps
 
 APRUN_ENV=""
-for KV in $ENV_PAIRS
+for KV in ${USER_ENV_PAIRS}
 do
-    APRUN_ENV+="-e $KV "
+    APRUN_ENV+="-e ${KV} "
 done
-APRUN_ENV+="-e TURBINE_OUTPUT=$TURBINE_OUTPUT"
+APRUN_ENV+="-e TURBINE_OUTPUT=${TURBINE_OUTPUT}"
+
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
 if [ -z "$OUTPUT_FILE" ]

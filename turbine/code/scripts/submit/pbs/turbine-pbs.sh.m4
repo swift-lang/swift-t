@@ -21,10 +21,6 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
-
 #PBS -N getenv(TURBINE_JOBNAME)
 #PBS -l nodes=getenv_nospace(NODES):ppn=getenv(PPN)
 #PBS -l walltime=getenv(WALLTIME)
@@ -54,9 +50,23 @@ export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 START=$( date +%s.%N )
+
+# Run Turbine!
 ${TURBINE_LAUNCHER} ${TURBINE_INTERPOSER:-} ${COMMAND}
+CODE=$?
+
 STOP=$( date +%s.%N )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 echo "MPIEXEC TIME: ${DURATION}"
+
+echo "CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+
+# Return exit code from launcher
+exit ${CODE}
+
+# Local Variables:
+# mode: m4
+# End:

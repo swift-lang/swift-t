@@ -49,26 +49,27 @@ ifelse(getenv_nospace(MAIL_ENABLED),`1',
 #SBATCH --mail-type=ALL
 )
 
-# User directives:
-getenv_nospace(TURBINE_DIRECTIVE)
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
 
 echo TURBINE-SLURM.SH
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
-VERBOSE=getenv_nospace(VERBOSE)
+VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))
 then
  set -x
 fi
 
-TURBINE_HOME=getenv_nospace(TURBINE_HOME)
+TURBINE_HOME=getenv(TURBINE_HOME)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+source ${TURBINE_HOME}/scripts/helpers.sh
 
-COMMAND="getenv_nospace(COMMAND)"
+COMMAND="getenv(COMMAND)"
 
 # BEGIN TURBINE_PRELAUNCH
-# This code was inserted by TURBINE_PRELAUNCH
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
 
@@ -79,19 +80,31 @@ getenv(TURBINE_PRELAUNCH)
 # module load icc
 # module load mvapich2
 
-TURBINE_LAUNCHER=srun
+# Use mpiexec on Midway
+TURBINE_LAUNCHER=mpiexec
 
-for kv in ${envs}
-do
-  print kv: $kv
-done
+START=$( date "+%s.%N" )
 
 echo
 set -x
-${TURBINE_LAUNCHER} getenv_nospace(TURBINE_LAUNCH_OPTIONS) \
+${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
                     ${TURBINE_INTERPOSER:-} \
                     ${COMMAND}
-# Return exit code from mpirun
+CODE=$?
+set +x
+
+STOP=$( date "+%s.%N" )
+# Bash cannot do floating point arithmetic:
+DURATION=$( awk -v START=${START} -v STOP=${STOP} \
+            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+
+echo
+echo "MPIEXEC TIME: ${DURATION}"
+echo "CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+
+# Return exit code from launcher
+exit ${CODE}
 
 # Local Variables:
 # mode: m4;

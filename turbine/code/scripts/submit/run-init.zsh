@@ -36,8 +36,9 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   ENV:       User environment variables "K1=V1:K2=V2 ..."
-#   ENV_PAIRS: User environment variables "K1=V1 K2=V2 ..."
+#   USER_ENV_LIST:  User environment variables in string "K1=V1:K2=V2 ..."
+#   USER_ENV_PAIRS: User environment variables in string "K1=V1 K2=V2 ..."
+#   USER_ENV_ARRAY: User environment variables in ZSH array: (K1=V1 K2=V2 ...)
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -131,9 +132,9 @@ OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 OUTPUT_TOKEN_FILE=/dev/null
 
 # Job environment:
-typeset -T ENV env
-env=()
-export ENV env
+# USER_ENV_LIST and USER_ENV_ARRAY are ZSH tied parameters
+export -T USER_ENV_LIST USER_ENV_ARRAY
+USER_ENV_ARRAY=()
 
 # Get options
 while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
@@ -150,7 +151,7 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
          # Look up unset environment variables
          KV="${KV}=${(P)KV}"
        fi
-       env+="${KV}"
+       USER_ENV_ARRAY+="${KV}"
        ;;
     i) INIT_SCRIPT=${OPTARG}
        ;;
@@ -308,8 +309,8 @@ fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
-export ENV
-export ENV_PAIRS="${env}"
+# Flatten array into string
+export USER_ENV_PAIRS="${USER_ENV_ARRAY}"
 
 if (( ${MAIL_ENABLED:-0} == 1 ))
 then

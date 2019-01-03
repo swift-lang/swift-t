@@ -22,10 +22,6 @@ changecom(`dnl')#!/bin/bash -l
 
 # Created: esyscmd(`date')
 
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
-
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
 #BSUB -J getenv(TURBINE_JOBNAME)
@@ -51,13 +47,11 @@ TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 
-# Start the user environment variables pasted by M4
-getenv(USER_ENVS_CODE)
-# End environment variables pasted by M4
+USER_ENV_PAIRS=( getenv(USER_ENV_PAIRS) )
 
 # Construct jsrun-formatted user environment variable arguments
 USER_ENVS_ARGS=()
-for K in ${!USER_ENVS[@]}
+for K in ${!USER_ENV_PAIRS[@]}
 do
   USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
 done
@@ -76,16 +70,27 @@ set -x
 echo
 which jsrun
 
-START=$( date +%s.%N )
-hostname
+START=$( date "+%s.%N" )
+
+# Run Turbine!
 jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
 # ~/mcs/ste/mpi/t.x # bash -c hostname
 CODE=$?
-echo
-echo EXIT CODE: $CODE
+
+
 STOP=$( date +%s.%N )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+
+echo
 echo "MPIEXEC TIME: ${DURATION}"
-exit $CODE
+echo "CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+
+# Return exit code from launcher
+exit ${CODE}
+
+# Local Variables:
+# mode: m4;
+# End:

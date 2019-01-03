@@ -19,9 +19,6 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
-# Define a convenience macro
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
 
@@ -66,7 +63,7 @@ echo "VALGRIND:     ${VALGRIND}"
 echo
 
 # Unpack and export all user environment variables
-export getenv(ENV_LIST)
+export getenv(USER_ENV_PAIRS)
 
 # Run Turbine:
 ${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
