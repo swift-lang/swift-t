@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Developers' Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -2917,6 +2918,26 @@ use of the Turbine API and Tcl arithmetic capabilities.</p></div>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_logging_2">8.8. Logging</h3>
+<div class="paragraph"><p>Turbine has rich logging facilities.</p></div>
+<div class="sect3">
+<h4 id="_c_logging">8.8.1. C logging</h4>
+<div class="paragraph"><p>After running <code>./configure</code> , edit <code>src/util/debug-tokens.tcl</code> to
+enable debug logging for the various components.  For example, setting
+<code>TCL_TURBINE ON</code> will turn on all <code>DEBUG_TCL_TURBINE()</code> macros, each
+of which works like <code>printf()</code>.</p></div>
+<div class="paragraph"><p>These macros are defined in <code>src/util/debug.h</code> .  Note that this file
+is auto-generated at <code>make</code> time by <code>debug-auto.tcl</code> .</p></div>
+</div>
+<div class="sect3">
+<h4 id="_tcl_logging">8.8.2. Tcl logging</h4>
+<div class="paragraph"><p>Set environment variable <code>TURBINE_LOG=1</code> before running <code>turbine</code>.
+This will enable all Turbine Tcl <code>log</code> statements.  The Tcl <code>log</code>
+command is defined as a C function in<br />
+<code>src/tcl/turbine/tcl-turbine.c:Turbine_Log_Cmd()</code> .</p></div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -3677,6 +3698,11 @@ Build release packages
 <div class="ulist"><ul>
 <li>
 <p>
+Edit <code>dev/get-versions.sh</code> to set the Swift/T version
+</p>
+</li>
+<li>
+<p>
 Use <code>dev/release/make-release-pkg.zsh</code> to make the release package
 </p>
 </li>
@@ -3722,7 +3748,7 @@ Test package on Linux and Mac
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-05-14 10:57:12 CDT
+ 2019-01-04 14:09:19 CST
 </div>
 </div>
 </body>
