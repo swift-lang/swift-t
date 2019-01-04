@@ -41,13 +41,6 @@ chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
-# SLURM exports all environment variables to the job by default
-# Evaluate any user turbine-slurm-run -e K=V settings here:
-for kv in ${USER_ENV_PAIRS}
-do
-  eval export ${kv}
-done
-
 SUBMIT_COMMAND=( sbatch ${TURBINE_SLURM} )
 
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh

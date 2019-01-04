@@ -62,8 +62,8 @@ echo "LAUNCHER:     ${LAUNCHER}"
 echo "VALGRIND:     ${VALGRIND}"
 echo
 
-# Unpack and export all user environment variables
-export getenv(USER_ENV_PAIRS)
+# Export all user environment variables
+export getenv(USER_ENV_ARRAY)
 
 # Run Turbine:
 ${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \

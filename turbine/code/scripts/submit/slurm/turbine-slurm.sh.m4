@@ -69,6 +69,10 @@ source ${TURBINE_HOME}/scripts/helpers.sh
 
 COMMAND="getenv(COMMAND)"
 
+# SLURM exports all environment variables to the job by default
+# Evaluate any user turbine -e K=V settings here
+export getenv(USER_ENV_CODE)
+
 # BEGIN TURBINE_PRELAUNCH
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH

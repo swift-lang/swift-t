@@ -52,11 +52,11 @@ TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 
-USER_ENV_PAIRS=( getenv(USER_ENV_PAIRS) )
+USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 USER_ENVS_ARGS=()
-for K in ${!USER_ENV_PAIRS[@]}
+for K in ${!USER_ENV_ARRAY[@]}
 do
   USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
 done
@@ -64,7 +64,7 @@ done
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 module load gcc/6.3.1-20170301
@@ -78,7 +78,9 @@ which jsrun
 START=$( date "+%s.%N" )
 
 # Run Turbine!
-jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
+jsrun -n $PROCS -r $PPN \
+      -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" \
+      ${COMMAND}
 # ~/mcs/ste/mpi/t.x # bash -c hostname
 CODE=$?
 

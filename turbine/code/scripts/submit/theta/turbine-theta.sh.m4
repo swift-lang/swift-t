@@ -1,13 +1,13 @@
 #!/bin/bash`'bash_l()
-ifelse(getenv_nospace(PROJECT), `',,#COBALT -A getenv_nospace(PROJECT)
-)ifelse(getenv_nospace(QUEUE), `',,#COBALT -q getenv(QUEUE)
+ifelse(getenv(PROJECT), `',,#COBALT -A getenv(PROJECT)
+)ifelse(getenv(QUEUE), `',,#COBALT -q getenv(QUEUE)
 )#COBALT -n getenv(NODES)
 #COBALT -t getenv(WALLTIME)
 #COBALT --cwd getenv(WORK_DIRECTORY)
-#COBALT -o getenv_nospace(TURBINE_OUTPUT)/output.txt
-#COBALT -e getenv_nospace(TURBINE_OUTPUT)/output.txt
+#COBALT -o getenv(TURBINE_OUTPUT)/output.txt
+#COBALT -e getenv(TURBINE_OUTPUT)/output.txt
 #COBALT --jobname getenv(TURBINE_JOBNAME)
-ifelse(getenv_nospace(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
+ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 )
 
 # These COBALT directives have to stay right at the top of the file!
@@ -71,12 +71,12 @@ echo "PROCS:   ${PROCS}"
 echo "PPN:${PPN}"
 echo
 
-# Put environment variables from run-init into 'aprun -e' format
-ENV_LIST="getenv(USER_ENV_LIST)"
-APRUN_ENVS=""
-for KV in ${USER_ENV_LIST[@]}
+
+# Construct aprun-formatted user environment variable arguments
+USER_ENVS_ARGS=()
+for K in ${!USER_ENV_ARRAY[@]}
 do
-    APRUN_ENVS+="-e ${KV} "
+  USER_ENVS_ARGS+=( -e $K="${USER_ENVS[$K]}" )
 done
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
@@ -85,7 +85,7 @@ TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 set -x
 aprun -n ${PROCS} -N ${PPN} \
       ${TURBINE_LAUNCH_OPTIONS:-} \
-      ${APRUN_ENVS} \
+      "${USER_ENV_ARGS[@]}" \
       ${TURBINE_INTERPOSER:-} \
       ${COMMAND}
 CODE=${?}

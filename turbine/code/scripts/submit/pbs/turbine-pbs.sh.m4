@@ -50,16 +50,20 @@ COMMAND=getenv(COMMAND)
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-START=$( date +%s.%N )
+# PBS exports all environment variables to the job under #PBS -V
+# Evaluate any user turbine -e K=V settings here
+export getenv(USER_ENV_CODE)
+
+START=$( date "+%s.%N" )
 
 # Run Turbine!
 ${TURBINE_LAUNCHER} ${TURBINE_INTERPOSER:-} ${COMMAND}
 CODE=$?
 
-STOP=$( date +%s.%N )
+STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )

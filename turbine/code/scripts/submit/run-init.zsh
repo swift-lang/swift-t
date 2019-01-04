@@ -36,9 +36,8 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   USER_ENV_LIST:  User environment variables in string "K1=V1:K2=V2 ..."
-#   USER_ENV_PAIRS: User environment variables in string "K1=V1 K2=V2 ..."
-#   USER_ENV_ARRAY: User environment variables in ZSH array: (K1=V1 K2=V2 ...)
+#   USER_ENV_ARRAY: User environment variables for Bash array: K1 'V1' K2 'V2' ...
+#   USER_ENV_CODE:  User environment variables  in Bash code:  K1='V1' K2='V2' ...
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -126,15 +125,14 @@ export DRY_RUN=0
 WAIT_FOR_JOB=0
 
 # Place to link to output directory
-# If
 OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 # Turbine will also write the value of TURBINE_OUTPUT_HERE
 OUTPUT_TOKEN_FILE=/dev/null
 
-# Job environment:
-# USER_ENV_LIST and USER_ENV_ARRAY are ZSH tied parameters
-export -T USER_ENV_LIST USER_ENV_ARRAY
-USER_ENV_ARRAY=()
+# Regexp for environment variable key=value pairs
+ENV_RE='(.*)=(.*)'
+
+export USER_ENV_CODE="" USER_ENV_ARRAY=""
 
 # Get options
 while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
@@ -146,12 +144,20 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
     D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e) KV=${OPTARG}
-       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       if [[ ${KV} =~ ${ENV_RE} ]]
        then
+         USER_ENV_CODE+="${match[1]}='${match[2]}' "
+         USER_ENV_ARRAY+="${match[1]} '${match[2]}' "
+       else
+         if (( ! ${(P)+KV} ))
+         then
+           abort "turbine: provided '-e ${KV}' but variable" \
+                 "'${KV}' is not in the environment!"
+         fi
          # Look up unset environment variables
-         KV="${KV}=${(P)KV}"
+         USER_ENV_CODE+="${KV}='${(P)KV}' "
+         USER_ENV_ARRAY+="${KV} '${(P)KV}' "
        fi
-       USER_ENV_ARRAY+="${KV}"
        ;;
     i) INIT_SCRIPT=${OPTARG}
        ;;
@@ -308,9 +314,6 @@ else
 fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
-# Flatten array into string
-export USER_ENV_PAIRS="${USER_ENV_ARRAY}"
 
 if (( ${MAIL_ENABLED:-0} == 1 ))
 then

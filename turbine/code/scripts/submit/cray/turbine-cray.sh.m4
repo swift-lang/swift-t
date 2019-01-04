@@ -110,34 +110,27 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 
 module load alps
 
-APRUN_ENV=""
-for KV in ${USER_ENV_PAIRS}
+# Construct aprun-formatted user environment variable arguments
+USER_ENVS_ARGS=()
+for K in ${!USER_ENV_ARRAY[@]}
 do
-    APRUN_ENV+="-e ${KV} "
+  USER_ENVS_ARGS+=( -e $K="${USER_ENVS[$K]}" )
 done
-APRUN_ENV+="-e TURBINE_OUTPUT=${TURBINE_OUTPUT}"
 
 # BEGIN TURBINE_PRELAUNCH
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
-if [ -z "$OUTPUT_FILE" ]
-then
-    # Default non-streaming output: usually unused
-    echo "JOB OUTPUT:"
-    echo
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
-          ${TCLSH} ${SCRIPT_NAME} ${ARGS}
-else
-    # Stream output to file for immediate viewing
-    echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    # echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
-    set -x
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
-          ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
-                     2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
-fi
+# Stream output to file for immediate viewing
+echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.txt"
+# echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
+set -x
+${APRUN} -n getenv(PROCS) -N getenv(PPN) \
+         -cc none -d 1 \
+         "${USER_ENVS_ARGS[@]}" \
+         ${COMMAND} \
+         2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.txt"
 
 # Local Variables:
 # mode: m4
