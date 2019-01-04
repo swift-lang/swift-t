@@ -76,8 +76,8 @@ COMMAND="getenv(COMMAND)"
 # module load openmpi gcc/4.9
 
 # Use this on Bebop:
-module load icc
-module load mvapich2
+# module load icc
+# module load mvapich2
 
 TURBINE_LAUNCHER=srun
 

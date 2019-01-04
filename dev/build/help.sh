@@ -35,11 +35,12 @@ Then, it runs configure, make, and make install.
 
 The following options change this behavior:
 
--B     Force run ./bootstrap
+-B     Do not run ./bootstrap
 -C     Do not run ./configure
 -c     Do not 'make clean' or 'ant clean'
--f     Fast mode: do not run ./configure, do not 'make clean' or 'ant clean'
-       Same as -Cc
+-f     Fast mode: do not run ./bootstrap, do not run ./configure,
+       do not 'make clean' or 'ant clean'
+       Same as -BCc
 -h     This help message
 -m     Do not compile with 'make' or 'ant'
 -s T|S Skip Turbine (T) or STC (S)
