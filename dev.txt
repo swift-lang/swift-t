@@ -1272,6 +1272,27 @@ for a sense of the purpose of these features.
 Statistics functions are in *stats.tcl*.  These make straightforward
 use of the Turbine API and Tcl arithmetic capabilities.
 
+=== Logging
+
+Turbine has rich logging facilities.
+
+==== C logging
+
+After running +./configure+ , edit +src/util/debug-tokens.tcl+ to
+enable debug logging for the various components.  For example, setting
++TCL_TURBINE ON+ will turn on all +DEBUG_TCL_TURBINE()+ macros, each
+of which works like +printf()+.
+
+These macros are defined in +src/util/debug.h+ .  Note that this file
+is auto-generated at +make+ time by +debug-auto.tcl+ .
+
+==== Tcl logging
+
+Set environment variable +TURBINE_LOG=1+ before running +turbine+.
+This will enable all Turbine Tcl +log+ statements.  The Tcl +log+
+command is defined as a C function in +
++src/tcl/turbine/tcl-turbine.c:Turbine_Log_Cmd()+ .
+
 == ADLB/X
 
 ADLB/X is an
