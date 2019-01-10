@@ -260,6 +260,9 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		int rc = info_get_envs(comm, info, &envs, &env_length);
 		assert(rc);
 
+		int ppw;
+		info_get_ppw(comm, info, &ppw);
+
 		write_hosts(info, allhosts, size);
 
 		// compute the size of the string to pass to system()
