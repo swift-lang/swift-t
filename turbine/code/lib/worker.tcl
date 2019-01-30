@@ -48,8 +48,8 @@ namespace eval turbine {
         set success true
         try {
             c::worker_loop $WORK_TYPE($mode) $keyword_args
-        } trap "TURBINE ERROR" e {
-            puts "worker $rank: loop exited with error"
+        } trap {TURBINE ERROR} e {
+            throw {TURBINE ERROR} "user work error:\n$e"
         } on error e {
             set success false
             puts "WORKER ERROR: $::errorInfo"

@@ -204,7 +204,7 @@ namespace eval turbine {
                 "[ c_utils::hostname ] rank [ adlb::rank ]" ]
     } else {
       if { $max > 0 } {
-        log "app: exhausted $type tries"
+        log "app: exhausted $type tries ($tries)"
       }
       if { $args eq "{{{}}}" } { set args {} }
       if { $type eq "local" } {
