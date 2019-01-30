@@ -2113,7 +2113,18 @@ A randomized, exponential backoff delay is applied between tries.
 
 ===== Retry reput
 
+Some user applications fail on a certain worker, but may succeed on a
+different worker.  To have Turbine automatically retry to run +app+
+functions +N+ times on different worker ranks, simply set environment
+variable +TURBINE_APP_RETRIES_REPUT+ to +N+.  This will put the work
+unit back in the ADLB work queue and run it somewhere else.
 
+This feature multiplies with +TURBINE_APP_RETRIES_LOCAL+; each worker
+will make the +LOCAL+ tries before the reput.  Be sure to run this
+with extra workers to allow the reputs to run.
+
+To inspect what is happening, run this with +TURBINE_LOG=1+ and
++swift-t -l+ .
 
 === Remote job execution with Coasters
 
