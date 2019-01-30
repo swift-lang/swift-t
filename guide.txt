@@ -3030,7 +3030,7 @@ The seed is recorded in the log.
 +TURBINE_APP_RETRIES+::
 If set to a positive integer, +app+ functions will be retried that
 many times they fail to produce exit code 0.
-Cf. <<app_retry, App retry>>.
+Cf. <<_app_retry, App retry>>.
 
 anchor:app_delay[]
 
