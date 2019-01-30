@@ -229,9 +229,9 @@ namespace eval turbine {
   # based on parameters present in provided dictionary
   # For use of Tcl's exec command
   proc setup_redirects_tcl { kwopts stdin_var stdout_var stderr_var } {
-    #Note: strange behaviour can happen if user args have e.g "<"
+    # Note: strange behaviour can happen if user args have e.g "<"
     # or ">" or "|" at start
-    upvar 1 $stdin_var stdin_src
+    upvar 1 $stdin_var  stdin_src
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
 
