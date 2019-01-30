@@ -2076,9 +2076,11 @@ foreach time in [1:5] {
 
 ==== App retry
 
+===== Retry local
+
 Some user application codes fail for non-deterministic reasons.  To
 have Turbine automatically retry to run +app+ functions +N+ times, simply set
-environment variable +TURBINE_APP_RETRIES+ to +N+.
+environment variable +TURBINE_APP_RETRIES_LOCAL+ to +N+.
 
 Consider this Swift script (+false.swift+): +
 ----
@@ -2086,9 +2088,9 @@ app f() { "false" ; }
 f();
 ----
 
-This is the behavior with +TURBINE_APP_RETRIES+ enabled:
+This is the behavior with +TURBINE_APP_RETRIES_LOCAL+ enabled:
 ----
-$ export TURBINE_APP_RETRIES=3
+$ export TURBINE_APP_RETRIES_LOCAL=3
 $ export TURBINE_LOG=1
 $ swift-t ~/mcs/ste/false.swift
    0.061 exec: false {}
@@ -2108,6 +2110,10 @@ Swift: Aborting MPI job...
 ----
 
 A randomized, exponential backoff delay is applied between tries.
+
+===== Retry reput
+
+
 
 === Remote job execution with Coasters
 
