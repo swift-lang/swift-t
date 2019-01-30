@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -744,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">November 2018</span><br />
+<span id="author">January 2019</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3843,19 +3842,21 @@ foreach time in [1:5] {
 </div></div>
 <div class="sect3">
 <h4 id="_app_retry">14.3.1. App retry</h4>
+<div class="sect4">
+<h5 id="_retry_local">Retry local</h5>
 <div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.  To
 have Turbine automatically retry to run <code>app</code> functions <code>N</code> times, simply set
-environment variable <code>TURBINE_APP_RETRIES</code> to <code>N</code>.</p></div>
+environment variable <code>TURBINE_APP_RETRIES_LOCAL</code> to <code>N</code>.</p></div>
 <div class="paragraph"><p>Consider this Swift script (<code>false.swift</code>):<br /></p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>app f() { "false" ; }
 f();</code></pre>
 </div></div>
-<div class="paragraph"><p>This is the behavior with <code>TURBINE_APP_RETRIES</code> enabled:</p></div>
+<div class="paragraph"><p>This is the behavior with <code>TURBINE_APP_RETRIES_LOCAL</code> enabled:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ export TURBINE_APP_RETRIES=3
+<pre><code>$ export TURBINE_APP_RETRIES_LOCAL=3
 $ export TURBINE_LOG=1
 $ swift-t ~/mcs/ste/false.swift
    0.061 exec: false {}
@@ -3874,6 +3875,20 @@ Swift: app execution failed on: hostname
 Swift: Aborting MPI job...</code></pre>
 </div></div>
 <div class="paragraph"><p>A randomized, exponential backoff delay is applied between tries.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_retry_reput">Retry reput</h5>
+<div class="paragraph"><p>Some user applications fail on a certain worker, but may succeed on a
+different worker.  To have Turbine automatically retry to run <code>app</code>
+functions <code>N</code> times on different worker ranks, simply set environment
+variable <code>TURBINE_APP_RETRIES_REPUT</code> to <code>N</code>.  This will put the work
+unit back in the ADLB work queue and run it somewhere else.</p></div>
+<div class="paragraph"><p>This feature multiplies with <code>TURBINE_APP_RETRIES_LOCAL</code>; each worker
+will make the <code>LOCAL</code> tries before the reput.  Be sure to run this
+with extra workers to allow the reputs to run.</p></div>
+<div class="paragraph"><p>To inspect what is happening, run this with <code>TURBINE_LOG=1</code> and
+<code>swift-t -l</code> .</p></div>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -5134,7 +5149,7 @@ turbine ...</code></pre>
 <p>
 If set to a positive integer, <code>app</code> functions will be retried that
 many times they fail to produce exit code 0.
-Cf. <a href="#app_retry">App retry</a>.
+Cf. <a href="#_app_retry">App retry</a>.
 </p>
 </dd>
 </dl></div>
@@ -5785,8 +5800,16 @@ on more complex systems.</p></div>
 </dt>
 <dd>
 <p>
-Force run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
-scripts.  Use this if you change <code>configure.ac</code>, etc.
+Do not run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
+scripts.  Use this to build faster
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-C</code>
+</dt>
+<dd>
+<p>
+Do not <code>configure</code>.  Enables <code>-B</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5798,19 +5821,11 @@ Do not <code>make clean</code>.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>-C</code>
-</dt>
-<dd>
-<p>
-Do not <code>configure</code>.
-</p>
-</dd>
-<dt class="hdlist1">
 <code>-f</code>
 </dt>
 <dd>
 <p>
-Fast: same as <code>-cC</code>.
+Fast: same as <code>-BCc</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -6266,8 +6281,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated
- 2018-11-14 20:32:36 CST
+Last updated 2019-01-30 14:15:51 CST
 </div>
 </div>
 
