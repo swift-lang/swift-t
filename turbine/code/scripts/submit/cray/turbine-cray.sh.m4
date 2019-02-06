@@ -102,7 +102,7 @@ ENV_PAIRS="getenv(ENV_PAIRS)"
 
 # Output header
 echo "Turbine: turbine-cray.sh"
-date "+%Y/%m/%d %I:%M%p"
+date "+%Y-%m-%d %H:%M"
 echo
 
 PROCS=getenv(`PROCS')
