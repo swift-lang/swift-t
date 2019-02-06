@@ -108,7 +108,7 @@ echo
 PROCS=getenv(`PROCS')
 TURBINE_WORKERS=$(( ${PROCS} - ${ADLB_SERVERS} ))
 
-cd ${TURBINE_OUTPUT}
+cd $( readlink --canonicalize ${TURBINE_OUTPUT} )
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
