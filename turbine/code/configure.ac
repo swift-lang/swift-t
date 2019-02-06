@@ -1172,19 +1172,6 @@ AC_SUBST(TCL_LIB_SPEC)
 TCL_LIB_SPEC_EXTRA="${TCL_LIBS}"
 AC_SUBST(TCL_LIB_SPEC_EXTRA)
 
-DISABLE_LOG=0
-AC_ARG_ENABLE(log,
-                AS_HELP_STRING(
-                   [--disable-log],
-                   [Disables logging]),
-                 [
-                 if test "$enableval" = no ; then
-                   DISABLE_LOG=1
-                 fi
-                 ],
-                 [])
-# DISABLE_LOG set below:
-
 ENABLE_FAST=0
 AC_ARG_ENABLE(fast,
     AS_HELP_STRING([--enable-fast],
@@ -1213,8 +1200,6 @@ else
     AC_MSG_RESULT([HDF5 disabled])
     AC_MSG_RESULT([Note: HDF5 is only required if you need Turbine's HDF features.])
 fi
-
-AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
 
 ENABLE_BGP=0
 AC_ARG_ENABLE(bgp,

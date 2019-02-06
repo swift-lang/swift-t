@@ -239,7 +239,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		}
 
 		int i, j = 0;
-		// concatenate the names with commas
+		// concatenate the host names into a comma-separated string
+		// for mpiexec
 		for(i=0; i<(MPI_MAX_PROCESSOR_NAME+1)*size; i++) {
 			if(allhosts[i] != '\0') {
 				allhosts[j] = allhosts[i];
