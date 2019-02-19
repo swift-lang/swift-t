@@ -1198,6 +1198,14 @@ Test that future +A[key]+ exists.  This function blocks until +A+ is
 closed.  Consumers of +A[key]+ may block again until +A[key]+ is
 stored.
 
++keys_integer(A[]) -> int[]+::
+Returns a contiguous integer-indexed array, starting from 0, that maps to the
+integer keys in +A+.
+
++keys_string(A[]) -> string[]+::
+Returns a contiguous integer-indexed array, starting from 0, that maps to the
+string keys in +A+.
+
 [[pick]]
 ==== Pick functions
 
