@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">November 2018</span><br />
+<span id="author">February 2019</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2270,6 +2270,24 @@ Obtain the size of array <code>A</code>
 Test that future <code>A[key]</code> exists.  This function blocks until <code>A</code> is
 closed.  Consumers of <code>A[key]</code> may block again until <code>A[key]</code> is
 stored.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>keys_integer(A[]) &#8594; int[]</code>
+</dt>
+<dd>
+<p>
+Returns a contiguous integer-indexed array, starting from 0, that maps to the
+integer keys in <code>A</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>keys_string(A[]) &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Returns a contiguous integer-indexed array, starting from 0, that maps to the
+string keys in <code>A</code>.
 </p>
 </dd>
 </dl></div>
@@ -3843,19 +3861,21 @@ foreach time in [1:5] {
 </div></div>
 <div class="sect3">
 <h4 id="_app_retry">14.3.1. App retry</h4>
+<div class="sect4">
+<h5 id="_retry_local">Retry local</h5>
 <div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.  To
 have Turbine automatically retry to run <code>app</code> functions <code>N</code> times, simply set
-environment variable <code>TURBINE_APP_RETRIES</code> to <code>N</code>.</p></div>
+environment variable <code>TURBINE_APP_RETRIES_LOCAL</code> to <code>N</code>.</p></div>
 <div class="paragraph"><p>Consider this Swift script (<code>false.swift</code>):<br /></p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>app f() { "false" ; }
 f();</code></pre>
 </div></div>
-<div class="paragraph"><p>This is the behavior with <code>TURBINE_APP_RETRIES</code> enabled:</p></div>
+<div class="paragraph"><p>This is the behavior with <code>TURBINE_APP_RETRIES_LOCAL</code> enabled:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ export TURBINE_APP_RETRIES=3
+<pre><code>$ export TURBINE_APP_RETRIES_LOCAL=3
 $ export TURBINE_LOG=1
 $ swift-t ~/mcs/ste/false.swift
    0.061 exec: false {}
@@ -3874,6 +3894,10 @@ Swift: app execution failed on: hostname
 Swift: Aborting MPI job...</code></pre>
 </div></div>
 <div class="paragraph"><p>A randomized, exponential backoff delay is applied between tries.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_retry_reput">Retry reput</h5>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -5785,8 +5809,16 @@ on more complex systems.</p></div>
 </dt>
 <dd>
 <p>
-Force run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
-scripts.  Use this if you change <code>configure.ac</code>, etc.
+Do not run the <code>bootstrap</code> scripts, which rebuild the <code>configure</code>
+scripts.  Use this to build faster
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-C</code>
+</dt>
+<dd>
+<p>
+Do not <code>configure</code>.  Enables <code>-B</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5798,19 +5830,11 @@ Do not <code>make clean</code>.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>-C</code>
-</dt>
-<dd>
-<p>
-Do not <code>configure</code>.
-</p>
-</dd>
-<dt class="hdlist1">
 <code>-f</code>
 </dt>
 <dd>
 <p>
-Fast: same as <code>-cC</code>.
+Fast: same as <code>-BCc</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -6267,7 +6291,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2018-11-14 20:32:36 CST
+ 2019-02-19 14:30:34 CST
 </div>
 </div>
 
