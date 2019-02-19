@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -744,7 +743,11 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
+<<<<<<< HEAD
 <span id="author">February 2019</span><br />
+=======
+<span id="author">January 2019</span><br />
+>>>>>>> 9e55632dc3f3b659493150bcda26ba76ae35f699
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3897,6 +3900,19 @@ Swift: Aborting MPI job...</code></pre>
 </div>
 <div class="sect4">
 <h5 id="_retry_reput">Retry reput</h5>
+<<<<<<< HEAD
+=======
+<div class="paragraph"><p>Some user applications fail on a certain worker, but may succeed on a
+different worker.  To have Turbine automatically retry to run <code>app</code>
+functions <code>N</code> times on different worker ranks, simply set environment
+variable <code>TURBINE_APP_RETRIES_REPUT</code> to <code>N</code>.  This will put the work
+unit back in the ADLB work queue and run it somewhere else.</p></div>
+<div class="paragraph"><p>This feature multiplies with <code>TURBINE_APP_RETRIES_LOCAL</code>; each worker
+will make the <code>LOCAL</code> tries before the reput.  Be sure to run this
+with extra workers to allow the reputs to run.</p></div>
+<div class="paragraph"><p>To inspect what is happening, run this with <code>TURBINE_LOG=1</code> and
+<code>swift-t -l</code> .</p></div>
+>>>>>>> 9e55632dc3f3b659493150bcda26ba76ae35f699
 </div>
 </div>
 </div>
@@ -5158,7 +5174,7 @@ turbine ...</code></pre>
 <p>
 If set to a positive integer, <code>app</code> functions will be retried that
 many times they fail to produce exit code 0.
-Cf. <a href="#app_retry">App retry</a>.
+Cf. <a href="#_app_retry">App retry</a>.
 </p>
 </dd>
 </dl></div>
@@ -6290,8 +6306,12 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
+<<<<<<< HEAD
 Last updated
  2019-02-19 14:30:34 CST
+=======
+Last updated 2019-01-30 14:15:51 CST
+>>>>>>> 9e55632dc3f3b659493150bcda26ba76ae35f699
 </div>
 </div>
 
