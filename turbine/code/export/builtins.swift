@@ -260,6 +260,16 @@ pragma appexecdef COASTER "turbine" "0.8.0"
   "set <<O>> <<I>>" // Use Tcl string conversion
 ];
 
+@pure
+<T> (string O[]) keys_string (T I[]) "turbine" "0.4.0" [
+  "set <<O>> [ turbine::keys <<I>> ]" // Use Tcl string conversion
+];
+
+@pure
+<T> (int    O[]) keys_integer(T I[]) "turbine" "0.4.0" [
+  "set <<O>> [ turbine::keys <<I>> ]" // Use Tcl string conversion
+];
+
 // Implement % operator
 @builtin_op=SPRINTF
 (string o) __sprintf_op__(string fmt, int|float|string|boolean... args)
