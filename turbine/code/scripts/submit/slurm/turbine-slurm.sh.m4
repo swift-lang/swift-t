@@ -63,6 +63,7 @@ then
  set -x
 fi
 
+TURBINE_PILOT=${TURBINE_PILOT:-getenv(TURBINE_PILOT)}
 if (( ! ${#TURBINE_PILOT} ))
 then
   TURBINE_HOME=getenv(TURBINE_HOME)
