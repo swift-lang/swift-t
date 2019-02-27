@@ -85,14 +85,15 @@ getenv(TURBINE_PRELAUNCH)
 # module load mvapich2
 
 # Use mpiexec on Midway
-TURBINE_LAUNCHER=mpiexec
+TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
+TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
 START=$( date "+%s.%N" )
 
 echo
 set -x
 ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
-                    ${TURBINE_INTERPOSER:-} \
+                    ${TURBINE_INTERPOSER} \
                     ${COMMAND}
 CODE=$?
 set +x
@@ -104,7 +105,7 @@ DURATION=$( awk -v START=${START} -v STOP=${STOP} \
 
 echo
 echo "MPIEXEC TIME: ${DURATION}"
-echo "CODE: ${CODE}"
+echo "EXIT CODE: ${CODE}"
 echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
 
 # Return exit code from launcher
