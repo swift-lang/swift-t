@@ -580,6 +580,18 @@ namespace eval turbine {
         # Construct Turbine array:
         turbine::array_build $result $L 1 string
     }
+
+    proc keys { args } {
+        set dk [ dict keys {*}$args ]
+        set i 0
+        set result [ list ]
+        foreach k $dk {
+            lappend result $i
+            lappend result $k
+            incr i
+        }
+        return $result
+    }
 }
 
 # Local Variables:

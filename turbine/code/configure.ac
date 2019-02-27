@@ -219,6 +219,11 @@ USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
 ENABLE_MPI_CHECKS=1
+# The label is just for 'turbine -v' output
+# It may be "(unknown)" if MPI checks are disabled
+MPI_LABEL=""
+MPI_LABEL_DIR=""
+MPI_LABEL_LIB=""
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -230,6 +235,7 @@ AC_ARG_WITH(mpi,
         fi
         USE_MPI_DIR=${withval}
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
     [])
@@ -280,6 +286,7 @@ then
                                   --enable-custom-mpi or
                                   or mpicc in PATH .])
    fi
+   MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
@@ -326,15 +333,17 @@ AC_ARG_WITH(mpi-lib-dir,
                    [directory containing MPI lib (usually libmpich)]),
     [
         USE_MPI_LIB_DIR=${withval}
+        MPI_LABEL_DIR="${USE_MPI_LIB_DIR}"
     ],
     [])
 
 AC_ARG_WITH(mpi-lib-name,
     AS_HELP_STRING([--with-mpi-lib-name],
-                   [name of MPI lib (usually mpich) -
+                   [name of MPI lib (usually mpi or mpich) -
                     assumes mpi-lib-dir has been given]),
     [
         USE_MPI_LIB_NAME=${withval}
+	MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
     ],
     [])
 
@@ -354,7 +363,7 @@ AC_ARG_WITH(mpi-lib-extra,
 
 # Now check MPI settings
 
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
+if (( ENABLE_MPI_CHECKS ))
 then
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
@@ -366,7 +375,7 @@ MPI_LIB_FOUND=0
 if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
   MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-
+  echo MPI_LIB_DIR_ALTS $MPI_LIB_DIR_ALTS
   if [[ ! -z "${DPKG_ARCH}" ]]
   then
     MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
@@ -395,6 +404,8 @@ do
       MPI_LIB_FOUND=1
       USE_MPI_LIB_DIR="${MPI_LIB_DIR_ALT}"
       USE_MPI_LIB_NAME="${MPI_LIB_NAME_ALT}"
+      MPI_LABEL_DIR=${USE_MPI_LIB_DIR}
+      MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
       break 2
     else
       AC_MSG_RESULT([no])
@@ -407,6 +418,15 @@ then
   AC_MSG_ERROR([Could not find MPI library in any alternative locations])
 fi
 fi
+
+# Set MPI_LABEL
+if [[ -n "${MPI_LABEL_DIR}${MPI_LABEL_LIB}" ]]
+then
+  MPI_LABEL="${MPI_LABEL_DIR} ${MPI_LABEL_LIB}"
+else
+  MPI_LABEL="(unknown)"
+fi
+echo MPI_LABEL $MPI_LABEL
 
 # Set MPI options
 
@@ -460,6 +480,8 @@ then
 fi
 fi
 
+MPI_LABEL=${MPI_LABEL:-(unknown)}
+
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
@@ -469,10 +491,15 @@ AC_SUBST(USE_MPI_LIB_NAME)
 AC_SUBST(USE_MPI_LIB_SPEC)
 AC_SUBST(USE_MPI_LIB_A)
 AC_SUBST(USE_MPI_LIB_EXTRA_A)
+AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
-# MPI_IMPL will be unknown, OpenMPI, or MPICH
+# MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
+# 2018/09/29: We no longer put version information in these tokens
+#             Add new variables if we need that.
 MPI_IMPL=unknown
+HAVE_MPI_IMPL_MPICH=0
+HAVE_MPI_IMPL_OPENMPI=0
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
@@ -487,9 +514,10 @@ fi
 AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
+   HAVE_MPI_IMPL_OPENMPI=1
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
-   MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
+   MPI_IMPL="OpenMPI"
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
      LINE_PREFIX="-tag-output"
@@ -498,11 +526,16 @@ then
    fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
-   MPI_IMPL=MPICH2
+   HAVE_MPI_IMPL_MPICH=0
+   MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 fi # ENABLE_MPI_CHECKS==1
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
+                   ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
+                   ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
@@ -655,6 +688,7 @@ then
     AC_SUBST(PYTHON_LIB_FLAGS)
     AC_SUBST(PYTHON_LIBDIR)
     AC_SUBST(PYTHON_NAME)
+    AC_DEFINE_UNQUOTED([PYTHON_NAME],"$PYTHON_NAME",[Provides Python Name])
 else
     AC_MSG_RESULT([Python disabled])
 fi
@@ -1138,19 +1172,6 @@ AC_SUBST(TCL_LIB_SPEC)
 TCL_LIB_SPEC_EXTRA="${TCL_LIBS}"
 AC_SUBST(TCL_LIB_SPEC_EXTRA)
 
-DISABLE_LOG=0
-AC_ARG_ENABLE(log,
-                AS_HELP_STRING(
-                   [--disable-log],
-                   [Disables logging]),
-                 [
-                 if test "$enableval" = no ; then
-                   DISABLE_LOG=1
-                 fi
-                 ],
-                 [])
-# DISABLE_LOG set below:
-
 ENABLE_FAST=0
 AC_ARG_ENABLE(fast,
     AS_HELP_STRING([--enable-fast],
@@ -1180,8 +1201,6 @@ else
     AC_MSG_RESULT([Note: HDF5 is only required if you need Turbine's HDF features.])
 fi
 
-AC_DEFINE_UNQUOTED(DISABLE_LOG, $DISABLE_LOG, [Disables logging])
-
 ENABLE_BGP=0
 AC_ARG_ENABLE(bgp,
     AS_HELP_STRING([--enable-bgp],
@@ -1208,7 +1227,11 @@ AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
 
 AC_CONFIG_FILES(
+        Makefile
         bin/turbine
+        bin/turbine-pilot
+        scripts/turbine-config.sh
+        scripts/turbine-build-config.sh
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
@@ -1237,11 +1260,8 @@ AC_CONFIG_FILES(
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
         scripts/submit/theta/module.mk
-        scripts/turbine-config.sh
-        scripts/turbine-build-config.sh
         tests/module.mk
         tests/runbin.zsh
-	Makefile
 )
 
         #         $USE_JVM_SCRIPT_HOME/src/module.mk

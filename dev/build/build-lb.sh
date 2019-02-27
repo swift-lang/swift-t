@@ -66,6 +66,11 @@ then
                 CC=${CC} \
                 ${EXTRA_ARGS}
   )
+  if (( $? ))
+  then
+    echo "configure failed!"
+    exit 1
+  fi
 fi
 
 check_make

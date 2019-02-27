@@ -53,6 +53,7 @@ set items [ eval list -load $libtclturbine \
                 -source checkpoint.tcl \
                 -source langs.tcl      \
                 -source launch.tcl     \
+                -source python.tcl     \
                 -source gemtc_worker.tcl \
                 -source helpers.tcl ]
 

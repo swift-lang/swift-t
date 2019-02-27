@@ -1,3 +1,6 @@
+#!/bin/bash
+set -eu
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# The file debug-tokens.tcl is expected to be regularly edited
-# to control debugging output.  It is sourced by debug-auto.tcl
-# The variable INPUT is converted to an array by debug-auto.tcl
-# Each token maps to ON or OFF to indicate debugging
-# If you edit this file, you must re-run ./configure or ./config.status
+# TURBINE PILOT
+# For launch by an external mpiexec, i.e.:
+# $ stc <WORKFLOW.SWIFT>
+# $ mpiexec -n <PROCS> turbine-pilot <WORKFLOW.TIC>
+# PROCS must be >= 2
 
-set INPUT {
-    TURBINE OFF
-    TCL_TURBINE OFF
-    ADLB OFF
-    CACHE OFF
-    EXECUTOR OFF
-    COASTER OFF
-}
+TURBINE_HOME='@prefix@'
+
+ARGS=( ${*} )
+
+source $TURBINE_HOME/scripts/turbine-config.sh
+
+$TCLSH ${ARGS[@]}

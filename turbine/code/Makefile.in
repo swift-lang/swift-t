@@ -760,6 +760,7 @@ ifeq ($(ENABLE_STATIC_PKG),1)
 endif
 
 BINS := $(shell ls bin/turbine               \
+                   bin/turbine-pilot         \
                    bin/turbine-write-doubles \
                    bin/turbine-read-doubles )
 ifeq ($(ENABLE_STATIC_PKG),1)
@@ -776,7 +777,8 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
 	$(E) rm -f $(@)
-	$(E) chmod u+x bin/turbine # A configure-generated file
+# 	Configure-generated files
+	$(E) chmod u+x bin/turbine bin/turbine-pilot
 #       Set up directories
 	$(E) mkdir -pv $(DIRECTORIES)
 #       Copy in build provenance files

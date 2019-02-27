@@ -36,7 +36,9 @@
 #include <dlfcn.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
+#include <mpi.h>
 #include <tcl.h>
 
 #include "src/util/debug.h"
@@ -46,6 +48,7 @@
 
 #if HAVE_PYTHON==1
 
+/** @return A Tcl return code */
 static int
 handle_python_exception(bool exceptions_are_errors)
 {
@@ -88,18 +91,19 @@ static PyObject* local_dict  = NULL;
 
 static bool initialized = false;
 
-static int python_init(void)
+static int
+python_init(void)
 {
-/* Loading python library symbols so that dynamic extensions don't throw symbol not found error.           
+/* Loading python library symbols so that dynamic extensions don't throw symbol not found error.
            Ref Link: http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
         */
-  char str_python_lib[17];
+  char str_python_lib[32];
 #ifdef _WIN32
-  sprintf(str_python_lib, "libpython%d.%d.dll", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.dll", PYTHON_NAME);
 #elif defined __unix__
-  sprintf(str_python_lib, "libpython%d.%d.so", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.so", PYTHON_NAME);
 #elif defined __APPLE__
-  sprintf(str_python_lib, "libpython%d.%d.dylib", PY_MAJOR_VERSION, PY_MINOR_VERSION);
+  sprintf(str_python_lib, "lib%s.dylib", PYTHON_NAME);
 #endif
   dlopen(str_python_lib, RTLD_NOW | RTLD_GLOBAL);
 
@@ -121,10 +125,10 @@ static void python_finalize(void);
 static char* python_result_default   = "__NOTHING__";
 static char* python_result_exception = "__EXCEPTION__";
 
-#define EXCEPTION(ee)                                             \
-  {                                                               \
-    *output = Tcl_NewStringObj(python_result_exception, -1);      \
-    return handle_python_exception(ee);                           \
+#define EXCEPTION(ee)                           \
+  {                                             \
+    *result = python_result_exception;          \
+    return handle_python_exception(ee);         \
   }
 
 /**
@@ -133,15 +137,15 @@ static char* python_result_exception = "__EXCEPTION__";
    @param exceptions_are_errors: If true, abort on Python exception
    @param code: The multiline string of Python code.
    @param expr: A Python expression to be evaluated to the returned result
-   @param output: Store result pointer here
+   @param result: Store result pointer here
    @return Tcl return code
  */
 static int
 python_eval(bool persist, bool exceptions_are_errors,
-            const char* code, const char* expr, Tcl_Obj** output)
+            const char* code, const char* expr, char** result)
 {
   int rc;
-  char* result = python_result_default;
+  char* s = python_result_default;
 
   // Initialize:
   rc = python_init();
@@ -158,11 +162,11 @@ python_eval(bool persist, bool exceptions_are_errors,
                              main_dict, local_dict);
   if (o == NULL) EXCEPTION(exceptions_are_errors);
 
-  // Convert Python result to C string, then to Tcl string:
-  rc = PyArg_Parse(o, "s", &result);
+  // Convert Python result to C string
+  rc = PyArg_Parse(o, "s", &s);
   if (rc != 1) return handle_python_non_string(o);
-  DEBUG_TCL_TURBINE("python: result: %s\n", result);
-  *output = Tcl_NewStringObj(result, -1);
+  DEBUG_TCL_TURBINE("python: result: %s\n", s);
+  *result = strdup(s);
 
   // Clean up and return:
   Py_DECREF(o);
@@ -192,13 +196,52 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "python: argument exceptions_are_errors should be integer!");
   char* code = Tcl_GetString(objv[3]);
   char* expr = Tcl_GetString(objv[4]);
-  Tcl_Obj* result = NULL;
+  char* output = NULL;
   rc = python_eval(persist, exceptions_are_errors,
-                   code, expr, &result);
+                   code, expr, &output);
   TCL_CHECK(rc);
+  Tcl_Obj* result = Tcl_NewStringObj(output, -1);
   Tcl_SetObjResult(interp, result);
+  free(output);
   return TCL_OK;
 }
+
+char*
+python_parallel_persist(MPI_Comm comm, char* code, char* expr)
+{
+  int task_rank, task_size;
+  MPI_Comm_rank(comm, &task_rank);
+  MPI_Comm_size(comm, &task_size);
+  printf("In ppp(): rank: %i/%i\n", task_rank, task_size);
+  printf("code: %s\n", code);
+  printf("expr: %s\n", expr);
+
+  long long int task_comm_int = (long long int) comm;
+  char task_comm_string[64];
+  sprintf(task_comm_string, "%lli", task_comm_int);
+  setenv("task_comm", task_comm_string, true);
+
+  int rc;
+  rc = python_init();
+  assert(rc == TCL_OK);
+
+  char* output;
+  rc = python_eval(true, true, code, expr, &output);
+  if (rc != TCL_OK)
+  {
+    printf("python parallel task failed!\n");
+    exit(EXIT_FAILURE);
+  }
+
+  printf("eval ok.\n");   fflush(stdout);
+
+  MPI_Comm_free(&comm);
+  if (task_rank == 0)
+    return output;
+  free(output);
+  return NULL;
+}
+
 
 #else // Python disabled
 
@@ -208,6 +251,19 @@ Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   return turbine_user_errorv(interp,
                      "Turbine not compiled with Python support");
+}
+
+char*
+python_parallel_persist(MPI_Comm comm, char* code, char* expr)
+{
+  int task_rank, task_size;
+  MPI_Comm_rank(comm, &task_rank);
+  MPI_Comm_size(comm, &task_size);
+  printf("python_parallel_persist: "
+         "Turbine not compiled with Python support");
+  if (task_rank == 0)
+    return strdup("__ERROR__");
+  return NULL;
 }
 
 #endif

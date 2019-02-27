@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
 PROGRAM_SWIFT="wavefront.swift"
 PROGRAM_TCL=${PROGRAM_SWIFT%.swift}.tcl

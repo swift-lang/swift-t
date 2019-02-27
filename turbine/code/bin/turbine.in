@@ -1,6 +1,4 @@
-#!/bin/zsh -f
-# We use zsh -f to avoid reloading user startup files and
-# resetting environment, e.g., LD_LIBRARY_PATH.
+#!/usr/bin/env zsh
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -143,7 +141,7 @@ report_version()
     print " installed from: $( cat ${SOURCE_TXT} )"
   fi
   print " using CC:  ${USE_CC}"
-  print " using MPI: ${MPI_LIB}"
+  print " using MPI: ${MPI_LABEL}"
   print " using Tcl: ${TCLSH}"
   if (( ${#TURBINE_USE_PYTHON} + ${#TURBINE_USE_PYTHON_NAME} ))
   then
@@ -186,7 +184,12 @@ fi
 
 if [[ ${MACHINE_FILE} != 0 ]]
 then
-  TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
+  if [[ ${MPI_IMPL} == "OpenMPI" ]]
+  then
+    TURBINE_LAUNCH_OPTIONS+=( --hostfile ${MACHINE_FILE} )
+  else # MPICH
+    TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
+  fi
 fi
 
 shift $(( OPTIND-1 ))
@@ -225,10 +228,10 @@ then
   LINE_PREFIX="${TURBINE_LINE_OUTPUT_FLAG}"
 fi
 
-OPTIONS=()
-OPTIONS+=${LINE_PREFIX}
-OPTIONS+=( -n ${PROCS} )
-OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
+LAUNCH_OPTIONS=()
+LAUNCH_OPTIONS+=${LINE_PREFIX}
+LAUNCH_OPTIONS+=( -n ${PROCS} )
+LAUNCH_OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
 
 if (( VERBOSE ))
 then
@@ -284,6 +287,7 @@ do
   export ${KV}
 done
 
-# Allows user to insert valgrind
-${TURBINE_LAUNCHER} ${OPTIONS} ${=VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+# TURBINE_INTERPOSER allows user to insert valgrind, strace, etc.
+${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS} ${=TURBINE_INTERPOSER} \
+                    ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script

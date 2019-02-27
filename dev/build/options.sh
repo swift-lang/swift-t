@@ -11,7 +11,7 @@ fi
 source $THIS/help.sh
 
 # Defaults
-export RUN_BOOTSTRAP=0
+export RUN_BOOTSTRAP=1
 export RUN_CONFIGURE=1
 export RUN_MAKE=1
 export RUN_MAKE_CLEAN=1
@@ -22,12 +22,14 @@ export VERBOSITY=$LOG_INFO
 while getopts "BcCfhmqs:vy" OPTION
 do
   case $OPTION in
-    B) RUN_BOOTSTRAP=1      ;;
+    B) RUN_BOOTSTRAP=0      ;;
     c) RUN_MAKE_CLEAN=0     ;;
-    C) RUN_CONFIGURE=0      ;;
-    f) # Fast
-       RUN_MAKE_CLEAN=0
+    C) RUN_BOOTSTRAP=0
        RUN_CONFIGURE=0      ;;
+    f) # Fast
+       RUN_BOOTSTRAP=0
+       RUN_CONFIGURE=0
+       RUN_MAKE_CLEAN=0     ;;
     h) help ; exit 0        ;;
     m) RUN_MAKE=0           ;;
     q) # Quiet

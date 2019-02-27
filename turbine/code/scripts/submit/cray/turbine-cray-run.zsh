@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/usr/bin/env zsh
 set -eu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory

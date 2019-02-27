@@ -1202,6 +1202,8 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
 int Blob_Init(Tcl_Interp* interp);
 // See the tcl/launch module
 int Launch_Init(Tcl_Interp* interp);
+// See the tcl/python module
+int Python_Init(Tcl_Interp* interp);
 
 /*
   turbine::noop_exec_register
@@ -1786,6 +1788,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   tcl_r_init(interp);
   Blob_Init(interp);
   Launch_Init(interp);
+  Python_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
   COMMAND("init_debug",  Turbine_Init_Debug_Cmd);
