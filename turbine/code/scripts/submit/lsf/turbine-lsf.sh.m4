@@ -34,6 +34,9 @@ ifelse(getenv(PROJECT), `',,
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
 
+# User directives:
+getenv(TURBINE_DIRECTIVE)
+
 set -eu
 
 VERBOSE=getenv(VERBOSE)
@@ -69,9 +72,14 @@ export PYTHONPATH=getenv(PYTHONPATH)
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-module load gcc/6.3.1-20170301
-module load spectrum-mpi # /10.1.0.4-20170915
-# PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
+
+# User directives:
+# For Summit use:
+# module load gcc/6.3.1-20170301
+# module load spectrum-mpi # /10.1.0.4-20170915
+# # PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
+getenv(TURBINE_PRELAUNCH)
+
 
 # which jsrun
 
