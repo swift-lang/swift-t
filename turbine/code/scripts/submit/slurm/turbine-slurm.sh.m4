@@ -63,9 +63,11 @@ then
  set -x
 fi
 
-TURBINE_HOME=getenv(TURBINE_HOME)
-source ${TURBINE_HOME}/scripts/turbine-config.sh
-source ${TURBINE_HOME}/scripts/helpers.sh
+if (( ! ${#TURBINE_PILOT} ))
+then
+  TURBINE_HOME=getenv(TURBINE_HOME)
+  source ${TURBINE_HOME}/scripts/turbine-config.sh
+fi
 
 COMMAND="getenv(COMMAND)"
 
@@ -85,6 +87,7 @@ getenv(TURBINE_PRELAUNCH)
 # module load mvapich2
 
 # Use mpiexec on Midway
+TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
 TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
 TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
