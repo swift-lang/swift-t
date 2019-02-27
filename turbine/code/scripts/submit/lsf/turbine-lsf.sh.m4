@@ -50,6 +50,7 @@ cd ${TURBINE_OUTPUT}
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
+PPN=getenv(PPN)
 
 # Start the user environment variables pasted by M4
 getenv(USER_ENVS_CODE)
@@ -72,14 +73,15 @@ module load gcc/6.3.1-20170301
 module load spectrum-mpi # /10.1.0.4-20170915
 # PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
 
-set -x
-echo
-which jsrun
+# which jsrun
 
 START=$( date +%s.%N )
 hostname
-jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
-# ~/mcs/ste/mpi/t.x # bash -c hostname
+jsrun -n $PROCS -r $PPN \
+      -E TCLLIBPATH \
+      -E ADLB_PRINT_TIME=1 \
+      "${USER_ENVS_ARGS[@]}" \
+      ${COMMAND}
 CODE=$?
 echo
 echo EXIT CODE: $CODE
