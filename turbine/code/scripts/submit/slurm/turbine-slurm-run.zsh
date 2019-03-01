@@ -33,6 +33,16 @@ declare TURBINE_HOME
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
+export TURBINE_LAUNCH_OPTIONS=""
+if (( TURBINE_PREALLOCATION ))
+then
+  TURBINE_LAUNCH_OPTIONS+="--output=${OUTPUT_FILE} "
+  TURBINE_LAUNCH_OPTIONS+="--error=${OUTPUT_FILE} "
+  TURBINE_LAUNCH_OPTIONS+="--nodes=${NODES} "
+  TURBINE_LAUNCH_OPTIONS+="--ntasks-per-node=${PPN} "
+  TURBINE_LAUNCH_OPTIONS+="--chdir=${TURBINE_OUTPUT}"
+fi
+
 TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
@@ -74,11 +84,13 @@ then
     abort "sbatch failed!"
   fi
 else
+  set -x
   if ! ${SUBMIT_COMMAND}
   then
     abort "submit command failed: ${SUBMIT_COMMAND}"
   fi
-  JOB_ID=UNKNOWN
+  JOB_ID=${SLURM_JOB_ID}
+  set +x
 fi
 declare JOB_ID
 
