@@ -68,6 +68,7 @@ then
 fi
 
 
+set -x
 if (( ! TURBINE_PREALLOCATION ))
 then
   JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
@@ -77,9 +78,14 @@ then
     abort "sbatch failed!"
   fi
 else
+  if ! ${SUBMIT_COMMAND}
+  then
+    abort "submit command failed: ${SUBMIT_COMMAND}"
+  fi
   JOB_ID=UNKNOWN
 fi
 declare JOB_ID
+set +x
 
 # Fill in turbine.log
 turbine_log >> ${LOG_FILE}
