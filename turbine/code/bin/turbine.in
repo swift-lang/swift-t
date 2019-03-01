@@ -44,7 +44,7 @@ export TURBINE_PREALLOCATION=0
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
-while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:wY" OPTION
+while getopts "AcCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:wY" OPTION
 do
   case ${OPTION} in
     A)
