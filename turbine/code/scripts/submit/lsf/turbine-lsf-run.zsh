@@ -47,8 +47,10 @@ TURBINE_LSF=${TURBINE_OUTPUT}/turbine-lsf.sh
 m4 ${TURBINE_LSF_M4} > ${TURBINE_LSF}
 print "wrote: ${TURBINE_LSF}"
 
+BSUB=/sw/sources/lsf-tools/2.0/summit/bin/bsub
+
 # Submit it!
-bsub < ${TURBINE_LSF} | read MESSAGE
+$BSUB ${TURBINE_LSF} | read MESSAGE
 echo $MESSAGE
 # Pull out 2nd word without characters '<' and '>'
 JOB_ID=${${(z)MESSAGE}[3]}
@@ -57,7 +59,7 @@ JOB_ID=${${(z)MESSAGE}[3]}
 
 declare JOB_ID
 
-# Fill in log.txt
+# Fill in turbine.log
 turbine_log >> ${LOG_FILE}
 # Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
