@@ -67,12 +67,17 @@ then
   return 0
 fi
 
-JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
 
-# JOB_ID must be an integer:
-if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
+if (( ! TURBINE_PREALLOCATION ))
 then
-  abort "sbatch failed!"
+  JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
+  # JOB_ID must be an integer:
+  if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
+  then
+    abort "sbatch failed!"
+  fi
+else
+  JOB_ID=UNKNOWN
 fi
 declare JOB_ID
 
