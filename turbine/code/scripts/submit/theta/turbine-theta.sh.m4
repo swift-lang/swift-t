@@ -83,6 +83,9 @@ do
     APRUN_ENVS+="-e ${KV} "
 done
 
+# This is the critical Cray fork() fix
+APRUN_ENVS+="-e MPICH_GNI_FORK_MODE=FULLCOPY"
+
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
 # Run Turbine:

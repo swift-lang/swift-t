@@ -40,6 +40,15 @@ LOG()
   fi
 }
 
+LOG_WAIT()
+{
+  if [ -t 1 ] # Is the output a terminal?
+  then
+    echo "  waiting $* seconds: press enter to skip ..."
+    sleep $*
+  fi
+}
+
 log_status()
 {
   if (( VERBOSITY > LOG_TRACE ))

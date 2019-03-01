@@ -79,7 +79,7 @@ SWIFT_T_TRACE_BUILD=0
 # NOTE: Python detection may require PYTHONPATH and PYTHONHOME
 # in the environment
 # Enable Python integration
-ENABLE_PYTHON=0 # Finds Python in PATH
+ENABLE_PYTHON=0
 # Specify the Python interpreter executable below;
 # if empty, looks for python in PATH
 PYTHON_EXE=""
@@ -210,6 +210,8 @@ ENABLE_MKSTATIC_CRC=0
 # module swap PrgEnv-pgi PrgEnv-gnu
 # module load java
 
+# Summitdev:
+# module load spectrum-mpi
 
 #+===================+
 #|| Editor settings ||

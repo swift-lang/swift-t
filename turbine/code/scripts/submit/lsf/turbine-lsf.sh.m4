@@ -34,6 +34,11 @@ ifelse(getenv(PROJECT), `',,
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
 
+# User directives:
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
+
 set -eu
 
 VERBOSE=getenv(VERBOSE)
@@ -50,13 +55,15 @@ cd ${TURBINE_OUTPUT}
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
+PPN=getenv(PPN)
 
 # Start the user environment variables pasted by M4
 getenv(USER_ENVS_CODE)
 # End environment variables pasted by M4
 
 # Construct jsrun-formatted user environment variable arguments
-USER_ENVS_ARGS=()
+# The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
+USER_ENVS_ARGS=( -E _dummy=x )
 for K in ${!USER_ENVS[@]}
 do
   USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
@@ -68,21 +75,25 @@ export PYTHONPATH=getenv(PYTHONPATH)
 export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-module load gcc/6.3.1-20170301
-module load spectrum-mpi # /10.1.0.4-20170915
-# PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
+# User prelaunch commands:
+# For Summit use:
+# module load gcc/6.3.1-20170301
+# module load spectrum-mpi # /10.1.0.4-20170915
+# # PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
 
-set -x
-echo
-which jsrun
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 START=$( date +%s.%N )
-hostname
-jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
-# ~/mcs/ste/mpi/t.x # bash -c hostname
+jsrun -n $PROCS -r $PPN \
+      -E TCLLIBPATH \
+      -E ADLB_PRINT_TIME=1 \
+      "${USER_ENVS_ARGS[@]}" \
+      ${COMMAND}
 CODE=$?
 echo
-echo EXIT CODE: $CODE
+echo "EXIT CODE: $CODE"
 STOP=$( date +%s.%N )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
