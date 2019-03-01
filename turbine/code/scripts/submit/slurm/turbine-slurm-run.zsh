@@ -37,6 +37,7 @@ TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
 m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
@@ -47,7 +48,13 @@ do
   eval export ${kv}
 done
 
-SUBMIT_COMMAND=( sbatch ${TURBINE_SLURM} )
+TURBINE_PREALLOCATION=${TURBINE_PREALLOCATION:-0}
+SUBMIT_PROGRAM=sbatch
+if (( TURBINE_PREALLOCATION ))
+then
+  SUBMIT_PROGRAM=
+fi
+SUBMIT_COMMAND=( ${SUBMIT_PROGRAM} ${TURBINE_SLURM} )
 
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh
 chmod u+x ${TURBINE_OUTPUT}/submit.sh

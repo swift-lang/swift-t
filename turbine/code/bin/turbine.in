@@ -39,6 +39,7 @@ TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
+export TURBINE_PREALLOCATION=0
 
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
@@ -46,6 +47,9 @@ SCHED_OPTS=()
 while getopts "cCd:D:f:hlm:M:n:vVxX:e:i:o:s:St:wY" OPTION
 do
   case ${OPTION} in
+    A)
+      export TURBINE_PREALLOCATION=1
+      ;;
     c)
       PRINT_CONFIG=1
       ;;
