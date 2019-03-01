@@ -84,13 +84,11 @@ then
     abort "sbatch failed!"
   fi
 else
-  set -x
   if ! ${SUBMIT_COMMAND}
   then
     abort "submit command failed: ${SUBMIT_COMMAND}"
   fi
   JOB_ID=${SLURM_JOB_ID}
-  set +x
 fi
 declare JOB_ID
 
