@@ -16,6 +16,7 @@ source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
 
 LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"
+LOG_WAIT 3
 
 LOG $LOG_INFO ""
 ${THIS}/build-cutils.sh
