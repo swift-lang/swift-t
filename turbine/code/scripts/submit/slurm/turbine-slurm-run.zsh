@@ -48,6 +48,7 @@ do
   eval export ${kv}
 done
 
+set -x
 TURBINE_PREALLOCATION=${TURBINE_PREALLOCATION:-0}
 SUBMIT_PROGRAM=sbatch
 if (( TURBINE_PREALLOCATION ))
@@ -58,6 +59,7 @@ SUBMIT_COMMAND=( ${SUBMIT_PROGRAM} ${TURBINE_SLURM} )
 
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh
 chmod u+x ${TURBINE_OUTPUT}/submit.sh
+set +x
 
 if (( DRY_RUN ))
 then
