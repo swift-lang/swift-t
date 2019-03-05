@@ -85,11 +85,14 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
 
+TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS) )
+
 START=$( date +%s.%N )
 jsrun -n $PROCS -r $PPN \
       -E TCLLIBPATH \
       -E ADLB_PRINT_TIME=1 \
       "${USER_ENVS_ARGS[@]}" \
+      ${TURBINE_LAUNCH_OPTIONS} \
       ${COMMAND}
 CODE=$?
 echo
