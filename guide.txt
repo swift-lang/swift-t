@@ -83,17 +83,25 @@ $ ./install-debs.sh
 [[spack]]
 === From Spack
 
-Simply clone Spack and install STC.
+Simply clone Spack and install STC.  Use the version spec +@develop+ .
 
 ----
 $ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
-$ spack install stc
+$ spack install stc@develop
 ----
 
 This will install all necessary dependencies.  See the
 <<_spack_tips,Spack tips>> to reduce the number of dependencies that
 Spack will install from source.
+
+==== Python and R
+
+----
+$ . spack/share/spack/setup-env.sh
+$ spack install python r
+$
+----
 
 [[conda]]
 === From Conda
@@ -3613,10 +3621,21 @@ export PYTHONPATH=$HOME/Python-2.7.6/lib/python2.7
 [[build_r]]
 ==== R
 
+First, install R package RInside.  The following command can be used
+from any shell:
+
+----
+$ R -e "install.packages('RInside', repos='http://cran.us.r-project.org')"
+----
+or if using Spack:
+----
+$ spack install r-rinside
+----
+
 To build Swift/T with R, either:
 
 * When using +build-swift-t.sh+: set +ENABLE_R=1+ in
- +swift-t-settings.sh+.
+ +swift-t-settings.sh+ ; or
 
 * When doing a <<build_manual,manual build>> provide the +--with-r+
  argument to +configure+.  See +./configure&nbsp;--help+ for further
@@ -3704,7 +3723,7 @@ export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-b
 
 Running
 ----
-$ spack install stc
+$ spack install stc@develop
 ----
 will download, compile, and install all necessary dependencies,
 including an MPI implementation.
@@ -3747,6 +3766,14 @@ packages:
   ant:
     paths:
       ant@1.10.3%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  diffutils:
+    paths:
+      diffutils@3.7%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  bzip2:
+    paths:
+      bzip2@1.0.6%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
     buildable: False
 ----
 
