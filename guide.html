@@ -818,16 +818,25 @@ Install:
 </div>
 <div class="sect2">
 <h3 id="spack">2.2. From Spack</h3>
-<div class="paragraph"><p>Simply clone Spack and install STC.</p></div>
+<div class="paragraph"><p>Simply clone Spack and install STC.  Use the version spec <code>@develop</code> .</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>$ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
-$ spack install stc</code></pre>
+$ spack install stc@develop</code></pre>
 </div></div>
 <div class="paragraph"><p>This will install all necessary dependencies.  See the
 <a href="#_spack_tips">Spack tips</a> to reduce the number of dependencies that
 Spack will install from source.</p></div>
+<div class="sect3">
+<h4 id="_python_and_r">2.2.1. Python and R</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ . spack/share/spack/setup-env.sh
+$ spack install python r
+$</code></pre>
+</div></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="conda">2.3. From Conda</h3>
@@ -6035,12 +6044,23 @@ When running, you may need to set <code>PYTHONPATH</code> to the installation
 </div>
 <div class="sect3">
 <h4 id="build_r">18.5.2. R</h4>
+<div class="paragraph"><p>First, install R package RInside.  The following command can be used
+from any shell:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ R -e "install.packages('RInside', repos='http://cran.us.r-project.org')"</code></pre>
+</div></div>
+<div class="paragraph"><p>or if using Spack:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ spack install r-rinside</code></pre>
+</div></div>
 <div class="paragraph"><p>To build Swift/T with R, either:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
 When using <code>build-swift-t.sh</code>: set <code>ENABLE_R=1</code> in
- <code>swift-t-settings.sh</code>.
+ <code>swift-t-settings.sh</code> ; or
 </p>
 </li>
 <li>
@@ -6175,7 +6195,7 @@ Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source di
 <div class="paragraph"><p>Running</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ spack install stc</code></pre>
+<pre><code>$ spack install stc@develop</code></pre>
 </div></div>
 <div class="paragraph"><p>will download, compile, and install all necessary dependencies,
 including an MPI implementation.</p></div>
@@ -6217,6 +6237,14 @@ such as the following:</p></div>
   ant:
     paths:
       ant@1.10.3%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  diffutils:
+    paths:
+      diffutils@3.7%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
+    buildable: False
+  bzip2:
+    paths:
+      bzip2@1.0.6%gcc@7.3.0 arch=linux-ubuntu18.04-x86_64: /usr
     buildable: False</code></pre>
 </div></div>
 <div class="paragraph"><p>You will need to replace the <code>gcc@7.3.0</code> and
@@ -6301,7 +6329,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-02-19 14:35:10 CST
+ 2019-03-20 13:45:05 CDT
 </div>
 </div>
 
