@@ -88,6 +88,7 @@ Simply clone Spack and install STC.  Use the version spec +@develop+ .
 ----
 $ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
+$ spack install turbine@develop
 $ spack install stc@develop
 ----
 
@@ -3723,6 +3724,7 @@ export SWIFT_JVM_USER_LIB=SWIFT_T/turbine/code/swift-t-jvm/swift-jvm/swift-jvm-b
 
 Running
 ----
+$ spack install turbine@develop
 $ spack install stc@develop
 ----
 will download, compile, and install all necessary dependencies,
