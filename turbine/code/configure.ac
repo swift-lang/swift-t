@@ -153,11 +153,13 @@ AC_CHECK_TYPES([ptrdiff_t])
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
 AC_FUNC_FORK
+AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
-AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
-AC_CHECK_FUNCS([strtol strtoul uname])
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([dup2 getcwd gettimeofday mallinfo memchr memset pow])
+AC_CHECK_FUNCS([setenv strchr strdup strerror strlen strnlen strpbrk])
+AC_CHECK_FUNCS([strstr strtol strtoul strtoull uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
