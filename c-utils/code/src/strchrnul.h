@@ -23,7 +23,7 @@
  * For systems that do not have strchrnul() -- BSD, Mac
  */
 
-#pragma once 
+#pragma once
 
 #ifndef HAVE_STRCHRNUL
 
