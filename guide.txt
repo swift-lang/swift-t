@@ -288,6 +288,8 @@ output goes into the STC output file (the second file name argument).
 +-I+:: Add a directory to the import and include search path.
 +-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>.
 +-j+:: Set the location of the +java+ executable.
++-o <path/to/program.tic>+:: Set the output location of the generated
+TIC file
 +-p+:: Disable the C preprocessor.
 +-u+:: Only compile if output file is not up-to-date.
 +-v+:: Output version number and exit.
