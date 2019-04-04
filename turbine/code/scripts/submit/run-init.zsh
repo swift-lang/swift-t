@@ -289,8 +289,12 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
+# The modifier :A produces canonicalized file paths
+if [[ ${SCRIPT:A} != ${PROGRAM:A} ]]
+then
+  cp ${SCRIPT} ${PROGRAM}
+fi
 if (( TURBINE_STATIC_EXEC ))
 then
   # Uses turbine_sh launcher
