@@ -3,7 +3,7 @@
 
 # Process this file with autoconf to produce a configure script.
 
-# This is only used to build the Debian package
+# This is only used to build the Debian and Spack packages
 
 define([stc_version],
        regexp(esyscmd(cat etc/version.txt),[\([.0-9]*\)],[\1]))
