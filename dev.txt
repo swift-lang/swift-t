@@ -1718,7 +1718,7 @@ trace: 42
 
 Spack should not have to install software that you already have on
 your system.
-If you do not have a packages.yaml that covers everything except the 4
+If you do not have a +packages.yaml+ that covers everything except the 4
 Swift/T modules, contact Wozniak for tips.
 
 . Clone:
