@@ -1687,6 +1687,7 @@ The Swift/T maintainer does this for each Swift/T release.
 **** Increment +etc/version.txt+
 **** Edit +turbine-version.txt+: update required Turbine version
 **** Edit +guide.txt+: update version number for download and date
+* Apply +git tag release-x.y.z+
 * Build release packages
 ** Edit +dev/get-versions.sh+ to set the Swift/T version
 ** Use +dev/release/make-release-pkg.zsh+ to make the release package
@@ -1696,6 +1697,7 @@ The Swift/T maintainer does this for each Swift/T release.
 * Copy the package to the +swift-t-downloads+ repo, +gh-pages+ branch
 * Test package on Linux and Mac
 * +git push+ tag and downloads to GitHub
+* Update installation instructions in guide.txt with version numbers
 
 ////
 Local Variables:
