@@ -1740,7 +1740,7 @@ $ git checkout   swift-release-1.4.3 # or whatever branch
 +
 ----
 $ PATH=$PWD/bin:$PATH
-$ source share/spack/setup-env.sh
+$ . share/spack/setup-env.sh
 ----
 +
 . Install from Spack
