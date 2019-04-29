@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">February 2019</span><br />
+<span id="author">April 2019</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -823,6 +823,7 @@ Install:
 <div class="content">
 <pre><code>$ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
+$ spack install turbine@develop
 $ spack install stc@develop</code></pre>
 </div></div>
 <div class="paragraph"><p>This will install all necessary dependencies.  See the
@@ -1126,6 +1127,15 @@ Set optimization level: 0, 1, 2, or 3.  See <a href="#Optimizations">[Optimizati
 <dd>
 <p>
 Set the location of the <code>java</code> executable.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>-o &lt;path/to/program.tic&gt;</code>
+</dt>
+<dd>
+<p>
+Set the output location of the generated
+TIC file
 </p>
 </dd>
 <dt class="hdlist1">
@@ -6195,7 +6205,8 @@ Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source di
 <div class="paragraph"><p>Running</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ spack install stc@develop</code></pre>
+<pre><code>$ spack install turbine@develop
+$ spack install stc@develop</code></pre>
 </div></div>
 <div class="paragraph"><p>will download, compile, and install all necessary dependencies,
 including an MPI implementation.</p></div>
@@ -6329,7 +6340,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-03-20 13:45:05 CDT
+ 2019-04-29 11:15:04 CDT
 </div>
 </div>
 
