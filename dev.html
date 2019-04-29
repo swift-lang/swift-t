@@ -745,7 +745,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
-<span id="revdate">May 2018</span>
+<span id="revdate">April 2019</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3752,6 +3752,9 @@ Update installation instructions in guide.txt with version numbers
 </div>
 <div class="sect3">
 <h4 id="_release_tester">14.1.2. Release tester</h4>
+<div class="paragraph"><p>If these instructions do not work exactly as written, that is a bug.</p></div>
+<div class="sect4">
+<h5 id="_tgz_installations">TGZ installations</h5>
 <div class="paragraph"><p>The release tester just has to do:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3762,7 +3765,73 @@ $ swift-t-1.4.3/dev/build/build-swift-t.sh
 $ /tmp/swift-t-install/stc/bin/swift-t -E 'trace(42);'
 trace: 42</code></pre>
 </div></div>
-<div class="paragraph"><p>If this does not work, that is a bug.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_spack_installations">Spack installations</h5>
+<div class="paragraph"><p>Spack should not have to install software that you already have on
+your system.
+If you do not have a packages.yaml that covers everything except the 4
+Swift/T modules, contact Wozniak for tips.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Clone:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ git clone git@github.com:spack/spack.git spack-test
+$ cd spack-test</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+If testing before the Spack PR is complete (typical case):
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ git remote add swift git@github.com:swift-lang/spack.git
+$ git pull swift swift-t-release-1.4.3 # or whatever branch
+$ git checkout   swift-t-release-1.4.3 # or whatever branch</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Set up the new Spack
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ PATH=$PWD/bin:$PATH
+$ source share/spack/setup-env.sh</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Install from Spack
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ spack install stc@develop # From GitHub
+# and/or
+$ spack install stc # From the static Swift/T Downloads</code></pre>
+</div></div>
+<div class="paragraph"><p>Please check that the correct dependencies were installed.<br />
+Installing <code>@develop</code> should install all Swift/T modules from <code>@develop</code> .<br />
+Installing a static release should install Swift/T modules from the
+static downloads.</p></div>
+</li>
+<li>
+<p>
+Test execution
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ spack load stc
+$ swift-t -E 'trace(42);'
+trace: 42</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
 </div>
 </div>
 </div>
@@ -3772,7 +3841,7 @@ trace: 42</code></pre>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-04-29 12:22:26 CDT
+ 2019-04-29 14:12:48 CDT
 </div>
 </div>
 </body>
