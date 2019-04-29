@@ -3750,6 +3750,20 @@ Update installation instructions in guide.txt with version numbers
 </li>
 </ul></div>
 </div>
+<div class="sect3">
+<h4 id="_release_tester">14.1.2. Release tester</h4>
+<div class="paragraph"><p>The release tester just has to do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.3.tar.gz
+$ tar xfz swift-t-1.4.3.tar.gz
+$ swift-t-1.4.3/dev/build/init-settings.sh
+$ swift-t-1.4.3/dev/build/build-swift-t.sh
+$ /tmp/swift-t-install/stc/bin/swift-t -E 'trace(42);'
+trace: 42</code></pre>
+</div></div>
+<div class="paragraph"><p>If this does not work, that is a bug.</p></div>
+</div>
 </div>
 </div>
 </div>
@@ -3758,7 +3772,7 @@ Update installation instructions in guide.txt with version numbers
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-04-29 12:12:29 CDT
+ 2019-04-29 12:22:26 CDT
 </div>
 </div>
 </body>
