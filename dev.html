@@ -3770,7 +3770,7 @@ trace: 42</code></pre>
 <h5 id="_spack_installations">Spack installations</h5>
 <div class="paragraph"><p>Spack should not have to install software that you already have on
 your system.
-If you do not have a packages.yaml that covers everything except the 4
+If you do not have a <code>packages.yaml</code> that covers everything except the 4
 Swift/T modules, contact Wozniak for tips.</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -3790,8 +3790,8 @@ If testing before the Spack PR is complete (typical case):
 <div class="listingblock">
 <div class="content">
 <pre><code>$ git remote add swift git@github.com:swift-lang/spack.git
-$ git pull swift swift-t-release-1.4.3 # or whatever branch
-$ git checkout   swift-t-release-1.4.3 # or whatever branch</code></pre>
+$ git pull swift swift-release-1.4.3 # or whatever branch
+$ git checkout   swift-release-1.4.3 # or whatever branch</code></pre>
 </div></div>
 </li>
 <li>
@@ -3814,7 +3814,7 @@ Install from Spack
 # and/or
 $ spack install stc # From the static Swift/T Downloads</code></pre>
 </div></div>
-<div class="paragraph"><p>Please check that the correct dependencies were installed.<br />
+<div class="paragraph"><p>Please check that the correct dependencies were installed via <code>spack find</code> .<br />
 Installing <code>@develop</code> should install all Swift/T modules from <code>@develop</code> .<br />
 Installing a static release should install Swift/T modules from the
 static downloads.</p></div>
@@ -3841,7 +3841,7 @@ trace: 42</code></pre>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-04-29 14:12:48 CDT
+ 2019-04-29 15:54:05 CDT
 </div>
 </div>
 </body>
