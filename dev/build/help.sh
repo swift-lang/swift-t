@@ -42,7 +42,10 @@ The following options change this behavior:
        do not 'make clean' or 'ant clean'
        Same as -BCc
 -h     This help message
+-j     Autodetect parallelism based on processor count (Linux only)
+       Implies -n
 -m     Do not compile with 'make' or 'ant'
+-n     Run key build steps under nice -n 15
 -s T|S Skip Turbine (T) or STC (S)
 -q     Quiet:   reduce   verbosity (may be given more than once)
 -v     Verbose: increase verbosity (may be given more than once)

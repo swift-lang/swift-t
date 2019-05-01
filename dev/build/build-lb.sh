@@ -60,7 +60,7 @@ then
   (
     rm -f config.cache
     set -eux
-    ./configure --config-cache \
+    ${NICE_CMD} ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
                 CC=${CC} \

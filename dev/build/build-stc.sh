@@ -31,7 +31,8 @@ if (( ! RUN_MAKE )); then
   exit
 fi
 
-${ANT} ${STC_ANT_ARGS}
+# The main Ant build step
+${NICE_CMD} ${ANT} ${STC_ANT_ARGS}
 
 if (( ! RUN_MAKE_INSTALL )); then
   exit
@@ -39,7 +40,7 @@ fi
 
 if [ ! -z "${STC_INSTALL}" ]
 then
-  ${ANT} -Ddist.dir="${STC_INSTALL}" \
-         -Dturbine.home="${TURBINE_INSTALL}" \
-         install
+  ${NICE_CMD} ${ANT} -Ddist.dir="${STC_INSTALL}" \
+                     -Dturbine.home="${TURBINE_INSTALL}" \
+                     install
 fi
