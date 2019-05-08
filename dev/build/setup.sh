@@ -3,7 +3,7 @@
 # Do some build configuration after processing command line
 # and user settings file
 
-if (( ${PARALLEL} && ${MAKE_PARALLELISM} == 1))
+if (( ${PARALLEL} ))
 then
   # Auto-configure parallelism based on /proc/cpuinfo
   if [[ -f /proc/cpuinfo ]]
