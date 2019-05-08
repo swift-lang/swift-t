@@ -526,6 +526,9 @@ if (( ${#IMPORT_STRINGS} )) {
 
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG:-} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+# Ensure output directory exists
+mkdir -pv ${OUTPUT:h}
+
 ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 # Return the exit code from the java process
 EXITCODE=${?}

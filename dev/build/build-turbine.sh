@@ -10,6 +10,7 @@ ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
+source ${THIS}/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
@@ -156,20 +157,19 @@ then
   rm -f config.cache
   (
     set -ex
-    ./configure --config-cache \
+    ${NICE_CMD} ./configure --config-cache \
                 --prefix=${TURBINE_INSTALL} \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
                 ${EXTRA_ARGS} \
-                --disable-log
     )
-  assert $? "Configure failed!"
+  assert ${?} "Configure failed!"
 fi
 
 report_turbine_includes()
 {
   echo
-  echo Make failed.  The following may be useful:
+  echo "Make failed.  The following may be useful:"
   echo
   set -x
   rm -fv deps_contents.txt

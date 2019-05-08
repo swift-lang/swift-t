@@ -198,7 +198,8 @@ ENABLE_MKSTATIC_CRC=0
 # module load gcc
 
 # Bebop:
-# module load mvapich2
+# module load mvapich2 # or
+# module load gcc/7.1.0-4bgguyp mpich/3.2-bsq4vhr
 
 # Beagle:
 # module unload PrgEnv-gnu

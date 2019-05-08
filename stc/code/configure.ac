@@ -3,13 +3,13 @@
 
 # Process this file with autoconf to produce a configure script.
 
-# This is only used to build the Debian package
+# This is only used to build the Debian and Spack packages
 
 define([stc_version],
        regexp(esyscmd(cat etc/version.txt),[\([.0-9]*\)],[\1]))
 
 AC_PREREQ([2.62])
-AC_INIT([STC], [stc_version()], [wozniak@mcs.anl.gov])
+AC_INIT([STC], [stc_version()], [woz@anl.gov])
 AC_CONFIG_SRCDIR([build.xml])
 
 DEBIAN_BUILD=0

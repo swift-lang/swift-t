@@ -11,6 +11,8 @@ fi
 source $THIS/help.sh
 
 # Defaults
+export NICE=""
+export PARALLEL=0
 export RUN_BOOTSTRAP=1
 export RUN_CONFIGURE=1
 export RUN_MAKE=1
@@ -19,7 +21,7 @@ export RUN_MAKE_INSTALL=1
 export SKIP=""
 export VERBOSITY=$LOG_INFO
 
-while getopts "BcCfhmqs:vy" OPTION
+while getopts "BcCfhjmnqs:vy" OPTION
 do
   case $OPTION in
     B) RUN_BOOTSTRAP=0      ;;
@@ -31,7 +33,9 @@ do
        RUN_CONFIGURE=0
        RUN_MAKE_CLEAN=0     ;;
     h) help ; exit 0        ;;
+    j) PARALLEL=1 ; NICE=15 ;;
     m) RUN_MAKE=0           ;;
+    n) NICE=15              ;;
     q) # Quiet
       : $(( VERBOSITY -- )) ;; # Do not error on zero (set -e)
     s) SKIP+=$OPTARG        ;;
