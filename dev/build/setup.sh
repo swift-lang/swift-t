@@ -19,7 +19,7 @@ then
   fi
 fi
 
-NICE_CMD=""
+export NICE_CMD=""
 if (( ${#NICE} ))
 then
   # Runs all key build steps under nice
