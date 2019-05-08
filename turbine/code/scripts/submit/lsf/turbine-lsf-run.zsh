@@ -31,6 +31,12 @@ then
   return 1
 fi
 
+# Convert HH:MM:SS to HH:MM (bsub will not accept HH:MM:SS)
+if (( ${#WALLTIME} == 8 ))
+then
+  WALLTIME=${WALLTIME[1,5]}
+fi
+
 # Repack environment variables for LSF jsrun
 export USER_ENVS_CODE="declare -A USER_ENVS=()\n"
 for kv in ${env}

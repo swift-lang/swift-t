@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eu
 
+. /sw/summit/lmod/7.7.10/rhel7.3_gnu4.8.5/lmod/7.7.10/init/bash
+
 # BUILD SWIFT-T
 
 # Main user interface

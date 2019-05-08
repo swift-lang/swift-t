@@ -32,6 +32,8 @@
 #   PROCS: Number of MPI processes
 #   PPN: Processes-per-node: see below: (default 1)
 #   WALLTIME: Formatted according to specific scheduler
+#             Swift/T default: HH:MM:SS
+#             LSF converts HH:MM:SS to HH:MM
 #   TURBINE_OUTPUT_ROOT, TURBINE_OUTPUT_FORMAT: See sites guide
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
