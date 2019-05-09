@@ -1,8 +1,10 @@
 
+# TURBINE CONFIG SH
+
 # BASH-formatted setup script filtered by turbine/configure
 #
 # Influential environment variables include:
-# TURBINE_USER_LIB - directory for user library code
+# SWIFT_PATH / TURBINE_PATH / TURBINE_USER_LIB - directory for user library code
 # TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
