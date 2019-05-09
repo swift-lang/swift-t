@@ -64,7 +64,8 @@ then
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
                 CC=${CC} \
-                ${EXTRA_ARGS}
+                ${EXTRA_ARGS} \
+                ${CUSTOM_CFG_ARGS_LB}
   )
   if (( $? ))
   then

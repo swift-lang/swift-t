@@ -146,6 +146,10 @@ else
   EXTRA_ARGS+=" --with-hdf5=$WITH_HDF5"
 fi
 
+if [[ ${LAUNCHER:-} != "" ]]; then
+  EXTRA_ARGS+=" --with-launcher=${LAUNCHER}"
+fi
+
 common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
@@ -162,6 +166,7 @@ then
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
                 ${EXTRA_ARGS} \
+                ${CUSTOM_CFG_ARGS_TURBINE}
     )
   assert ${?} "Configure failed!"
 fi
