@@ -247,10 +247,11 @@ public class FunctionDecl {
                    VarProvenance.userVar(context.getSourceLoc()));
   }
 
-  private static void checkDuplicateArgs(Context context,
-      String functionName,
-      @SuppressWarnings("unchecked") Collection<String> ...names)
-          throws DoubleDefineException {
+@SafeVarargs
+private static void checkDuplicateArgs(Context context,
+                                       String functionName,
+                                       Collection<String> ...names)
+throws DoubleDefineException {
     Set<String> usedNames = new HashSet<String>();
 
     for (Collection<String> names2: names) {
