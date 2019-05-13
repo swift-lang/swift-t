@@ -1057,7 +1057,7 @@ static adlb_code
 handle_multicreate(int caller)
 {
   // MPE_LOG(xlb_mpe_svr_multicreate_start);
-  TRACE("ADLB_TAG_MULTICREATE\n");
+  TRACE("caller=%i", caller);
 
   MPI_Status status;
 
@@ -1086,7 +1086,7 @@ handle_multicreate(int caller)
   free(specs);
   ADLB_DATA_CHECK(dc);
 
-  TRACE("ADLB_TAG_MULTICREATE done\n");
+  TRACE("done");
   // MPE_LOG(xlb_mpe_svr_multicreate_end);
   return ADLB_SUCCESS;
 }
@@ -1297,7 +1297,7 @@ handle_retrieve(int caller)
 static adlb_code
 handle_enumerate(int caller)
 {
-  TRACE("ENUMERATE\n");
+  TRACE("...");
   struct packed_enumerate opts;
   adlb_code rc;
   MPI_Status status;
@@ -1305,12 +1305,12 @@ handle_enumerate(int caller)
        ADLB_TAG_ENUMERATE);
 
   adlb_buffer data = { .data = NULL, .length = 0 };
-  struct packed_enumerate_result res;
+  struct packed_enumerate_result result;
   adlb_data_code dc;
   dc = xlb_data_enumerate(opts.id, opts.count, opts.offset,
                            opts.request_subscripts, opts.request_members,
-                           &xlb_xfer_buf, &data, &res.records,
-                           &res.key_type, &res.val_type);
+                           &xlb_xfer_buf, &data, &result.records,
+                           &result.key_type, &result.val_type);
   bool free_data = (dc == ADLB_DATA_SUCCESS &&
                     xlb_xfer_buf.data != data.data);
   if (dc == ADLB_DATA_SUCCESS)
@@ -1319,11 +1319,10 @@ handle_enumerate(int caller)
     ADLB_CHECK(rc);
   }
 
-  res.dc = dc;
-  res.length = data.length;
+  result.dc = dc;
+  result.length = data.length;
 
-
-  RSEND(&res, sizeof(res), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  RSEND(&result, sizeof(result), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
     if (opts.request_subscripts || opts.request_members)
@@ -1342,7 +1341,6 @@ handle_enumerate(int caller)
 static adlb_code
 handle_subscribe(int caller)
 {
-  TRACE("ADLB_TAG_SUBSCRIBE\n");
   MPE_LOG(xlb_mpe_svr_subscribe_start);
 
   MPI_Status status;

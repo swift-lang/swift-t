@@ -84,10 +84,11 @@ adlb_code xlb_debug_check_environment(void);
 #endif
 
 #if ENABLE_LOG_TRACE && !defined(NDEBUG)
-#define TRACE(format, args...)                    \
-  { if (xlb_trace_enabled && xlb_debug_enabled) { \
-      printf("%5.4f ADLB_TRACE: " format "\n", xlb_wtime(), ## args);  \
-  fflush(stdout);                                 \
+#define TRACE(format, args...)                       \
+  { if (xlb_trace_enabled && xlb_debug_enabled) {    \
+      printf("%5.4f ADLB_TRACE: %s(): " format "\n", \
+	     xlb_wtime(), __func__, ## args);        \
+  fflush(stdout);                                    \
   } }
 #else
 #define TRACE(format, args...) // noop

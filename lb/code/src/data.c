@@ -1432,14 +1432,15 @@ pack_member(adlb_container *cont, table_bp_entry *item,
         on the array size.
  */
 static adlb_data_code
-extract_members(adlb_container *cont, int count, int offset,
+extract_members(adlb_container* container,
+		int count, int offset,
                 bool include_keys, bool include_vals,
-                const adlb_buffer *caller_buffer,
-                adlb_buffer *output)
+                const adlb_buffer* caller_buffer,
+                adlb_buffer* output)
 {
   int c = 0; // Count of members seen
   adlb_data_code dc;
-  struct table_bp* members = cont->members;
+  struct table_bp* members = container->members;
   bool use_caller_buf;
 
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
@@ -1459,18 +1460,18 @@ extract_members(adlb_container *cont, int count, int offset,
     {
       if (c >= count+offset && count != -1)
       {
-        TRACE("Got %i/%i items, done\n", c+1, count);
+        TRACE("packed c=%i / count=%i items, done", c, count);
         goto extract_members_done;
       }
-      dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
+      dc = pack_member(container, item, include_keys, include_vals, &tmp_buf,
                        output, &use_caller_buf, &output_pos);
       ADLB_DATA_CHECK_CODE(dc);
     }
     c++;
   }
 
-  TRACE("Got %i/%i entries at offset %i table size %i\n", c-offset, count,
-                offset, members->size);
+  TRACE("packed final %i/%i entries at offset=%i total=%i",
+	c-offset, count, offset, members->size);
   // Should have found requested number
   if (count != -1 && c - offset != count)
   {
@@ -1482,7 +1483,7 @@ extract_members(adlb_container *cont, int count, int offset,
 extract_members_done:
   // Mark actual length of output
   output->length = output_pos;
-  TRACE("extract_members: output_length: %zu\n", output->length);
+  TRACE("output_length: %zu", output->length);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1538,14 +1539,15 @@ enumerate_slice_size(int offset, int count, int actual_size)
    @param container_id
    @param count maximum number of elements to return, negative for unlimited
    @param offset offset of member to start at
+   @param include_keys whether to include keys in result
+   @param include_vals whether to include values in result
    @param data Filled in with output location for encoded binary keys and
                values.  Members are stored with key first, then value.  The
                length in bytes of the key and value is encoded with vint_encode
                and prefixed to the actual data
-   @param length Length of data in data
-   @param include_keys whether to include keys in result
-   @param include_vals whether to include values in result
-   @param actual Returns the number of entries in the container
+   @param actual The number of entries returned
+   @param key_type The key type for the container
+   @param val_type The value type for the container
  */
 adlb_data_code
 xlb_data_enumerate(adlb_datum_id id, int count, int offset,
@@ -1554,7 +1556,8 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type)
 {
-  TRACE("data_enumerate(%"PRId64")", id);
+  TRACE("id=%"PRId64" keys=%i vals=%i offset=%i",
+	id, include_keys, include_vals, offset);
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   ADLB_DATA_CHECK_CODE(dc);
@@ -1575,8 +1578,8 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     *actual = slice_size;
     *key_type = (adlb_data_type)d->data.CONTAINER.key_type;
     *val_type = (adlb_data_type)d->data.CONTAINER.val_type;
-    TRACE("Enumerate container: %i elems %zu bytes\n", slice_size,
-                                                      data->length);
+    TRACE("extracted: members=%i bytes=%zu",
+	  slice_size, data->length);
     return ADLB_DATA_SUCCESS;
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)

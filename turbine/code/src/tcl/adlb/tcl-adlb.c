@@ -2813,19 +2813,22 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
     case ADLB_DATA_TYPE_INTEGER:
       dc = ADLB_Unpack_integer(&tmp.INTEGER, data, length);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking integer data <%"PRId64"> error code: %i", id, dc);
+		    "Retrieve failed due to error unpacking integer data "
+		    "<%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewADLBInt(tmp.INTEGER);
       break;
     case ADLB_DATA_TYPE_REF:
       dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_REFC, true);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking reference data <%"PRId64"> error code: %i", id, dc);
+		    "Retrieve failed due to error unpacking reference data "
+		    "<%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewADLB_ID(tmp.REF.id);
       break;
     case ADLB_DATA_TYPE_FLOAT:
       dc = ADLB_Unpack_float(&tmp.FLOAT, data, length);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking float data <%"PRId64"> error code: %i", id, dc);
+		    "Retrieve failed due to error unpacking float data "
+		    "<%"PRId64"> error code: %i", id, dc);
       *result = Tcl_NewDoubleObj(tmp.FLOAT);
       break;
     case ADLB_DATA_TYPE_STRING:
@@ -2835,7 +2838,8 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
       dc = ADLB_Unpack_string(&tmp.STRING, (void*)data,
                               length, false);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking string data <%"PRId64"> length: %zi error code: %i", id, length, dc);
+		    "Retrieve failed due to error unpacking string data "
+		    "<%"PRId64"> length: %zi error code: %i", id, length, dc);
       *result = Tcl_NewStringObj(tmp.STRING.value,
                                  (int) (tmp.STRING.length-1));
       break;

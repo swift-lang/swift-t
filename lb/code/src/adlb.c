@@ -1717,6 +1717,9 @@ ADLBP_Enumerate(adlb_datum_id container_id,
                 void** data, size_t* length, int* records,
                 adlb_type_extra *kv_type)
 {
+  TRACE("id=%"PRId64" offset=%i count=%i",
+        container_id, offset, count);
+
   MPI_Status status;
   MPI_Request request;
 
@@ -1732,28 +1735,28 @@ ADLBP_Enumerate(adlb_datum_id container_id,
   opts.offset = offset;
   opts.decr = decr;
 
-  struct packed_enumerate_result res;
-  IRECV(&res, sizeof(res), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+  struct packed_enumerate_result result;
+  IRECV(&result, sizeof(result), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&opts, sizeof(struct packed_enumerate), MPI_BYTE,
        to_server_rank, ADLB_TAG_ENUMERATE);
   WAIT(&request,&status);
 
-  if (res.dc == ADLB_DATA_SUCCESS)
+  if (result.dc == ADLB_DATA_SUCCESS)
   {
-    *records = res.records;
-    *length = res.length;
+    *records = result.records;
+    *length = result.length;
     if (include_keys || include_vals)
     {
-      *data = malloc(res.length);
+      *data = malloc(result.length);
       ADLB_CHECK_MALLOC(*data);
 
-      adlb_code ac = mpi_recv_big(*data, res.length,
+      adlb_code ac = mpi_recv_big(*data, result.length,
                                   to_server_rank, ADLB_TAG_RESPONSE);
       ADLB_CHECK(ac);
     }
     kv_type->valid = true;
-    kv_type->CONTAINER.key_type = res.key_type;
-    kv_type->CONTAINER.val_type = res.val_type;
+    kv_type->CONTAINER.key_type = result.key_type;
+    kv_type->CONTAINER.val_type = result.val_type;
     return ADLB_SUCCESS;
   }
   else

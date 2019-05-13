@@ -718,6 +718,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
 static inline adlb_code
 mpi_send_big(const void* data, size_t length, int target, int tag)
 {
+  TRACE("length=%zi target=%i", length, target);
   size_t chunk     = 100*1024*1024;
   int    chunk_int = (int) chunk;
   size_t chunks_full = length / chunk;
@@ -734,8 +735,9 @@ mpi_send_big(const void* data, size_t length, int target, int tag)
 }
 
 static inline adlb_code
-mpi_recv_big(void* xfer, size_t length, int caller, int tag)
+mpi_recv_big(void* xfer, size_t length, int sender, int tag)
 {
+  TRACE("length=%zi sender=%i", length, sender);
   size_t chunk     = 100*1024*1024;
   int    chunk_int = (int) chunk;
   size_t chunks_full = length / chunk;
@@ -745,10 +747,10 @@ mpi_recv_big(void* xfer, size_t length, int caller, int tag)
   MPI_Status status;
   for (int i = 0; i < chunks_full; i++)
   {
-    RECV(p, chunk_int, MPI_BYTE, caller, tag);
+    RECV(p, chunk_int, MPI_BYTE, sender, tag);
     p += chunk;
   }
-  RECV(p, remainder_int, MPI_BYTE, caller, tag);
+  RECV(p, remainder_int, MPI_BYTE, sender, tag);
   return ADLB_SUCCESS;
 }
 
