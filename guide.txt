@@ -3020,10 +3020,14 @@ almost always adequate.
 Enable reporting of any unfreed data in ADLB data store at end of
 execution.
 
-+ADLB_TRACE=true+::
-+ADLB_DEBUG=true+::
-To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
-with it enabled)
++ADLB_DEBUG=0+::
++ADLB_TRACE=0+::
+If ADLB was configured with log debugging or tracing enabled,
+debugging and trace message will be output by default unless these are
+set to 0.  Simply set them to 1 or unset them to restore the
+configure-time behavior.  This output is best combined with the use of
++TURBINE_STDOUT+ or +TURBINE_LOG_RANKS+ to separate the output from
+each rank.
 
 ++++
 <a name="turbine_launch_options"></a>
