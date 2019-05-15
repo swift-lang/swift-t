@@ -435,8 +435,7 @@ public class TurbineGenerator implements CompilerBackend {
   /**
    * Check that we finished code generation in a valid state
    */
-  @Override
-  public void finalize() {
+  public void finish() {
     pointPop();
     assert(pointStack.isEmpty());
 
@@ -445,7 +444,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   /**
-     Generate and output Tcl from  our internal TclTree
+     Generate and output Tcl from our internal TclTree
    * @throws IOException
    */
   @Override

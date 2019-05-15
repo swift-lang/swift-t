@@ -10,6 +10,7 @@ ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
+source ${THIS}/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
