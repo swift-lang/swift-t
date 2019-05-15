@@ -25,3 +25,13 @@ then
   # Runs all key build steps under nice
   NICE_CMD="nice -n ${NICE}"
 fi
+
+if (( SWIFT_T_TRACE_BUILD ))
+then
+  if (( ! SWIFT_T_DEBUG_BUILD ))
+  then
+    echo "setup.sh: enabling SWIFT_T_DEBUG_BUILD " \
+         "because SWIFT_T_TRACE_BUILD=1"
+    SWIFT_T_DEBUG_BUILD=1
+  fi
+fi
