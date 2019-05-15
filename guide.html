@@ -5140,15 +5140,19 @@ execution.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>ADLB_TRACE=true</code>
+<code>ADLB_DEBUG=0</code>
 </dt>
 <dt class="hdlist1">
-<code>ADLB_DEBUG=true</code>
+<code>ADLB_TRACE=0</code>
 </dt>
 <dd>
 <p>
-To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
-with it enabled)
+If ADLB was configured with log debugging or tracing enabled,
+debugging and trace message will be output by default unless these are
+set to 0.  Simply set them to 1 or unset them to restore the
+configure-time behavior.  This output is best combined with the use of
+<code>TURBINE_STDOUT</code> or <code>TURBINE_LOG_RANKS</code> to separate the output from
+each rank.
 </p>
 </dd>
 </dl></div>
@@ -6340,7 +6344,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-04-29 11:15:04 CDT
+ 2019-05-15 10:32:05 CDT
 </div>
 </div>
 
