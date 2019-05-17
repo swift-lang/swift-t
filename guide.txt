@@ -2093,6 +2093,9 @@ foreach time in [1:5] {
 }
 ----
 
+As shown, +void+ variables may be added to the output list of any
++app+ function.  They are set automatically when the +app+ completes.
+
 ==== App retry
 
 ===== Retry local
