@@ -483,8 +483,6 @@ table_lp_remove(table_lp* table, int64_t key, void **value)
     return true;
   }
   return false;
-
-  return false;
 }
 
 /**
