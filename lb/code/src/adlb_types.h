@@ -29,6 +29,7 @@
 
 #include "adlb-defs.h"
 #include "table_bp.h"
+#include "checks.h"
 #include "debug.h"
 
 #include <assert.h>
@@ -469,8 +470,11 @@ static inline adlb_data_code
 ADLB_Unpack_string(adlb_string_t *s, void *data, size_t length, bool copy)
 {
   // Must be null-terminated
-  if (length < 1 || ((char*)data)[length-1] != '\0')
-    return ADLB_DATA_ERROR_INVALID;
+  ADLB_CHECK_MSG_CODE(length > 0, ADLB_DATA_ERROR_INVALID,
+                      "length=%zi", length);
+  ADLB_CHECK_MSG_CODE(((char*)data)[length-1] != '\0',
+                      ADLB_DATA_ERROR_INVALID,
+                      "string not null-terminated");
 
   if (copy)
   {
@@ -730,5 +734,3 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
   }
   return ADLB_DATA_SUCCESS;
 }
-
-#endif // __ADLB_TYPES_H
