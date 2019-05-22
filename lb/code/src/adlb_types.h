@@ -472,7 +472,7 @@ ADLB_Unpack_string(adlb_string_t *s, void *data, size_t length, bool copy)
   // Must be null-terminated
   ADLB_CHECK_MSG_CODE(length > 0, ADLB_DATA_ERROR_INVALID,
                       "length=%zi", length);
-  ADLB_CHECK_MSG_CODE(((char*)data)[length-1] != '\0',
+  ADLB_CHECK_MSG_CODE(((char*)data)[length-1] == '\0',
                       ADLB_DATA_ERROR_INVALID,
                       "string not null-terminated");
 
