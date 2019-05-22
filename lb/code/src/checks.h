@@ -31,8 +31,7 @@
  *  thus, they may be disabled by NDEBUG for performance.
  * */
 
-#ifndef CHECKS_H
-#define CHECKS_H
+#pragma once
 
 #include <stdio.h>
 
@@ -161,6 +160,4 @@
 #define MPI_ASSERT(rc)          { (void) (rc); }
 #define ADLB_ASSERT(rc)         { (void) (rc); }
 #define ADLB_DATA_ASSERT(rc)    { (void) (rc); }
-#endif
-
 #endif

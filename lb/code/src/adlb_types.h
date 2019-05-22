@@ -24,8 +24,8 @@
     by returning internal pointers to data structures and
     by using caller-provided fixed buffers.
  */
-#ifndef __ADLB_TYPES_H
-#define __ADLB_TYPES_H
+
+#pragma once
 
 #include "adlb-defs.h"
 #include "table_bp.h"
