@@ -386,7 +386,8 @@ handle_dput(int caller)
   xlb_engine_code tc = xlb_engine_put(name, name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
-  ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding data-dependent work");
+  ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS,
+                 "Error adding data-dependent work! code=%i", tc);
 
   if (ready)
   {
@@ -1447,7 +1448,7 @@ handle_refcount_incr(int caller)
   struct packed_incr msg;
   RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_REFCOUNT_INCR);
 
-  DEBUG("Refcount_incr: "ADLB_PRID" READ %i WRITE %i",
+  DEBUG("handle_refcount_incr(): "ADLB_PRID" READ %i WRITE %i",
         ADLB_PRID_ARGS(msg.id, ADLB_DSYM_NULL),
         msg.change.read_refcount, msg.change.write_refcount);
 
@@ -1455,7 +1456,7 @@ handle_refcount_incr(int caller)
   adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change,
                                     XLB_NO_ACQUIRE, NULL, &notifs);
 
-  DEBUG("data_reference_count => %i", dc);
+  TRACE("xlb_data_reference_count(): code=%i", dc);
 
   struct packed_incr_resp resp = {
       .success = (dc == ADLB_DATA_SUCCESS)};
