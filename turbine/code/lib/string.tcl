@@ -99,7 +99,6 @@ namespace eval turbine {
     }
 
     # This accepts an optional delimiter
-    # (STC does not yet support optional arguments)
     proc split { result inputs } {
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
@@ -121,6 +120,7 @@ namespace eval turbine {
     # Tcl split should handle spaces correctly:
     # http://tmml.sourceforge.net/doc/tcl/split.html
     proc split_body { result s delimiter } {
+        log "split_body: <$s>"
         set s_value [ retrieve_decr_string $s ]
         if { $delimiter == 0 } {
             set d_value " "
@@ -130,16 +130,19 @@ namespace eval turbine {
         #debug "split: $s_value on: $d_value tokens: $n"
 
         set r_val [ split_impl $s_value $d_value ]
+
         array_kv_build $result $r_val 1 integer string
     }
 
     proc split_impl { s delimiter } {
+        log "split_impl ..."
         set result_dict [ list ]
         set i 0
-        foreach tok [ ::split $s $delimiter ] {
-          dict append result_dict $i $tok
+        foreach token [ ::split $s $delimiter ] {
+          dict append result_dict $i $token
           incr i
         }
+        log "split_impl: <$s> -> $i tokens"
         return $result_dict
     }
 

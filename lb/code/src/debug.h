@@ -37,7 +37,7 @@
 #include <tools.h>
 
 #include "config.h"
-#include "common.h"
+#include "xlb_time.h"
 
 /** Is ADLB_DEBUG enabled? */
 extern bool xlb_debug_enabled;
@@ -118,9 +118,9 @@ adlb_code xlb_debug_check_environment(void);
 #endif
 
 /** Print that we are entering a function */
-#define TRACE_START TRACE("%s()...",    __func__)
+#define TRACE_START TRACE("...")
 /** Print that we are exiting a function */
-#define TRACE_END   TRACE("%s() done.", __func__)
+#define TRACE_END   TRACE("done.")
 
 #define PRINT_COUNTER(format, args...)                    \
   { if (xlb_s.perfc_enabled) {                      \

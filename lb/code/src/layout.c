@@ -21,6 +21,7 @@
 #include "checks.h"
 #include "debug.h"
 #include "location.h"
+#include "dyn_array_i.h"
 
 static int
 my_workers_count(const xlb_layout* layout);

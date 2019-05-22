@@ -597,8 +597,8 @@ workers_idle(void)
   double busy = (double) (w - blocked - shutdown);
   double load = busy/w;
 
-  TRACE("workers_idle(): workers blocked: %i shutdown: %i load %0.2f\n",
-         blocked, shutdown, load);
+  // TRACE("workers_idle(): workers blocked: %i shutdown: %i load %0.2f\n",
+  //       blocked, shutdown, load);
 
   if (load == 0)
     return true;
@@ -668,7 +668,7 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
 
   if (! workers_idle())
   {
-    TRACE("Idle check: a worker is not idle");
+    // TRACE("Idle check: a worker is not idle");
     // A worker is busy...
     return false;
   }

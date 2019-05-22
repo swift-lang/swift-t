@@ -988,7 +988,7 @@ send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
   assert(!xlb_server_shutting_down); // Shouldn't shutdown if have work
 
   DEBUG("send_work() to: %i wuid: %"PRId64"...", worker, wuid);
-  TRACE("work_unit: %s\n", (char*) payload);
+  TRACE("work_unit: %s", (char*) payload);
   struct packed_get_response g;
   g.answer_rank = answer;
   g.code = ADLB_SUCCESS;
@@ -1234,12 +1234,14 @@ handle_retrieve(int caller)
   adlb_refc decr_self = hdr->refcounts.decr_self;
   adlb_refc incr_referand = hdr->refcounts.incr_referand;
 
-  TRACE("Retrieve: "ADLB_PRIDSUB" decr_self r:%i w:%i "
-        "incr_referand r:%i w:%i",
-          ADLB_PRIDSUB_ARGS(hdr->id, ADLB_DSYM_NULL, subscript),
-          decr_self.read_refcount, decr_self.write_refcount,
-          incr_referand.read_refcount, incr_referand.write_refcount);
-
+  TRACE("Retrieve: caller=%i "
+        ADLB_PRIDSUB
+        " decr_self r:%i w:%i"
+        " incr_referand r:%i w:%i",
+        caller,
+        ADLB_PRIDSUB_ARGS(hdr->id, ADLB_DSYM_NULL, subscript),
+        decr_self.read_refcount, decr_self.write_refcount,
+        incr_referand.read_refcount, incr_referand.write_refcount);
 
   adlb_data_code dc;
   adlb_data_type type;

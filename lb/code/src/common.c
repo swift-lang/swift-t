@@ -48,12 +48,6 @@ xlb_random_server()
   return result;
 }
 
-double
-xlb_wtime(void)
-{
-  return MPI_Wtime() - xlb_s.start_time;
-}
-
 adlb_code xlb_env_long(const char *env_var, long *val)
 {
   char *s = getenv(env_var);

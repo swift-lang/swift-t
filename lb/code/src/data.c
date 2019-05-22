@@ -906,7 +906,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
   {
     char *val_s = ADLB_Data_repr(&d->data, d->type);
-    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i\n",
+    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i",
           ADLB_PRID_ARGS(id, d->symbol), val_s,
           store_refcounts.read_refcount, store_refcounts.write_refcount);
     free(val_s);
@@ -1196,7 +1196,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
                  adlb_binary_data *result, adlb_notif_t *notifs)
 {
   // TODO: How to get subscript key as string safely?
-  TRACE("data_retrieve(%"PRId64")", id); // subscript.key
+  TRACE("<%"PRId64">", id); // subscript.key
 
   adlb_data_code dc;
 
@@ -1556,7 +1556,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type)
 {
-  TRACE("id=%"PRId64" keys=%i vals=%i offset=%i",
+  TRACE("<%"PRId64"> keys=%i vals=%i offset=%i",
 	id, include_keys, include_vals, offset);
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);

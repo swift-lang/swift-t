@@ -575,10 +575,10 @@ ADLBP_Get(int type_requested, void** payload,
     *payload = buffer;
   }
 
-  TRACE("ADLB_Get(): payload source: %i", g.payload_source);
+  TRACE("payload source: %i", g.payload_source);
   RECV(buffer, g.length, MPI_BYTE, g.payload_source, ADLB_TAG_WORK);
   xlb_mpi_recv_sanity(&status, MPI_BYTE, g.length);
-  DEBUG("ADLB_Get(): got: %s", (char*) buffer);
+  DEBUG("got: %s", (char*) buffer);
 
   if (g.parallelism > 1)
   {
@@ -1653,6 +1653,8 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                adlb_retrieve_refc refcounts, adlb_data_type* type,
                void* data, size_t* length)
 {
+  TRACE("...");
+
   MPI_Status status;
   MPI_Request request;
 
@@ -1702,7 +1704,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
                                               to_server_rank);
   ADLB_CHECK(ac);
-
+  TRACE("done.");
   return ADLB_SUCCESS;
 }
 

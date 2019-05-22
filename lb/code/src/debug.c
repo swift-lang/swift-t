@@ -20,7 +20,9 @@
 
 #include <tools.h>
 
+#include "adlb-defs.h"
 #include "checks.h"
+#include "common.h"
 #include "debug.h"
 
 // NOTE: DEBUG and TRACE are disabled by default by macros:

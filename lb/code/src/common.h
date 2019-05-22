@@ -22,8 +22,7 @@
  *      Author: wozniak
  */
 
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
 #include <mpi.h>
 
@@ -102,11 +101,6 @@ static const adlb_buffer xlb_xfer_buf =
             { .data = xlb_xfer, .length = ADLB_XFER_SIZE };
 
 int xlb_random_server(void);
-/**
-   Time since XLB was initialized
-   Note: this is used by debugging output
- */
-double xlb_wtime(void);
 
 /**
     Get long int from env var.  If not present, val is unmodified
@@ -117,4 +111,3 @@ adlb_code xlb_env_long(const char *env_var, long *val);
     Get placement policy setting from environment.
  */
 adlb_code xlb_env_placement(adlb_placement *placement);
-#endif

@@ -2835,7 +2835,7 @@ adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
       // Don't allocate new memory
       // Ok to cast away const since Tcl will copy string anyway
       // Length is limited by Tcl to INT_MAX
-      dc = ADLB_Unpack_string(&tmp.STRING, (void*)data,
+      dc = ADLB_Unpack_string(&tmp.STRING, (void*) data,
                               length, false);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
 		    "Retrieve failed due to error unpacking string data "

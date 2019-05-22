@@ -29,6 +29,7 @@
 
 #include "adlb-defs.h"
 #include "table_bp.h"
+#include "debug.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -36,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 // Declarations of individual data types
 typedef int64_t adlb_int_t;
@@ -441,8 +443,9 @@ ADLB_Unpack_float(adlb_float_t *d, const void *data, size_t length)
 }
 
 static inline adlb_data_code
-ADLB_Pack_string(const adlb_string_t *s, adlb_binary_data *result)
+ADLB_Pack_string(const adlb_string_t* s, adlb_binary_data* result)
 {
+  TRACE("string length=%zi", s->length);
   // Check for malformed string
   assert(s->length >= 1);
   assert(s->value != NULL);
@@ -451,6 +454,8 @@ ADLB_Pack_string(const adlb_string_t *s, adlb_binary_data *result)
   result->caller_data = NULL;
   result->data = s->value;
   result->length = s->length;
+
+  TRACE("result length=%zi", result->length);
 
   return ADLB_DATA_SUCCESS;
 }

@@ -15,9 +15,7 @@
 #include "data_cleanup.h"
 #include "data_internal.h"
 #include "data_structs.h"
-#include "debug.h"
 #include "multiset.h"
-
 
 #define TYPE_NAME_INTEGER "integer"
 #define TYPE_NAME_FLOAT "float"
@@ -239,6 +237,7 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result)
 {
+  TRACE_START;
   adlb_data_code dc;
   switch (type)
   {

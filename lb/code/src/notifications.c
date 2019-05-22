@@ -1058,6 +1058,8 @@ adlb_code
 xlb_recv_notif_work(const struct packed_notif_counts *counts,
     int to_server_rank, adlb_notif_t *notifs)
 {
+  TRACE_START;
+
   adlb_code ac;
   adlb_data_code dc;
   MPI_Status status;
@@ -1067,6 +1069,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
   int extra_data_count = 0;
   if (counts->extra_data_bytes > 0)
   {
+    TRACE("receiving extra data bytes...");
     size_t bytes = counts->extra_data_bytes;
     extra_data_count = counts->extra_data_count;
     assert(extra_data_count >= 0);
@@ -1096,6 +1099,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       ADLB_DATA_CHECK(dc);
     }
     assert(pos == bytes); // Should consume all of buffer
+    TRACE("received %zi extra data bytes.", bytes);
   }
 
   if (counts->notify_count > 0)
@@ -1231,6 +1235,6 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     notifs->refcs.count += refc_count;
   }
   
-  TRACE("Done receiving notifs");
+  TRACE_END;
   return ADLB_SUCCESS;
 }
