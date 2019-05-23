@@ -32,7 +32,7 @@ then
                 --prefix=${C_UTILS_INSTALL} \
                 --enable-shared \
                 ${EXTRA_ARGS} \
-                ${CUSTOM_CFG_ARGS_C_UTILS}
+                ${CUSTOM_CFG_ARGS_C_UTILS:-}
   )
 fi
 

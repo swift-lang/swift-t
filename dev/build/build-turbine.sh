@@ -166,7 +166,7 @@ then
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
                 ${EXTRA_ARGS} \
-                ${CUSTOM_CFG_ARGS_TURBINE}
+                ${CUSTOM_CFG_ARGS_TURBINE:-}
     )
   assert ${?} "Configure failed!"
 fi
