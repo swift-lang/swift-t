@@ -145,6 +145,16 @@ STC_ANT_ARGS=""
 # Make build parallelism: increase to speed up builds
 MAKE_PARALLELISM=1
 
+#+================================+
+#| Configure-time customizations  |
+#+================================+
+
+# These are additional arguments passed directly to the configure
+# scripts for each C module for any settings not captured above:
+CUSTOM_CFG_ARGS_C_UTILS=""
+CUSTOM_CFG_ARGS_LB=""
+CUSTOM_CFG_ARGS_TURBINE=""
+
 #+=====================================+
 #|| Optional directory layout control ||
 #+=====================================+
