@@ -19,10 +19,9 @@
 #include "adlb-defs.h"
 #include "adlb.h"
 
-#include "checks.h"
-#include "debug.h"
-
 #include <table_lp.h>
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
 static const adlb_dsym_data NULL_DATA = { .name = NULL,
                                                   .context = NULL };

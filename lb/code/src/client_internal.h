@@ -23,7 +23,7 @@
 #define __XLB_CLIENT_INTERNAL_H
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 #include "notifications.h"
 
 adlb_code

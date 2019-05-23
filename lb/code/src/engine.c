@@ -46,9 +46,9 @@
 #include <table_bp.h>
 #include <table_lp.h>
 #include <tools.h>
+#include "adlb-debug.h"
 
 #include "data_internal.h"
-#include "debug.h"
 #include "sync.h"
 
 /*

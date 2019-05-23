@@ -29,7 +29,7 @@
 #include <adlb.h>
 
 #include <tools.h>
-#include "src/debug.h"
+#include "../src/adlb-debug.h"
 
 int rank_world;
 

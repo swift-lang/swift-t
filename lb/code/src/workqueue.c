@@ -35,11 +35,11 @@
 
 #include "adlb-defs.h"
 #include "common.h"
-#include "debug.h"
 #include "layout.h"
 #include "messaging.h"
 #include "requestqueue.h"
 #include "workqueue.h"
+#include "adlb-debug.h"
 
 // minimum percentage imbalance to trigger steal if stealers queue not empty
 #define XLB_STEAL_IMBALANCE 0.1

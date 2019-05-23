@@ -27,9 +27,9 @@
 
 #include <stdbool.h>
 
+#include "adlb-debug.h"
 #include "adlb-defs.h"
 #include "common.h"
-#include "debug.h"
 
 typedef int64_t xlb_work_unit_id;
 

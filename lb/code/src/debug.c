@@ -21,9 +21,9 @@
 #include <tools.h>
 
 #include "adlb-defs.h"
-#include "checks.h"
 #include "common.h"
-#include "debug.h"
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
 // NOTE: DEBUG and TRACE are disabled by default by macros:
 //       Cf. debug.h

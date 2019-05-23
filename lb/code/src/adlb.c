@@ -32,15 +32,15 @@
 #include <tools.h>
 
 #include "adlb.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 #include "adlb-version.h"
 #include "adlb-xpt.h"
-#include "checks.h"
+#include "adlb-checks.h"
 #include "config.h"
 #include "client_internal.h"
 #include "common.h"
 #include "data.h"
-#include "debug.h"
+#include "adlb-debug.h"
 #include "debug_symbols.h"
 #include "location.h"
 #include "mpe-tools.h"

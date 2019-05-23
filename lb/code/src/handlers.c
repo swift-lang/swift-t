@@ -37,10 +37,10 @@
 #include <mpi.h>
 
 #include "adlb-defs.h"
-#include "checks.h"
+#include "adlb-checks.h"
 #include "common.h"
 #include "data.h"
-#include "debug.h"
+#include "adlb-debug.h"
 #include "handlers.h"
 #include "messaging.h"
 #include "mpe-tools.h"

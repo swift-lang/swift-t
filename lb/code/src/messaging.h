@@ -30,8 +30,8 @@
 #include <limits.h>
 
 #include "adlb.h"
-#include "checks.h"
-#include "debug.h"
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 #include "workqueue.h"
 
 /*

@@ -29,11 +29,11 @@
 #include <tools.h>
 
 #include "adlb-defs.h"
-#include "checks.h"
 #include "common.h"
-#include "debug.h"
 #include "messaging.h"
 #include "requestqueue.h"
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
 typedef struct
 {

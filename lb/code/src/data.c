@@ -31,12 +31,13 @@
 #include <vint.h>
 
 #include "adlb.h"
-#include "adlb_types.h"
 #include "data.h"
+
+#include "adlb-debug.h"
+#include "adlb-types.h"
 #include "data_cleanup.h"
 #include "data_internal.h"
 #include "data_structs.h"
-#include "debug.h"
 #include "multiset.h"
 #include "notifications.h"
 #include "refcount.h"

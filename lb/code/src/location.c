@@ -17,10 +17,10 @@
 #include <tools.h>
 
 #include "adlb.h"
-#include "checks.h"
 #include "common.h"
-#include "debug.h"
 #include "location.h"
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
 /**
    Maps string hostname to list of int ranks which are running on

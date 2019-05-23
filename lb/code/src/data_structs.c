@@ -10,7 +10,7 @@
 
 #include "adlb-defs.h"
 #include "data.h"
-#include "debug.h"
+#include "adlb-debug.h"
 #include "data_cleanup.h"
 #include "data_internal.h"
 #include "refcount.h"

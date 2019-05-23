@@ -28,7 +28,7 @@
 #include "tools.h"
 
 #include "common.h"
-#include "debug.h"
+#include "adlb-debug.h"
 #include "messaging.h"
 
 /** Tag names: just for debugging */

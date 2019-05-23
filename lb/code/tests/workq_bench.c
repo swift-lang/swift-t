@@ -29,11 +29,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../src/adlb-checks.h"
 #include "common/qtests.h"
 #include "common/timers.h"
 
 #include "common.h"
-#include "checks.h"
 #include "layout.h"
 #include "requestqueue.h"
 #include "workqueue.h"

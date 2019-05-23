@@ -28,13 +28,13 @@
 
 #include "backoffs.h"
 #include "common.h"
-#include "debug.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "refcount.h"
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
+#include "adlb-debug.h"
 
 // Enable debugging of very long syncs
 #ifndef XLB_DEBUG_SYNC_DELAY

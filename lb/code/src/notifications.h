@@ -28,10 +28,10 @@
 #define ADLB_NOTIFICATIONS_H
 
 #include "adlb-defs.h"
-#include "checks.h"
 #include "messaging.h"
 
 #include <table_lp.h>
+#include "adlb-checks.h"
 
 /** If ADLB_CLIENT_NOTIFIES is true, client is responsible for
     notifying others of closing, otherwise the server does it */

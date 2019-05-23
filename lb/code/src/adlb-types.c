@@ -1,7 +1,7 @@
 
 #define _GNU_SOURCE // for asprintf()
 
-#include "adlb_types.h"
+#include "adlb-types.h"
 
 #include <stdint.h>
 #include <inttypes.h>

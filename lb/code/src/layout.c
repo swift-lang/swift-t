@@ -17,9 +17,9 @@
 #include "layout.h"
 
 #include <table.h>
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
-#include "checks.h"
-#include "debug.h"
 #include "location.h"
 #include "dyn_array_i.h"
 

@@ -29,15 +29,14 @@
 
 #include "adlb-defs.h"
 #include "table_bp.h"
-#include "checks.h"
-#include "debug.h"
-
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 
 
 // Declarations of individual data types

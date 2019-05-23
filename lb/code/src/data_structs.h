@@ -6,7 +6,7 @@
 #define __XLB_DATA_STRUCTS_H
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 #include "data.h"
 #include "notifications.h"
 

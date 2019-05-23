@@ -22,10 +22,10 @@
 #define __XLB_DATA_INTERNAL_H
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
 #include "checks.h"
 #include "data.h"
 #include <rbtree_bp.h>
+#include "adlb-types.h"
 
 /**
  * Set initial capacity to be fairly small since in practice most

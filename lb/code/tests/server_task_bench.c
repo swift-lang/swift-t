@@ -29,12 +29,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../src/adlb-checks.h"
 #include "common/qtests.h"
 #include "common/timers.h"
 
 #include "adlb.h"
 #include "common.h"
-#include "checks.h"
 
 /** Random seed to use for each experiment */
 // TODO: make configurable

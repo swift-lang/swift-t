@@ -29,7 +29,7 @@
 #include <dyn_array_i.h>
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 #include "layout.h"
 
 /**

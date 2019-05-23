@@ -1,7 +1,6 @@
 #include "data_cleanup.h"
 
 #include "data_structs.h"
-#include "debug.h"
 #include "multiset.h"
 #include "refcount.h"
 #include "table_bp.h"
@@ -9,6 +8,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include "adlb-debug.h"
 
 adlb_data_code
 xlb_datum_cleanup(adlb_datum_storage *d,

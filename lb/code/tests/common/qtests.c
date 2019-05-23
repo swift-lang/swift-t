@@ -27,8 +27,8 @@
 
 #include <stdlib.h>
 
+#include "../../src/adlb-checks.h"
 #include "adlb.h"
-#include "checks.h"
 #include "layout.h"
 #include "requestqueue.h"
 #include "workqueue.h"

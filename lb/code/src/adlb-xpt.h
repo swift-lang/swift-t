@@ -22,7 +22,7 @@
 #define __ADLB_XPT_H
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 
 /*
   Flush policy to use for checkpointing

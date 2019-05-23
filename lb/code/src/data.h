@@ -25,7 +25,7 @@
 #define DATA_H
 
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 #include "notifications.h"
 
 adlb_data_code xlb_data_init(int s, int r);

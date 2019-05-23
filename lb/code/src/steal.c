@@ -29,7 +29,6 @@
 
 #include "backoffs.h"
 #include "common.h"
-#include "debug.h"
 #include "handlers.h"
 #include "messaging.h"
 #include "mpe-tools.h"
@@ -37,6 +36,7 @@
 #include "server.h"
 #include "sync.h"
 #include "steal.h"
+#include "adlb-debug.h"
 
 double xlb_steal_last = 0.0;
 int xlb_failed_steals_since_backoff = 0;

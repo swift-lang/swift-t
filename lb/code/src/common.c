@@ -34,7 +34,7 @@
 #include "common.h"
 
 #include "adlb.h"
-#include "checks.h"
+#include "adlb-checks.h"
 
 char xlb_xfer[ADLB_XFER_SIZE];
 
