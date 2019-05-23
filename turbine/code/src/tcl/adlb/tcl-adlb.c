@@ -56,7 +56,7 @@
 #include <mpi.h>
 #include <adlb.h>
 #include <adlb-defs.h>
-#include <adlb_types.h>
+#include <adlb-types.h>
 #ifdef ENABLE_XPT
 #include <adlb-xpt.h>
 #endif

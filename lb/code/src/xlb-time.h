@@ -1,3 +1,4 @@
+
 /*
  * xlb_time.h
  *
@@ -6,6 +7,8 @@
  */
 
 #pragma once
+
+extern double xlb_time_start;
 
 /**
    Time since XLB was initialized

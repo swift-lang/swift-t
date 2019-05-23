@@ -23,11 +23,10 @@
  * numbers, etc.  They must be kept in sync
  * */
 
-#include <adlb-defs.h>
-#include <adlb_types.h>
+#pragma once
 
-#ifndef TURBINE_DEFS_H
-#define TURBINE_DEFS_H
+#include <adlb-defs.h>
+#include <adlb-types.h>
 
 typedef adlb_datum_id turbine_datum_id;
 
@@ -111,5 +110,3 @@ typedef enum
 #define TURBINE_ACTION_MAX 1024
 
 #define turbine_string_totype adlb_data_string_totype
-
-#endif

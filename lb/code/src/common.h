@@ -47,12 +47,6 @@ struct xlb_state {
   char* my_name;
 
   /**
-     Start time from MPI_Wtime()
-     Note: this is used by debugging output
-   */
-  double start_time;
-
-  /**
     General layout info
    */
   xlb_layout layout;

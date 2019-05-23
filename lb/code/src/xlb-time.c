@@ -5,11 +5,15 @@
  *      Author: wozniak
  */
 
-#include "common.h"
+#include "mpi.h"
+
+#include "xlb-time.h"
+
+double xlb_time_start = 0;
 
 double
 xlb_wtime(void)
 {
-  return MPI_Wtime() - xlb_s.start_time;
+  return MPI_Wtime() - xlb_time_start;
 }
 

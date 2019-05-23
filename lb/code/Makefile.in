@@ -232,7 +232,7 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) | lib
 ### INSTALL
 
 INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb-types.h \
-                    src/adlb-checks.h src/adlb-debug.h
+                    src/adlb-checks.h src/adlb-debug.h src/xlb-time.h
 
 ifeq ($(ENABLE_XPT),yes)
         INSTALLED_HEADERS += src/adlb-xpt.h

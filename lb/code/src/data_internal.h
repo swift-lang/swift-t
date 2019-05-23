@@ -22,7 +22,7 @@
 #define __XLB_DATA_INTERNAL_H
 
 #include "adlb-defs.h"
-#include "checks.h"
+#include "adlb-checks.h"
 #include "data.h"
 #include <rbtree_bp.h>
 #include "adlb-types.h"

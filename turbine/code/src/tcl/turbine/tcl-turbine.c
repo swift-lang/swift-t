@@ -46,7 +46,7 @@
 
 #include <adlb.h>
 #include <adlb-defs.h>
-#include <adlb_types.h>
+#include <adlb-types.h>
 
 #include <log.h>
 #include <tools.h>

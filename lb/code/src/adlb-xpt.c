@@ -18,8 +18,8 @@
 
 #include <table.h>
 
-#include "checks.h"
-#include "debug.h"
+#include "adlb-checks.h"
+#include "adlb-debug.h"
 #include "xpt_file.h"
 #include "xpt_index.h"
 

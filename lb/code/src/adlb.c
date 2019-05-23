@@ -147,7 +147,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   ADLB_CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
   xlb_s.status = ADLB_STATUS_RUNNING;
-  xlb_s.start_time = MPI_Wtime();
+  xlb_time_start = MPI_Wtime();
 
   code = xlb_setup_layout(comm, nservers);
   ADLB_CHECK(code);

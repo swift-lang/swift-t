@@ -21,8 +21,10 @@
 #ifndef __XLB_XPT_INDEX_H
 #define __XLB_XPT_INDEX_H
 
+#warning XPT
+
 #include "adlb-defs.h"
-#include "adlb_types.h"
+#include "adlb-types.h"
 
 typedef struct
 {

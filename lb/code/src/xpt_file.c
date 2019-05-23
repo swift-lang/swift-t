@@ -32,9 +32,9 @@
 
 #include <zlib.h>
 
-#include "checks.h"
+#include "adlb-checks.h"
 #include "common.h"
-#include "debug.h"
+#include "adlb-debug.h"
 #include <vint.h>
 
 // Magic number to put at start of blocks;

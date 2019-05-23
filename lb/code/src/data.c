@@ -30,11 +30,12 @@
 #include <table_lp.h>
 #include <vint.h>
 
+
+#include "adlb-defs.h"
+#include "adlb-debug.h"
+#include "common.h"
 #include "adlb.h"
 #include "data.h"
-
-#include "adlb-debug.h"
-#include "adlb-types.h"
 #include "data_cleanup.h"
 #include "data_internal.h"
 #include "data_structs.h"

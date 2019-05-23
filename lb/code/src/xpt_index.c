@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #include "adlb.h"
-#include "checks.h"
+#include "adlb-checks.h"
 #include "common.h"
 #include "data.h"
 #include "jenkins-hash.h"

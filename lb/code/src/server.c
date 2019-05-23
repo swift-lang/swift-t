@@ -890,7 +890,7 @@ static inline void print_final_stats()
   if (print_time)
   {
     double xlb_end_time = MPI_Wtime();
-    double xlb_elapsed_time = xlb_end_time - xlb_s.start_time;
+    double xlb_elapsed_time = xlb_end_time - xlb_time_start;
     printf("ADLB Total Elapsed Time: %.3lf\n", xlb_elapsed_time);
   }
 

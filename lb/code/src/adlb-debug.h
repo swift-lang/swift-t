@@ -27,8 +27,7 @@
  *  or at run time by setting environment variable XLB_DEBUG=0
  */
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#pragma once
 
 #include <stdbool.h>
 #define _GNU_SOURCE
@@ -37,7 +36,8 @@
 #include <tools.h>
 
 #include "config.h"
-#include "xlb_time.h"
+#include "xlb-time.h"
+#include "adlb-defs.h"
 
 /** Is ADLB_DEBUG enabled? */
 extern bool xlb_debug_enabled;
@@ -127,5 +127,3 @@ adlb_code xlb_debug_check_environment(void);
       printf("[%d] COUNTER: " format "\n", xlb_s.layout.rank, \
             ## args);                                     \
   } }
-
-#endif

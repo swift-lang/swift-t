@@ -11,7 +11,7 @@
 #include <vint.h>
 
 #include "adlb.h"
-#include "checks.h"
+#include "adlb-checks.h"
 #include "data_cleanup.h"
 #include "data_internal.h"
 #include "data_structs.h"

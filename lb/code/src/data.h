@@ -21,8 +21,7 @@
  * All functions return ADLB_DATA_SUCCESS or ADLB_DATA_ERROR_*
  * */
 
-#ifndef DATA_H
-#define DATA_H
+#pragma once
 
 #include "adlb-defs.h"
 #include "adlb-types.h"
@@ -188,5 +187,3 @@ xlb_data_system_reserve(int count, adlb_datum_id *start);
 adlb_dsym xlb_get_dsym(adlb_datum_id id);
 
 adlb_data_code xlb_data_finalize(void);
-
-#endif
