@@ -66,7 +66,7 @@ then
                 --prefix=${LB_INSTALL} \
                 CC=${CC} \
                 ${EXTRA_ARGS} \
-                ${CUSTOM_CFG_ARGS_LB}
+                ${CUSTOM_CFG_ARGS_LB:-}
   )
   if (( $? ))
   then
