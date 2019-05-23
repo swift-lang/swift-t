@@ -6010,7 +6010,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("get",       ADLB_Get_Cmd);
   COMMAND("iget",      ADLB_Iget_Cmd);
   COMMAND("create",    ADLB_Create_Cmd);
-  COMMAND("multicreate",ADLB_Multicreate_Cmd);
+  COMMAND("multicreate", ADLB_Multicreate_Cmd);
   COMMAND("create_globals",ADLB_Create_Globals_Cmd);
   COMMAND("locate",    ADLB_Locate_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
