@@ -850,34 +850,6 @@ A public Tcl is in: +&#126;wozniak/Public/sfw/tcl-8.6.4+
 
 A public Python is in: +&#126;wozniak/Public/sfw/Python-2.7.8+
 
-=== Fusion
-
-http://www.lcrc.anl.gov/about/fusion[Fusion] is a 320-node x86
-cluster at ANL.  It uses PBS.
-
-==== Public installation
-
-* STC: +~wozniak/Public/compute/stc/bin/stc+
-
-To run:
-----
-export QUEUE=batch
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
-$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
-----
-
-See the <<variables,Turbine scheduler variables>> and
-<<options,Turbine run script options>> for additional settings.
-
-==== Build procedure
-
-Use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
-----
-$ which gcc
-/software/gcc-4.7.2/bin/gcc
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
-----
-
 === JLSE KNL
 
 These are the Knights Landing nodes at ANL/JLSE.
@@ -2216,6 +2188,35 @@ turbine-cobalt-run.zsh -n 3 program.tic
 * Configure c-utils with +gcc+
 * Configure ADLB with +CC=mpicc --enable-mpi-2+
 * Configure Turbine with +--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bin/mpiexec+
+
+=== Fusion
+
+http://www.lcrc.anl.gov/about/fusion[Fusion] was a 320-node x86
+cluster at ANL.  It used PBS.
+
+==== Public installation
+
+* STC: +~wozniak/Public/compute/stc/bin/stc+
+
+To run:
+----
+export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
+$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic
+----
+
+See the <<variables,Turbine scheduler variables>> and
+<<options,Turbine run script options>> for additional settings.
+
+==== Build procedure
+
+Use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
+----
+$ which gcc
+/software/gcc-4.7.2/bin/gcc
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+----
+
 
 ////
 Local Variables:
