@@ -242,11 +242,6 @@ then
   which ${TURBINE_LAUNCHER}
 fi
 
-if (( ${#TURBINE_USE_PYTHON} ))
-then
-  export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
-fi
-
 check_machine()
 # Confirm that we have a script for this machine type
 {
@@ -272,7 +267,11 @@ then
   (( EXEC_SCRIPT )) && MACHINE_ARGS+=( -x )
   # Construct the scheduler script name
   RUN_SCRIPT_NAME=${MACHINE_MODE}/turbine-${MACHINE_MODE}-run.zsh
-  RUN_SCRIPT=${TURBINE_HOME}/scripts/submit/${RUN_SCRIPT_NAME}
+  # Set up PYTHONPATH for turbine_helpers
+  if (( ${#TURBINE_USE_PYTHON} ))
+  then
+      export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+  fi
   # Call the scheduler script:
   ${RUN_SCRIPT} ${MACHINE_ARGS} ${SCHED_OPTS} ${PROGRAM} ${ARGS}
   exit ${?}
@@ -290,6 +289,12 @@ for KV in ${ENV_VARS}
 do
   export ${KV}
 done
+
+# Set up PYTHONPATH for turbine_helpers
+if (( ${#TURBINE_USE_PYTHON} ))
+then
+    export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+fi
 
 # TURBINE_INTERPOSER allows user to insert valgrind, strace, etc.
 ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS} ${=TURBINE_INTERPOSER} \
