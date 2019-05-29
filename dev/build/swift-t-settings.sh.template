@@ -224,6 +224,10 @@ ENABLE_MKSTATIC_CRC=0
 # Summitdev:
 # module load spectrum-mpi
 
+# Midway:
+
+
+
 #+===================+
 #|| Editor settings ||
 #+===================+

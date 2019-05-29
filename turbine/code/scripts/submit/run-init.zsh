@@ -38,8 +38,8 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   ENV:       User environment variables "K1=V1:K2=V2 ..."
-#   ENV_PAIRS: User environment variables "K1=V1 K2=V2 ..."
+#   USER_ENV_ARRAY: User environment variables for Bash array: K1 'V1' K2 'V2' ...
+#   USER_ENV_CODE:  User environment variables  in Bash code:  K1='V1' K2='V2' ...
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -63,6 +63,8 @@
 #   ADLB_DEBUG
 # OTHER CONVENTIONS
 #   JOB_ID: Job ID from the scheduler (not available at run time)
+# UTILITIES
+#   COMMON_M4: Common M4 utilities
 
 # Files:
 # Creates soft link in PWD pointing to TURBINE_OUTPUT
@@ -125,15 +127,14 @@ export DRY_RUN=0
 WAIT_FOR_JOB=0
 
 # Place to link to output directory
-# If
 OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 # Turbine will also write the value of TURBINE_OUTPUT_HERE
 OUTPUT_TOKEN_FILE=/dev/null
 
-# Job environment:
-typeset -T ENV env
-env=()
-export ENV env
+# Regexp for environment variable key=value pairs
+ENV_RE='(.*)=(.*)'
+
+export USER_ENV_CODE="" USER_ENV_ARRAY=""
 
 # Get options
 while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
@@ -145,12 +146,20 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
     D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e) KV=${OPTARG}
-       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       if [[ ${KV} =~ ${ENV_RE} ]]
        then
+         USER_ENV_CODE+="${match[1]}='${match[2]}' "
+         USER_ENV_ARRAY+="${match[1]} '${match[2]}' "
+       else
+         if (( ! ${(P)+KV} ))
+         then
+           abort "turbine: provided '-e ${KV}' but variable" \
+                 "'${KV}' is not in the environment!"
+         fi
          # Look up unset environment variables
-         KV="${KV}=${(P)KV}"
+         USER_ENV_CODE+="${KV}='${(P)KV}' "
+         USER_ENV_ARRAY+="${KV} '${(P)KV}' "
        fi
-       env+="${KV}"
        ;;
     i) INIT_SCRIPT=${OPTARG}
        ;;
@@ -305,15 +314,16 @@ elif (( EXEC_SCRIPT ))
 then
   # User static executable
   export COMMAND="${PROGRAM} ${ARGS}"
+elif (( ${#TURBINE_PILOT} ))
+then
+  export TURBINE_PILOT=${TURBINE_HOME}/bin/turbine-pilot
+  export COMMAND="${TURBINE_PILOT} ${PROGRAM} ${ARGS}"
 else
   # Normal case
   export COMMAND="${TCLSH} ${PROGRAM} ${ARGS}"
 fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
-export ENV
-export ENV_PAIRS="${env}"
 
 if (( ${MAIL_ENABLED:-0} == 1 ))
 then
@@ -322,6 +332,9 @@ then
     print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
   fi
 fi
+
+# This is being phased in to capture common M4 functions (2018-12-18)
+COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 
 ## Local Variables:
 ## mode: sh

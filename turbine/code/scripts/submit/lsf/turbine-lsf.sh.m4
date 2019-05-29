@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -l
+changecom(`dnl')#!/bin/bash`'bash_l()
 
 # We use changecom to change the M4 comment to dnl, not hash
 
@@ -20,11 +20,7 @@ changecom(`dnl')#!/bin/bash -l
 # The Turbine LSF template.  This is automatically filled in
 # by M4 in turbine-lsf-run.zsh
 
-# Created: esyscmd(`date')
-
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
@@ -57,14 +53,17 @@ COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
-# Start the user environment variables pasted by M4
-getenv(USER_ENVS_CODE)
-# End environment variables pasted by M4
+USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
+<<<<<<< HEAD
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
 USER_ENVS_ARGS=( -E _dummy=x )
 for K in ${!USER_ENVS[@]}
+=======
+USER_ENVS_ARGS=()
+for K in ${!USER_ENV_ARRAY[@]}
+>>>>>>> issue-163
 do
   USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
 done
@@ -72,7 +71,7 @@ done
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # User prelaunch commands:
@@ -87,6 +86,7 @@ getenv(TURBINE_PRELAUNCH)
 
 TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
+<<<<<<< HEAD
 START=$( date +%s.%N )
 jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
       -E TCLLIBPATH \
@@ -96,9 +96,31 @@ jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
 CODE=$?
 echo
 echo "EXIT CODE: $CODE"
+=======
+START=$( date "+%s.%N" )
+
+# Run Turbine!
+jsrun -n $PROCS -r $PPN \
+      -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" \
+      ${COMMAND}
+# ~/mcs/ste/mpi/t.x # bash -c hostname
+CODE=$?
+
+
+>>>>>>> issue-163
 STOP=$( date +%s.%N )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+
+echo
 echo "MPIEXEC TIME: ${DURATION}"
-exit $CODE
+echo "CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+
+# Return exit code from launcher
+exit ${CODE}
+
+# Local Variables:
+# mode: m4;
+# End:

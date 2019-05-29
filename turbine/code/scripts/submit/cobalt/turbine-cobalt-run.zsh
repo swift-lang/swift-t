@@ -95,10 +95,6 @@ then
   MAIL_ARG=( -M ${MAIL_ADDRESS} )
 fi
 
-# Create the environment list in a format Cobalt can support
-ENV_LIST=${env}
-export ENV_LIST
-
 print $COMMAND
 
 # Launch it

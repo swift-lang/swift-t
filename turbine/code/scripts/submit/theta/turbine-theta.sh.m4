@@ -1,13 +1,13 @@
-#!/bin/bash -l
-ifelse(getenv_nospace(PROJECT), `',,#COBALT -A getenv_nospace(PROJECT)
-)ifelse(getenv_nospace(QUEUE), `',,#COBALT -q getenv(QUEUE)
+#!/bin/bash`'bash_l()
+ifelse(getenv(PROJECT), `',,#COBALT -A getenv(PROJECT)
+)ifelse(getenv(QUEUE), `',,#COBALT -q getenv(QUEUE)
 )#COBALT -n getenv(NODES)
 #COBALT -t getenv(WALLTIME)
 #COBALT --cwd getenv(WORK_DIRECTORY)
-#COBALT -o getenv_nospace(TURBINE_OUTPUT)/output.txt
-#COBALT -e getenv_nospace(TURBINE_OUTPUT)/output.txt
+#COBALT -o getenv(TURBINE_OUTPUT)/output.txt
+#COBALT -e getenv(TURBINE_OUTPUT)/output.txt
 #COBALT --jobname getenv(TURBINE_JOBNAME)
-ifelse(getenv_nospace(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
+ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 )
 
 # These COBALT directives have to stay right at the top of the file!
@@ -29,7 +29,7 @@ ifelse(getenv_nospace(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 
 # TURBINE-THETA.SH
 
-# Created: esyscmd(`date')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 source /opt/modules/default/init/bash
 module load modules
@@ -69,18 +69,14 @@ echo "DATE:    $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "PROCS:   ${PROCS}"
 echo "PPN:${PPN}"
-# echo "TCLLIBPATH:   ${TCLLIBPATH}"
-# echo "LAUNCHER:${LAUNCHER}"
-#[[ -n ${VALGRIND} ]] && \
-# echo "VALGRIND:${VALGRIND}"
 echo
 
-# Put environment variables from run-init into 'aprun -e' format
-ENV_LIST="getenv(ENV_LIST)"
-APRUN_ENVS=""
-for KV in ${ENV_LIST}
+
+# Construct aprun-formatted user environment variable arguments
+USER_ENVS_ARGS=()
+for K in ${!USER_ENV_ARRAY[@]}
 do
-    APRUN_ENVS+="-e ${KV} "
+  USER_ENVS_ARGS+=( -e $K="${USER_ENVS[$K]}" )
 done
 
 # This is the critical Cray fork() fix
@@ -88,11 +84,11 @@ APRUN_ENVS+="-e MPICH_GNI_FORK_MODE=FULLCOPY"
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
-# Run Turbine:
+# Run Turbine!
 set -x
 aprun -n ${PROCS} -N ${PPN} \
       ${TURBINE_LAUNCH_OPTIONS:-} \
-      ${APRUN_ENVS} \
+      "${USER_ENV_ARGS[@]}" \
       ${TURBINE_INTERPOSER:-} \
       ${COMMAND}
 CODE=${?}
@@ -101,7 +97,7 @@ set +x
 echo
 echo "Turbine Theta launcher done."
 echo "CODE: ${CODE}"
-echo "COMPLETE: $(date)"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
 
 # Return exit code from launcher (aprun)
 exit ${CODE}

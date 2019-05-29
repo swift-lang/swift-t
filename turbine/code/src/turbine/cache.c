@@ -214,7 +214,6 @@ cache_replace(turbine_datum_id td, turbine_type type,
   table_lp_remove(&entries, e->td, &tmp);
   assert(tmp == e);
 
-  assert(e->length >= 0);
   memory += (unsigned long)e->length;
   free(e->data);
   // Replace the entry with the new data
