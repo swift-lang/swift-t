@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -1983,12 +1982,45 @@ Install STC as usual
 </div>
 </div>
 <div class="sect2">
+<h3 id="_washington">Washington</h3>
+<div class="paragraph"><p>Washington is a single node deep learning machine for CELS.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_4">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2019-05-29</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/swift-t/2019-05-23/stc/bin/swift-t</code></pre>
+</div></div>
+<div class="paragraph"><p>Run as usual on a local machine.</p></div>
+<div class="paragraph"><p>This installation has Python and R enabled.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_dependencies">Dependencies</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/anaconda3
+~wozniak/Public/sfw/ant-1.10.5
+~wozniak/Public/sfw/jdk-1.8.0_211
+~wozniak/Public/sfw/mpich-3.2.1
+~wozniak/Public/sfw/R-3.5.3
+~wozniak/Public/sfw/tcl-8.6.8-global
+~wozniak/Public/sfw/EQ-R</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_3">Build procedure</h4>
+<div class="paragraph"><p>Use the <code>dev/build/build-swift-t.sh</code> method.
+Simply set the MPI, Tcl (and optionally Python and R) locations in
+<code>swift-t-settings.sh</code> and build.</p></div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_blues">Blues</h3>
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/blues">Blues</a> is a 310-node x86
 cluster at ANL.  It uses PBS.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Master, 8/17/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_4">Public installation</h4>
+<h4 id="_public_installation_5">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2028,7 +2060,7 @@ turbine-pbs-run.zsh -n 8 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_3">Build procedure</h4>
+<h4 id="_build_procedure_4">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.8.2 and MVAPICH 2.0:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2041,40 +2073,6 @@ $ which mpicc
 </div></div>
 <div class="paragraph"><p>A public Tcl is in: <code>&#126;wozniak/Public/sfw/tcl-8.6.4</code></p></div>
 <div class="paragraph"><p>A public Python is in: <code>&#126;wozniak/Public/sfw/Python-2.7.8</code></p></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_fusion">Fusion</h3>
-<div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> is a 320-node x86
-cluster at ANL.  It uses PBS.</p></div>
-<div class="sect3">
-<h4 id="_public_installation_5">Public installation</h4>
-<div class="ulist"><ul>
-<li>
-<p>
-STC: <code>~wozniak/Public/compute/stc/bin/stc</code>
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>To run:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export QUEUE=batch
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
-$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic</code></pre>
-</div></div>
-<div class="paragraph"><p>See the <a href="#variables">Turbine scheduler variables</a> and
-<a href="#options">Turbine run script options</a> for additional settings.</p></div>
-</div>
-<div class="sect3">
-<h4 id="_build_procedure_4">Build procedure</h4>
-<div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ which gcc
-/software/gcc-4.7.2/bin/gcc
-$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
-</div></div>
 </div>
 </div>
 <div class="sect2">
@@ -2425,7 +2423,7 @@ is a Cray XK7 at the Oak Ridge Leadership Computing Facility.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_8">Public installation</h4>
 <div class="sect4">
-<h5 id="_dependencies">Dependencies</h5>
+<h5 id="_dependencies_2">Dependencies</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2725,7 +2723,7 @@ Urbana-Champaign.</p></div>
 <div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_dependencies_2">Dependencies</h5>
+<h5 id="_dependencies_3">Dependencies</h5>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3814,6 +3812,40 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 </ul></div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_fusion">Fusion</h3>
+<div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> was a 320-node x86
+cluster at ANL.  It used PBS.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_18">Public installation</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/compute/stc/bin/stc</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>To run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export QUEUE=batch
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/soft/gcc/4.7.2/lib64
+$ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 3 program.tic</code></pre>
+</div></div>
+<div class="paragraph"><p>See the <a href="#variables">Turbine scheduler variables</a> and
+<a href="#options">Turbine run script options</a> for additional settings.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_15">Build procedure</h4>
+<div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ which gcc
+/software/gcc-4.7.2/bin/gcc
+$ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
+</div></div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -3821,8 +3853,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div id="footer">
 <div id="footer-text">
 Version 1.4.2<br />
-Last updated
- 2019-01-03 13:26:49 CST
+Last updated 2019-05-29 11:23:46 CDT
 </div>
 </div>
 </body>
