@@ -100,7 +100,7 @@ get_envs(int envc, char** envs, char* match, int* index, char** result) {
     char* p = &envs[i][0];
     char* q = strchr(envs[i], '=');
     if (q-p == n) return false;
-    int k = q-p-1; // Length of envs key
+    int k = q-p; // Length of envs key
     if (strncmp(envs[i], match, k) == 0) {
       *index = i;
       *result = q+1;
