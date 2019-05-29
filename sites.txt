@@ -791,6 +791,40 @@ $ swift-t -m slurm workflow.swift
 +--with-tcl=/home/wozniak/Public/sfw/bebop/login/tcl-8.6.5+
 . Install STC as usual
 
+=== Washington
+
+Washington is a single node deep learning machine for CELS.
+
+==== Public installation
+
+*As of:* 2019-05-29
+
+----
+~wozniak/Public/sfw/swift-t/2019-05-23/stc/bin/swift-t
+----
+
+Run as usual on a local machine.
+
+This installation has Python and R enabled.
+
+==== Dependencies
+
+----
+~wozniak/Public/sfw/anaconda3
+~wozniak/Public/sfw/ant-1.10.5
+~wozniak/Public/sfw/jdk-1.8.0_211
+~wozniak/Public/sfw/mpich-3.2.1
+~wozniak/Public/sfw/R-3.5.3
+~wozniak/Public/sfw/tcl-8.6.8-global
+~wozniak/Public/sfw/EQ-R
+----
+
+==== Build procedure
+
+Use the +dev/build/build-swift-t.sh+ method.
+Simply set the MPI, Tcl (and optionally Python and R) locations in
++swift-t-settings.sh+ and build.
+
 === Blues
 
 http://www.lcrc.anl.gov/about/blues[Blues] is a 310-node x86
