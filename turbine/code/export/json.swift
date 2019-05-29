@@ -17,7 +17,7 @@
 /** JSON.SWIFT
  *
  *  JSON functionality for Swift/T- relies on Python
- *  See helpers.py for implementations
+ *  See turbine_helpers.py for implementations
  */
 
 import python;
@@ -26,7 +26,7 @@ import python;
 {
   wait (f)
   {
-    t = python_persist("from helpers import *",
+    t = python_persist("from turbine_helpers import *",
                        "json_type('%s','%s')" %
                        (filename(f), path));
   }
@@ -36,7 +36,7 @@ import python;
 {
   wait (f)
   {
-    t = python_persist("from helpers import *",
+    t = python_persist("from turbine_helpers import *",
                        "json_list_length('%s','%s')" %
                        (filename(f), path));
   }
@@ -44,7 +44,7 @@ import python;
 
 (string t) json_get(string J, string path)
 {
-    t = python_persist("from helpers import *",
+    t = python_persist("from turbine_helpers import *",
                        "json_get('%s','%s')" %
                        (J, path));
 }
@@ -53,7 +53,7 @@ import python;
 {
   wait (f)
   {
-    t = python_persist("from helpers import *",
+    t = python_persist("from turbine_helpers import *",
                        "json_dict_entries('%s','%s')" %
                        (filename(f), path));
   }
