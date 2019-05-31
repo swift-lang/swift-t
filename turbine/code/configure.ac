@@ -518,15 +518,16 @@ then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL="OpenMPI"
+   HAVE_MPI_IMPL_OPENMPI=1
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
-     LINE_PREFIX="-tag-output"
+     MPI_LINE_OUTPUT_FLAG="--tag-output"
    else
-     LINE_PREFIX=
+     MPI_LINE_OUTPUT_FLAG=""
    fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
-   HAVE_MPI_IMPL_MPICH=0
+   HAVE_MPI_IMPL_MPICH=1
    MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG=-l
 fi
