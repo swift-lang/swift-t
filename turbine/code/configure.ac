@@ -726,7 +726,7 @@ AC_ARG_WITH(rcpp,
 
 AC_ARG_WITH(r,
    AS_HELP_STRING([--with-r],
-                   [Use this R directory]),
+                   [Use this R directory, the one returned by cat(R.home()) ]),
   [
       HAVE_R=1
       USE_R=${withval}
