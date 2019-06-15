@@ -362,7 +362,7 @@ ifneq ($(USE_R),)
   endif
   LIBS += -L$(RINSIDE_LIB)
 endif
-LIBS += -lRInside -lR
+LIBS += -lRInside -lR -lRblas
 
 ifeq ($(USE_MAC),yes)
 # if mac, the RInside library and python install name can be incorrect
