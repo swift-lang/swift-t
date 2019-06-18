@@ -159,6 +159,9 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 getcwd gettimeofday mallinfo memchr memset pow])
 AC_CHECK_FUNCS([setenv strchr strdup strerror strlen strnlen strpbrk])
+# These vary: strchrnul is on Linux but not Mac
+#             strlcpy   is on Mac   but not Linux
+AC_CHECK_FUNCS([strchrnul strlcpy])
 AC_CHECK_FUNCS([strstr strtol strtoul strtoull uname])
 
 # Define templates

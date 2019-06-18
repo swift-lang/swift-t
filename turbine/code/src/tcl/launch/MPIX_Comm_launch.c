@@ -10,6 +10,7 @@
 
 // If this system does not have strchrnul(),
 // see ExM c-utils strchrnul.h
+#include <config.h>
 #include <strchrnul.h>
 
 #include "MPIX_Comm_launch.h"
