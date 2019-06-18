@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// For systems without strlcpy(), e.g., Linux
+#include <strlcpy.h>
+
 #include "MPIX_Comm_launch.h"
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
