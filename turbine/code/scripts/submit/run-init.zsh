@@ -314,7 +314,7 @@ elif (( EXEC_SCRIPT ))
 then
   # User static executable
   export COMMAND="${PROGRAM} ${ARGS}"
-elif (( ${#TURBINE_PILOT} ))
+elif [[ ${TURBINE_PILOT:-} != "" ]]
 then
   export TURBINE_PILOT=${TURBINE_HOME}/bin/turbine-pilot
   export COMMAND="${TURBINE_PILOT} ${PROGRAM} ${ARGS}"
