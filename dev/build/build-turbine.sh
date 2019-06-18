@@ -25,28 +25,33 @@ if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
 fi
 
-if (( ENABLE_PYTHON )); then
-  if (( ${#PYTHON_EXE} > 0 )); then
-    EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
-  else
+if (( ENABLE_PYTHON ))
+then
+  if [[ ${PYTHON_EXE:-} == "" ]]
+  then
     EXTRA_ARGS+=" --enable-python"
+  else
+    EXTRA_ARGS+=" --with-python-exe=${PYTHON_EXE}"
   fi
 fi
 
-if (( ENABLE_R )); then
-  EXTRA_ARGS+=" --enable-r"
-fi
-if [[ ${R_INSTALL:-} != "" ]]; then
-  EXTRA_ARGS+=" --with-r=${R_INSTALL}"
-fi
-
-if [[ ${RINSIDE_INSTALL:-} != "" ]]; then
-  EXTRA_ARGS+=" --with-rinside=${RINSIDE_INSTALL}"
-fi
-
-if [[ ${RCPP_INSTALL:-} != "" ]]
+if (( ENABLE_R ))
 then
-  EXTRA_ARGS+=" --with-rcpp=${RCPP_INSTALL}"
+  if [[ ${R_INSTALL:-} == "" ]]
+  then
+    EXTRA_ARGS+=" --enable-r"
+  else
+    EXTRA_ARGS+=" --with-r=${R_INSTALL}"
+  fi
+
+  if [[ ${RINSIDE_INSTALL:-} != "" ]]
+  then
+    EXTRA_ARGS+=" --with-rinside=${RINSIDE_INSTALL}"
+  fi
+  if [[ ${RCPP_INSTALL:-} != "" ]]
+  then
+    EXTRA_ARGS+=" --with-rcpp=${RCPP_INSTALL}"
+  fi
 fi
 
 if (( ENABLE_JULIA )); then
