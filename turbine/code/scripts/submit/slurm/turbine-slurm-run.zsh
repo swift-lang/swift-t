@@ -53,7 +53,7 @@ print "wrote: ${TURBINE_SLURM}"
 
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine-slurm-run -e K=V settings here:
-for kv in ${env}
+for kv in ${USER_ENV_CODE}
 do
   eval export ${kv}
 done
