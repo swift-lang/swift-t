@@ -770,12 +770,26 @@ LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
 http://www.lcrc.anl.gov/about/bebop[Bebop] is a 1024-node x86
 cluster at ANL.  It uses SLURM.
 
-*As of:* Master, 2018/02/21
+*As of:* Master, 2019-06-18
 
-==== Installation for PACC
+==== Public installation
 
-* +~wozniak/Public/sfw/bebop/compute/swift-t-pacc/stc/bin/swift-t+
-* +~wozniak/Public/sfw/bebop/compute/swift-t-pacc/turbine/bin/turbine+
+Add to +PATH+:
+
+----
+~wozniak/Public/sfw/bebop/compute/swift-t/2019-06-14/stc/bin
+~wozniak/Public/sfw/bebop/compute/swift-t/2019-06-14/turbine/bin
+----
+
+*Login node:*
+
+Run with:
+
+----
+$ nice swift-t workflow.swift
+----
+
+*Compute nodes:*
 
 Run with:
 
@@ -785,11 +799,17 @@ $ swift-t -m slurm workflow.swift
 
 ==== Build instructions
 
-. Load modules +gcc/7.1.0 mpich/3.2-bsq4vhr+
-. Configure c-utils and ADLB as usual
-. Configure Turbine with
-+--with-tcl=/home/wozniak/Public/sfw/bebop/login/tcl-8.6.5+
-. Install STC as usual
+These prerequisites are available and have been tested:
+
+----
+MPI:    ~wozniak/Public/sfw/mpich-3.1.2
+Tcl:    ~wozniak/Public/sfw/tcl-8.6.5
+Python: /blues/gpfs/home/software/spack-0.10.1/opt/spack/linux-centos7-x86_64/intel-17.0.4/python-3.6.5-lvrzbkyyf53gqe5xwp6xsp7xjzajdbbu
+R:      ~/Public/sfw/bebop/R-3.4.3
+----
+
+* Use the +dev/build/build-swift-t.sh+ method
+* Enable the +module load gcc/7.1.0-4bgguyp+ in +swift-t-settings.sh+
 
 === Washington
 
