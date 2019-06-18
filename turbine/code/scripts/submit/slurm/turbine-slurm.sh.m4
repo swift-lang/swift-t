@@ -74,7 +74,11 @@ COMMAND="getenv(COMMAND)"
 
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine -e K=V settings here
-export getenv(USER_ENV_CODE)
+ENV_PAIRS=( getenv(USER_ENV_CODE) )
+for P in "${ENV_PAIRS[@]}"
+do
+    export "$P"
+done
 
 # BEGIN TURBINE_PRELAUNCH
 getenv(TURBINE_PRELAUNCH)
