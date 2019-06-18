@@ -2572,7 +2572,7 @@ Swift/T.
 
 The special environment variables include:
 
-+launcher=_path_/mpiexec+::
++swift_launcher=_path_/mpiexec+::
 The path to +mpiexec+.  Defaults to +mpiexec+ (in +PATH+).
 
 +swift_chdir=_directory_+::
