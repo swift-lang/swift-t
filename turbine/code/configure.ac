@@ -111,25 +111,25 @@ AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
 
 # We prefer to use cp -u for installation
-AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
-            [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
+AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_HAVE_CP_U],
+            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_U], [cp],
               [[cp_u_out=`cp -u /dev/null cp_u.token 2>&1 > /dev/null`
                 test "$?" = 0 \
-                && ac_cv_path_cp_u=yes || ac_cv_path_cp_u=no ]],
-              [])])
-AC_SUBST([CP_U], [$ac_cv_path_cp_u])
-[[ -r cp_u.token ]] && rm cp_u.token
+                && ac_cv_path_HAVE_CP_U=yes ac_path_HAVE_CP_U_found=: ]],
+              [ac_cv_path_HAVE_CP_U=no])])
+AC_SUBST([HAVE_CP_U], [$ac_cv_path_HAVE_CP_U])
+[[ -w cp_u.token ]] && rm cp_u.token
 
 # We prefer to use cp --parents for installation
 AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
-            [AC_PATH_PROGS_FEATURE_CHECK([CP_PARENTS], [cp],
+            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_PARENTS], [cp],
               [[cp_parents_out=`cp --parents /dev/null . > /dev/null 2>&1`
                 test "$?" = 0 \
                 && ac_cv_path_cp_parents=yes || ac_cv_path_cp_parents=no ]],
               [])])
 # If cp --parents succeeded, we have a directory to remove
 [[ -d dev ]] && rm -r dev
-AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
+AC_SUBST([HAVE_CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
 AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stddef.h sys/param.h])

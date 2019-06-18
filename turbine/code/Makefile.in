@@ -719,14 +719,14 @@ $(TEST_BINS): %.x: %.o install.txt $(TEST_STATIC_PREREQS)
 
 ### INSTALL
 
-HAVE_CP_U = @CP_U@
+HAVE_CP_U = @HAVE_CP_U@
 ifeq ($(HAVE_CP_U),yes)
 	CP_ARGS = -uvf
 else
 	CP_ARGS = -vf
 endif
 
-HAVE_CP_PARENTS = @CP_PARENTS@
+HAVE_CP_PARENTS = @HAVE_CP_PARENTS@
 ifeq ($(HAVE_CP_PARENTS),yes)
 	CP_PARENTS = cp --parents
 else
