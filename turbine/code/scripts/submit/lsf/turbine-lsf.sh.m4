@@ -56,16 +56,11 @@ PPN=getenv(PPN)
 USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
-<<<<<<< HEAD
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
 USER_ENVS_ARGS=( -E _dummy=x )
-for K in ${!USER_ENVS[@]}
-=======
-USER_ENVS_ARGS=()
 for K in ${!USER_ENV_ARRAY[@]}
->>>>>>> issue-163
 do
-  USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
+  USER_ENVS_ARGS+=( -E $K="${USER_ENV_ARRAY[$K]}" )
 done
 
 # Restore user PYTHONPATH if the system overwrote it:
