@@ -700,25 +700,44 @@ else
 fi
 
 # R is optional
-HAVE_R=0
-USE_R=0
+HAVE_R=0          # If we have R, this is 1
+USE_R=0           # If we have R, this is R.home()
 RCPP_PATH=0
 RINSIDE_PATH=0
-# Drop this?  Almost guaranteed to fail.
+
 AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
       HAVE_R=1
-      USE_R="/usr" # Acceptable default?
+      AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+      USE_R=$( Rscript -e "cat(R.home())" )
+      AC_MSG_RESULT([Found R at: $USE_R])
+      AC_MSG_RESULT([Using Rscript: $( which Rscript ) ])
     ])
+
+AC_ARG_WITH(r,
+   AS_HELP_STRING([--with-r],
+                   [Use this R directory, the one returned by R.home() ]),
+  [
+      HAVE_R=1
+      USE_R=$withval
+      R_BIN=$USE_R/../../bin
+      if [[ -d $R_BIN ]]
+      then
+        R_BIN=$( cd $R_BIN ; /bin/pwd )
+        AC_MSG_RESULT([Adding to PATH: $R_BIN ])
+        PATH=$R_BIN:$PATH
+      fi
+      AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+  ])
 
 AC_ARG_WITH(rinside,
    AS_HELP_STRING([--with-rinside],
                    [Use this RInside directory]),
    [
       HAVE_R=1
-      RINSIDE_PATH=${withval}
+      RINSIDE_PATH=$withval
    ])
 
 AC_ARG_WITH(rcpp,
@@ -726,33 +745,29 @@ AC_ARG_WITH(rcpp,
                    [Use this Rcpp directory]),
    [
       HAVE_R=1
-      RCPP_PATH=${withval}
+      RCPP_PATH=$withval
    ])
 
-AC_ARG_WITH(r,
-   AS_HELP_STRING([--with-r],
-                   [Use this R directory, the one returned by R.home() ]),
-  [
-      HAVE_R=1
-      USE_R=${withval}
-  ])
-
-if [[ ${HAVE_R} == 1 ]]
+if (( $HAVE_R ))
 then
-  AC_MSG_RESULT([Adding to PATH: $USE_R/../../bin ])
-  PATH=$USE_R/../../bin:$PATH
+  R_HEADER_FOUND=0
+  DEFAULT_R_INCLUDE=$USE_R/include/R.h
+  AC_CHECK_FILE($DEFAULT_R_INCLUDE,
+                [ R_INCLUDE=$DEFAULT_R_INCLUDE ; R_HEADER_FOUND=1 ])
+  if (( ! R_HEADER_FOUND ))
+  then
+    R_INCLUDE=$( Rscript -e "cat(R.home('include'))" )
+  fi
+  AC_MSG_RESULT([Using R include: $R_INCLUDE])
 
-  AC_CHECK_FILE(${USE_R}/include/R.h, [],
-        [AC_MSG_ERROR([Could not find R header!])])
   if [[ ${RINSIDE_PATH} == 0 ]]
   then
-    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
       R_LIB_PATHS=" ${USE_R} "
       # returned in order of precedence so we want to
       # reverse so that the last overrides the first
-      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      R_LIB_PATHS+="$( Rscript -e 'cat(rev(.libPaths()))' )"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
@@ -764,13 +779,12 @@ then
 
   if [[ ${RCPP_PATH} == 0 ]]
   then
-    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
       R_LIB_PATHS="${USE_R} "
       # returned in order of precedence so we want to
       # reverse so that the last overrides the first
-      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      R_LIB_PATHS+="$( Rscript -e 'cat(rev(.libPaths()))' )"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
@@ -792,6 +806,7 @@ fi # if HAVE_R
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)
+AC_SUBST(R_INCLUDE)
 AC_SUBST(RINSIDE_PATH)
 AC_SUBST(RCPP_PATH)
 
