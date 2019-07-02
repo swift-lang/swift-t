@@ -294,7 +294,7 @@ ifeq ($(HAVE_PYTHON),1)
 endif
 ifeq  ($(HAVE_R),1)
 ifneq ($(USE_R),)
-  INCLUDES += -I $(USE_R)/include
+  INCLUDES += -I $(R_INCLUDE)
   R_LIBRARY = $(USE_R)/library
   ifneq ($(RINSIDE_PATH),)
    INCLUDES += -I $(RINSIDE_PATH)/include
