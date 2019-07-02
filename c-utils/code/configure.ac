@@ -16,6 +16,14 @@ C_UTILS_VERSION=c_utils_version()
 AC_MSG_RESULT([c-utils version: ${C_UTILS_VERSION}])
 AC_SUBST(C_UTILS_VERSION)
 
+if [[ ${prefix} == "NONE" ]]
+then
+  if (( ! DEBIAN_BUILD ))
+  then
+    AC_MSG_ERROR([You must provide --prefix])
+  fi
+fi
+
 if [[ ${prefix} == ${PWD} ]]
 then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
