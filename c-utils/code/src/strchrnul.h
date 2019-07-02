@@ -28,7 +28,8 @@
 #ifndef HAVE_STRCHRNUL
 
 static inline
-char* strchrnul(const char* s, int c)
+char*
+strchrnul(const char* s, int c)
 {
   char* result = strchr(s, c);
   if (result == NULL)
