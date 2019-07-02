@@ -757,6 +757,17 @@ then
   if (( ! R_HEADER_FOUND ))
   then
     R_INCLUDE=$( Rscript -e "cat(R.home('include'))" )
+    AC_CHECK_FILE($R_INCLUDE/R.h, [ R_HEADER_FOUND=1 ])
+  fi
+  dnl # Another way to find the R.h location:
+  dnl if (( ! R_HEADER_FOUND ))
+  dnl then
+  dnl   R_INCLUDE=$( Rscript -e "cat(Sys.getenv('R_INCLUDE_DIR'))" )
+  dnl   AC_CHECK_FILE($R_INCLUDE/R.h, [ R_HEADER_FOUND=1 ])
+  dnl fi
+  if (( ! R_HEADER_FOUND ))
+  then
+    AC_MSG_ERROR("Could not find R header!")
   fi
   AC_MSG_RESULT([Using R include: $R_INCLUDE])
 
