@@ -39,7 +39,7 @@ if [[ ${prefix} == "NONE" ]]
 then
   if (( ! DEBIAN_BUILD ))
   then
-    AC_MSG_ERROR("You must provide --prefix")
+    AC_MSG_ERROR([You must provide --prefix])
   fi
 fi
 
