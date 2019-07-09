@@ -127,6 +127,7 @@ export DRY_RUN=0
 WAIT_FOR_JOB=0
 
 # Place to link to output directory
+# If TURBINE_OUTPUT_SOFTLINK==/dev/null , this behavior is suppressed
 OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 # Turbine will also write the value of TURBINE_OUTPUT_HERE
 OUTPUT_TOKEN_FILE=/dev/null

@@ -29,6 +29,7 @@ ifelse(getenv(PROJECT), `',,
 #BSUB -W getenv(WALLTIME)
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
+#BSUB -cwd getenv(TURBINE_OUTPUT)
 
 # User directives:
 # BEGIN TURBINE_DIRECTIVE
@@ -44,6 +45,7 @@ then
 fi
 
 echo "TURBINE-LSF"
+echo "DATE START: $( date "+%Y-%m-%d %H:%M" )"
 echo
 
 cd ${TURBINE_OUTPUT}
@@ -81,41 +83,28 @@ getenv(TURBINE_PRELAUNCH)
 
 TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
-<<<<<<< HEAD
 START=$( date +%s.%N )
-jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
-      -E TCLLIBPATH \
-      -E ADLB_PRINT_TIME=1 \
-      "${USER_ENVS_ARGS[@]}" \
-      ${COMMAND}
-CODE=$?
+CODE=0
+if ! jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
+            -E TCLLIBPATH \
+            -E ADLB_PRINT_TIME=1 \
+            "${USER_ENVS_ARGS[@]}" \
+            ${COMMAND}
+then
+    CODE=$?
+    echo
+    echo "jsrun returned an error code!"
+    echo
+fi
 echo
 echo "EXIT CODE: $CODE"
-=======
-START=$( date "+%s.%N" )
-
-# Run Turbine!
-jsrun -n $PROCS -r $PPN \
-      -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" \
-      ${COMMAND}
-# ~/mcs/ste/mpi/t.x # bash -c hostname
-CODE=$?
-
-
->>>>>>> issue-163
 STOP=$( date +%s.%N )
+
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 
 echo
 echo "MPIEXEC TIME: ${DURATION}"
-echo "CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
-
-# Return exit code from launcher
-exit ${CODE}
-
-# Local Variables:
-# mode: m4;
-# End:
+echo "DATE STOP:  $( date "+%Y-%m-%d %H:%M" )"
+exit $CODE

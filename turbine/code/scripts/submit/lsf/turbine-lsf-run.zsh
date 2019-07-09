@@ -55,8 +55,14 @@ print "wrote: ${TURBINE_LSF}"
 
 BSUB=/sw/sources/lsf-tools/2.0/summit/bin/bsub
 
+cd ${TURBINE_OUTPUT}
+echo "PWD: $( /bin/pwd )"
+
+# module list # modules are not loaded : 05-09 1:42pm
+printenv | sort >> $LOG_FILE
+
 # Submit it!
-$BSUB ${TURBINE_LSF} | read MESSAGE
+${BSUB} ${TURBINE_LSF} | read MESSAGE
 echo $MESSAGE
 # Pull out 2nd word without characters '<' and '>'
 JOB_ID=${${(z)MESSAGE}[3]}
