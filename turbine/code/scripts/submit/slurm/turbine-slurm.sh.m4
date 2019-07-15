@@ -54,6 +54,8 @@ getenv(TURBINE_DIRECTIVE)
 # END TURBINE_DIRECTIVE
 
 echo TURBINE-SLURM.SH
+START=$( date "+%s.%N" )
+echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
