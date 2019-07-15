@@ -116,7 +116,7 @@ DURATION=$( awk -v START=${START} -v STOP=${STOP} \
 echo
 echo "MPIEXEC TIME: ${DURATION}"
 echo "EXIT CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 # Return exit code from launcher
 exit ${CODE}
