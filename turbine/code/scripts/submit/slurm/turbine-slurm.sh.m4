@@ -95,11 +95,14 @@ getenv(TURBINE_PRELAUNCH)
 # module load mvapich2
 
 # Use mpiexec on Midway
-TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
-TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
-TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
+# TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
+# TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
+# TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
-START=$( date "+%s.%N" )
+# Use this on Cori:
+# TURBINE_LAUNCHER=srun
+# module swap PrgEnv-intel PrgEnv-gnu
+# module load gcc
 
 echo
 set -x
