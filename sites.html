@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -746,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.3,</span>
-<span id="revdate">June 2019</span>
+<span id="revdate">July 2019</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2941,87 +2942,51 @@ is a Cray XC40 at NERSC.</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>~wozniak/Public/sfw/Python-2.7.10
-~wozniak/Public/sfw/mpich-3.1.4
-~wozniak/Public/sfw/R-3.4.0
-~wozniak/Public/sfw/swig-3.0.12
-~wozniak/Public/sfw/tcl-8.6.6</code></pre>
+<pre><code>/global/common/software/nstaff/swift-t/login/deps/mpich-3.2.1
+/global/common/software/nstaff/swift-t/deps/R-3.4.0-gcc-7.3.0
+/global/common/software/nstaff/swift-t/deps/swig-3.0.2
+/global/common/software/nstaff/swift-t/deps/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
 <h4 id="_public_installation_13">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_7">Login nodes</h5>
-<div class="paragraph"><p><strong>Python</strong></p></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/07</p></div>
-<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
-<code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code></p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2019-07-12</p></div>
+<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-nice swift-t workflow.swift</code></pre>
+<pre><code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code></pre>
 </div></div>
-<div class="paragraph"><p><strong>Python and R</strong></p></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/05/03</p></div>
-<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at<br />
-<code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code> and R 3.4.0</p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t-r/stc/bin</code></p></div>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p>and the R 3.4.0 noted above.</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-nice swift-t workflow.swift</code></pre>
+<pre><code>$ PATH=$PATH:/global/common/software/nstaff/swift-t/login/2019-07-12/stc/bin
+$ export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+$ nice swift-t workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect4">
 <h5 id="cori_compute">Compute nodes</h5>
-<div class="paragraph"><p>There are multiple Swift/T installations for different Python installations:</p></div>
-<div class="paragraph"><p><strong>Python and R (I)</strong></p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-r/stc/bin</code></p></div>
-<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
+<div class="paragraph"><p>This installation was configured with the Python 2.7.12 at:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>module load java
-export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm workflow.swift</code></pre>
+<pre><code>/usr/common/software/python/2.7-anaconda/envs/deeplearning</code></pre>
 </div></div>
-<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
-cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
-<div class="paragraph"><p><strong>Python and R (II)</strong><br />
-<strong>As of:</strong> 2017/07/11</p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-2017-07-11/stc/bin</code></p></div>
-<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
+<div class="paragraph"><p>and the R 3.4.0 noted above.</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>module load java
-export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/intel-tensorflow
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift</code></pre>
-</div></div>
-<div class="paragraph"><p>The <code>TURBINE_DIRECTIVE</code> enables a special SLURM constraint for Cori:
-cf. <a href="http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs">http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs</a></p></div>
-<div class="paragraph"><p><strong>Python and R (III)</strong></p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t-2017-12-19/stc/bin</code></p></div>
-<div class="paragraph"><p>Cori uses SLURM.  Run with</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/intel-tensorflow
-LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift</code></pre>
+<pre><code>$ PATH=$PATH:/global/common/software/nstaff/swift-t/compute/2019-07-12/stc/bin
+$ export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
+$ swift-t -m slurm -e PYTHONHOME workflow.swift</code></pre>
 </div></div>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2017/07/11</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3029,35 +2994,43 @@ swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swif
 </div></div>
 <div class="sect4">
 <h5 id="_login_nodes_8">Login nodes</h5>
-<div class="paragraph"><p>No special configuration is necessary.</p></div>
+<div class="paragraph"><p>No special configuration is necessary.  You can use the login node
+MPICH dependency noted above.</p></div>
 </div>
 <div class="sect4">
 <h5 id="_compute_nodes_8">Compute nodes</h5>
-<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC</code> and use compiler flags
-to configure the MPI library.</p></div>
-<div class="paragraph"><p>Use <code>/usr/bin/cc</code> .</p></div>
-<div class="paragraph"><p>Configure c-utils with:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <a href="guide.html#install_source"><code>dev/build</code> scripts</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code> to enable:
+</p>
 <div class="listingblock">
 <div class="content">
-<pre><code>./configure CC=cc</code></pre>
+<pre><code>SWIFT_T_CUSTOM_MPI=1
+MPI_DIR=/opt/cray/pe/mpt/7.7.3/gni/mpich-gnu/7.1</code></pre>
 </div></div>
-<div class="paragraph"><p>Configure ADLB with:</p></div>
+</li>
+<li>
+<p>
+Put this at the bottom of <code>swift-t-settings.sh</code>:
+</p>
 <div class="listingblock">
 <div class="content">
-<pre><code>export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
-export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
-./configure CC=cc ...</code></pre>
+<pre><code>module load PrgEnv-gnu
+export CRAYPE_LINK_TYPE=dynamic</code></pre>
 </div></div>
-<div class="paragraph"><p>Configure Turbine with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>./configure
-  --enable-custom-mpi
-  --with-launcher=/usr/bin/srun
-  --with-mpi-include=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
-  --with-mpi-lib-dir=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib
-  ...</code></pre>
-</div></div>
+</li>
+<li>
+<p>
+Then build as usual.
+</p>
+</li>
+</ol></div>
 </div>
 </div>
 </div>
@@ -3851,7 +3824,8 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated 2019-06-18 13:54:55 EDT
+Last updated
+ 2019-07-15 14:41:32 CDT
 </div>
 </div>
 </body>
