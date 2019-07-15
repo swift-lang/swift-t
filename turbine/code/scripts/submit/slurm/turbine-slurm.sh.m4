@@ -104,13 +104,14 @@ getenv(TURBINE_PRELAUNCH)
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
 
+(
 echo
 set -x
 ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
                     ${TURBINE_INTERPOSER} \
                     ${COMMAND}
+)
 CODE=$?
-set +x
 
 STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:
