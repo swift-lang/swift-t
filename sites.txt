@@ -1607,8 +1607,9 @@ Run with:
 
 ----
 $ PATH=$PATH:/global/common/software/nstaff/swift-t/compute/2019-07-12/stc/bin
-$ export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
-$ swift-t -m slurm -e PYTHONHOME workflow.swift
+# This will be pasted into the SLURM script
+$ export TURBINE_DIRECTIVE="#SBATCH -C knl,quad,cache\n#SBATCH --license=SCRATCH"
+$ swift-t -m slurm workflow.swift
 ----
 
 ==== Build instructions
