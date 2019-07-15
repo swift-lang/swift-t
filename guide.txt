@@ -1217,6 +1217,14 @@ integer keys in +A+.
 Returns a contiguous integer-indexed array, starting from 0, that maps to the
 string keys in +A+.
 
+The following functions are available after v1.4.3 .
+
++ternary_integer(boolean b, int i1, int i2) -> int+::
+If +b+ is true, return +i1+, else return +i2+.
+
++ternary_string(boolean b, string s1, string s2) -> string+::
+If +b+ is true, return +s1+, else return +s2+.
+
 [[pick]]
 ==== Pick functions
 
