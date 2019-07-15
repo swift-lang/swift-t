@@ -1562,103 +1562,58 @@ is a Cray XC40 at NERSC.
 Dependencies are installed in:
 
 ----
-~wozniak/Public/sfw/Python-2.7.10
-~wozniak/Public/sfw/mpich-3.1.4
-~wozniak/Public/sfw/R-3.4.0
-~wozniak/Public/sfw/swig-3.0.12
-~wozniak/Public/sfw/tcl-8.6.6
+/global/common/software/nstaff/swift-t/login/deps/mpich-3.2.1
+/global/common/software/nstaff/swift-t/deps/R-3.4.0-gcc-7.3.0
+/global/common/software/nstaff/swift-t/deps/swig-3.0.2
+/global/common/software/nstaff/swift-t/deps/tcl-8.6.6
 ----
 
 ==== Public installation
 
 ===== Login nodes
 
-*Python*
+*As of:* 2019-07-12
 
-*As of:* 2017/03/07
+This installation was configured with the Python 2.7.12 at:
 
-This installation was configured with the Python 2.7.12 at +
-+/usr/common/software/python/2.7-anaconda/envs/deeplearning+
-
-Add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
-
-Run with
 ----
-module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-nice swift-t workflow.swift
+/usr/common/software/python/2.7-anaconda/envs/deeplearning
 ----
 
-*Python and R*
+and the R 3.4.0 noted above.
 
-*As of:* 2017/05/03
+Run with:
 
-This installation was configured with the Python 2.7.12 at +
-+/usr/common/software/python/2.7-anaconda/envs/deeplearning+ and R 3.4.0
-
-Add to +PATH+: +~wozniak/Public/sfw/login/swift-t-r/stc/bin+
-
-Run with
 ----
-module load java
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-nice swift-t workflow.swift
+$ PATH=$PATH:/global/common/software/nstaff/swift-t/login/2019-07-12/stc/bin
+$ export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
+$ nice swift-t workflow.swift
 ----
 
 [[cori_compute]]
 ===== Compute nodes
 
-There are multiple Swift/T installations for different Python installations:
+*As of:* 2019-07-14
 
-*Python and R (I)*
+This installation was configured with the Python 2.7.12 at:
 
-Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-r/stc/bin+
-
-Cori uses SLURM.  Run with
 ----
-module load java
-export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/python/2.7-anaconda/envs/deeplearning
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm workflow.swift
+/usr/common/software/python/2.7-anaconda/envs/deeplearning
 ----
 
-The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
-cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
+and the R 3.4.0 noted above.
 
-*Python and R (II)* +
-*As of:* 2017/07/11
+Run with:
 
-Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-07-11/stc/bin+
-
-Cori uses SLURM.  Run with
 ----
-module load java
-export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/intel-tensorflow
-export LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
-----
-
-The +TURBINE_DIRECTIVE+ enables a special SLURM constraint for Cori:
-cf. http://www.nersc.gov/users/computational-systems/cori/running-jobs/batch-jobs
-
-*Python and R (III)*
-
-Add to +PATH+: +~wozniak/Public/sfw/compute/swift-t-2017-12-19/stc/bin+
-
-Cori uses SLURM.  Run with
-----
-export TURBINE_DIRECTIVE="#SBATCH --constraint haswell"
-export PYTHONHOME=/usr/common/software/intel-tensorflow
-LD_LIBRARY_PATH=~wozniak/Public/sfw/R-3.4.0/lib64/R/lib
-swift-t -m slurm -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH -e PYTHONHOME workflow.swift
+$ PATH=$PATH:/global/common/software/nstaff/swift-t/compute/2019-07-12/stc/bin
+$ export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
+$ swift-t -m slurm -e PYTHONHOME workflow.swift
 ----
 
 ==== Build instructions
 
-*As of:* 2017/07/11
+*As of:* 2019-07-14
 
 Use
 
@@ -1668,36 +1623,25 @@ module load gcc
 
 ===== Login nodes
 
-No special configuration is necessary.
+No special configuration is necessary.  You can use the login node
+MPICH dependency noted above.
 
 ===== Compute nodes
 
-Cray systems do not use +mpicc+.  We set +CC+ and use compiler flags
-to configure the MPI library.
-
-Use +/usr/bin/cc+ .
-
-Configure c-utils with:
+. Use the link:guide.html#install_source[+dev/build+ scripts].
+. Edit +swift-t-settings.sh+ to enable:
++
 ----
-./configure CC=cc
+SWIFT_T_CUSTOM_MPI=1
+MPI_DIR=/opt/cray/pe/mpt/7.7.3/gni/mpich-gnu/7.1
 ----
-
-Configure ADLB with:
+. Put this at the bottom of +swift-t-settings.sh+:
++
 ----
-export CFLAGS=-I/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
-export LDFLAGS="-L/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib -lmpich"
-./configure CC=cc ...
+module load PrgEnv-gnu
+export CRAYPE_LINK_TYPE=dynamic
 ----
-
-Configure Turbine with:
-----
-./configure
-  --enable-custom-mpi
-  --with-launcher=/usr/bin/srun
-  --with-mpi-include=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/include
-  --with-mpi-lib-dir=/opt/cray/pe/mpt/7.5.2/gni/mpich-gnu/5.1/lib
-  ...
-----
+. Then build as usual.
 
 === Swan
 
