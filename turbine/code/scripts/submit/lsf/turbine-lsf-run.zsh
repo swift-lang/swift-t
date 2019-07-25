@@ -37,15 +37,6 @@ then
   WALLTIME=${WALLTIME[1,5]}
 fi
 
-# Repack environment variables for LSF jsrun
-export USER_ENVS_CODE="declare -A USER_ENVS=()\n"
-for kv in ${env}
-do
-  KEY=${kv%=*}
-  VALUE=${kv#*=}
-  USER_ENVS_CODE+="USER_ENVS[$KEY]=\"$VALUE\"\n"
-done
-
 TURBINE_LSF_M4=${TURBINE_HOME}/scripts/submit/lsf/turbine-lsf.sh.m4
 TURBINE_LSF=${TURBINE_OUTPUT}/turbine-lsf.sh
 

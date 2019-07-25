@@ -45,7 +45,7 @@ then
 fi
 
 echo "TURBINE-LSF"
-echo "DATE START: $( date "+%Y-%m-%d %H:%M" )"
+echo "TURBINE: DATE START: $( date "+%Y-%m-%d %H:%M:%S" )"
 echo
 
 cd ${TURBINE_OUTPUT}
@@ -55,14 +55,17 @@ COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
+typeset -a USER_ENV_ARRAY
 USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
-USER_ENVS_ARGS=( -E _dummy=x )
-for K in ${!USER_ENV_ARRAY[@]}
+USER_ENV_ARGS=( -E _dummy=x )
+COUNT=${#USER_ENV_ARRAY[@]}
+for (( i=0 ; $i < $COUNT ; i+=2 ))
 do
-  USER_ENVS_ARGS+=( -E $K="${USER_ENV_ARRAY[$K]}" )
+  i1=$(( $i + 1 ))
+  USER_ENV_ARGS+=( -E ${USER_ENV_ARRAY[$i]}="${USER_ENV_ARRAY[$i1]}" )
 done
 
 # Restore user PYTHONPATH if the system overwrote it:
@@ -84,20 +87,24 @@ getenv(TURBINE_PRELAUNCH)
 TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
 START=$( date +%s.%N )
-CODE=0
-if ! jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
+if (
+   set -x
+   jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
             -E TCLLIBPATH \
             -E ADLB_PRINT_TIME=1 \
-            "${USER_ENVS_ARGS[@]}" \
+            "${USER_ENV_ARGS[@]}" \
             ${COMMAND}
+)
 then
+    CODE=0
+else
     CODE=$?
     echo
-    echo "jsrun returned an error code!"
+    echo "TURBINE-LSF: jsrun returned an error code!"
     echo
 fi
 echo
-echo "EXIT CODE: $CODE"
+echo "TURBINE: EXIT CODE: $CODE"
 STOP=$( date +%s.%N )
 
 # Bash cannot do floating point arithmetic:
@@ -105,6 +112,6 @@ DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 
 echo
-echo "MPIEXEC TIME: ${DURATION}"
-echo "DATE STOP:  $( date "+%Y-%m-%d %H:%M" )"
+echo "TURBINE: MPIEXEC TIME: ${DURATION}"
+echo "TURBINE: DATE STOP:  $( date "+%Y-%m-%d %H:%M:%S" )"
 exit $CODE
