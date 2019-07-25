@@ -64,6 +64,7 @@ MPI_VERSION=3
 SWIFT_T_CHECK_MPICC=1
 # Enable custom MPI settings
 SWIFT_T_CUSTOM_MPI=0
+# MPI_DIR=/path/to/mpi
 # MPI_INCLUDE=/path/to/mpi/include
 # MPI_LIB_DIR=/path/to/mpi/lib
 # MPI_LIB_NAME=funny.mpi.a

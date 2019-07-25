@@ -54,6 +54,8 @@ getenv(TURBINE_DIRECTIVE)
 # END TURBINE_DIRECTIVE
 
 echo TURBINE-SLURM.SH
+START=$( date "+%s.%N" )
+echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
@@ -87,24 +89,29 @@ getenv(TURBINE_PRELAUNCH)
 # Use this on Midway:
 # module load openmpi gcc/4.9
 
+
 # Use this on Bebop:
 # module load icc
 # module load mvapich2
 
 # Use mpiexec on Midway
-TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
-TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
-TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
+# TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
+# TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
+# TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
-START=$( date "+%s.%N" )
+# Use this on Cori:
+# TURBINE_LAUNCHER=srun
+# module swap PrgEnv-intel PrgEnv-gnu
+# module load gcc
 
+(
 echo
 set -x
 ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
                     ${TURBINE_INTERPOSER} \
                     ${COMMAND}
+)
 CODE=$?
-set +x
 
 STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:
@@ -114,7 +121,7 @@ DURATION=$( awk -v START=${START} -v STOP=${STOP} \
 echo
 echo "MPIEXEC TIME: ${DURATION}"
 echo "EXIT CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 # Return exit code from launcher
 exit ${CODE}

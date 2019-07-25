@@ -121,6 +121,10 @@ if (( SWIFT_T_CUSTOM_MPI )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
+if [[ "${MPI_DIR:-}" != "" ]]; then
+  EXTRA_ARGS+=" --with-mpi=${MPI_DIR}"
+fi
+
 if [[ "${MPI_INCLUDE:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-mpi-include=${MPI_INCLUDE}"
 fi
