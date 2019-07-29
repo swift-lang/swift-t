@@ -1508,159 +1508,46 @@ Configure Turbine with:
 at the ALCF.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_2">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2019-07-29</p></div>
+<div class="paragraph"><p>This installation has Python with TensorFlow 0.10.0rc0 .</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="paragraph"><p><code>~wozniak/Public/sfw/x86_64/swift-t/stc/bin</code></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/soft/analytics/conda/env/Candle_ML/bin
+~wozniak/Public/sfw/x86_64/swift-t/stc/bin</code></pre>
+</div></div>
 <div class="paragraph"><p>Run on the login nodes with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>nice swift-t ...</code></pre>
+<pre><code>$ nice swift-t ...</code></pre>
 </div></div>
 <div class="paragraph"><p>Run on the compute nodes with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export MODE=cluster QUEUE=default PROJECT=...
-swift-t -m cobalt ...</code></pre>
+<pre><code>$ export MODE=cluster QUEUE=default PROJECT=...
+$ swift-t -m cobalt ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="cooley_candle">CANDLE installation</h4>
-<div class="sect4">
-<h5 id="_python_only">Python only</h5>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/29</p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="paragraph"><p><code>~wozniak/Public/sfw/x86_64/login/swift-t-conda/stc/bin</code></p></div>
-<div class="paragraph"><p>Run as noted above.</p></div>
-<div class="paragraph"><p>This installation is linked to the Python in<br />
-<code>/soft/analytics/conda/env/Candle_ML</code><br />
-which has Theano and TensorFlow installed.</p></div>
-</div>
-<div class="sect4">
-<h5 id="_python_and_r">Python and R</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="paragraph"><p><code>~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin</code></p></div>
-<div class="paragraph"><p>Run as noted above.</p></div>
+<h4 id="_build_instructions_2">Build instructions</h4>
+<div class="paragraph"><p>Dependencies are in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/x86_64/mpich-3.2-gcc-8.2.0
+~wozniak/Public/sfw/x86_64/tcl-8.6.6-global-gcc-4.8.1</code></pre>
+</div></div>
 <div class="ulist"><ul>
 <li>
 <p>
-This installation is linked to the Python in<br />
-  <code>/soft/analytics/conda/env/Candle_ML</code><br />
-  which has Theano and TensorFlow installed.
+Add these dependencies to <code>PATH</code>.
 </p>
 </li>
 <li>
 <p>
-This installation is linked to the R in<br />
-  <code>~wozniak/Public/sfw/x86_64/R-3.2.3-gcc-4.8.1</code><br />
-  which has mlrMBO installed.
+Use the <a href="guide.html#install_source"><code>dev/build</code> scripts</a>.
 </p>
 </li>
 </ul></div>
-</div>
-<div class="sect4">
-<h5 id="_how_this_was_built">How this was built</h5>
-<div class="paragraph"><p>There is a conflict with zlib between the system MVAPICH and the Conda
-installation.  So we compile everything to use the Conda zlib.</p></div>
-<div class="paragraph"><p>Use the system <code>/usr/bin/gcc</code> (4.4.7).</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-Change the Tcl <code>Makefile</code> to contain:<br />
-line 193:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>Candle_ML_RP = -Wl,-rpath -Wl,/soft/analytics/conda/env/Candle_ML/lib
-CC_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)
-LD_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)</code></pre>
-</div></div>
-<div class="paragraph"><p>line 283:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>LIBS = -ldl -L /soft/analytics/conda/env/Candle_ML/lib -lz  -lpthread -lieee -lm</code></pre>
-</div></div>
-<div class="paragraph"><p>Check that you are using the zlib in Conda with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>ldd libtcl8.6.so
-ldd tclsh</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Compile a plain MPICH from source. (This will work on the compute
-nodes with <code>swift-t&nbsp;-m&nbsp;cobalt</code> .)   Check that it uses no zlib with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>ldd lib/.libs/libmpi.so</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure ADLB with the MPICH in step 2 and <code>--without-zlib</code>.
-Check that it uses the zlib in Conda with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>ldd lib/libadlb.so</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>--disable-checkpoint --without-zlib --with-hdf5=no</code></pre>
-</div></div>
-<div class="paragraph"><p>Check that it uses no zlib:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>ldd lib/libturbine.so</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Run with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
-swift-t -m cobalt ...</code></pre>
-</div></div>
-<div class="paragraph"><p>(Also runs on the login nodes.)</p></div>
-</li>
-</ol></div>
-</div>
-<div class="sect4">
-<h5 id="_python_and_r_2">Python and R</h5>
-<div class="paragraph"><p>This installation was compiled with GCC 4.8.1 (<code>/soft/compilers/gcc/4.8.1</code>)</p></div>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="paragraph"><p><code>~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin</code></p></div>
-<div class="paragraph"><p>Run with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
-swift-t -m cobalt ...</code></pre>
-</div></div>
-<div class="paragraph"><p>(Also runs on the login nodes.)</p></div>
-</div>
-<div class="sect4">
-<h5 id="_to_build_with_python_and_r">To build with Python and R</h5>
-<div class="paragraph"><p>As above for Python, but additionally:</p></div>
-<div class="olist arabic"><ol class="arabic">
-<li>
-<p>
-Put R in <code>PATH</code>: <code>~wozniak/Public/sfw/x86_64/R-3.2.3/bin</code>
-</p>
-</li>
-<li>
-<p>
-Configure Turbine with: <code>--with-r=~wozniak/Public/sfw/x86_64/R-3.2.3/lib64/R</code>
-</p>
-</li>
-</ol></div>
-</div>
 </div>
 </div>
 <div class="sect2">
@@ -1957,7 +1844,7 @@ cluster at ANL.  It uses SLURM.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_2">Build instructions</h4>
+<h4 id="_build_instructions_3">Build instructions</h4>
 <div class="paragraph"><p>These prerequisites are available and have been tested:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2123,7 +2010,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_3">Build instructions</h4>
+<h4 id="_build_instructions_4">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2355,7 +2242,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_4">Build instructions</h4>
+<h4 id="_build_instructions_5">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2018-12-11</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2979,13 +2866,14 @@ $ nice swift-t workflow.swift</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre><code>$ PATH=$PATH:/global/common/software/nstaff/swift-t/compute/2019-07-12/stc/bin
-$ export PYTHONHOME=/global/common/cori/software/python/2.7-anaconda/envs/deeplearning
-$ swift-t -m slurm -e PYTHONHOME workflow.swift</code></pre>
+# This will be pasted into the SLURM script
+$ export TURBINE_DIRECTIVE="#SBATCH -C knl,quad,cache\n#SBATCH --license=SCRATCH"
+$ swift-t -m slurm workflow.swift</code></pre>
 </div></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -3395,7 +3283,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -3825,7 +3713,7 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 <div id="footer-text">
 Version 1.4.3<br />
 Last updated
- 2019-07-15 14:41:32 CDT
+ 2019-07-29 16:52:25 CDT
 </div>
 </div>
 </body>

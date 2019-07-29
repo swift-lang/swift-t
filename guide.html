@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -2309,6 +2310,25 @@ string keys in <code>A</code>.
 </p>
 </dd>
 </dl></div>
+<div class="paragraph"><p>The following functions are available after v1.4.3 .</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>ternary_integer(boolean b, int i1, int i2) &#8594; int</code>
+</dt>
+<dd>
+<p>
+If <code>b</code> is true, return <code>i1</code>, else return <code>i2</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>ternary_string(boolean b, string s1, string s2) &#8594; string</code>
+</dt>
+<dd>
+<p>
+If <code>b</code> is true, return <code>s1</code>, else return <code>s2</code>.
+</p>
+</dd>
+</dl></div>
 <div class="sect3">
 <h4 id="pick">13.1.1. Pick functions</h4>
 <div class="paragraph"><p>Select items from an array.</p></div>
@@ -2917,7 +2937,7 @@ Get count of unflagged arguments
 <em>(argument-value)</em>
 Given a string, returns the flagged argument with that key:
 </p>
-<div class="paragraph"><p><code>argv("a") &#8594; file1.txt</code></p></div>
+<div class="paragraph"><p><code>argv("a") &#8594; "file1.txt"</code></p></div>
 <div class="paragraph"><p>In addition to regular run-time arguments, the STC <em>compile-time
 arguments</em> feature allows <code>argv()</code> arguments to be provided at compile
 time.  This allows a specialized, optimized version of code to be
@@ -2936,9 +2956,9 @@ since <code>b</code> is not in the command line above:</p></div>
 <em>(argument-positional)</em>
 Given an integer, returns the unflagged argument at that index:
 </p>
-<div class="paragraph"><p><code>argp(2) &#8594; file4.txt</code></p></div>
+<div class="paragraph"><p><code>argp(2) &#8594; "file4.txt"</code></p></div>
 <div class="paragraph"><p>Given 0, returns the program name,</p></div>
-<div class="paragraph"><p><code>argp(0) &#8594; /path/to/program.tic</code></p></div>
+<div class="paragraph"><p><code>argp(0) &#8594; "/path/to/program.tic"</code></p></div>
 </dd>
 <dt class="hdlist1">
 <code>argv_accept(string&#8230;)</code>
@@ -6344,7 +6364,8 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-18 13:52:04 EDT
+Last updated
+ 2019-07-19 13:28:32 CDT
 </div>
 </div>
 
