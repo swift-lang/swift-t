@@ -510,138 +510,41 @@ at the ALCF.
 
 ==== Public installation
 
+*As of:* 2019-07-29
+
+This installation has Python with TensorFlow 0.10.0rc0 .
+
 Add to +PATH+:
 
-+~wozniak/Public/sfw/x86_64/swift-t/stc/bin+
+----
+/soft/analytics/conda/env/Candle_ML/bin
+~wozniak/Public/sfw/x86_64/swift-t/stc/bin
+----
 
 Run on the login nodes with:
 
 ----
-nice swift-t ...
+$ nice swift-t ...
 ----
 
 Run on the compute nodes with:
 
 ----
-export MODE=cluster QUEUE=default PROJECT=...
-swift-t -m cobalt ...
+$ export MODE=cluster QUEUE=default PROJECT=...
+$ swift-t -m cobalt ...
 ----
 
-[[cooley_candle]]
-==== CANDLE installation
+==== Build instructions
 
-===== Python only
-
-*As of:* 2017/03/29
-
-Add to +PATH+:
-
-+~wozniak/Public/sfw/x86_64/login/swift-t-conda/stc/bin+
-
-Run as noted above.
-
-This installation is linked to the Python in +
-+/soft/analytics/conda/env/Candle_ML+ +
-which has Theano and TensorFlow installed.
-
-===== Python and R
-
-Add to +PATH+:
-
-+~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin+
-
-Run as noted above.
-
-* This installation is linked to the Python in +
-  +/soft/analytics/conda/env/Candle_ML+ +
-  which has Theano and TensorFlow installed.
-* This installation is linked to the R in +
-  +~wozniak/Public/sfw/x86_64/R-3.2.3-gcc-4.8.1+ +
-  which has mlrMBO installed.
-
-===== How this was built
-
-There is a conflict with zlib between the system MVAPICH and the Conda
-installation.  So we compile everything to use the Conda zlib.
-
-Use the system +/usr/bin/gcc+ (4.4.7).
-
-1. Change the Tcl +Makefile+ to contain: +
-line 193:
-+
-----
-Candle_ML_RP = -Wl,-rpath -Wl,/soft/analytics/conda/env/Candle_ML/lib
-CC_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)
-LD_SEARCH_FLAGS = -Wl,-rpath,${LIB_RUNTIME_DIR} $(Candle_ML_RP)
-----
-+
-line 283:
-+
-----
-LIBS = -ldl -L /soft/analytics/conda/env/Candle_ML/lib -lz  -lpthread -lieee -lm
-----
-+
-Check that you are using the zlib in Conda with:
-+
-----
-ldd libtcl8.6.so
-ldd tclsh
-----
-2. Compile a plain MPICH from source. (This will work on the compute
-nodes with +swift-t&nbsp;-m&nbsp;cobalt+ .)   Check that it uses no zlib with:
-+
-----
-ldd lib/.libs/libmpi.so
-----
-3. Configure ADLB with the MPICH in step 2 and +--without-zlib+.
-Check that it uses the zlib in Conda with:
-+
-----
-ldd lib/libadlb.so
-----
-4. Configure Turbine with:
-+
-----
---disable-checkpoint --without-zlib --with-hdf5=no
-----
-+
-Check that it uses no zlib:
-+
-----
-ldd lib/libturbine.so
-----
-5. Run with:
-+
-----
-export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
-swift-t -m cobalt ...
-----
-+
-(Also runs on the login nodes.)
-
-===== Python and R
-
-This installation was compiled with GCC 4.8.1 (+/soft/compilers/gcc/4.8.1+)
-
-Add to +PATH+:
-
-+~wozniak/Public/sfw/x86_64/login/swift-t-conda-r/stc/bin+
-
-Run with:
+Dependencies are in:
 
 ----
-export PYTHONHOME=/soft/analytics/conda/env/Candle_ML
-swift-t -m cobalt ...
+~wozniak/Public/sfw/x86_64/mpich-3.2-gcc-8.2.0
+~wozniak/Public/sfw/x86_64/tcl-8.6.6-global-gcc-4.8.1
 ----
 
-(Also runs on the login nodes.)
-
-===== To build with Python and R
-
-As above for Python, but additionally:
-
-1. Put R in +PATH+: +~wozniak/Public/sfw/x86_64/R-3.2.3/bin+
-2. Configure Turbine with: +--with-r=~wozniak/Public/sfw/x86_64/R-3.2.3/lib64/R+
+* Add these dependencies to +PATH+.
+* Use the link:guide.html#install_source[+dev/build+ scripts].
 
 === Breadboard
 
