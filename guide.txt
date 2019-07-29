@@ -1486,7 +1486,7 @@ Get count of unflagged arguments
 _(argument-value)_
 Given a string, returns the flagged argument with that key:
 +
-+argv("a") -> file1.txt+
++argv("a") -> "file1.txt"+
 +
 In addition to regular run-time arguments, the STC _compile-time
 arguments_ feature allows +argv()+ arguments to be provided at compile
@@ -1504,11 +1504,11 @@ since +b+ is not in the command line above:
 _(argument-positional)_
 Given an integer, returns the unflagged argument at that index:
 +
-+argp(2) -> file4.txt+
++argp(2) -> "file4.txt"+
 +
 Given 0, returns the program name,
 +
-+argp(0) -> /path/to/program.tic+
++argp(0) -> "/path/to/program.tic"+
 
 +argv_accept(string...)+::
 
