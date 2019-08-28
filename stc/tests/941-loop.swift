@@ -1,6 +1,5 @@
 
 // Reported in issue #98
-// SKIP-THIS-TEST
 
 int a[][];
 foreach i in [1:50]

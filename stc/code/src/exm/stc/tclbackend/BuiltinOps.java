@@ -33,7 +33,6 @@ import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.SetVariable;
 import exm.stc.tclbackend.tree.Square;
 import exm.stc.tclbackend.tree.TclExpr;
-import exm.stc.tclbackend.tree.TclList;
 import exm.stc.tclbackend.tree.TclString;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;

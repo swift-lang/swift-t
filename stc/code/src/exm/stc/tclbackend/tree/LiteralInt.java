@@ -57,6 +57,11 @@ public class LiteralInt extends Expression {
   }
 
   @Override
+  public int hashCode() {
+    return Long.valueOf(value).hashCode();
+  }
+
+  @Override
   public boolean supportsStringList() {
     return true;
   }

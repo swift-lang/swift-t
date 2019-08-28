@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -l
+changecom(`dnl')#!/bin/bash`'bash_l()
 
 # We use changecom to change the M4 comment to dnl, not hash
 
@@ -20,11 +20,7 @@ changecom(`dnl')#!/bin/bash -l
 # The Turbine LSF template.  This is automatically filled in
 # by M4 in turbine-lsf-run.zsh
 
-# Created: esyscmd(`date')
-
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
@@ -33,6 +29,7 @@ ifelse(getenv(PROJECT), `',,
 #BSUB -W getenv(WALLTIME)
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
+#BSUB -cwd getenv(TURBINE_OUTPUT)
 
 # User directives:
 # BEGIN TURBINE_DIRECTIVE
@@ -48,6 +45,7 @@ then
 fi
 
 echo "TURBINE-LSF"
+echo "TURBINE: DATE START: $( date "+%Y-%m-%d %H:%M:%S" )"
 echo
 
 cd ${TURBINE_OUTPUT}
@@ -57,22 +55,23 @@ COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
-# Start the user environment variables pasted by M4
-getenv(USER_ENVS_CODE)
-# End environment variables pasted by M4
+typeset -a USER_ENV_ARRAY
+USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
-USER_ENVS_ARGS=( -E _dummy=x )
-for K in ${!USER_ENVS[@]}
+USER_ENV_ARGS=( -E _dummy=x )
+COUNT=${#USER_ENV_ARRAY[@]}
+for (( i=0 ; $i < $COUNT ; i+=2 ))
 do
-  USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
+  i1=$(( $i + 1 ))
+  USER_ENV_ARGS+=( -E ${USER_ENV_ARRAY[$i]}="${USER_ENV_ARRAY[$i1]}" )
 done
 
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # User prelaunch commands:
@@ -85,18 +84,34 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
 
+TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
+
 START=$( date +%s.%N )
-jsrun -n $PROCS -r $PPN \
-      -E TCLLIBPATH \
-      -E ADLB_PRINT_TIME=1 \
-      "${USER_ENVS_ARGS[@]}" \
-      ${COMMAND}
-CODE=$?
+if (
+   set -x
+   jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
+            -E TCLLIBPATH \
+            -E ADLB_PRINT_TIME=1 \
+            "${USER_ENV_ARGS[@]}" \
+            ${COMMAND}
+)
+then
+    CODE=0
+else
+    CODE=$?
+    echo
+    echo "TURBINE-LSF: jsrun returned an error code!"
+    echo
+fi
 echo
-echo "EXIT CODE: $CODE"
+echo "TURBINE: EXIT CODE: $CODE"
 STOP=$( date +%s.%N )
+
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
-echo "MPIEXEC TIME: ${DURATION}"
+
+echo
+echo "TURBINE: MPIEXEC TIME: ${DURATION}"
+echo "TURBINE: DATE STOP:  $( date "+%Y-%m-%d %H:%M:%S" )"
 exit $CODE

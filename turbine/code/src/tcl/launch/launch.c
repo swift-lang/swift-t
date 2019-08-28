@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// For systems without strlcpy(), e.g., Linux
+#include <strlcpy.h>
+
 #include "MPIX_Comm_launch.h"
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
@@ -100,7 +104,7 @@ get_envs(int envc, char** envs, char* match, int* index, char** result) {
     char* p = &envs[i][0];
     char* q = strchr(envs[i], '=');
     if (q-p == n) return false;
-    int k = q-p-1; // Length of envs key
+    int k = q-p; // Length of envs key
     if (strncmp(envs[i], match, k) == 0) {
       *index = i;
       *result = q+1;

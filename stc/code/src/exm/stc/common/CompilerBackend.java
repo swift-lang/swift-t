@@ -90,7 +90,7 @@ public interface CompilerBackend {
    * Called once after code generation ends to allow generator to finalize
    * before generating actual output code.
    */
-  public void finalize();
+  public void finish();
 
   /**
    * Generate code, and output to provided stream.

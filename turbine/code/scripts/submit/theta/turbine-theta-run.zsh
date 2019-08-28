@@ -69,7 +69,6 @@ export ENV_LIST
 
 # Launch it
 export COMMAND
-COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 TURBINE_THETA_M4=${TURBINE_HOME}/scripts/submit/theta/turbine-theta.sh.m4
 TURBINE_THETA=${TURBINE_OUTPUT}/turbine-theta.sh
 m4 ${COMMON_M4} ${TURBINE_THETA_M4} > ${TURBINE_THETA}

@@ -46,14 +46,14 @@ fi
 TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
-m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+m4 ${COMMON_M4} ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
 chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine-slurm-run -e K=V settings here:
-for kv in ${env}
+for kv in ${USER_ENV_CODE}
 do
   eval export ${kv}
 done
@@ -77,6 +77,7 @@ fi
 
 if (( ! TURBINE_PREALLOCATION ))
 then
+  # Submit it!
   JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
   # JOB_ID must be an integer:
   if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]

@@ -31,26 +31,26 @@ then
   return 1
 fi
 
-# Repack environment variables for LSF jsrun
-export USER_ENVS_CODE="declare -A USER_ENVS=()\n"
-for kv in ${env}
-do
-  KEY=${kv%=*}
-  VALUE=${kv#*=}
-  USER_ENVS_CODE+="USER_ENVS[$KEY]=\"$VALUE\"\n"
-done
+# Convert HH:MM:SS to HH:MM (bsub will not accept HH:MM:SS)
+if (( ${#WALLTIME} == 8 ))
+then
+  WALLTIME=${WALLTIME[1,5]}
+fi
 
 TURBINE_LSF_M4=${TURBINE_HOME}/scripts/submit/lsf/turbine-lsf.sh.m4
 TURBINE_LSF=${TURBINE_OUTPUT}/turbine-lsf.sh
 
 # Filter/create the LSF submit file
-m4 ${TURBINE_LSF_M4} > ${TURBINE_LSF}
+m4 ${COMMON_M4} ${TURBINE_LSF_M4} > ${TURBINE_LSF}
 print "wrote: ${TURBINE_LSF}"
 
 BSUB=/sw/sources/lsf-tools/2.0/summit/bin/bsub
 
+cd ${TURBINE_OUTPUT:A} # Canonicalize
+echo "PWD: ${PWD}"
+
 # Submit it!
-$BSUB ${TURBINE_LSF} | read MESSAGE
+${BSUB} ${TURBINE_LSF} | read MESSAGE
 echo $MESSAGE
 # Pull out 2nd word without characters '<' and '>'
 JOB_ID=${${(z)MESSAGE}[3]}

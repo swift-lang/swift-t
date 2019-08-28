@@ -1,8 +1,10 @@
 
+# TURBINE CONFIG SH
+
 # BASH-formatted setup script filtered by turbine/configure
 #
 # Influential environment variables include:
-# TURBINE_USER_LIB - directory for user library code
+# SWIFT_PATH / TURBINE_PATH / TURBINE_USER_LIB - directory for user library code
 # TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
@@ -23,7 +25,7 @@ export USE_CC=@USE_CC@
 export MPI_IMPL=@MPI_IMPL@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 export MPI_LABEL="@MPI_LABEL@"
-export TURBINE_LAUNCHER=@USE_LAUNCHER@
+export TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-@USE_LAUNCHER@}
 export TURBINE_LINE_OUTPUT_FLAG=@MPI_LINE_OUTPUT_FLAG@
 export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
 export TURBINE_MAC=@USE_MAC@
@@ -75,5 +77,11 @@ export TURBINE_MACHINE=@USE_MACHINE@
 export TURBINE_USE_PYTHON=@PYTHON_LIBDIR@
 export TURBINE_USE_PYTHON_NAME=@PYTHON_NAME@
 export TURBINE_USE_R=@USE_R@
+
+if [[ ${TURBINE_USE_R} != 0 ]]
+then
+  R_LIB=${TURBINE_USE_R}/lib
+  export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}${LD_LIBRARY_PATH:+:}${R_LIB}
+fi
 
 return 0

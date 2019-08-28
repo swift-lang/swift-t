@@ -14,9 +14,13 @@ ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
+source ${THIS}/setup.sh
 
 LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"
-LOG_WAIT 3
+if (( RUN_CONFIGURE ))
+then
+  LOG_WAIT 3
+fi
 
 LOG $LOG_INFO ""
 ${THIS}/build-cutils.sh

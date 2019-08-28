@@ -26,7 +26,8 @@ fi
 
 if [[ ! -x "${TURBINE_HOME}/bin/turbine" ]]
 then
-  print "${TURBINE_HOME} does not appear to be a valid Turbine installation: expected ${TURBINE_HOME}/bin/turbine to be present"
+  print "Invalid Turbine installation: ${TURBINE_HOME}"
+  print "Turbine is not executable: ${TURBINE_HOME}/bin/turbine"
   exit ${EXIT_ERROR_SCRIPT}
 fi
 

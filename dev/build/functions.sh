@@ -137,7 +137,7 @@ make_clean()
 
 make_all()
 {
-  make -j ${MAKE_PARALLELISM} ${MAKE_V} ${MAKE_QUIET}
+  ${NICE_CMD} make -j ${MAKE_PARALLELISM} ${MAKE_V} ${MAKE_QUIET}
 }
 
 make_install()

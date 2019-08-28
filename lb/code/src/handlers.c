@@ -1611,7 +1611,7 @@ handle_typeof(int caller)
   long long i;
   RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
   id = i;
-  
+
   adlb_data_type type;
   int t;
   adlb_data_code dc = xlb_data_typeof(id, &type);
@@ -1636,7 +1636,7 @@ handle_container_typeof(int caller)
   long long i;
   RECV(&i, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
   id = i;
-  
+
   adlb_data_type types[2];
   int t[2];
   adlb_data_code dc =
@@ -1729,7 +1729,8 @@ handle_container_reference(int caller)
 static adlb_code
 handle_container_size(int caller)
 {
-  adlb_code rc;
+  adlb_code ac;
+  int rc;
   MPI_Status status;
   struct packed_size_req req;
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_CONTAINER_SIZE);
@@ -1741,8 +1742,8 @@ handle_container_size(int caller)
 
   if (dc == ADLB_DATA_SUCCESS)
   {
-    rc = refcount_decr_helper(req.id, req.decr);
-    ADLB_CHECK(rc);
+    ac = refcount_decr_helper(req.id, req.decr);
+    ADLB_CHECK(ac);
   }
 
   if (dc != ADLB_DATA_SUCCESS)

@@ -625,6 +625,8 @@ size_t list_ip_snprintf(char* str, size_t size,
     returns int greater than size if size limits are exceeded
             indicating result is garbage
  */
+/*
+ WARNING: This has a couple bugs...
 size_t list_ip_marshal(char* str, size_t size,
                   char* (f)(void*), struct list_ip* target)
 {
@@ -653,7 +655,4 @@ size_t list_ip_marshal(char* str, size_t size,
 
   return (size_t)(ptr-str);
 }
-
-#ifdef DEBUG_list_ip
-
-#endif
+*/

@@ -39,7 +39,7 @@ if [[ ${prefix} == "NONE" ]]
 then
   if (( ! DEBIAN_BUILD ))
   then
-    AC_MSG_ERROR("You must provide --prefix")
+    AC_MSG_ERROR([You must provide --prefix])
   fi
 fi
 
@@ -111,25 +111,25 @@ AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
 
 # We prefer to use cp -u for installation
-AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
-            [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
+AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_HAVE_CP_U],
+            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_U], [cp],
               [[cp_u_out=`cp -u /dev/null cp_u.token 2>&1 > /dev/null`
                 test "$?" = 0 \
-                && ac_cv_path_cp_u=yes || ac_cv_path_cp_u=no ]],
-              [])])
-AC_SUBST([CP_U], [$ac_cv_path_cp_u])
-[[ -r cp_u.token ]] && rm cp_u.token
+                && ac_cv_path_HAVE_CP_U=yes ac_path_HAVE_CP_U_found=: ]],
+              [ac_cv_path_HAVE_CP_U=no])])
+AC_SUBST([HAVE_CP_U], [$ac_cv_path_HAVE_CP_U])
+[[ -w cp_u.token ]] && rm cp_u.token
 
 # We prefer to use cp --parents for installation
 AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
-            [AC_PATH_PROGS_FEATURE_CHECK([CP_PARENTS], [cp],
+            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_PARENTS], [cp],
               [[cp_parents_out=`cp --parents /dev/null . > /dev/null 2>&1`
                 test "$?" = 0 \
                 && ac_cv_path_cp_parents=yes || ac_cv_path_cp_parents=no ]],
               [])])
 # If cp --parents succeeded, we have a directory to remove
 [[ -d dev ]] && rm -r dev
-AC_SUBST([CP_PARENTS], [$ac_cv_path_cp_parents])
+AC_SUBST([HAVE_CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
 AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stddef.h sys/param.h])
@@ -153,11 +153,16 @@ AC_CHECK_TYPES([ptrdiff_t])
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
 AC_FUNC_FORK
+AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([dup2 gettimeofday mallinfo memchr memset pow setenv])
-AC_CHECK_FUNCS([strchr strdup strerror strlen strnlen strstr])
-AC_CHECK_FUNCS([strtol strtoul uname])
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([dup2 getcwd gettimeofday mallinfo memchr memset pow])
+AC_CHECK_FUNCS([setenv strchr strdup strerror strlen strnlen strpbrk])
+# These vary: strchrnul is on Linux but not Mac
+#             strlcpy   is on Mac   but not Linux
+AC_CHECK_FUNCS([strchrnul strlcpy])
+AC_CHECK_FUNCS([strstr strtol strtoul strtoull uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
@@ -518,15 +523,16 @@ then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL="OpenMPI"
+   HAVE_MPI_IMPL_OPENMPI=1
    if (( OMPI_MINOR_VERSION >= 3 ))
    then
-     LINE_PREFIX="-tag-output"
+     MPI_LINE_OUTPUT_FLAG="--tag-output"
    else
-     LINE_PREFIX=
+     MPI_LINE_OUTPUT_FLAG=""
    fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
-   HAVE_MPI_IMPL_MPICH=0
+   HAVE_MPI_IMPL_MPICH=1
    MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG=-l
 fi
@@ -694,25 +700,44 @@ else
 fi
 
 # R is optional
-HAVE_R=0
-USE_R=0
+HAVE_R=0          # If we have R, this is 1
+USE_R=0           # If we have R, this is R.home()
 RCPP_PATH=0
 RINSIDE_PATH=0
-# Drop this?  Almost guaranteed to fail.
+
 AC_ARG_ENABLE(r,
     AS_HELP_STRING([--enable-r],
                    [Enable calling R language]),
     [
       HAVE_R=1
-      USE_R="/usr" # Acceptable default?
+      AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+      USE_R=$( Rscript -e "cat(R.home())" )
+      AC_MSG_RESULT([Found R at: $USE_R])
+      AC_MSG_RESULT([Using Rscript: $( which Rscript ) ])
     ])
+
+AC_ARG_WITH(r,
+   AS_HELP_STRING([--with-r],
+                   [Use this R directory, the one returned by R.home() ]),
+  [
+      HAVE_R=1
+      USE_R=$withval
+      R_BIN=$USE_R/../../bin
+      if [[ -d $R_BIN ]]
+      then
+        R_BIN=$( cd $R_BIN ; /bin/pwd )
+        AC_MSG_RESULT([Adding to PATH: $R_BIN ])
+        PATH=$R_BIN:$PATH
+      fi
+      AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+  ])
 
 AC_ARG_WITH(rinside,
    AS_HELP_STRING([--with-rinside],
                    [Use this RInside directory]),
    [
       HAVE_R=1
-      RINSIDE_PATH=${withval}
+      RINSIDE_PATH=$withval
    ])
 
 AC_ARG_WITH(rcpp,
@@ -720,33 +745,40 @@ AC_ARG_WITH(rcpp,
                    [Use this Rcpp directory]),
    [
       HAVE_R=1
-      RCPP_PATH=${withval}
+      RCPP_PATH=$withval
    ])
 
-AC_ARG_WITH(r,
-   AS_HELP_STRING([--with-r],
-                   [Use this R directory]),
-  [
-      HAVE_R=1
-      USE_R=${withval}
-  ])
-
-if [[ ${HAVE_R} == 1 ]]
+if (( $HAVE_R ))
 then
-  AC_MSG_RESULT([Adding to PATH: $USE_R/../../bin ])
-  PATH=$USE_R/../../bin:$PATH
+  R_HEADER_FOUND=0
+  DEFAULT_R_INCLUDE=$USE_R/include
+  AC_CHECK_FILE($DEFAULT_R_INCLUDE/R.h,
+                [ R_INCLUDE=$DEFAULT_R_INCLUDE ; R_HEADER_FOUND=1 ])
+  if (( ! R_HEADER_FOUND ))
+  then
+    R_INCLUDE=$( Rscript -e "cat(R.home('include'))" )
+    AC_CHECK_FILE($R_INCLUDE/R.h, [ R_HEADER_FOUND=1 ])
+  fi
+  dnl # Another way to find the R.h location:
+  dnl if (( ! R_HEADER_FOUND ))
+  dnl then
+  dnl   R_INCLUDE=$( Rscript -e "cat(Sys.getenv('R_INCLUDE_DIR'))" )
+  dnl   AC_CHECK_FILE($R_INCLUDE/R.h, [ R_HEADER_FOUND=1 ])
+  dnl fi
+  if (( ! R_HEADER_FOUND ))
+  then
+    AC_MSG_ERROR("Could not find R header!")
+  fi
+  AC_MSG_RESULT([Using R include: $R_INCLUDE])
 
-  AC_CHECK_FILE(${USE_R}/include/R.h, [],
-        [AC_MSG_ERROR([Could not find R header!])])
   if [[ ${RINSIDE_PATH} == 0 ]]
   then
-    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
       R_LIB_PATHS=" ${USE_R} "
       # returned in order of precedence so we want to
       # reverse so that the last overrides the first
-      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      R_LIB_PATHS+="$( Rscript -e 'cat(rev(.libPaths()))' )"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/RInside, [RINSIDE_PATH=${p}/RInside], [])
@@ -758,13 +790,12 @@ then
 
   if [[ ${RCPP_PATH} == 0 ]]
   then
-    AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
     if [[ ! -z ${RSCRIPT} ]]
     then
       R_LIB_PATHS="${USE_R} "
       # returned in order of precedence so we want to
       # reverse so that the last overrides the first
-      R_LIB_PATHS+="$(Rscript -e 'cat(rev(.libPaths()))')"
+      R_LIB_PATHS+="$( Rscript -e 'cat(rev(.libPaths()))' )"
       for p in $R_LIB_PATHS
       do
         AC_CHECK_FILE(${p}/Rcpp, [RCPP_PATH=${p}/Rcpp], [])
@@ -786,6 +817,7 @@ fi # if HAVE_R
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)
+AC_SUBST(R_INCLUDE)
 AC_SUBST(RINSIDE_PATH)
 AC_SUBST(RCPP_PATH)
 

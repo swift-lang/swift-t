@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash
+changecom(`dnl')#!/bin/bash`'bash_l()
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -21,16 +21,16 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
-
 #PBS -N getenv(TURBINE_JOBNAME)
 #PBS -l nodes=getenv_nospace(NODES):ppn=getenv(PPN)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -j oe
 #PBS -o getenv(OUTPUT_FILE)
 #PBS -V
+
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
 
 VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))
@@ -50,13 +50,31 @@ COMMAND=getenv(COMMAND)
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-START=$( date +%s.%N )
+# PBS exports all environment variables to the job under #PBS -V
+# Evaluate any user turbine -e K=V settings here
+export getenv(USER_ENV_CODE)
+
+START=$( date "+%s.%N" )
+
+# Run Turbine!
 ${TURBINE_LAUNCHER} ${TURBINE_INTERPOSER:-} ${COMMAND}
-STOP=$( date +%s.%N )
+CODE=$?
+
+STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 echo "MPIEXEC TIME: ${DURATION}"
+
+echo "CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+
+# Return exit code from launcher
+exit ${CODE}
+
+# Local Variables:
+# mode: m4
+# End:

@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,7 +34,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 

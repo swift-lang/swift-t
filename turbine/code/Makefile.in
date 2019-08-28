@@ -260,9 +260,10 @@ PYTHON_LIB_FLAGS     = @PYTHON_LIB_FLAGS@
 PYTHON_LIBDIR        = @PYTHON_LIBDIR@
 PYTHON_NAME          = @PYTHON_NAME@
 
-HAVE_R = @HAVE_R@
-USE_R  = @USE_R@
-RCPP_PATH = @RCPP_PATH@
+HAVE_R       = @HAVE_R@
+USE_R        = @USE_R@
+R_INCLUDE    = @R_INCLUDE@
+RCPP_PATH    = @RCPP_PATH@
 RINSIDE_PATH = @RINSIDE_PATH@
 
 HAVE_JULIA = @HAVE_JULIA@
@@ -293,7 +294,7 @@ ifeq ($(HAVE_PYTHON),1)
 endif
 ifeq  ($(HAVE_R),1)
 ifneq ($(USE_R),)
-  INCLUDES += -I $(USE_R)/include
+  INCLUDES += -I $(R_INCLUDE)
   R_LIBRARY = $(USE_R)/library
   ifneq ($(RINSIDE_PATH),)
    INCLUDES += -I $(RINSIDE_PATH)/include
@@ -719,14 +720,14 @@ $(TEST_BINS): %.x: %.o install.txt $(TEST_STATIC_PREREQS)
 
 ### INSTALL
 
-HAVE_CP_U = @CP_U@
+HAVE_CP_U = @HAVE_CP_U@
 ifeq ($(HAVE_CP_U),yes)
 	CP_ARGS = -uvf
 else
 	CP_ARGS = -vf
 endif
 
-HAVE_CP_PARENTS = @CP_PARENTS@
+HAVE_CP_PARENTS = @HAVE_CP_PARENTS@
 ifeq ($(HAVE_CP_PARENTS),yes)
 	CP_PARENTS = cp --parents
 else

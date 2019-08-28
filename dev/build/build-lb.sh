@@ -10,6 +10,7 @@ ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
 source ${THIS}/options.sh
 source ${THIS}/swift-t-settings.sh
+source ${THIS}/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
@@ -60,11 +61,12 @@ then
   (
     rm -f config.cache
     set -eux
-    ./configure --config-cache \
+    ${NICE_CMD} ./configure --config-cache \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --prefix=${LB_INSTALL} \
                 CC=${CC} \
-                ${EXTRA_ARGS}
+                ${EXTRA_ARGS} \
+                ${CUSTOM_CFG_ARGS_LB:-}
   )
   if (( $? ))
   then

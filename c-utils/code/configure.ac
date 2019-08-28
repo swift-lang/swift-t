@@ -16,6 +16,14 @@ C_UTILS_VERSION=c_utils_version()
 AC_MSG_RESULT([c-utils version: ${C_UTILS_VERSION}])
 AC_SUBST(C_UTILS_VERSION)
 
+if [[ ${prefix} == "NONE" ]]
+then
+  if (( ! DEBIAN_BUILD ))
+  then
+    AC_MSG_ERROR([You must provide --prefix])
+  fi
+fi
+
 if [[ ${prefix} == ${PWD} ]]
 then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
@@ -59,6 +67,9 @@ AC_TYPE_SIZE_T
 # because of known autoconf issues.  We do check for strnlen here:
 AC_CHECK_FUNCS([floor gettimeofday memchr memmove memset])
 AC_CHECK_FUNCS([strchr strdup strnlen strtol])
+# These vary: strchrnul is on Linux but not Mac
+#             strlcpy   is on Mac   but not Linux
+AC_CHECK_FUNCS([strchrnul strlcpy])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
