@@ -391,7 +391,7 @@ fi
 
 if [[ -z "${USE_MPI_LIB_NAME}" ]]
 then
-  MPI_LIB_NAME_ALTS="mpi mpich"
+  MPI_LIB_NAME_ALTS="mpi mpich mpi_ibm"
 else
   MPI_LIB_NAME_ALTS="${USE_MPI_LIB_NAME}"
 fi

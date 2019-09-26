@@ -218,22 +218,18 @@ AC_ARG_ENABLE(mpi-2,
 AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
                    [MPI version])
 
-AC_MSG_CHECKING([MPI version])
-${CC} -E -P ${CFLAGS} maint/mpi_version.c > mpi_version.c.txt
-[[ ${?} != 0 ]] && AC_MSG_ERROR([Could not preprocess maint/mpi_version.c])
-
-MPI_VERSION_LINE=$( grep "The MPI version is" mpi_version.c.txt )
-AC_MSG_RESULT([${MPI_VERSION_LINE}])
-MPI_VERSION=$( echo ${MPI_VERSION_LINE} | cut -d ' ' -f 5 )
+# if user wants to build with MPI 3,
+# check the reported MPI_VERSION number
 if [[ ${ADLB_MPI_VERSION} == 3 ]]
 then
-   [[ ${MPI_VERSION} == 3 ]] || \
-     AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
+AC_MSG_CHECKING([MPI version])
+${CC} ${CFLAGS} -o maint/mpi_version3_test maint/mpi_version3_test.c
+[[ ${?} != 0 ]] && AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
                    You must 1) re-configure with --enable-mpi-2
                                which disables parallel tasks; or
                             2) use an MPI 3 implementation])
+rm -f maint/mpi_version3_test
 fi
-rm -f mpi_version.c.txt
 
 XLB_ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
