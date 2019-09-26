@@ -44,7 +44,7 @@ TURBINE_LSF=${TURBINE_OUTPUT}/turbine-lsf.sh
 m4 ${COMMON_M4} ${TURBINE_LSF_M4} > ${TURBINE_LSF}
 print "wrote: ${TURBINE_LSF}"
 
-BSUB=/sw/sources/lsf-tools/2.0/summit/bin/bsub
+BSUB=bsub
 
 cd ${TURBINE_OUTPUT:A} # Canonicalize
 echo "PWD: ${PWD}"
