@@ -362,7 +362,7 @@ namespace eval turbine {
         }
 
         # Remove REPUT for the following log message
-        set work_types_user [ lreplace $work_types end-1 end ]
+        set work_types_user [ lreplace $work_types end end ]
 
         # Report on how workers are subdivided for user work types
         set curr_rank 0
