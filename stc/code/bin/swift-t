@@ -133,7 +133,7 @@ done
 shift $(( OPTIND - 1 ))
 
 (( VERBOSE >= 1 )) && STC_OPTS+="-V"
-(( VERBOSE == 2 )) && TURBINE_OPTS+="-V"
+(( VERBOSE >= 2 )) && TURBINE_OPTS+="-V"
 
 # Print a message when we are verbose.
 verbose()
