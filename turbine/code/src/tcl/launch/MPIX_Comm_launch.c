@@ -8,11 +8,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-// If this system does not have strchrnul(),
-// see ExM c-utils strchrnul.h
-#include <config.h>
-#include <strchrnul.h>
-
 #include "MPIX_Comm_launch.h"
 
 static char* old_pwd = NULL;
@@ -54,6 +49,65 @@ static char* info_get_output_redirection(MPI_Info info) {
 	return redirect;
 }
 
+static char* info_get_exectime(MPI_Info info) {
+	char* print_time;
+	int flag = 0;
+	if (MPI_INFO_NULL != info) {
+		int len = 0;
+		MPI_Info_get_valuelen(info, "exectime", &len, &flag);
+		if (flag) {
+			char filename[len + 1];
+
+			MPI_Info_get(info, "exectime", len + 1, filename, &flag);
+			print_time = (char*) malloc((len + 32) * sizeof(char));
+			sprintf(print_time,"/usr/bin/time -v -o %s ", filename);
+		}
+	}
+	if (! flag) {
+		print_time = (char*) malloc(sizeof(char));
+		print_time[0] = '\0';
+	}
+	return print_time;
+}
+
+static int info_get_ppw(MPI_Info info) {
+	int ppw = 1;
+	int flag = 0;
+	if(MPI_INFO_NULL != info) {
+		int len = 0;
+		MPI_Info_get_valuelen(info, "ppw", &len, &flag);
+		if(flag) {
+			char ppw_string[len + 1];
+			MPI_Info_get(info, "ppw", len + 1, ppw_string, &flag);
+			int n = sscanf(ppw_string, "%d", &ppw);
+			if (n != 1 || ppw <= 0) {
+				printf("MPIX_Comm_launch(): error retrieving info value for key 'ppw': "
+						"should be a positive int: '%s'\n", ppw_string);
+			}
+		}
+	}
+	return ppw;
+}
+
+static int info_get_numproc(MPI_Info info) {
+	int numproc = 1;
+	int flag = 0;
+	if(MPI_INFO_NULL != info) {
+		int len = 0;
+		MPI_Info_get_valuelen(info, "numproc", &len, &flag);
+		if(flag) {
+			char numproc_string[len + 1];
+			MPI_Info_get(info, "numproc", len + 1, numproc_string, &flag);
+			int n = sscanf(numproc_string, "%d", &numproc);
+			if (n != 1 || numproc <= 0) {
+				printf("MPIX_Comm_launch(): error retrieving info value for key 'numproc': "
+						"should be a positive int: '%s'\n", numproc_string);
+			}
+		}
+	}
+	return numproc;
+}
+
 static void info_get_envs_error(MPI_Comm comm, const char* message);
 
 /**
@@ -81,27 +135,30 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 	}
 	char count_string[len+1];
 	MPI_Info_get(info,"envs",len+1,count_string,&flag);
-	long count = strtod(count_string, NULL);
+	long count = strtol(count_string, NULL, 10);
 	int* lengths = alloca(count * sizeof(int));
-	char* env_word = "env ";
+	char* env_word = "-env ";
 	size_t env_word_length = strlen(env_word);
-	size_t total = env_word_length;
+	size_t total = 1;
 	char key[16];
 	int i;
 	for(i=0; i<count; i++) {
+		total += env_word_length;
 		sprintf(key, "env%i", i);
 		MPI_Info_get_valuelen(info, key, &len, &flag);
 		if(!flag) info_get_envs_error(comm, key);
 		lengths[i] = len;
-		total += len+2;
+		total += len + 1;
 	}
-	result = malloc(total);
+	result = malloc(total * sizeof(char));
 	memset(result, 0, total);
-	strcpy(result, env_word);
-	char* p = result+env_word_length;
+	// strcpy(result, env_word);
+	char* p = result;
 	for(i=0; i<count; i++) {
+		strcpy(p, env_word);
+		p += env_word_length;
 		sprintf(key, "env%i", i);
-		MPI_Info_get(info,key,lengths[i],p,&flag);
+		MPI_Info_get(info, key, lengths[i] + 1, p, &flag);
 		p += lengths[i];
 		*p = ' ';
 		p++;
@@ -171,7 +228,7 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	if(MPI_INFO_NULL == info) {
 		return MPI_SUCCESS;
 	}
-        MPI_Info_get_valuelen(info, "write_hosts", &len, &flag);
+	MPI_Info_get_valuelen(info, "write_hosts", &len, &flag);
 	if(!flag) {
 		return MPI_SUCCESS;
 	}
@@ -221,8 +278,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		if(!allhosts) goto fn_error;
 	}
 	r = MPI_Gather(procname, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
-	               allhosts, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
-	               root, comm);
+			allhosts, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
+			root, comm);
 	if(r) goto fn_error;
 
 	// printf("exec\n");   fflush(stdout);
@@ -232,8 +289,14 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		char* launcher = info_get_launcher(info);
 		// get output redirection string
 		char* redirect = info_get_output_redirection(info);
+		// get time printing string
+		char* print_time = info_get_exectime(info);
 		// get the timeout
 		float timeout = (float) info_get_timeout(comm, info);
+		int ppw = info_get_ppw(info);
+		int numproc = info_get_numproc(info);
+		assert(numproc <= ppw * size);
+
 		info_chdir(comm, info);
 
 		char timeout_string[64];
@@ -275,6 +338,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		s += strlen(allhosts)+1;
 		s += strlen(launcher)+1;
 		s += strlen(redirect)+1;
+		s += strlen(print_time) + 1;
 		if(argv)
 			for(i=0; argv[i] != NULL; i++)
 				s += strlen(argv[i])+1;
@@ -286,15 +350,14 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 
 		// create MPI command
 		if(strcmp("turbine",launcher) == 0) {
-			sprintf(mpicmd, "-hosts=%s", allhosts);
+			// sprintf(mpicmd, "-ppn %d -hosts=%s", ppw, allhosts);
 			setenv("TURBINE_LAUNCH_OPTIONS", mpicmd, 1);
-			sprintf(mpicmd, "%s -n %d ", launcher, (size+1));
+			sprintf(mpicmd, "%s -n %d ", launcher, (numproc+1));
 		} else {
-			sprintf(mpicmd, "%s -n %d -hosts %s -launcher ssh ",
-                                launcher, size, allhosts);
+			sprintf(mpicmd, "%s%s%s -n %d -ppn %d -hosts %s -launcher ssh ",
+					print_time, timeout_string, launcher, numproc, ppw, allhosts);
 		}
 
-		strcat(mpicmd, timeout_string);
 		if (envs != NULL)
 			strcat(mpicmd, envs);
 		// printf("envs: '%s'\n", envs);
@@ -312,7 +375,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		// concatenate the redirection
 		strcat(mpicmd, redirect);
 
-		// printf("mpicmd: %s\n", mpicmd); fflush(stdout);
+		printf("mpicmd: %s\n", mpicmd); fflush(stdout);
 
 		// calls the system command
 		*exit_code = system(mpicmd);
@@ -334,6 +397,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		free(mpicmd);
 		free(launcher);
 		free(redirect);
+		free(print_time);
 	}
 
 	// broadcast the exit status

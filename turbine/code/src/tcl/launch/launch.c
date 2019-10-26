@@ -20,10 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// For systems without strlcpy(), e.g., Linux
-#include <strlcpy.h>
-
 #include "MPIX_Comm_launch.h"
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
@@ -86,6 +82,15 @@ special_envs(MPI_Info info, int envc, char** envs) {
     MPI_Info_set(info,"write_hosts",value);
   if (get_envs(envc,envs,"swift_chdir",&index,&value))
     MPI_Info_set(info,"chdir",value);
+  if (get_envs(envc,envs,"swift_output",&index,&value))
+    MPI_Info_set(info,"output",value);
+  if (get_envs(envc,envs,"swift_exectime",&index,&value))
+    MPI_Info_set(info,"exectime",value);
+  if (get_envs(envc,envs,"swift_numproc",&index,&value))
+    MPI_Info_set(info,"numproc",value);
+  if (get_envs(envc,envs,"swift_ppw",&index,&value))
+    MPI_Info_set(info,"ppw",value);
+
 }
 
 /**
@@ -179,7 +184,7 @@ int launch_multi(MPI_Comm comm, int count, int* procs,
   int result = launch_envs(subcomm, cmd[color],
                            argc[color], argv[color],
                            envc[color], envs[color]);
-  MPI_Reduce(&status, &result, 1, MPI_INT, MPI_MAX, 0, comm);
+  MPI_Reduce(&result, &status, 1, MPI_INT, MPI_MAX, 0, comm);
   return status;
 }
 
