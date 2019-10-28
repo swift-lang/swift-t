@@ -2,8 +2,10 @@
 # SWIFT/T SETTINGS
 
 # Settings for building Swift/T
+# This script is accessed internally by the build-*.sh scripts,
+#      do not attempt to run it directly.
 
-# Note that this script is source by each build-* script-
+# Note that this script is source by each build-*.sh script-
 #  thus, there is no need to export variables to the environment
 
 # Unless otherwise noted, set option to 0 to turn off, 1 to turn on.

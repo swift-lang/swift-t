@@ -11,9 +11,9 @@ DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 if (( DEBIAN_BUILD ))
 then
-  TURBINE_HOME=/usr/lib/turbine
+  export TURBINE_HOME=/usr/lib/turbine
 else
-  TURBINE_HOME='@prefix@'
+  export TURBINE_HOME='@prefix@'
 fi
 TURBINE_VERSION=@TURBINE_VERSION@
 export C_UTILS=@USE_C_UTILS@
