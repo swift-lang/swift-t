@@ -8,6 +8,9 @@
 # GCC dependency files
 *.d
 
+# Tags
+TAGS
+
 # Autoconf stuff
 configure
 config.cache
