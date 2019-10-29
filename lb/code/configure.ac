@@ -230,6 +230,7 @@ ${CC} ${CFLAGS} -o maint/mpi_version3_test maint/mpi_version3_test.c
                             2) use an MPI 3 implementation])
 rm -f maint/mpi_version3_test
 fi
+AC_MSG_RESULT([MPI_VERSION == ${ADLB_MPI_VERSION}])
 
 XLB_ENABLE_XPT=no
 AC_ARG_ENABLE(checkpoint,
