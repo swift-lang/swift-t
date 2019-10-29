@@ -1618,7 +1618,8 @@ the action ready for execution, based on the <code>type</code>.
 <div class="paragraph"><p>All options are optional</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>rule input_list action name "myfunction" type $turbine::WORK location 4 parallelism 2</code></pre>
+<pre><code>rule input_list action name "myfunction" type $turbine::WORK \
+     target 4 parallelism 2</code></pre>
 </div></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -3841,7 +3842,7 @@ trace: 42</code></pre>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2019-04-29 17:36:03 CDT
+ 2019-10-29 14:35:45 CDT
 </div>
 </div>
 </body>
