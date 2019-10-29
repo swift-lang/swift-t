@@ -526,7 +526,6 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "target argument must be integer");
         opts->target = t;
-
         return TCL_OK;
       }
       else if (strcmp(k, "type") == 0)
