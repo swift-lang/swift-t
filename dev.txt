@@ -487,7 +487,8 @@ the action ready for execution, based on the +type+.
 All options are optional
 
 ----
-rule input_list action name "myfunction" type $turbine::WORK target 4 parallelism 2
+rule input_list action name "myfunction" type $turbine::WORK \
+     target 4 parallelism 2
 ----
 
 +name+:: An arbitrary string name used for debugging and logging.
