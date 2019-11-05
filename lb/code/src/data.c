@@ -893,7 +893,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   adlb_data_code dc;
 
   ADLB_CHECK_MSG_CODE(type == d->type, ADLB_DATA_ERROR_TYPE,
-          "Type mismatch: expected %s actual %s\n",
+          "Type mismatch: expected=%s actual=%s\n",
           ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
 
   // Handle store to top-level datum
