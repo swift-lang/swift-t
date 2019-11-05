@@ -25,7 +25,7 @@
   http://swift-lang.github.io/swift-t/blob.html
 */
 
-#ifndef BLOB_H
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -309,4 +309,3 @@ void* blobutils_strdup(char* s);
 bool blobutils_hdf_write(const char* output, const char* dataset,
                           turbine_blob* blob);
 
-#endif
