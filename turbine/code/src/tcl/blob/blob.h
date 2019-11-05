@@ -31,6 +31,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <mpi.h>
+
 /** The M4 macro DOC CODE() (leave that space) allows us to extract
     C code into Asciidoc, this preprocessor macro simply passes it through.
 */
@@ -309,3 +311,4 @@ void* blobutils_strdup(char* s);
 bool blobutils_hdf_write(const char* output, const char* dataset,
                           turbine_blob* blob);
 
+MPI_Comm turbine_get_task_comm(void);
