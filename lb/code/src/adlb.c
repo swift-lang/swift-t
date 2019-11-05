@@ -618,7 +618,8 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   rc = MPI_Comm_create_group(xlb_s.comm, group, 0, comm);
   valgrind_assert(rc == MPI_SUCCESS);
   MPI_Group_free(&group);
-  TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
+  TRACE("MPI_Comm_create_group(): comm=%llu\n",
+        (long long unsigned int) *comm);
   #endif
 
   return ADLB_SUCCESS;
