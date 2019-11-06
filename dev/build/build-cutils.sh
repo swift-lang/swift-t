@@ -28,7 +28,8 @@ then
   rm -f config.cache
   (
     set -eux
-    ${NICE_CMD} ./configure --config-cache \
+    ${NICE_CMD} ./configure \
+                ${CONFIGURE_ARGS[@]} \
                 --prefix=${C_UTILS_INSTALL} \
                 --enable-shared \
                 ${EXTRA_ARGS} \

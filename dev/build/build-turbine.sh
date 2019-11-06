@@ -170,7 +170,8 @@ then
   rm -f config.cache
   (
     set -ex
-    ${NICE_CMD} ./configure --config-cache \
+    ${NICE_CMD} ./configure \
+                ${CONFIGURE_ARGS[@]} \
                 --prefix=${TURBINE_INSTALL} \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \
