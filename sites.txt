@@ -1040,6 +1040,9 @@ You can use the MPICH installed here:
 
 Use the link:guide.html#install_source[+dev/build+ scripts].
 
+. First, if you are using dependencies in Spack,
+  simply +module load+ them.
+. Make sure that the +cc+ in +PATH+ is the correct compiler wrapper.
 . Edit +swift-t-settings.sh+
 .. Set: +CC=cc+
 .. Set: +SWIFT_T_CHECK_MPICC=0+
