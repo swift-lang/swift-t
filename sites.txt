@@ -998,7 +998,7 @@ Add to +PATH+: +
 This installation uses the Python 2.7.12 noted above.
 
 ----
-$ swift-t -E 'trace(42);'
+$ nice swift-t -E 'trace(42);'
 trace: 42
 ----
 
