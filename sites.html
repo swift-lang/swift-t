@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.3,</span>
-<span id="revdate">July 2019</span>
+<span id="revdate">November 2019</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2224,7 +2223,7 @@ Run with:
 <div class="paragraph"><p>This installation uses the Python 2.7.12 noted above.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ swift-t -E 'trace(42);'
+<pre><code>$ nice swift-t -E 'trace(42);'
 trace: 42</code></pre>
 </div></div>
 </div>
@@ -2262,6 +2261,17 @@ trace: 42</code></pre>
 <h5 id="_compute_nodes_2">Compute nodes</h5>
 <div class="paragraph"><p>Use the <a href="guide.html#install_source"><code>dev/build</code> scripts</a>.</p></div>
 <div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+First, if you are using dependencies in Spack,
+  simply <code>module load</code> them.
+</p>
+</li>
+<li>
+<p>
+Make sure that the <code>cc</code> in <code>PATH</code> is the correct compiler wrapper.
+</p>
+</li>
 <li>
 <p>
 Edit <code>swift-t-settings.sh</code>
@@ -3712,8 +3722,7 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated
- 2019-07-29 16:52:25 CDT
+Last updated 2019-11-22 14:01:48 CST
 </div>
 </div>
 </body>
