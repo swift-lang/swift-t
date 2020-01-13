@@ -160,8 +160,7 @@ the <<build_manual,manual build process>>).
   e.g., +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu (APT) systems.
 * Source distributions are available at the http://www.tcl.tk[Tcl web
   site]
-* Tcl 8.5 is also acceptable.  (Swift/T optionally uses Tcl 8.6
-  features to produce cleaner error messages.)
+* Swift/T currently requires Tcl 8.6 (not 8.5).
 +
 3. Ensure you have these third-party software development tools (APT
    packages are denoted in parentheses):
@@ -679,16 +678,9 @@ written to, for example, the file +tmp+ in the code snippet above.
 This file is created in +/tmp+ by default unless
 <<env_swift_tmp,overridden by +SWIFT_TMP+>>.
 
-The way this feature is implemented depends on the Tcl version:
-
-8.5:: Implemented by calling system command +mktemp+.  The directory
-may be set with environment variable +TMPDIR+ which defaults to
-+/tmp+, or +SWIFT_TMP+.  The filename will contain +.turbine+ in the
-middle or as a suffix, depending on +mktemp+ implementation.
-
-8.6:: Implemented with a Tcl builtin.  The default directory is
-+/tmp+, set environment variable +TMP+ or +SWIFT_TMP+ to change this.
-The file always has suffix +.turbine+.
+The default directory for temporary files is +/tmp+, set environment
+variable +TMP+ or +SWIFT_TMP+ to change this.  The file always has
+suffix +.turbine+.
 
 Swift/T assumes that the file system is shared among all nodes.  Set
 +SWIFT_TMP+ to a shared file system for best results when running
