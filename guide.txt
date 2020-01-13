@@ -3099,13 +3099,15 @@ functions while using threads.
 These variables may be accessed by code called from Swift/T.
 
 +ADLB_RANK_SELF+::
-The current MPI rank.
+The current MPI rank, unique across all ranks in the run.
 
 +ADLB_RANK_OFFSET+::
-A unique number for each rank on a node.
+A unique number for each rank on a node, from 0 to N-1, where N is the
+number of MPI processes on that node.
 
 +ADLB_RANK_LEADER+::
 The rank of the leader process on this node (cf. <<hooks,hooks>>).
+This is the +ADLB_RANK_SELF+ of some process on this node.
 
 [[mpi_impl]]
 ==== MPI implementation-specific details
