@@ -953,11 +953,11 @@ AC_PROG_RANLIB
 export TCL_VERSION=0
 
 # In order from most to least preferred
-TCL_VERSION_PREFS="8.6 8.5"
+TCL_VERSION_PREFS="8.6"
 
 AC_ARG_WITH(tcl-version,
     AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.5. If not specified,
+                   [Tcl version. Minimum is 8.6. If not specified,
                     use highest version we can find]),
     [
         TCL_VERSION=${withval}
@@ -1079,7 +1079,7 @@ do
       LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
-      AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
+      AC_MSG_CHECKING([for Tcl ${TCLVER} library at ${LIB_DIR}/${LIBTCL}])
       if [[ -r ${LIB_DIR}/${LIBTCL} ]]
       then
         AC_MSG_RESULT([yes])
