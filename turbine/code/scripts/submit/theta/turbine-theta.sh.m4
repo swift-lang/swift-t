@@ -71,16 +71,20 @@ echo "PROCS:   ${PROCS}"
 echo "PPN:${PPN}"
 echo
 
-
 # Construct aprun-formatted user environment variable arguments
-USER_ENVS_ARGS=()
-for K in ${!USER_ENV_ARRAY[@]}
+# # The dummy is needed for old GNU bash (4.3.48) under set -eu
+USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+USER_ENV_COUNT=${#USER_ENV_ARRAY[@]}
+USER_ENV_ARGS=( -e _dummy=x )
+for (( i=0 ; i < USER_ENV_COUNT ; i+=2 ))
 do
-  USER_ENVS_ARGS+=( -e $K="${USER_ENVS[$K]}" )
+  K=${USER_ENV_ARRAY[i]}
+  V=${USER_ENV_ARRAY[i+1]}
+  USER_ENV_ARGS+=( -e $K="${V}" )
 done
 
 # This is the critical Cray fork() fix
-APRUN_ENVS+="-e MPICH_GNI_FORK_MODE=FULLCOPY"
+USER_ENV_ARGS+=( -e MPICH_GNI_FORK_MODE=FULLCOPY )
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
