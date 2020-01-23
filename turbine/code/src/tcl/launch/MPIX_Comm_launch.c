@@ -197,7 +197,7 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	return MPI_SUCCESS;
 }
 
-int MPIX_Comm_launch(const char* cmd, char** argv,
+int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		MPI_Info info, int root, MPI_Comm comm,
 		int* exit_code) {
 

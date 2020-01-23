@@ -34,7 +34,7 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
     argvc[i] = argv[i];
   }
   argvc[argc] = NULL;
-  MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
     MPI_Comm_free(&comm);
@@ -126,7 +126,7 @@ int launch_envs(MPI_Comm comm, char* cmd,
   argvc[argc] = NULL;
 
   MPI_Info info = envs2info(envc, envs);
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   if (info != MPI_INFO_NULL) {
     MPI_Info_free(&info);
   }
@@ -148,7 +148,7 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   MPI_Info info;
   MPI_Info_create(&info);
   MPI_Info_set(info,"launcher","turbine");
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
