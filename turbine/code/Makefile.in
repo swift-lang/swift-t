@@ -526,7 +526,7 @@ endif
 
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
-	DEP_DROP = -d mpi.h
+	DEP_DROP = -d mpi\\.h
 endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
