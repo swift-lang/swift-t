@@ -8,7 +8,7 @@ ifelse(getenv(PROJECT), `',,#COBALT -A getenv(PROJECT)
 #COBALT -e getenv(TURBINE_OUTPUT)/output.txt
 #COBALT --jobname getenv(TURBINE_JOBNAME)
 ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
-)
+)getenv(TURBINE_DIRECTIVE)
 
 # These COBALT directives have to stay right at the top of the file!
 # No blank lines are allowed, making this look cluttered.
@@ -38,6 +38,10 @@ module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 module load alps
 
 set -eu
+
+echo TURBINE-THETA.SH
+START=$( date "+%s.%N" )
+echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
@@ -72,21 +76,26 @@ echo "PPN:${PPN}"
 echo
 
 # Construct aprun-formatted user environment variable arguments
-# # The dummy is needed for old GNU bash (4.3.48) under set -eu
-USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+# The dummy is needed for old GNU bash (4.3.48) under set -eu
+USER_ENV_ARRAY=( _dummy x getenv(USER_ENV_ARRAY) )
 USER_ENV_COUNT=${#USER_ENV_ARRAY[@]}
-USER_ENV_ARGS=( -e _dummy=x )
+USER_ENV_ARGS=()
 for (( i=0 ; i < USER_ENV_COUNT ; i+=2 ))
 do
   K=${USER_ENV_ARRAY[i]}
   V=${USER_ENV_ARRAY[i+1]}
   USER_ENV_ARGS+=( -e $K="${V}" )
 done
+set +x
 
 # This is the critical Cray fork() fix
 USER_ENV_ARGS+=( -e MPICH_GNI_FORK_MODE=FULLCOPY )
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
+
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 # Run Turbine!
 set -x
@@ -98,10 +107,16 @@ aprun -n ${PROCS} -N ${PPN} \
 CODE=${?}
 set +x
 
+STOP=$( date "+%s.%N" )
+# Bash cannot do floating point arithmetic:
+DURATION=$( awk -v START=${START} -v STOP=${STOP} \
+            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+
 echo
 echo "Turbine Theta launcher done."
-echo "CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M' )"
+echo "MPIEXEC TIME: ${DURATION}"
+echo "EXIT CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 # Return exit code from launcher (aprun)
 exit ${CODE}
