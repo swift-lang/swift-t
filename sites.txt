@@ -546,42 +546,6 @@ Dependencies are in:
 * Add these dependencies to +PATH+.
 * Use the link:guide.html#install_source[+dev/build+ scripts].
 
-=== Breadboard
-
-Cf. link:http://wiki.mcs.anl.gov/radix/index.php/Breadboard[Breadboard Wiki]
-
-Breadboard is a cloud-ish cluster for software development in
-MCS. This is a fragile resource used by many MCS developers. Do not
-overuse.
-
-Operates as a generic cluster (see above).  No scheduler.  Once you
-have the nodes, you can use them until you release them or time
-expires (12 hours by default).
-
-. Allocate nodes with +heckle+.  See Breadboard wiki
-. Wait for nodes to boot
-. Use +heckle allocate -w+ for better interaction
-. Create MPICH hosts file:
-+
-----
-heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
-----
-. Run:
-+
-----
-export TURBINE_LAUNCH_OPTIONS='-f hosts.txt'
-turbine -l -n 4 program.tic
-----
-+
-. Run as many jobs as desired on the allocation
-. When done, release the allocation:
-+
-----
-for h in $( cat hosts.txt )
-do
-  heckle free $h
-done
-----
 
 === Midway
 
@@ -747,65 +711,6 @@ This installation has Python and R enabled.
 Use the +dev/build/build-swift-t.sh+ method.
 Simply set the MPI, Tcl (and optionally Python and R) locations in
 +swift-t-settings.sh+ and build.
-
-=== Blues
-
-http://www.lcrc.anl.gov/about/blues[Blues] is a 310-node x86
-cluster at ANL.  It uses PBS.
-
-*As of:* Master, 8/17/2015
-
-==== Public installation
-
-* +~wozniak/Public/sfw/blues/compute/stc/bin/swift-t+
-* +~wozniak/Public/sfw/blues/compute/turbine/bin/turbine+
-
-This installation has Python enabled.
-
-To run:
-----
-$ export QUEUE=batch # or other settings
-----
-
-See the <<variables,Turbine scheduler variables>> and
-<<options,Turbine run script options>> for additional settings.
-
-Use +swift-t+:
-----
-swift-t -m pbs -n 8 program.swift
-----
-or Turbine:
-----
-stc program.swift
-turbine -m pbs -n 8 program.tic
-----
-or the Turbine PBS run script:
-----
-stc program.swift
-turbine-pbs-run.zsh -n 8 program.tic
-----
-
-==== Build procedure
-
-Use GCC 4.8.2 and MVAPICH 2.0:
-----
-$ PATH=/soft/gcc/4.8.2/bin:$PATH
-$ which gcc
-/soft/gcc/4.8.2/bin/gcc
-$ PATH=/soft/mvapich2/2.0-gcc-4.7.2/bin:$PATH
-$ which mpicc
-/soft/mvapich2/2.0-gcc-4.7.2/bin/mpicc
-----
-
-////
- Used to need this:
- and set +LD_LIBRARY_PATH+:
- export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
-////
-
-A public Tcl is in: +&#126;wozniak/Public/sfw/tcl-8.6.4+
-
-A public Python is in: +&#126;wozniak/Public/sfw/Python-2.7.8+
 
 === JLSE KNL
 
@@ -1054,150 +959,6 @@ Use the link:guide.html#install_source[+dev/build+ scripts].
 $ nice dev/build/build-swift-t.sh
 ----
 
-=== Titan
-
-https://www.olcf.ornl.gov/olcf-resources/compute-systems/titan[Titan]
-is a Cray XK7 at the Oak Ridge Leadership Computing Facility.
-
-==== Public installation
-
-===== Dependencies
-
-* SWIG: +~wozniak/Public/sfw/swig-3.0.2+
-* Tcl (login):  +~wozniak/Public/sfw/tcl-8.6.2+
-* Tcl (compute): +
-+/lustre/atlas2/med106/world-shared/sfw/titan/compute/tcl-8.6.6+ +
-+# module PrgEnv-gnu+
-
-===== Login nodes
-
-*As of:* 2018/03/05
-
-This installation is for use on the <<login_node,login node>>.
-
-Add to PATH: +
-----
-~wozniak/Public/sfw/login/swift-t/stc/bin
-----
-
-Run with, e.g.: +
-----
-$ nice swift-t -E 'trace("Hello world!");'
-----
-
-This uses:
-
-* MPICH: +~wozniak/Public/sfw/login/mpich-3.1.3+
-
-===== Compute nodes
-
-*As of:* 2018-12-13
-
-This installation is for the general public, particularly INSPIRE and
-CANDLE users.
-
-Add to +PATH+: +
-----
-/lustre/atlas2/med106/world-shared/sfw/titan/compute/swift-t/2018-12-12/stc/bin
-----
-
-Run with, e.g.: +
-----
-$ export PROJECT=...
-$ export QUEUE=debug
-$ export TITAN=true
-$ swift-t -m cray -E 'trace("Hello world!");'
-----
-
-This uses:
-
-* Cray MPI: +/opt/cray/mpt/default/gni/mpich-gnu/5.1+
-
-==== Submitting jobs
-
-Titan requires that user output goes to a Lustre file system.  Set a
-soft link like this so that Turbine output goes to Lustre:
-
-----
-mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
-cd ~
-ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
-----
-
-Or, you may set +TURBINE_OUTPUT+ <<variables,manually>>.
-
-Titan requires the submit script to specify job size using different
-directives to other Cray systems.  It does not support the +#PBS -l ppn:+
-directive. The correct directive is:
-
-----
-#PBS -l nodes=2
-----
-
-Swift/T supports this with a special environment variable +TITAN=true+.
-An example use of Swift/T on Titan is thus:
-
-----
-export PROJECT=...    # Some valid project
-export QUEUE=debug    # or another queue
-export TITAN=true
-export PPN=32         # Thus 2 nodes, 32 processes per node
-swift-t -m cray -n 64 workflow.swift
-----
-
-These environment variables may be placed in your +-s+
-<<options,settings file>>.
-
-==== Build procedure
-
-*As of:* 2018-12-13
-
-. Use the link:guide.html#install_source[+dev/build+ scripts].
-. Run +init-settings.sh+ as usual
-. Edit +swift-t-settings.sh+ to set:
-.. Set +SWIFT_T_PREFIX+ to the desired installation directory
-.. This is a Tcl compiled for the compute nodes: +
-   +TCL_INSTALL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/compute/tcl-8.6.6+
-.. This is a Tcl compiled for the login nodes: +
-   +TCLSH_LOCAL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/login/tcl-8.6.6++
-.. Disable search for Python in +PATH+: +
-   +ENABLE_PYTHON=0+
-.. If you want Python: +
-   +PYTHON_EXE=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/bin/python+ +
-   or else leave that set to empty string.
-.. Speed up the build: +
-   +MAKE_PARALLELISM=8+
-.. Uncomment the +module load gcc+ at the end of the script.
-+
-. Run:
-+
-----
-$ nice dev/build/build-swift-t.sh
-----
-
-==== Submitting jobs
-
-Titan requires the submit script to specify job size using different
-directives to other Cray systems.  It does not support the +#PBS -l ppn:+
-directive. The correct directive is:
-
-----
-#PBS -l nodes=32
-----
-
-+PPN+ is handled by setting the +mppnppn+ argument.
-
-The +turbine-cray.sh.m4+ job script template supports Titan.
-Use it as follows (for single node/32 processes per node):
-----
-export QUEUE=normal
-export TITAN=true
-export PPN=32
-----
-
-These environment variables may be placed in your
-<<settings_file,settings file>>.
-
 === Blue Waters
 
 Blue Waters is a Cray XE6/XK7 at the University of Illinois at
@@ -1338,126 +1099,6 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
 +
 ----
 --with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
-----
-
-=== Beagle
-
-Beagle is a Cray XE6 at the University of Chicago
-
-Remember that at run time, Beagle compute node jobs can access only
-+/lustre+, not NFS (including home directories).  Thus, you must
-install Turbine and its libraries in +/lustre+.  Also, your data must
-be in +/lustre+.
-
-==== Public installation
-
-===== Login nodes
-
-*As of: Swift/T 1.3.0, October 2017*
-
-This installation is for use on the <<login_node,login node>>.  It has
-http://swift-lang.github.io/swift-t/guide.html#leaf_python[Python]
-and
-http://swift-lang.github.io/swift-t/guide.html#leaf_r[R] enabled.
-
-Add to +PATH+:
-----
-/soft/swift-t/login/2017-10/stc/bin
-/soft/swift-t/login/2017-10/turbine/bin
-----
-
-Add to +LD_LIBRARY_PATH+:
-----
-/soft/swift-t/deps/R-3.3.2/lib64/R/lib
-/soft/swift-t/deps/Python-2.7.10/lib
-/opt/gcc/4.9.2/snos/lib64
-----
-
-Run with:
-----
-nice swift-t workflow.swift
-----
-
-===== Compute nodes
-
-* Swift/T master - 2016/03/21
-* STC: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/stc+
-* Turbine: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/turbine+
-
-* This installation is configured with
-  http://swift-lang.github.io/swift-t/guide.html#_calling_python[Python] and
-  http://swift-lang.github.io/swift-t/guide.html#_calling_r[R]
-
-To run:
-
-1. Set environment variables.  The normal Turbine environment
-variables are honored, plus the <<variables,Turbine scheduler
-variables>> and <<options,Turbine scheduler
-options>>..
-2. Run Swift:
-+
-----
-swift-t -m cray -n <numprocs> script.swift --arg1=value1 ...
-----
-+
-or:
-+
-Run Turbine:
-+
-----
-turbine -m cray -n <numprocs> script.tic --arg1=value1 ...
-----
-+
-or:
-+
-Run the submit script directly (in +turbine/scripts/submit/cray+):
-+
-----
-turbine-cray-run.zsh -n <numprocs> script.tic --arg1=value1 ...
-----
-
-==== Build procedure
-
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
-+
-----
-$ export CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
-$ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
-$ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enable-mpi-2
-----
-+
-* In the Turbine configure step, replace the +--with-mpi+ option with:
-+
-----
---with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
-----
-
-==== Build procedure with MPE
-
-Configure MPE 1.3.0 with:
-----
-export CFLAGS=-fPIC
-export MPI_CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include -fPIC"
-export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
-export F77=gfortran
-export MPI_F77=$F77
-export MPI_FFLAGS=$MPI_CFLAGS
-CC="gcc -fPIC" ./configure --prefix=... --disable-graphics
-----
-
-Configure ADLB with:
-----
-export CFLAGS=-mpilog
-export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
-./configure --prefix=... CC=mpecc --with-c-utils=/path/to/c-utils --with-mpe=/path/to/mpe --enable-mpi-2
-----
-
-Configure Turbine with:
-----
-./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe
 ----
 
 === Cori
@@ -1641,218 +1282,6 @@ You may load Swift/T with:
 ----
 module use /home/users/p01577/Public/modules
 module load swift-t
-----
-
-=== Edison
-
-Edison is a Cray XC30 system at NERSC.
-
-==== Public Installation
-
-A public installation may be run at: +/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t+
-
-Run with, e.g.:
-----
-swift-t -m cray -n 4 program.swift
-----
-
-
-==== Build Procedure
-
-Load (and unload) appropriate modules:
-
-----
-module unload PrgEnv-intel darshan cray-shmem
-module load PrgEnv-gnu java
-----
-
-Clone the latest exm code:
-
-----
-cd $SCRATCH
-git clone https://github.com/swift-lang/swift-t.git
-cd swift-t
-----
-
-Install c-utils:
-
-----
-cd $SCRATCH/swift-t/c-utils
-./configure --enable-shared --prefix=$SCRATCH/exm-install/c-utils
-make && make install
-----
-
-Install adlb:
-
-----
-cd $SCRATCH/swift-t/lb
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
-./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
-make && make install
-----
-
-Install turbine:
-
-----
-cd $SCRATCH/swift-t/turbine
-./configure --with-adlb=$SCRATCH/exm-install/lb --with-c-utils=$SCRATCH/exm-install/c-utils \
---prefix=$SCRATCH/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
---with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
-make && make install
-----
-
-Install stc:
-
-----
-cd $SCRATCH/swift-t/stc
-ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-install/turbine
-----
-
-
-==== Environment
-
-Set environment. Add the following to your .bashrc.ext (or equivalent)
-
-----
-export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:$SCRATCH/exm-install/turbine/scripts/submit/cray
-source ~/.bash.ext
-----
-
-
-Note that with Swift installed as a module, the above steps will disappear and the only step needed will be to load the module:
-
-----
-module load swift-t
-module load swift-k
-----
-
-
-==== A simple script
-
-To compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
-
-----
-/**
-   Example 1 - HELLO.SWIFT
-*/
-
-import io;
-
-main
-{
-  printf("Hello world!");
-}
-----
-
-Compile and run the above script using +swift-t+:
-
-----
-swift-t -m "cray" hello.swift
-----
-
-NOTE: The -m flag determines the machine type: "cray", "pbs", "cobalt", etc.
-
-
-A Turbine Intermediate Code (.tic) file will be generated on successful compilation.
-The +swift-t+ command builds a job specification script and submits it to the
-scheduler.
-
-Output from the above command will be similar to the following:
-
-----
-TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
-`hello.tic' -> `/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/hello.tic'
-SCRIPT=hello.tic
-PPN=1
-TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
-WALLTIME=00:15:00
-PROCS=2
-NODES=2
-wrote: /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/turbine-cray.sh
-JOB_ID=2816478.edique02
-----
-
-Inspect the results with:
-
-----
-cat $TURBINE_OUTPUT/output.txt.2816478.edique02.out
-----
-
-The following will be the contents:
-
-----
-   0.000 MODE: WORK
-   0.000 WORK TYPES: WORK
-   0.000 WORKERS: 1 RANKS: 0 - 0
-   0.000 SERVERS: 1 RANKS: 1 - 1
-   0.000 WORK WORKERS: 1 RANKS: 0 - 0
-   0.000 MODE: SERVER
-   0.062 function:swift:constants
-   0.062 enter function: __entry
-Hello world!
-   0.163 turbine finalizing
-   0.104 turbine finalizing
-Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50
-----
-
-==== A second example
-
-The following example joins multiple files (n times in parallel) using the Unix
-+cat+ utility:
-
-----
-import files;
-import string;
-
-app (file out) cat (file input) {
-  "/bin/cat" input @stdout=out
-}
-
-foreach i in [0:9]{
-  file joined<sprintf("joined%i.txt", i)> = cat(input_file("data.txt"));
-}
-----
-
-Save the above script as +catsn.swift+.
-
-Prepare input file as:
-
-----
-echo "contents of data.txt">data.txt
-----
-
-Set TURBINE_OUTPUT to current directory:
-
-----
-export TURBINE_OUTPUT=$PWD
-----
-
-Run the script as:
-
-----
-swift-t -m "cray" catsn.swift
-----
-
-On successful compilation and job submission, output similar to the following will be produced:
-
-----
-TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
-`./swift-t-catsn.hzS.tic' -> `/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/swift-t-catsn.hzS.tic'
-SCRIPT=./swift-t-catsn.hzS.tic
-PPN=1
-TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
-WALLTIME=00:15:00
-PROCS=2
-NODES=2
-wrote: /scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/turbine-cray.sh
-JOB_ID=2835290.edique02
-----
-
-Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT directory:
-
-----
-cat $TURBINE_OUTPUT/joined4.txt
 ----
 
 == IBM
@@ -2169,6 +1598,579 @@ Use GCC 4.7.2 and set +LD_LIBRARY_PATH+:
 $ which gcc
 /software/gcc-4.7.2/bin/gcc
 $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+----
+
+=== Titan
+
+https://www.olcf.ornl.gov/olcf-resources/compute-systems/titan[Titan]
+was a Cray XK7 at the Oak Ridge Leadership Computing Facility that
+used PBS+APRUN.
+
+==== Public installation
+
+===== Dependencies
+
+* SWIG: +~wozniak/Public/sfw/swig-3.0.2+
+* Tcl (login):  +~wozniak/Public/sfw/tcl-8.6.2+
+* Tcl (compute): +
++/lustre/atlas2/med106/world-shared/sfw/titan/compute/tcl-8.6.6+ +
++# module PrgEnv-gnu+
+
+===== Login nodes
+
+*As of:* 2018/03/05
+
+This installation is for use on the <<login_node,login node>>.
+
+Add to PATH: +
+----
+~wozniak/Public/sfw/login/swift-t/stc/bin
+----
+
+Run with, e.g.: +
+----
+$ nice swift-t -E 'trace("Hello world!");'
+----
+
+This uses:
+
+* MPICH: +~wozniak/Public/sfw/login/mpich-3.1.3+
+
+===== Compute nodes
+
+*As of:* 2018-12-13
+
+This installation is for the general public, particularly INSPIRE and
+CANDLE users.
+
+Add to +PATH+: +
+----
+/lustre/atlas2/med106/world-shared/sfw/titan/compute/swift-t/2018-12-12/stc/bin
+----
+
+Run with, e.g.: +
+----
+$ export PROJECT=...
+$ export QUEUE=debug
+$ export TITAN=true
+$ swift-t -m cray -E 'trace("Hello world!");'
+----
+
+This uses:
+
+* Cray MPI: +/opt/cray/mpt/default/gni/mpich-gnu/5.1+
+
+==== Submitting jobs
+
+Titan requires that user output goes to a Lustre file system.  Set a
+soft link like this so that Turbine output goes to Lustre:
+
+----
+mkdir /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+cd ~
+ln -s /lustre/atlas/scratch/YOUR_USERNAME/turbine-output
+----
+
+Or, you may set +TURBINE_OUTPUT+ <<variables,manually>>.
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is:
+
+----
+#PBS -l nodes=2
+----
+
+Swift/T supports this with a special environment variable +TITAN=true+.
+An example use of Swift/T on Titan is thus:
+
+----
+export PROJECT=...    # Some valid project
+export QUEUE=debug    # or another queue
+export TITAN=true
+export PPN=32         # Thus 2 nodes, 32 processes per node
+swift-t -m cray -n 64 workflow.swift
+----
+
+These environment variables may be placed in your +-s+
+<<options,settings file>>.
+
+==== Build procedure
+
+*As of:* 2018-12-13
+
+. Use the link:guide.html#install_source[+dev/build+ scripts].
+. Run +init-settings.sh+ as usual
+. Edit +swift-t-settings.sh+ to set:
+.. Set +SWIFT_T_PREFIX+ to the desired installation directory
+.. This is a Tcl compiled for the compute nodes: +
+   +TCL_INSTALL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/compute/tcl-8.6.6+
+.. This is a Tcl compiled for the login nodes: +
+   +TCLSH_LOCAL=/lustre/atlas2/med106/world-shared/sfw/titan/compute/login/tcl-8.6.6++
+.. Disable search for Python in +PATH+: +
+   +ENABLE_PYTHON=0+
+.. If you want Python: +
+   +PYTHON_EXE=/sw/xk6/deeplearning/1.0/sles11.3_gnu4.9.3/bin/python+ +
+   or else leave that set to empty string.
+.. Speed up the build: +
+   +MAKE_PARALLELISM=8+
+.. Uncomment the +module load gcc+ at the end of the script.
++
+. Run:
++
+----
+$ nice dev/build/build-swift-t.sh
+----
+
+==== Submitting jobs
+
+Titan requires the submit script to specify job size using different
+directives to other Cray systems.  It does not support the +#PBS -l ppn:+
+directive. The correct directive is:
+
+----
+#PBS -l nodes=32
+----
+
++PPN+ is handled by setting the +mppnppn+ argument.
+
+The +turbine-cray.sh.m4+ job script template supports Titan.
+Use it as follows (for single node/32 processes per node):
+----
+export QUEUE=normal
+export TITAN=true
+export PPN=32
+----
+
+These environment variables may be placed in your
+<<settings_file,settings file>>.
+
+=== Beagle
+
+Beagle is a Cray XE6 at the University of Chicago
+
+Remember that at run time, Beagle compute node jobs can access only
++/lustre+, not NFS (including home directories).  Thus, you must
+install Turbine and its libraries in +/lustre+.  Also, your data must
+be in +/lustre+.
+
+==== Public installation
+
+===== Login nodes
+
+*As of: Swift/T 1.3.0, October 2017*
+
+This installation is for use on the <<login_node,login node>>.  It has
+http://swift-lang.github.io/swift-t/guide.html#leaf_python[Python]
+and
+http://swift-lang.github.io/swift-t/guide.html#leaf_r[R] enabled.
+
+Add to +PATH+:
+----
+/soft/swift-t/login/2017-10/stc/bin
+/soft/swift-t/login/2017-10/turbine/bin
+----
+
+Add to +LD_LIBRARY_PATH+:
+----
+/soft/swift-t/deps/R-3.3.2/lib64/R/lib
+/soft/swift-t/deps/Python-2.7.10/lib
+/opt/gcc/4.9.2/snos/lib64
+----
+
+Run with:
+----
+nice swift-t workflow.swift
+----
+
+===== Compute nodes
+
+* Swift/T master - 2016/03/21
+* STC: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/stc+
+* Turbine: +/lustre/beagle2/wozniak/Public/sfw/swift-t/py2r/turbine+
+
+* This installation is configured with
+  http://swift-lang.github.io/swift-t/guide.html#_calling_python[Python] and
+  http://swift-lang.github.io/swift-t/guide.html#_calling_r[R]
+
+To run:
+
+1. Set environment variables.  The normal Turbine environment
+variables are honored, plus the <<variables,Turbine scheduler
+variables>> and <<options,Turbine scheduler
+options>>..
+2. Run Swift:
++
+----
+swift-t -m cray -n <numprocs> script.swift --arg1=value1 ...
+----
++
+or:
++
+Run Turbine:
++
+----
+turbine -m cray -n <numprocs> script.tic --arg1=value1 ...
+----
++
+or:
++
+Run the submit script directly (in +turbine/scripts/submit/cray+):
++
+----
+turbine-cray-run.zsh -n <numprocs> script.tic --arg1=value1 ...
+----
+
+==== Build procedure
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+$ export CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+$ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+$ ./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils CC=gcc --enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+----
+
+==== Build procedure with MPE
+
+Configure MPE 1.3.0 with:
+----
+export CFLAGS=-fPIC
+export MPI_CFLAGS="-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include -fPIC"
+export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+export F77=gfortran
+export MPI_F77=$F77
+export MPI_FFLAGS=$MPI_CFLAGS
+CC="gcc -fPIC" ./configure --prefix=... --disable-graphics
+----
+
+Configure ADLB with:
+----
+export CFLAGS=-mpilog
+export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
+./configure --prefix=... CC=mpecc --with-c-utils=/path/to/c-utils --with-mpe=/path/to/mpe --enable-mpi-2
+----
+
+Configure Turbine with:
+----
+./configure --enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47 --with-mpe=/path/to/mpe
+----
+
+=== Blues
+
+http://www.lcrc.anl.gov/about/blues[Blues] is a 310-node x86
+cluster at ANL.  It uses PBS.
+
+*As of:* Master, 8/17/2015
+
+==== Public installation
+
+* +~wozniak/Public/sfw/blues/compute/stc/bin/swift-t+
+* +~wozniak/Public/sfw/blues/compute/turbine/bin/turbine+
+
+This installation has Python enabled.
+
+To run:
+----
+$ export QUEUE=batch # or other settings
+----
+
+See the <<variables,Turbine scheduler variables>> and
+<<options,Turbine run script options>> for additional settings.
+
+Use +swift-t+:
+----
+swift-t -m pbs -n 8 program.swift
+----
+or Turbine:
+----
+stc program.swift
+turbine -m pbs -n 8 program.tic
+----
+or the Turbine PBS run script:
+----
+stc program.swift
+turbine-pbs-run.zsh -n 8 program.tic
+----
+
+==== Build procedure
+
+Use GCC 4.8.2 and MVAPICH 2.0:
+----
+$ PATH=/soft/gcc/4.8.2/bin:$PATH
+$ which gcc
+/soft/gcc/4.8.2/bin/gcc
+$ PATH=/soft/mvapich2/2.0-gcc-4.7.2/bin:$PATH
+$ which mpicc
+/soft/mvapich2/2.0-gcc-4.7.2/bin/mpicc
+----
+
+////
+ Used to need this:
+ and set +LD_LIBRARY_PATH+:
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64
+////
+
+A public Tcl is in: +&#126;wozniak/Public/sfw/tcl-8.6.4+
+
+A public Python is in: +&#126;wozniak/Public/sfw/Python-2.7.8+
+
+=== Breadboard
+
+Cf. link:http://wiki.mcs.anl.gov/radix/index.php/Breadboard[Breadboard Wiki]
+
+Breadboard is a cloud-ish cluster for software development in
+MCS. This is a fragile resource used by many MCS developers. Do not
+overuse.
+
+Operates as a generic cluster (see above).  No scheduler.  Once you
+have the nodes, you can use them until you release them or time
+expires (12 hours by default).
+
+. Allocate nodes with +heckle+.  See Breadboard wiki
+. Wait for nodes to boot
+. Use +heckle allocate -w+ for better interaction
+. Create MPICH hosts file:
++
+----
+heckle stat | grep $USER | cut -f 1 -d ' ' > hosts.txt
+----
+. Run:
++
+----
+export TURBINE_LAUNCH_OPTIONS='-f hosts.txt'
+turbine -l -n 4 program.tic
+----
++
+. Run as many jobs as desired on the allocation
+. When done, release the allocation:
++
+----
+for h in $( cat hosts.txt )
+do
+  heckle free $h
+done
+----
+
+=== Edison
+
+Edison is a Cray XC30 system at NERSC.
+
+==== Public Installation
+
+A public installation may be run at: +/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t+
+
+Run with, e.g.:
+----
+swift-t -m cray -n 4 program.swift
+----
+
+
+==== Build Procedure
+
+Load (and unload) appropriate modules:
+
+----
+module unload PrgEnv-intel darshan cray-shmem
+module load PrgEnv-gnu java
+----
+
+Clone the latest exm code:
+
+----
+cd $SCRATCH
+git clone https://github.com/swift-lang/swift-t.git
+cd swift-t
+----
+
+Install c-utils:
+
+----
+cd $SCRATCH/swift-t/c-utils
+./configure --enable-shared --prefix=$SCRATCH/exm-install/c-utils
+make && make install
+----
+
+Install adlb:
+
+----
+cd $SCRATCH/swift-t/lb
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/49/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/49/lib -lmpich"
+./configure CC=gcc --with-c-utils=$SCRATCH/exm-install/c-utils --prefix=$SCRATCH/exm-install/lb --enable-mpi-2
+make && make install
+----
+
+Install turbine:
+
+----
+cd $SCRATCH/swift-t/turbine
+./configure --with-adlb=$SCRATCH/exm-install/lb --with-c-utils=$SCRATCH/exm-install/c-utils \
+--prefix=$SCRATCH/exm-install/turbine --with-tcl=/global/homes/k/ketan/tcl-install --with-tcl-version=8.6 \
+--with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/49
+make && make install
+----
+
+Install stc:
+
+----
+cd $SCRATCH/swift-t/stc
+ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-install/turbine
+----
+
+
+==== Environment
+
+Set environment. Add the following to your .bashrc.ext (or equivalent)
+
+----
+export PATH=$PATH:$SCRATCH/exm-install/stc/bin:$SCRATCH/exm-install/turbine/bin:$SCRATCH/exm-install/turbine/scripts/submit/cray
+source ~/.bash.ext
+----
+
+
+Note that with Swift installed as a module, the above steps will disappear and the only step needed will be to load the module:
+
+----
+module load swift-t
+module load swift-k
+----
+
+
+==== A simple script
+
+To compile and run a simple Swift/T script over Edison Compute nodes. Following is a simple "Hello World!" script:
+
+----
+/**
+   Example 1 - HELLO.SWIFT
+*/
+
+import io;
+
+main
+{
+  printf("Hello world!");
+}
+----
+
+Compile and run the above script using +swift-t+:
+
+----
+swift-t -m "cray" hello.swift
+----
+
+NOTE: The -m flag determines the machine type: "cray", "pbs", "cobalt", etc.
+
+
+A Turbine Intermediate Code (.tic) file will be generated on successful compilation.
+The +swift-t+ command builds a job specification script and submits it to the
+scheduler.
+
+Output from the above command will be similar to the following:
+
+----
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+`hello.tic' -> `/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/hello.tic'
+SCRIPT=hello.tic
+PPN=1
+TURBINE_OUTPUT=/global/homes/k/ketan/turbine-output/2015/04/30/09/09/53
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /global/homes/k/ketan/turbine-output/2015/04/30/09/09/53/turbine-cray.sh
+JOB_ID=2816478.edique02
+----
+
+Inspect the results with:
+
+----
+cat $TURBINE_OUTPUT/output.txt.2816478.edique02.out
+----
+
+The following will be the contents:
+
+----
+   0.000 MODE: WORK
+   0.000 WORK TYPES: WORK
+   0.000 WORKERS: 1 RANKS: 0 - 0
+   0.000 SERVERS: 1 RANKS: 1 - 1
+   0.000 WORK WORKERS: 1 RANKS: 0 - 0
+   0.000 MODE: SERVER
+   0.062 function:swift:constants
+   0.062 enter function: __entry
+Hello world!
+   0.163 turbine finalizing
+   0.104 turbine finalizing
+Application 12141240 resources: utime ~0s, stime ~0s, Rss ~118364, inblocks ~2287, outblocks ~50
+----
+
+==== A second example
+
+The following example joins multiple files (n times in parallel) using the Unix
++cat+ utility:
+
+----
+import files;
+import string;
+
+app (file out) cat (file input) {
+  "/bin/cat" input @stdout=out
+}
+
+foreach i in [0:9]{
+  file joined<sprintf("joined%i.txt", i)> = cat(input_file("data.txt"));
+}
+----
+
+Save the above script as +catsn.swift+.
+
+Prepare input file as:
+
+----
+echo "contents of data.txt">data.txt
+----
+
+Set TURBINE_OUTPUT to current directory:
+
+----
+export TURBINE_OUTPUT=$PWD
+----
+
+Run the script as:
+
+----
+swift-t -m "cray" catsn.swift
+----
+
+On successful compilation and job submission, output similar to the following will be produced:
+
+----
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+`./swift-t-catsn.hzS.tic' -> `/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/swift-t-catsn.hzS.tic'
+SCRIPT=./swift-t-catsn.hzS.tic
+PPN=1
+TURBINE_OUTPUT=/scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work
+WALLTIME=00:15:00
+PROCS=2
+NODES=2
+wrote: /scratch2/scratchdirs/ketan/ATPESC_2014-08-14/swift-t/examples/catsn/turbine.work/turbine-cray.sh
+JOB_ID=2835290.edique02
+----
+
+Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT directory:
+
+----
+cat $TURBINE_OUTPUT/joined4.txt
 ----
 
 
