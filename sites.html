@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 8.6.10" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -746,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.3,</span>
-<span id="revdate">November 2019</span>
+<span id="revdate">February 2020</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3274,12 +3275,56 @@ JOB_ID=2835290.edique02</code></pre>
 <h2 id="_ibm">IBM</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="_summit">Summit</h3>
+<div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/summit_user_guide.html">Summit</a>
+is an IBM system located at the Oak Ridge Leadership Computing
+Facility with a theoretical peak double-precision performance
+of approximately 200 PF.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_16">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/gpfs/alpine/world-shared/med106/sw/gcc-7.4.0/swift-t/2019-11-06/stc/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ module load spectrum-mpi
+$ module load ibm-wml
+$ swift-t -m lsf workflow.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_7">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
+<div class="paragraph"><p>Dependencies are in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/sw/summit/ibm-wml/anaconda-powerai-1.6.1
+/gpfs/alpine/world-shared/med106/sw/R-190927
+/gpfs/alpine/world-shared/med106/sw/gcc-7.4.0/tcl-8.6.6
+/ccs/home/wozniak/Public/sfw/ant-1.10.3
+/usr/lib/jvm/java-1.8.0-openjdk/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>Load modules:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ module load ibm-wml
+$ module load spectrum-mpi</code></pre>
+</div></div>
+<div class="paragraph"><p>Use the <a href="guide.qhtml#install_source"><code>dev/build</code> scripts</a> and
+build as on any other system.</p></div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_summit_dev">Summit-dev</h3>
 <div class="paragraph"><p><a href="https://www.olcf.ornl.gov/for-users/system-user-guides/summitdev-quickstart-guide/#system-overview">Summit-dev</a>
 is a 54-node IBM POWER8 x2 plus NVIDIA Tesla P100 x4 system at OLCF.
 It uses LSF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_16">Public installation</h4>
+<h4 id="_public_installation_17">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3293,7 +3338,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -3494,7 +3539,7 @@ example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
 (ALCF).  Other existing Blue Gene/P systems may be configured in a
 similar way.</p></div>
 <div class="sect4">
-<h5 id="_public_installation_17">Public installation</h5>
+<h5 id="_public_installation_18">Public installation</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3632,7 +3677,7 @@ cluster at the Argonne Leadership Computing Facility (ALCF).  It used
 the Cobalt scheduler.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
 <div class="sect3">
-<h4 id="_public_installation_18">Public installation</h4>
+<h4 id="_public_installation_19">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3686,7 +3731,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> was a 320-node x86
 cluster at ANL.  It used PBS.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_19">Public installation</h4>
+<h4 id="_public_installation_20">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3722,7 +3767,8 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated 2019-11-22 14:01:48 CST
+Last updated
+ 2020-02-24 15:10:17 CST
 </div>
 </div>
 </body>
