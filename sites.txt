@@ -1857,6 +1857,55 @@ cat $TURBINE_OUTPUT/joined4.txt
 
 == IBM
 
+=== Summit
+
+https://docs.olcf.ornl.gov/systems/summit_user_guide.html[Summit]
+is an IBM system located at the Oak Ridge Leadership Computing
+Facility with a theoretical peak double-precision performance
+of approximately 200 PF.
+
+==== Public installation
+
+*As of:* 2020-02-24
+
+Add to +PATH+:
+
+----
+/gpfs/alpine/world-shared/med106/sw/gcc-7.4.0/swift-t/2019-11-06/stc/bin
+----
+
+Run with:
+
+----
+$ module load spectrum-mpi
+$ module load ibm-wml
+$ swift-t -m lsf workflow.swift
+----
+
+==== Build instructions
+
+*As of:* 2020-02-24
+
+Dependencies are in:
+
+----
+/sw/summit/ibm-wml/anaconda-powerai-1.6.1
+/gpfs/alpine/world-shared/med106/sw/R-190927
+/gpfs/alpine/world-shared/med106/sw/gcc-7.4.0/tcl-8.6.6
+/ccs/home/wozniak/Public/sfw/ant-1.10.3
+/usr/lib/jvm/java-1.8.0-openjdk/bin
+----
+
+Load modules:
+
+----
+$ module load ibm-wml
+$ module load spectrum-mpi
+----
+
+Use the link:guide.qhtml#install_source[+dev/build+ scripts] and
+build as on any other system.
+
 === Summit-dev
 
 https://www.olcf.ornl.gov/for-users/system-user-guides/summitdev-quickstart-guide/#system-overview[Summit-dev]
