@@ -201,13 +201,12 @@ get_color(int rank, MPI_Comm comm, int count, int* procs,
 
   // Else: Use default in-order layout
   int p = 0; // running total procs
-  int i;
-  for (i = 0; i < count; i++)
+  for (int color = 0; color < count; color++)
   {
     // printf("procs[%i]=%i\n", i, procs[i]);
-    p += procs[i];
+    p += procs[color];
     if (rank < p)
-      return i;
+      return color;
   }
   // Unreachable (guarded by sanity_check())
   assert(0);
