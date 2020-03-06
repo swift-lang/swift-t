@@ -3,7 +3,7 @@
          default="build.all"
          xmlns:jacoco="antlib:org.jacoco.ant">
 
-  <!-- ExM STC build file
+  <!-- STC build file
 
        Note:
        Eclipse generates class files in build/
