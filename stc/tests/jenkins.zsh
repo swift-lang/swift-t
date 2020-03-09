@@ -21,9 +21,12 @@ set -eu
 
 # Any arguments to this script are passed to run-tests.zsh
 
-print "JENKINS.ZSH"
-print " in $(/bin/pwd)"
-printf "DATE: $(date "+%m/%d/%Y %I:%M%p")"
+print "JENKINS ZSH"
+print "DATE: $( date "+%Y-%m-%d %H:%M" )\n"
+
+THIS=$( readlink --canonicalize $( dirname $0 ) )
+print "THIS: ${THIS}"
+cd $THIS
 print
 
 TESTS_SKIP=0
