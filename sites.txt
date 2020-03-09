@@ -910,9 +910,10 @@ trace: 42
 ===== Compute nodes
 
 Add to +PATH+: +
-+/projects/Swift-T/public/sfw/compute/swift-t/2018-12-10/stc/bin+
 
-This installation uses the Python 2.7.12 noted above.
++~wozniak/Public/sfw/theta/swift-t/2020-03-03/stc/bin+
+
+This installation uses the Python 2.7.13 and R 3.4.0 noted above.
 
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 
