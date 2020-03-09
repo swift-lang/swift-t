@@ -70,10 +70,8 @@ print "stc -v"
 ${STC} -v
 print
 
-cat ${TURBINE_INSTALL}/export/files.swift
-
 export ADLB_PERF_COUNTERS=0
-./run-tests.zsh -O0 -O1 -O2 -O3 -p 5671 \
+./run-tests.zsh -O0 -O1 -O2 -O3 \
      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
      tee results.out
 print
