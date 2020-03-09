@@ -1,6 +1,9 @@
 #!/bin/zsh
 set -eu
 
+# JENKINS ZSH
+# This is run by Jenkins
+
 C_UTILS=/tmp/exm-install/c-utils
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
