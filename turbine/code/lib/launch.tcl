@@ -26,7 +26,7 @@ namespace eval turbine {
     # Unpack args TDs
     lassign $args cmd argv
     # Receive MPI task information
-    set comm [ turbine::c::task_comm ]
+    set comm [ turbine::c::task_comm_int ]
     set rank [ adlb::rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
