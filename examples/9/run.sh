@@ -1,7 +1,6 @@
 #!/bin/sh
 set -eu
 
-echo run.sh $PATH
 which turbine
 
 ./build.sh
