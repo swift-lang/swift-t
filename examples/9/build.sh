@@ -4,7 +4,10 @@ set -eu
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-source $( turbine -C )
+set -x
+echo configscript
+CONFIG_SCRIPT=$( turbine -C )
+source $CONFIG_SCRIPT
 
 TURBINE_INCLUDE=${TURBINE_HOME}/include
 TURBINE_LIB=${TURBINE_HOME}/lib
