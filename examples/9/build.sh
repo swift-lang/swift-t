@@ -4,8 +4,7 @@ set -eu
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-set -x
-echo configscript
+# Need to split these lines to catch errors:
 CONFIG_SCRIPT=$( turbine -C )
 source $CONFIG_SCRIPT
 
