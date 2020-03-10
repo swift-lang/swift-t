@@ -911,9 +911,9 @@ trace: 42
 
 Add to +PATH+: +
 
-+~wozniak/Public/sfw/theta/swift-t/2020-03-03/stc/bin+
++~wozniak/Public/sfw/theta/swift-t/2020-03-10/stc/bin+
 
-This installation uses the Python 2.7.13 and R 3.4.0 noted above.
+This installation uses Python 3.6.5.3 and the R 3.4.0 noted above.
 
 Theta uses Cobalt/APRUN, which in Swift/T is machine type +theta+.
 
@@ -924,7 +924,7 @@ $ swift-t -m theta workflow.swift
 
 ==== Build instructions
 
-*As of:* 2018-12-11
+*As of:* 2020-03-10
 
 Use
 
