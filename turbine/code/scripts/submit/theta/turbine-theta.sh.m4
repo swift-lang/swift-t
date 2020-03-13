@@ -69,10 +69,10 @@ export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 
 echo "TURBINE SETTINGS"
 echo "JOB_ID:  ${COBALT_JOBID}"
-echo "DATE:    $(date)"
-echo "TURBINE_HOME: ${TURBINE_HOME}"
+echo "DATE:    $( date '+%Y-%m-%d %H:%M:%S' )"
 echo "PROCS:   ${PROCS}"
-echo "PPN:${PPN}"
+echo "PPN:     ${PPN}"
+echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
 # Construct aprun-formatted user environment variable arguments
