@@ -33,9 +33,8 @@ ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 
 source /opt/modules/default/init/bash
 module load modules
-PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
-module swap PrgEnv-intel/6.0.4 PrgEnv-gnu
 module load alps
+PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 
 set -eu
 
@@ -69,10 +68,10 @@ export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 
 echo "TURBINE SETTINGS"
 echo "JOB_ID:  ${COBALT_JOBID}"
-echo "DATE:    $(date)"
-echo "TURBINE_HOME: ${TURBINE_HOME}"
+echo "DATE:    $( date '+%Y-%m-%d %H:%M:%S' )"
 echo "PROCS:   ${PROCS}"
-echo "PPN:${PPN}"
+echo "PPN:     ${PPN}"
+echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
 # Construct aprun-formatted user environment variable arguments
