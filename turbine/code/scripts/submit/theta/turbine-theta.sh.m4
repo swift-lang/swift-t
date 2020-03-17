@@ -34,6 +34,7 @@ ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 source /opt/modules/default/init/bash
 module load modules
 module load alps
+module swap PrgEnv-intel PrgEnv-gnu 
 PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 
 set -eu
@@ -52,6 +53,8 @@ PROCS=getenv(PROCS)
 TURBINE_HOME=getenv(TURBINE_HOME)
 TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
 EXEC_SCRIPT=getenv(EXEC_SCRIPT)
+
+export TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if [[ ${?} != 0 ]]
@@ -89,6 +92,7 @@ set +x
 
 # This is the critical Cray fork() fix
 USER_ENV_ARGS+=( -e MPICH_GNI_FORK_MODE=FULLCOPY )
+# USER_ENV_ARGS+=( -e TURBINE_OUTPUT=$TURBINE_OUTPUT )
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
