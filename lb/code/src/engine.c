@@ -158,7 +158,7 @@ static xlb_engine_code
 id_sub_closed_cache_add(const void *key, size_t key_len);
 static bool id_sub_closed_cache_check(const void *key, size_t key_len);
 
-#define DEBUG_ENGINE(s, args...) DEBUG("ENGINE:" s, ## args)
+#define DEBUG_ENGINE(s, args...) DEBUG("ENGINE: " s, ## args)
 
 /** Has xlb_engine_init() been called? */
 bool xlb_engine_initialized = false;
@@ -561,7 +561,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
                     "Null ID provided to data-dependent task");
   int server = ADLB_Locate(id);
 
-  DEBUG_ENGINE("Engine subscribe to <%"PRId64">", id);
+  DEBUG_ENGINE("subscribing to <%"PRId64">", id);
   if (table_lp_contains(&id_subscribed, id)) {
     TRACE("already subscribed: <%"PRId64">", id);
     // Already subscribed
@@ -759,7 +759,7 @@ xlb_engine_put(const char* name, int name_strlen,
   }
   else
   {
-    DEBUG_ENGINE("ready: {%"PRId64"}", work->id);
+    DEBUG_ENGINE("work ready: {%"PRId64"}", work->id);
     *ready = true;
 
     // Free transform except for work unit

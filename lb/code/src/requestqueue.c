@@ -110,7 +110,8 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
 
-  // Allocate one list node per worker - otherwise will fallback to malloc/free
+  // Allocate one list node per worker -
+  //          otherwise will fallback to malloc/free
   adlb_code ac = list2_node_pool_init(layout->my_workers);
   ADLB_CHECK(ac);
 
@@ -139,9 +140,10 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
        * requests out of order, and with more complicated data structures.
        * We leave it to the client code to avoid doing this for now.
        */
-      ADLB_CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
-            " for different work types from same rank."
-            " Rank: %i Types: %i, %i", rank, R->type, type);
+      ADLB_CHECK_MSG(R->type == type,
+                     "Do not yet support simultaneous requests"
+                     " for different work types from same rank."
+                     " Rank: %i Types: %i, %i", rank, R->type, type);
       return merge_request(R, rank, type, count, blocking);
     }
   }
@@ -166,7 +168,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   list2_add_item(L, item);
   request_queue_size++;
 
-  // printf("request_queue_size: %i\n", request_queue_size);
+  DEBUG("request_queue_add(): size: %i\n", request_queue_size);
 
   if (blocking)
   {
@@ -181,7 +183,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
  * Caller is responsible for ensuring types and ranks match.
  */
 static inline adlb_code
-merge_request(request *R, int rank, int type, int count, bool blocking)
+merge_request(request* R, int rank, int type, int count, bool blocking)
 {
   assert(R->rank == rank);
   assert(R->type == type);
@@ -355,7 +357,7 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
   struct list2* L = &type_requests[type];
   int count = list2_size(L);
 
-  TRACE("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
+  DEBUG("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
         type, parallelism, count);
 
   if (count < parallelism)
@@ -396,7 +398,8 @@ get_parallel_workers_ordered(int count, int parallelism, int* ranks,
   if (count < parallelism)
       return false;
 
-  // printf("\nget_parallel_workers_ordered(count: %i parallelism: %i)\n", count, parallelism);
+  DEBUG("get_parallel_workers_ordered(count=%i parallelism=%i)\n",
+        count, parallelism);
 
   extract_worker_ranks(L, t);
   quicksort_ints(t, 0, count-1);
@@ -408,7 +411,8 @@ get_parallel_workers_ordered(int count, int parallelism, int* ranks,
 
   if (!result)
   {
-    // printf("Could not satisfy ADLB_PAR_MOD=%i\n", xlb_s.par_mod);
+    DEBUG("get_parallel_workers_ordered(): "
+          "could not satisfy ADLB_PAR_MOD=%i\n", xlb_s.par_mod);
     return false;
   }
 
@@ -424,6 +428,7 @@ get_parallel_workers_ordered(int count, int parallelism, int* ranks,
   return true;
 }
 
+/** Extract all worker ranks in the requestqueue */
 static inline void
 extract_worker_ranks(struct list2* L, int* result)
 {
@@ -445,12 +450,13 @@ find_contig(int* A, int n, int k, int m, int* result)
 {
   int n_k = n-k; // Useful place to give up
   int p = 0;
-  // printf("find_contig: n=%i k=%i m=%i\n", n, k, m);
+  DEBUG("find_contig(): n=%i k=%i m=%i\n", n, k, m);
   do
   {
     // printf("p trial1: %i\n", p);
     // Advance to next allowable PAR_MOD start point
-    while (A[p] % m != 0){
+    while (A[p] % m != 0)
+    {
       // printf(" A[p]: %i\n", A[p]);
       if (++p > n_k) return false;
     }
@@ -467,12 +473,14 @@ find_contig(int* A, int n, int k, int m, int* result)
       if (A[q] != next++) goto loop;
     // Found it!
     *result = p;
+    DEBUG("find_contig(): found: p=%i", p);
     return true;
 
     loop: p = q; // Not sequential: try again
     // printf("loop: p=%i n_k=%i\n", p, n_k);
   }
   while (p < n_k);
+  DEBUG("find_contig(): nothing.");
   return false;
 }
 

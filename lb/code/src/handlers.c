@@ -451,7 +451,7 @@ put(int type, int putter, int answer, int target, int length,
     WAIT(&req, &status);
   }
 
-  DEBUG("work unit: x%i %s ", opts.parallelism, work->payload);
+  DEBUG("recvd work unit: x%i %s ", opts.parallelism, work->payload);
 
   if (opts.parallelism > 1)
   {
@@ -904,7 +904,7 @@ xlb_check_parallel_tasks(int type)
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  TRACE("\t tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
+  DEBUG("\t parallel tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
 
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
@@ -1188,7 +1188,7 @@ handle_store(int caller)
     rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
                                 &prep, &send_notifs);
     ADLB_CHECK(rc);
-    DEBUG("SEnding store response");
+    DEBUG("handle_store(): sending store response");
 
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 

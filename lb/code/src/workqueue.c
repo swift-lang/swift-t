@@ -647,7 +647,8 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   TRACE_START;
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
-  TRACE("type: %i tree_size: %i", work_type, rbtree_size(T));
+  DEBUG("xlb_workq_pop_parallel(): "
+        "type: %i tree_size: %i", work_type, rbtree_size(T));
   // Common case is empty: want to exit asap
   if (rbtree_size(T) != 0)
   {
@@ -657,7 +658,7 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
     bool found = rbtree_iterator(T, pop_parallel_cb, &data);
     if (found)
     {
-      TRACE("found...");
+      DEBUG("xlb_workq_pop_parallel(): found: wuid=%"PRId64, data.wu->id);
       *wu = data.wu;
       *ranks = data.ranks;
       result = true;
@@ -666,6 +667,10 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
       TRACE("rbtree_removed: wu: %p node: %p...", wu, data.node);
       free(data.node);
       xlb_workq_parallel_task_count--;
+    }
+    else
+    {
+      DEBUG("xlb_workq_pop_parallel(): nothing");
     }
   }
   TRACE_END;
@@ -679,7 +684,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   struct pop_parallel_data* data = user_data;
   int parallelism = wu->opts.parallelism;
 
-  TRACE("pop_parallel_cb(): wu: %p %"PRId64" x%i",
+  TRACE("pop_parallel_cb(): wu: %p %"PRID64" x%i",
         wu, wu->id, parallelism);
   assert(parallelism > 0);
 
