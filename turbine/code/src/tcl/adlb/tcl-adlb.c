@@ -347,7 +347,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
    If comm is given, run ADLB in that communicator
    Else, run ADLB in a dup of MPI_COMM_WORLD
 
-   After this is run, adlb::size and adlb::rank can be used.
+   After this is run, adlb::comm_size and adlb::comm_rank can be used.
  */
 static int
 ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -769,11 +769,11 @@ static int
 ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  int result = -1;
+  int rank = -1;
   if (objc == 1)
   {
     TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
-    result = adlb_comm_rank;
+    rank = adlb_comm_rank;
   }
   else if (objc == 2)
   {
@@ -781,27 +781,40 @@ ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
     int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
     TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
     MPI_Comm comm = (MPI_Comm) comm_int;
-    MPI_Comm_rank(comm, &result);
+    MPI_Comm_rank(comm, &rank);
+    /* printf("ADLB_CommRank_Cmd(): comm_int: %lli\n", comm_int); */
+    /* printf("ADLB_CommRank_Cmd(): rank:     %i\n",   rank); */
   }
   else
     TCL_RETURN_ERROR("requires 1 or 2 arguments!");
 
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+  Tcl_Obj* result = Tcl_NewIntObj(rank);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
 static int
 ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
+                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2)
-  Tcl_WideInt comm_int;
-  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
-  MPI_Comm comm = (MPI_Comm) comm_int;
+  int size = -1;
+  if (objc == 1)
+  {
+    TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
+    size = adlb_comm_size;
+  }
+  else if (objc == 2)
+  {
+    Tcl_WideInt comm_int;
+    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+    MPI_Comm comm = (MPI_Comm) comm_int;
 
-  int size;
-  MPI_Comm_size(comm, &size);
+    MPI_Comm_size(comm, &size);
+  }
+  else
+    TCL_RETURN_ERROR("requires 1 or 2 arguments!");
+
   Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -878,6 +891,7 @@ ADLB_AmServer_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: no args, returns size of MPI communicator ADLB is running on
 */
+/*
 static int
 ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
@@ -886,6 +900,7 @@ ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_comm_size));
   return TCL_OK;
 }
+*/
 
 /**
    usage: no args, returns number of servers
@@ -1164,7 +1179,14 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, Tcl_NewStringObj(payload, work_len - 1));
     free(payload);
   }
+
   turbine_task_comm = task_comm;
+  /* printf("ADLB_Get_Cmd(): turbine_task_comm: %lli\n", */
+  /*        (long long int) turbine_task_comm); */
+
+  int size;
+  MPI_Comm_size(turbine_task_comm, &size);
+  /* printf("ADLB_Get_Cmd(): turbine_task_comm size: %i\n", size); */
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -5991,15 +6013,15 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("declare_struct_type", ADLB_Declare_Struct_Type_Cmd);
   COMMAND("is_struct_type", ADLB_Is_Struct_Type_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);
-  COMMAND("rank",      ADLB_CommRank_Cmd);
-  COMMAND("size",      ADLB_CommSize_Cmd);
+  COMMAND("comm_rank", ADLB_CommRank_Cmd);
+  COMMAND("comm_size", ADLB_CommSize_Cmd);
   COMMAND("comm_dup",  ADLB_CommDup_Cmd);
   COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
-  COMMAND("size",      ADLB_Size_Cmd);
+  // COMMAND("size",      ADLB_Size_Cmd);
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("hostmap_lookup",   ADLB_Hostmap_Lookup_Cmd);

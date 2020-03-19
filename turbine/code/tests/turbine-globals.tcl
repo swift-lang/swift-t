@@ -25,7 +25,7 @@ lassign [ turbine::declare_globals [ list v1 v2 v3 ] [ list integer integer inte
 lassign [ turbine::declare_globals [ list v4 v5 ] [ list string string ] ] a b
 
 proc test_global { td type val} {
-  set rank [ adlb::rank ]
+  set rank [ adlb::comm_rank ]
   if { $rank == 0 } {
     adlb::store $td $type $val
   }

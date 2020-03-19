@@ -19,7 +19,7 @@ package require turbine 1.0
 set NOOP_WORK_TYPE 1
 
 proc noop_task { x i } {
-  turbine::noop_exec_run "NOOP TASK rank: [ adlb::rank ]" \
+  turbine::noop_exec_run "NOOP TASK rank: [ adlb::comm_rank ]" \
       "noop_task_callback $x $i \$noop_task_result"
 }
 
@@ -39,7 +39,7 @@ proc main {} {
   for { set i 0 } { $i < 100 } { incr i } {
     # A dummy task that doesn't actually add anything to executor
     turbine::rule "" {
-      puts "DUMMY TASK rank: [ adlb::rank ]"
+      puts "DUMMY TASK rank: [ adlb::comm_rank ]"
     } type $NOOP_WORK_TYPE
 
     # Add a task to the noop executor

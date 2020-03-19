@@ -27,7 +27,7 @@ namespace eval turbine {
     lassign $args cmd argv
     # Receive MPI task information
     set comm [ turbine::c::task_comm_int ]
-    set rank [ adlb::rank $comm ]
+    set rank [ adlb::comm_rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
       set cmd_value [ turbine::retrieve_decr $cmd ]
@@ -56,7 +56,7 @@ namespace eval turbine {
     lassign $args cmd argv envs
     # Receive MPI task information
     set comm [ turbine::c::task_comm ]
-    set rank [ adlb::rank $comm ]
+    set rank [ adlb::comm_rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
       set cmd_value [ turbine::retrieve_decr $cmd ]
@@ -69,7 +69,7 @@ namespace eval turbine {
     set envs_length [ dict size $envs_tds ]
     # Receive MPI task information
     set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
+    set rank   [ adlb::comm_rank $comm ]
     # Construct char**
     set argv_charpp [ turbine::blob_strings_to_char_ptr_ptr $argv_tds ]
     set envs_charpp [ turbine::blob_strings_to_char_ptr_ptr $envs_tds ]
@@ -98,7 +98,7 @@ namespace eval turbine {
     set tds    [ adlb::enumerate $argv dict all 0 ]
     # Receive MPI task information
     set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
+    set rank   [ adlb::comm_rank $comm ]
     # Construct a char**
     set charpp [ turbine::blob_strings_to_char_ptr_ptr $tds ]
     # Run the user code
@@ -171,7 +171,7 @@ namespace eval turbine {
 
     # Receive MPI task information
     set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
+    set rank   [ adlb::comm_rank $comm ]
 
     # show rank
 
@@ -198,6 +198,6 @@ namespace eval turbine {
     if { $rank == 0 } {
       store_integer $exit_code $exit_code_value
     }
-    # puts "returned: [ adlb::rank ]"
+    # puts "returned: [ adlb::comm_rank ]"
   }
 }

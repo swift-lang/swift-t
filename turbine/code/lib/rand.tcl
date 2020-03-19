@@ -32,7 +32,7 @@ namespace eval turbine {
     # Note: Call this after adlb::init so that rank is valid
     proc init_rng {} {
         global env
-        set rank [ adlb::rank ]
+        set rank [ adlb::comm_rank ]
 
         if { [ getenv_integer TURBINE_SRAND x s ] } {
             if { $rank == 0 } {

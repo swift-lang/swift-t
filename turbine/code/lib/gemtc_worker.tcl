@@ -42,7 +42,7 @@ namespace eval turbine {
         package require gemtc
 
 	# call srand once here
-	set seed [ expr [adlb::rank] + [ clock milliseconds ] ]
+	set seed [ expr [adlb::comm_rank] + [ clock milliseconds ] ]
 	expr { srand ($seed) }
 
 	# intialize context

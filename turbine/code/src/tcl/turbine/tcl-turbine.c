@@ -847,6 +847,8 @@ Turbine_TaskCommInt_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(1);
   Tcl_Obj* result =
     Tcl_NewWideIntObj((long long int) turbine_task_comm);
+  //printf("TaskCommInt_Cmd(): turbine_task_comm: %lli\n",
+  //       (long long int) turbine_task_comm);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

@@ -38,7 +38,7 @@ set event_end   [ lindex $L 1 ]
 
 if { ! [ adlb::amserver ] } {
 
-    set rank [ adlb::rank ]
+    set rank [ adlb::comm_rank ]
     puts "rank: $rank"
     set workers [ adlb::workers ]
     if { $rank == 0 } {

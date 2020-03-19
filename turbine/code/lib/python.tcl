@@ -16,7 +16,7 @@ namespace eval turbine {
     # show code expr
     # Look up MPI information
     set comm [ turbine::c::task_comm ]
-    set rank [ adlb::rank $comm ]
+    set rank [ adlb::comm_rank $comm ]
     # Run the user code
     # show code_value expr_value
     set result_value [ python_parallel_persist $comm $code_value $expr_value ]

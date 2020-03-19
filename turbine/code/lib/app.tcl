@@ -43,7 +43,7 @@ namespace eval turbine {
     getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
     if { $app_delay_time > 0 } {
-      if { [ adlb::rank ] == 0 } {
+      if { [ adlb::comm_rank ] == 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
       }
     }
@@ -105,7 +105,7 @@ namespace eval turbine {
       } trap {TURBINE ERROR} { message } {
         set success false
         try {
-          app_retry_reput $message $tries_reput [adlb::rank] \
+          app_retry_reput $message $tries_reput [adlb::comm_rank] \
               $stdin_src $stdout_dst $stderr_dst \
               $cmd {*}$args
           break
@@ -150,7 +150,7 @@ namespace eval turbine {
         $cmd $args
 
     log** "app: reput to ADLB:" $cmd $args
-    set payload [ list exec_local $tries_reput [adlb::rank] ]
+    set payload [ list exec_local $tries_reput [adlb::comm_rank] ]
     lappend payload $stdin_src $stdout_dst $stderr_dst
     lappend payload $cmd {*}$args
     global WORK_TYPE
@@ -201,7 +201,7 @@ namespace eval turbine {
   proc app_retry_check { type message tries max cmd args } {
     if { $tries < $max } {
       log [ cat "$message: retries $type: $tries/$max " \
-                "[ c_utils::hostname ] rank [ adlb::rank ]" ]
+                "[ c_utils::hostname ] rank [ adlb::comm_rank ]" ]
     } else {
       if { $max > 0 } {
         log "app: exhausted $type tries ($tries)"
