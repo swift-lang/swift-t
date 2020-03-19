@@ -398,7 +398,7 @@ get_parallel_workers_ordered(int count, int parallelism, int* ranks,
   if (count < parallelism)
       return false;
 
-  DEBUG("get_parallel_workers_ordered(count=%i parallelism=%i)\n",
+  DEBUG("get_parallel_workers_ordered(count=%i parallelism=%i)",
         count, parallelism);
 
   extract_worker_ranks(L, t);
@@ -450,7 +450,7 @@ find_contig(int* A, int n, int k, int m, int* result)
 {
   int n_k = n-k; // Useful place to give up
   int p = 0;
-  DEBUG("find_contig(): n=%i k=%i m=%i\n", n, k, m);
+  DEBUG("find_contig(): n=%i k=%i m=%i", n, k, m);
   do
   {
     // printf("p trial1: %i\n", p);

@@ -809,7 +809,6 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
     int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
     TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
     MPI_Comm comm = (MPI_Comm) comm_int;
-
     MPI_Comm_size(comm, &size);
   }
   else
@@ -1179,7 +1178,6 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, Tcl_NewStringObj(payload, work_len - 1));
     free(payload);
   }
-
   turbine_task_comm = task_comm;
   /* printf("ADLB_Get_Cmd(): turbine_task_comm: %lli\n", */
   /*        (long long int) turbine_task_comm); */

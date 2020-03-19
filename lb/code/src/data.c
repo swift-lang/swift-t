@@ -906,7 +906,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
   {
     char *val_s = ADLB_Data_repr(&d->data, d->type);
-    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i\n",
+    DEBUG("data_store "ADLB_PRID"=%s | refs: r: %i w: %i",
           ADLB_PRID_ARGS(id, d->symbol), val_s,
           store_refcounts.read_refcount, store_refcounts.write_refcount);
     free(val_s);
