@@ -1017,7 +1017,6 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
     T_prev = T;
     if (!subscribed)
     {
-      DEBUG_ENGINE("Ready {%"PRId64"}", T->work->id);
       tc = move_to_ready(ready, T);
       ENGINE_CHECK(tc);
     }

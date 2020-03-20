@@ -168,7 +168,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   list2_add_item(L, item);
   request_queue_size++;
 
-  DEBUG("request_queue_add(): size: %i\n", request_queue_size);
+  DEBUG("request_queue_add(): size: %i", request_queue_size);
 
   if (blocking)
   {
@@ -412,7 +412,7 @@ get_parallel_workers_ordered(int count, int parallelism, int* ranks,
   if (!result)
   {
     DEBUG("get_parallel_workers_ordered(): "
-          "could not satisfy ADLB_PAR_MOD=%i\n", xlb_s.par_mod);
+          "could not satisfy ADLB_PAR_MOD=%i", xlb_s.par_mod);
     return false;
   }
 

@@ -715,7 +715,7 @@ servers_idle()
 
   // New serial number for round of checks
   xlb_idle_check_attempt++;
-  DEBUG("Master server initiating idle check attempt #%"PRId64,
+  DEBUG("master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
 
   // Arrays containing request and work counts from all servers
@@ -802,7 +802,7 @@ servers_idle()
     }
   }
 
-  DEBUG("[%i] done checking idle %.4f\n", xlb_s.layout.rank, MPI_Wtime());
+  DEBUG("[%i] done checking idle\n", xlb_s.layout.rank);
   free(request_counts);
   free(work_counts);
   return all_idle;
@@ -813,9 +813,10 @@ shutdown_all_servers()
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
-  DEBUG("Initiating server shutdown");
+  DEBUG("initiating server shutdown");
   xlb_server_shutting_down = true;
-  for (int rank = xlb_s.layout.master_server_rank+1; rank < xlb_s.layout.size;
+  for (int rank = xlb_s.layout.master_server_rank+1;
+       rank < xlb_s.layout.size;
        rank++)
   {
     adlb_code rc = xlb_sync_shutdown(rank);

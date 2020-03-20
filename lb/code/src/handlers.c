@@ -904,7 +904,8 @@ xlb_check_parallel_tasks(int type)
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  DEBUG("\t parallel tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
+  DEBUG("xlb_check_parallel_tasks(): count=%"PRId64"",
+        xlb_workq_parallel_tasks());
 
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
