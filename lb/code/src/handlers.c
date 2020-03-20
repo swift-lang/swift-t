@@ -223,7 +223,8 @@ void xlb_print_handler_counters(void)
     if (xlb_handlers[tag] != NULL)
     {
       PRINT_COUNTER("%s=%"PRId64"\n",
-              xlb_get_tag_name(tag), xlb_handler_counters[tag]);
+                    xlb_get_tag_name(tag),
+                    xlb_handler_counters[tag]);
     }
   }
 }

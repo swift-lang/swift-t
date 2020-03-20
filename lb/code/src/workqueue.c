@@ -643,7 +643,7 @@ static bool pop_parallel_cb(struct rbtree_node* node,
 bool
 xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
 {
-  //TODO: cache the minimum size of parallel task of each type
+  // TODO: cache the minimum size of parallel task of each type
   TRACE_START;
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];

@@ -364,7 +364,7 @@ xlb_poll(int source, MPI_Status *req_status)
 static inline adlb_code
 xlb_handle_pending(MPI_Status* status)
 {
-  adlb_tag tag = (adlb_tag)status->MPI_TAG;
+  adlb_tag tag = (adlb_tag) status->MPI_TAG;
   // Call appropriate RPC handler:
   adlb_code rc = xlb_handle(tag, status->MPI_SOURCE);
 
