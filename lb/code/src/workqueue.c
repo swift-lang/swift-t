@@ -635,6 +635,8 @@ struct pop_parallel_data
   int* ranks;
   /** Output: node in rbtree to remove */
   struct rbtree_node* node;
+  /** Smallest task seen so far */
+  int smallest;
 };
 
 static bool pop_parallel_cb(struct rbtree_node* node,
@@ -649,30 +651,30 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   struct rbtree* T = &parallel_work[work_type];
   DEBUG("xlb_workq_pop_parallel(): "
         "type: %i tree_size: %i", work_type, rbtree_size(T));
-  // Common case is empty: want to exit asap
-  if (rbtree_size(T) != 0)
+  // Common case is empty: want to exit ASAP:
+  if (rbtree_size(T) == 0)
+    goto end;
+
+  struct pop_parallel_data data = { -1, NULL, NULL, NULL, INT_MAX };
+  data.type = work_type;
+  TRACE("iterator...");
+  bool found = rbtree_iterator(T, pop_parallel_cb, &data);
+  if (!found)
   {
-    struct pop_parallel_data data = { -1, NULL, NULL, NULL };
-    data.type = work_type;
-    TRACE("iterator...");
-    bool found = rbtree_iterator(T, pop_parallel_cb, &data);
-    if (found)
-    {
-      DEBUG("xlb_workq_pop_parallel(): found: wuid=%"PRId64, data.wu->id);
-      *wu = data.wu;
-      *ranks = data.ranks;
-      result = true;
-      // Release memory:
-      rbtree_remove_node(T, data.node);
-      TRACE("rbtree_removed: wu: %p node: %p...", wu, data.node);
-      free(data.node);
-      xlb_workq_parallel_task_count--;
-    }
-    else
-    {
-      DEBUG("xlb_workq_pop_parallel(): nothing");
-    }
+    DEBUG("xlb_workq_pop_parallel(): nothing");
+    goto end;
   }
+  DEBUG("xlb_workq_pop_parallel(): found: wuid=%"PRId64,
+        data.wu->id);
+  *wu = data.wu;
+  *ranks = data.ranks;
+  result = true;
+  // Release memory:
+  rbtree_remove_node(T, data.node);
+  TRACE("rbtree_removed: wu: %p node: %p...", wu, data.node);
+  free(data.node);
+  xlb_workq_parallel_task_count--;
+  end:
   TRACE_END;
   return result;
 }
@@ -683,24 +685,29 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   xlb_work_unit* wu = node->data;
   struct pop_parallel_data* data = user_data;
   int parallelism = wu->opts.parallelism;
+  if (parallelism >= data->smallest)
+    return false;
 
   TRACE("pop_parallel_cb(): wu: %p %"PRID64" x%i",
         wu, wu->id, parallelism);
   assert(parallelism > 0);
 
   int ranks[parallelism];
-  bool found = xlb_requestqueue_parallel_workers(data->type, parallelism,
-                                        ranks);
-  if (found)
+  bool found =
+    xlb_requestqueue_parallel_workers(data->type, parallelism, ranks);
+  if (! found)
   {
-    data->wu = wu;
-    data->node = node;
-    data->ranks = malloc((size_t)parallelism * sizeof(int));
-    valgrind_assert(data->ranks != NULL);
-    memcpy(data->ranks, ranks, (size_t)parallelism * sizeof(int));
-    return true;
+    if (parallelism < data->smallest)
+      data->smallest = parallelism;
+    return false;
   }
-  return false;
+
+  data->wu = wu;
+  data->node = node;
+  data->ranks = malloc((size_t)parallelism * sizeof(int));
+  valgrind_assert(data->ranks != NULL);
+  memcpy(data->ranks, ranks, (size_t)parallelism * sizeof(int));
+  return true;
 }
 
 adlb_code

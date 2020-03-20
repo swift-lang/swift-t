@@ -144,7 +144,7 @@ static adlb_code xlb_recheck_single_queues(void);
 
 static adlb_code xlb_recheck_parallel_queues(void);
 
-static inline adlb_code xlb_check_parallel_tasks(int work_type);
+static inline adlb_code xlb_check_parallel_queue(int work_type);
 
 static inline adlb_code redirect_work(int type, int putter, int answer,
                                       int worker, int length);
@@ -802,7 +802,7 @@ process_get_request(int caller, int type, int count, bool blocking)
   {
     // TODO: for count > 0 this early exit may leave unmatched work
     // without initiating a steal
-    code = xlb_check_parallel_tasks(type);
+    code = xlb_check_parallel_queue(type);
     if (code == ADLB_SUCCESS)
       return ADLB_SUCCESS;
     else if (code != ADLB_NOTHING)
@@ -898,14 +898,14 @@ xlb_recheck_single_queues(void)
   return ADLB_SUCCESS if any matches, ADLB_NOTHING if no matches
  */
 static adlb_code
-xlb_check_parallel_tasks(int type)
+xlb_check_parallel_queue(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  DEBUG("xlb_check_parallel_tasks(): count=%"PRId64"",
+  DEBUG("xlb_check_parallel_queue(): size=%"PRId64"",
         xlb_workq_parallel_tasks());
 
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
@@ -940,7 +940,7 @@ xlb_recheck_parallel_queues(void)
 
   for (int t = 0; t < xlb_s.types_size; t++)
   {
-    adlb_code rc = xlb_check_parallel_tasks(t);
+    adlb_code rc = xlb_check_parallel_queue(t);
     if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING)
       ADLB_CHECK(rc);
   }
