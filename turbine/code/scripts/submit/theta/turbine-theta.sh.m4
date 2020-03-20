@@ -40,11 +40,12 @@ PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 set -eu
 
 echo TURBINE-THETA.SH
-START=$( date "+%s.%N" )
-echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 # Get the time zone: for time stamps on log messages
 export TZ=getenv(TZ)
+
+START=$( date "+%s.%N" )
+echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 COMMAND="getenv(COMMAND)"
 PPN=getenv(PPN)
@@ -92,7 +93,7 @@ set +x
 
 # This is the critical Cray fork() fix
 USER_ENV_ARGS+=( -e MPICH_GNI_FORK_MODE=FULLCOPY )
-# USER_ENV_ARGS+=( -e TURBINE_OUTPUT=$TURBINE_OUTPUT )
+USER_ENV_ARGS+=( -e TURBINE_OUTPUT=$TURBINE_OUTPUT )
 
 TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 
