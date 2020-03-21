@@ -791,6 +791,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_TOP)
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
+	$(E) $(CP_PARENTS) $(CP_ARGS) etc/turbine.supp $(INSTALL_TOP)
 ifeq ($(HAVE_PYTHON),1)
 	$(E) cp $(CP_ARGS) py/*.py $(INSTALL_PY)
 endif
