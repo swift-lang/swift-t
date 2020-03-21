@@ -42,6 +42,11 @@ LOG()
 
 LOG_WAIT()
 {
+  # User can skip waits with WAIT=0
+  if (( ${WAIT:-1} == 0 ))
+  then
+    return
+  fi
   if [ -t 1 ] # Is the output a terminal?
   then
     echo "  waiting $* seconds: press enter to skip ..."
