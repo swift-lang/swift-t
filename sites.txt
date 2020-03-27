@@ -103,6 +103,9 @@ script that sets the environment variables for your case and finally
 calls +swift-t+.  Alternatively, they may be placed in a
 <<settings_file,settings file>>.
 
+The +swift-t+ command will submit your job to the given scheduler and
+run it.
+
 == Swift-Turbine compilation
 
 Swift/T usage starts with developing and testing a Swift/T script.
@@ -150,6 +153,33 @@ mpiexec tclsh program.tic
 
 On more complex, scheduled systems, users do not invoke +mpiexec+
 directly; Turbine run scripts are provided by Swift/T.
+
+=== Turbine pilot
+
+The +turbine-pilot+ program can be used to run Swift/T interactively
+on the compute nodes of a scheduled system in an interactive
+allocation.  This mode of operation does not attempt to submit a job
+to the scheduler, it assumes you have already done that.
+
+Simply compile your workflow with +stc+, and run:
+
+----
+$ stc workflow.swift
+----
+
+*APRUN* system
+
+----
+# Inside the interactive job
+$ aprun -n 4 turbine-pilot <ARGUMENTS...>
+----
+
+*SLURM* system
+
+----
+# Inside the interactive job
+$ srun -n 4 turbine-pilot <ARGUMENTS...>
+----
 
 [[scheduled_systems]]
 == Submitting Turbine jobs on scheduled systems
