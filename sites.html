@@ -913,16 +913,17 @@ directly; Turbine run scripts are provided by Swift/T.</p></div>
 on the compute nodes of a scheduled system in an interactive
 allocation.  This mode of operation does not attempt to submit a job
 to the scheduler, it assumes you have already done that.</p></div>
-<div class="paragraph"><p>Simply compile your workflow with <code>stc</code>, and run:</p></div>
+<div class="paragraph"><p>Simply compile your workflow with <code>stc</code>:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>$ stc workflow.swift</code></pre>
 </div></div>
+<div class="paragraph"><p>which produces <code>workflow.tic</code> .  Then run:</p></div>
 <div class="paragraph"><p><strong>APRUN</strong> system</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code># Inside the interactive job
-$ aprun -n 4 turbine-pilot &lt;ARGUMENTS...&gt;</code></pre>
+$ aprun -n 4 turbine-pilot workflow.tic &lt;ARGUMENTS...&gt;</code></pre>
 </div></div>
 <div class="paragraph"><p><strong>SLURM</strong> system</p></div>
 <div class="listingblock">
@@ -3793,7 +3794,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated 2020-03-27 16:37:56 CDT
+Last updated 2020-03-27 16:41:24 CDT
 </div>
 </div>
 </body>
