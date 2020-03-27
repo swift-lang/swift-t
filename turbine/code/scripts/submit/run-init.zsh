@@ -38,8 +38,10 @@
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   USER_ENV_ARRAY: User environment variables for Bash array: K1 'V1' K2 'V2' ...
-#   USER_ENV_CODE:  User environment variables  in Bash code:  K1='V1' K2='V2' ...
+#   USER_ENV_ARRAY: User environment variables for Bash array:
+#                   K1 'V1' K2 'V2' ...
+#   USER_ENV_CODE:  User environment variables  in Bash code:
+#                   K1='V1' K2='V2' ...
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -111,6 +113,8 @@ turbine_log()
 }
 
 # Defaults:
+PROJECT=${PROJECT:-}
+QUEUE=${QUEUE:-}
 CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
@@ -136,16 +140,6 @@ OUTPUT_TOKEN_FILE=/dev/null
 ENV_RE='(.*)=(.*)'
 
 export USER_ENV_CODE="" USER_ENV_ARRAY=""
-
-AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
-    TURBINE_LOG TURBINE_DEBUG MPI_LABEL ADLB_SERVERS
-    TCLLIBPATH LD_LIBRARY_PATH )
-
-for NAME in ${AUTO_VARS}
-do
-  USER_ENV_CODE+="${NAME}='${(P)NAME}' "
-  USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
-done
 
 # Get options
 while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
@@ -343,6 +337,17 @@ then
     print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
   fi
 fi
+
+AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
+    TURBINE_LOG TURBINE_DEBUG MPI_LABEL ADLB_SERVERS
+    TCLLIBPATH LD_LIBRARY_PATH )
+
+for NAME in ${AUTO_VARS}
+do
+  USER_ENV_CODE+="${NAME}='${(P)NAME}' "
+  USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
+done
+
 
 # This is being phased in to capture common M4 functions (2018-12-18)
 COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
