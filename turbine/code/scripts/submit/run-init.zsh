@@ -113,6 +113,8 @@ turbine_log()
 }
 
 # Defaults:
+PROJECT=${PROJECT:-}
+QUEUE=${QUEUE:-}
 CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
