@@ -845,6 +845,8 @@ Run Swift/T with the name of the scheduler, e.g.:
 script that sets the environment variables for your case and finally
 calls <code>swift-t</code>.  Alternatively, they may be placed in a
 <a href="#settings_file">settings file</a>.</p></div>
+<div class="paragraph"><p>The <code>swift-t</code> command will submit your job to the given scheduler and
+run it.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -905,6 +907,30 @@ script wrapper that configures Turbine and essentially runs:</p></div>
 </div></div>
 <div class="paragraph"><p>On more complex, scheduled systems, users do not invoke <code>mpiexec</code>
 directly; Turbine run scripts are provided by Swift/T.</p></div>
+<div class="sect2">
+<h3 id="_turbine_pilot">Turbine pilot</h3>
+<div class="paragraph"><p>The <code>turbine-pilot</code> program can be used to run Swift/T interactively
+on the compute nodes of a scheduled system in an interactive
+allocation.  This mode of operation does not attempt to submit a job
+to the scheduler, it assumes you have already done that.</p></div>
+<div class="paragraph"><p>Simply compile your workflow with <code>stc</code>, and run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ stc workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>APRUN</strong> system</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Inside the interactive job
+$ aprun -n 4 turbine-pilot &lt;ARGUMENTS...&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p><strong>SLURM</strong> system</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Inside the interactive job
+$ srun -n 4 turbine-pilot &lt;ARGUMENTS...&gt;</code></pre>
+</div></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -3767,7 +3793,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated 2020-03-10 12:35:52 CDT
+Last updated 2020-03-27 16:37:56 CDT
 </div>
 </div>
 </body>
