@@ -7,8 +7,10 @@ set -eu
 # Swift/T build script: runs configuration and compilation
 # See options.sh for options
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
+
+cd $THIS
 
 ${THIS}/check-settings.sh
 source ${THIS}/functions.sh
