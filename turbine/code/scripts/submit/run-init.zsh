@@ -348,7 +348,6 @@ do
   USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
 done
 
-
 # This is being phased in to capture common M4 functions (2018-12-18)
 COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 
