@@ -183,6 +183,11 @@ Makefile: configure Makefile.in
 
 ### DEPS
 
+ifeq (${DEPCC},)
+# Assume we always have gcc for deps processing
+DEPCC = gcc
+endif
+
 deps: $(DEPS) $(TEST_DEPS)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
@@ -191,7 +196,7 @@ endif
 
 %.d: %.c Makefile
 	$(Q) "  DEP		$(@)"
-	$(E) CC=$(CC) maint/depend.sh \
+	$(E) CC=$(DEPCC) maint/depend.sh \
              $(dir $(<)) $(CFLAGS) $(<) > $(@)
 
 deps.txt: $(DEPS) $(TEST_DEPS)
