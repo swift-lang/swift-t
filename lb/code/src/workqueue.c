@@ -688,7 +688,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   if (parallelism >= data->smallest)
     return false;
 
-  TRACE("pop_parallel_cb(): wu: %p %"PRID64" x%i",
+  TRACE("pop_parallel_cb(): wu: %p %"PRId64" x%i",
         wu, wu->id, parallelism);
   assert(parallelism > 0);
 

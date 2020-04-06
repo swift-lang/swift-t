@@ -224,7 +224,8 @@ USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
 ENABLE_MPI_CHECKS=1
-# The label is just for 'turbine -v' output
+# The label is just for 'turbine -v' output and the
+#     Turbine runtime environment, which is available to workflows
 # It may be "(unknown)" if MPI checks are disabled
 MPI_LABEL=""
 MPI_LABEL_DIR=""
@@ -273,6 +274,20 @@ AC_ARG_ENABLE(mpi-checks,
                     the MPI version and enforce sanity.  This flag
                     disables these checks.]),
     [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
+
+# Set MPI_DIR with respect to a system OpenMPI
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+then
+    OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
+    if [[ -r ${OPENMPI}/include/mpi.h ]]
+    then
+        AC_MSG_RESULT([Using OpenMPI directory: ${OPENMPI}])
+        USE_MPI_DIR=${OPENMPI}
+        USE_LAUNCHER=/usr/bin/mpiexec
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    fi
+fi
 
 # Set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]]
@@ -380,7 +395,6 @@ MPI_LIB_FOUND=0
 if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
   MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-  echo MPI_LIB_DIR_ALTS $MPI_LIB_DIR_ALTS
   if [[ ! -z "${DPKG_ARCH}" ]]
   then
     MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
@@ -431,7 +445,7 @@ then
 else
   MPI_LABEL="(unknown)"
 fi
-echo MPI_LABEL $MPI_LABEL
+AC_MSG_RESULT([Setting MPI_LABEL: ${MPI_LABEL}])
 
 # Set MPI options
 
