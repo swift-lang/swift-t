@@ -55,6 +55,11 @@ COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
+# Restore user PYTHONPATH if the system overwrote it:
+export PYTHONPATH=getenv(PYTHONPATH)
+# Add Turbine Python utilities:
+PYTHONPATH=$PYTHONPATH:${TURBINE_HOME}/py
+
 USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
@@ -62,6 +67,7 @@ USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 USER_ENV_COUNT=${#USER_ENV_ARRAY[@]}
 USER_ENV_ARGS=( -E _dummy=x )
+USER_ENV_ARGS=( -E PYTHONPATH )
 for (( i=0 ; i < USER_ENV_COUNT ; i+=2 ))
 do
   K=${USER_ENV_ARRAY[i]}
@@ -69,30 +75,50 @@ do
   USER_ENV_ARGS+=( -E $K="${V}" )
 done
 
-# Restore user PYTHONPATH if the system overwrote it:
-export PYTHONPATH=getenv(PYTHONPATH)
-
 export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # User prelaunch commands:
-# For Summit use:
-# module load gcc/6.3.1-20170301
-# module load spectrum-mpi # /10.1.0.4-20170915
-# # PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
-
 # BEGIN TURBINE_PRELAUNCH
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
+
+# Deduplicate entries in LD_LIBRARY_PATH to reduce size
+# for systems that expand environment variables on the command line
+LLP_OLD=$LD_LIBRARY_PATH
+LLP_NEW=""
+for P in ${LLP_OLD//:/ }
+do
+  # Append colon here to prevent prefix matching:
+  if [[ ! $LLP_NEW =~ $P: ]]
+  then
+     LLP_NEW+=$P:
+  fi
+done
+
+if (( ${#LLP_OLD} != ${#LLP_NEW} ))
+then
+    echo "turbine-lsf: changed LD_LIBRARY_PATH ..."
+    echo "turbine-lsf: from:"
+    echo $LLP_OLD | tr : '\n' | nl
+    echo "turbine-lsf: to:"
+    echo $LLP_NEW | tr : '\n' | nl
+    LD_LIBRARY_PATH=$LLP_NEW
+fi
 
 TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
 START=$( date +%s.%N )
 if (
+   # Dump the environment to a sorted file:
+   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
    set -x
+   # Launch it!
    jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
             -E TCLLIBPATH \
             -E ADLB_PRINT_TIME=1 \
+            -E PATH \
+            -E LD_LIBRARY_PATH \
             "${USER_ENV_ARGS[@]}" \
             ${COMMAND}
 )
