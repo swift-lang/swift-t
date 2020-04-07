@@ -11,7 +11,12 @@ git-log()
   git log -n 1 --color=always --date="format:%Y-%m-%d %H:%M" --pretty=format:"%Cblue%h%Creset %ad %Cgreen%s%Creset%n"
 }
 
+soft add +git-2.10.1
+
 set -x
+
+which git
+git --version
 
 git-log
 
