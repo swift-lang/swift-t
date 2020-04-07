@@ -235,9 +235,21 @@ MPI_LABEL_LIB=""
 AC_ARG_WITH(mpi,
     AS_HELP_STRING([--with-mpi], [location of MPI installation]),
     [
-        if [[ ! -d ${withval} ]]
+        if ! test -d ${withval}
         then
             AC_MSG_ERROR(No MPI directory at $withval)
+        fi
+        if test ${withval} = /usr
+        then # Spack external /usr installation of OpenMPI:
+          if which mpicc > /dev/null 2>&1
+          then
+            if mpicc -show | grep -q openmpi
+            then
+              withval=/usr/lib/x86_64-linux-gnu/openmpi
+              AC_MSG_RESULT([user specified --with-mpi=/usr -- detected $withval])
+              USE_LAUNCHER=/usr/bin/mpiexec
+            fi
+          fi
         fi
         USE_MPI_DIR=${withval}
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
