@@ -4,6 +4,7 @@ set -eu
 # JENKINS SPACK SH
 # Install Swift/T from Jenkins under various techniques
 
+set -x
 mkdir -pv /tmp/ExM/jenkins-spack
 cd /tmp/ExM/jenkins-spack
 
