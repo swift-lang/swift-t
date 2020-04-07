@@ -183,9 +183,9 @@ Makefile: configure Makefile.in
 
 ### DEPS
 
+# Allow the user to set DEPCC
 ifeq (${DEPCC},)
-# Assume we always have gcc for deps processing
-DEPCC = gcc
+  DEPCC = $(CC)
 endif
 
 deps: $(DEPS) $(TEST_DEPS)
