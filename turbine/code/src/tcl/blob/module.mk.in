@@ -17,7 +17,7 @@ endif
 
 $(SWIG_C_FILE_BLOB): $(DIR)/blob.i $(DIR)/blob.h
 	$(Q) "  SWIG 		$(<)"
-	$(E) swig -outdir $(DIR) $(<)
+	$(E) swig -tcl -outdir $(DIR) $(<)
 
 clean::
 	$(Q) "  CLEAN $(DIR)"

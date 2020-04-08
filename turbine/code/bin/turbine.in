@@ -144,16 +144,16 @@ report_version()
   then
     print " installed from: $( cat ${SOURCE_TXT} )"
   fi
-  print " using CC:  ${USE_CC}"
-  print " using MPI: ${MPI_LABEL}"
-  print " using Tcl: ${TCLSH}"
+  print " using CC:     ${USE_CC}"
+  print " using MPI:    ${MPI_LABEL}"
+  print " using Tcl:    ${TCLSH}"
   if (( ${#TURBINE_USE_PYTHON} + ${#TURBINE_USE_PYTHON_NAME} ))
   then
     print " using Python: ${TURBINE_USE_PYTHON} ${TURBINE_USE_PYTHON_NAME}"
   fi
   if [[ ${TURBINE_USE_R} != 0 ]]
   then
-    print " using R: ${TURBINE_USE_R}"
+    print " using R:      ${TURBINE_USE_R}"
   fi
 }
 

@@ -3,7 +3,7 @@ set -eu
 
 # BUILD STC
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
 ${THIS}/check-settings.sh

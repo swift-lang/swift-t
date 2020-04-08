@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Autogenerates Makefile dependencies 
-# See the GCC documentation for -M, -MG 
+# Autogenerates Makefile dependencies
+# See the GCC documentation for -M, -MG
 # This does not work with XLC- on BlueGene, always make clean
 
 DIR="$1"
