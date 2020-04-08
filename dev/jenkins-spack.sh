@@ -5,18 +5,12 @@ set -eu
 # Install Swift/T from Jenkins under various techniques
 
 setopt PUSHD_SILENT
+soft add +git-2.10.1
 
 git-log()
 {
-  git log -n 1 --color=always --date="format:%Y-%m-%d %H:%M" --pretty=format:"%Cblue%h%Creset %ad %Cgreen%s%Creset%n"
+  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%Cblue%h%Creset %ad %Cgreen%s%Creset%n"
 }
-
-soft add +git-2.10.1
-
-set -x
-
-which git
-git --version
 
 git-log
 
@@ -33,14 +27,25 @@ then
   popd
 fi
 
-pushd spack
-git-log
-git pull
-git-log
-popd
+SPACK_HOME=/tmp/ExM/jenkins-spack/spack
 
-PATH=/tmp/ExM/jenkins-spack/spack/bin:$PATH
+SPACK_CHANGED=0
+pushd $SPACK_HOME
+git-log | tee timestamp-old.txt
+git pull
+git-log | tee timestamp-new.txt
+popd
+if diff -q timestamp-{old,new}.txt
+then
+  SPACK_CHANGED=1
+fi
+
+PATH=$SPACK_HOME/bin:$PATH
 
 which spack
 
-spack install stc@master
+cp -uv ~wozniak/Public/data/packages-mcs.yaml \
+   $SPACK_HOME/etc/spack/packages.yaml
+
+spack install exmcutils@master
+# spack install stc@master
