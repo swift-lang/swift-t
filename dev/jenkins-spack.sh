@@ -14,10 +14,10 @@ git-log()
 
 git-log
 
-ls -l
-
 mkdir -pv /tmp/ExM/jenkins-spack
 pushd /tmp/ExM/jenkins-spack
+
+set -x
 
 if [[ ! -d spack ]]
 then
@@ -35,7 +35,7 @@ git-log | tee timestamp-old.txt
 git pull
 git-log | tee timestamp-new.txt
 popd
-if diff -q timestamp-{old,new}.txt
+if ! diff -q timestamp-{old,new}.txt
 then
   SPACK_CHANGED=1
 fi
@@ -47,5 +47,8 @@ which spack
 cp -uv ~wozniak/Public/data/packages-mcs.yaml \
    $SPACK_HOME/etc/spack/packages.yaml
 
-spack install exmcutils@master
-# spack install stc@master
+set -x
+nice spack install exmcutils@master
+nice spack install adlbx@master
+nice spack install turbine@master
+nice spack install stc@master
