@@ -117,8 +117,6 @@ if (
    jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
             -E TCLLIBPATH \
             -E ADLB_PRINT_TIME=1 \
-            -E PATH \
-            -E LD_LIBRARY_PATH \
             "${USER_ENV_ARGS[@]}" \
             ${COMMAND}
 )
