@@ -55,9 +55,13 @@ nice spack install stc@master
 set +x
 
 source ${SPACK_HOME}/share/spack/setup-env.sh
-
 spack load stc
-which swift-t
 
+set -x
+which swift-t
 swift-t -v
 swift-t -E 'trace("HELLO WORLD");'
+set +x
+
+nice spack install 'turbine+python@master'
+nice spack install 'stc^turbine+python@master'
