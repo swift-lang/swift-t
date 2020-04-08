@@ -12,7 +12,7 @@ SWIG_C_FILE_PYTHON = $(DIR)/python-swig_wrap.c
 
 $(SWIG_C_FILE_PYTHON): $(DIR)/python-swig.i $(DIR)/python-swig.h
 	$(Q) "  SWIG 		$(<)"
-	$(E) swig -outdir $(DIR) $(<)
+	$(E) swig -tcl -outdir $(DIR) $(<)
 
 clean::
 	$(Q) "  CLEAN $(DIR)"
