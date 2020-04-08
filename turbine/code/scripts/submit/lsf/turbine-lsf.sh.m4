@@ -60,7 +60,7 @@ export PYTHONPATH=getenv(PYTHONPATH)
 # Add Turbine Python utilities:
 PYTHONPATH=$PYTHONPATH:${TURBINE_HOME}/py
 
-USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+# USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
