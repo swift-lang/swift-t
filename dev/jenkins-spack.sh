@@ -52,3 +52,12 @@ nice spack install exmcutils@master
 nice spack install adlbx@master
 nice spack install turbine@master
 nice spack install stc@master
+set +x
+
+source ${SPACK_HOME}/share/spack/setup-env.sh
+
+spack load stc
+which swift-t
+
+swift-t -v
+swift-t -E 'trace("HELLO WORLD");'
