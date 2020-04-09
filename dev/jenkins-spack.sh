@@ -67,7 +67,7 @@ swift-t -E 'trace("HELLO WORLD");'
 set +x
 
 # nice spack install 'turbine@master+python'
-# nice spack install 'stc@master^turbine@master+python'
+nice spack install 'stc@master^turbine@master+python'
 
 spack load 'stc@master^turbine@master+python'
 set -x
