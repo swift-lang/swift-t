@@ -65,6 +65,8 @@ swift-t -v
 swift-t -E 'trace("HELLO WORLD");'
 set +x
 
+spack uninstall -y 'stc@0.8.3'
+
 nice spack install 'turbine@master+python'
 nice spack install 'stc@master^turbine@master+python'
 
