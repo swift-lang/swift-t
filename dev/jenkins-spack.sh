@@ -50,10 +50,10 @@ cp -uv ~wozniak/Public/data/packages-mcs.yaml \
    $SPACK_HOME/etc/spack/packages.yaml
 
 set -x
-nice spack install exmcutils@master
-nice spack install adlbx@master
-nice spack install turbine@master
-nice spack install stc@master
+# nice spack install exmcutils@master
+# nice spack install adlbx@master
+# nice spack install turbine@master
+# nice spack install stc@master
 set +x
 
 source ${SPACK_HOME}/share/spack/setup-env.sh
@@ -66,10 +66,14 @@ swift-t -v
 swift-t -E 'trace("HELLO WORLD");'
 set +x
 
-nice spack install 'turbine@master+python'
-nice spack install 'stc@master^turbine@master+python'
+# nice spack install 'turbine@master+python'
+# nice spack install 'stc@master^turbine@master+python'
 
 spack load 'stc@master^turbine@master+python'
 set -x
 which swift-t
 swift-t -i python -E 'trace(python("", "repr(42)"));'
+
+# nice spack install 'stc@master^turbine@master+python'
+
+nice spack install 'stc@master^turbine@master+python+r'
