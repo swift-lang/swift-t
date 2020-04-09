@@ -74,4 +74,4 @@ nice spack install 'stc@master^turbine@master+python'
 spack load 'stc@master^turbine@master+python'
 set -x
 which swift-t
-swift-t -i python -E 'trace(python("repr(42)"));'
+swift-t -i python -E 'trace(python("", "repr(42)"));'
