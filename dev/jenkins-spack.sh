@@ -57,7 +57,8 @@ nice spack install stc@master
 set +x
 
 source ${SPACK_HOME}/share/spack/setup-env.sh
-spack load stc@master
+# try to get non-Python installation
+spack load 'stc@master^turbine@master -python'
 
 set -x
 which swift-t
