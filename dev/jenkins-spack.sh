@@ -56,8 +56,6 @@ nice spack install turbine@master
 nice spack install stc@master
 set +x
 
-which modulecmd
-
 source ${SPACK_HOME}/share/spack/setup-env.sh
 spack load stc
 
