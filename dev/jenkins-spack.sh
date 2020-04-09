@@ -50,6 +50,7 @@ cp -uv ~wozniak/Public/data/packages-mcs.yaml \
    $SPACK_HOME/etc/spack/packages.yaml
 
 set -x
+spack uninstall -y 'stc@0.8.3'
 nice spack install exmcutils@master
 nice spack install adlbx@master
 nice spack install turbine@master
@@ -57,7 +58,7 @@ nice spack install stc@master
 set +x
 
 source ${SPACK_HOME}/share/spack/setup-env.sh
-spack load stc
+spack load stc@master
 
 set -x
 which swift-t
@@ -65,7 +66,7 @@ swift-t -v
 swift-t -E 'trace("HELLO WORLD");'
 set +x
 
-spack uninstall -y 'stc@0.8.3'
+
 
 nice spack install 'turbine@master+python'
 nice spack install 'stc@master^turbine@master+python'
