@@ -9,7 +9,7 @@ soft add +git-2.10.1
 
 git-log()
 {
-  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%Cblue%h%Creset %ad %Cgreen%s%Creset%n"
+  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%h %ad %s%n"
 }
 
 git-log
@@ -34,11 +34,13 @@ pushd $SPACK_HOME
 git-log | tee timestamp-old.txt
 git pull
 git-log | tee timestamp-new.txt
-popd
 if ! diff -q timestamp-{old,new}.txt
 then
   SPACK_CHANGED=1
 fi
+popd
+
+echo SPACK_CHANGED=$SPACK_CHANGED
 
 PATH=$SPACK_HOME/bin:$PATH
 
@@ -54,6 +56,8 @@ nice spack install turbine@master
 nice spack install stc@master
 set +x
 
+which modulecmd
+
 source ${SPACK_HOME}/share/spack/setup-env.sh
 spack load stc
 
@@ -63,5 +67,10 @@ swift-t -v
 swift-t -E 'trace("HELLO WORLD");'
 set +x
 
-nice spack install 'turbine+python@master'
-nice spack install 'stc^turbine+python@master'
+nice spack install 'turbine@master+python'
+nice spack install 'stc@master^turbine@master+python'
+
+spack load stc@master^python
+set -x
+which swift-t
+swift-t -i python -E 'trace(python("repr(42)"));'
