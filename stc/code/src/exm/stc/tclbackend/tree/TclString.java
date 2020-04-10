@@ -155,6 +155,12 @@ public class TclString extends Expression
       case ']':
         escaped.append("\\]");
         break;
+      case '{':
+        escaped.append("\\u007B");
+        break;
+      case '}':
+        escaped.append("\\u007D");
+        break;
       case '\\':
         escaped.append("\\\\");
         break;
