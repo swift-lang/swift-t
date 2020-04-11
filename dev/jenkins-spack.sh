@@ -5,25 +5,19 @@ set -eu
 # Install Swift/T from Jenkins under various techniques
 
 setopt PUSHD_SILENT
+soft add +git-2.10.1
 
 git-log()
 {
-  git log -n 1 --color=always --date="format:%Y-%m-%d %H:%M" --pretty=format:"%Cblue%h%Creset %ad %Cgreen%s%Creset%n"
+  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%h %ad %s%n"
 }
-
-soft add +git-2.10.1
-
-set -x
-
-which git
-git --version
 
 git-log
 
-ls -l
-
 mkdir -pv /tmp/ExM/jenkins-spack
 pushd /tmp/ExM/jenkins-spack
+
+set -x
 
 if [[ ! -d spack ]]
 then
@@ -33,14 +27,53 @@ then
   popd
 fi
 
-pushd spack
-git-log
+SPACK_HOME=/tmp/ExM/jenkins-spack/spack
+
+SPACK_CHANGED=0
+pushd $SPACK_HOME
+git-log | tee timestamp-old.txt
 git pull
-git-log
+git-log | tee timestamp-new.txt
+if ! diff -q timestamp-{old,new}.txt
+then
+  SPACK_CHANGED=1
+fi
 popd
 
-PATH=/tmp/ExM/jenkins-spack/spack/bin:$PATH
+echo SPACK_CHANGED=$SPACK_CHANGED
+
+PATH=$SPACK_HOME/bin:$PATH
 
 which spack
 
-spack install stc@master
+cp -uv ~wozniak/Public/data/packages-mcs.yaml \
+   $SPACK_HOME/etc/spack/packages.yaml
+
+set -x
+# nice spack install exmcutils@master
+# nice spack install adlbx@master
+# nice spack install turbine@master
+# nice spack install stc@master
+set +x
+
+source ${SPACK_HOME}/share/spack/setup-env.sh
+# try to get non-Python installation
+spack load 'stc@master^turbine@master -python'
+
+set -x
+which swift-t
+swift-t -v
+swift-t -E 'trace("HELLO WORLD");'
+set +x
+
+# nice spack install 'turbine@master+python'
+nice spack install 'stc@master^turbine@master+python'
+
+spack load 'stc@master^turbine@master+python'
+set -x
+which swift-t
+swift-t -i python -E 'trace(python("", "repr(42)"));'
+
+# nice spack install 'stc@master^turbine@master+python'
+
+nice spack install 'stc@master^turbine@master+python+r'
