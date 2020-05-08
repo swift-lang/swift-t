@@ -650,7 +650,7 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
   DEBUG("xlb_workq_pop_parallel(): "
-        "type: %i tree_size: %i", work_type, rbtree_size(T));
+        "type=%i tree_size=%i", work_type, rbtree_size(T));
   // Common case is empty: want to exit ASAP:
   if (rbtree_size(T) == 0)
     goto end;
