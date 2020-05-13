@@ -149,6 +149,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   else
   {
     // Otherwise store on heap
+    // When would this happen? - Justin 2020-05-13
     R = malloc(sizeof(*R));
     ADLB_CHECK_MALLOC(R);
   }
