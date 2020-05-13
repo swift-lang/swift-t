@@ -129,7 +129,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 
   // Whether we need to merge requests
   // Store in targets if it is one of our workers
-  if (xlb_map_to_server(&xlb_s.layout, rank) == xlb_s.layout.rank)
+  if (xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank))
   {
     int targets_ix = xlb_my_worker_idx(&xlb_s.layout, rank);
     R = &targets[targets_ix];
