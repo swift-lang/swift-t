@@ -1,10 +1,10 @@
 
 # Valgrind memcheck suppressions file
-# Suppresses known memcheck leaks in Tcl and MPICH
+# Suppresses known memcheck leaks in Tcl, MPICH, and OpenMPI
 # Turbine/ADLB/C-Utils should have no leaks
-# No leaks as of 2018/06/28
+# No leaks as of 2018-06-28, 2020-05-10
 
-# Suppressions are listed with Tcl version and date of creation
+# Suppressions are listed with library version and date of creation
 #    so that old suppressions can be removed if no longer necessary.
 
 # To use: set
@@ -379,7 +379,7 @@
 }
 
 {
-  vg-calloc-1
+  vg-calloc-2
   Memcheck:Leak
   fun:calloc
   fun:_dl_new_object
@@ -393,6 +393,135 @@
   fun:malloc
   ...
   fun:pthread_exit
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-strdup-1
+  Memcheck:Leak
+  fun:malloc
+  fun:strdup
+  ...
+  fun:mca_base_framework_components_register
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-strdup-2
+  Memcheck:Leak
+  fun:malloc
+  fun:strdup
+  ...
+  fun:opal_info_set
+  fun:ompi_mpiinfo_init
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-dl-1
+  Memcheck:Leak
+  fun:calloc
+  fun:_dl_new_object
+  fun:_dl_map_object_from_fd
+  ...
+  fun:_dl_catch_exception
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-finalize-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:_dl_close_worker
+  ...
+  fun:mca_base_component_repository_finalize
+  ...
+  fun:opal_finalize_util
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-dl-2
+  Memcheck:Leak
+  fun:calloc
+  fun:do_lookup_unique
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-init-info-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:opal_info_set
+  ...
+  fun:ompi_mpi_init
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-init-infosubscribe-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:opal_infosubscribe_subscribe
+  ...
+  fun:ompi_mpi_init
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-init-mpiinfo-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:ompi_mpiinfo_init
+  fun:ompi_mpi_init
+  ...
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-finalize-2
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:_dl_close
+  ...
+  fun:mca_base_component_repository_release
+  ...
+  fun:mca_base_component_close
+}
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-init-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:mca_base_framework_open
+  ...
+  fun:ompi_mpi_init
+  ...
+}
+
+
+{
+  # OpenMPI 3.1.3 2020-05-10
+  ompi-orte-init-1
+  Memcheck:Leak
+  fun:malloc
+  ...
+  fun:orte_oob_base_select
+  ...
+  fun:ompi_mpi_init
+  ...
 }
 
 # Local Variables:
