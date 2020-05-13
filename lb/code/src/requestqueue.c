@@ -131,7 +131,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   // Store in targets if it is one of our workers
   if (xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank))
   {
-    int targets_ix = xlb_my_worker_idx(&xlb_s.layout, rank);
+    int targets_ix = xlb_worker_idx(&xlb_s.layout, rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
