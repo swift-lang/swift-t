@@ -4,6 +4,7 @@
 *.o
 *.so
 *.a
+*.out
 
 # GCC dependency files
 *.d
@@ -51,6 +52,8 @@ turbine-directory.txt
 .project
 .cproject
 .autotools
+*.prefs
+*.settings.xml
 
 # Auto-filtered Debian changelogs
 changelog
