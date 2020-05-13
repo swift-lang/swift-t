@@ -240,7 +240,7 @@ static int targeted_work_entries(int work_types, int my_workers)
 __attribute__((always_inline))
 static inline heap_iu32_t *targeted_work_heap(int rank, int type)
 {
-  int idx = xlb_my_worker_idx(&xlb_s.layout, rank) * xlb_s.types_size
+  int idx = xlb_worker_idx(&xlb_s.layout, rank) * xlb_s.types_size
             + (int)type;
   assert(idx >= 0 && idx < targeted_work_size);
   return &targeted_work[idx];
@@ -780,7 +780,7 @@ xlb_workq_steal(int max_memory, const int* steal_type_counts,
  * Note: we allow soft-targeted tasks to be stolen.
  */
 static adlb_code
-heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
+heap_steal_type(heap_iu32_t* q, int type, double p, int* stolen,
                 xlb_workq_steal_callback cb)
 {
   int p_threshold = (int)(p * RAND_MAX);
