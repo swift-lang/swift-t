@@ -206,7 +206,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 /**
  * Setup everything to do with layout of communicator we're running on
  */
-static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
+static adlb_code
+xlb_setup_layout(MPI_Comm comm, int nservers)
 {
   int rc;
   adlb_code code;
