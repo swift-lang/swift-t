@@ -140,7 +140,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
   *host_count = 0;
   for (int i = 0; i < my_workers; i++)
   {
-    int rank = xlb_rank_from_my_worker_idx(layout, i);
+    int rank = xlb_rank_from_worker_idx(layout, i);
     const char *host_name = xlb_hostnames_lookup(hostnames, rank);
     ADLB_CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
               "rank %i", rank);
@@ -154,7 +154,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
     }
     (*worker2host)[i] = (int)host_idx;
     DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
-          i, xlb_rank_from_my_worker_idx(layout, i), (int)host_idx,
+          i, xlb_rank_from_worker_idx(layout, i), (int)host_idx,
           host_name);
   }
 

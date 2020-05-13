@@ -39,6 +39,88 @@ xlb_is_server(const xlb_layout *layout,int rank)
   return (rank >= layout->workers);
 }
 
+#define LAYOUT_CONTIG 0
+
+#if LAYOUT_CONTIG == 1
+
+/** The max number of workers assigned to each server */
+__attribute__((always_inline))
+static inline int
+xlb_server_chunk(const xlb_layout* layout)
+{
+  int result;
+  if (layout->workers % layout->servers == 0)
+    result = layout->workers / layout->servers;
+  else
+    result = layout->workers / (layout->servers-1);
+  return result;
+}
+
+__attribute__((always_inline))
+static inline int
+xlb_map_to_server(const xlb_layout* layout, int rank)
+{
+  if (xlb_is_server(layout, rank))
+    return rank;
+  assert(rank >= 0 && rank < layout->workers);
+  int sc = xlb_server_chunk(layout);
+  int server = rank / sc + layout->workers;
+  printf("map to server: %i -> %i\n", rank, server);
+  return server;
+}
+
+__attribute__((always_inline))
+static inline bool
+xlb_worker_maps_to_server(const xlb_layout* layout,
+			  int worker_rank, int server_rank)
+{
+  int s = xlb_map_to_server(layout, worker_rank);
+  return (s == server_rank);
+}
+
+/**
+   @param rank rank of worker belonging to this server
+   @return unique number for each of my workers, e.g. to use in array.
+           Does not validate that rank is valid
+ */
+static inline int
+xlb_worker_idx(const xlb_layout* layout, int rank)
+{
+  int sc = xlb_server_chunk(layout);
+  int idx = rank % sc;
+  TRACE("xlb_worker_idx: servers=%i rank=%i -> %i\n",
+        layout->servers, rank, idx);
+  return idx;
+}
+
+/**
+   Inverse of xlb_my_worker_idx, valid for this server only.
+ */
+static inline int
+xlb_rank_from_worker_idx(const xlb_layout* layout,
+			 int worker_idx)
+{
+  int sc = xlb_server_chunk(layout);
+  int server_idx = layout->rank - layout->workers;
+  int rank = sc * server_idx + worker_idx;
+
+  TRACE("xlb_rank_from_worker_idx: server_idx=%i server_chunk=%i "
+        "worker_idx=%i -> rank=%i\n",
+	server_idx, sc, worker_idx, rank);
+
+  return rank;
+}
+
+__attribute__((always_inline))
+static inline int
+host_idx_from_rank(const xlb_layout* layout, int rank)
+{
+  assert(xlb_worker_maps_to_server(layout, rank, layout->rank));
+
+  return layout->my_worker2host[xlb_worker_idx(layout, rank)];
+}
+
+#else
 /**
    @param rank of worker
    @return rank of server for this worker rank
@@ -68,7 +150,7 @@ xlb_worker_maps_to_server(const xlb_layout* layout,
            Does not validate that rank is valid
  */
 static inline int
-xlb_my_worker_idx(const xlb_layout* layout, int rank)
+xlb_worker_idx(const xlb_layout* layout, int rank)
 {
   return rank / layout->servers;
 }
@@ -77,8 +159,8 @@ xlb_my_worker_idx(const xlb_layout* layout, int rank)
  * Inverse of xlb_my_worker_idx
  */
 static inline int
-xlb_rank_from_my_worker_idx(const xlb_layout* layout,
-                            int my_worker_idx)
+xlb_rank_from_worker_idx(const xlb_layout* layout,
+                         int my_worker_idx)
 {
   int server_num = layout->rank - layout->workers;
   return my_worker_idx * layout->servers + server_num;
@@ -89,7 +171,7 @@ static inline int host_idx_from_rank(const xlb_layout *layout, int rank)
 {
   assert(xlb_worker_maps_to_server(layout, rank, layout->rank));
 
-  return layout->my_worker2host[xlb_my_worker_idx(layout, rank)];
+  return layout->my_worker2host[xlb_worker_idx(layout, rank)];
 }
 
 #endif // __LAYOUT_H
