@@ -258,7 +258,7 @@ static bool in_targets_array(request *R)
   if (target_server != xlb_s.layout.rank) {
     return false;
   }
-  int targets_ix = xlb_my_worker_idx(&xlb_s.layout, R->rank);
+  int targets_ix = xlb_worker_idx(&xlb_s.layout, R->rank);
   return (R == &targets[targets_ix]);
 }
 
