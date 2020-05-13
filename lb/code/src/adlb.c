@@ -164,7 +164,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   }
 
   // Set this correctly before initializing other modules
-  xlb_s.perfc_enabled = false;
+  xlb_s.perfc_enabled = false; // TODO: don't need this line?
   getenv_boolean("ADLB_PERF_COUNTERS", xlb_s.perfc_enabled,
                  &xlb_s.perfc_enabled);
 
