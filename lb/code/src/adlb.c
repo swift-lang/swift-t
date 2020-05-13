@@ -232,6 +232,9 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
                          &xlb_s.layout);
   ADLB_CHECK(code);
 
+  DEBUG("my_server: rank=%i -> server=%i\n",
+	xlb_s.layout.rank, xlb_s.layout.my_server);
+
   code = xlb_get_hostmap_mode(&xlb_s.hostmap_mode);
   ADLB_CHECK(code);
 
