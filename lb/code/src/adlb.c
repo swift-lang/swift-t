@@ -164,7 +164,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   }
 
   // Set this correctly before initializing other modules
-  xlb_s.perfc_enabled = false;
+  xlb_s.perfc_enabled = false; // TODO: don't need this line?
   getenv_boolean("ADLB_PERF_COUNTERS", xlb_s.perfc_enabled,
                  &xlb_s.perfc_enabled);
 
@@ -206,7 +206,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 /**
  * Setup everything to do with layout of communicator we're running on
  */
-static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
+static adlb_code
+xlb_setup_layout(MPI_Comm comm, int nservers)
 {
   int rc;
   adlb_code code;
@@ -231,6 +232,9 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
                          &xlb_s.layout);
   ADLB_CHECK(code);
 
+  DEBUG("my_server: rank=%i -> server=%i\n",
+	xlb_s.layout.rank, xlb_s.layout.my_server);
+
   code = xlb_get_hostmap_mode(&xlb_s.hostmap_mode);
   ADLB_CHECK(code);
 
@@ -238,7 +242,7 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
 
   if (xlb_s.hostmap_mode != HOSTMAP_DISABLED)
   {
-    struct xlb_hostmap *hostmap;
+    struct xlb_hostmap* hostmap;
 
     // Need hostmap for server init
     code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);

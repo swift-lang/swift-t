@@ -26,13 +26,14 @@
    Maps string hostname to list of int ranks which are running on
    that host
  */
-struct xlb_hostmap {
+struct xlb_hostmap
+{
   struct table map;
 };
 
-static adlb_code
-hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
-                size_t name_length);
+static adlb_code hostnames_alloc(struct xlb_hostnames *hostnames,
+				 int comm_size,
+				 size_t name_length);
 
 static void
 report_ranks(MPI_Comm comm)
@@ -52,7 +53,6 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
-
   struct utsname u;
   uname(&u);
   xlb_s.my_name = strdup(u.nodename);
@@ -120,7 +120,7 @@ xlb_hostnames_fill(struct xlb_hostnames *hostnames,
 
   for (size_t i = 0; i < nranks; i++)
   {
-    char *name_pos = &hostnames->all_names[i * length_with_term];
+    char* name_pos = &hostnames->all_names[i * length_with_term];
     strcpy(name_pos, names[i]);
   }
 
@@ -136,7 +136,8 @@ xlb_hostnames_lookup(const struct xlb_hostnames *hostnames, int rank)
 }
 
 void
-xlb_hostnames_free(struct xlb_hostnames *hostnames) {
+xlb_hostnames_free(struct xlb_hostnames *hostnames)
+{
   free(hostnames->all_names);
   free(hostnames->my_name);
   hostnames->all_names = NULL;

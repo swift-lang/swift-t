@@ -14,8 +14,7 @@
  * limitations under the License
  */
 
-#ifndef __LAYOUT_DEFS_H
-#define __LAYOUT_DEFS_H
+#pragma once
 
 #include <stdbool.h>
 /**
@@ -71,5 +70,3 @@ typedef struct {
    */
   struct dyn_array_i *my_host2workers;
 } xlb_layout;
-
-#endif // __LAYOUT_DEFS_H

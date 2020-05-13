@@ -117,7 +117,7 @@ adlb_code xlb_debug_check_environment(void);
 #endif
 
 /** Print that we are entering a function */
-#define TRACE_START TRACE("%s()...",    __func__)
+#define TRACE_START TRACE("%s() ...",   __func__)
 /** Print that we are exiting a function */
 #define TRACE_END   TRACE("%s() done.", __func__)
 

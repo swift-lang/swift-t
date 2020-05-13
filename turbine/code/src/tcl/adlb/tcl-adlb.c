@@ -478,7 +478,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     long tmp_comm_ptr = 0;
     rc = Tcl_GetLongFromObj(interp, objv[3], &tmp_comm_ptr);
     TCL_CHECK(rc);
-    adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
+    adlb_comm_ptr = (MPI_Comm*) tmp_comm_ptr;
   }
 
   if (!adlb_comm_init)
@@ -498,14 +498,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-#ifdef USE_ADLB
-  rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
-               &am_server, &am_debug_server, &adlb_worker_comm);
-#endif
-#ifdef USE_XLB
+
   rc = ADLB_Init(servers, ntypes, type_vect,
                  &am_server, adlb_comm, &adlb_worker_comm);
-#endif
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
 

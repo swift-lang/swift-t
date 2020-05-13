@@ -217,7 +217,7 @@ then
   STC_OPTS+=( ${STC_DEPS_ARGS} )
 fi
 
-if (( ! SKIP_COMPILE ))
+if (( ! ${SKIP_COMPILE:-0} ))
 then
   # Run STC
   make_stc_output

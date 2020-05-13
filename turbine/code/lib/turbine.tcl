@@ -86,6 +86,11 @@ namespace eval turbine {
     #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
 
+        variable language
+        if { $lang != "" } {
+            set language $lang
+        }
+      
         # Initialize debugging in case other functions want to debug
         variable debug_categories
         c::init_debug
@@ -112,12 +117,6 @@ namespace eval turbine {
         } else {
             # Interpret as custom rank configuration
             set rank_allocation $rank_config
-        }
-
-        variable language
-
-        if { $lang != "" } {
-            set language $lang
         }
 
         set servers [ dict get $rank_allocation servers ]
@@ -191,6 +190,10 @@ namespace eval turbine {
             turbine_fail "You have 0 workers!\n" \
                 "Check your MPI configuration. " \
                 "There may be a mix of MPICH and OpenMPI."
+        }
+
+        if { $n_workers < $n_servers } {
+            turbine_fail "You have more ADLB servers than workers!\n"
         }
 
         set workers_running_sum 0
@@ -297,7 +300,7 @@ namespace eval turbine {
 
         set n_workers [ dict get $rank_allocation workers ]
         set n_adlb_servers [ dict get $rank_allocation servers ]
-
+        
         variable n_workers_by_type
         set n_workers_by_type [ dict get $rank_allocation workers_by_type ]
         set n_regular_workers [ dict get $n_workers_by_type WORK ]
@@ -474,7 +477,7 @@ namespace eval turbine {
 
     proc turbine_fail { args } {
         if { [ adlb::comm_rank ] == 0 } {
-            puts* {*}$args
+            puts* $turbine::language ": " {*}$args
         }
         exit 1
     }

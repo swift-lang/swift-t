@@ -31,11 +31,6 @@ ifelse(getenv_nospace(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
-# TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
-#SBATCH getenv(TURBINE_SBATCH_ARGS)
-)
-
 #SBATCH --job-name=getenv_nospace(TURBINE_JOBNAME)
 
 #SBATCH --time=getenv_nospace(WALLTIME)
@@ -47,6 +42,13 @@ ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
 ifelse(getenv_nospace(MAIL_ENABLED),`1',
 #SBATCH --mail-user=getenv_nospace(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
+)
+
+# This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
+# Note this works because sbatch ignores all but the last of duplicate arguments
+# TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
+ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
+#SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
 # BEGIN TURBINE_DIRECTIVE

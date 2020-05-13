@@ -64,8 +64,9 @@ static int nblocked;
 static struct list2* type_requests;
 
 /** Cache list nodes to avoid malloc/free calls on critical path */
-static struct {
-  struct list2_item **free_array;
+static struct
+{
+  struct list2_item** free_array;
   int free_array_size; // Size of free array
   int nfree; // Number of items in free array
 } list2_node_pool;
@@ -101,9 +102,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   ADLB_CHECK_MALLOC(targets);
 
   for (int i = 0; i < layout->my_workers; i++)
-  {
     targets[i].item = NULL;
-  }
 
   type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
   ADLB_CHECK_MALLOC(type_requests);
@@ -130,9 +129,9 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 
   // Whether we need to merge requests
   // Store in targets if it is one of our workers
-  if (xlb_map_to_server(&xlb_s.layout, rank) == xlb_s.layout.rank)
+  if (xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank))
   {
-    int targets_ix = xlb_my_worker_idx(&xlb_s.layout, rank);
+    int targets_ix = xlb_worker_idx(&xlb_s.layout, rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
@@ -150,6 +149,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   else
   {
     // Otherwise store on heap
+    // When would this happen? - Justin 2020-05-13
     R = malloc(sizeof(*R));
     ADLB_CHECK_MALLOC(R);
   }
@@ -168,7 +168,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   list2_add_item(L, item);
   request_queue_size++;
 
-  DEBUG("request_queue_add(): size: %i", request_queue_size);
+  DEBUG("request_queue_add(): size=%i", request_queue_size);
 
   if (blocking)
   {
@@ -185,9 +185,12 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 static inline adlb_code
 merge_request(request* R, int rank, int type, int count, bool blocking)
 {
-  assert(R->rank == rank);
-  assert(R->type == type);
-  assert(R->item != NULL);
+  valgrind_assert_msg(R->rank == rank,
+		      "attempt to merge request rank %i "
+		      "into slot rank %i",
+		      R->rank, rank);
+  valgrind_assert(R->type == type);
+  valgrind_assert(R->item != NULL);
 
   R->count += count;
   if (blocking)
@@ -255,7 +258,7 @@ static bool in_targets_array(request *R)
   if (target_server != xlb_s.layout.rank) {
     return false;
   }
-  int targets_ix = xlb_my_worker_idx(&xlb_s.layout, R->rank);
+  int targets_ix = xlb_worker_idx(&xlb_s.layout, R->rank);
   return (R == &targets[targets_ix]);
 }
 
@@ -291,7 +294,7 @@ xlb_requestqueue_matches_target(int task_target_rank, int task_type,
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         task_target_rank, task_type);
 
-  int task_tgt_idx = xlb_my_worker_idx(&xlb_s.layout, task_target_rank);
+  int task_tgt_idx = xlb_worker_idx(&xlb_s.layout, task_target_rank);
   request* R = &targets[task_tgt_idx];
   if (R->item != NULL && R->type == task_type)
   {
@@ -324,7 +327,7 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
     if (R->item != NULL && R->type == task_type)
     {
       request_match_update(R, true, 1);
-      result = xlb_rank_from_my_worker_idx(&xlb_s.layout, worker_idx);
+      result = xlb_rank_from_worker_idx(&xlb_s.layout, worker_idx);
       break;
     }
   }
@@ -574,10 +577,11 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
       r[ix].count = rq->count;
       r[ix]._internal = rq; // Store for later reference
       ix++;
-      if (ix == max)
-        return max;
+      if (ix == max) break;
     }
+    if (ix == max) break;
   }
+  TRACE("xlb_requestqueue_get() => %i", ix);
   return ix;
 }
 

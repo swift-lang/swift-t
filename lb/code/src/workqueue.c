@@ -240,7 +240,7 @@ static int targeted_work_entries(int work_types, int my_workers)
 __attribute__((always_inline))
 static inline heap_iu32_t *targeted_work_heap(int rank, int type)
 {
-  int idx = xlb_my_worker_idx(&xlb_s.layout, rank) * xlb_s.types_size
+  int idx = xlb_worker_idx(&xlb_s.layout, rank) * xlb_s.types_size
             + (int)type;
   assert(idx >= 0 && idx < targeted_work_size);
   return &targeted_work[idx];
@@ -306,8 +306,11 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Untargeted single-process task
   heap_iu32_t* H = &untargeted_work[wu->type];
+  TRACE("add_untargeted(): prior size=%ui", H->size);
   bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
   ADLB_CHECK_MSG(b, "out of memory expanding heap");
+
+  TRACE("add_untargeted(): after size=%ui", H->size);
 
   if (xlb_s.perfc_enabled)
   {
@@ -317,7 +320,8 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
   return ADLB_SUCCESS;
 }
 
-static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
+static adlb_code
+add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Targeted task
   if (xlb_worker_maps_to_server(&xlb_s.layout, wu->target,
@@ -650,7 +654,7 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
   DEBUG("xlb_workq_pop_parallel(): "
-        "type: %i tree_size: %i", work_type, rbtree_size(T));
+        "type=%i tree_size=%i", work_type, rbtree_size(T));
   // Common case is empty: want to exit ASAP:
   if (rbtree_size(T) == 0)
     goto end;
@@ -688,7 +692,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   if (parallelism >= data->smallest)
     return false;
 
-  TRACE("pop_parallel_cb(): wu: %p %"PRID64" x%i",
+  TRACE("pop_parallel_cb(): wu: %p %"PRId64" x%i",
         wu, wu->id, parallelism);
   assert(parallelism > 0);
 
@@ -711,8 +715,8 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
 }
 
 adlb_code
-xlb_workq_steal(int max_memory, const int *steal_type_counts,
-                          xlb_workq_steal_callback cb)
+xlb_workq_steal(int max_memory, const int* steal_type_counts,
+		xlb_workq_steal_callback cb)
 {
   // for each type:
   //    select # to send to stealer
@@ -735,25 +739,27 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
       }
       else
       {
-        double imbalance = (tot_count - stealer_count) / (double) stealer_count;
+        double imbalance =
+            (tot_count - stealer_count) / (double) stealer_count;
         send = imbalance > XLB_STEAL_IMBALANCE;
       }
-      if (send) {
+      if (send)
+      {
         // Fraction of our tasks to send
-        double send_pc = (tot_count - stealer_count) / (2.0 * tot_count);
-        int par_to_send = (int)(send_pc * par_count);
+        double send_pct = (tot_count - stealer_count) / (2.0 * tot_count);
+        int par_to_send = (int)(send_pct * par_count);
         if (par_count > 0 && par_to_send == 0)
         {
           par_to_send = 1;
         }
 
-        TRACE("xlb_workq_steal(): stealing type=%i single=%lf of %i par=%i/%i"
-              " This server count: %i versus %i",
-                        t, send_pc, single_count, par_to_send, par_count,
-                        tot_count, stealer_count);
+        TRACE("xlb_workq_steal(): stealing type=%i pct=%2.2lf%% of %i par=%i/%i",
+	      t, 100*send_pct, single_count, par_to_send, par_count);
+        TRACE("xlb_workq_steal(): local=%i stealer=%i",
+	      tot_count, stealer_count);
         adlb_code code;
         int single_sent;
-        code = heap_steal_type(&(untargeted_work[t]), t, send_pc,
+        code = heap_steal_type(&(untargeted_work[t]), t, send_pct,
                                &single_sent, cb);
         ADLB_CHECK(code);
         code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
@@ -777,7 +783,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
  * Note: we allow soft-targeted tasks to be stolen.
  */
 static adlb_code
-heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
+heap_steal_type(heap_iu32_t* q, int type, double p, int* stolen,
                 xlb_workq_steal_callback cb)
 {
   int p_threshold = (int)(p * RAND_MAX);
@@ -787,16 +793,21 @@ heap_steal_type(heap_iu32_t *q, int type, double p, int *stolen,
     Iterate backwards because removing entries sifts them down -
     best to remove from bottom first
    */
-  for (long i = heap_iu32_size(q) - 1; i >= 0; i--)
+  TRACE("heap_steal_type: enter loop: size=%u", heap_iu32_size(q));
+  // Must convert to signed before decrement (may be 0)!
+  long size_start = heap_iu32_size(q);
+  for (long i = size_start - 1; i > 1; i--)
   {
+    TRACE("heap_steal_type: loop: i=%li", i);
     if (rand() < p_threshold)
     {
+      TRACE("heap_steal_type: size=%u", q->size);
       int priority = -q->array[i].key;
       uint32_t wu_idx = q->array[i].val;
-      heap_iu32_del_entry(q, (heap_idx_t)i);
+      heap_iu32_del_entry(q, (heap_idx_t) i);
 
-      xlb_work_unit* wu;
-      wu = wu_array_try_remove_untargeted(wu_idx, type, priority);
+      xlb_work_unit* wu =
+	  wu_array_try_remove_untargeted(wu_idx, type, priority);
       if (wu != NULL)
       {
         adlb_code code = cb.f(cb.data, wu);
@@ -816,7 +827,6 @@ static inline int host_idx_from_rank2(int rank)
   return host_idx_from_rank(&xlb_s.layout, rank);
 }
 
-
 static adlb_code
 rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
 {
@@ -826,7 +836,7 @@ rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
     struct rbtree_node* node = rbtree_random(q);
     assert(node != NULL);
     rbtree_remove_node(q, node);
-    xlb_work_unit *wu = (xlb_work_unit*) node->data;
+    xlb_work_unit* wu = (xlb_work_unit*) node->data;
     free(node);
 
     adlb_code code = cb.f(cb.data, wu);

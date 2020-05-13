@@ -113,6 +113,8 @@ turbine_log()
 }
 
 # Defaults:
+PROJECT=${PROJECT:-}
+QUEUE=${QUEUE:-}
 CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
@@ -337,15 +339,13 @@ then
 fi
 
 AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
-    TURBINE_LOG TURBINE_DEBUG MPI_LABEL ADLB_SERVERS
-    TCLLIBPATH LD_LIBRARY_PATH )
+    TURBINE_LOG TURBINE_DEBUG MPI_LABEL ADLB_SERVERS )
 
 for NAME in ${AUTO_VARS}
 do
   USER_ENV_CODE+="${NAME}='${(P)NAME}' "
   USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
 done
-
 
 # This is being phased in to capture common M4 functions (2018-12-18)
 COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
