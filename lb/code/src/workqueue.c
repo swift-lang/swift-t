@@ -317,7 +317,8 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
   return ADLB_SUCCESS;
 }
 
-static adlb_code add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
+static adlb_code
+add_targeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Targeted task
   if (xlb_worker_maps_to_server(&xlb_s.layout, wu->target,
@@ -711,8 +712,8 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
 }
 
 adlb_code
-xlb_workq_steal(int max_memory, const int *steal_type_counts,
-                          xlb_workq_steal_callback cb)
+xlb_workq_steal(int max_memory, const int* steal_type_counts,
+		xlb_workq_steal_callback cb)
 {
   // for each type:
   //    select # to send to stealer
@@ -735,10 +736,12 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
       }
       else
       {
-        double imbalance = (tot_count - stealer_count) / (double) stealer_count;
+        double imbalance =
+            (tot_count - stealer_count) / (double) stealer_count;
         send = imbalance > XLB_STEAL_IMBALANCE;
       }
-      if (send) {
+      if (send)
+      {
         // Fraction of our tasks to send
         double send_pc = (tot_count - stealer_count) / (2.0 * tot_count);
         int par_to_send = (int)(send_pc * par_count);
@@ -826,7 +829,7 @@ rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
     struct rbtree_node* node = rbtree_random(q);
     assert(node != NULL);
     rbtree_remove_node(q, node);
-    xlb_work_unit *wu = (xlb_work_unit*) node->data;
+    xlb_work_unit* wu = (xlb_work_unit*) node->data;
     free(node);
 
     adlb_code code = cb.f(cb.data, wu);

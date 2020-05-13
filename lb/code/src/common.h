@@ -36,8 +36,9 @@
 /**
    Struct that encapsulates xlb system state.
  */
-struct xlb_state {
-  /**
+struct xlb_state
+{
+  /*
     MPI communicators for everything and subgroups
    */
   MPI_Comm comm;

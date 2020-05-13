@@ -478,7 +478,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     long tmp_comm_ptr = 0;
     rc = Tcl_GetLongFromObj(interp, objv[3], &tmp_comm_ptr);
     TCL_CHECK(rc);
-    adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
+    adlb_comm_ptr = (MPI_Comm*) tmp_comm_ptr;
   }
 
   if (!adlb_comm_init)

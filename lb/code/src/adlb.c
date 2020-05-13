@@ -242,7 +242,7 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
 
   if (xlb_s.hostmap_mode != HOSTMAP_DISABLED)
   {
-    struct xlb_hostmap *hostmap;
+    struct xlb_hostmap* hostmap;
 
     // Need hostmap for server init
     code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);

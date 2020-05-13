@@ -297,7 +297,7 @@ namespace eval turbine {
 
         set n_workers [ dict get $rank_allocation workers ]
         set n_adlb_servers [ dict get $rank_allocation servers ]
-
+        
         variable n_workers_by_type
         set n_workers_by_type [ dict get $rank_allocation workers_by_type ]
         set n_regular_workers [ dict get $n_workers_by_type WORK ]

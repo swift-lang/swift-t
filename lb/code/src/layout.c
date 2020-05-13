@@ -36,7 +36,8 @@ build_host2workers(const xlb_layout *layout, int worker_count,
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-    const struct xlb_hostnames *hostnames, xlb_layout *layout)
+		const struct xlb_hostnames *hostnames,
+		xlb_layout *layout)
 {
   adlb_code ac;
 

@@ -25,7 +25,8 @@
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-    const struct xlb_hostnames *hostnames, xlb_layout *layout);
+		const struct xlb_hostnames* hostnames,
+		xlb_layout* layout);
 
 void
 xlb_layout_finalize(xlb_layout *layout);

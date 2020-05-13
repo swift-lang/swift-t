@@ -64,8 +64,9 @@ static int nblocked;
 static struct list2* type_requests;
 
 /** Cache list nodes to avoid malloc/free calls on critical path */
-static struct {
-  struct list2_item **free_array;
+static struct
+{
+  struct list2_item** free_array;
   int free_array_size; // Size of free array
   int nfree; // Number of items in free array
 } list2_node_pool;
@@ -101,9 +102,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   ADLB_CHECK_MALLOC(targets);
 
   for (int i = 0; i < layout->my_workers; i++)
-  {
     targets[i].item = NULL;
-  }
 
   type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
   ADLB_CHECK_MALLOC(type_requests);
