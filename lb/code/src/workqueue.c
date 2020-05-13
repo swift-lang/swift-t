@@ -306,8 +306,11 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Untargeted single-process task
   heap_iu32_t* H = &untargeted_work[wu->type];
+  TRACE("add_untargeted(): prior size=%ui", H->size);
   bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
   ADLB_CHECK_MSG(b, "out of memory expanding heap");
+
+  TRACE("add_untargeted(): after size=%ui", H->size);
 
   if (xlb_s.perfc_enabled)
   {
@@ -743,20 +746,20 @@ xlb_workq_steal(int max_memory, const int* steal_type_counts,
       if (send)
       {
         // Fraction of our tasks to send
-        double send_pc = (tot_count - stealer_count) / (2.0 * tot_count);
-        int par_to_send = (int)(send_pc * par_count);
+        double send_pct = (tot_count - stealer_count) / (2.0 * tot_count);
+        int par_to_send = (int)(send_pct * par_count);
         if (par_count > 0 && par_to_send == 0)
         {
           par_to_send = 1;
         }
 
-        TRACE("xlb_workq_steal(): stealing type=%i single=%lf of %i par=%i/%i"
-              " This server count: %i versus %i",
-                        t, send_pc, single_count, par_to_send, par_count,
-                        tot_count, stealer_count);
+        TRACE("xlb_workq_steal(): stealing type=%i pct=%2.2lf%% of %i par=%i/%i",
+	      t, 100*send_pct, single_count, par_to_send, par_count);
+        TRACE("xlb_workq_steal(): local=%i stealer=%i",
+	      tot_count, stealer_count);
         adlb_code code;
         int single_sent;
-        code = heap_steal_type(&(untargeted_work[t]), t, send_pc,
+        code = heap_steal_type(&(untargeted_work[t]), t, send_pct,
                                &single_sent, cb);
         ADLB_CHECK(code);
         code = rbtree_steal_type(&(parallel_work[t]), par_to_send, cb);
@@ -790,16 +793,21 @@ heap_steal_type(heap_iu32_t* q, int type, double p, int* stolen,
     Iterate backwards because removing entries sifts them down -
     best to remove from bottom first
    */
-  for (long i = heap_iu32_size(q) - 1; i >= 0; i--)
+  TRACE("heap_steal_type: enter loop: size=%u", heap_iu32_size(q));
+  // Must convert to signed before decrement (may be 0)!
+  long size_start = heap_iu32_size(q);
+  for (long i = size_start - 1; i > 1; i--)
   {
+    TRACE("heap_steal_type: loop: i=%li", i);
     if (rand() < p_threshold)
     {
+      TRACE("heap_steal_type: size=%u", q->size);
       int priority = -q->array[i].key;
       uint32_t wu_idx = q->array[i].val;
-      heap_iu32_del_entry(q, (heap_idx_t)i);
+      heap_iu32_del_entry(q, (heap_idx_t) i);
 
-      xlb_work_unit* wu;
-      wu = wu_array_try_remove_untargeted(wu_idx, type, priority);
+      xlb_work_unit* wu =
+	  wu_array_try_remove_untargeted(wu_idx, type, priority);
       if (wu != NULL)
       {
         adlb_code code = cb.f(cb.data, wu);
