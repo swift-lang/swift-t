@@ -168,7 +168,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   list2_add_item(L, item);
   request_queue_size++;
 
-  DEBUG("request_queue_add(): size: %i", request_queue_size);
+  DEBUG("request_queue_add(): size=%i", request_queue_size);
 
   if (blocking)
   {
