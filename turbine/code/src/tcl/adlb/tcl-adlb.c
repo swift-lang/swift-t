@@ -498,14 +498,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-#ifdef USE_ADLB
-  rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
-               &am_server, &am_debug_server, &adlb_worker_comm);
-#endif
-#ifdef USE_XLB
+
   rc = ADLB_Init(servers, ntypes, type_vect,
                  &am_server, adlb_comm, &adlb_worker_comm);
-#endif
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
 
