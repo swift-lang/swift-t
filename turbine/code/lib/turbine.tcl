@@ -193,6 +193,10 @@ namespace eval turbine {
                 "There may be a mix of MPICH and OpenMPI."
         }
 
+        if { $n_workers < $n_servers } {
+            turbine_fail "You have more ADLB servers than workers!\n"
+        }
+     
         set workers_running_sum 0
 
         variable addtl_work_types

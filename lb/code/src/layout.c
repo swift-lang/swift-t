@@ -53,6 +53,10 @@ xlb_layout_init(int comm_size, int comm_rank, int nservers,
   layout->am_server = (layout->rank >= layout->workers);
   layout->am_leader = false; // Filled in later
 
+  ADLB_CHECK_MSG(layout->servers <= layout->workers,
+		 "ADLB layout error: servers=%i > workers=%i",
+		 layout->servers, layout->workers);
+
   if (layout->am_server)
   {
     // Don't have a server: I am one
