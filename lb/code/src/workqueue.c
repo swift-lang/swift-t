@@ -819,7 +819,6 @@ static inline int host_idx_from_rank2(int rank)
   return host_idx_from_rank(&xlb_s.layout, rank);
 }
 
-
 static adlb_code
 rbtree_steal_type(struct rbtree *q, int num, xlb_workq_steal_callback cb)
 {
