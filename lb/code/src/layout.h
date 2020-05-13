@@ -14,8 +14,7 @@
  * limitations under the License
  */
 
-#ifndef __LAYOUT_H
-#define __LAYOUT_H
+#pragma once
 
 #include <assert.h>
 
@@ -173,5 +172,4 @@ static inline int host_idx_from_rank(const xlb_layout *layout, int rank)
 
   return layout->my_worker2host[xlb_worker_idx(layout, rank)];
 }
-
-#endif // __LAYOUT_H
+#endif
