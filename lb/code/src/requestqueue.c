@@ -294,7 +294,7 @@ xlb_requestqueue_matches_target(int task_target_rank, int task_type,
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         task_target_rank, task_type);
 
-  int task_tgt_idx = xlb_my_worker_idx(&xlb_s.layout, task_target_rank);
+  int task_tgt_idx = xlb_worker_idx(&xlb_s.layout, task_target_rank);
   request* R = &targets[task_tgt_idx];
   if (R->item != NULL && R->type == task_type)
   {
@@ -327,7 +327,7 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
     if (R->item != NULL && R->type == task_type)
     {
       request_match_update(R, true, 1);
-      result = xlb_rank_from_my_worker_idx(&xlb_s.layout, worker_idx);
+      result = xlb_rank_from_worker_idx(&xlb_s.layout, worker_idx);
       break;
     }
   }
