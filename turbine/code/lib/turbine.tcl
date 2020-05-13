@@ -86,6 +86,11 @@ namespace eval turbine {
     #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
 
+        variable language
+        if { $lang != "" } {
+            set language $lang
+        }
+      
         # Initialize debugging in case other functions want to debug
         variable debug_categories
         c::init_debug
@@ -112,12 +117,6 @@ namespace eval turbine {
         } else {
             # Interpret as custom rank configuration
             set rank_allocation $rank_config
-        }
-
-        variable language
-
-        if { $lang != "" } {
-            set language $lang
         }
 
         set servers [ dict get $rank_allocation servers ]
@@ -478,7 +477,7 @@ namespace eval turbine {
 
     proc turbine_fail { args } {
         if { [ adlb::comm_rank ] == 0 } {
-            puts* {*}$args
+            puts* $turbine::language ": " {*}$args
         }
         exit 1
     }
