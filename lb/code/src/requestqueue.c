@@ -577,9 +577,9 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
       r[ix].count = rq->count;
       r[ix]._internal = rq; // Store for later reference
       ix++;
-      if (ix == max)
-        return max;
+      if (ix == max) break;
     }
+    if (ix == max) break;
   }
   return ix;
 }
