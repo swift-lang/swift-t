@@ -581,6 +581,7 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
     }
     if (ix == max) break;
   }
+  TRACE("xlb_requestqueue_get() => %i", ix);
   return ix;
 }
 
