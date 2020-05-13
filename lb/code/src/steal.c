@@ -422,7 +422,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
    Sends 
  */
 static adlb_code
-handle_steal_callback(void * cb_data, xlb_work_unit * work)
+handle_steal_callback(void* cb_data, xlb_work_unit* work)
 {
   steal_cb_state* state = (steal_cb_state*) cb_data;
   assert(state->size < state->max_size);
