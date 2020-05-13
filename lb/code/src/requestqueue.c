@@ -185,9 +185,12 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 static inline adlb_code
 merge_request(request* R, int rank, int type, int count, bool blocking)
 {
-  assert(R->rank == rank);
-  assert(R->type == type);
-  assert(R->item != NULL);
+  valgrind_assert_msg(R->rank == rank,
+		      "attempt to merge request rank %i "
+		      "into slot rank %i",
+		      R->rank, rank);
+  valgrind_assert(R->type == type);
+  valgrind_assert(R->item != NULL);
 
   R->count += count;
   if (blocking)
