@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "adlb-defs.h"
+#include "debug.h"
 #include "layout-defs.h"
 #include "location.h"
 

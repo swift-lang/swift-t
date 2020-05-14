@@ -37,7 +37,8 @@
 #include <tools.h>
 
 #include "config.h"
-#include "common.h"
+#include "adlb-time.h"
+#include "adlb-defs.h"
 
 /** Is ADLB_DEBUG enabled? */
 extern bool xlb_debug_enabled;

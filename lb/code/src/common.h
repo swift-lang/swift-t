@@ -103,11 +103,6 @@ static const adlb_buffer xlb_xfer_buf =
             { .data = xlb_xfer, .length = ADLB_XFER_SIZE };
 
 int xlb_random_server(void);
-/**
-   Time since XLB was initialized
-   Note: this is used by debugging output
- */
-double xlb_wtime(void);
 
 /**
     Get long int from env var.  If not present, val is unmodified

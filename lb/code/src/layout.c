@@ -16,6 +16,7 @@
 
 #include "layout.h"
 
+#include <dyn_array_i.h>
 #include <table.h>
 
 #include "checks.h"
