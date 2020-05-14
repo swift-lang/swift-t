@@ -16,7 +16,7 @@
 
 
 /*
- * queue.h
+ * workqueue.h
  *
  *  Created on: Jun 14, 2012
  *      Author: wozniak
