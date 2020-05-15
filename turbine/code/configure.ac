@@ -756,6 +756,13 @@ AC_ARG_WITH(r,
         PATH=$R_BIN:$PATH
       fi
       AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+      AC_MSG_RESULT([Using Rscript: $( which Rscript )])
+      if Rscript -e '"R_IS_OK"' | grep R_IS_OK
+      then
+        AC_MSG_RESULT(["Rscript works."])
+      else
+        AC_MSG_ERROR([Cannot execute simple Rscript program.])
+      fi
   ])
 
 AC_ARG_WITH(rinside,
