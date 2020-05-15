@@ -336,16 +336,22 @@ in Swift/T via +getenv()+.
 * +QUEUE+
 * +TURBINE_OUTPUT+
 * +TURBINE_JOBNAME+
+* +TURBINE_STDOUT+
 * +TURBINE_LOG+
 * +TURBINE_DEBUG+
+* +ADLB_DEBUG+
+* +ADLB_TRACE+
 * +MPI_LABEL+
 * +TURBINE_WORKERS+
 * +ADLB_SERVERS+
 * +TCLLIBPATH+
-* +LD_LIBRARY_PATH+
 
 NOTE: +TCLLIBPATH+ should not be set directly by the user,
 see link:guide.html#swift_path[+SWIFT_PATH+]
+
+NOTE: +LD_LIBRARY_PATH+ may be explicity set by the user.  Normally
+this is already set but customizations may be needed when running with
+Python, R, or other libraries.
 
 [[options]]
 === Turbine scheduler script options
