@@ -64,7 +64,7 @@ xlb_map_to_server(const xlb_layout* layout, int rank)
   assert(rank >= 0 && rank < layout->workers);
   int sc = xlb_server_chunk(layout);
   int server = rank / sc + layout->workers;
-  printf("map to server: %i -> %i\n", rank, server);
+  TRACE("map to server: %i -> %i", rank, server);
   return server;
 }
 
