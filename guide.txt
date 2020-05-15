@@ -3087,7 +3087,8 @@ anchor:env_hostmap_disable[]
 Enable a command between +mpiexec+ and +tclsh+.
 Cf. <<valgrind,valgrind>>.
 
-+GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.
++GDB_RANK+::
+Enable GDB debugging.  Cf. <<gdb,GDB>>.
 
 anchor:env_mpi_thread[]
 
