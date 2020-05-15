@@ -3083,7 +3083,9 @@ anchor:env_hostmap_disable[]
       random (place data on a random server - the default) and
       local (place data on the local server).
 
-+VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>.
++TURBINE_INTERPOSER+::
+Enable a command between +mpiexec+ and +tclsh+.
+Cf. <<valgrind,valgrind>>.
 
 +GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.
 
@@ -3303,13 +3305,15 @@ function code (and the Swift/T run time libraries).
 ==== Valgrind
 
 The Swift/T launcher scripts support http://valgrind.org[valgrind].
-Simply set the environment variable +VALGRIND+ to the valgrind command
-you wish to use.  A suppressions file is distributed with Turbine to
-ignore known issues.  (Swift/T is valgrind-clean but there are some
-issues in the libraries we use.)
+Simply set the environment variable +TURBINE_INTERPOSER+
+to the valgrind command you wish to use.
+A suppressions file is distributed with Turbine to
+ignore known issues.
+(Swift/T is valgrind-clean but there are some issues
+in the libraries we use.)
 
 ----
-export VALGRIND="valgrind --suppressions=SWIFT_T/turbine/code/turbine.supp"
+export TURBINE_INTERPOSER="valgrind --suppressions=SWIFT_T/turbine/etc/turbine.supp"
 swift-t program.swift
 ----
 
