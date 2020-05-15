@@ -121,7 +121,7 @@ When running on a big HPC machine, it may be difficult to get STC
 platform-independent.  You may run STC to develop and debug your
 script on your local workstation, then simply copy +program.tic+ to
 the big machine for execution.  Just make sure that the STC and
-Turbine versions are compatible (the same release number).
+Turbine versions are compatible (the same release).
 
 == Turbine as MPI program
 
