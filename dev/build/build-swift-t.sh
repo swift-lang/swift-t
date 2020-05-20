@@ -12,6 +12,7 @@ SCRIPT=$( basename $0 )
 
 cd $THIS
 
+$THIS/check-tools.sh
 $THIS/check-settings.sh
 source $THIS/functions.sh
 source $THIS/options.sh
