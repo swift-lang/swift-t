@@ -161,6 +161,12 @@ if [[ ${LAUNCHER:-} != "" ]]; then
   EXTRA_ARGS+=" --with-launcher=${LAUNCHER}"
 fi
 
+if (( ENABLE_R ))
+then
+  # Need this to find Rscript, which is used for installation:
+  PATH=$R_INSTALL/bin:$PATH
+fi
+
 common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]

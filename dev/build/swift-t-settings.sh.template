@@ -95,8 +95,6 @@ ENABLE_R=0
 # Define these if Rcpp and RInside are not autodetected
 # RCPP_INSTALL=/path/to/Rcpp
 # RINSIDE_INSTALL=/path/to/RInside
-# Need this to find Rscript, which is used for installation:
-PATH=$R_INSTALL/bin:$PATH
 
 # Enable Julia integration
 ENABLE_JULIA=0
