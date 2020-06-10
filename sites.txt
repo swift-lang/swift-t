@@ -168,14 +168,14 @@ $ stc workflow.swift
 ----
 which produces +workflow.tic+ .  Then run:
 
-*APRUN* system
+==== Cray ALPS system
 
 ----
 # Inside the interactive job
 $ aprun -n 4 turbine-pilot workflow.tic <ARGUMENTS...>
 ----
 
-*SLURM* system
+==== SLURM system
 
 ----
 # Inside the interactive job
