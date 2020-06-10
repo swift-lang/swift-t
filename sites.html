@@ -920,18 +920,22 @@ to the scheduler, it assumes you have already done that.</p></div>
 <pre><code>$ stc workflow.swift</code></pre>
 </div></div>
 <div class="paragraph"><p>which produces <code>workflow.tic</code> .  Then run:</p></div>
-<div class="paragraph"><p><strong>APRUN</strong> system</p></div>
+<div class="sect3">
+<h4 id="_cray_alps_system">Cray ALPS system</h4>
 <div class="listingblock">
 <div class="content">
 <pre><code># Inside the interactive job
 $ aprun -n 4 turbine-pilot workflow.tic &lt;ARGUMENTS...&gt;</code></pre>
 </div></div>
-<div class="paragraph"><p><strong>SLURM</strong> system</p></div>
+</div>
+<div class="sect3">
+<h4 id="_slurm_system">SLURM system</h4>
 <div class="listingblock">
 <div class="content">
 <pre><code># Inside the interactive job
 $ srun -n 4 turbine-pilot workflow.tic &lt;ARGUMENTS...&gt;</code></pre>
 </div></div>
+</div>
 </div>
 </div>
 </div>
@@ -3805,7 +3809,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.4.3<br />
 Last updated
- 2020-06-10 16:26:09 CDT
+ 2020-06-10 16:29:30 CDT
 </div>
 </div>
 </body>
