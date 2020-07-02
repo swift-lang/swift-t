@@ -101,6 +101,9 @@ TURBINE_LAUNCH_OPTIONS="getenv(TURBINE_LAUNCH_OPTIONS)"
 getenv(TURBINE_PRELAUNCH)
 # END TURBINE_PRELAUNCH
 
+# Dump the environment to a sorted file:
+printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+
 # Run Turbine!
 set -x
 aprun -n ${PROCS} -N ${PPN} \
