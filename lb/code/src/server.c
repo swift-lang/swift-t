@@ -559,7 +559,8 @@ setup_par_mod()
     return ADLB_ERROR;
   }
   if (xlb_s.par_mod != 1)
-    printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
+    if (xlb_s.layout.rank == xlb_s.layout.master_server_rank)
+      printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
   return ADLB_SUCCESS;
 }
 
