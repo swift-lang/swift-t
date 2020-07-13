@@ -106,6 +106,7 @@ int xlb_random_server(void);
 
 /**
     Get long int from env var.  If not present, val is unmodified
+    TODO: Replace with use of tools.h
  */
 adlb_code xlb_env_long(const char *env_var, long *val);
 
