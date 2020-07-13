@@ -26,6 +26,8 @@ echo "JAVA_HOME: '${JAVA_HOME:-}'"
 echo "ANT_HOME:  '${ANT_HOME:-}'"
 echo
 
+USE_JAVA=$( which java )
+
 if (( RUN_MAKE_CLEAN )); then
   $ANT clean
 fi
@@ -45,5 +47,6 @@ if (( ${#STC_INSTALL} > 0 ))
 then
   $NICE_CMD $ANT -Ddist.dir="$STC_INSTALL" \
                  -Dturbine.home="$TURBINE_INSTALL" \
+                 -Duse.java="$USE_JAVA" \
                  install
 fi
