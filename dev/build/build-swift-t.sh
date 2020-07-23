@@ -12,11 +12,11 @@ SCRIPT=$( basename $0 )
 
 cd $THIS
 
-$THIS/check-tools.sh
 $THIS/check-settings.sh
 source $THIS/functions.sh
 source $THIS/options.sh
 source $THIS/swift-t-settings.sh
+$THIS/check-tools.sh
 source $THIS/setup.sh
 
 LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"

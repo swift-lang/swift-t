@@ -4,6 +4,8 @@ set -eu
 # CHECK TOOLS
 
 # Checks for missing system compilers and tools
+# Do this after user swift-t-settings are loaded,
+#    that may set needed modules
 
 TOOLS=( ant autoconf make javac ${CC:-} swig zsh )
 declare -a MISSING=()
