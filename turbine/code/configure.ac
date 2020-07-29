@@ -292,22 +292,8 @@ AC_ARG_ENABLE(mpi-checks,
                     disables these checks.]),
     [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
-# Set MPI_DIR with respect to a system OpenMPI
-if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
-then
-    OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
-    if [[ -r ${OPENMPI}/include/mpi.h ]]
-    then
-        AC_MSG_RESULT([Using OpenMPI directory: ${OPENMPI}])
-        USE_MPI_DIR=${OPENMPI}
-        USE_LAUNCHER=/usr/bin/mpiexec
-        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-        USE_MPI_LIB=${USE_MPI_DIR}/lib
-    fi
-fi
-
 # Set MPI_DIR with respect to an mpicc in PATH
-if [[ ${USE_MPI_DIR} == 0 ]]
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
    # Last chance to configure MPI: look for mpiexec in PATH
    program=$( which mpicc 2> /dev/null)
@@ -324,6 +310,23 @@ then
                                   or mpicc in PATH .])
    fi
    MPI_LABEL_DIR="${USE_MPI_DIR}"
+fi
+
+# Set MPI_DIR with respect to a system OpenMPI
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+then
+    OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
+    if [[ -r ${OPENMPI}/include/mpi.h ]]
+    then
+        AC_MSG_RESULT([Using OpenMPI directory: ${OPENMPI}])
+        USE_MPI_DIR=${OPENMPI}
+        if [[ $USE_LAUNCHER == 0 ]]
+        then
+          USE_LAUNCHER=/usr/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    fi
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
