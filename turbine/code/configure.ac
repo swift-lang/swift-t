@@ -83,6 +83,11 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
+AC_MSG_RESULT([using CC='$CC'])
+if [[ ${CC} != "" ]]
+then
+  AC_MSG_RESULT([which CC='$(which $CC)'])
+fi
 # Check for CC
 AC_PROG_CC
 
