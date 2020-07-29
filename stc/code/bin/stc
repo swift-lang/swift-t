@@ -307,8 +307,10 @@ report_version()
   printf "\t for Turbine: "
   cat ${STC_HOME}/etc/turbine-version.txt
   lookup_java
-  print "Using Java VM:    ${JVM}"
-  print "Using Turbine in: ${TURBINE_HOME}"
+  print " installed:     ${STC_HOME}"
+  print " source:        ${STC_SRC}"
+  print " using Java VM: ${JVM}"
+  print " using Turbine: ${TURBINE_HOME}"
   exit 0
 }
 
