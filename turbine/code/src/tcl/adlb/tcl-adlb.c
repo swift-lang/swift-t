@@ -4253,7 +4253,7 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::container_typeof <id>
+   usage: adlb::typeof <id>
 */
 static int
 ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -4269,11 +4269,11 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %i\n", id, type);
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %i\n", id, type);
 
-  const char *type_string = ADLB_Data_type_tostring(type);
+  const char* type_string = ADLB_Data_type_tostring(type);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %s",
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %s",
   //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
