@@ -35,9 +35,9 @@ namespace eval turbine {
     foreach nvt $args {
       lassign $nvt name value type
       if { $type eq "float" || $type eq "integer" } {
-        lappend kvs "$name: $value"
+        lappend kvs "\"$name\": $value"
       } elseif { $type eq "string" } {
-        lappend kvs "$name: \"$value\""
+        lappend kvs "\"$name\": \"$value\""
       }
     }
     set result [ join $kvs ", " ]
