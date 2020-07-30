@@ -49,6 +49,18 @@ import python;
                        (J, path));
 }
 
+(float t) json_get_float(string J, string path)
+{
+  s = json_get(J, path);
+  t = string2float(s);
+}
+
+(int t) json_get_int(string J, string path)
+{
+  s = json_get(J, path);
+  t = string2int(s);
+}
+
 (string t) json_dict_entries(file f, string path)
 {
   wait (f)
@@ -58,3 +70,6 @@ import python;
                        (filename(f), path));
   }
 }
+
+(string o) json_encode(string names[], int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode";
