@@ -73,3 +73,7 @@ import python;
 
 (string o) json_encode(string names[], int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode";
+
+(string o) json_encode_retype(string names[], string values[],
+                              int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_retype";
