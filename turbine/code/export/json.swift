@@ -71,9 +71,26 @@ import python;
   }
 }
 
-(string o) json_encode(string names[], int|float|string|boolean... args)
-"turbine" "1.2.3" "json_encode";
+(string o) json_array(string text)
+{
+  o = "[" + text + "]";
+}
 
-(string o) json_encode_retype(string names[], string values[],
-                              int|float|string|boolean... args)
-"turbine" "1.2.3" "json_encode_retype";
+(string o) json_object(string text)
+{
+  o = "{" + text + "}";
+}
+
+(string o) json_encode_array(int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_array";
+
+(string o) json_encode_array_retype(string types[],
+                                    int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_array_retype";
+
+(string o) json_encode_object(string names[], int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object";
+
+(string o) json_encode_object_retype(string names[], string types[],
+                                     int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object_retype";
