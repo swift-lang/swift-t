@@ -124,6 +124,7 @@ namespace eval turbine {
 
     set i 0
     foreach a $args {
+      set name  ""
       set type  [ dict get $D_types $i ]
       set value [ retrieve_decr $a ]
       lappend L [ list $name $type $value ]
