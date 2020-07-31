@@ -71,12 +71,12 @@ import python;
   }
 }
 
-(string o) json_array(string text)
+(string o) json_arrayify(string text)
 {
   o = "[" + text + "]";
 }
 
-(string o) json_object(string text)
+(string o) json_objectify(string text)
 {
   o = "{" + text + "}";
 }
@@ -84,13 +84,33 @@ import python;
 (string o) json_encode_array(int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode_array";
 
+// + _contents
+
 (string o) json_encode_array_retype(string types[],
                                     int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode_array_retype";
 
+// + _contents
+
+(string o) json_encode_array_format(string format,
+                                    int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_array_format";
+
+// + _contents
+
 (string o) json_encode_object(string names[], int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode_object";
+
+// + _contents
 
 (string o) json_encode_object_retype(string names[], string types[],
                                      int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode_object_retype";
+
+// + _contents
+
+(string o) json_encode_object_format(string format,
+                                    int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object_format";
+
+// + _contents
