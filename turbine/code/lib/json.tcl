@@ -2,6 +2,12 @@
 # JSON TCL
 # Special features for handling JSON
 
+# Encode paths:
+#  Simple encodes: use json_encode_infer to translate
+#                  from Turbine types
+#  retype/format encode: use json_encode_translate to translate
+#                        from user type strings
+
 namespace eval turbine {
 
   proc json_encode_object { result inputs } {
@@ -10,13 +16,26 @@ namespace eval turbine {
         name "json_encode_object-$result"
   }
   proc json_encode_object_body { result names args } {
-    set L [ list ]
+    set s [ json_encode_object_contents_action $result $names {*}$args ]
+    store_string $result "\{$s\}"
+  }
+  proc json_encode_object_contents { result inputs } {
+    set names [ list_pop_first inputs ]
+    rule $inputs "json_encode_object_contents_body $result $names $inputs" \
+        name "json_encode_object-$result"
+  }
+  proc json_encode_object_contents_body { result names args } {
+    set s [ json_encode_object_contents_action $result $names {*}$args ]
+    store_string $result $s
+  }
+  proc json_encode_object_contents_action { result names args } {
     # A dict (index->"name"):
     set D [ adlb::enumerate $names dict all 0 1 ]
 
     json_encode_check_count [ dict size $D ] $args \
         "json_encode_object" "names"
 
+    set L [ list ]
     set i 0
     foreach a $args {
       set name  [ dict get $D $i ]
@@ -25,13 +44,13 @@ namespace eval turbine {
       lappend L [ list $name $value $type ]
       incr i
     }
-    set s [ json_encode_impl {*}$L ]
-
-    store_string $result $s
+    set s [ json_encode_infer {*}$L ]
+    return $s
   }
 
   # Encode into comma separated list, possibly with "name": prefixes
-  proc json_encode_impl { args } {
+  # Uses Turbine type inferencing to retain Turbine types
+  proc json_encode_infer { args } {
     # List of key-values
     set kvs [ list ]
     # nvt: name+value+type (strings), name may be empty for JSON array
@@ -50,13 +69,13 @@ namespace eval turbine {
   }
 
   proc json_prefix { name value } {
-    # Sets up the token for an array or object.
+    # Sets up the prefix token for an array or object.
     # The value will be appended later.
     if { $name eq "" } {
-      # JSON array
+      # JSON array - no prefix
       set token ""
     } else {
-      # JSON object
+      # JSON object - prefix is "name":
       set token "\"$name\":"
     }
     return $token
@@ -69,7 +88,20 @@ namespace eval turbine {
         name "json_encode_object_retype-$result"
   }
   proc json_encode_object_retype_body { result names types args } {
-    set L [ list ]
+    set s [ json_encode_object_contents_retype_action $names $types {*}$args ]
+    store_string $result "\{$s\}"
+  }
+  proc json_encode_object_contents_retype { result inputs } {
+    set names [ list_pop_first inputs ]
+    set types [ list_pop_first inputs ]
+    rule $inputs "json_encode_object_contents_retype_body $result $names $types $inputs" \
+        name "json_encode_object_retype-$result"
+  }
+  proc json_encode_object_contents_retype_body { result names types args } {
+    set s [ json_encode_object_contents_retype_action $names $types {*}$args ]
+    store_string $result $s
+  }
+  proc json_encode_object_contents_retype_action { names types args } {
     # A dict (index->"name"):
     set D_names [ adlb::enumerate $names dict all 0 1 ]
     set D_types [ adlb::enumerate $types dict all 0 1 ]
@@ -81,6 +113,7 @@ namespace eval turbine {
     json_encode_check_count [ dict size $D_types ] $args \
         "json_encode_object_retype" "types"
 
+    set L [ list ]
     set i 0
     foreach a $args {
       set name  [ dict get $D_names $i ]
@@ -89,9 +122,8 @@ namespace eval turbine {
       lappend L [ list $name $type $value ]
       incr i
     }
-    set s [ json_encode_retype_impl {*}$L ]
-
-    store_string $result $s
+    set s [ json_encode_translate {*}$L ]
+    return $s
   }
 
   proc json_encode_array { result inputs } {
@@ -99,6 +131,18 @@ namespace eval turbine {
         name "json_encode_array-$result"
   }
   proc json_encode_array_body { result args } {
+    set s [ json_encode_array_contents_action $result {*}$args ]
+    store_string $result "\[$s\]"
+  }
+  proc json_encode_array_contents { result inputs } {
+    rule $inputs "json_encode_array_contents_body $result $inputs" \
+        name "json_encode_array-$result"
+  }
+  proc json_encode_array_contents_body { result args } {
+    set s [ json_encode_array_contents_action $result {*}$args ]
+    store_string $result $s
+  }
+  proc json_encode_array_contents_action { result args } {
     set L [ list ]
     set i 0
     foreach a $args {
@@ -108,9 +152,8 @@ namespace eval turbine {
       lappend L [ list $name $value $type ]
       incr i
     }
-    set s [ json_encode_impl {*}$L ]
-
-    store_string $result $s
+    set s [ json_encode_infer {*}$L ]
+    return $s
   }
 
   proc json_encode_array_retype { result inputs } {
@@ -119,15 +162,27 @@ namespace eval turbine {
         name "json_encode_array_retype-$result"
   }
   proc json_encode_array_retype_body { result types args } {
+    set s [ json_encode_array_contents_retype_action $types {*}$args ]
+    store_string $result "\[$s\]"
+  }
+  proc json_encode_array_contents_retype { result inputs } {
+    set types [ list_pop_first inputs ]
+    rule $inputs "json_encode_array_contents_retype_body $result $types $inputs" \
+        name "json_encode_array_retype-$result"
+  }
+  proc json_encode_array_contents_retype_body { result types args } {
     set L [ list ]
+    set s [ json_encode_array_contents_retype_action $types {*}$args ]
+    store_string $result $s
+  }
+  proc json_encode_array_contents_retype_action { types args } {
     # A dict (index->"name"):
     set D_types [ adlb::enumerate $types dict all 0 1 ]
-
-    # show D_types
 
     json_encode_check_count [ dict size $D_types ] $args \
         "json_encode_array_retype" "types"
 
+    set L [ list ]
     set i 0
     foreach a $args {
       set name  ""
@@ -136,9 +191,8 @@ namespace eval turbine {
       lappend L [ list $name $type $value ]
       incr i
     }
-    set s [ json_encode_retype_impl {*}$L ]
-
-    store_string $result $s
+    set s [ json_encode_translate {*}$L ]
+    return $s
   }
 
   proc json_encode_array_format { result inputs } {
@@ -147,14 +201,28 @@ namespace eval turbine {
         name "json_encode_array_format-$result"
   }
   proc json_encode_array_format_body { result fmt args } {
-    set L [ list ]
+    set s [ json_encode_array_contents_format_action $fmt {*}$args ]
+    store_string $result "\[$s\]"
+  }
+  proc json_encode_array_contents_format { result inputs } {
+    set fmt [ list_pop_first inputs ]
+    rule $inputs "json_encode_array_contents_format_body $result $fmt $inputs" \
+        name "json_encode_array_format-$result"
+  }
+  proc json_encode_array_contents_format_body { result fmt args } {
+    set s [ json_encode_array_contents_format_action $fmt {*}$args ]
+    store_string $result $s
+  }
+  proc json_encode_array_contents_format_action { fmt args } {
+
     set fmt_value [ retrieve $fmt ]
     set fmts [ ::split $fmt_value ]
-    show fmts
+    # show fmts
 
     json_encode_check_count [ llength $fmts ] $args \
         "json_encode_array_format" "types"
 
+    set L [ list ]
     set i 0
     foreach a $args {
       set name  ""
@@ -167,41 +235,75 @@ namespace eval turbine {
       lappend L [ list $name $fmti $value ]
       incr i
     }
-    set s [ json_encode_format_impl {*}$L ]
+    set s [ json_encode_translate {*}$L ]
+    return $s
+  }
 
+  proc json_encode_object_format { result inputs } {
+    set names [ list_pop_first inputs ]
+    set fmt   [ list_pop_first inputs ]
+    rule $inputs "json_encode_object_format_body $result $names $fmt $inputs" \
+        name "json_encode_object_format-$result"
+  }
+  proc json_encode_object_format_body { result names fmt args } {
+    set s [ json_encode_object_contents_format_action $names $fmt {*}$args ]
+    store_string $result "\{$s\}"
+  }
+  proc json_encode_object_contents_format { result inputs } {
+    set names [ list_pop_first inputs ]
+    set fmt   [ list_pop_first inputs ]
+    rule $inputs "json_encode_object_contents_format_body $result $names $fmt $inputs" \
+        name "json_encode_object_format-$result"
+  }
+  proc json_encode_object_contents_format_body { result names fmt args } {
+    set s [ json_encode_object_contents_format_action $names $fmt {*}$args ]
     store_string $result $s
   }
+  proc json_encode_object_contents_format_action { names fmt args } {
+    # A dict (index->"name"):
+    set D_names [ adlb::enumerate $names dict all 0 1 ]
 
-  proc json_encode_format_impl { args } {
-    # List of key-values
-    set kvs [ list ]
-    foreach nfv $args {
-      # nfv: name+fmt+value (strings)
-      # if name=="", this is encoding an array, else an object
-      lassign $nfv name fmt value
-      # Last character of format string:
+    set fmt_value [ retrieve $fmt ]
+    set fmts [ ::split $fmt_value ]
+    # show fmts
 
-      set token [ json_encode_value {*}$nfv ]
+    json_encode_check_count [ dict size $D_names ] $args \
+        "json_encode_object_format" "names"
+    json_encode_check_count [ llength $fmts ] $args \
+        "json_encode_object_format" "specifiers"
 
-      lappend kvs $token
+    set L [ list ]
+    set i 0
+    foreach a $args {
+      set name  [ dict get $D_names $i ]
+      set fmti  [ lindex $fmts $i ]
+      if { [ string first "%" $fmti ] != 0 } {
+        turbine_error "json_encode_object_format(): " \
+            "format token without %: '$fmti'"
+      }
+      set value [ retrieve_decr $a ]
+      lappend L [ list $name $fmti $value ]
+      incr i
     }
-    set result [ join $kvs ", " ]
-    return $result
+    set s [ json_encode_translate {*}$L ]
+    return $s
   }
 
-  proc json_encode_retype_impl { args } {
-    # List of key-values
-    set kvs [ list ]
+  proc json_encode_translate { args } {
+    # args: list of ntv: name,type,value (strings)
+    # List of results
+    set L [ list ]
     foreach ntv $args {
-      # ntv: name+type+value (strings)
       set token [ json_encode_value {*}$ntv ]
-      lappend kvs $token
+      lappend L $token
     }
-    set result [ join $kvs ", " ]
+    set result [ join $L ", " ]
     return $result
   }
 
   proc json_encode_value { name type value } {
+    # Encodes and returns the value as the given type
+    # The type can be a name or a %-specifier
     set token [ json_prefix $name $value ]
     if { [ string index $type 0 ] eq "%" } {
       # A %-specifier - we switch on the last character
@@ -213,12 +315,12 @@ namespace eval turbine {
     # show type spec value
     switch -regexp $spec {
       "^f$" {
-        json_encode_convert json_encode_format float $value
+        json_conversion_check json_encode_format float $value
         set value [ format $type $value ]
         append token $value
       }
       "^i$" {
-        json_encode_convert json_encode_format int $value
+        json_conversion_check json_encode_format int $value
         set value [ format $type [ expr int($value) ] ]
         append token $value
       }
@@ -227,11 +329,11 @@ namespace eval turbine {
         append token "\"$value\""
       }
       "int" {
-        json_encode_convert json_encode_retype int $value
+        json_conversion_check json_encode_retype int $value
         append token [expr int($value)]
       }
       "float" {
-        json_encode_convert json_encode_retype float $value
+        json_conversion_check json_encode_retype float $value
         append token [expr double($value)]
       }
       "string" {
@@ -241,7 +343,7 @@ namespace eval turbine {
         append token "\[ $value \]"
       }
       "boolean|^B$" {
-        json_encode_convert json_encode_retype boolean $value
+        json_conversion_check json_encode_retype boolean $value
         set b [ ternary { $value == 0 } "false" "true" ]
         append token $b
       }
@@ -260,18 +362,24 @@ namespace eval turbine {
     }
     return $token
   }
+
   proc json_encode_check_count { D_length a function which } {
+    # Just check that the counts are equal
+    # D_length: number
+    # a: list
+    # function, which: just for error messages
     set a_length [ llength $a ]
     if { $D_length != $a_length } {
       turbine_error \
-          "${function}(): " \
+          "${function}():" \
           "length of $which ($D_length) not equal to " \
           "length of given values ($a_length)"
     }
   }
 
-  proc json_encode_convert { function type value } {
-    # Just a conversion check
+  proc json_conversion_check { function type value } {
+    # Just a conversion check that value can be converted to type
+    # function: Just for error messages
     # Very accomodating-
     #      floats      are converted to ints
     #      floats|ints are converted to booleans

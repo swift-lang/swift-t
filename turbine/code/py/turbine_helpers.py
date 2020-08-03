@@ -59,7 +59,7 @@ def json_type(filename, path):
     else:
         raise "ERROR"
 
-def json_dict_entries(filename, path):
+def json_get_object_entries(filename, path):
     """ Assume dict and return all keys at given path """
     J = json_path(filename, path)
     L = []
@@ -77,4 +77,3 @@ def json_get(filename, path):
     """ Return whatever is at the given path (usually scalar) """
     J = json_path(filename, path)
     return str(J)
-

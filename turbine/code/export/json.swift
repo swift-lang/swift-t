@@ -61,12 +61,12 @@ import python;
   t = string2int(s);
 }
 
-(string t) json_dict_entries(file f, string path)
+(string t) json_get_object_entries(file f, string path)
 {
   wait (f)
   {
     t = python_persist("from turbine_helpers import *",
-                       "json_dict_entries('%s','%s')" %
+                       "json_get_object_entries('%s','%s')" %
                        (filename(f), path));
   }
 }
@@ -81,36 +81,46 @@ import python;
   o = "{" + text + "}";
 }
 
-(string o) json_encode_array(int|float|string|boolean... args)
+(string o) json_encode_array(int|float|string|boolean... args) // OK
 "turbine" "1.2.3" "json_encode_array";
 
-// + _contents
+(string o) json_encode_array_contents(int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents";
 
 (string o) json_encode_array_retype(string types[],
-                                    int|float|string|boolean... args)
+                                    int|float|string|boolean... args) // OK
 "turbine" "1.2.3" "json_encode_array_retype";
 
-// + _contents
+(string o) json_encode_array_contents_retype(string types[],
+                                             int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents_retype";
 
 (string o) json_encode_array_format(string format,
-                                    int|float|string|boolean... args)
+                                    int|float|string|boolean... args) // OK
 "turbine" "1.2.3" "json_encode_array_format";
 
-// + _contents
+(string o) json_encode_array_contents_format(string format,
+                                             int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents_format";
 
-(string o) json_encode_object(string names[], int|float|string|boolean... args)
+(string o) json_encode_object(string names[], int|float|string|boolean... args) // OK
 "turbine" "1.2.3" "json_encode_object";
 
-// + _contents
+(string o) json_encode_object_contents(string names[], int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object_contents";
 
 (string o) json_encode_object_retype(string names[], string types[],
-                                     int|float|string|boolean... args)
+                                     int|float|string|boolean... args) // OK
 "turbine" "1.2.3" "json_encode_object_retype";
 
-// + _contents
+(string o) json_encode_object_contents_retype(string names[], string types[],
+                                              int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object_contents_retype";
 
-(string o) json_encode_object_format(string format,
+(string o) json_encode_object_format(string names[], string format,
                                     int|float|string|boolean... args)
 "turbine" "1.2.3" "json_encode_object_format";
 
-// + _contents
+(string o) json_encode_object_contents_format(string names[], string format,
+                                              int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object_contents_format";
