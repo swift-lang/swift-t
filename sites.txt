@@ -168,14 +168,14 @@ $ stc workflow.swift
 ----
 which produces +workflow.tic+ .  Then run:
 
-*APRUN* system
+==== Cray ALPS system
 
 ----
 # Inside the interactive job
 $ aprun -n 4 turbine-pilot workflow.tic <ARGUMENTS...>
 ----
 
-*SLURM* system
+==== SLURM system
 
 ----
 # Inside the interactive job
@@ -261,8 +261,18 @@ Name of queue in which to run
 Wall time argument to pass to scheduler, typically +HH:MM:SS+
 
 +TURBINE_OUTPUT+::
-Directory in which to place Turbine output
-(if unset, a default value is automatically created)
+The run directory for the workflow.
+Turbine will create this directory if it does not exist.
+If unset, a default value is automatically set.
+The TIC file is copied here before execution.
+Normally, this is unique to a Swift/T workflow execution,
+and starts out empty.
++
+Note that if +TURBINE_OUTPUT+ is set to the same directory as
+the workflow source directory, your +*.tic+ file may be
+auto-deleted by +swift-t+; use +swift-t -o+ to prevent this.
+If +TURBINE_OUTPUT+ is shared by multiple concurrent
+Swift/T workflows, conflicts may occur.
 
 +TURBINE_OUTPUT_ROOT+::
 Directory under which Turbine will automatically create
