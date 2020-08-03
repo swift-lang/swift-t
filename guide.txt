@@ -1791,7 +1791,8 @@ Thus, object names and array indices may be used.
 
 +json_type(string json, string path) -> string+::
 In the JSON string +json+, look up +path+ and return its type. +
-Possible return values are +"string"+, +"array"+, and +"object"+.
+The possible return values are
++"string"+, +"int"+, +"float"+, "+"array"+, +"object"+, and +"null"+.
 
 +json_array_size(string json, string path) -> int+::
 If +path+ points to a JSON array, this will return the size of the array.
