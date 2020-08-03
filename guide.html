@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -744,7 +743,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:800px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.4.3, January 2020</span><br />
+<span id="author">v1.4.3, August 2020</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3507,6 +3506,331 @@ Make the given directory (via <code>mkdir</code>).
 </dd>
 </dl></div>
 </div>
+<div class="sect2">
+<h3 id="library_json">13.11. JSON</h3>
+<div class="paragraph"><p>Swift/T workflow applications commonly pass data to and from
+applications via JSON, so a library of string processing functions for
+JSON data is provided.</p></div>
+<div class="paragraph"><p>To use the JSON parser functions, Swift/T must be compiled with Python support.</p></div>
+<div class="sect3">
+<h4 id="_json_path_concept">13.11.1. JSON path concept</h4>
+<div class="paragraph"><p>When parsing JSON, these functions have the concept of a JSON path,
+which is a simple comma-separated specification of the value.  For
+example, in JSON fragment:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>{"x":[7,8,9]}</code></pre>
+</div></div>
+<div class="paragraph"><p>JSON path <code>"x,1"</code> would obtain the value 8.
+Thus, object names and array indices may be used.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_json_parsing">13.11.2. JSON parsing</h4>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>json_type(string json, string path) &#8594; string</code>
+</dt>
+<dd>
+<p>
+In the JSON string <code>json</code>, look up <code>path</code> and return its type.<br />
+Possible return values are <code>"string"</code>, <code>"array"</code>, and <code>"object"</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_array_size(string json, string path) &#8594; int</code>
+</dt>
+<dd>
+<p>
+If <code>path</code> points to a JSON array, this will return the size of the array.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_object_names(string json, string path) &#8594; string</code>
+</dt>
+<dd>
+<p>
+If <code>path</code> points to a JSON object, this will return a comma-separated
+string containing all the names in that object.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_get(string J, string path) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Get the JSON value at the given path.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_get_int(string json, string path) &#8594; int</code>
+</dt>
+<dd>
+<p>
+Get the JSON value at the given path, convert to int.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_get_float(string json, string path) &#8594; float</code>
+</dt>
+<dd>
+<p>
+Get the JSON value at the given path, convert to float.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect3">
+<h4 id="_json_encoding">13.11.3. JSON encoding</h4>
+<div class="sect4">
+<h5 id="_simple_wrappers">Simple wrappers</h5>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>json_arrayify(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Simply wrap the given string as a JSON array.
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>json_arrayify("2,3,4"); // returns "[2,3,4]"</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<code>json_objectify(string) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Simply wrap the given string as a JSON object.
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>json_objectify("x:2,y:3,z:4"); // returns "{x:2,y:3,z:4}"</code></pre>
+</div></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect4">
+<h5 id="_full_encoders">Full encoders</h5>
+<div class="paragraph"><p>The JSON encoder output has two forms: "wrapped" and "contents".</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The "wrapped" forms return the JSON array or object wrapped in <code>"[&#8230;]"</code>
+or <code>"{&#8230;}"</code> respectively.
+</p>
+</li>
+<li>
+<p>
+The "contents" forms return comma-separated JSON text without the
+wrappers, allowing for further user JSON assembly.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The JSON encoders have three types handlers: "infer", "retype", and
+"format".</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The "infer" handlers use the Swift/T data types and encode the values automatically.
+</p>
+</li>
+<li>
+<p>
+The "retype" handlers accept a user array of type specifiers that
+  correspond to the given values and force the types as specified.
+</p>
+</li>
+<li>
+<p>
+The "format" handlers accept a user string of space-separated type
+  specifiers force the types as specified.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The accepted type specifiers are:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+C format specifiers, including <code>%i</code>, <code>%f</code>, <code>%s</code>, and all variations
+  supported by the underlying
+  <a href="http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm">Tcl <code>format</code> command</a>.
+</p>
+</li>
+<li>
+<p>
+Human-readable specifiers, including <code>int</code>, <code>float</code>, and
+  <code>string</code>.
+</p>
+</li>
+<li>
+<p>
+The following specifiers:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>boolean</code> or <code>%B</code>: outputs <code>true</code> or <code>false</code>.
+</p>
+</li>
+<li>
+<p>
+<code>json</code> or <code>%J</code>: produces the literal value in the JSON output,
+  allowing for user-customized JSON assembly
+</p>
+</li>
+<li>
+<p>
+<code>array</code> or <code>%A</code>: produces the literal value but wrapped in
+  <code>"[&#8230;]"</code>, convenient for use with <code>json_encode_array_contents()</code>.
+</p>
+</li>
+<li>
+<p>
+<code>object</code> or <code>%O</code>: produces the literal value but wrapped in
+  <code>"{&#8230;}"</code>, convenient for use with <code>json_encode_object_contents()</code>.
+</p>
+</li>
+<li>
+<p>
+<code>null</code> or <code>%N</code>: always produces a JSON <code>null</code>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_examples">Examples</h5>
+<div class="paragraph"><p>Inferred types:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>json_encode_array(3, "s", true);
+// produces [3, "s", 1]</code></pre>
+</div></div>
+<div class="paragraph"><p>Format types, contents-only output:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>json_encode_array_contents_format("%04i %0.1f %1s boolean null",
+                                  "8.2", 0.4,  42, true, "howdy");
+// produces 0008, 0.4, "42", true, null</code></pre>
+</div></div>
+<div class="paragraph"><p>Note that string <code>"8.2"</code> is converted to an integer and zero-padded,
+integer 42 is converted to a string, the boolean is correctly
+represented in JSON, and <code>"howdy"</code> is replaced by a JSON <code>null</code>.  No
+<code>"[&#8230;]"</code> brackets are produced.</p></div>
+<div class="paragraph"><p>Object retype:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>json_encode_object_retype(["x", "y", "z"], ["int", "float", "array"],
+                          77, 88, "9,9,9");
+// produces {"x":77, "y":88.0, "z":[ 9,9,9 ]}</code></pre>
+</div></div>
+<div class="paragraph"><p>Note that the <code>array</code> specifier allows for convenient JSON assembly.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_list_of_encoders">List of encoders</h5>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>json_encode_array(int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Inferred types.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_array_contents(int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Inferred types, contents-only output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_array_retype(string types[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Retype.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_array_contents_retype(string types[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Retype, contents-only output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_array_format(string format, int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Format.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_array_contents_format(string format, int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Format, contents-only output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object(string names[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Inferred types.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object_contents(string names[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Inferred types, contents-only output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object_retype(string names[], string types[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Retype.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object_contents_retype(string names[], string types[], int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Retype, contents-only output.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object_format(string names[], string format, int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Format.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>json_encode_object_contents_format(string names[], string format, int|float|string|boolean&#8230; args)</code>
+</dt>
+<dd>
+<p>
+Format, contents-only output.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -5251,11 +5575,12 @@ Change the placement policy.  Alternatives are:
 </p>
 </dd>
 <dt class="hdlist1">
-<code>VALGRIND</code>
+<code>TURBINE_INTERPOSER</code>
 </dt>
 <dd>
 <p>
-Enable valgrind debugging.  Cf. <a href="#valgrind">valgrind</a>.
+Enable a command between <code>mpiexec</code> and <code>tclsh</code>.
+Cf. <a href="#valgrind">valgrind</a>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -5617,13 +5942,15 @@ When using <code>mkstatic</code>, you generate a complete executable.  You can
 <div class="sect3">
 <h4 id="valgrind">17.6.1. Valgrind</h4>
 <div class="paragraph"><p>The Swift/T launcher scripts support <a href="http://valgrind.org">valgrind</a>.
-Simply set the environment variable <code>VALGRIND</code> to the valgrind command
-you wish to use.  A suppressions file is distributed with Turbine to
-ignore known issues.  (Swift/T is valgrind-clean but there are some
-issues in the libraries we use.)</p></div>
+Simply set the environment variable <code>TURBINE_INTERPOSER</code>
+to the valgrind command you wish to use.
+A suppressions file is distributed with Turbine to
+ignore known issues.
+(Swift/T is valgrind-clean but there are some issues
+in the libraries we use.)</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export VALGRIND="valgrind --suppressions=SWIFT_T/turbine/code/turbine.supp"
+<pre><code>export TURBINE_INTERPOSER="valgrind --suppressions=SWIFT_T/turbine/etc/turbine.supp"
 swift-t program.swift</code></pre>
 </div></div>
 </div>
@@ -6344,8 +6671,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated
- 2020-01-13 16:56:06 CST
+Last updated 2020-08-03 12:24:27 CST
 </div>
 </div>
 
