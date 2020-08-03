@@ -1766,6 +1766,167 @@ output to file (via +sed+).
 
 +mkdir(string) -> void+:: Make the given directory (via +mkdir+).
 
+[[library_json]]
+
+=== JSON
+
+Swift/T workflow applications commonly pass data to and from
+applications via JSON, so a library of string processing functions for
+JSON data is provided.
+
+To use the JSON parser functions, Swift/T must be compiled with Python support.
+
+==== JSON path concept
+
+When parsing JSON, these functions have the concept of a JSON path,
+which is a simple comma-separated specification of the value.  For
+example, in JSON fragment:
+----
+{"x":[7,8,9]}
+----
+JSON path +"x,1"+ would obtain the value 8.
+Thus, object names and array indices may be used.
+
+==== JSON parsing
+
++json_type(string json, string path) -> string+::
+In the JSON string +json+, look up +path+ and return its type. +
+Possible return values are +"string"+, +"array"+, and +"object"+.
+
++json_array_size(string json, string path) -> int+::
+If +path+ points to a JSON array, this will return the size of the array.
+
++json_object_names(string json, string path) -> string+::
+If +path+ points to a JSON object, this will return a comma-separated
+string containing all the names in that object.
+
++json_get(string J, string path) -> string+::
+Get the JSON value at the given path.
+
++json_get_int(string json, string path) -> int+::
+Get the JSON value at the given path, convert to int.
+
++json_get_float(string json, string path) -> float+::
+Get the JSON value at the given path, convert to float.
+
+==== JSON encoding
+
+===== Simple wrappers
+
++json_arrayify(string) -> string+::
+Simply wrap the given string as a JSON array.
++
+----
+json_arrayify("2,3,4"); // returns "[2,3,4]"
+----
+
++json_objectify(string) -> string+::
+Simply wrap the given string as a JSON object.
++
+----
+json_objectify("x:2,y:3,z:4"); // returns "{x:2,y:3,z:4}"
+----
+
+===== Full encoders
+
+The JSON encoder output has two forms: "wrapped" and "contents".
+
+* The "wrapped" forms return the JSON array or object wrapped in +"[...]"+
+or +"{...}"+ respectively.
+* The "contents" forms return comma-separated JSON text without the
+wrappers, allowing for further user JSON assembly.
+
+The JSON encoders have three types handlers: "infer", "retype", and
+"format".
+
+* The "infer" handlers use the Swift/T data types and encode the values automatically.
+* The "retype" handlers accept a user array of type specifiers that
+  correspond to the given values and force the types as specified.
+* The "format" handlers accept a user string of space-separated type
+  specifiers force the types as specified.
+
+The accepted type specifiers are:
+
+* C format specifiers, including +%i+, +%f+, +%s+, and all variations
+  supported by the underlying
+  http://www.tcl.tk/man/tcl8.6/TclCmd/format.htm[Tcl +format+ command].
+* Human-readable specifiers, including +int+, +float+, and
+  +string+.
+* The following specifiers:
+** +boolean+ or +%B+: outputs +true+ or +false+.
+** +json+ or +%J+: produces the literal value in the JSON output,
+  allowing for user-customized JSON assembly
+** +array+ or +%A+: produces the literal value but wrapped in
+  +"[...]"+, convenient for use with +json_encode_array_contents()+.
+** +object+ or +%O+: produces the literal value but wrapped in
+  +"{...}"+, convenient for use with +json_encode_object_contents()+.
+** +null+ or +%N+: always produces a JSON +null+.
+
+===== Examples
+
+Inferred types:
+----
+json_encode_array(3, "s", true);
+// produces [3, "s", 1]
+----
+
+Format types, contents-only output:
+----
+json_encode_array_contents_format("%04i %0.1f %1s boolean null",
+                                  "8.2", 0.4,  42, true, "howdy");
+// produces 0008, 0.4, "42", true, null
+----
+Note that string +"8.2"+ is converted to an integer and zero-padded,
+integer 42 is converted to a string, the boolean is correctly
+represented in JSON, and +"howdy"+ is replaced by a JSON +null+.  No
++"[...]"+ brackets are produced.
+
+Object retype:
+----
+json_encode_object_retype(["x", "y", "z"], ["int", "float", "array"],
+                          77, 88, "9,9,9");
+// produces {"x":77, "y":88.0, "z":[ 9,9,9 ]}
+----
+Note that the +array+ specifier allows for convenient JSON assembly.
+
+===== List of encoders
+
++json_encode_array(int|float|string|boolean... args)+::
+Inferred types.
+
++json_encode_array_contents(int|float|string|boolean... args)+::
+Inferred types, contents-only output.
+
++json_encode_array_retype(string types[], int|float|string|boolean... args)+::
+Retype.
+
++json_encode_array_contents_retype(string types[], int|float|string|boolean... args)+::
+Retype, contents-only output.
+
++json_encode_array_format(string format, int|float|string|boolean... args)+::
+Format.
+
++json_encode_array_contents_format(string format, int|float|string|boolean... args)+::
+Format, contents-only output.
+
++json_encode_object(string names[], int|float|string|boolean... args)+::
+Inferred types.
+
++json_encode_object_contents(string names[], int|float|string|boolean... args)+::
+Inferred types, contents-only output.
+
++json_encode_object_retype(string names[], string types[], int|float|string|boolean... args)+::
+Retype.
+
++json_encode_object_contents_retype(string names[], string types[], int|float|string|boolean... args)+::
+Retype, contents-only output.
+
++json_encode_object_format(string names[], string format, int|float|string|boolean... args)+::
+Format.
+
++json_encode_object_contents_format(string names[], string format, int|float|string|boolean... args)+::
+Format, contents-only output.
+
 [[leaf_functions]]
 == Defining leaf functions
 
