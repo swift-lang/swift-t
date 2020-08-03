@@ -22,24 +22,13 @@
 
 import python;
 
-(string t) json_type(file f, string path)
-{
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_type('%s','%s')" %
-                       (filename(f), path));
-  }
-}
+// Parsers
 
-(string t) json_list_length(file f, string path)
+(string t) json_type(string J, string path)
 {
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_list_length('%s','%s')" %
-                       (filename(f), path));
-  }
+  t = python_persist("from turbine_helpers import *",
+                     "json_type('%s','%s')" %
+                     (J, path));
 }
 
 (string t) json_get(string J, string path)
@@ -49,27 +38,34 @@ import python;
                        (J, path));
 }
 
-(float t) json_get_float(string J, string path)
-{
-  s = json_get(J, path);
-  t = string2float(s);
-}
-
 (int t) json_get_int(string J, string path)
 {
   s = json_get(J, path);
   t = string2int(s);
 }
 
-(string t) json_get_object_entries(file f, string path)
+(float t) json_get_float(string J, string path)
 {
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_get_object_entries('%s','%s')" %
-                       (filename(f), path));
-  }
+  s = json_get(J, path);
+  t = string2float(s);
 }
+
+(int t) json_array_size(string J, string path)
+{
+  s = python_persist("from turbine_helpers import *",
+                     "json_array_size('%s','%s')" %
+                     (J, path));
+  t = string2int(s);
+}
+
+(string t) json_object_names(string J, string path)
+{
+  t = python_persist("from turbine_helpers import *",
+                     "json_object_names('%s','%s')" %
+                     (J, path));
+}
+
+// Encoders
 
 (string o) json_arrayify(string text)
 {
