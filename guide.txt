@@ -3246,7 +3246,9 @@ anchor:env_hostmap_disable[]
       local (place data on the local server).
 
 +TURBINE_INTERPOSER+::
-Enable a command between +mpiexec+ and +tclsh+.
+Enable a command between +mpiexec+ and +tclsh+,
+thus running Turbine under an interposer
+such as +valgrind+ or +strace+.
 Cf. <<valgrind,valgrind>>.
 
 +GDB_RANK+::
