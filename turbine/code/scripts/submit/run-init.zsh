@@ -116,10 +116,6 @@ export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
 export PROCS=${PROCS:-0}
-if (( ! ${+TURBINE_OUTPUT_ROOT} ))
-then
-  TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
-fi
 SETTINGS=0
 export MAIL_ENABLED=${MAIL_ENABLED:-0}
 export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
@@ -236,37 +232,8 @@ then
   exit 1
 fi
 
-# Prints a TURBINE_OUTPUT directory
-# Handles TURBINE_OUTPUT_FORMAT
-# Default format is e.g., 2006/10/13/14/26/12
-turbine_output_format()
-{
-  TURBINE_OUTPUT_FORMAT=${TURBINE_OUTPUT_FORMAT:-%Y/%m/%d/%H/%M/%S}
-  local S=$( date +${TURBINE_OUTPUT_FORMAT} )
-  if [[ ${S} == *%Q* ]]
-  then
-    # Create a unique directory by substituting on %Q
-    TURBINE_OUTPUT_PAD=${TURBINE_OUTPUT_PAD:-3}
-    integer -Z ${TURBINE_OUTPUT_PAD} i=1
-    while true
-    do
-      local D=${S/\%Q/${i}}
-      local TRY=${TURBINE_OUTPUT_ROOT}/${D}
-      [[ ! -d ${TRY} ]] && break
-      (( i++ ))
-    done
-    print ${TRY}
-  else
-    print ${TURBINE_OUTPUT_ROOT}/${S}
-  fi
-}
+source ${TURBINE_HOME}/scripts/submit/turbine-output-format.zsh
 
-# Create the directory in which to run
-if (( ! ${+TURBINE_OUTPUT} ))
-then
-  export TURBINE_OUTPUT=$( turbine_output_format )
-fi
-export TURBINE_OUTPUT
 declare TURBINE_OUTPUT
 
 # All output from job, including error stream

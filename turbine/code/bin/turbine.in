@@ -37,6 +37,8 @@ REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
+# If 1, mimic scheduled system output
+SCHEDULER_OUTPUT=0
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 export TURBINE_PREALLOCATION=0
@@ -70,6 +72,9 @@ do
       ;;
     n)
       PROCS=${OPTARG}
+      ;;
+    S)
+      SCHEDULER_OUTPUT=1
       ;;
     v)
       REPORT_VERSION=1
@@ -279,7 +284,7 @@ then
 fi
 
 # Just use mpiexec right now
-if [[ ${TURBINE_LAUNCHER} == 0 ]]
+if (( ${TURBINE_LAUNCHER} == 0 ))
 then
   print "Turbine is not configured for the mpiexec launcher!"
   print "Use turbine -m <machine> ."
@@ -294,10 +299,28 @@ done
 # Set up PYTHONPATH for turbine_helpers
 if (( ${#TURBINE_USE_PYTHON} ))
 then
-    export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+  export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+fi
+
+if (( SCHEDULER_OUTPUT ))
+then
+  # Mimics scheduled systems
+  # Creates a TURBINE_OUTPUT directory and runs in that directory
+  # Redirects stdout to TURBINE_OUTPUT/output.txt
+  source ${TURBINE_HOME}/scripts/submit/turbine-output-format.zsh
+  declare TURBINE_OUTPUT
+  mkdir -pv ${TURBINE_OUTPUT}
+  alias -g STDOUT="> ${TURBINE_OUTPUT}/output.txt" # ZSH global alias
+  [[ -L turbine-output ]] && rm turbine-output
+  ln -s ${TURBINE_OUTPUT} turbine-output
+  cd ${TURBINE_OUTPUT}
+else
+  # Normal mode: stdout is not redirected
+  # (typically goes to the console)
+  alias -g STDOUT=""
 fi
 
 # TURBINE_INTERPOSER allows user to insert valgrind, strace, etc.
 ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS} ${=TURBINE_INTERPOSER} \
-                    ${TCLSH} ${PROGRAM} ${ARGS}
+                    ${TCLSH} ${PROGRAM} ${ARGS} STDOUT
 # Exit code returned by shell script
