@@ -55,7 +55,7 @@ namespace eval turbine {
     # Unpack args TDs
     lassign $args cmd argv envs
     # Receive MPI task information
-    set comm [ turbine::c::task_comm ]
+    set comm [ turbine::c::task_comm_int ]
     set rank [ adlb::comm_rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
@@ -97,7 +97,7 @@ namespace eval turbine {
     set length [ adlb::container_size $argv ]
     set tds    [ adlb::enumerate $argv dict all 0 ]
     # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
+    set comm   [ turbine::c::task_comm_int ]
     set rank   [ adlb::comm_rank $comm ]
     # Construct a char**
     set charpp [ turbine::blob_strings_to_char_ptr_ptr $tds ]
@@ -170,7 +170,7 @@ namespace eval turbine {
     # show envc_dict
 
     # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
+    set comm   [ turbine::c::task_comm_int ]
     set rank   [ adlb::comm_rank $comm ]
 
     # show rank
