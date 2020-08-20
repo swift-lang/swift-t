@@ -67,10 +67,7 @@ namespace eval turbine {
     set argv_length [ dict size $argv_tds ]
     set envs_tds    [ adlb::enumerate $envs dict all 0 ]
     set envs_length [ dict size $envs_tds ]
-    # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::comm_rank $comm ]
-    # Construct char**
+    # Construct char**s
     set argv_charpp [ turbine::blob_strings_to_char_ptr_ptr $argv_tds ]
     set envs_charpp [ turbine::blob_strings_to_char_ptr_ptr $envs_tds ]
     # Run the user code
