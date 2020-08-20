@@ -299,7 +299,7 @@ namespace eval turbine {
         return $argc
     }
 
-	# DOCD(blob_string_dict_to_char_ppp d,
+    # DOCD(blob_string_dict_to_char_ppp d,
     #      `Input: A Tcl dict of int->int->string indexed from 0. +
     #       Output: A SWIG pointer (+char***+) to the C strings. +
     #       Helpful for passing data into C-style multi argc/argv interfaces.')
