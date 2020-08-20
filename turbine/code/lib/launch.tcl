@@ -131,6 +131,7 @@ namespace eval turbine {
     set envc_dict [ dict create ]
 
     # This is a nested dict [ int->int->arg ]
+    #      i.e., one argv for each of the multiple launches
     set argv_all  [ dict create ]
     set argv_dict_size [ dict size $argv_dict ]
     if { $argv_dict_size != $count } {
@@ -145,6 +146,7 @@ namespace eval turbine {
       # show k n
     }
     # This is a nested dict [ int->int->env ]
+    #      i.e., one env for each of the multiple launches
     set envs_all  [ dict create ]
     set envs_dict_size [ dict size $envs_dict ]
     if { $envs_dict_size == 0 } {
