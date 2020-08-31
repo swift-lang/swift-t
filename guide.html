@@ -3645,7 +3645,7 @@ The "retype" handlers accept a user array of type specifiers that
 <li>
 <p>
 The "format" handlers accept a user string of space-separated type
-  specifiers force the types as specified.
+  specifiers and force the types as specified.
 </p>
 </li>
 </ul></div>
@@ -3712,9 +3712,9 @@ The following specifiers:
 <div class="paragraph"><p>Format types, contents-only output:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>json_encode_array_contents_format("%04i %0.1f %1s boolean null",
+<pre><code>json_encode_array_contents_format("%04i %0.1f %4s boolean null",
                                   "8.2", 0.4,  42, true, "howdy");
-// produces 0008, 0.4, "42", true, null</code></pre>
+// produces 0008, 0.4, "  42", true, null</code></pre>
 </div></div>
 <div class="paragraph"><p>Note that string <code>"8.2"</code> is converted to an integer and zero-padded,
 integer 42 is converted to a string, the boolean is correctly
@@ -3723,7 +3723,7 @@ represented in JSON, and <code>"howdy"</code> is replaced by a JSON <code>null</
 <div class="paragraph"><p>Object retype:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>json_encode_object_retype(["x", "y", "z"], ["int", "float", "array"],
+<pre><code>json_encode_object_retype(["x", "y", "z"], ["%i", "float", "array"],
                           77, 88, "9,9,9");
 // produces {"x":77, "y":88.0, "z":[ 9,9,9 ]}</code></pre>
 </div></div>
@@ -5580,7 +5580,9 @@ Change the placement policy.  Alternatives are:
 </dt>
 <dd>
 <p>
-Enable a command between <code>mpiexec</code> and <code>tclsh</code>.
+Enable a command between <code>mpiexec</code> and <code>tclsh</code>,
+thus running Turbine under an interposer
+such as <code>valgrind</code> or <code>strace</code>.
 Cf. <a href="#valgrind">valgrind</a>.
 </p>
 </dd>
@@ -6672,7 +6674,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-08-03 16:25:01 CST
+Last updated 2020-08-31 15:52:46 CDT
 </div>
 </div>
 
