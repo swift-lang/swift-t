@@ -6,11 +6,13 @@ set -eu
 THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
-${THIS}/check-settings.sh
-source ${THIS}/functions.sh
-source ${THIS}/options.sh
-source ${THIS}/swift-t-settings.sh
-source ${THIS}/setup.sh
+cd $THIS
+
+$THIS/check-settings.sh
+source $THIS/functions.sh
+source $THIS/options.sh
+source $THIS/swift-t-settings.sh
+source $THIS/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
@@ -157,6 +159,15 @@ fi
 
 if [[ ${LAUNCHER:-} != "" ]]; then
   EXTRA_ARGS+=" --with-launcher=${LAUNCHER}"
+fi
+
+if (( ENABLE_R ))
+then
+  # May need this to find Rscript, which is used for installation:
+  if [[ ${R_INSTALL:-} != "" ]]
+  then
+    PATH=$R_INSTALL/bin:$PATH
+  fi
 fi
 
 common_args

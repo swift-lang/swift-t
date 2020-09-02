@@ -49,6 +49,7 @@
 
 #include "data_internal.h"
 #include "debug.h"
+#include "layout.h"
 #include "sync.h"
 
 /*

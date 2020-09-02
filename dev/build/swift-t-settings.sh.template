@@ -164,8 +164,8 @@ CUSTOM_CFG_ARGS_TURBINE=""
 #+=====================================+
 # Specify non-standard source/install subdirectory locations
 
-# Code: Find current directory
-SCRIPT_DIR=$(cd $(dirname $0); pwd)
+# Code: Find current directory - should already be in this directory
+SCRIPT_DIR=$( /bin/pwd )
 # Code: Find default source directory (current directory)
 src_default()
 {

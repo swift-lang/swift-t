@@ -16,6 +16,7 @@
 
 #include "layout.h"
 
+#include <dyn_array_i.h>
 #include <table.h>
 
 #include "checks.h"
@@ -36,7 +37,8 @@ build_host2workers(const xlb_layout *layout, int worker_count,
 
 adlb_code
 xlb_layout_init(int comm_size, int comm_rank, int nservers,
-    const struct xlb_hostnames *hostnames, xlb_layout *layout)
+		const struct xlb_hostnames *hostnames,
+		xlb_layout *layout)
 {
   adlb_code ac;
 
@@ -51,6 +53,10 @@ xlb_layout_init(int comm_size, int comm_rank, int nservers,
 
   layout->am_server = (layout->rank >= layout->workers);
   layout->am_leader = false; // Filled in later
+
+  ADLB_CHECK_MSG(layout->servers <= layout->workers,
+		 "ADLB layout error: servers=%i > workers=%i",
+		 layout->servers, layout->workers);
 
   if (layout->am_server)
   {
@@ -135,7 +141,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
   *host_count = 0;
   for (int i = 0; i < my_workers; i++)
   {
-    int rank = xlb_rank_from_my_worker_idx(layout, i);
+    int rank = xlb_rank_from_worker_idx(layout, i);
     const char *host_name = xlb_hostnames_lookup(hostnames, rank);
     ADLB_CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
               "rank %i", rank);
@@ -149,7 +155,7 @@ build_worker2host(const struct xlb_hostnames *hostnames,
     }
     (*worker2host)[i] = (int)host_idx;
     DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
-          i, xlb_rank_from_my_worker_idx(layout, i), (int)host_idx,
+          i, xlb_rank_from_worker_idx(layout, i), (int)host_idx,
           host_name);
   }
 

@@ -6,11 +6,13 @@ set -eu
 THIS=$(   dirname  $0 )
 SCRIPT=$( basename $0 )
 
-${THIS}/check-settings.sh
-source ${THIS}/functions.sh
-source ${THIS}/options.sh
-source ${THIS}/swift-t-settings.sh
-source ${THIS}/setup.sh
+cd $THIS
+
+$THIS/check-settings.sh
+source $THIS/functions.sh
+source $THIS/options.sh
+source $THIS/swift-t-settings.sh
+source $THIS/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 

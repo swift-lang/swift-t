@@ -110,7 +110,7 @@ TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
 START=$( date +%s.%N )
 if (
-   # Dump the environment to a sorted file:
+   # Dump the environment to a sorted file for debugging:
    printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
    set -x
    # Launch it!

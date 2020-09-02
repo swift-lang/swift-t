@@ -607,8 +607,9 @@ xlb_sync_steal(int target, const int *work_counts, int size,
   return xlb_sync2(target, req, response);
 }
 
-adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
-                            adlb_refc change, bool wait)
+adlb_code
+xlb_sync_refcount(int target, adlb_datum_id id,
+                  adlb_refc change, bool wait)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;

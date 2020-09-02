@@ -36,8 +36,9 @@
 /**
    Struct that encapsulates xlb system state.
  */
-struct xlb_state {
-  /**
+struct xlb_state
+{
+  /*
     MPI communicators for everything and subgroups
    */
   MPI_Comm comm;
@@ -102,14 +103,10 @@ static const adlb_buffer xlb_xfer_buf =
             { .data = xlb_xfer, .length = ADLB_XFER_SIZE };
 
 int xlb_random_server(void);
-/**
-   Time since XLB was initialized
-   Note: this is used by debugging output
- */
-double xlb_wtime(void);
 
 /**
     Get long int from env var.  If not present, val is unmodified
+    TODO: Replace with use of tools.h
  */
 adlb_code xlb_env_long(const char *env_var, long *val);
 

@@ -478,7 +478,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     long tmp_comm_ptr = 0;
     rc = Tcl_GetLongFromObj(interp, objv[3], &tmp_comm_ptr);
     TCL_CHECK(rc);
-    adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
+    adlb_comm_ptr = (MPI_Comm*) tmp_comm_ptr;
   }
 
   if (!adlb_comm_init)
@@ -498,14 +498,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-#ifdef USE_ADLB
-  rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
-               &am_server, &am_debug_server, &adlb_worker_comm);
-#endif
-#ifdef USE_XLB
+
   rc = ADLB_Init(servers, ntypes, type_vect,
                  &am_server, adlb_comm, &adlb_worker_comm);
-#endif
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
 
@@ -4258,7 +4253,7 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::container_typeof <id>
+   usage: adlb::typeof <id>
 */
 static int
 ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -4274,11 +4269,11 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %i\n", id, type);
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %i\n", id, type);
 
-  const char *type_string = ADLB_Data_type_tostring(type);
+  const char* type_string = ADLB_Data_type_tostring(type);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %s",
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %s",
   //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
