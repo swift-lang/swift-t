@@ -24,6 +24,8 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
+ifelse(getenv(QUEUE), `',,
+#BSUB -q getenv(QUEUE))
 #BSUB -J getenv(TURBINE_JOBNAME)
 #BSUB -nnodes getenv_nospace(NODES)
 #BSUB -W getenv(WALLTIME)
