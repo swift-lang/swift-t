@@ -24,6 +24,8 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
+ifelse(getenv(QUEUE), `',,
+#BSUB -q getenv(QUEUE))
 #BSUB -J getenv(TURBINE_JOBNAME)
 #BSUB -nnodes getenv_nospace(NODES)
 #BSUB -W getenv(WALLTIME)
@@ -60,7 +62,7 @@ export PYTHONPATH=getenv(PYTHONPATH)
 # Add Turbine Python utilities:
 PYTHONPATH=$PYTHONPATH:${TURBINE_HOME}/py
 
-USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+# USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
@@ -117,8 +119,6 @@ if (
    jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
             -E TCLLIBPATH \
             -E ADLB_PRINT_TIME=1 \
-            -E PATH \
-            -E LD_LIBRARY_PATH \
             "${USER_ENV_ARGS[@]}" \
             ${COMMAND}
 )

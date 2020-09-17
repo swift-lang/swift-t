@@ -163,8 +163,11 @@ fi
 
 if (( ENABLE_R ))
 then
-  # Need this to find Rscript, which is used for installation:
-  PATH=$R_INSTALL/bin:$PATH
+  # May need this to find Rscript, which is used for installation:
+  if [[ ${R_INSTALL:-} != "" ]]
+  then
+    PATH=$R_INSTALL/bin:$PATH
+  fi
 fi
 
 common_args

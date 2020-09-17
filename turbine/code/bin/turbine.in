@@ -138,11 +138,11 @@ fi
 report_version()
 {
   print "Turbine ${TURBINE_VERSION}"
-  print " in: ${TURBINE_HOME}"
+  print " installed:    ${TURBINE_HOME}"
   SOURCE_TXT=${TURBINE_HOME}/etc/source.txt
   if [[ -f ${SOURCE_TXT} ]]
   then
-    print " installed from: $( cat ${SOURCE_TXT} )"
+    print " source:       $( cat ${SOURCE_TXT} )"
   fi
   print " using CC:     ${USE_CC}"
   print " using MPI:    ${MPI_LABEL}"
