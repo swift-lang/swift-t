@@ -39,7 +39,7 @@ xlb_is_server(const xlb_layout *layout,int rank)
   return (rank >= layout->workers);
 }
 
-#define LAYOUT_CONTIG 0
+#define LAYOUT_CONTIG 1
 
 #if LAYOUT_CONTIG == 1
 
