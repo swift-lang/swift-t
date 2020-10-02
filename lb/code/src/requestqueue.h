@@ -26,8 +26,7 @@
  *  that they may run in the future, or for stolen work
  */
 
-#ifndef REQUESTQUEUE_H
-#define REQUESTQUEUE_H
+#pragma once
 
 typedef struct
 {
@@ -98,5 +97,3 @@ int xlb_requestqueue_get(xlb_request_entry* r, int max);
 void xlb_requestqueue_remove(xlb_request_entry *e, int count);
 
 void xlb_requestqueue_shutdown(void);
-
-#endif
