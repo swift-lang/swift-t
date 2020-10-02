@@ -34,7 +34,7 @@ typedef struct
   int type;
   int count;
   void *_internal; /* Internal pointer, caller should not touch */
-} xlb_request_entry; 
+} xlb_request_entry;
 
 adlb_code
 xlb_requestqueue_init(int ntypes, const xlb_layout *layout);
