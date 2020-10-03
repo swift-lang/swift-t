@@ -72,6 +72,17 @@ adlb_code xlb_debug_check_environment(void);
    ADLB_DEBUG=0
  */
 #if ENABLE_LOG_DEBUG && !defined(NDEBUG)
+#define INFO_ENABLED 1
+#define INFO(format, args...)              \
+  {      printf("%5.4f ADLB: " format "\n", xlb_wtime(), ## args);  \
+         fflush(stdout);                    \
+       }
+#else
+#define INFO(format, args...) // noop
+#define INFO_ENABLED 0
+#endif
+
+#if ENABLE_LOG_DEBUG && !defined(NDEBUG)
 #define DEBUG_ENABLED 1
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
