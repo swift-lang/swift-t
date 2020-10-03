@@ -27,8 +27,7 @@
  *  or at run time by setting environment variable XLB_DEBUG=0
  */
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#pragma once
 
 #include <stdbool.h>
 #define _GNU_SOURCE
@@ -127,5 +126,3 @@ adlb_code xlb_debug_check_environment(void);
       printf("[%d] COUNTER: " format "\n", xlb_s.layout.rank, \
             ## args);                                     \
   } }
-
-#endif
