@@ -215,7 +215,7 @@ typedef struct {
     { 0 /* read_refcount */, 0 /* write_refcount */ };
 
   static const adlb_refc ADLB_READ_REFC =
-    { 1 /*read_refcount */, 0 /* write_refcount */ };
+    { 1 /* read_refcount */, 0 /* write_refcount */ };
 
   static const adlb_refc ADLB_WRITE_REFC =
     { 0 /* read_refcount */, 1 /* write_refcount */ };

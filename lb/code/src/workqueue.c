@@ -527,9 +527,9 @@ xlb_workq_get(int target, int type)
 }
 
 /**
-  Pop an entry from a targeted queue, return NULL if none left.
+   Pop an entry from a targeted queue, return NULL if none left.
 
-  Implementation notes:
+   Implementation notes:
    Does not remove entry in untargeted_work if soft targeted
    Frees per target/type queue if empty
  */

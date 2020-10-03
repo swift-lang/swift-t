@@ -78,7 +78,7 @@ static double backoff_sync          = 0.00001;
     + backoff_server_exp_delay_attempts)
 
 bool
-xlb_backoff_server(int attempt, bool *slept)
+xlb_backoff_server(int attempt, bool* slept)
 {
   // DEBUG("backoff()");
   if (attempt < backoff_server_no_delay_attempts)

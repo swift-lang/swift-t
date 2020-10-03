@@ -209,7 +209,7 @@ merge_request(request* R, int rank, int type, int count, bool blocking)
   in_targets: if true, is target array entry
   count: number to remove, must be >= 1
  */
-static void request_match_update(request *R, bool in_targets, int count)
+static void request_match_update(request* R, bool in_targets, int count)
 {
   assert(count >= 1);
 
@@ -243,7 +243,7 @@ static void request_match_update(request *R, bool in_targets, int count)
 }
 
 /* Mark request as empty */
-static inline void invalidate_request(request *R)
+static inline void invalidate_request(request* R)
 {
   R->item = NULL; // Clear item if needed for targets array
 }
