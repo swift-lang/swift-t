@@ -3,7 +3,7 @@ set -eu
 
 # BUILD C-UTILS
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
 cd $THIS
