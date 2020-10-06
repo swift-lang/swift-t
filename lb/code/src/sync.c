@@ -158,7 +158,7 @@ xlb_sync_init(void)
   xlb_pending_sync_size = PENDING_SYNC_INIT_SIZE;
 
   // Optionally have different min size - otherwise we won't cover the
-  // resizing cases in testing`
+  // resizing cases in testing
   rc = xlb_env_long("ADLB_DEBUG_SYNC_BUFFER_SIZE", &tmp);
   ADLB_CHECK(rc);
 
