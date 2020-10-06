@@ -82,19 +82,22 @@ unlock()
   print "Unlocked: $THIS"
 }
 
+check()
+{
+  if [[ -f $THIS/lock ]] {
+       print "Installation directory is locked!  $THIS"
+       return 1
+  } else {
+       if (( VERBOSE )) {
+            print "Not locked: $THIS"
+       }
+  }
+}
+
 if (( CHECK )) {
-     if [[ -f $THIS/lock ]] {
-          print "Installation directory is locked!  $THIS"
-          return 1
-     } else {
-          if (( VERBOSE )) {
-               print "Not locked: $THIS"
-          }
-     }
+     check
+} elif (( UNLOCK )) {
+     unlock
 } else {
-     if (( UNLOCK )) {
-          unlock
-     } else {
-          lock
-     }
+     lock
 }
