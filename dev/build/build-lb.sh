@@ -19,6 +19,8 @@ source $THIS/setup.sh
 LOG $LOG_INFO "Building lb"
 cd ${LB_SRC}
 
+check-lock $SWIFT_T_PREFIX/c-utils
+
 run_bootstrap
 
 EXTRA_ARGS=""

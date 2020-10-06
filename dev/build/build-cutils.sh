@@ -3,7 +3,7 @@ set -eu
 
 # BUILD C-UTILS
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
 cd $THIS
@@ -18,6 +18,8 @@ source $THIS/setup.sh
 
 LOG $LOG_INFO "Building c-utils"
 cd ${C_UTILS_SRC}
+
+check-lock $SWIFT_T_PREFIX/c-utils
 
 run_bootstrap
 

@@ -211,6 +211,7 @@ HEADERS = $(wildcard src/*.h)
 $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS) $(HEADERS)
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
+	../../dev/build/lock.sh -c $(INSTALL_PREFIX)
 	$(E) touch install.txt
 #       Set up directories
 	$(E) mkdir -pv $(INSTALL_PREFIX)

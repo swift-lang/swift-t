@@ -25,6 +25,8 @@ then
   LOG_WAIT 3
 fi
 
+check-lock $SWIFT_T_PREFIX
+
 LOG $LOG_INFO ""
 $THIS/build-cutils.sh
 
@@ -39,3 +41,5 @@ $THIS/build-stc.sh
 
 LOG $LOG_INFO
 LOG $LOG_WARN "Swift/T build successful."
+
+cp $THIS/lock.sh $SWIFT_T_PREFIX

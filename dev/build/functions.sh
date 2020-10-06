@@ -153,4 +153,15 @@ make_install()
   fi
 }
 
+check_lock()
+{
+  DIR=$1
+  if [[ -f $DIR/lock ]]
+  then
+    echo "cannot install: lock exists: $DIR/lock"
+    echo "                to unlock use 'lock.sh -u'"
+    return 1
+  fi
+}
+
 FUNCTIONS_DONE=1

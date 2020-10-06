@@ -19,6 +19,8 @@ source $THIS/setup.sh
 echo "Building STC in $PWD"
 cd $STC_SRC
 
+check-lock $SWIFT_T_PREFIX/stc
+
 echo "Ant and Java settings:"
 which $ANT java
 
