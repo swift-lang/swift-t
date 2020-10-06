@@ -30,18 +30,21 @@ echo
 
 USE_JAVA=$( which java )
 
-if (( RUN_MAKE_CLEAN )); then
+if (( RUN_MAKE_CLEAN ))
+then
   $ANT clean
 fi
 
-if (( ! RUN_MAKE )); then
+if (( ! RUN_MAKE ))
+then
   exit
 fi
 
 # The main Ant build step
 $NICE_CMD $ANT $STC_ANT_ARGS
 
-if (( ! RUN_MAKE_INSTALL )); then
+if (( ! RUN_MAKE_INSTALL ))
+then
   exit
 fi
 
