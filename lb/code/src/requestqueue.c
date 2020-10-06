@@ -346,13 +346,13 @@ xlb_requestqueue_matches_type(int type)
 
 static inline bool get_parallel_workers_unordered(int count,
                                                   int parallelism,
-                                                  int* ranks,
-                                                  struct list2* L);
+                                                  struct list2* L,
+                                                  int* ranks);
 
 static inline bool get_parallel_workers_ordered(int count,
                                                 int parallelism,
-                                                int* ranks,
-                                                struct list2* L);
+                                                struct list2* L,
+                                                int* ranks);
 
 bool
 xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
@@ -361,23 +361,23 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
   struct list2* L = &type_requests[type];
   int count = list2_size(L);
 
-  DEBUG("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
-        type, parallelism, count);
+  /* INFO("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...", */
+  /*       type, parallelism, count); */
 
   if (count < parallelism)
     return false;
 
   if (xlb_s.par_mod == 1)
-    result = get_parallel_workers_unordered(count, parallelism, ranks, L);
+    result = get_parallel_workers_unordered(count, parallelism, L, ranks);
   else
-    result = get_parallel_workers_ordered(count, parallelism, ranks, L);
+    result = get_parallel_workers_ordered(count, parallelism, L, ranks);
   TRACE_END;
   return result;
 }
 
 static inline bool
-get_parallel_workers_unordered(int count, int parallelism, int* ranks,
-                               struct list2* L)
+get_parallel_workers_unordered(int count, int parallelism,
+                               struct list2* L, int* ranks)
 {
   TRACE("\t found: count: %i needed: %i", count, parallelism);
   for (int i = 0; i < parallelism; i++)
@@ -394,38 +394,65 @@ static inline bool find_contig(int* A, int n, int k, int m, int* result);
 
 static inline request* find_request(struct list2* L, int rank);
 
+static void update_parallel_requests(struct list2* L, int* ranks, int count);
+
+
+/**
+   ranks: output array of ranks
+   returns true if ranks were found, else false
+ */
 static inline bool
-get_parallel_workers_ordered(int count, int parallelism, int* ranks,
-                             struct list2* L)
+get_parallel_workers_ordered(int count, int parallelism,
+                             struct list2* L, int* ranks)
 {
-  int t[count];
+  double t0 = MPI_Wtime();
   if (count < parallelism)
       return false;
 
-  DEBUG("get_parallel_workers_ordered(count=%i parallelism=%i)",
-        count, parallelism);
+  /* INFO("get_parallel_workers_ordered(server=%i count=%i parallelism=%i) ...", */
+  /*       xlb_s.layout.rank, count, parallelism); */
 
-  extract_worker_ranks(L, t);
-  quicksort_ints(t, 0, count-1);
+  // Flat array representation of available ranks:
+  int flat[count];
+  extract_worker_ranks(L, flat);
+  double t1 = MPI_Wtime();
+  // INFO("qsort: %i", count);
+  quicksort_ints(flat, 0, count-1);
+  double t2 = MPI_Wtime();
 
   // print_ints(t, count);
 
-  int p; // Index of start rank in t
-  bool result = find_contig(t, count, parallelism, xlb_s.par_mod, &p);
+  int p; // Index of start rank in flat array
+  bool result = find_contig(flat, count, parallelism, xlb_s.par_mod, &p);
+  double t3 = MPI_Wtime();
 
   if (!result)
   {
-    DEBUG("get_parallel_workers_ordered(): "
-          "could not satisfy ADLB_PAR_MOD=%i", xlb_s.par_mod);
+    /* INFO("get_parallel_workers_ordered(): " */
+    /*       "could not satisfy ADLB_PAR_MOD=%i", xlb_s.par_mod); */
     return false;
   }
 
+  /* for (int i = 0; i < parallelism; i++) */
+  /* { */
+  /*   ranks[i] = flat[p]+i; */
+  /*   request* R = find_request(L, ranks[i]); */
+  /*   request_match_update(R, in_targets_array(R), 1); */
+  /* } */
+
   for (int i = 0; i < parallelism; i++)
-  {
-    ranks[i] = t[p]+i;
-    request* R = find_request(L, ranks[i]);
-    request_match_update(R, in_targets_array(R), 1);
-  }
+    ranks[i] = flat[p]+i;
+  update_parallel_requests(L, ranks, parallelism);
+
+  double t4 = MPI_Wtime();
+
+  double duration = t4 - t0;
+
+  INFO("get_parallel_workers_ordered(server=%i count=%i parallelism=%i) OK "
+       "%.4f extract=%.4f sort=%.4f %.4f %.4f",
+        xlb_s.layout.rank, count, parallelism,
+       duration, t1-t0, t2-t1, t3-t2, t4-t3);
+
 
   // print_ints(ranks, parallelism);
 
@@ -507,6 +534,27 @@ find_request(struct list2* L, int rank)
   return result;
 }
 
+static void
+update_parallel_requests(struct list2* L, int* ranks, int count)
+{
+  int copy[count];
+  memcpy(copy, ranks, count*sizeof(int));
+  for (struct list2_item *item = L->head; item != NULL;
+       item = item->next)
+  {
+    request* R = (request*) item->data;
+    for (int i = 0; i < count; i++)
+    {
+      if (R->rank == copy[i])
+      {
+        request_match_update(R, in_targets_array(R), 1);
+        // Move last element to present element, shrink array
+        copy[i] = copy[count-1];
+        count--;
+      }
+    }
+  }
+}
 void
 xlb_requestqueue_remove(xlb_request_entry* e, int count)
 {
