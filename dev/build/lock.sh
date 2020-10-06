@@ -4,6 +4,8 @@ set -eu
 # LOCK SH
 # Lock a Swift/T installation directory to prevent modification
 # during runs.
+# Applications can lock the directory by simply touching the
+# lock file in the installation directory.
 
 UNLOCK=0
 VERBOSE=0
@@ -72,7 +74,11 @@ unlock()
        print "Not locked: $THIS"
        return
   }
-  rm $RM_V lock {c-utils,lb,turbine,stc}/lock
+  # This one has to work
+  rm $RM_V lock
+  # These don't have to work
+  # (a user app may create only the top-level lock)
+  rm $RM_V {c-utils,lb,turbine,stc}/lock || true
   print "Unlocked: $THIS"
 }
 
@@ -80,6 +86,10 @@ if (( CHECK )) {
      if [[ -f $THIS/lock ]] {
           print "Installation directory is locked!  $THIS"
           return 1
+     } else {
+          if (( VERBOSE )) {
+               print "Not locked: $THIS"
+          }
      }
 } else {
      if (( UNLOCK )) {
