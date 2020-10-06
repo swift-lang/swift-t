@@ -116,7 +116,7 @@ adlb_code xlb_sync_steal(int target, const int *work_counts,
 
 /*
   Send a refcount operation to another server.
-  
+
   If wait is true, wait for response.
   Otherwise, return as soon as it is sent.
  */
@@ -139,7 +139,7 @@ typedef enum {
 } xlb_pending_kind;
 
 typedef struct {
-  xlb_pending_kind kind; 
+  xlb_pending_kind kind;
   int rank;
   struct packed_sync *hdr; // Header to be freed later
   void *extra_data; // Extra data if needed for header type
@@ -210,7 +210,7 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
     return ADLB_NOTHING;
   }
 
-  xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
+  xlb_sync_recv* head = &xlb_sync_recvs[xlb_sync_recv_head];
   MPI_TEST2(&head->req, &flag, &status);
 
   if (flag)
@@ -226,7 +226,7 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
 
 // Info about pending sync requests: where sync request has been received
 // but we haven't responded yet.
-extern xlb_pending *xlb_pending_syncs; // Array for ring buffer
+extern xlb_pending* xlb_pending_syncs; // Array for ring buffer
 extern int xlb_pending_sync_head; // Head of ring buffer
 extern int xlb_pending_sync_count; // Valid entries in array
 extern int xlb_pending_sync_size; // Malloced size
@@ -251,8 +251,8 @@ xlb_dequeue_pending(xlb_pending_kind* kind,
 {
   if (xlb_pending_sync_count == 0)
     return ADLB_NOTHING;
-  
-  xlb_pending *pending = &xlb_pending_syncs[xlb_pending_sync_head];
+
+  xlb_pending* pending = &xlb_pending_syncs[xlb_pending_sync_head];
 
   *kind = pending->kind;
   *rank = pending->rank;

@@ -277,7 +277,7 @@ adlb_code
 xlb_sync(int target)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+  struct packed_sync* hdr = (struct packed_sync*) hdr_storage;
 #ifndef NDEBUG
   // Avoid send uninitialized bytes for memory checking tools
   memset(hdr, 0, PACKED_SYNC_SIZE);
@@ -301,7 +301,7 @@ xlb_sync(int target)
    3) The master server tells this process to shut down
  */
 static adlb_code
-xlb_sync2(int target, const struct packed_sync *hdr, int *response)
+xlb_sync2(int target, const struct packed_sync* hdr, int* response)
 {
   TRACE_START;
   DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_s.layout.rank,
@@ -340,7 +340,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     if (accept_required)
     {
       IRECV2(&accept_response, 1, MPI_INT, target, ADLB_TAG_SYNC_RESPONSE,
-            &accept_request);
+             &accept_request);
     }
 
     /*

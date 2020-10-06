@@ -104,7 +104,7 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   for (int i = 0; i < layout->my_workers; i++)
     targets[i].item = NULL;
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
+  type_requests = malloc(sizeof(struct list2) * (size_t) ntypes);
   ADLB_CHECK_MALLOC(type_requests);
   for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
@@ -135,10 +135,10 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
-       * Assuming that types match avoid complications with responding to
-       * requests out of order, and with more complicated data structures.
-       * We leave it to the client code to avoid doing this for now.
-       */
+         Assuming that types match avoids complications with responding to
+         requests out of order, and with more complicated data structures.
+         We leave it to the client code to avoid doing this for now.
+      */
       ADLB_CHECK_MSG(R->type == type,
                      "Do not yet support simultaneous requests"
                      " for different work types from same rank."
@@ -209,7 +209,8 @@ merge_request(request* R, int rank, int type, int count, bool blocking)
   in_targets: if true, is target array entry
   count: number to remove, must be >= 1
  */
-static void request_match_update(request* R, bool in_targets, int count)
+static void
+request_match_update(request* R, bool in_targets, int count)
 {
   assert(count >= 1);
 
@@ -507,11 +508,11 @@ find_request(struct list2* L, int rank)
 }
 
 void
-xlb_requestqueue_remove(xlb_request_entry *e, int count)
+xlb_requestqueue_remove(xlb_request_entry* e, int count)
 {
   TRACE("pequestqueue_remove(%i)", e->rank);
   // Recover request from stored pointer
-  request *r = (request*)e->_internal;
+  request* r = (request*) e->_internal;
   assert(r != NULL);
   if (count >= r->count)
   {
@@ -548,10 +549,12 @@ adlb_code xlb_requestqueue_decr_blocked(void)
   return ADLB_SUCCESS;
 }
 
-void xlb_requestqueue_type_counts(int* types, int size) {
+void xlb_requestqueue_type_counts(int* types, int size)
+{
   assert(size >= xlb_s.types_size);
   int total = 0;
-  for (int t = 0; t < xlb_s.types_size; t++) {
+  for (int t = 0; t < xlb_s.types_size; t++)
+  {
     struct list2* L = &type_requests[t];
     types[t] = L->size;
     total += L->size;
@@ -655,7 +658,7 @@ static inline adlb_code list2_node_pool_init(int size)
 
   for (int i = 0; i < size; i++)
   {
-    struct list2_item *item = malloc(sizeof(struct list2_item));
+    struct list2_item* item = malloc(sizeof(struct list2_item));
     ADLB_CHECK_MALLOC(item);
     list2_node_pool.free_array[i] = item;
   }
@@ -676,7 +679,7 @@ static inline void list2_node_pool_finalize(void)
   list2_node_pool.nfree = 0;
 }
 
-static inline struct list2_item *alloc_list2_node(void)
+static inline struct list2_item* alloc_list2_node(void)
 {
   if (list2_node_pool.nfree > 0)
   {
@@ -689,7 +692,7 @@ static inline struct list2_item *alloc_list2_node(void)
   }
 }
 
-static inline void free_list2_node(struct list2_item *node)
+static inline void free_list2_node(struct list2_item* node)
 {
   if (list2_node_pool.nfree == list2_node_pool.free_array_size)
   {

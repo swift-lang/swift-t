@@ -607,8 +607,9 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
 {
   DEBUG("xlb_parallel_comm_setup(): parallelism=%i", parallelism);
   // Parallel tasks require MPI 3.  Cf. configure.ac
-  ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3, "Parallel tasks not supported for MPI "
-                                   "version %i < 3", ADLB_MPI_VERSION);
+  ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3,
+                 "Parallel tasks not supported for MPI version %i < 3",
+                 ADLB_MPI_VERSION);
   #if ADLB_MPI_VERSION >= 3
   MPI_Status status;
   // Recv ranks for output comm
@@ -616,7 +617,8 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   RECV(ranks, parallelism, MPI_INT, xlb_s.layout.my_server,
        ADLB_TAG_RESPONSE_GET);
   MPI_Group group;
-  int rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
+  int rc;
+  rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
   assert(rc == MPI_SUCCESS);
   // This is an MPI 3 function:
   rc = MPI_Comm_create_group(xlb_s.comm, group, 0, comm);

@@ -297,7 +297,6 @@ serve_several()
       {
         code = xlb_handle_pending(&req_status);
         ADLB_CHECK(code);
-
         handled = true;
       }
       else if (code != ADLB_NOTHING)
@@ -350,11 +349,9 @@ serve_several()
 
 /**
    Poll msg queue for requests
-
-   prefer_sync: if true, check for server-server syncs first
  */
 static inline adlb_code
-xlb_poll(int source, MPI_Status *req_status)
+xlb_poll(int source, MPI_Status* req_status)
 {
   int new_message;
   IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
