@@ -1222,13 +1222,15 @@ handle_retrieve(int caller)
   // TRACE("ADLB_TAG_RETRIEVE");
   MPE_LOG(xlb_mpe_svr_retrieve_start);
 
+  double t0 = MPI_Wtime();
+
   MPI_Status status;
 
   RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
 
   // Interpret xlb_xfer buffer as struct
   struct packed_retrieve_hdr *hdr =
-        (struct packed_retrieve_hdr*)xlb_xfer;
+        (struct packed_retrieve_hdr*) xlb_xfer;
   adlb_subscript subscript = ADLB_NO_SUB;
   if (hdr->subscript_len > 0)
   {
@@ -1294,6 +1296,9 @@ handle_retrieve(int caller)
   xlb_free_notif(&notifs);
 
   ADLB_Free_binary_data2(&result, xlb_scratch);
+
+  double t1 = MPI_Wtime();
+  INFO("handle_retrieve: rank=%i %8.5f", xlb_s.layout.rank, t1-t0);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
