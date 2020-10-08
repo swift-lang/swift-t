@@ -547,6 +547,11 @@ ADLBP_Get(int type_requested, void** payload,
 
   TRACE_START;
 
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("Get(): post: rank=%i", xlb_s.layout.rank);
+  }
+
   ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
@@ -554,6 +559,11 @@ ADLBP_Get(int type_requested, void** payload,
   IRECV(&g, sizeof(g), MPI_BYTE, xlb_s.layout.my_server, ADLB_TAG_RESPONSE_GET);
   SEND(&type_requested, 1, MPI_INT, xlb_s.layout.my_server, ADLB_TAG_GET);
   WAIT(&request, &status);
+
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("Get(): recv rank=%i", xlb_s.layout.rank);
+  }
 
   xlb_mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
 
@@ -584,6 +594,11 @@ ADLBP_Get(int type_requested, void** payload,
   xlb_mpi_recv_sanity(&status, MPI_BYTE, g.length);
   DEBUG("ADLB_Get(): got: %s", (char*) buffer);
 
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("Get(): payload rank=%i", xlb_s.layout.rank);
+  }
+
   if (g.parallelism > 1)
   {
     rc = xlb_parallel_comm_setup(g.parallelism, comm);
@@ -605,7 +620,11 @@ ADLBP_Get(int type_requested, void** payload,
 static adlb_code
 xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
 {
-  DEBUG("xlb_parallel_comm_setup(): parallelism=%i", parallelism);
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): parallelism=%i rank=%i",
+         parallelism, xlb_s.layout.rank);
+  }
   // Parallel tasks require MPI 3.  Cf. configure.ac
   ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3,
                  "Parallel tasks not supported for MPI version %i < 3",
@@ -616,6 +635,13 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   int ranks[parallelism];
   RECV(ranks, parallelism, MPI_INT, xlb_s.layout.my_server,
        ADLB_TAG_RESPONSE_GET);
+
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): ranks rank=%i",
+         xlb_s.layout.rank);
+  }
+
   MPI_Group group;
   int rc;
   rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
@@ -624,6 +650,12 @@ xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
   rc = MPI_Comm_create_group(xlb_s.comm, group, 0, comm);
   valgrind_assert(rc == MPI_SUCCESS);
   MPI_Group_free(&group);
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): grouped rank=%i",
+         xlb_s.layout.rank);
+  }
+
   TRACE("MPI_Comm_create_group(): comm=%llu\n",
         (long long unsigned int) *comm);
   #endif

@@ -63,9 +63,9 @@ static double backoff_sync          = 0.01;
             1/100 requests were work-stealing requests.
    xlb_steal_backoff: take a break from stealing after trying #servers times
  */
-       double xlb_steal_rate_limit  = 0.0005;
-       double xlb_steal_backoff     = 0.02;
-       double xlb_steal_concurrency_limit = 16;
+       double xlb_steal_rate_limit  = 0.05;
+       double xlb_steal_backoff     = 0.1;
+       double xlb_steal_concurrency_limit = 2;
 static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;

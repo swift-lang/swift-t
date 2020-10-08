@@ -153,7 +153,7 @@ adlb_code
 xlb_workq_init(int work_types, const xlb_layout *layout)
 {
   assert(work_types >= 1);
-  DEBUG("xlb_workq_init(work_types=%i)", work_types);
+  INFO("xlb_workq_init(work_types=%i)", work_types);
 
   adlb_code ac;
 
@@ -271,7 +271,7 @@ xlb_workq_add(xlb_work_unit* wu)
 static adlb_code xlb_workq_add_parallel(xlb_work_unit* wu)
 {
   // Untargeted parallel task
-  TRACE("xlb_workq_add_parallel(): %p", wu);
+  // INFO("xlb_workq_add_parallel(): %p", wu);
   struct rbtree* T = &parallel_work[wu->type];
   TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->opts.priority);
   rbtree_add(T, -wu->opts.priority, wu);
@@ -498,7 +498,8 @@ static int soft_target_priority(int base_priority)
 xlb_work_unit*
 xlb_workq_get(int target, int type)
 {
-  DEBUG("xlb_workq_get(target=%i, type=%i)", target, type);
+  /* INFO("xlb_workq_get(server=%i, target=%i, type=%i)", */
+  /*      xlb_s.layout.rank, target, type); */
 
   xlb_work_unit* wu;
 
@@ -653,8 +654,8 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
   TRACE_START;
   bool result = false;
   struct rbtree* T = &parallel_work[work_type];
-  DEBUG("xlb_workq_pop_parallel(): "
-        "type=%i tree_size=%i", work_type, rbtree_size(T));
+  /* INFO("xlb_workq_pop_parallel(): server=%i type=%i tree_size=%i", */
+  /*      xlb_s.layout.rank, work_type, rbtree_size(T)); */
   // Common case is empty: want to exit ASAP:
   if (rbtree_size(T) == 0)
     goto end;
@@ -668,8 +669,7 @@ xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
     DEBUG("xlb_workq_pop_parallel(): nothing");
     goto end;
   }
-  DEBUG("xlb_workq_pop_parallel(): found: wuid=%"PRId64,
-        data.wu->id);
+  // INFO("xlb_workq_pop_parallel(): found: wuid=%"PRId64, data.wu->id);
   *wu = data.wu;
   *ranks = data.ranks;
   result = true;

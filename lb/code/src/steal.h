@@ -64,7 +64,7 @@ void xlb_steal_finalize(void);
 static inline bool xlb_steal_allowed(void);
 
 /**
-  Send a steal probe to check for work on a random caller 
+  Send a steal probe to check for work on a random caller
  */
 adlb_code xlb_random_steal_probe(void);
 
@@ -100,7 +100,7 @@ static inline bool xlb_steal_allowed(void)
   // Somewhat adaptive backoff approach where we do bursts of polling
   double interval;
 
-  bool backoff = (xlb_failed_steals_since_backoff == xlb_s.layout.servers);
+  bool backoff = (xlb_failed_steals_since_backoff >= xlb_s.layout.servers);
   if (backoff)
   {
     interval = xlb_steal_backoff;

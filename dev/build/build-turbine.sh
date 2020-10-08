@@ -19,7 +19,7 @@ source $THIS/setup.sh
 LOG $LOG_INFO "Building Turbine"
 cd ${TURBINE_SRC}
 
-check-lock $SWIFT_T_PREFIX/turbine
+check_lock $SWIFT_T_PREFIX/turbine
 
 run_bootstrap
 

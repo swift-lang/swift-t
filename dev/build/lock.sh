@@ -44,12 +44,21 @@ if (( ${#} > 0 )) {
      THIS=$( readlink --canonicalize $( dirname $0 ) )
 }
 
-cd $THIS
-
 LOCKS=( lock {c-utils,lb,turbine,stc}/lock )
+
+assert_cd()
+# Assert directory exists and chdir to it
+{
+  if [[ ! -d $THIS ]] {
+       print "Directory does not exist: $THIS"
+       return 1
+  }
+  cd $THIS
+}
 
 lock()
 {
+  assert_cd
   if [[ -f lock ]] {
        print "Already locked: $THIS"
        if (( VERBOSE )) {
@@ -66,6 +75,7 @@ lock()
 
 unlock()
 {
+  assert_cd
   local RM_V=""
   if (( VERBOSE )) {
        RM_V="-v"

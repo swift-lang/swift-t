@@ -351,7 +351,8 @@ steal_payloads(int target, int count,
     }
   }
   free(wus);
-  DEBUG("[%i] received batch size %i", xlb_s.layout.rank, count);
+  // DEBUG("[%i] received batch size %i", xlb_s.layout.rank, count);
+  INFO("[%i] steal_payloads(): received: %i", xlb_s.layout.rank, count);
 
   *single_count = single;
   *par_count = par;

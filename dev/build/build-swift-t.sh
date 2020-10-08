@@ -25,7 +25,7 @@ then
   LOG_WAIT 3
 fi
 
-check-lock $SWIFT_T_PREFIX
+check_lock $SWIFT_T_PREFIX
 
 LOG $LOG_INFO ""
 $THIS/build-cutils.sh

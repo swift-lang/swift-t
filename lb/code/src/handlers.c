@@ -958,14 +958,17 @@ static inline adlb_code send_parallel_work(int *workers,
     xlb_work_unit_id wuid, int type, int answer,
     const void* payload, int length, int parallelism)
 {
+  INFO("[%i] send_parallel_work: worker=%i",
+       xlb_s.layout.rank, workers[0]);
   for (int i = 0; i < parallelism; i++)
   {
     adlb_code rc = send_work(workers[i], wuid, type, answer,
-                       payload, length, parallelism);
+                             payload, length, parallelism);
     ADLB_CHECK(rc);
     SEND(workers, parallelism, MPI_INT, workers[i],
          ADLB_TAG_RESPONSE_GET);
   }
+  INFO("[%i] send_parallel_work: OK", xlb_s.layout.rank);
   return ADLB_SUCCESS;
 }
 

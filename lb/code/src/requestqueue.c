@@ -98,6 +98,8 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   assert(layout->my_workers >= 0);
   assert(ntypes >= 1);
 
+  // INFO("requestqueue_init");
+
   targets = malloc(sizeof(targets[0]) * (size_t)layout->my_workers);
   ADLB_CHECK_MALLOC(targets);
 
@@ -122,8 +124,9 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
 adlb_code
 xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 {
-  DEBUG("requestqueue_add(rank=%i,type=%i,count=%i,blocking=%s)", rank,
-        type, count, blocking ? "true" : "false");
+  /* if (rank % 100 == 0) */
+  /*   INFO("requestqueue_add(server=%i, rank=%i,type=%i,count=%i,blocking=%s)\n", */
+  /*          xlb_s.layout.rank, rank, type, count, blocking ? "true" : "false"); */
   assert(count >= 1);
   request* R;
 
@@ -481,7 +484,7 @@ find_contig(int* A, int n, int k, int m, int* result)
 {
   int n_k = n-k; // Useful place to give up
   int p = 0;
-  DEBUG("find_contig(): n=%i k=%i m=%i", n, k, m);
+  // INFO("find_contig(): n=%i k=%i m=%i", n, k, m);
   do
   {
     // printf("p trial1: %i\n", p);
@@ -500,18 +503,20 @@ find_contig(int* A, int n, int k, int m, int* result)
     int z = q+k-1;
     if (z > n) break;
     for ( ; q < z; q++)
+    {
+      // printf("A[%i]=%i\n", q, A[q]);
       // Proceed while we have sequential ranks
       if (A[q] != next++) goto loop;
+    }
     // Found it!
     *result = p;
-    DEBUG("find_contig(): found: p=%i", p);
+    // INFO("find_contig(): found: p=%i", p);
     return true;
 
     loop: p = q; // Not sequential: try again
     // printf("loop: p=%i n_k=%i\n", p, n_k);
-  }
-  while (p < n_k);
-  DEBUG("find_contig(): nothing.");
+  } while (p < n_k);
+  // INFO("find_contig(): nothing.");
   return false;
 }
 
@@ -558,7 +563,7 @@ update_parallel_requests(struct list2* L, int* ranks, int count)
 void
 xlb_requestqueue_remove(xlb_request_entry* e, int count)
 {
-  TRACE("pequestqueue_remove(%i)", e->rank);
+  TRACE("requestqueue_remove(%i)", e->rank);
   // Recover request from stored pointer
   request* r = (request*) e->_internal;
   assert(r != NULL);

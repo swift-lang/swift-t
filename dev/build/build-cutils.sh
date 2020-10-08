@@ -19,7 +19,7 @@ source $THIS/setup.sh
 LOG $LOG_INFO "Building c-utils"
 cd ${C_UTILS_SRC}
 
-check-lock $SWIFT_T_PREFIX/c-utils
+check_lock $SWIFT_T_PREFIX/c-utils
 
 run_bootstrap
 
