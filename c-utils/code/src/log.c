@@ -57,7 +57,8 @@ log_enable(bool b)
   log_enabled = b;
 }
 
-void log_flush_auto_enable(bool b)
+void
+log_flush_auto_enable(bool b)
 {
   log_flush_auto = b;
 }
@@ -94,8 +95,8 @@ log_time_absolute()
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  double result = (double)tv.tv_sec;
-  result += (double)tv.tv_usec * 0.000001;
+  double result = (double) tv.tv_sec;
+  result += (double) tv.tv_usec * 0.000001;
   return result;
 }
 
@@ -130,7 +131,28 @@ log_printf(char* format, ...)
   va_start(ap, format);
   static char line[1024];
   vsnprintf(line, 1024, format, ap);
-  int precision = t > 10000 ? 15 : 8;
+  int precision = t > 10000 ? 15 : 9;
+  if (prefix == NULL)
+    fprintf(output, "%*.3f %s\n", precision, t, line);
+  else
+    fprintf(output, "%s %*.3f %s\n", prefix, precision, t, line);
+  if (log_flush_auto)
+    fflush(output);
+  va_end(ap);
+}
+
+/**
+   Resulting line is limited to 1024 characters
+ */
+void
+log_printf_force(char* format, ...)
+{
+  double t = log_time();
+  va_list ap;
+  va_start(ap, format);
+  static char line[1024];
+  vsnprintf(line, 1024, format, ap);
+  int precision = t > 10000 ? 15 : 9;
   if (prefix == NULL)
     fprintf(output, "%*.3f %s\n", precision, t, line);
   else
