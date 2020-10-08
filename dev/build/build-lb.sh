@@ -25,9 +25,10 @@ run_bootstrap
 
 EXTRA_ARGS=""
 
-if (( SWIFT_T_DEBUG_BUILD )); then
+# if (( SWIFT_T_DEBUG_BUILD )); then
+
     EXTRA_ARGS+=" --enable-log-debug"
-fi
+# fi
 
 if (( SWIFT_T_TRACE_BUILD )); then
     EXTRA_ARGS+=" --enable-log-trace"
