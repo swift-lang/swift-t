@@ -418,16 +418,18 @@ get_parallel_workers_ordered(int count, int parallelism,
   // Flat array representation of available ranks:
   int flat[count];
   extract_worker_ranks(L, flat);
-  double t1 = MPI_Wtime();
+  // Timing data: only used by logging
+  unused double t1, t2, t3, t4, duration;
+  t1 = MPI_Wtime();
   // INFO("qsort: %i", count);
   quicksort_ints(flat, 0, count-1);
-  double t2 = MPI_Wtime();
+  t2 = MPI_Wtime();
 
   // print_ints(t, count);
 
   int p; // Index of start rank in flat array
   bool result = find_contig(flat, count, parallelism, xlb_s.par_mod, &p);
-  double t3 = MPI_Wtime();
+  t3 = MPI_Wtime();
 
   if (!result)
   {
@@ -447,9 +449,9 @@ get_parallel_workers_ordered(int count, int parallelism,
     ranks[i] = flat[p]+i;
   update_parallel_requests(L, ranks, parallelism);
 
-  double t4 = MPI_Wtime();
+  t4 = MPI_Wtime();
 
-  double duration = t4 - t0;
+  duration = t4 - t0;
 
   INFO("get_parallel_workers_ordered(server=%i count=%i parallelism=%i) OK "
        "%.4f extract=%.4f sort=%.4f %.4f %.4f",
