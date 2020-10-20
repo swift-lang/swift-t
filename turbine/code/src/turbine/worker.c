@@ -85,7 +85,7 @@ turbine_worker_loop(Tcl_Interp* interp,
       int r;
       MPI_Comm_rank(task_comm, &r);
       if (r == 0)
-        print_command = true;
+        print_command = false;
     }
     char* command = payload;
     if (print_command)
