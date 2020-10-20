@@ -78,8 +78,8 @@ adlb_code xlb_debug_check_environment(void);
          fflush(stdout);                    \
        }
 #else
-#define INFO(format, args...) // noop
 #define INFO_ENABLED 0
+#define INFO(format, args...) // noop
 #endif
 
 #if ENABLE_LOG_DEBUG && !defined(NDEBUG)
@@ -90,8 +90,8 @@ adlb_code xlb_debug_check_environment(void);
          fflush(stdout);                    \
        } }
 #else
-#define DEBUG(format, args...) // noop
 #define DEBUG_ENABLED 0
+#define DEBUG(format, args...) // noop
 #endif
 
 #if ENABLE_LOG_TRACE && !defined(NDEBUG)
