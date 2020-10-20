@@ -1761,7 +1761,8 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // Execute
   int length;
-  turbine_io_bcast(comm, &s, &length);
+  bool b = turbine_io_bcast(comm, &s, &length);
+  TCL_CHECK_MSG(b, "Broadcast failed!");
 
   // Return
   if (rank != root)
