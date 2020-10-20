@@ -1741,6 +1741,7 @@ Turbine_Bcast_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   // Unpack
+  // ARGS: comm root variable_name
   TCL_ARGS(4);
   int rc;
   Tcl_WideInt comm_int;
