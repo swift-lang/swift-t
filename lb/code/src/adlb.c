@@ -1692,7 +1692,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                adlb_retrieve_refc refcounts, adlb_data_type* type,
                void* data, size_t* length)
 {
-  double t0 = MPI_Wtime();
+  unused double t0 = MPI_Wtime();
   MPI_Status status;
   MPI_Request request;
 
@@ -1743,7 +1743,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                                               to_server_rank);
   ADLB_CHECK(ac);
 
-  double t1 = MPI_Wtime();
+  unused double t1 = MPI_Wtime();
   INFO("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
        xlb_s.layout.rank, to_server_rank, id, t1-t0);
 

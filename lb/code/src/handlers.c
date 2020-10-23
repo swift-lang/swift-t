@@ -1222,7 +1222,7 @@ handle_retrieve(int caller)
   // TRACE("ADLB_TAG_RETRIEVE");
   MPE_LOG(xlb_mpe_svr_retrieve_start);
 
-  double t0 = MPI_Wtime();
+  unused double t0 = MPI_Wtime();
 
   MPI_Status status;
 
@@ -1297,7 +1297,7 @@ handle_retrieve(int caller)
 
   ADLB_Free_binary_data2(&result, xlb_scratch);
 
-  double t1 = MPI_Wtime();
+  unused double t1 = MPI_Wtime();
   INFO("handle_retrieve: rank=%i %8.5f", xlb_s.layout.rank, t1-t0);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);

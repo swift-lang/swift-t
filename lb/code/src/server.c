@@ -181,7 +181,7 @@ xlb_server_init(const struct xlb_state *state)
   code = xlb_steal_init();
   ADLB_CHECK(code);
 
-  printf("server_init(): rank=%i\n", state->layout.rank);
+  TRACE("server_init(): rank=%i\n", state->layout.rank);
 
   xlb_engine_code tc = xlb_engine_init(state->layout.rank);
   ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
@@ -417,7 +417,7 @@ static adlb_code xlb_process_ready_work(void)
   adlb_code rc;
   bool ready = false;
 
-  double t0 = MPI_Wtime();
+  unused double t0 = MPI_Wtime();
 
   if (xlb_server_ready_work.count > 0)
   {
@@ -431,7 +431,7 @@ static adlb_code xlb_process_ready_work(void)
     ADLB_CHECK(rc);
   }
 
-  double t1 = MPI_Wtime();
+  unused double t1 = MPI_Wtime();
 
   if (ready)
   {
