@@ -21,8 +21,7 @@
  *      Author: wozniak
  */
 
-#ifndef TOOLS_H
-#define TOOLS_H
+#pragma once
 
 #include <assert.h>
 #include <inttypes.h>
@@ -350,5 +349,3 @@ int slurp_process(const char** argv);
 void print_ints(const int* A, int n);
 
 void quicksort_ints(int* A, int first, int last);
-
-#endif
