@@ -36,7 +36,7 @@ ifelse(getenv_nospace(PROJECT),`',,
 #SBATCH --time=getenv_nospace(WALLTIME)
 #SBATCH --nodes=getenv_nospace(NODES)
 #SBATCH --ntasks-per-node=getenv_nospace(PPN)
-#SBATCH --workdir=getenv_nospace(TURBINE_OUTPUT)
+#SBATCH -D getenv_nospace(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
 ifelse(getenv_nospace(MAIL_ENABLED),`1',
