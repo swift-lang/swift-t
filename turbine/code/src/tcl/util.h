@@ -298,11 +298,11 @@ static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return TCL_OK;
 }
 
-/*
-  Extract ADLB subscript from string (assume string subscript).
-  Returned subscript will have pointer to Tcl-interp-owned string
+/**
+   Extract ADLB subscript from string (assume string subscript).
+   Returned subscript will have pointer to Tcl-interp-owned string
  */
-static inline int Tcl_GetADLB_Subscript(Tcl_Obj *objPtr, adlb_subscript *sub)
+static inline int Tcl_GetADLB_Subscript(Tcl_Obj* objPtr, adlb_subscript* sub)
 {
   int keylen;
   sub->key = Tcl_GetStringFromObj(objPtr, &keylen);
@@ -324,9 +324,10 @@ static inline int Tcl_GetADLB_Subscript(Tcl_Obj *objPtr, adlb_subscript *sub)
  *                (to allow for future support for multiple subscripts
  *                 with binary data)
  */
-static inline int adlb_subscript_convert(
-      Tcl_Interp *interp, Tcl_Obj *const objv[],
-      const char *str, size_t length, adlb_subscript *sub, bool *alloced)
+static inline int
+adlb_subscript_convert(Tcl_Interp* interp, Tcl_Obj* const objv[],
+                       const char* str, size_t length,
+                       adlb_subscript* sub, bool* alloced)
 {
   if (length == 0)
   {

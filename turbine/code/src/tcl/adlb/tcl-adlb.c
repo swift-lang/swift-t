@@ -156,17 +156,19 @@ char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
 static table_bp blob_cache;
 
 /**
- * Cache Tcl_Objs for struct field names
+   Cache Tcl_Objs for struct field names
  */
-static struct {
-  Tcl_Obj ***objs;
+static struct
+{
+  Tcl_Obj*** objs;
   int size;
 } field_name_objs;
 
-/*
-  Represent full type of a data structure
- */
-typedef struct {
+/**
+   Represent full type of a data structure
+*/
+typedef struct
+{
   int len;
   adlb_data_type *types; /* E.g. container and nested types */
   adlb_type_extra *extras; /* E.g. for struct subtype */
