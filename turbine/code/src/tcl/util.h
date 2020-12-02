@@ -20,8 +20,7 @@
  * Various utilities for C-based Tcl extensions
  * */
 
-#ifndef TURBINE_TCL_UTIL_H
-#define TURBINE_TCL_UTIL_H
+#pragma once
 
 #include <tcl.h>
 
@@ -363,5 +362,3 @@ adlb_subscript_convert(Tcl_Interp* interp, Tcl_Obj* const objv[],
   }
   return TCL_OK;
 }
-
-#endif
