@@ -210,7 +210,7 @@ ARGS=( ${*} )
 
 if [[ ! -f ${PROGRAM} ]]
 then
-  print "turbine: Program not found: ${PROGRAM}"
+  print "turbine: program not found: ${PROGRAM}"
   exit 1
 fi
 if [[ ${#PROGRAM%.swift} != ${#PROGRAM} ]]
