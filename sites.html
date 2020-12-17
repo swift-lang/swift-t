@@ -746,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.3,</span>
-<span id="revdate">May 2020</span>
+<span id="revdate">December 2020</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -924,7 +924,7 @@ to the scheduler, it assumes you have already done that.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code># Inside the interactive job
-$ aprun -n 4 turbine-pilot workflow.tic &lt;ARGUMENTS...&gt;</code></pre>
+$ aprun -B turbine-pilot workflow.tic &lt;ARGUMENTS...&gt;</code></pre>
 </div></div>
 </div>
 <div class="sect3">
@@ -1035,8 +1035,25 @@ processes per node), submitted by PBS to queue <code>bigqueue</code>.</p></div>
 <div class="sect2">
 <h3 id="variables">Turbine scheduler variables</h3>
 <div class="paragraph"><p>For scheduled systems, Turbine accepts a common set of environment
-variables.  These may be placed in the <a href="#settings_file">settings file</a>
-or set by the user in any other way.</p></div>
+variables.  These may be set by:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Simply setting them in the calling environment
+</p>
+</li>
+<li>
+<p>
+Setting them in the environment <a href="#settings_file">settings file</a>
+</p>
+</li>
+<li>
+<p>
+Passing them in via the flag <code>-e</code> .
+</p>
+</li>
+</ul></div>
+<!-- end list -->
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>PROCS</code>
@@ -3827,7 +3844,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated 2020-12-17 11:11:33 CST
+Last updated 2020-12-17 11:19:21 CST
 </div>
 </div>
 </body>
