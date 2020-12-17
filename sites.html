@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +746,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.4.3,</span>
-<span id="revdate">March 2020</span>
+<span id="revdate">May 2020</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -864,7 +863,7 @@ with <code>swift-t</code> or run <code>stc</code> and <code>turbine</code> separ
 platform-independent.  You may run STC to develop and debug your
 script on your local workstation, then simply copy <code>program.tic</code> to
 the big machine for execution.  Just make sure that the STC and
-Turbine versions are compatible (the same release number).</p></div>
+Turbine versions are compatible (the same release).</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -1235,12 +1234,27 @@ in Swift/T via <code>getenv()</code>.</p></div>
 </li>
 <li>
 <p>
+<code>TURBINE_STDOUT</code>
+</p>
+</li>
+<li>
+<p>
 <code>TURBINE_LOG</code>
 </p>
 </li>
 <li>
 <p>
 <code>TURBINE_DEBUG</code>
+</p>
+</li>
+<li>
+<p>
+<code>ADLB_DEBUG</code>
+</p>
+</li>
+<li>
+<p>
+<code>ADLB_TRACE</code>
 </p>
 </li>
 <li>
@@ -1263,11 +1277,6 @@ in Swift/T via <code>getenv()</code>.</p></div>
 <code>TCLLIBPATH</code>
 </p>
 </li>
-<li>
-<p>
-<code>LD_LIBRARY_PATH</code>
-</p>
-</li>
 </ul></div>
 <div class="admonitionblock">
 <table><tr>
@@ -1276,6 +1285,16 @@ in Swift/T via <code>getenv()</code>.</p></div>
 </td>
 <td class="content"><code>TCLLIBPATH</code> should not be set directly by the user,
 see <a href="guide.html#swift_path"><code>SWIFT_PATH</code></a></td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content"><code>LD_LIBRARY_PATH</code> may be explicity set by the user.  Normally
+this is already set but customizations may be needed when running with
+Python, R, or other libraries.</td>
 </tr></table>
 </div>
 </div>
@@ -3808,8 +3827,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer">
 <div id="footer-text">
 Version 1.4.3<br />
-Last updated
- 2020-06-10 16:29:30 CDT
+Last updated 2020-12-17 11:11:33 CST
 </div>
 </div>
 </body>
