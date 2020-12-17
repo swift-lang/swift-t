@@ -242,8 +242,15 @@ processes per node), submitted by PBS to queue +bigqueue+.
 === Turbine scheduler variables
 
 For scheduled systems, Turbine accepts a common set of environment
-variables.  These may be placed in the <<settings_file,settings file>>
-or set by the user in any other way.
+variables.  These may be set by:
+
+* Simply setting them in the calling environment
+* Setting them in the environment <<settings_file,settings file>>
+* Passing them in via the flag +-e+ .
+
+++++
+<!-- end list -->
+++++
 
 +PROCS+::
 Number of processes to use
