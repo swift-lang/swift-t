@@ -4,6 +4,11 @@
  *
  *  Created on: Jun 2, 2014
  *      Author: wozniak
+ *
+ *  Contributors:
+ *   Carmine Spagnuolo, PhD
+ *   Giuseppe D'Ambrosio, PhD Student
+ *   Matteo D'Auria, PhD Student
  */
 
 #include "config.h"
