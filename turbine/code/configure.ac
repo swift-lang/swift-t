@@ -257,7 +257,10 @@ AC_ARG_WITH(mpi,
           fi
         fi
         USE_MPI_DIR=${withval}
-        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        if [[ -d ${USE_MPI_DIR}/include ]]
+        then
+          USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        fi
         MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
@@ -292,16 +295,21 @@ AC_ARG_ENABLE(mpi-checks,
                     disables these checks.]),
     [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
-# Set MPI_DIR with respect to an mpicc in PATH
+# Try to set MPI_DIR with respect to an mpicc in PATH
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-   # Last chance to configure MPI: look for mpiexec in PATH
    program=$( which mpicc 2> /dev/null)
    if [[ ${?} == 0 ]]
    then
        AC_MSG_RESULT([PATH contains: ${program}])
        USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+       if [[ -f ${USE_MPI_DIR}/include/mpi.h ]]
+       then
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+       elif [[ -f ${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
+       then
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
+       fi
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
    elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
    then
@@ -312,7 +320,24 @@ then
    MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
-# Set MPI_DIR with respect to a system OpenMPI
+# Set MPI_DIR with respect to a system MPICH
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+then
+    MPICH=/usr/lib/x86_64-linux-gnu/mpich
+    if [[ -r ${MPICH}/include/mpi.h ]]
+    then
+        AC_MSG_RESULT([Using MPICH directory: ${MPICH}])
+        USE_MPI_DIR=${MPICH}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
+    fi
+fi
+
+# Try to set MPI_DIR with respect to a system OpenMPI
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
     OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
@@ -356,6 +381,7 @@ if [[ ! -f ${USE_MPI_INCLUDE}/mpi.h ]]
 then
     if [[ -f ${USE_MPI_INCLUDE}/mpi/mpi.h ]]
     then
+        # Obsolete location?  2020-01-04
         USE_MPI_INCLUDE=${USE_MPI_INCLUDE}/mpi
     fi
 fi
