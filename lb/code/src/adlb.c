@@ -549,7 +549,7 @@ ADLBP_Get(int type_requested, void** payload,
 
   if (xlb_s.layout.am_leader)
   {
-    INFO("Get(): post: rank=%i", xlb_s.layout.rank);
+    TRACE("Get(): post: rank=%i", xlb_s.layout.rank);
   }
 
   ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
@@ -562,7 +562,7 @@ ADLBP_Get(int type_requested, void** payload,
 
   if (xlb_s.layout.am_leader)
   {
-    INFO("Get(): recv rank=%i", xlb_s.layout.rank);
+    TRACE("Get(): recv rank=%i", xlb_s.layout.rank);
   }
 
   xlb_mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
@@ -596,7 +596,7 @@ ADLBP_Get(int type_requested, void** payload,
 
   if (xlb_s.layout.am_leader)
   {
-    INFO("Get(): payload rank=%i", xlb_s.layout.rank);
+    TRACE("Get(): payload rank=%i", xlb_s.layout.rank);
   }
 
   if (g.parallelism > 1)

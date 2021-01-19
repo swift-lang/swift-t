@@ -153,7 +153,7 @@ adlb_code
 xlb_workq_init(int work_types, const xlb_layout *layout)
 {
   assert(work_types >= 1);
-  INFO("xlb_workq_init(work_types=%i)", work_types);
+  TRACE("xlb_workq_init(work_types=%i)", work_types);
 
   adlb_code ac;
 
