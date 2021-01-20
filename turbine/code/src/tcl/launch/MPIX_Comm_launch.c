@@ -95,8 +95,7 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 		lengths[i] = len;
 		total += len+2;
 	}
-	result = malloc(total);
-	memset(result, 0, total);
+	result = malloc(total+1);
 	strcpy(result, env_word);
 	char* p = result+env_word_length;
 	for(i=0; i<count; i++) {
