@@ -836,7 +836,7 @@ clean::
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
 	@rm -fv  $(TURBINE_OBJS) $(STATIC_PACKAGE_OBJS)
-	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_RESOURCE_O)
+	@rm -fv  $(STATIC_PKG_RESOURCE_O)
 	@rm -fvr tests/data
 
 clean-results:
