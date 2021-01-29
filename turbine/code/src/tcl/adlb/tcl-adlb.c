@@ -304,10 +304,10 @@ static bool must_comm_free = false;
     TCL_CONDITION(rc == ADLB_SUCCESS,                                        \
                   "<%"PRId64"> failed!", (id));                              \
   } else {                                                                   \
-  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"] failed",          \
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
+  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%s\"], double assign!",\
+                  (id), (const char*)(sub).key);          \
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%s\"] failed",          \
+                  (id), (const char*)(sub).key);          \
   }                                                                          \
 }
 
