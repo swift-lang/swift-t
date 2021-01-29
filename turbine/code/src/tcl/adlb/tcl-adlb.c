@@ -297,19 +297,21 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
 
-#define CHECK_ADLB_STORE(rc, id, sub) {                                      \
-  if (adlb_has_sub((sub))) {                                                 \
-    TCL_CONDITION(rc != ADLB_REJECTED,                                       \
-                  "<%"PRId64"> failed: double assign!", (id));               \
-    TCL_CONDITION(rc == ADLB_SUCCESS,                                        \
-                  "<%"PRId64"> failed!", (id));                              \
-  } else {                                                                   \
-  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%s\"], double assign!",\
-                  (id), (const char*)(sub).key);          \
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%s\"] failed",          \
-                  (id), (const char*)(sub).key);          \
-  }                                                                          \
-}
+#define CHECK_ADLB_STORE(rc, id, sub) {                                 \
+    if (adlb_has_sub((sub))) {                                          \
+      TCL_CONDITION(rc != ADLB_REJECTED,                                \
+                    "<%"PRId64">[\"%s\"], double assign!",              \
+                    (id), (const char*)(sub).key);                      \
+      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
+                    "<%"PRId64">[\"%s\"] failed",                       \
+                    (id), (const char*)(sub).key);                      \
+    } else {                                                            \
+      TCL_CONDITION(rc != ADLB_REJECTED,                                \
+                    "<%"PRId64"> failed: double assign!", (id));        \
+      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
+                    "<%"PRId64"> failed!", (id));                       \
+    }                                                                   \
+  }
 
 #define CHECK_ADLB_RETRIEVE(rc, handle) {                  \
   if (adlb_has_sub((handle).sub.val)) {                    \
