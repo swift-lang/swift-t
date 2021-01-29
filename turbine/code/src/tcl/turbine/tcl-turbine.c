@@ -399,7 +399,8 @@ rule_set_opts_default(struct rule_opts* opts,
                       int buffer_size)
 {
   opts->name = buffer;
-  if (action != NULL) {
+  if (action != NULL)
+  {
     assert(opts->name != NULL);
     rule_set_name_default(opts->name, buffer_size, action);
   }
