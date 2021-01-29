@@ -277,7 +277,7 @@ Turbine_Version_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("unknown turbine entry type: %s", type);   \
   strcpy(entry.name, subscript);
 
-static inline void rule_set_name_default(char* name, int size,
+static inline void rule_set_name_default(char* name, size_t size,
                                          const char* action);
 
 struct rule_opts
@@ -409,17 +409,17 @@ rule_set_opts_default(struct rule_opts* opts,
 }
 
 static inline void
-rule_set_name_default(char* name, int size, const char* action)
+rule_set_name_default(char* name, size_t size, const char* action)
 {
   char* q = strchr(action, ' ');
   if (q == NULL)
   {
-    strncpy(name, action, (size_t)size);
+    strncpy(name, action, size-1);
   }
   else
   {
-    long n = q-action+1;
-    strncpy(name, action, (size_t)n);
+    size_t n = q-action+1;
+    memcpy(name, action, n);
     name[n] = '\0';
   }
 }
