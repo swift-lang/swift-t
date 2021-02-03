@@ -302,12 +302,18 @@ then
    if [[ ${?} == 0 ]]
    then
        AC_MSG_RESULT([PATH contains: ${program}])
-       USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       if [[ -f ${USE_MPI_DIR}/include/mpi.h ]]
+       TRY_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
+       if   [[ -f ${TRY_MPI_DIR}/include/mpich/mpi.h ]]
        then
+         USE_MPI_DIR=${TRY_MPI_DIR}
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/include/mpich
+       elif [[ -f ${TRY_MPI_DIR}/include/mpi.h ]]
+       then
+         USE_MPI_DIR=${TRY_MPI_DIR}
          USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-       elif [[ -f ${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
+       elif [[ -f ${TRY_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
        then
+         USE_MPI_DIR=${TRY_MPI_DIR}
          USE_MPI_INCLUDE=${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
        fi
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
@@ -320,7 +326,7 @@ then
    MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
-# Set MPI_DIR with respect to a system MPICH
+# Set MPI_DIR with respect to a system MPICH (NEWER c. 2021)
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
     MPICH=/usr/lib/x86_64-linux-gnu/mpich
