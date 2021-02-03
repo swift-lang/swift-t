@@ -286,10 +286,38 @@ then
   exit 1
 fi
 
+# Set up user environment:
 for KV in ${ENV_VARS}
 do
+  # Set this environment variable
   export ${KV}
+  if [[ ${MPI_IMPL} == "OpenMPI" ]]
+  then
+    # Cut off the value part:
+    K=${KV%=*}
+    # Tell OpenMPI to set this environment variable:
+    LAUNCH_OPTIONS+=( -x ${K} )
+  fi
 done
+
+# Set up Swift/T environment for OpenMPI:
+if [[ ${MPI_IMPL} == "OpenMPI" ]]
+then
+  # Cf. scripts/submit/run-init.zsh
+  AUTO_VARS=(
+    TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
+    MPI_LABEL TURBINE_STDOUT
+    TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
+  )
+  for K in ${AUTO_VARS}
+  do
+    # If the variable is set, tell OpenMPI about it:
+    if (( ${(P)+K} ))
+    then
+      LAUNCH_OPTIONS+=( -x ${K} )
+    fi
+  done
+fi
 
 # Set up PYTHONPATH for turbine_helpers
 if (( ${#TURBINE_USE_PYTHON} ))

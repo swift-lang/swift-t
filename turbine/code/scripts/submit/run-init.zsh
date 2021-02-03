@@ -342,6 +342,7 @@ then
 fi
 
 # Anything in AUTO_VARS must have a default set above
+# Keep this in sync with AUTO_VARS in bin/turbine.in
 AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
             TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
             MPI_LABEL TURBINE_STDOUT
