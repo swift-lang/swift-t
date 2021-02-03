@@ -596,7 +596,7 @@ elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    HAVE_MPI_IMPL_MPICH=1
    MPI_IMPL="MPICH"
-   MPI_LINE_OUTPUT_FLAG=-l
+   MPI_LINE_OUTPUT_FLAG="-l"
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 fi # ENABLE_MPI_CHECKS==1
