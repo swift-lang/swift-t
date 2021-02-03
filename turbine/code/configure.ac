@@ -580,11 +580,13 @@ AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
    HAVE_MPI_IMPL_OPENMPI=1
+   OMPI_MAJOR_VERSION=$( grep OMPI_MAJOR_VERSION ${MPI_H} | \
+                         head -1 | cut -d ' ' -f 3 )
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL="OpenMPI"
    HAVE_MPI_IMPL_OPENMPI=1
-   if (( OMPI_MINOR_VERSION >= 3 ))
+   if (( OMPI_MAJOR_VERSION > 3 || OMPI_MINOR_VERSION >= 3 ))
    then
      MPI_LINE_OUTPUT_FLAG="--tag-output"
    else
