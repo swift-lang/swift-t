@@ -3718,7 +3718,7 @@ these steps to resolve the problem:
 install Swift/T from the downloadable package or from a Git clone.
 However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile (C) techniques.  You can more directly control
+Autotools/Makefile \(C) techniques.  You can more directly control
 the configuration when building through the arguments to +ant+ or
 +configure+.
 
