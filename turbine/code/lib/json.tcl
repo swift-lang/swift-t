@@ -34,8 +34,8 @@ namespace eval turbine {
     set i 0
     foreach a $args {
       set name  ""
-      set value [ retrieve_decr $a ]
       set type  [ adlb::typeof  $a ]
+      set value [ retrieve_decr $a ]
       lappend L [ list $name $value $type ]
       incr i
     }
@@ -157,8 +157,9 @@ namespace eval turbine {
     set i 0
     foreach a $args {
       set name  [ dict get $D $i ]
-      set value [ retrieve_decr $a ]
       set type  [ adlb::typeof  $a ]
+      set value [ retrieve_decr $a ]
+
       lappend L [ list $name $value $type ]
       incr i
     }
