@@ -691,9 +691,11 @@ LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
 http://www.lcrc.anl.gov/about/bebop[Bebop] is a 1024-node x86
 cluster at ANL.  It uses SLURM.
 
-*As of:* Master, 2019-06-18
-
 ==== Public installation
+
+===== Regular build
+
+*As of:* Master, 2019-06-18
 
 Add to +PATH+:
 
@@ -717,6 +719,33 @@ Run with:
 ----
 $ swift-t -m slurm workflow.swift
 ----
+
+[[bebop_spack]]
+===== Spack
+
+*As of:* Master, 2021-02-24
+
+This installation uses Spack for Swift/T,
+and Anaconda for most dependencies.
+
+Load from Spack:
+
+----
+$ source ~woz/Public/sfw/bebop/spack/mvapich2/share/spack/setup-env.sh
+$ spack load stc turbine
+$ swift-t -v
+...
+ using MPI:    /blues/.../spack-0.10.1/.../gcc-7.1.0/mvapich2-2.3a ... "MPICH"
+ using Tcl:    /home/woz/Public/sfw/bebop/anaconda3/bin/tclsh8.6
+ using Python: /home/woz/Public/sfw/bebop/anaconda3/lib python3.8
+ using R:      /gpfs/fs1/home/woz/Public/sfw/bebop/anaconda3/lib/R
+----
+
+Run as noted for Bebop compute nodes above. +
+This installation also supports link:#_turbine_pilot[Turbine Pilot].
+
+See this for build hints:
++~woz/Public/sfw/bebop/spack/mvapich2/etc/spack/packages.yaml+
 
 ==== Build instructions
 
