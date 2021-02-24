@@ -154,7 +154,7 @@ mpiexec tclsh program.tic
 On more complex, scheduled systems, users do not invoke +mpiexec+
 directly; Turbine run scripts are provided by Swift/T.
 
-=== Turbine pilot
+=== Turbine Pilot
 
 The +turbine-pilot+ program can be used to run Swift/T interactively
 on the compute nodes of a scheduled system in an interactive
