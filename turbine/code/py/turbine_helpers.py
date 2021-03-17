@@ -82,6 +82,6 @@ def json_array_size(J, path):
 def json_get(J, path):
     """ Return whatever is at the given path (usually scalar) """
     J = json_path(J, path)
-    if J == None:
+    if J is None:
         return "null"
     return str(J)
