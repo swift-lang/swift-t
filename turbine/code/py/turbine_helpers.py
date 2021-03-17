@@ -17,7 +17,6 @@
 # Python helpers for JSON module
 
 import json
-import sys
 
 # Type classes for comparison:
 _zero  = 0
