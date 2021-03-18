@@ -28,6 +28,8 @@ type_list  =  [].__class__
 type_dict  =  {}.__class__
 type_none  = None.__class__
 
+task_comm = "__UNSET__"
+
 def set_key_type(k):
     """ Convert to integer if possible """
     try:

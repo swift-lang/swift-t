@@ -41,6 +41,8 @@
 #include <mpi.h>
 #include <tcl.h>
 
+#include <tools.h>
+
 #include "src/util/debug.h"
 #include "src/tcl/util.h"
 
@@ -48,59 +50,9 @@
 
 #if HAVE_PYTHON==1
 
-/** @return A Tcl return code */
-static int
-handle_python_exception(bool exceptions_are_errors)
-{
-  printf("\n");
-  printf("PYTHON EXCEPTION:\n");
-  fflush(stdout);
-
-  #if PY_MAJOR_VERSION >= 3
-  int size = 4096;
-  char buffer1[size];
-  char buffer2[size];
-  memset(buffer1, 0, size);
-  FILE* errs = fmemopen(buffer1, size, "r+");
-
-  PyObject *exc,*val,*tb;
-  PyErr_Fetch(&exc, &val, &tb);
-  PyObject_Print(exc, errs, Py_PRINT_RAW);
-  fprintf(errs, "\n");
-  PyObject_Print(val, errs, Py_PRINT_RAW);
-  fprintf(errs, "\n");
-
-  rewind(errs);
-  while (fgets(buffer2, size, errs) != NULL)
-  {
-    int n = strlen(buffer2);
-    if (n == 0) continue;
-    printf("EXCEPTION: ");
-    fwrite(buffer2, 1, n, stdout);
-    fflush(stdout);
-  }
-  fclose(errs);
-
-  #else // Python 2
-
-  PyErr_Print();
-
-  #endif
-
-  if (exceptions_are_errors)
-    return TCL_ERROR;
-  return TCL_OK;
-}
-
-static int
-handle_python_non_string(PyObject* o)
-{
-  printf("python: expression did not return a string!\n");
-  fflush(stdout);
-  printf("python: expression evaluated to: ");
-  PyObject_Print(o, stdout, 0);
-  return TCL_ERROR;
-}
+static int   handle_python_exception(bool exceptions_are_errors);
+static char* handle_python_exception_parallel(void);
+static int   handle_python_non_string(PyObject* o);
 
 static PyObject* main_module = NULL;
 static PyObject* main_dict   = NULL;
@@ -108,24 +60,48 @@ static PyObject* local_dict  = NULL;
 
 static bool initialized = false;
 
+static void python_finalize(void);
+
+static char* python_result_default   = "__NOTHING__";
+static char* python_result_exception = "__EXCEPTION__";
+
+/** 1 on error, 0 on success */
+static int python_parallel_error_code = 0;
+static char python_parallel_error_string[4096];
+
+#if   HAVE_MPI_IMPL_MPICH
+static char* mpi_impl = "MPICH";
+#elif HAVE_MPI_IMPL_OPENMPI
+static char* mpi_impl = "OpenMPI";
+#endif
+
+#define EXCEPTION(ee)                           \
+  {                                             \
+    *result = strdup(python_result_exception);  \
+    return handle_python_exception(ee);         \
+  }
+
 static int
 python_init(void)
 {
-/* Loading python library symbols so that dynamic extensions don't throw symbol not found error.
-           Ref Link: http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
-        */
-  char str_python_lib[32];
-#ifdef _WIN32
-  sprintf(str_python_lib, "lib%s.dll", PYTHON_NAME);
-#elif defined __unix__
-  sprintf(str_python_lib, "lib%s.so", PYTHON_NAME);
-#elif defined __APPLE__
-  sprintf(str_python_lib, "lib%s.dylib", PYTHON_NAME);
-#endif
-  dlopen(str_python_lib, RTLD_NOW | RTLD_GLOBAL);
-
   if (initialized) return TCL_OK;
+
+  /* Load Python library symbols so that dynamic extensions
+     don't throw symbol not found error.
+     Cf. http://stackoverflow.com/questions/29880931/importerror-and-pyexc-systemerror-while-embedding-python-script-within-c-for-pam
+   */
+  char python_lib_name[32];
+#ifdef _WIN32
+  sprintf(python_lib_name, "lib%s.dll", PYTHON_NAME);
+#elif defined __unix__
+  sprintf(python_lib_name, "lib%s.so", PYTHON_NAME);
+#elif defined __APPLE__
+  sprintf(python_lib_name, "lib%s.dylib", PYTHON_NAME);
+#endif
+  dlopen(python_lib_name, RTLD_NOW | RTLD_GLOBAL);
+
   DEBUG_TCL_TURBINE("python: initializing...");
+  printf("python: initializing...\n");
   Py_InitializeEx(1);
   main_module  = PyImport_AddModule("__main__");
   if (main_module == NULL) return handle_python_exception(true);
@@ -133,20 +109,10 @@ python_init(void)
   if (main_dict == NULL) return handle_python_exception(true);
   local_dict = PyDict_New();
   if (local_dict == NULL) return handle_python_exception(true);
+
   initialized = true;
   return TCL_OK;
 }
-
-static void python_finalize(void);
-
-static char* python_result_default   = "__NOTHING__";
-static char* python_result_exception = "__EXCEPTION__";
-
-#define EXCEPTION(ee)                           \
-  {                                             \
-    *result = python_result_exception;          \
-    return handle_python_exception(ee);         \
-  }
 
 /**
    @param persist: If true, retain the Python interpreter,
@@ -229,34 +195,72 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   int task_rank, task_size;
   MPI_Comm_rank(comm, &task_rank);
   MPI_Comm_size(comm, &task_size);
-  printf("In ppp(): rank: %i/%i\n", task_rank, task_size);
-  printf("code: %s\n", code);
-  printf("expr: %s\n", expr);
-
-  long long int task_comm_int = (long long int) comm;
-  char task_comm_string[64];
-  sprintf(task_comm_string, "%lli", task_comm_int);
-  setenv("task_comm", task_comm_string, true);
+  //  printf("In ppp(): rank: %i/%i\n", task_rank, task_size);
+  //  printf("code: %s\n", code);
+  //  printf("expr: %s\n", expr);
 
   int rc;
-  rc = python_init();
-  assert(rc == TCL_OK);
 
+  // Initialize Python (if needed):
+  rc = python_init();
+  valgrind_assert_msg(rc == TCL_OK, "Could not initialize Python!");
+
+  // Convert the MPI_Comm to a big integer (MPICH or OpenMPI)
+  long long int task_comm_int = (long long int) comm;
+
+  // Run some Python code to setup the mpi4py communicator:
+  char setup[256];
+  memset(setup, '\0', 256);
+  sprintf(setup, "import turbine_helpers as TH");
+  PyRun_String(setup, Py_file_input, main_dict, local_dict);
+  if (PyErr_Occurred()) return handle_python_exception_parallel();
+  sprintf(setup, "TH.task_comm = %lli", task_comm_int);
+  // printf("setup: %s\n", setup); fflush(stdout);
+  PyRun_String(setup, Py_file_input, main_dict, local_dict);
+  sprintf(setup, "TH.mpi_impl = \"%s\"", mpi_impl);
+  PyRun_String(setup, Py_file_input, main_dict, local_dict);
+
+  // Run the user Python code:
   char* output;
   rc = python_eval(true, true, code, expr, &output);
-  if (rc != TCL_OK)
+  // Set the error markers for later access:
+  if (rc == TCL_OK)
+  {
+    python_parallel_error_code = 0;
+    strcpy(python_parallel_error_string, "OK");
+  }
+  else
   {
     printf("python parallel task failed!\n");
-    exit(EXIT_FAILURE);
+    python_parallel_error_code = 1;
+    strcpy(python_parallel_error_string, output);
   }
 
-  printf("eval ok.\n");   fflush(stdout);
-
+  // Free the new MPI_Comm
   MPI_Comm_free(&comm);
+
+  // Return the result to SWIG:
   if (task_rank == 0)
     return output;
+
+  // We are not rank 0: free and return
   free(output);
   return NULL;
+}
+
+/** For SWIG- Check error status */
+int
+python_parallel_error_status()
+{
+  return python_parallel_error_code;
+}
+
+/** For SWIG- Obtain human-readable error message */
+char*
+python_parallel_error_message()
+{
+  printf("error_message(): %s\n", python_parallel_error_string);
+  return strdup(python_parallel_error_string);
 }
 
 
@@ -283,12 +287,22 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   return NULL;
 }
 
+int
+python_parallel_error_status()
+{
+  return python_parallel_error_code;
+}
+
+char*
+python_parallel_error_message()
+{
+  return strdup("__DISABLED__");
+}
+
 #endif
 
 
-/**
-   Called when Tcl loads this extension
- */
+/** Called when Tcl loads this extension */
 int
 Tclpython_Init(Tcl_Interp *interp)
 {
@@ -312,4 +326,104 @@ void
 tcl_python_init(Tcl_Interp* interp)
 {
   COMMAND("eval", Python_Eval_Cmd);
+}
+
+/** @return A Tcl return code */
+static int
+handle_python_non_string(PyObject* o)
+{
+  printf("python: expression did not return a string!\n");
+  fflush(stdout);
+  printf("python: expression evaluated to: ");
+  PyObject_Print(o, stdout, 0);
+  return TCL_ERROR;
+}
+
+/** @return A Tcl return code */
+static int
+handle_python_exception(bool exceptions_are_errors)
+{
+  printf("\n");
+  printf("PYTHON EXCEPTION:\n");
+  fflush(stdout);
+
+  #if PY_MAJOR_VERSION >= 3
+  int size = 4096;
+  char buffer1[size];
+  char buffer2[size];
+  memset(buffer1, 0, size);
+  FILE* errs = fmemopen(buffer1, size, "r+");
+
+  PyObject *exc,*val,*tb;
+  PyErr_Fetch(&exc, &val, &tb);
+  PyObject_Print(exc, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+  PyObject_Print(val, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+
+  rewind(errs);
+  while (fgets(buffer2, size, errs) != NULL)
+  {
+    int n = strlen(buffer2);
+    if (n == 0) continue;
+    printf("EXCEPTION: ");
+    fwrite(buffer2, 1, n, stdout);
+    fflush(stdout);
+  }
+  fclose(errs);
+
+  #else // Python 2
+
+  PyErr_Print();
+
+  #endif
+
+  if (exceptions_are_errors)
+    return TCL_ERROR;
+  return TCL_OK;
+}
+
+static char*
+handle_python_exception_parallel()
+{
+  printf("\n");
+  printf("PYTHON PARALLEL EXCEPTION:\n");
+  fflush(stdout);
+
+  python_parallel_error_code = 1;
+  strcpy(python_parallel_error_string, "EXCEPTION!");
+
+  #if PY_MAJOR_VERSION >= 3
+  int size = 4096;
+  char buffer1[size];
+  char buffer2[size];
+  memset(buffer1, 0, size);
+  FILE* errs = fmemopen(buffer1, size, "r+");
+
+  PyObject *exc,*val,*tb;
+  PyErr_Fetch(&exc, &val, &tb);
+  PyObject_Print(exc, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+  PyObject_Print(val, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+
+  rewind(errs);
+  while (fgets(buffer2, size, errs) != NULL)
+  {
+    int n = strlen(buffer2);
+    if (n == 0) continue;
+    printf("EXCEPTION: ");
+    fwrite(buffer2, 1, n, stdout);
+    fflush(stdout);
+  }
+  fclose(errs);
+
+  #else // Python 2
+
+  PyErr_Print();
+
+  #endif
+
+  // Return this to SWIG:
+  return strdup("PYTHON PARALLEL EXCEPTION (see above)");
 }
