@@ -209,7 +209,8 @@ get_color(int rank, MPI_Comm comm, int count, int* procs,
       return color;
   }
   // Unreachable (guarded by sanity_check())
-  assert(0);
+  assert(false);
+  return -1;
 }
 
 static const int MAX_SPEC=1024;
