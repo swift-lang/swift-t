@@ -14,7 +14,9 @@
 
 # TURBINE HELPERS PY
 
-# Python helpers for JSON module
+# Python helpers for JSON and mpi4py
+
+### JSON STUFF
 
 import json
 
@@ -27,8 +29,6 @@ type_float =  _zerof.__class__
 type_list  =  [].__class__
 type_dict  =  {}.__class__
 type_none  = None.__class__
-
-task_comm = "__UNSET__"
 
 def set_key_type(k):
     """ Convert to integer if possible """
@@ -87,3 +87,31 @@ def json_get(J, path):
     if J is None:
         return "null"
     return str(J)
+
+
+### MPI4PY STUFF
+
+# For mpi4py tasks:
+task_comm = "__UNSET__"
+
+def get_task_comm():
+    from mpi4py import MPI
+    import ctypes
+
+    # print("turbine_helpers.task_comm: %i" % task_comm)
+    # sys.stdout.flush()
+
+    mpi4py_comm = MPI.Intracomm()
+    if   MPI._sizeof(MPI.Comm) == ctypes.sizeof(ctypes.c_int):
+        # MPICH
+        comm_int = ctypes.c_int
+        mpi4py_comm_ptr = comm_int.from_address(MPI._addressof(mpi4py_comm))
+        mpi4py_comm_ptr.value = task_comm
+    elif MPI._sizeof(MPI.Comm) == ctypes.sizeof(ctypes.c_void_p):
+        # OpenMPI
+        comm_pointer = ctypes.c_void_p
+        mpi4py_comm = MPI.Intracomm()
+        handle = comm_pointer.from_address(MPI._addressof(mpi4py_comm))
+        handle.value = task_comm
+
+    return mpi4py_comm
