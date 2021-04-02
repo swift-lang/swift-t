@@ -101,7 +101,6 @@ python_init(void)
   dlopen(python_lib_name, RTLD_NOW | RTLD_GLOBAL);
 
   DEBUG_TCL_TURBINE("python: initializing...");
-  printf("python: initializing...\n");
   Py_InitializeEx(1);
   main_module  = PyImport_AddModule("__main__");
   if (main_module == NULL) return handle_python_exception(true);
@@ -248,86 +247,6 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   return NULL;
 }
 
-/** For SWIG- Check error status */
-int
-python_parallel_error_status()
-{
-  return python_parallel_error_code;
-}
-
-/** For SWIG- Obtain human-readable error message */
-char*
-python_parallel_error_message()
-{
-  printf("error_message(): %s\n", python_parallel_error_string);
-  return strdup(python_parallel_error_string);
-}
-
-
-#else // Python disabled
-
-static int
-Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[])
-{
-  return turbine_user_errorv(interp,
-                     "Turbine not compiled with Python support");
-}
-
-char*
-python_parallel_persist(MPI_Comm comm, char* code, char* expr)
-{
-  int task_rank, task_size;
-  MPI_Comm_rank(comm, &task_rank);
-  MPI_Comm_size(comm, &task_size);
-  printf("python_parallel_persist: "
-         "Turbine not compiled with Python support");
-  if (task_rank == 0)
-    return strdup("__ERROR__");
-  return NULL;
-}
-
-int
-python_parallel_error_status()
-{
-  return python_parallel_error_code;
-}
-
-char*
-python_parallel_error_message()
-{
-  return strdup("__DISABLED__");
-}
-
-#endif
-
-
-/** Called when Tcl loads this extension */
-int
-Tclpython_Init(Tcl_Interp *interp)
-{
-  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
-    return TCL_ERROR;
-
-  if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
-    return TCL_ERROR;
-
-  return TCL_OK;
-}
-
-/**
-   Shorten object creation lines.  python:: namespace is prepended
- */
-#define COMMAND(tcl_function, c_function) \
-    Tcl_CreateObjCommand(interp, "python::" tcl_function, c_function, \
-                         NULL, NULL);
-
-void
-tcl_python_init(Tcl_Interp* interp)
-{
-  COMMAND("eval", Python_Eval_Cmd);
-}
-
 /** @return A Tcl return code */
 static int
 handle_python_non_string(PyObject* o)
@@ -426,4 +345,83 @@ handle_python_exception_parallel()
 
   // Return this to SWIG:
   return strdup("PYTHON PARALLEL EXCEPTION (see above)");
+}
+
+/** For SWIG- Check error status */
+int
+python_parallel_error_status()
+{
+  return python_parallel_error_code;
+}
+
+/** For SWIG- Obtain human-readable error message */
+char*
+python_parallel_error_message()
+{
+  printf("error_message(): %s\n", python_parallel_error_string);
+  return strdup(python_parallel_error_string);
+}
+
+#else // HAVE_PYTHON==0 // Python disabled
+
+static int
+Python_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return turbine_user_errorv(interp,
+                     "Turbine not compiled with Python support");
+}
+
+char*
+python_parallel_persist(MPI_Comm comm, char* code, char* expr)
+{
+  int task_rank, task_size;
+  MPI_Comm_rank(comm, &task_rank);
+  MPI_Comm_size(comm, &task_size);
+  printf("python_parallel_persist: "
+         "Turbine not compiled with Python support");
+  if (task_rank == 0)
+    return strdup("__ERROR__");
+  return NULL;
+}
+
+int
+python_parallel_error_status()
+{
+  return 1;
+}
+
+char*
+python_parallel_error_message()
+{
+  return strdup("__DISABLED__");
+}
+
+#endif // HAVE_PYTHON
+
+
+/** Called when Tcl loads this extension */
+int
+Tclpython_Init(Tcl_Interp *interp)
+{
+  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
+    return TCL_ERROR;
+
+  if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
+    return TCL_ERROR;
+
+  return TCL_OK;
+}
+
+/**
+   Shorten object creation lines.  python:: namespace is prepended
+ */
+#define COMMAND(tcl_function, c_function) \
+    Tcl_CreateObjCommand(interp, "python::" tcl_function, c_function, \
+                         NULL, NULL);
+
+void
+tcl_python_init(Tcl_Interp* interp)
+{
+  COMMAND("eval", Python_Eval_Cmd);
 }
