@@ -329,17 +329,30 @@ fi
 # Set MPI_DIR with respect to a system MPICH (NEWER c. 2021)
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-    MPICH=/usr/lib/x86_64-linux-gnu/mpich
-    if [[ -r ${MPICH}/include/mpi.h ]]
+    if [[ -r /usr/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
     then
-        AC_MSG_RESULT([Using MPICH directory: ${MPICH}])
-        USE_MPI_DIR=${MPICH}
+        # APT
+        DIR=/usr/lib/x86_64-linux-gnu/mpich
+        AC_MSG_RESULT([Using MPICH (APT) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
         if [[ ${USE_LAUNCHER} == 0 ]]
         then
           USE_LAUNCHER=/usr/bin/mpiexec
         fi
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
         USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
+    elif [[ -r /usr/include/mpich-x86_64/mpi.h ]]
+    then
+        # Yum
+        DIR=/usr/lib64/mpich
+        AC_MSG_RESULT([Using MPICH (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/mpich/bin/mpicc
+        fi
+        USE_MPI_INCLUDE=/usr/include/mpich-x86_64
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
     fi
 fi
 
@@ -1068,6 +1081,21 @@ AC_ARG_WITH(tcl,
           AC_MSG_RESULT([no])
         fi
       done
+
+      if [[ ${USE_TCL} == 0 ]]
+      then
+        AC_MSG_CHECKING([for tclsh on path])
+        program=$( which tclsh 2>&1 )
+        if [[ ${?} == 0 ]]
+        then
+          AC_MSG_RESULT([yes: ${program}])
+          USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
+          AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
+          break
+        else
+          AC_MSG_RESULT([no])
+        fi
+      fi
 
       if [[ ${USE_TCL} == 0 ]]
       then
