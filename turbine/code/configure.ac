@@ -349,7 +349,7 @@ then
         USE_MPI_DIR=${DIR}
         if [[ ${USE_LAUNCHER} == 0 ]]
         then
-          USE_LAUNCHER=/usr/lib64/mpich/bin/mpicc
+          USE_LAUNCHER=/usr/lib64/mpich/bin/mpiexec
         fi
         USE_MPI_INCLUDE=/usr/include/mpich-x86_64
         USE_MPI_LIB=${USE_MPI_DIR}/lib
