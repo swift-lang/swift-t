@@ -359,16 +359,27 @@ fi
 # Try to set MPI_DIR with respect to a system OpenMPI
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-    OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
-    if [[ -r ${OPENMPI}/include/mpi.h ]]
+    if [[ -r /usr/lib/x86_64-linux-gnu/openmpi/include/mpi.h ]]
     then
-        AC_MSG_RESULT([Using OpenMPI directory: ${OPENMPI}])
-        USE_MPI_DIR=${OPENMPI}
+        AC_MSG_RESULT([Using OpenMPI (Debian) directory: ${OPENMPI}])
+        USE_MPI_DIR=/usr/lib/x86_64-linux-gnu/openmpi
         if [[ $USE_LAUNCHER == 0 ]]
         then
           USE_LAUNCHER=/usr/bin/mpiexec
         fi
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    elif [[ -r /usr/include/openmpi-x86_64/mpi.h ]]
+    then
+        # Yum OpenMPI
+        DIR=/usr/lib64/openmpi
+        AC_MSG_RESULT([Using OpenMPI (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/openmpi/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=/usr/include/openmpi-x86_64
         USE_MPI_LIB=${USE_MPI_DIR}/lib
     fi
 fi
