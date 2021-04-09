@@ -343,7 +343,7 @@ then
         USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
     elif [[ -r /usr/include/mpich-x86_64/mpi.h ]]
     then
-        # Yum
+        # Yum MPICH
         DIR=/usr/lib64/mpich
         AC_MSG_RESULT([Using MPICH (Yum) directory: ${DIR}])
         USE_MPI_DIR=${DIR}
