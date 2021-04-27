@@ -181,25 +181,25 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.3.tar.gz
+$ wget http://swift-lang.github.io/swift-t-downloads/1.5/swift-t-1.5.0.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-tar xfz swift-t-1.4.3.tar.gz
-cd swift-t-1.4.3
+$ tar xfz swift-t-1.5.0.tar.gz
+$ cd swift-t-1.5.0
 ----
 +
 3. Create a settings file by running:
 +
 ----
-./dev/build/init-settings.sh
+$ ./dev/build/init-settings.sh
 ----
 +
 4. Edit the settings file: +dev/build/swift-t-settings.sh+
 +
-At a minimum, you must set the install directory with +SWIFT_T_PREFIX+
+At a minimum, you should set the install directory with +SWIFT_T_PREFIX+
 (the default will install to +/tmp+).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
@@ -215,7 +215,7 @@ TIP: Save your +swift-t-settings.sh+ when you download a new package
 5. Run the build script
 +
 ----
-dev/build/build-swift-t.sh
+$ dev/build/build-swift-t.sh
 ----
 +
 See +dev/build/README.md+ for more notes and build options. +
@@ -231,8 +231,8 @@ TIP: if you want more control than +build-swift-t.sh+ provides, you can
 6. Add Turbine and STC to your paths
 +
 ----
-PATH=${PATH}:/path/to/swift-t-install/turbine/bin
-PATH=${PATH}:/path/to/swift-t-install/stc/bin
+$ PATH=${PATH}:/path/to/swift-t-install/turbine/bin
+$ PATH=${PATH}:/path/to/swift-t-install/stc/bin
 ----
 
 == Usage
