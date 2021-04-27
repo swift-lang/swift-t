@@ -63,7 +63,7 @@ const char* tgt_mix_str(tgt_mix tgt)
     case NODE_SOFT_TARGETED: return "NODE_SOFT_TARGETED";
     default: assert(false);
   }
-  // Cannot get here:
+  // Unreachable:
   assert(false);
   return NULL;
 }
