@@ -7,6 +7,7 @@ OUTPUT=${THIS%.sh}.out
 
 if mpiexec -n 4 ${EXEC} > ${OUTPUT} 2>&1
 then
+  CODE=0
   echo "OK"
 else
   CODE=$?
