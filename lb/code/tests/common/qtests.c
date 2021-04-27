@@ -38,7 +38,7 @@ static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
 static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
                               const char **hosts, int comm_size);
 
-const char *prio_mix_str(prio_mix prio)
+const char* prio_mix_str(prio_mix prio)
 {
   if (prio == EQUAL)
   {
@@ -51,7 +51,7 @@ const char *prio_mix_str(prio_mix prio)
   }
 }
 
-const char *tgt_mix_str(tgt_mix tgt)
+const char* tgt_mix_str(tgt_mix tgt)
 {
   switch (tgt)
   {
