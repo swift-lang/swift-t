@@ -61,7 +61,7 @@ then
   export TEST_ADLB_WORKERS=0
   while (( TEST_ADLB_WORKERS < TEST_ADLB_SERVERS ))
   do
-    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 1 ))
+    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 10 ))
   done
   print "TEST_ADLB_WORKERS=${TEST_ADLB_WORKERS}"
 fi
