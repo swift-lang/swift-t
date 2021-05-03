@@ -242,12 +242,12 @@ run_test()
   # affecting other tests.
   # Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
   (
-    if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
+    if [[ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]]
     then
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
       if ! source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT}
       then
-        return $TEST_SETUP_FAIL
+        return ${TEST_SETUP_FAIL}
       fi
     fi
 
