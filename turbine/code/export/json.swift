@@ -27,14 +27,14 @@ import python;
 (string t) json_type(string J, string path)
 {
   t = python_persist("from turbine_helpers import *",
-                     "json_type('%s','%s')" %
+                     "json_type('''%s''','''%s''')" %
                      (J, path));
 }
 
 (string t) json_get(string J, string path)
 {
     t = python_persist("from turbine_helpers import *",
-                       "json_get('%s','%s')" %
+                       "json_get('''%s''','''%s''')" %
                        (J, path));
 }
 
@@ -53,7 +53,7 @@ import python;
 (int t) json_array_size(string J, string path)
 {
   s = python_persist("from turbine_helpers import *",
-                     "json_array_size('%s','%s')" %
+                     "json_array_size('''%s''','''%s''')" %
                      (J, path));
   t = string2int(s);
 }
@@ -61,7 +61,7 @@ import python;
 (string t) json_object_names(string J, string path)
 {
   t = python_persist("from turbine_helpers import *",
-                     "json_object_names('%s','%s')" %
+                     "json_object_names('''%s''','''%s''')" %
                      (J, path));
 }
 
