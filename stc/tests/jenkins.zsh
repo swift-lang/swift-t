@@ -71,15 +71,22 @@ ${STC} -v
 print
 
 export ADLB_PERF_COUNTERS=0
-./run-tests.zsh -O0 -O1 -O2 -O3 \
+if ! ./run-tests.zsh -O0 -O1 -O2 -O3 \
      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
      tee results.out
+then
+  print "run-tests failed!"
+  return 1
+fi
 print
 
 print "Aggregating results..."
 SUITE_RESULT="result_aggregate.xml";
-./jenkins-results.zsh > ${SUITE_RESULT}
-
+if ! ./jenkins-results.zsh > ${SUITE_RESULT}
+then
+  print "jenkins-results failed!"
+  return 1
+fi
 print
 print "SUITE RESULT XML:"
 cat ${SUITE_RESULT}
