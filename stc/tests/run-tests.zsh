@@ -239,7 +239,8 @@ run_test()
   (( VERBOSE )) && V="-V"
 
   # Run in subshell to allow setting environment variables without
-  # affecting other tests.  Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
+  # affecting other tests.
+  # Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
   (
     if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
     then
@@ -282,7 +283,7 @@ run_test()
   EXIT_CODE=${?}
   popd
 
-  if [ $EXIT_CODE = $TEST_SETUP_FAIL ]
+  if (( EXIT_CODE == TEST_SETUP_FAIL ))
   then
     echo "Setup script failed"
     return $EXIT_CODE
