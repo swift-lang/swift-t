@@ -1,3 +1,9 @@
+
+/*
+  SKIP-O2-TEST issue #191
+  SKIP-O3-TEST issue #191
+*/
+
 import random;
 import assert;
 
