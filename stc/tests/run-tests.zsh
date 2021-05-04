@@ -122,9 +122,9 @@ then
   export ADLB_REPORT_LEAKS=true
 fi
 
-if [ ${#STC_OPT_LEVELS} -eq 0 ]
+if (( ${#STC_OPT_LEVELS} == 0 ))
 then
-  STC_OPT_LEVELS=($DEFAULT_STC_OPT_LEVEL)
+  STC_OPT_LEVELS=( ${DEFAULT_STC_OPT_LEVEL} )
 fi
 
 crash()
