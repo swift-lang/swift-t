@@ -10,7 +10,7 @@ main {
     // Check sequencing
     trace("BEFORE") =>
         F1 += "string1" =>
-        trace("AFTER"); 
+        trace("AFTER");
   } else {
     trace("FAILURE1");
   }
@@ -32,4 +32,3 @@ main {
   assertEqual(bag_size(F1), 1, "size(F1)");
   assertEqual(bag_size(F2), 1, "size(F2)");
 }
-
