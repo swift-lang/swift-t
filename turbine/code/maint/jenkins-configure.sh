@@ -14,7 +14,7 @@ PATH=${PATH}:$TURBINE/bin
 rm -rf autom4te.cache
 ./bootstrap
 
-for D in $EXM_INSTALL $C_UTILS $ADLB
+for D in $EXM_INSTALL $EXM_INSTALL/mpich $C_UTILS $ADLB
 do
   if ! [[ -d $D ]]
   then
