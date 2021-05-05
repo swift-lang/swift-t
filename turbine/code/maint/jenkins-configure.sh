@@ -13,12 +13,16 @@ PATH=${PATH}:$TURBINE/bin
 rm -rf autom4te.cache
 ./bootstrap
 
+set -x
+which python3
+
 ./configure --prefix=$TURBINE        \
             --with-tcl=/usr          \
             --with-c-utils=$C_UTILS  \
             --with-adlb=$ADLB        \
             --with-hdf5=no           \
             --disable-static-pkg     \
-            --disable-static
+            --disable-static         \
+            --with-python-exe=$(which python3)
 
 make clean
