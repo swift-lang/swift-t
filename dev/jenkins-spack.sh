@@ -32,7 +32,10 @@ SPACK_HOME=/tmp/ExM/jenkins-spack/spack
 SPACK_CHANGED=0
 pushd $SPACK_HOME
 git-log | tee timestamp-old.txt
-git pull
+if ! git pull
+then
+  print "WARNING: git pull failed!"
+fi
 git-log | tee timestamp-new.txt
 if ! diff -q timestamp-{old,new}.txt
 then
@@ -42,9 +45,11 @@ popd
 
 echo SPACK_CHANGED=$SPACK_CHANGED
 
+set -x
+ls $SPACK_HOME/bin
 PATH=$SPACK_HOME/bin:$PATH
-
 which spack
+set +x
 
 cp -uv ~wozniak/Public/data/packages-mcs.yaml \
    $SPACK_HOME/etc/spack/packages.yaml
