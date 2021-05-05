@@ -65,11 +65,10 @@ source ${SPACK_HOME}/share/spack/setup-env.sh
 # try to get non-Python installation
 spack load 'stc@master^turbine@master -python'
 
-set -x
-which swift-t
-swift-t -v
-swift-t -E 'trace("HELLO WORLD");'
-set +x
+# set -x
+# which swift-t
+# swift-t -v
+# swift-t -E 'trace("HELLO WORLD");'
 
 # nice spack install 'turbine@master+python'
 nice spack install 'stc@master^turbine@master+python'
