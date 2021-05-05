@@ -14,7 +14,9 @@ rm -rf autom4te.cache
 ./bootstrap
 
 set -x
-which python3
+
+ls /tmp/exm-install
+ls /tmp/exm-install/c-utils
 
 ./configure --prefix=$TURBINE        \
             --with-tcl=/usr          \
