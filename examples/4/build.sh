@@ -1,4 +1,5 @@
-#!/bin/bash -eu
+#!/bin/bash
+set -eu
 
 TURBINE=$( which turbine )
 source $( $TURBINE -C )
