@@ -6,7 +6,7 @@ echo "Stand-alone C program"
 
 echo
 echo "Run SWIG"
-swig g.i
+swig -tcl g.i
 
 echo
 echo "Compile SWIG-generated module"

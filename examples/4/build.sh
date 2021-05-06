@@ -7,7 +7,7 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # Wrap the Fortran in C++
 fortwrap.py --array-as-ptr --no-vector --no-fmat mvm.f
 # Wrap the C++ in Tcl
-swig -c++ -module mvm FortFuncs.h
+swig -tcl -c++ -module mvm FortFuncs.h
 # Minor fix to the wrapper code
 sed -i '11i#include "FortFuncs.h"' FortFuncs_wrap.cxx
 
