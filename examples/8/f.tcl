@@ -11,7 +11,7 @@ namespace eval f {
         set k_value [ retrieve_integer $k ]
         # Look up MPI information
         set comm [ turbine::c::task_comm_int ]
-        set rank [ adlb::rank $comm ]
+        set rank [ adlb::comm_rank $comm ]
         # Run the user code
         set z_value [ f $comm $k_value ]
         # Store result
