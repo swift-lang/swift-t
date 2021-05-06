@@ -13,6 +13,10 @@ TURBINE_LIB=${TURBINE_HOME}/lib
 
 INCLUDES="-I . ${TURBINE_INCLUDES}"
 
+# Remove this problematic library:
+# Cf. https://www.linuxquestions.org/questions/slackware-14/tcl-linking-library-not-found-4175623418
+TURBINE_LIBS=${TURBINE_LIBS/-lieee/}
+
 set -x
 
 stc -r ${PWD} -r ${TURBINE_LIB} test-f.swift test-f.tic
