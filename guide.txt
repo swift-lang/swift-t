@@ -210,7 +210,7 @@ be correctly located and configured (see Section
 A range of other settings are also available here:
 enabling/disabling features, debug or optimized builds, etc.
 +
-TIP: Save your +swift-t-settings.sh+ when you download a new package
+TIP: Save your +swift-t-settings.sh+ when you download a new package.
 +
 5. Run the build script
 +
