@@ -6,6 +6,8 @@ set -eu
 # during runs.
 # Applications can lock the directory by simply touching the
 # lock file in the installation directory.
+# Note that this script is not installed by Spack
+#      or when not using the build-swift-t scripts
 
 UNLOCK=0
 VERBOSE=0
