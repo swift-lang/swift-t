@@ -1377,6 +1377,19 @@ is an IBM system located at the Oak Ridge Leadership Computing
 Facility with a theoretical peak double-precision performance
 of approximately 200 PF.
 
+==== E4S installation
+
+*As of:* 2021-06-17
+
+This installation is maintained by OLCF staff and is based on a Spack
+installation.  To use it, simply run:
+
+----
+$ module load e4s/20.10 stc/0.8.3
+$ export PROJECT=...      # <- Put your project here
+$ swift-t -m lsf -E 'trace(42);'
+----
+
 ==== Public installation
 
 *As of:* 2020-02-24
