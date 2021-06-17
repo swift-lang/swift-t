@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -436,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -746,8 +746,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.4.3,</span>
-<span id="revdate">February 2021</span>
+<span id="revnumber">version 1.5.0,</span>
+<span id="revdate">June 2021</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2711,6 +2711,18 @@ is an IBM system located at the Oak Ridge Leadership Computing
 Facility with a theoretical peak double-precision performance
 of approximately 200 PF.</p></div>
 <div class="sect3">
+<h4 id="_e4s_installation">E4S installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2021-06-17</p></div>
+<div class="paragraph"><p>This is based on a Spack installation.  To use it, simply run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ module load e4s/20.10 stc/0.8.3
+$ export PROJECT=...      # &lt;- Put your project here
+$ swift-t -m lsf -E 'trace(42);'</code></pre>
+</div></div>
+<div class="paragraph"><p>Thanks to the OLCF staff for installing and maintaining this build.</p></div>
+</div>
+<div class="sect3">
 <h4 id="_public_installation_12">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
@@ -3869,9 +3881,9 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.4.3<br />
+Version 1.5.0<br />
 Last updated
- 2021-02-24 13:49:09 CST
+ 2021-06-17 12:20:26 CDT
 </div>
 </div>
 </body>
