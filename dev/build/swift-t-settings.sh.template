@@ -228,6 +228,14 @@ ENABLE_MKSTATIC_CRC=0
 # Summitdev:
 # module load spectrum-mpi
 
+# Summit
+# set +eu
+# module load gcc
+# # echo MODULES
+# module load spectrum-mpi
+# # module load ibm-wml-ce/1.6.2-3
+# set -eu
+
 # Midway:
 
 #+===================+
