@@ -49,6 +49,7 @@
 
 #include "data_internal.h"
 #include "debug.h"
+#include "layout.h"
 #include "sync.h"
 
 /*
@@ -61,7 +62,7 @@ static struct {
   int64_t id_subscribe_remote; /* Subscribe to remote data */
   int64_t id_subscribe_cached; /* Cached subscribe to remote data */
   int64_t id_ready; /* Already closed upon subscribe */
-  
+
   // Counters for ID/subscript combo
   int64_t id_sub_subscribed; /* Combine with existing subscribe */
   int64_t id_sub_subscribe_local; /* Subscribe to local data */
@@ -158,7 +159,7 @@ static xlb_engine_code
 id_sub_closed_cache_add(const void *key, size_t key_len);
 static bool id_sub_closed_cache_check(const void *key, size_t key_len);
 
-#define DEBUG_ENGINE(s, args...) DEBUG("ENGINE:" s, ## args)
+#define DEBUG_ENGINE(s, args...) DEBUG("ENGINE: " s, ## args)
 
 /** Has xlb_engine_init() been called? */
 bool xlb_engine_initialized = false;
@@ -182,7 +183,7 @@ static struct table_lp id_blockers;
 /**
    ID/subscript pairs blocking transforms
    Map from ID/subscript pair to list of pointers to transforms
-   
+
    There may be duplicate entries of the same transform for an ID
    in id_sub_blockers: this must be handled when the notification is
    received.
@@ -346,21 +347,21 @@ xlb_engine_init(int rank)
 
   bool result;
 
-  list2_init(&transforms_waiting); 
+  list2_init(&transforms_waiting);
 
-  result = table_lp_init(&id_blockers, table_init_capacity); 
-  if (!result)
-    return XLB_ENGINE_ERROR_OOM;
-  
-  result = table_bp_init(&id_sub_blockers, table_init_capacity); 
+  result = table_lp_init(&id_blockers, table_init_capacity);
   if (!result)
     return XLB_ENGINE_ERROR_OOM;
 
-  result = table_lp_init(&id_subscribed, table_init_capacity); 
+  result = table_bp_init(&id_sub_blockers, table_init_capacity);
   if (!result)
     return XLB_ENGINE_ERROR_OOM;
 
-  result = table_bp_init(&id_sub_subscribed, table_init_capacity); 
+  result = table_lp_init(&id_subscribed, table_init_capacity);
+  if (!result)
+    return XLB_ENGINE_ERROR_OOM;
+
+  result = table_bp_init(&id_sub_subscribed, table_init_capacity);
   if (!result)
     return XLB_ENGINE_ERROR_OOM;
 
@@ -371,7 +372,7 @@ xlb_engine_init(int rank)
     xlb_engine_counters.id_subscribe_remote = 0;
     xlb_engine_counters.id_subscribe_cached = 0;
     xlb_engine_counters.id_ready = 0;
-    
+
     xlb_engine_counters.id_sub_subscribed = 0;
     xlb_engine_counters.id_sub_subscribe_local = 0;
     xlb_engine_counters.id_sub_subscribe_remote = 0;
@@ -382,7 +383,7 @@ xlb_engine_init(int rank)
   xlb_engine_code tc = init_closed_caches();
   if (tc != XLB_ENGINE_SUCCESS)
     return tc;
-  
+
   xlb_engine_initialized = true;
   return XLB_ENGINE_SUCCESS;
 }
@@ -396,12 +397,12 @@ xlb_engine_print_counters(void)
         xlb_engine_counters.id_subscribed +
         xlb_engine_counters.id_sub_subscribed);
   PRINT_COUNTER("engine_subscribe_local=%"PRId64,
-        xlb_engine_counters.id_subscribe_local + 
+        xlb_engine_counters.id_subscribe_local +
         xlb_engine_counters.id_sub_subscribe_local);
-  PRINT_COUNTER("engine_subscribe_remote=%"PRId64, 
+  PRINT_COUNTER("engine_subscribe_remote=%"PRId64,
         xlb_engine_counters.id_subscribe_remote +
         xlb_engine_counters.id_sub_subscribe_remote);
-  PRINT_COUNTER("engine_subscribe_cached=%"PRId64, 
+  PRINT_COUNTER("engine_subscribe_cached=%"PRId64,
         xlb_engine_counters.id_subscribe_cached +
         xlb_engine_counters.id_sub_subscribe_cached);
   PRINT_COUNTER("engine_ready=%"PRId64, xlb_engine_counters.id_ready +
@@ -417,7 +418,7 @@ xlb_engine_print_counters(void)
         xlb_engine_counters.id_subscribe_cached);
   PRINT_COUNTER("engine_id_ready=%"PRId64,
         xlb_engine_counters.id_ready);
-  
+
   PRINT_COUNTER("engine_id_sub_subscribed=%"PRId64,
         xlb_engine_counters.id_sub_subscribed);
   PRINT_COUNTER("engine_id_sub_subscribe_local=%"PRId64,
@@ -561,7 +562,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
                     "Null ID provided to data-dependent task");
   int server = ADLB_Locate(id);
 
-  DEBUG_ENGINE("Engine subscribe to <%"PRId64">", id);
+  DEBUG_ENGINE("subscribing to <%"PRId64">", id);
   if (table_lp_contains(&id_subscribed, id)) {
     TRACE("already subscribed: <%"PRId64">", id);
     // Already subscribed
@@ -600,7 +601,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
         INCR_COUNTER(id_subscribe_remote);
       }
     }
-  
+
     if (*subscribed)
     {
       bool ok = table_lp_add(&id_subscribed, id, (void*)1);
@@ -612,7 +613,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
       INCR_COUNTER(id_ready);
     }
   }
-  
+
   return XLB_ENGINE_SUCCESS;
 }
 
@@ -628,7 +629,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
 {
   ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
                     "Null ID provided to to data-dependent task");
-  
+
   int server = ADLB_Locate(id);
 
   assert(subscript.key != NULL);
@@ -660,7 +661,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
         *subscribed = false;
       }
       ENGINE_CHECK_DATA(dc, XLB_ENGINE_ERROR_UNKNOWN);
-    
+
       INCR_COUNTER(id_sub_subscribe_local);
     }
     else
@@ -676,7 +677,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
         adlb_code ac = xlb_sync_subscribe(server, id,
                             sub_convert(subscript), subscribed);
         ENGINE_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
-        
+
         INCR_COUNTER(id_sub_subscribe_remote);
       }
     }
@@ -759,7 +760,7 @@ xlb_engine_put(const char* name, int name_strlen,
   }
   else
   {
-    DEBUG_ENGINE("ready: {%"PRId64"}", work->id);
+    DEBUG_ENGINE("work ready: {%"PRId64"}", work->id);
     *ready = true;
 
     // Free transform except for work unit
@@ -924,13 +925,13 @@ xlb_engine_code xlb_engine_sub_close(adlb_datum_id id, adlb_subscript sub,
   size_t key_len = xlb_id_sub_buflen(sub);
   char key[key_len];
   xlb_write_id_sub(key, id, sub);
-  
+
   // Record no longer subscribed
   void *tmp;
   bool was_subscribed = table_bp_remove(&id_sub_subscribed, key,
                                         key_len, &tmp);
   assert(was_subscribed);
-  
+
   if (remote)
   {
     // Cache remote subscribes
@@ -939,7 +940,7 @@ xlb_engine_code xlb_engine_sub_close(adlb_datum_id id, adlb_subscript sub,
   }
 
   struct list* L;
-  
+
   bool found = table_bp_remove(&id_sub_blockers, key, key_len, (void**)&L);
   if (!found)
     // We don't have any transforms that block on this td
@@ -961,7 +962,7 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
          adlb_subscript sub, xlb_engine_work_array *ready)
 {
   transform* T_prev = NULL;
-  
+
   // Try to make progress on those transforms
   for (struct list_item* item = blocked->head; item; item = item->next)
   {
@@ -1001,7 +1002,7 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
       {
         id_sub_pair *input_tdsub = &T->input_id_sub_list[i];
         engine_sub *input_sub = &input_tdsub->subscript;
-        if (input_tdsub->td == id && input_sub->length == sub.length 
+        if (input_tdsub->td == id && input_sub->length == sub.length
             && memcmp(input_sub->key, sub.key, sub.length) == 0)
         {
           mark_input_id_sub_closed(T, i);
@@ -1017,7 +1018,6 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
     T_prev = T;
     if (!subscribed)
     {
-      DEBUG_ENGINE("Ready {%"PRId64"}", T->work->id);
       tc = move_to_ready(ready, T);
       ENGINE_CHECK(tc);
     }
@@ -1053,7 +1053,7 @@ move_to_ready(xlb_engine_work_array *ready, transform *T)
   list2_remove_item(&transforms_waiting, T->list_entry);
   free(T->list_entry);
   T->list_entry = NULL;
-  
+
   T->work = NULL; // Don't free work
   transform_free(T);
 
@@ -1130,7 +1130,7 @@ transform_tostring(char* output, transform* t)
 {
   int result = 0;
   char* p = output;
- 
+
   if (t->name != NULL)
   {
     append(p, "%s ", t->name);
@@ -1246,7 +1246,7 @@ static xlb_engine_code init_closed_caches(void)
   table_lp_init_custom(&id_closed_cache, id_closed_cache_size, 1.0);
   table_bp_init_custom(&id_sub_closed_cache, id_sub_closed_cache_size,
                        1.0);
-  
+
   list2_b_init(&id_closed_cache_lru);
   list2_b_init(&id_sub_closed_cache_lru);
   return XLB_ENGINE_SUCCESS;
@@ -1338,7 +1338,7 @@ static xlb_engine_code id_closed_cache_add(adlb_datum_id id)
   struct list2_b_item *node = list2_b_item_alloc(sizeof(*entry));
   entry = (id_closed_cache_entry*)&node->data;
   entry->id = id;
-  
+
   list2_b_add_item(&id_closed_cache_lru, node);
 
   bool ok = table_lp_add(&id_closed_cache, id, node);
@@ -1372,7 +1372,7 @@ id_sub_closed_cache_add(const void *key, size_t key_len)
   entry = (id_sub_closed_cache_entry*)&node->data;
   memcpy(entry->key, key, key_len);
   entry->key_len = key_len;
-  
+
   list2_b_add_item(&id_sub_closed_cache_lru, node);
 
   bool ok = table_bp_add(&id_sub_closed_cache, key, key_len, node);
@@ -1438,7 +1438,7 @@ static void free_transforms_waiting(void)
   struct list2_item *next;
   while (item != NULL)
   {
-    transform *T = item->data; 
+    transform *T = item->data;
     next = item->next;
     transform_free(T);
     free(item);

@@ -40,6 +40,20 @@ LOG()
   fi
 }
 
+LOG_WAIT()
+{
+  # User can skip waits with WAIT=0
+  if (( ${WAIT:-1} == 0 ))
+  then
+    return
+  fi
+  if [ -t 1 ] # Is the output a terminal?
+  then
+    echo "  waiting $* seconds: press enter to skip ..."
+    sleep $*
+  fi
+}
+
 log_status()
 {
   if (( VERBOSITY > LOG_TRACE ))
@@ -128,7 +142,7 @@ make_clean()
 
 make_all()
 {
-  make -j ${MAKE_PARALLELISM} ${MAKE_V} ${MAKE_QUIET}
+  ${NICE_CMD} make -j ${MAKE_PARALLELISM} ${MAKE_V} ${MAKE_QUIET}
 }
 
 make_install()
@@ -136,6 +150,17 @@ make_install()
   if (( RUN_MAKE_INSTALL ))
   then
     make ${MAKE_QUIET} install
+  fi
+}
+
+check_lock()
+{
+  DIR=$1
+  if [[ -f $DIR/lock ]]
+  then
+    echo "cannot install: lock exists: $DIR/lock"
+    echo "                to unlock use 'lock.sh -u'"
+    return 1
   fi
 }
 

@@ -307,7 +307,6 @@ namespace eval turbine {
             name "float2int-$input"
     }
     proc float2int_body { result input } {
-        puts "retrieve float $input"
         set t [ retrieve_decr_float $input ]
         set i [ float2int_impl $t ]
         store_integer $result $i

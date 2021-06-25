@@ -552,7 +552,7 @@ public class FunctionInline implements OptimizerPass {
     String newName = targetFunction.mainBlock().uniqueVarName(
                                         var.name(), excludedNames);
     Var newVar = var.makeRenamed(newName);
-    assert(!replacements.containsKey(newName));
+    assert(!replacements.containsKey(newVar));
     replacements.put(var, Arg.newVar(newVar));
     excludedNames.add(newName);
     UniqueVarNames.replaceCleanup(block, var, newVar);

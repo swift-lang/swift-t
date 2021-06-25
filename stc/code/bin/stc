@@ -296,7 +296,7 @@ lookup_java()
     # Broken Java: User gave bad stc -j argument
     print "Cannot run java!"
     print "Tried: ${JVM}"
-    exit 1
+    return 1
   fi
 }
 
@@ -306,8 +306,12 @@ report_version()
   cat ${STC_HOME}/etc/version.txt
   printf "\t for Turbine: "
   cat ${STC_HOME}/etc/turbine-version.txt
-  lookup_java
-  print "Using Java VM:    ${JVM}"
+  if lookup_java
+  then
+    print "Using Java VM:    ${JVM}"
+  else
+    print "Could not find Java!"
+  fi
   print "Using Turbine in: ${TURBINE_HOME}"
   exit 0
 }
@@ -526,6 +530,9 @@ if (( ${#IMPORT_STRINGS} )) {
 
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG:-} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
+# Ensure output directory exists
+mkdir -pv ${OUTPUT:h}
+
 ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 # Return the exit code from the java process
 EXITCODE=${?}

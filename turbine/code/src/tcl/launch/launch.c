@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// For systems without strlcpy(), e.g., Linux
+#include <strlcpy.h>
+
 #include "MPIX_Comm_launch.h"
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
@@ -30,7 +34,7 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
     argvc[i] = argv[i];
   }
   argvc[argc] = NULL;
-  MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
     MPI_Comm_free(&comm);
@@ -100,7 +104,7 @@ get_envs(int envc, char** envs, char* match, int* index, char** result) {
     char* p = &envs[i][0];
     char* q = strchr(envs[i], '=');
     if (q-p == n) return false;
-    int k = q-p-1; // Length of envs key
+    int k = q-p; // Length of envs key
     if (strncmp(envs[i], match, k) == 0) {
       *index = i;
       *result = q+1;
@@ -122,7 +126,7 @@ int launch_envs(MPI_Comm comm, char* cmd,
   argvc[argc] = NULL;
 
   MPI_Info info = envs2info(envc, envs);
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   if (info != MPI_INFO_NULL) {
     MPI_Info_free(&info);
   }
@@ -144,7 +148,7 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   MPI_Info info;
   MPI_Info_create(&info);
   MPI_Info_set(info,"launcher","turbine");
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
@@ -197,13 +201,12 @@ get_color(int rank, MPI_Comm comm, int count, int* procs,
 
   // Else: Use default in-order layout
   int p = 0; // running total procs
-  int i;
-  for (i = 0; i < count; i++)
+  for (int color = 0; color < count; color++)
   {
     // printf("procs[%i]=%i\n", i, procs[i]);
-    p += procs[i];
+    p += procs[color];
     if (rank < p)
-      return i;
+      return color;
   }
   // Unreachable (guarded by sanity_check())
   assert(0);

@@ -25,7 +25,7 @@ lassign [ adlb::create_globals integer integer integer ] x y z
 lassign [ adlb::create_globals string string ] a b
 
 proc test_global { td type val} {
-  set rank [ adlb::rank ]
+  set rank [ adlb::comm_rank ]
   if { $rank == 0 } {
     adlb::store $td $type $val
   }

@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,7 +34,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <linux/limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -150,8 +150,7 @@ turbine_init(int amserver, int rank, int size)
     mpi_rank = rank;
     initialized = true;
 
-    bool b;
-    b = setup_cache();
+    bool b = setup_cache();
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 

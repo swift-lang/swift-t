@@ -249,6 +249,15 @@ proc split_first { value token } {
   return [ list $r0 $r1 ]
 }
 
+# Ternary operator
+proc ternary { condition a b } {
+    if [ uplevel expr $condition ] {
+        return $a
+    } else {
+        return $b
+    }
+}
+
 # Local Variables:
 # mode: tcl
 # tcl-indent-level: 2

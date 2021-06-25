@@ -43,7 +43,7 @@ namespace eval turbine {
     getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
     if { $app_delay_time > 0 } {
-      if { [ adlb::rank ] == 0 } {
+      if { [ adlb::comm_rank ] == 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
       }
     }
@@ -105,7 +105,7 @@ namespace eval turbine {
       } trap {TURBINE ERROR} { message } {
         set success false
         try {
-          app_retry_reput $message $tries_reput [adlb::rank] \
+          app_retry_reput $message $tries_reput [adlb::comm_rank] \
               $stdin_src $stdout_dst $stderr_dst \
               $cmd {*}$args
           break
@@ -150,7 +150,7 @@ namespace eval turbine {
         $cmd $args
 
     log** "app: reput to ADLB:" $cmd $args
-    set payload [ list exec_local $tries_reput [adlb::rank] ]
+    set payload [ list exec_local $tries_reput [adlb::comm_rank] ]
     lappend payload $stdin_src $stdout_dst $stderr_dst
     lappend payload $cmd {*}$args
     global WORK_TYPE
@@ -201,10 +201,10 @@ namespace eval turbine {
   proc app_retry_check { type message tries max cmd args } {
     if { $tries < $max } {
       log [ cat "$message: retries $type: $tries/$max " \
-                "[ c_utils::hostname ] rank [ adlb::rank ]" ]
+                "[ c_utils::hostname ] rank [ adlb::comm_rank ]" ]
     } else {
       if { $max > 0 } {
-        log "app: exhausted $type tries"
+        log "app: exhausted $type tries ($tries)"
       }
       if { $args eq "{{{}}}" } { set args {} }
       if { $type eq "local" } {
@@ -229,9 +229,9 @@ namespace eval turbine {
   # based on parameters present in provided dictionary
   # For use of Tcl's exec command
   proc setup_redirects_tcl { kwopts stdin_var stdout_var stderr_var } {
-    #Note: strange behaviour can happen if user args have e.g "<"
+    # Note: strange behaviour can happen if user args have e.g "<"
     # or ">" or "|" at start
-    upvar 1 $stdin_var stdin_src
+    upvar 1 $stdin_var  stdin_src
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
 

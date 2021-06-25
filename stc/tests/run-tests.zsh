@@ -122,9 +122,9 @@ then
   export ADLB_REPORT_LEAKS=true
 fi
 
-if [ ${#STC_OPT_LEVELS} -eq 0 ]
+if (( ${#STC_OPT_LEVELS} == 0 ))
 then
-  STC_OPT_LEVELS=($DEFAULT_STC_OPT_LEVEL)
+  STC_OPT_LEVELS=( ${DEFAULT_STC_OPT_LEVEL} )
 fi
 
 crash()
@@ -239,14 +239,15 @@ run_test()
   (( VERBOSE )) && V="-V"
 
   # Run in subshell to allow setting environment variables without
-  # affecting other tests.  Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
+  # affecting other tests.
+  # Return values 0=OK, 1=TEST_FAILED, 2=SETUP_FAILED
   (
-    if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
+    if [[ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]]
     then
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
       if ! source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT}
       then
-        return $TEST_SETUP_FAIL
+        return ${TEST_SETUP_FAIL}
       fi
     fi
 
@@ -282,7 +283,7 @@ run_test()
   EXIT_CODE=${?}
   popd
 
-  if [ $EXIT_CODE = $TEST_SETUP_FAIL ]
+  if (( EXIT_CODE == TEST_SETUP_FAIL ))
   then
     echo "Setup script failed"
     return $EXIT_CODE

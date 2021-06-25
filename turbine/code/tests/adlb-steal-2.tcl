@@ -138,7 +138,7 @@ clock_init
 
 set amserver [ adlb::amserver ]
 
-set rank [ adlb::rank ]
+set rank [ adlb::comm_rank ]
 
 set tasks_run 0
 
@@ -156,7 +156,7 @@ if { $amserver == 0 } {
         if [ info exists env(JOB_ID) ] {
             puts "JOB_ID: $env(PBS_JOBID)"
         }
-        puts "ADLB_SIZE: [ adlb::size ]"
+        puts "ADLB_SIZE: [ adlb::comm_size ]"
     }
 
     if { $rank == 0 } {

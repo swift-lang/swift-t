@@ -156,17 +156,19 @@ char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
 static table_bp blob_cache;
 
 /**
- * Cache Tcl_Objs for struct field names
+   Cache Tcl_Objs for struct field names
  */
-static struct {
-  Tcl_Obj ***objs;
+static struct
+{
+  Tcl_Obj*** objs;
   int size;
 } field_name_objs;
 
-/*
-  Represent full type of a data structure
- */
-typedef struct {
+/**
+   Represent full type of a data structure
+*/
+typedef struct
+{
   int len;
   adlb_data_type *types; /* E.g. container and nested types */
   adlb_type_extra *extras; /* E.g. for struct subtype */
@@ -295,19 +297,21 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
 
-#define CHECK_ADLB_STORE(rc, id, sub) {                                      \
-  if (adlb_has_sub((sub))) {                                                 \
-    TCL_CONDITION(rc != ADLB_REJECTED,                                       \
-                  "<%"PRId64"> failed: double assign!", (id));               \
-    TCL_CONDITION(rc == ADLB_SUCCESS,                                        \
-                  "<%"PRId64"> failed!", (id));                              \
-  } else {                                                                   \
-  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"] failed",          \
-                  (id), (int)(sub).length, (const char*)(sub).key);          \
-  }                                                                          \
-}
+#define CHECK_ADLB_STORE(rc, id, sub) {                                 \
+    if (adlb_has_sub((sub))) {                                          \
+      TCL_CONDITION(rc != ADLB_REJECTED,                                \
+                    "<%"PRId64">[\"%s\"], double assign!",              \
+                    (id), (const char*)(sub).key);                      \
+      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
+                    "<%"PRId64">[\"%s\"] failed",                       \
+                    (id), (const char*)(sub).key);                      \
+    } else {                                                            \
+      TCL_CONDITION(rc != ADLB_REJECTED,                                \
+                    "<%"PRId64"> failed: double assign!", (id));        \
+      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
+                    "<%"PRId64"> failed!", (id));                       \
+    }                                                                   \
+  }
 
 #define CHECK_ADLB_RETRIEVE(rc, handle) {                  \
   if (adlb_has_sub((handle).sub.val)) {                    \
@@ -347,7 +351,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
    If comm is given, run ADLB in that communicator
    Else, run ADLB in a dup of MPI_COMM_WORLD
 
-   After this is run, adlb::size and adlb::rank can be used.
+   After this is run, adlb::comm_size and adlb::comm_rank can be used.
  */
 static int
 ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -478,7 +482,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     long tmp_comm_ptr = 0;
     rc = Tcl_GetLongFromObj(interp, objv[3], &tmp_comm_ptr);
     TCL_CHECK(rc);
-    adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
+    adlb_comm_ptr = (MPI_Comm*) tmp_comm_ptr;
   }
 
   if (!adlb_comm_init)
@@ -498,14 +502,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // ADLB_Init(int num_servers, int use_debug_server,
   //           int aprintf_flag, int num_types, int *types,
   //           int *am_server, int *am_debug_server, MPI_Comm *app_comm)
-#ifdef USE_ADLB
-  rc = ADLB_Init(servers, 0, 0, ntypes, type_vect,
-               &am_server, &am_debug_server, &adlb_worker_comm);
-#endif
-#ifdef USE_XLB
+
   rc = ADLB_Init(servers, ntypes, type_vect,
                  &am_server, adlb_comm, &adlb_worker_comm);
-#endif
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
 
@@ -769,11 +768,11 @@ static int
 ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  int result = -1;
+  int rank = -1;
   if (objc == 1)
   {
     TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
-    result = adlb_comm_rank;
+    rank = adlb_comm_rank;
   }
   else if (objc == 2)
   {
@@ -781,27 +780,39 @@ ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
     int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
     TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
     MPI_Comm comm = (MPI_Comm) comm_int;
-    MPI_Comm_rank(comm, &result);
+    MPI_Comm_rank(comm, &rank);
+    /* printf("ADLB_CommRank_Cmd(): comm_int: %lli\n", comm_int); */
+    /* printf("ADLB_CommRank_Cmd(): rank:     %i\n",   rank); */
   }
   else
     TCL_RETURN_ERROR("requires 1 or 2 arguments!");
 
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(result));
+  Tcl_Obj* result = Tcl_NewIntObj(rank);
+  Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
 static int
 ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj *const objv[])
+                  int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2)
-  Tcl_WideInt comm_int;
-  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
-  MPI_Comm comm = (MPI_Comm) comm_int;
+  int size = -1;
+  if (objc == 1)
+  {
+    TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
+    size = adlb_comm_size;
+  }
+  else if (objc == 2)
+  {
+    Tcl_WideInt comm_int;
+    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
+    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+    MPI_Comm comm = (MPI_Comm) comm_int;
+    MPI_Comm_size(comm, &size);
+  }
+  else
+    TCL_RETURN_ERROR("requires 1 or 2 arguments!");
 
-  int size;
-  MPI_Comm_size(comm, &size);
   Tcl_Obj* result = Tcl_NewIntObj(size);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -878,6 +889,7 @@ ADLB_AmServer_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: no args, returns size of MPI communicator ADLB is running on
 */
+/*
 static int
 ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
@@ -886,6 +898,7 @@ ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_comm_size));
   return TCL_OK;
 }
+*/
 
 /**
    usage: no args, returns number of servers
@@ -1165,6 +1178,12 @@ ADLB_Get_Cmd(ClientData cdata, Tcl_Interp *interp,
     free(payload);
   }
   turbine_task_comm = task_comm;
+  /* printf("ADLB_Get_Cmd(): turbine_task_comm: %lli\n", */
+  /*        (long long int) turbine_task_comm); */
+
+  int size;
+  MPI_Comm_size(turbine_task_comm, &size);
+  /* printf("ADLB_Get_Cmd(): turbine_task_comm size: %i\n", size); */
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -2352,7 +2371,8 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     if (valid)
     {
       size_t data_offset = offset + 1;
-      const void *field_data = data + data_offset;
+      const char* field_data = (char*) data;
+      field_data += data_offset;
       size_t field_data_length;
       if (i == field_count - 1)
         field_data_length = length - data_offset;
@@ -3310,6 +3330,7 @@ ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
  * Construct cache key
  * Key may point to id or sub
+ * @return Tcl error code
  */
 static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           adlb_datum_id *id, adlb_subscript *sub,
@@ -3323,7 +3344,9 @@ static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
     *alloced = true;
 
     memcpy(*key, id, sizeof(*id));
-    memcpy(*key + sizeof(*id), sub->key, sub->length);
+    char* dest = (char*) *key;
+    dest += sizeof(*id);
+    memcpy(dest, sub->key, sub->length);
   }
   else
   {
@@ -4234,7 +4257,7 @@ ADLB_Unique_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::container_typeof <id>
+   usage: adlb::typeof <id>
 */
 static int
 ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -4250,11 +4273,11 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %i\n", id, type);
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %i\n", id, type);
 
-  const char *type_string = ADLB_Data_type_tostring(type);
+  const char* type_string = ADLB_Data_type_tostring(type);
 
-  // DEBUG_ADLB("adlb::container_typeof: <%"PRId64"> is: %s",
+  // DEBUG_ADLB("adlb::typeof: <%"PRId64"> is: %s",
   //            id, type_string);
 
   Tcl_Obj* result = Tcl_NewStringObj(type_string, -1);
@@ -4351,6 +4374,13 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
                     Tcl_GetString(objv[2]));
 
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
+
+  char* xfer;
+  adlb_code ac;
+
   // Check for no subscript
   TCL_CONDITION_GOTO(adlb_has_sub(handle.sub.val), exit_err,
                     "No subscript");
@@ -4366,10 +4396,6 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                               type, &type_extra);
     TCL_CHECK(rc);
   }
-
-  // Increments/decrements for outer and inner containers
-  // (default no extras)
-  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
   if (argpos < objc)
   {
@@ -4404,7 +4430,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     handle.id, (int)handle.sub.val.length, handle.sub.val.key);
 
   uint64_t xfer_size;
-  char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
+  xfer = tcl_adlb_xfer_buffer(&xfer_size);
 
   bool created, value_present;
   size_t value_len;
@@ -4412,7 +4438,7 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Initial trial at inserting.
   // Refcounts are only applied here if we got back the data
-  adlb_code ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
+  ac = ADLB_Insert_atomic(handle.id, handle.sub.val,
             refcounts, &created, &value_present, xfer,
             &value_len, &outer_value_type);
 
@@ -5147,9 +5173,9 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
   TCL_CONDITION(type_arr != NULL, "Error allocating memory");
 
-  adlb_type_extra *extras = malloc(sizeof(adlb_type_extra) * types_size);
-  TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
   int to_consume = 1; // Min additional number that must be consumed
+  adlb_type_extra* extras = malloc(sizeof(adlb_type_extra) * types_size);
+  TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
 
   // Must consume at least the outermost type
   while (to_consume > 0) {
@@ -5984,15 +6010,15 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("declare_struct_type", ADLB_Declare_Struct_Type_Cmd);
   COMMAND("is_struct_type", ADLB_Is_Struct_Type_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);
-  COMMAND("rank",      ADLB_CommRank_Cmd);
-  COMMAND("size",      ADLB_CommSize_Cmd);
+  COMMAND("comm_rank", ADLB_CommRank_Cmd);
+  COMMAND("comm_size", ADLB_CommSize_Cmd);
   COMMAND("comm_dup",  ADLB_CommDup_Cmd);
   COMMAND("comm_get",  ADLB_CommGet_Cmd);
   COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("worker_barrier", ADLB_Worker_Barrier_Cmd);
   COMMAND("worker_rank", ADLB_Worker_Rank_Cmd);
   COMMAND("amserver",  ADLB_AmServer_Cmd);
-  COMMAND("size",      ADLB_Size_Cmd);
+  // COMMAND("size",      ADLB_Size_Cmd);
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
   COMMAND("hostmap_lookup",   ADLB_Hostmap_Lookup_Cmd);

@@ -43,7 +43,7 @@ set PUTS 10
 
 if { $amserver == 0 } {
 
-    set rank [ adlb::rank ]
+    set rank [ adlb::comm_rank ]
     if { $rank == 0 } {
         for { set i 0 } { $i < $PUTS } { incr i } {
             adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "wu-$i" 0

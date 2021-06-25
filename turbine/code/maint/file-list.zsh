@@ -10,7 +10,7 @@ print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf,file-list.zsh}
 print maint/*.sh
-print bin/turbine{,.in}
+print bin/turbine{,.in} bin/turbine-pilot.in
 print bin/turbine-{read,write}-doubles
 print scripts/*-config.sh.in scripts/helpers.zsh
 print **/*.[cChi] **/*.{tcl,swift}
@@ -36,7 +36,7 @@ print scripts/submit/sge/turbine{-sge-run.zsh,-sge.sh.m4}
 print scripts/submit/theta/{turbine-theta-run.zsh,turbine-theta.sh.m4}
 print scripts/python-config.py
 print src/turbine/turbine-version.h.in
-print etc/help/*.txt
+print etc/help/*.txt etc/turbine.supp
 
 if [[ ${PKG_TYPE} == "deb-bin" ]]
 then

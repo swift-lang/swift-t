@@ -524,7 +524,6 @@ ADLB_Unpack_buffer(adlb_data_type type,
 {
   assert(buffer != NULL);
   assert(pos != NULL);
-  assert(*pos >= 0);
   assert(entry != NULL);
   assert(entry_length != NULL);
 

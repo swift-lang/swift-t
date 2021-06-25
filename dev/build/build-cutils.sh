@@ -3,18 +3,23 @@ set -eu
 
 # BUILD C-UTILS
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
-${THIS}/check-settings.sh
-source ${THIS}/functions.sh
-source ${THIS}/options.sh
-source ${THIS}/swift-t-settings.sh
+cd $THIS
+
+$THIS/check-settings.sh
+source $THIS/functions.sh
+source $THIS/options.sh
+source $THIS/swift-t-settings.sh
+source $THIS/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
 LOG $LOG_INFO "Building c-utils"
 cd ${C_UTILS_SRC}
+
+check_lock $SWIFT_T_PREFIX/c-utils
 
 run_bootstrap
 
@@ -27,10 +32,12 @@ then
   rm -f config.cache
   (
     set -eux
-    ./configure --config-cache \
+    ${NICE_CMD} ./configure \
+                ${CONFIGURE_ARGS[@]} \
                 --prefix=${C_UTILS_INSTALL} \
                 --enable-shared \
-                ${EXTRA_ARGS}
+                ${EXTRA_ARGS} \
+                ${CUSTOM_CFG_ARGS_C_UTILS:-}
   )
 fi
 

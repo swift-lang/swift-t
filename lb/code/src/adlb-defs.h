@@ -19,8 +19,7 @@
  * Basic definitions used by ADLB
  * */
 
-#ifndef ADLB_DEFS_H
-#define ADLB_DEFS_H
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -216,7 +215,7 @@ typedef struct {
     { 0 /* read_refcount */, 0 /* write_refcount */ };
 
   static const adlb_refc ADLB_READ_REFC =
-    { 1 /*read_refcount */, 0 /* write_refcount */ };
+    { 1 /* read_refcount */, 0 /* write_refcount */ };
 
   static const adlb_refc ADLB_WRITE_REFC =
     { 0 /* read_refcount */, 1 /* write_refcount */ };
@@ -428,5 +427,3 @@ typedef struct {
 #define ADLB_PRIDSUB_ARGS(id, symbol, sub) \
   (id), ADLB_Dsym(symbol).name, (int)((sub).length), \
   (const char*)((sub).key), ADLB_Dsym(symbol).context
-
-#endif

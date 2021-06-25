@@ -7,7 +7,7 @@
 set -eu
 
 echo
-echo "maint/jenkins.zsh ..."
+echo "maint/jenkins.zsh $( date "+%Y-%m-%d %H:%M" ) ..."
 echo
 
 rm -rf autom4te.cache

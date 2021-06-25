@@ -32,12 +32,16 @@
 #   PROCS: Number of MPI processes
 #   PPN: Processes-per-node: see below: (default 1)
 #   WALLTIME: Formatted according to specific scheduler
+#             Swift/T default: HH:MM:SS
+#             LSF converts HH:MM:SS to HH:MM
 #   TURBINE_OUTPUT_ROOT, TURBINE_OUTPUT_FORMAT: See sites guide
 # OUTPUT:
 #   SCRIPT: User-provided TIC or executable name from $1
 #   ARGS:   User-provided args from ${*} after shift
-#   ENV:       User environment variables "K1=V1:K2=V2 ..."
-#   ENV_PAIRS: User environment variables "K1=V1 K2=V2 ..."
+#   USER_ENV_ARRAY: User environment variables for Bash array:
+#                   K1 'V1' K2 'V2' ...
+#   USER_ENV_CODE:  User environment variables  in Bash code:
+#                   K1='V1' K2='V2' ...
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
 #   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 #   TURBINE_WORKERS
@@ -61,6 +65,8 @@
 #   ADLB_DEBUG
 # OTHER CONVENTIONS
 #   JOB_ID: Job ID from the scheduler (not available at run time)
+# UTILITIES
+#   COMMON_M4: Common M4 utilities
 
 # Files:
 # Creates soft link in PWD pointing to TURBINE_OUTPUT
@@ -80,9 +86,12 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
 export ADLB_SERVERS=${ADLB_SERVERS:-1}
 export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
+export TURBINE_STDOUT=${TURBINE_STDOUT:-}
 export TURBINE_LOG=${TURBINE_LOG:-0}
 export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
 export ADLB_DEBUG=${ADLB_DEBUG:-0}
+export ADLB_TRACE=${ADLB_TRACE:-0}
+export TCLLIBPATH=${TCLLIBPATH:-}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
 export VERBOSE=0
@@ -107,6 +116,8 @@ turbine_log()
 }
 
 # Defaults:
+PROJECT=${PROJECT:-}
+QUEUE=${QUEUE:-}
 CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
@@ -123,15 +134,15 @@ export DRY_RUN=0
 WAIT_FOR_JOB=0
 
 # Place to link to output directory
-# If
+# If TURBINE_OUTPUT_SOFTLINK==/dev/null , this behavior is suppressed
 OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 # Turbine will also write the value of TURBINE_OUTPUT_HERE
 OUTPUT_TOKEN_FILE=/dev/null
 
-# Job environment:
-typeset -T ENV env
-env=()
-export ENV env
+# Regexp for environment variable key=value pairs
+ENV_RE='(.*)=(.*)'
+
+export USER_ENV_CODE="" USER_ENV_ARRAY=""
 
 # Get options
 while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
@@ -143,12 +154,20 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
     D) OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
     e) KV=${OPTARG}
-       if [[ ! ${OPTARG} =~ ".*=.*" ]]
+       if [[ ${KV} =~ ${ENV_RE} ]]
        then
+         USER_ENV_CODE+="${match[1]}='${match[2]}' "
+         USER_ENV_ARRAY+="${match[1]} '${match[2]}' "
+       else
+         if (( ! ${(P)+KV} ))
+         then
+           abort "turbine: provided '-e ${KV}' but variable" \
+                 "'${KV}' is not in the environment!"
+         fi
          # Look up unset environment variables
-         KV="${KV}=${(P)KV}"
+         USER_ENV_CODE+="${KV}='${(P)KV}' "
+         USER_ENV_ARRAY+="${KV} '${(P)KV}' "
        fi
-       env+="${KV}"
        ;;
     i) INIT_SCRIPT=${OPTARG}
        ;;
@@ -289,8 +308,12 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
+# The modifier :A produces canonicalized file paths
+if [[ ${SCRIPT:A} != ${PROGRAM:A} ]]
+then
+  cp ${SCRIPT} ${PROGRAM}
+fi
 if (( TURBINE_STATIC_EXEC ))
 then
   # Uses turbine_sh launcher
@@ -299,15 +322,16 @@ elif (( EXEC_SCRIPT ))
 then
   # User static executable
   export COMMAND="${PROGRAM} ${ARGS}"
+elif [[ ${TURBINE_PILOT:-} != "" ]]
+then
+  export TURBINE_PILOT=${TURBINE_HOME}/bin/turbine-pilot
+  export COMMAND="${TURBINE_PILOT} ${PROGRAM} ${ARGS}"
 else
   # Normal case
   export COMMAND="${TCLSH} ${PROGRAM} ${ARGS}"
 fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
-export ENV
-export ENV_PAIRS="${env}"
 
 if (( ${MAIL_ENABLED:-0} == 1 ))
 then
@@ -316,6 +340,23 @@ then
     print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
   fi
 fi
+
+# Anything in AUTO_VARS must have a default set above
+# Keep this in sync with AUTO_VARS in bin/turbine.in
+AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
+            TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
+            MPI_LABEL TURBINE_STDOUT
+            TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
+            )
+
+for NAME in ${AUTO_VARS}
+do
+  USER_ENV_CODE+="${NAME}='${(P)NAME}' "
+  USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
+done
+
+# This is being phased in to capture common M4 functions (2018-12-18)
+COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 
 ## Local Variables:
 ## mode: sh

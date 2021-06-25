@@ -43,8 +43,7 @@
  *   processed later.
  */
 
-#ifndef SYNC_H
-#define SYNC_H
+#pragma once
 
 #include "adlb-defs.h"
 #include "messaging.h"
@@ -80,31 +79,29 @@ adlb_code xlb_sync_shutdown(int target);
 /*
   Subscribe to a datum on another server
  */
-adlb_code
-xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
-                   bool *subscribed);
+adlb_code xlb_sync_subscribe(int target, adlb_datum_id id,
+                             adlb_subscript sub, bool *subscribed);
 
-adlb_code
-xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub);
+adlb_code xlb_sync_notify(int target, adlb_datum_id id,
+                          adlb_subscript sub);
 
-adlb_code
-xlb_send_unsent_notify(int rank, const struct packed_sync *req_hdr,
-        void *malloced_subscript);
+adlb_code xlb_send_unsent_notify(int rank,
+                                 const struct packed_sync *req_hdr,
+                                 void *malloced_subscript);
 
 /*
   Send a steal probe
  */
-adlb_code
-xlb_sync_steal_probe(int target);
+adlb_code xlb_sync_steal_probe(int target);
 
 /*
   Send a steal probe response
   work_counts: counts of request types
   size: number of entries in work_counts array
  */
-adlb_code
-xlb_sync_steal_probe_resp(int target, const int *work_counts,
-                          int size);
+adlb_code xlb_sync_steal_probe_resp(int target,
+                                    const int *work_counts,
+                                    int size);
 
 /*
   Send a request to initiate a steal, to be followed up by actual steal
@@ -114,13 +111,12 @@ xlb_sync_steal_probe_resp(int target, const int *work_counts,
   max_memory: max additional memory to accept
   response: logical, true if we will receive work
  */
-adlb_code
-xlb_sync_steal(int target, const int *work_counts, int size,
-               int max_memory, int *response);
+adlb_code xlb_sync_steal(int target, const int *work_counts,
+                         int size, int max_memory, int *response);
 
 /*
   Send a refcount operation to another server.
-  
+
   If wait is true, wait for response.
   Otherwise, return as soon as it is sent.
  */
@@ -143,14 +139,16 @@ typedef enum {
 } xlb_pending_kind;
 
 typedef struct {
-  xlb_pending_kind kind; 
+  xlb_pending_kind kind;
   int rank;
   struct packed_sync *hdr; // Header to be freed later
   void *extra_data; // Extra data if needed for header type
 } xlb_pending;
 
-static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
-            int *rank, struct packed_sync **hdr, void **extra_data);
+static inline adlb_code xlb_dequeue_pending(xlb_pending_kind* kind,
+                                            int* rank,
+                                            struct packed_sync** hdr,
+                                            void** extra_data);
 
 /*
   Handle a dequeued pending sync.  Frees all memory associated
@@ -159,7 +157,9 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   This should not be called if already within a sync loop.
  */
 adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
-      int rank, struct packed_sync *hdr, void *extra_data);
+                                  int rank,
+                                  struct packed_sync* hdr,
+                                  void* extra_data);
 
 /*
  * return: true if we have pending notification work that could result
@@ -168,7 +168,7 @@ adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
 static inline bool xlb_have_pending_notifs(void);
 
 static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
-                                const struct packed_sync *hdr);
+                                        const struct packed_sync* hdr);
 
 /*
  * Check if there incoming sync request messages to process.
@@ -191,12 +191,13 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops);
 
 adlb_code xlb_handle_notify_sync(int rank,
-        const struct packed_subscribe_sync *hdr, const void *sync_data,
-        void *extra_data);
+                                 const struct packed_subscribe_sync *hdr,
+                                 const void* sync_data,
+                                 void* extra_data);
 
 // Inline functions to make it quick to check for pending sync requests
 
-extern xlb_sync_recv *xlb_sync_recvs;
+extern xlb_sync_recv* xlb_sync_recvs;
 extern int xlb_sync_recv_head;
 extern int xlb_sync_recv_size;
 
@@ -209,7 +210,7 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
     return ADLB_NOTHING;
   }
 
-  xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
+  xlb_sync_recv* head = &xlb_sync_recvs[xlb_sync_recv_head];
   MPI_TEST2(&head->req, &flag, &status);
 
   if (flag)
@@ -225,7 +226,7 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
 
 // Info about pending sync requests: where sync request has been received
 // but we haven't responded yet.
-extern xlb_pending *xlb_pending_syncs; // Array for ring buffer
+extern xlb_pending* xlb_pending_syncs; // Array for ring buffer
 extern int xlb_pending_sync_head; // Head of ring buffer
 extern int xlb_pending_sync_count; // Valid entries in array
 extern int xlb_pending_sync_size; // Malloced size
@@ -242,13 +243,16 @@ adlb_code xlb_pending_shrink(void);
   Caller is responsible for freeing hdr
  */
 __attribute__((always_inline))
-static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
-            int *rank, struct packed_sync **hdr, void **extra_data)
+static inline adlb_code
+xlb_dequeue_pending(xlb_pending_kind* kind,
+                    int* rank,
+                    struct packed_sync** hdr,
+                    void** extra_data)
 {
   if (xlb_pending_sync_count == 0)
     return ADLB_NOTHING;
-  
-  xlb_pending *pending = &xlb_pending_syncs[xlb_pending_sync_head];
+
+  xlb_pending* pending = &xlb_pending_syncs[xlb_pending_sync_head];
 
   *kind = pending->kind;
   *rank = pending->rank;
@@ -276,13 +280,15 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   return ADLB_SUCCESS;
 }
 
-static inline bool xlb_have_pending_notifs(void)
+static inline bool
+xlb_have_pending_notifs(void)
 {
   return xlb_pending_notif_count > 0;
 }
 
 __attribute__((always_inline))
-static inline bool xlb_is_pending_notif_mode(adlb_sync_mode mode)
+static inline bool
+xlb_is_pending_notif_mode(adlb_sync_mode mode)
 {
   switch (mode) {
     case ADLB_SYNC_NOTIFY:
@@ -296,8 +302,9 @@ static inline bool xlb_is_pending_notif_mode(adlb_sync_mode mode)
 }
 
 __attribute__((always_inline))
-static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
-                                const struct packed_sync *hdr)
+static inline bool
+xlb_is_pending_notif(xlb_pending_kind kind,
+                     const struct packed_sync* hdr)
 {
   switch (kind)
   {
@@ -312,5 +319,3 @@ static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
       return false;
   }
 }
-
-#endif

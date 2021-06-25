@@ -21,8 +21,7 @@
  *      Author: wozniak
  */
 
-#ifndef TOOLS_H
-#define TOOLS_H
+#pragma once
 
 #include <assert.h>
 #include <inttypes.h>
@@ -39,13 +38,14 @@
 #endif
 
 /**
-   Reset this pointer
+   Free and reset this pointer
    NOTE: Pass in the address of the pointer you want to modify
          (Thus actually a pointer-pointer.  We
           do this because of C auto-casting limits.)
 
 */
-static inline void null(void* p)
+static inline void
+null(void* p)
 {
   void** pp = (void**) p;
   free(*pp);
@@ -53,18 +53,20 @@ static inline void null(void* p)
 }
 
 /**
-   null-predicated: Reset this pointer if not already NULL
+   null-predicated: Free and reset this pointer if not already NULL
    Return true if the pointer was non-NULL and is now NULL,
    else return false
    NOTE: Pass in the address of the pointer you want to modify
          (Thus actually a pointer-pointer.  We
           do this because of C auto-casting limits.)
 */
-static inline bool nullp(void* p)
+static inline bool
+nullp(void* p)
 {
   void** pp = (void**) p;
   if (*pp == NULL)
     return false;
+  // TODO: use null(p)
   free(*pp);
   *pp = NULL;
   return true;
@@ -347,5 +349,3 @@ int slurp_process(const char** argv);
 void print_ints(const int* A, int n);
 
 void quicksort_ints(int* A, int first, int last);
-
-#endif

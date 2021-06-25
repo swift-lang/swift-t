@@ -47,7 +47,7 @@ proc build_chain { chain_length head } {
 
 
 if { ! [ adlb::amserver ] } {
-  if { [ adlb::rank ] == 0 } {
+  if { [ adlb::comm_rank ] == 0 } {
     # This rank sets up data for test. Having a single rank set up the
     # data allows us free use of the ID space
 
@@ -87,7 +87,7 @@ if { ! [ adlb::amserver ] } {
   adlb::server
 }
 
-puts "Rank [ adlb::rank ] done!"
+puts "Rank [ adlb::comm_rank ] done!"
 
 adlb::finalize 1
 

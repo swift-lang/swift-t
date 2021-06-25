@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// If this system does not have strchrnul(),
+// see ExM c-utils strchrnul.h
+#include <config.h>
+#include <strchrnul.h>
+
 #include "MPIX_Comm_launch.h"
 
 static char* old_pwd = NULL;
@@ -90,8 +95,7 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 		lengths[i] = len;
 		total += len+2;
 	}
-	result = malloc(total);
-	memset(result, 0, total);
+	result = malloc(total+1);
 	strcpy(result, env_word);
 	char* p = result+env_word_length;
 	for(i=0; i<count; i++) {
@@ -192,7 +196,7 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	return MPI_SUCCESS;
 }
 
-int MPIX_Comm_launch(const char* cmd, char** argv,
+int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		MPI_Info info, int root, MPI_Comm comm,
 		int* exit_code) {
 
@@ -239,7 +243,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		}
 
 		int i, j = 0;
-		// concatenate the names with commas
+		// concatenate the host names into a comma-separated string
+		// for mpiexec
 		for(i=0; i<(MPI_MAX_PROCESSOR_NAME+1)*size; i++) {
 			if(allhosts[i] != '\0') {
 				allhosts[j] = allhosts[i];

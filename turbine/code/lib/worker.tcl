@@ -21,7 +21,8 @@ namespace eval turbine {
     proc standard_worker { rules startup_cmd {mode WORK}} {
 
         eval $startup_cmd
-        if { [ adlb::rank ] == 0 } {
+        set rank [ adlb::comm_rank ]
+        if { $rank == 0 } {
             # First rank should start execution
             eval $rules
         }
@@ -47,10 +48,10 @@ namespace eval turbine {
         set success true
         try {
             c::worker_loop $WORK_TYPE($mode) $keyword_args
-        } trap "TURBINE ERROR" e {
-            set success false
-            puts "worker loop exited with error"
+        } trap {TURBINE ERROR} e {
+            throw {TURBINE ERROR} "user work error:\n$e"
         } on error e {
+            set success false
             puts "WORKER ERROR: $::errorInfo"
         }
 
@@ -99,7 +100,7 @@ namespace eval turbine {
         async_exec_configure $work_type $config_str
 
         eval $startup_cmd
-        if { [ adlb::rank ] == 0 } {
+        if { [ adlb::comm_rank ] == 0 } {
             # First rank should start execution
             eval $rules
         }

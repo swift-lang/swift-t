@@ -29,11 +29,11 @@ proc worker_test { } {
   test_random random
   test_random default
   test_random_multicreate random
-  puts "Done: [ adlb::rank ]"
+  puts "Done: [ adlb::comm_rank ]"
 }
 
 proc test_local { } {
-  set my_rank [ adlb::rank ]
+  set my_rank [ adlb::comm_rank ]
   set my_server [ expr {$my_rank + 2} ]
   set N 200
   for { set i 0 } { $i < $N } { incr i } {
@@ -46,7 +46,7 @@ proc test_local { } {
 }
 
 proc test_local_multicreate { } {
-  set my_rank [ adlb::rank ]
+  set my_rank [ adlb::comm_rank ]
   set my_server [ expr {$my_rank + 2} ]
   set N 200
   for { set i 0 } { $i < $N } { incr i } {
@@ -61,7 +61,7 @@ proc test_local_multicreate { } {
 }
 
 proc test_random { placement_mode } {
-  set my_rank [ adlb::rank ]
+  set my_rank [ adlb::comm_rank ]
   set my_server [ expr {$my_rank + 2} ]
   set my_server_chosen 0
   set N 200
@@ -82,7 +82,7 @@ proc test_random { placement_mode } {
 }
 
 proc test_random_multicreate { placement_mode } {
-  set my_rank [ adlb::rank ]
+  set my_rank [ adlb::comm_rank ]
   set my_server [ expr {$my_rank + 2} ]
   set my_server_chosen 0
   set N 200

@@ -33,21 +33,38 @@ declare TURBINE_HOME
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
+export TURBINE_LAUNCH_OPTIONS=${TURBINE_LAUNCH_OPTIONS:-}
+if (( TURBINE_PREALLOCATION ))
+then
+  TURBINE_LAUNCH_OPTIONS+="--output=${OUTPUT_FILE} "
+  TURBINE_LAUNCH_OPTIONS+="--error=${OUTPUT_FILE} "
+  TURBINE_LAUNCH_OPTIONS+="--nodes=${NODES} "
+  TURBINE_LAUNCH_OPTIONS+="--ntasks-per-node=${PPN} "
+  TURBINE_LAUNCH_OPTIONS+="--chdir=${TURBINE_OUTPUT}"
+fi
+
 TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
-m4 ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+m4 ${COMMON_M4} ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"
 
 # SLURM exports all environment variables to the job by default
 # Evaluate any user turbine-slurm-run -e K=V settings here:
-for kv in ${env}
+for kv in ${USER_ENV_CODE}
 do
   eval export ${kv}
 done
 
-SUBMIT_COMMAND=( sbatch ${TURBINE_SLURM} )
+TURBINE_PREALLOCATION=${TURBINE_PREALLOCATION:-0}
+SUBMIT_PROGRAM=sbatch
+if (( TURBINE_PREALLOCATION ))
+then
+  SUBMIT_PROGRAM=
+fi
+SUBMIT_COMMAND=( ${SUBMIT_PROGRAM} ${TURBINE_SLURM} )
 
 print ${SUBMIT_COMMAND} > ${TURBINE_OUTPUT}/submit.sh
 chmod u+x ${TURBINE_OUTPUT}/submit.sh
@@ -58,12 +75,21 @@ then
   return 0
 fi
 
-JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
-
-# JOB_ID must be an integer:
-if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
+if (( ! TURBINE_PREALLOCATION ))
 then
-  abort "sbatch failed!"
+  # Submit it!
+  JOB_ID=$( echo $( ${SUBMIT_COMMAND} ) | grep -o "[1-9][0-9]*$" )
+  # JOB_ID must be an integer:
+  if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
+  then
+    abort "sbatch failed!"
+  fi
+else
+  if ! ${SUBMIT_COMMAND}
+  then
+    abort "submit command failed: ${SUBMIT_COMMAND}"
+  fi
+  JOB_ID=${SLURM_JOB_ID}
 fi
 declare JOB_ID
 

@@ -248,6 +248,14 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure
 (int o) ternary(boolean b, int i1, int i2) "turbine" "0.0.2"
 [ "if { <<b>> } { set <<o>> <<i1>> } else { set <<o>> <<i2>> }" ];
+// New after v1.4.3
+@pure
+(int o) ternary_integer(boolean b, int i1, int i2) "turbine" "0.0.2"
+[ "if { <<b>> } { set <<o>> <<i1>> } else { set <<o>> <<i2>> }" ];
+// New after v1.4.3
+@pure
+(string o) ternary_string(boolean b, string s1, string s2) "turbine" "0.0.2"
+[ "if { <<b>> } { set <<o>> <<s1>> } else { set <<o>> <<s2>> }" ];
 
 // Get internal representation of type
 @pure
@@ -258,6 +266,16 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure
 <T> (string O[]) array_repr(T I[]) "turbine" "0.4.0" [
   "set <<O>> <<I>>" // Use Tcl string conversion
+];
+
+@pure
+<T> (string O[]) keys_string (T I[]) "turbine" "0.4.0" [
+  "set <<O>> [ turbine::keys <<I>> ]" // Use Tcl string conversion
+];
+
+@pure
+<T> (int    O[]) keys_integer(T I[]) "turbine" "0.4.0" [
+  "set <<O>> [ turbine::keys <<I>> ]" // Use Tcl string conversion
 ];
 
 // Implement % operator

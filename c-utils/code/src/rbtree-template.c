@@ -451,7 +451,7 @@ search_node_succ(struct RBTREE_NODE* p, RBTREE_KEY_T key)
     {
       while (p->left != NULL && RBTREE_KEY_EQ(key, p->left->key))
         p = p->left;
-     
+
       // Cannot go further left
       if (p->left == NULL)
         break;
@@ -580,17 +580,19 @@ RBTREE_REMOVE_NODE(struct RBTREE_TYPENAME* target, struct RBTREE_NODE* N)
   }
 
   // If N has two children, we use replacement R: in-order successor
-  struct RBTREE_NODE* R = NULL;
-  if (N->right != NULL && N->left != NULL)
-    R = rbtree_leftmost_loop(N->right);
+  {
+    struct RBTREE_NODE* R = NULL;
+    if (N->right != NULL && N->left != NULL)
+      R = rbtree_leftmost_loop(N->right);
 
-  if (R != NULL)
-    swap_nodes(target, N, R);
+    if (R != NULL)
+      swap_nodes(target, N, R);
 
-  delete_one_child(target, N);
+    delete_one_child(target, N);
 
-  DEBUG_RBTREE("after:\n");
-  // RBTREE_PRINT(target);
+    DEBUG_RBTREE("after:\n");
+    // RBTREE_PRINT(target);
+  }
 
   end:
   target->size--;

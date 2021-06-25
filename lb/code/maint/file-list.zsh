@@ -10,6 +10,7 @@ print bootstrap configure configure.ac Makefile.in install-sh
 print config.h.in
 print maint/*.sh maint/*.c
 print maint/{debian,version}.mkf
+print m4/*.m4
 print src/*.[ch]
 print src/{adlb-version.h.in,mpe-settings.h.in}
 print {src,tests}/module.mk.in

@@ -91,22 +91,22 @@ typedef enum
 #define TURBINE_RANK_ANY ADLB_RANK_ANY
 
 /**
-   The maximal string length of a container subscript
+   The maximal storage of a container subscript
  */
-#define TURBINE_SUBSCRIPT_MAX  ADLB_DATA_SUBSCRIPT_MAX
+#define TURBINE_SUBSCRIPT_MAX ADLB_DATA_SUBSCRIPT_MAX
 
 /**
-   The maximal length of a Turbine rule name string
+   The maximal storageof a Turbine rule name string
  */
 #define TURBINE_NAME_MAX 128
 
 /**
    The maximal length of a datum (string, blob, etc.)
  */
-#define TURBINE_DATA_MAX       ADLB_DATA_MAX
+#define TURBINE_DATA_MAX ADLB_DATA_MAX
 
 /**
-   Maximal storage of a Turbine action string
+   The maximal storage of a Turbine action string
  */
 #define TURBINE_ACTION_MAX 1024
 

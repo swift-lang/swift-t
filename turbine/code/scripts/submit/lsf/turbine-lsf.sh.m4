@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -l
+changecom(`dnl')#!/bin/bash`'bash_l()
 
 # We use changecom to change the M4 comment to dnl, not hash
 
@@ -20,19 +20,23 @@ changecom(`dnl')#!/bin/bash -l
 # The Turbine LSF template.  This is automatically filled in
 # by M4 in turbine-lsf-run.zsh
 
-# Created: esyscmd(`date')
-
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
+ifelse(getenv(QUEUE), `',,
+#BSUB -q getenv(QUEUE))
 #BSUB -J getenv(TURBINE_JOBNAME)
 #BSUB -nnodes getenv_nospace(NODES)
 #BSUB -W getenv(WALLTIME)
 #BSUB -e getenv(OUTPUT_FILE)
 #BSUB -o getenv(OUTPUT_FILE)
+#BSUB -cwd getenv(TURBINE_OUTPUT)
+
+# User directives:
+# BEGIN TURBINE_DIRECTIVE
+getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
 
 set -eu
 
@@ -43,6 +47,7 @@ then
 fi
 
 echo "TURBINE-LSF"
+echo "TURBINE: DATE START: $( date "+%Y-%m-%d %H:%M:%S" )"
 echo
 
 cd ${TURBINE_OUTPUT}
@@ -50,42 +55,90 @@ cd ${TURBINE_OUTPUT}
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
-
-# Start the user environment variables pasted by M4
-getenv(USER_ENVS_CODE)
-# End environment variables pasted by M4
-
-# Construct jsrun-formatted user environment variable arguments
-USER_ENVS_ARGS=()
-for K in ${!USER_ENVS[@]}
-do
-  USER_ENVS_ARGS+=( -E $K="${USER_ENVS[$K]}" )
-done
+PPN=getenv(PPN)
 
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
+# Add Turbine Python utilities:
+PYTHONPATH=$PYTHONPATH:${TURBINE_HOME}/py
 
-export LD_LIBRARY_PATH=getenv_nospace(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+# USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+
+# Construct jsrun-formatted user environment variable arguments
+# The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
+USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
+USER_ENV_COUNT=${#USER_ENV_ARRAY[@]}
+USER_ENV_ARGS=( -E _dummy=x )
+USER_ENV_ARGS=( -E PYTHONPATH )
+for (( i=0 ; i < USER_ENV_COUNT ; i+=2 ))
+do
+  K=${USER_ENV_ARRAY[i]}
+  V=${USER_ENV_ARRAY[i+1]}
+  USER_ENV_ARGS+=( -E $K="${V}" )
+done
+
+export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
-module load gcc/6.3.1-20170301
-module load spectrum-mpi # /10.1.0.4-20170915
-# PATH=/opt/ibm/spectrum_mpi/jsm_pmix/bin:$PATH
+# User prelaunch commands:
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
-set -x
-echo
-which jsrun
+# Deduplicate entries in LD_LIBRARY_PATH to reduce size
+# for systems that expand environment variables on the command line
+LLP_OLD=$LD_LIBRARY_PATH
+LLP_NEW=""
+for P in ${LLP_OLD//:/ }
+do
+  # Append colon here to prevent prefix matching:
+  if [[ ! $LLP_NEW =~ $P: ]]
+  then
+     LLP_NEW+=$P:
+  fi
+done
+
+if (( ${#LLP_OLD} != ${#LLP_NEW} ))
+then
+    echo "turbine-lsf: changed LD_LIBRARY_PATH ..."
+    echo "turbine-lsf: from:"
+    echo $LLP_OLD | tr : '\n' | nl
+    echo "turbine-lsf: to:"
+    echo $LLP_NEW | tr : '\n' | nl
+    LD_LIBRARY_PATH=$LLP_NEW
+fi
+
+TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
 START=$( date +%s.%N )
-hostname
-jsrun -n $PROCS -r $PPN -E TCLLIBPATH "${USER_ENVS_ARGS[@]}" ${COMMAND}
-# ~/mcs/ste/mpi/t.x # bash -c hostname
-CODE=$?
+if (
+   # Dump the environment to a sorted file for debugging:
+   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+   set -x
+   # Launch it!
+   jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
+            -E TCLLIBPATH \
+            -E ADLB_PRINT_TIME=1 \
+            "${USER_ENV_ARGS[@]}" \
+            ${COMMAND}
+)
+then
+    CODE=0
+else
+    CODE=$?
+    echo
+    echo "TURBINE-LSF: jsrun returned an error code!"
+    echo
+fi
 echo
-echo EXIT CODE: $CODE
+echo "TURBINE: EXIT CODE: $CODE"
 STOP=$( date +%s.%N )
+
 # Bash cannot do floating point arithmetic:
 DURATION=$( awk -v START=${START} -v STOP=${STOP} \
             'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
-echo "MPIEXEC TIME: ${DURATION}"
+
+echo
+echo "TURBINE: MPIEXEC TIME: ${DURATION}"
+echo "TURBINE: DATE STOP:  $( date "+%Y-%m-%d %H:%M:%S" )"
 exit $CODE

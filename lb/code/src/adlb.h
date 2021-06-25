@@ -15,8 +15,7 @@
  */
 
 
-#ifndef ADLB_H
-#define ADLB_H
+#pragma once
 
 #include "adlb-defs.h"
 #include "version.h"
@@ -462,5 +461,3 @@ adlb_code ADLB_Finalize(void);
 adlb_code ADLB_Fail(int code);
 
 void ADLB_Abort(int code);
-
-#endif

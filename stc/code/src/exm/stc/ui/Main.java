@@ -147,8 +147,6 @@ public class Main {
       return null;
     }
 
-    boolean updateOutput = cmd.hasOption(UPDATE_FLAG);
-
     if (cmd.hasOption(INCLUDE_FLAG)) {
       for (String dir: cmd.getOptionValues(INCLUDE_FLAG)) {
         Settings.addModulePath(dir);
@@ -177,8 +175,8 @@ public class Main {
     if (remainingArgs.length == 2) {
       output = remainingArgs[1];
     }
-    Args result = new Args(input, output, updateOutput,
-            swiftProgramArgs, Arrays.asList(preprocMacros));
+    Args result = new Args(input, output, swiftProgramArgs,
+        Arrays.asList(preprocMacros));
     recordArgValues(result);
     return result;
   }
@@ -242,6 +240,7 @@ public class Main {
     System.out.println(
       "The first filename is the input; it is required.\n"   +
       "The second filename is the output; it is optional.\n" +
+      "The options must be placed before the filenames.\n"   +
       "Use stc -h for full help.");
   }
 
@@ -430,12 +429,6 @@ public class Main {
     }
   }
 
-  private static boolean olderThan(File file1, File file2) {
-    long modTime1 = file1.lastModified();
-    long modTime2 = file2.lastModified();
-    return modTime1 < modTime2;
-  }
-
   private static PrintStream setupICOutput() {
     String icFileName = Settings.get(Settings.IC_OUTPUT_FILE);
     if (icFileName == null || icFileName.equals("")) {
@@ -444,7 +437,6 @@ public class Main {
     PrintStream output = null;
     try
     {
-      @SuppressWarnings("resource")
       FileOutputStream stream = new FileOutputStream(icFileName);
       BufferedOutputStream buffer = new BufferedOutputStream(stream);
       output = new PrintStream(buffer);
@@ -452,7 +444,7 @@ public class Main {
     catch (IOException e)
     {
       System.out.println("Error opening IC output file " + icFileName
-                      + ": " + e.getMessage());
+                         + ": " + e.getMessage());
       System.exit(ExitCode.ERROR_IO.code());
     }
     return output;
@@ -475,17 +467,14 @@ public class Main {
   private static class Args {
     public final String inputFilename;
     public final String outputFilename;
-    public final boolean updateOutput;
     public final Properties swiftProgramArgs;
     public final List<String> preprocessorMacros;
 
     public Args(String inputFilename, String outputFilename,
-                boolean updateOutput,
                 Properties swiftProgramArgs, List<String> preprocessorArgs) {
       super();
       this.inputFilename = inputFilename;
       this.outputFilename = outputFilename;
-      this.updateOutput = updateOutput;
       this.swiftProgramArgs = swiftProgramArgs;
       this.preprocessorMacros = preprocessorArgs;
     }

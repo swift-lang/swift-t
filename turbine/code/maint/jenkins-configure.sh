@@ -5,13 +5,23 @@
 #  both configure/make from scratch
 
 # Jenkins - important variables
-C_UTILS=/tmp/exm-install/c-utils
-ADLB=/tmp/exm-install/lb
-TURBINE=/tmp/exm-install/turbine
+EXM_INSTALL=/tmp/exm-install
+C_UTILS=$EXM_INSTALL/c-utils
+ADLB=$EXM_INSTALL/lb
+TURBINE=$EXM_INSTALL/turbine
 PATH=${PATH}:$TURBINE/bin
 
 rm -rf autom4te.cache
 ./bootstrap
+
+for D in $EXM_INSTALL $EXM_INSTALL/mpich $C_UTILS $ADLB
+do
+  if ! [[ -d $D ]]
+  then
+    echo "Directory not found: $D"
+    return 1
+  fi
+done
 
 ./configure --prefix=$TURBINE        \
             --with-tcl=/usr          \
@@ -19,6 +29,7 @@ rm -rf autom4te.cache
             --with-adlb=$ADLB        \
             --with-hdf5=no           \
             --disable-static-pkg     \
-            --disable-static
+            --disable-static         \
+            --with-python-exe=$(which python3)
 
 make clean

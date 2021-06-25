@@ -33,7 +33,7 @@ fi
 
 # We use PBS -V to export all environment variables to the job
 # Evaluate any user turbine-pbs-run -e K=V settings here:
-for kv in ${env}
+for kv in ${USER_ENV_PAIRS}
 do
   eval export ${kv}
 done
@@ -42,7 +42,7 @@ TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine.pbs.m4
 TURBINE_PBS=${TURBINE_OUTPUT}/turbine.pbs
 
 # Filter/create the PBS submit file
-m4 ${TURBINE_PBS_M4} > ${TURBINE_PBS}
+m4 ${COMMON_M4} ${TURBINE_PBS_M4} > ${TURBINE_PBS}
 print "wrote: ${TURBINE_PBS}"
 
 # Launch it!

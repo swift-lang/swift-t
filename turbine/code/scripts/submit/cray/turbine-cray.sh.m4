@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash -l
+changecom(`dnl')#!/bin/bash`'bash_l()
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -21,10 +21,6 @@ changecom(`dnl')#!/bin/bash -l
 #       and will be picked up by aprun (works on Beagle)
 
 # Created: esyscmd(`date')
-
-# Define a convenience macro
-# This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N getenv(TURBINE_JOBNAME)
 ifelse(getenv(PROJECT), `',,
@@ -98,46 +94,43 @@ export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
-ENV_PAIRS="getenv(ENV_PAIRS)"
+ENV_PAIRS="getenv(USER_ENV_PAIRS)"
 
 # Output header
 echo "Turbine: turbine-cray.sh"
-date "+%Y/%m/%d %I:%M%p"
+date "+%Y-%m-%d %H:%M"
 echo
 
 PROCS=getenv(`PROCS')
 TURBINE_WORKERS=$(( ${PROCS} - ${ADLB_SERVERS} ))
 
-cd ${TURBINE_OUTPUT}
+cd $( readlink --canonicalize ${TURBINE_OUTPUT} )
 
 SCRIPT_NAME=$( basename ${SCRIPT} )
 
 module load alps
 
-APRUN_ENV=""
-for KV in $ENV_PAIRS
+# Construct aprun-formatted user environment variable arguments
+USER_ENVS_ARGS=()
+for K in ${!USER_ENV_ARRAY[@]}
 do
-    APRUN_ENV+="-e $KV "
+  USER_ENVS_ARGS+=( -e $K="${USER_ENVS[$K]}" )
 done
-APRUN_ENV+="-e TURBINE_OUTPUT=$TURBINE_OUTPUT"
+
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 OUTPUT_FILE=getenv(OUTPUT_FILE)
-if [ -z "$OUTPUT_FILE" ]
-then
-    # Default non-streaming output: usually unused
-    echo "JOB OUTPUT:"
-    echo
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
-          ${TCLSH} ${SCRIPT_NAME} ${ARGS}
-else
-    # Stream output to file for immediate viewing
-    echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.out"
-    # echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
-    set -x
-    ${APRUN} -n getenv(PROCS) -N getenv(PPN) ${APRUN_ENV} -cc none -d 1 \
-          ${TCLSH} ${SCRIPT_NAME} ${ARGS} \
-                     2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.out"
-fi
+# Stream output to file for immediate viewing
+echo "JOB OUTPUT is in ${OUTPUT_FILE}.${PBS_JOBID}.txt"
+# echo "Running: ${TCLSH} ${SCRIPT_NAME} ${ARGS}"
+set -x
+${APRUN} -n getenv(PROCS) -N getenv(PPN) \
+         -cc none -d 1 \
+         "${USER_ENVS_ARGS[@]}" \
+         ${COMMAND} \
+         2>&1 > "${OUTPUT_FILE}.${PBS_JOBID}.txt"
 
 # Local Variables:
 # mode: m4

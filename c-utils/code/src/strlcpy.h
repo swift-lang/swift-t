@@ -16,7 +16,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#pragma once
+
+#include <c-utils-config.h>
+
 #include <sys/types.h>
+
+// We don't need this on Mac, BSD, as these OSs have strlcpy()
+#ifndef HAVE_STRLCPY
 
 /*
  * Copy string src to buffer dst of size dsize.  At most dsize-1
@@ -47,3 +54,5 @@ strlcpy(char *dst, const char *src, size_t dsize)
 
 	return(src - osrc - 1);	/* count does not include NUL */
 }
+
+#endif

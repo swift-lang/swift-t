@@ -1,5 +1,6 @@
 
 // Reported in issue #98
+// This may have a race condition: 2021-05-03
 // SKIP-THIS-TEST
 
 int a[][];

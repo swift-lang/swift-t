@@ -1,6 +1,6 @@
-changecom(`dnl')#!/bin/bash -l
+#!/bin/bash`'bash_l()
 # We changed the M4 comment to d-n-l, not hash
-# We need 'bash -l' for the module system
+# We may need 'bash -l' for the module system
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -18,46 +18,46 @@ changecom(`dnl')#!/bin/bash -l
 
 # TURBINE-SLURM.SH
 
-# Created: esyscmd(`date')
-
-# Define convenience macros
-# This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1'")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
+# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
-ifelse(getenv(QUEUE),`',,
+ifelse(getenv_nospace(QUEUE),`',,
 #SBATCH --partition=getenv(QUEUE)
 )
 
-ifelse(getenv(PROJECT),`',,
+ifelse(getenv_nospace(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
-# TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
-#SBATCH getenv(TURBINE_SBATCH_ARGS)
-)
+#SBATCH --job-name=getenv_nospace(TURBINE_JOBNAME)
 
-#SBATCH --job-name=getenv(TURBINE_JOBNAME)
-
-#SBATCH --time=getenv(WALLTIME)
-#SBATCH --nodes=getenv(NODES)
-#SBATCH --ntasks-per-node=getenv(PPN)
-#SBATCH --workdir=getenv(TURBINE_OUTPUT)
+#SBATCH --time=getenv_nospace(WALLTIME)
+#SBATCH --nodes=getenv_nospace(NODES)
+#SBATCH --ntasks-per-node=getenv_nospace(PPN)
+#SBATCH -D getenv_nospace(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
-ifelse(getenv(MAIL_ENABLED),`1',
-#SBATCH --mail-user=getenv(MAIL_ADDRESS)
+ifelse(getenv_nospace(MAIL_ENABLED),`1',
+#SBATCH --mail-user=getenv_nospace(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
 )
 
-# User directives:
+# This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
+# Note this works because sbatch ignores all but the last of duplicate arguments
+# TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
+ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
+#SBATCH getenv(TURBINE_SBATCH_ARGS)
+)
+
+# BEGIN TURBINE_DIRECTIVE
 getenv(TURBINE_DIRECTIVE)
+# END TURBINE_DIRECTIVE
 
 echo TURBINE-SLURM.SH
+START=$( date "+%s.%N" )
+echo "START: $( date '+%Y-%m-%d %H:%M:%S' )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
@@ -67,23 +67,67 @@ then
  set -x
 fi
 
-TURBINE_HOME=getenv(TURBINE_HOME)
-source ${TURBINE_HOME}/scripts/turbine-config.sh
+TURBINE_PILOT=${TURBINE_PILOT:-getenv(TURBINE_PILOT)}
+if (( ! ${#TURBINE_PILOT} ))
+then
+  TURBINE_HOME=getenv(TURBINE_HOME)
+  source ${TURBINE_HOME}/scripts/turbine-config.sh
+fi
 
 COMMAND="getenv(COMMAND)"
 
+# SLURM exports all environment variables to the job by default
+# Evaluate any user turbine -e K=V settings here
+ENV_PAIRS=( getenv(USER_ENV_CODE) )
+for P in "${ENV_PAIRS[@]}"
+do
+    export "$P"
+done
+
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
+
 # Use this on Midway:
 # module load openmpi gcc/4.9
+
 
 # Use this on Bebop:
 # module load icc
 # module load mvapich2
 
-TURBINE_LAUNCHER=srun
+# Use mpiexec on Midway
+# TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
+# TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
+# TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
+# Use this on Cori:
+# TURBINE_LAUNCHER=srun
+# module swap PrgEnv-intel PrgEnv-gnu
+# module load gcc
+
+(
 echo
 set -x
 ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
-                    ${TURBINE_INTERPOSER:-} \
+                    ${TURBINE_INTERPOSER} \
                     ${COMMAND}
-# Return exit code from mpirun
+)
+CODE=$?
+
+STOP=$( date "+%s.%N" )
+# Bash cannot do floating point arithmetic:
+DURATION=$( awk -v START=${START} -v STOP=${STOP} \
+            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+
+echo
+echo "MPIEXEC TIME: ${DURATION}"
+echo "EXIT CODE: ${CODE}"
+echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
+
+# Return exit code from launcher
+exit ${CODE}
+
+# Local Variables:
+# mode: m4;
+# End:

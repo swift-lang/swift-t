@@ -54,15 +54,32 @@ handle_python_exception(bool exceptions_are_errors)
 {
   printf("\n");
   printf("PYTHON EXCEPTION:\n");
+  fflush(stdout);
 
   #if PY_MAJOR_VERSION >= 3
+  int size = 4096;
+  char buffer1[size];
+  char buffer2[size];
+  memset(buffer1, 0, size);
+  FILE* errs = fmemopen(buffer1, size, "r+");
 
   PyObject *exc,*val,*tb;
-  PyErr_Fetch(&exc,&val,&tb);
-  PyObject_Print(exc, stdout, Py_PRINT_RAW);
-  printf("\n");
-  PyObject_Print(val, stdout, Py_PRINT_RAW);
-  printf("\n");
+  PyErr_Fetch(&exc, &val, &tb);
+  PyObject_Print(exc, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+  PyObject_Print(val, errs, Py_PRINT_RAW);
+  fprintf(errs, "\n");
+
+  rewind(errs);
+  while (fgets(buffer2, size, errs) != NULL)
+  {
+    int n = strlen(buffer2);
+    if (n == 0) continue;
+    printf("EXCEPTION: ");
+    fwrite(buffer2, 1, n, stdout);
+    fflush(stdout);
+  }
+  fclose(errs);
 
   #else // Python 2
 

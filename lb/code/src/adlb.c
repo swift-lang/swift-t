@@ -164,7 +164,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   }
 
   // Set this correctly before initializing other modules
-  xlb_s.perfc_enabled = false;
+  xlb_s.perfc_enabled = false; // TODO: don't need this line?
   getenv_boolean("ADLB_PERF_COUNTERS", xlb_s.perfc_enabled,
                  &xlb_s.perfc_enabled);
 
@@ -206,7 +206,8 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 /**
  * Setup everything to do with layout of communicator we're running on
  */
-static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
+static adlb_code
+xlb_setup_layout(MPI_Comm comm, int nservers)
 {
   int rc;
   adlb_code code;
@@ -231,6 +232,9 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
                          &xlb_s.layout);
   ADLB_CHECK(code);
 
+  DEBUG("my_server: rank=%i -> server=%i\n",
+	xlb_s.layout.rank, xlb_s.layout.my_server);
+
   code = xlb_get_hostmap_mode(&xlb_s.hostmap_mode);
   ADLB_CHECK(code);
 
@@ -238,7 +242,7 @@ static adlb_code xlb_setup_layout(MPI_Comm comm, int nservers)
 
   if (xlb_s.hostmap_mode != HOSTMAP_DISABLED)
   {
-    struct xlb_hostmap *hostmap;
+    struct xlb_hostmap* hostmap;
 
     // Need hostmap for server init
     code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);
@@ -543,6 +547,11 @@ ADLBP_Get(int type_requested, void** payload,
 
   TRACE_START;
 
+  if (xlb_s.layout.am_leader)
+  {
+    TRACE("Get(): post: rank=%i", xlb_s.layout.rank);
+  }
+
   ADLB_CHECK_MSG(type_requested >= 0 && type_requested < xlb_s.types_size,
                 "ADLB_Get(): Bad work type: %i\n", type_requested);
 
@@ -550,6 +559,11 @@ ADLBP_Get(int type_requested, void** payload,
   IRECV(&g, sizeof(g), MPI_BYTE, xlb_s.layout.my_server, ADLB_TAG_RESPONSE_GET);
   SEND(&type_requested, 1, MPI_INT, xlb_s.layout.my_server, ADLB_TAG_GET);
   WAIT(&request, &status);
+
+  if (xlb_s.layout.am_leader)
+  {
+    TRACE("Get(): recv rank=%i", xlb_s.layout.rank);
+  }
 
   xlb_mpi_recv_sanity(&status, MPI_BYTE, sizeof(g));
 
@@ -580,6 +594,11 @@ ADLBP_Get(int type_requested, void** payload,
   xlb_mpi_recv_sanity(&status, MPI_BYTE, g.length);
   DEBUG("ADLB_Get(): got: %s", (char*) buffer);
 
+  if (xlb_s.layout.am_leader)
+  {
+    TRACE("Get(): payload rank=%i", xlb_s.layout.rank);
+  }
+
   if (g.parallelism > 1)
   {
     rc = xlb_parallel_comm_setup(g.parallelism, comm);
@@ -601,24 +620,44 @@ ADLBP_Get(int type_requested, void** payload,
 static adlb_code
 xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
 {
-  DEBUG("xlb_parallel_comm_setup(): parallelism=%i", parallelism);
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): parallelism=%i rank=%i",
+         parallelism, xlb_s.layout.rank);
+  }
   // Parallel tasks require MPI 3.  Cf. configure.ac
-  ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3, "Parallel tasks not supported for MPI "
-                                   "version %i < 3", ADLB_MPI_VERSION);
+  ADLB_CHECK_MSG(ADLB_MPI_VERSION >= 3,
+                 "Parallel tasks not supported for MPI version %i < 3",
+                 ADLB_MPI_VERSION);
   #if ADLB_MPI_VERSION >= 3
   MPI_Status status;
   // Recv ranks for output comm
   int ranks[parallelism];
   RECV(ranks, parallelism, MPI_INT, xlb_s.layout.my_server,
        ADLB_TAG_RESPONSE_GET);
+
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): ranks rank=%i",
+         xlb_s.layout.rank);
+  }
+
   MPI_Group group;
-  int rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
+  int rc;
+  rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
   assert(rc == MPI_SUCCESS);
   // This is an MPI 3 function:
   rc = MPI_Comm_create_group(xlb_s.comm, group, 0, comm);
   valgrind_assert(rc == MPI_SUCCESS);
   MPI_Group_free(&group);
-  TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
+  if (xlb_s.layout.am_leader)
+  {
+    INFO("xlb_parallel_comm_setup(): grouped rank=%i",
+         xlb_s.layout.rank);
+  }
+
+  TRACE("MPI_Comm_create_group(): comm=%llu\n",
+        (long long unsigned int) *comm);
   #endif
 
   return ADLB_SUCCESS;
@@ -1596,7 +1635,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        bool *result, bool *value_present,
                        void *data, size_t *length, adlb_data_type *type)
 {
-  int ac;
+  adlb_code ac;
   MPI_Status status;
   MPI_Request request;
   struct packed_insert_atomic_resp resp;
@@ -1653,6 +1692,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                adlb_retrieve_refc refcounts, adlb_data_type* type,
                void* data, size_t* length)
 {
+  double unused t0 = MPI_Wtime();
   MPI_Status status;
   MPI_Request request;
 
@@ -1702,6 +1742,10 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
                                               to_server_rank);
   ADLB_CHECK(ac);
+
+  double unused t1 = MPI_Wtime();
+  INFO("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
+       xlb_s.layout.rank, to_server_rank, id, t1-t0);
 
   return ADLB_SUCCESS;
 }
@@ -1848,7 +1892,8 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
 
   if (t == -1)
     return ADLB_ERROR;
-  *type = t;
+  adlb_data_type recvd = (adlb_data_type) t;
+  *type = recvd;
   return ADLB_SUCCESS;
 }
 
@@ -1873,8 +1918,11 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   if (t[0] == -1 || t[1] == -1)
     return ADLB_ERROR;
 
-  *key_type = t[0];
-  *val_type = t[1];
+  adlb_data_type recvd;
+  recvd = (adlb_data_type) t[0];
+  *key_type = recvd;
+  recvd = (adlb_data_type) t[1];
+  *val_type = recvd;
   return ADLB_SUCCESS;
 }
 

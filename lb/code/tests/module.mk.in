@@ -31,6 +31,6 @@ test_results: $(TEST_RESULTS)
 # exact dependencies between scripts and executables right now
 $(TEST_RESULTS): %.result : %.sh $(TEST_EXECS)
 	$(Q) "  TEST           $(@)"
-	$(E) rm -f $(@)
+	$(E) rm -fv $(@)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1

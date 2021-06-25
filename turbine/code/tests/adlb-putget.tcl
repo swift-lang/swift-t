@@ -35,7 +35,7 @@ set amserver [ adlb::amserver ]
 
 if { $amserver == 0 } {
 
-    set rank [ adlb::rank ]
+    set rank [ adlb::comm_rank ]
     if { $rank == 0 } {
         puts "clock: [ clock seconds ]"
         adlb::put $adlb::RANK_ANY $WORK_TYPE(T) "hello0" 0 1

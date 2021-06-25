@@ -133,7 +133,7 @@ done
 shift $(( OPTIND - 1 ))
 
 (( VERBOSE >= 1 )) && STC_OPTS+="-V"
-(( VERBOSE == 2 )) && TURBINE_OPTS+="-V"
+(( VERBOSE >= 2 )) && TURBINE_OPTS+="-V"
 
 # Print a message when we are verbose.
 verbose()
@@ -217,7 +217,7 @@ then
   STC_OPTS+=( ${STC_DEPS_ARGS} )
 fi
 
-if (( ! SKIP_COMPILE ))
+if (( ! ${SKIP_COMPILE:-0} ))
 then
   # Run STC
   make_stc_output

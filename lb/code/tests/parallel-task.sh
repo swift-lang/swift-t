@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 THIS=$0
 EXEC=${THIS%.sh}.x
