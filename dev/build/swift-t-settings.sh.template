@@ -215,18 +215,13 @@ ENABLE_MKSTATIC_CRC=0
 # module load mvapich2 # or
 # module load gcc/7.1.0-4bgguyp mpich/3.2-bsq4vhr
 
-# Beagle:
-# module unload PrgEnv-gnu
-# module load PrgEnv-gnu
-# module load cray-mpich
-
-# Titan:
-# module load deeplearning # If you want Python
-# module swap PrgEnv-pgi PrgEnv-gnu
-# module load java
-
-# Summitdev:
+# Summit
+# set +eu
+# module load gcc
+# # echo MODULES
 # module load spectrum-mpi
+# # module load ibm-wml-ce/1.6.2-3
+# set -eu
 
 # Midway:
 
