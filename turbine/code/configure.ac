@@ -398,8 +398,11 @@ if [[ ${USE_LAUNCHER} == 0 ]]
 then
     # Try to set launcher based on PATH
     program=$( which mpiexec 2> /dev/null )
-    if [[ ${?} != 0 ]]
+    if [[ ${?} == 0 ]]
     then
+        AC_MSG_RESULT([Found ${program} in PATH.])
+        USE_LAUNCHER=${program}
+    else
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
     fi
 fi
