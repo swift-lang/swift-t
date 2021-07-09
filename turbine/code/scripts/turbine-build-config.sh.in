@@ -22,6 +22,8 @@ TCL_LIB_DIR='@USE_TCL_LIB_DIR@'
 TCL_SYSLIB_DIR='@USE_TCL_SYSLIB_DIR@'
 TCL_LIB_SPEC='@TCL_LIB_SPEC@'
 # Tcl library dependencies for static build
+# This may contain an problematic -lieee
+# Cf. https://www.linuxquestions.org/questions/slackware-14/tcl-linking-library-not-found-4175623418
 TCL_LIB_SPEC_EXTRA='@TCL_LIB_SPEC_EXTRA@'
 TCL_INCLUDE_SPEC='@TCL_INCLUDE_SPEC@'
 TCLSH='@USE_TCLSH@'
