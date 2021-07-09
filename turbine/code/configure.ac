@@ -84,7 +84,7 @@ then
 fi
 
 AC_MSG_RESULT([using CC='$CC'])
-if [[ ${CC} != "" ]]
+if [[ "${CC}" != "" ]]
 then
   AC_MSG_RESULT([which CC='$(which $CC)'])
 fi
@@ -93,7 +93,7 @@ AC_PROG_CC
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using CC='$USE_CC'])
 AC_SUBST(USE_CC)
 
 # Checks for programs
