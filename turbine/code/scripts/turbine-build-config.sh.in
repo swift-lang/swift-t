@@ -3,10 +3,10 @@
 
 # BASH-formatted setup script filtered by turbine/configure
 #
-# This contains variables relevant to compiling code that uses the 
+# This contains variables relevant to compiling code that uses the
 # Turbine C interface
 
-DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us 
+DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 if (( DEBIAN_BUILD ))
 then
@@ -36,7 +36,7 @@ MPI_LIB_SPEC='@USE_MPI_LIB_SPEC@'
 ENABLE_MPE='@ENABLE_MPE@'
 MPE='@USE_MPE@'
 
-# TURBINE_INCLUDES has the flags for all non-system dependencies of 
+# TURBINE_INCLUDES has the flags for all non-system dependencies of
 # Turbine that user code may reference
 TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS_HOME}/include \
                   -I${ADLB_HOME}/include ${TCL_INCLUDE_SPEC}"
@@ -73,4 +73,3 @@ if [ "$ENABLE_MPE" = 1 ]; then
   TURBINE_INCLUDES+=" -I${MPE}/include"
   TURBINE_RPATH+=" -Wl,-rpath,${MPE}/lib"
 fi
-
