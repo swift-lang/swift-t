@@ -587,6 +587,7 @@ Swift has the conventional types:
 +boolean+:: A boolean (true/false).
 +file+:: A file (see <<section_files,Section Files>>).
 +blob+:: External byte data (see <<section_blobs,Section Blobs>>).
++void+:: An empty data type that can be used for controlling workflow progress.
 
 Literals for these types use conventional syntax:
 
