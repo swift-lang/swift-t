@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -435,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -740,13 +741,13 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:800px">
+<body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.4.3,</span>
-<span id="revdate">December 2020</span>
+<span id="revnumber">version 1.5.0,</span>
+<span id="revdate">June 2021</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -908,7 +909,7 @@ script wrapper that configures Turbine and essentially runs:</p></div>
 <div class="paragraph"><p>On more complex, scheduled systems, users do not invoke <code>mpiexec</code>
 directly; Turbine run scripts are provided by Swift/T.</p></div>
 <div class="sect2">
-<h3 id="_turbine_pilot">Turbine pilot</h3>
+<h3 id="_turbine_pilot">Turbine Pilot</h3>
 <div class="paragraph"><p>The <code>turbine-pilot</code> program can be used to run Swift/T interactively
 on the compute nodes of a scheduled system in an interactive
 allocation.  This mode of operation does not attempt to submit a job
@@ -1834,9 +1835,11 @@ Configure Turbine with:
 <h3 id="_bebop">Bebop</h3>
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/bebop">Bebop</a> is a 1024-node x86
 cluster at ANL.  It uses SLURM.</p></div>
-<div class="paragraph"><p><strong>As of:</strong> Master, 2019-06-18</p></div>
 <div class="sect3">
 <h4 id="_public_installation_4">Public installation</h4>
+<div class="sect4">
+<h5 id="_regular_build">Regular build</h5>
+<div class="paragraph"><p><strong>As of:</strong> Master, 2019-06-18</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1855,6 +1858,29 @@ cluster at ANL.  It uses SLURM.</p></div>
 <div class="content">
 <pre><code>$ swift-t -m slurm workflow.swift</code></pre>
 </div></div>
+</div>
+<div class="sect4">
+<h5 id="bebop_spack">Spack</h5>
+<div class="paragraph"><p><strong>As of:</strong> Master, 2021-02-24</p></div>
+<div class="paragraph"><p>This installation uses Spack for Swift/T,
+and Anaconda for most dependencies.</p></div>
+<div class="paragraph"><p>Load from Spack:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ source ~woz/Public/sfw/bebop/spack/mvapich2/share/spack/setup-env.sh
+$ spack load stc turbine
+$ swift-t -v
+...
+ using MPI:    /blues/.../spack-0.10.1/.../gcc-7.1.0/mvapich2-2.3a ... "MPICH"
+ using Tcl:    /home/woz/Public/sfw/bebop/anaconda3/bin/tclsh8.6
+ using Python: /home/woz/Public/sfw/bebop/anaconda3/lib python3.8
+ using R:      /gpfs/fs1/home/woz/Public/sfw/bebop/anaconda3/lib/R</code></pre>
+</div></div>
+<div class="paragraph"><p>Run as noted for Bebop compute nodes above.<br />
+This installation also supports <a href="#_turbine_pilot">Turbine Pilot</a>.</p></div>
+<div class="paragraph"><p>See this for build hints:
+<code>~woz/Public/sfw/bebop/spack/mvapich2/etc/spack/packages.yaml</code></p></div>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_3">Build instructions</h4>
@@ -2684,6 +2710,18 @@ module load swift-t</code></pre>
 is an IBM system located at the Oak Ridge Leadership Computing
 Facility with a theoretical peak double-precision performance
 of approximately 200 PF.</p></div>
+<div class="sect3">
+<h4 id="_e4s_installation">E4S installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2021-06-17</p></div>
+<div class="paragraph"><p>This is based on a Spack installation.  To use it, simply run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ module load e4s/20.10 stc/0.8.3
+$ export PROJECT=...      # &lt;- Put your project here
+$ swift-t -m lsf -E 'trace(42);'</code></pre>
+</div></div>
+<div class="paragraph"><p>Thanks to the OLCF staff for installing and maintaining this build.</p></div>
+</div>
 <div class="sect3">
 <h4 id="_public_installation_12">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
@@ -3843,8 +3881,9 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.4.3<br />
-Last updated 2020-12-17 11:19:21 CST
+Version 1.5.0<br />
+Last updated
+ 2021-06-17 12:20:26 CDT
 </div>
 </div>
 </body>

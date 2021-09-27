@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.4.3, December 2020
+v1.5.0, June 2021
 
 
 == How to use this guide
@@ -154,7 +154,7 @@ mpiexec tclsh program.tic
 On more complex, scheduled systems, users do not invoke +mpiexec+
 directly; Turbine run scripts are provided by Swift/T.
 
-=== Turbine pilot
+=== Turbine Pilot
 
 The +turbine-pilot+ program can be used to run Swift/T interactively
 on the compute nodes of a scheduled system in an interactive
@@ -691,9 +691,11 @@ LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
 http://www.lcrc.anl.gov/about/bebop[Bebop] is a 1024-node x86
 cluster at ANL.  It uses SLURM.
 
-*As of:* Master, 2019-06-18
-
 ==== Public installation
+
+===== Regular build
+
+*As of:* Master, 2019-06-18
 
 Add to +PATH+:
 
@@ -717,6 +719,33 @@ Run with:
 ----
 $ swift-t -m slurm workflow.swift
 ----
+
+[[bebop_spack]]
+===== Spack
+
+*As of:* Master, 2021-02-24
+
+This installation uses Spack for Swift/T,
+and Anaconda for most dependencies.
+
+Load from Spack:
+
+----
+$ source ~woz/Public/sfw/bebop/spack/mvapich2/share/spack/setup-env.sh
+$ spack load stc turbine
+$ swift-t -v
+...
+ using MPI:    /blues/.../spack-0.10.1/.../gcc-7.1.0/mvapich2-2.3a ... "MPICH"
+ using Tcl:    /home/woz/Public/sfw/bebop/anaconda3/bin/tclsh8.6
+ using Python: /home/woz/Public/sfw/bebop/anaconda3/lib python3.8
+ using R:      /gpfs/fs1/home/woz/Public/sfw/bebop/anaconda3/lib/R
+----
+
+Run as noted for Bebop compute nodes above. +
+This installation also supports link:#_turbine_pilot[Turbine Pilot].
+
+See this for build hints:
++~woz/Public/sfw/bebop/spack/mvapich2/etc/spack/packages.yaml+
 
 ==== Build instructions
 
@@ -1347,6 +1376,20 @@ https://docs.olcf.ornl.gov/systems/summit_user_guide.html[Summit]
 is an IBM system located at the Oak Ridge Leadership Computing
 Facility with a theoretical peak double-precision performance
 of approximately 200 PF.
+
+==== E4S installation
+
+*As of:* 2021-06-17
+
+This is based on a Spack installation.  To use it, simply run:
+
+----
+$ module load e4s/20.10 stc/0.8.3
+$ export PROJECT=...      # <- Put your project here
+$ swift-t -m lsf -E 'trace(42);'
+----
+
+Thanks to the OLCF staff for installing and maintaining this build.
 
 ==== Public installation
 

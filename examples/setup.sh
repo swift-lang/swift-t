@@ -2,6 +2,8 @@
 # EXAMPLES SETUP.SH
 # Source this before running examples
 
+which swift-t turbine
+
 # Set these for your system:
 
 # Get Turbine's build settings

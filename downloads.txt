@@ -23,7 +23,26 @@ Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
 [[stable]]
-== Current/stable: Series 1.4
+== Current/stable: Series 1.5
+
+=== 1.5.0
+
+** http://swift-lang.github.io/swift-t-downloads/1.5/swift-t-1.5.0.tar.gz[swift-t-1.5.0.tar.gz] (8.3 MB)
+** 2021-05-12
+** ExM c-utils 0.6.0
+** ADLB/X 1.0.0
+** Turbine 1.3.0
+** STC 0.8.3
+
+*Changes:*
+
+* Fixes for Mac
+* Performance improvements to ADLB/X parallel task placement
+* Automatic support for Yum package manager MPICH/OpenMPI
+* New JSON processing API
+* Scheduler improvements for SLURM and LSF
+
+== Series 1.4
 
 === 1.4.3
 

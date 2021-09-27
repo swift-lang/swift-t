@@ -63,7 +63,7 @@ endif
 ### SWIG
 
 func_wrap.cxx: FortFuncs.h string_array.h func.i
-	swig -c++ -includeall func.i
+	swig -tcl -c++ -includeall func.i
 	sed -i s/F_Init/Func_Init/ func_wrap.cxx
 
 ### C++

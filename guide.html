@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
     "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -435,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -740,10 +741,10 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:800px">
+<body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.4.3, August 2020</span><br />
+<span id="author">v1.5.0, April 2021</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -955,7 +956,7 @@ Obtain the Swift/T source package from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>wget http://swift-lang.github.io/swift-t-downloads/1.4/swift-t-1.4.3.tar.gz</code></pre>
+<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.5/swift-t-1.5.0.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -964,8 +965,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>tar xfz swift-t-1.4.3.tar.gz
-cd swift-t-1.4.3</code></pre>
+<pre><code>$ tar xfz swift-t-1.5.0.tar.gz
+$ cd swift-t-1.5.0</code></pre>
 </div></div>
 </li>
 <li>
@@ -974,14 +975,14 @@ Create a settings file by running:
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>./dev/build/init-settings.sh</code></pre>
+<pre><code>$ ./dev/build/init-settings.sh</code></pre>
 </div></div>
 </li>
 <li>
 <p>
 Edit the settings file: <code>dev/build/swift-t-settings.sh</code>
 </p>
-<div class="paragraph"><p>At a minimum, you must set the install directory with <code>SWIFT_T_PREFIX</code>
+<div class="paragraph"><p>At a minimum, you should set the install directory with <code>SWIFT_T_PREFIX</code>
 (the default will install to <code>/tmp</code>).
 On a standard system, no further configuration may be needed.
 In many cases, however, you will need to modify additional
@@ -995,7 +996,7 @@ enabling/disabling features, debug or optimized builds, etc.</p></div>
 <td class="icon">
 <div class="title">Tip</div>
 </td>
-<td class="content">Save your <code>swift-t-settings.sh</code> when you download a new package</td>
+<td class="content">Save your <code>swift-t-settings.sh</code> when you download a new package.</td>
 </tr></table>
 </div>
 </li>
@@ -1005,7 +1006,7 @@ Run the build script
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>dev/build/build-swift-t.sh</code></pre>
+<pre><code>$ dev/build/build-swift-t.sh</code></pre>
 </div></div>
 <div class="paragraph"><p>See <code>dev/build/README.md</code> for more notes and build options.<br />
 Use <code>build-swift-t.sh -h</code> for help.</p></div>
@@ -1028,8 +1029,8 @@ Add Turbine and STC to your paths
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>PATH=${PATH}:/path/to/swift-t-install/turbine/bin
-PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
+<pre><code>$ PATH=${PATH}:/path/to/swift-t-install/turbine/bin
+$ PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
 </div></div>
 </li>
 </ol></div>
@@ -6292,7 +6293,7 @@ If the options in <code>swift-t-settings.sh</code> do not give sufficient contro
 install Swift/T from the downloadable package or from a Git clone.
 However, this method does not allow full control over
 the configuration.  Swift/T is built with standard Ant (Java) and
-Autotools/Makefile &#169; techniques.  You can more directly control
+Autotools/Makefile (C) techniques.  You can more directly control
 the configuration when building through the arguments to <code>ant</code> or
 <code>configure</code>.</p></div>
 <div class="paragraph"><p>To perform the installation using <code>configure</code>/<code>make</code>, simply untar the
@@ -6674,7 +6675,8 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-08-31 15:52:46 CDT
+Last updated
+ 2021-04-27 11:10:30 CDT
 </div>
 </div>
 
