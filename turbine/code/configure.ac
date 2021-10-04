@@ -1077,6 +1077,8 @@ AC_ARG_WITH(tcl,
     [
         AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
+        AC_CHECK_FILE(${withval},[],
+          AC_MSG_ERROR([Given Tcl directory does not exist: $withval]))
     ],
     [
       AC_MSG_NOTICE([Tcl location not specified, trying to find tclsh on path])
