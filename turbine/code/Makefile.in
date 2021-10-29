@@ -777,7 +777,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
-	../../dev/build/lock.sh -c $(INSTALL_PREFIX)
+	test ! -f $(INSTALL_PREFIX)/lock
 	$(E) rm -f $(@)
 # 	Configure-generated files
 	$(E) chmod u+x bin/turbine bin/turbine-pilot

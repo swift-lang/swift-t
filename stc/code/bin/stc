@@ -537,9 +537,9 @@ ${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 # Return the exit code from the java process
 EXITCODE=${?}
 
-if (( DELETE_INPUT )) {
-     verbose "Deleting: ${INPUT}"
-     rm ${INPUT}
+if (( ${STC_AUTODELETE:-1} && DELETE_INPUT )) {
+  verbose "Deleting: ${INPUT}"
+  rm ${INPUT}
 }
 
 return ${EXITCODE}

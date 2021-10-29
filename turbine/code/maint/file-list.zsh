@@ -36,7 +36,7 @@ print scripts/submit/sge/turbine{-sge-run.zsh,-sge.sh.m4}
 print scripts/submit/theta/{turbine-theta-run.zsh,turbine-theta.sh.m4}
 print scripts/python-config.py
 print src/turbine/turbine-version.h.in
-print etc/help/*.txt
+print etc/help/*.txt etc/turbine.supp
 
 if [[ ${PKG_TYPE} == "deb-bin" ]]
 then

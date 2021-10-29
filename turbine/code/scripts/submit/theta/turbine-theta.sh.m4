@@ -106,12 +106,23 @@ printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
 # Run Turbine!
 set -x
-aprun -n ${PROCS} -N ${PPN} \
-      ${TURBINE_LAUNCH_OPTIONS:-} \
-      "${USER_ENV_ARGS[@]}" \
-      ${TURBINE_INTERPOSER:-} \
-      ${COMMAND}
-CODE=${?}
+if [[ ${HOST} =~ thetagpu* ]]
+then
+  # ThetaGPU
+  mpirun -hostfile ${COBALT_NODEFILE} -n ${PROCS} -npernode ${PPN} \
+         ${TURBINE_LAUNCH_OPTIONS:-} \
+         ${TURBINE_INTERPOSER:-} \
+         ${COMMAND}
+  CODE=${?}
+else
+  # Original Theta
+  aprun -n ${PROCS} -N ${PPN} \
+         ${TURBINE_LAUNCH_OPTIONS:-} \
+         "${USER_ENV_ARGS[@]}" \
+         ${TURBINE_INTERPOSER:-} \
+         ${COMMAND}
+  CODE=${?}
+fi
 set +x
 
 STOP=$( date "+%s.%N" )

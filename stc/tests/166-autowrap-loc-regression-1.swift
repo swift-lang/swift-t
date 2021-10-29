@@ -10,7 +10,7 @@ import string;
 
 @dispatch=WORKER
 (string o) hello_worker(string msg) "turbine" "0.0.1" [
-  "set mytmp1234 <<msg>>; set <<o>> \"Hello from [ adlb::rank ]: $mytmp1234\"; puts $<<o>>"
+  "set mytmp1234 <<msg>>; set <<o>> \"Hello from [ adlb::comm_rank ]: $mytmp1234\"; puts $<<o>>"
 ];
 
 main {

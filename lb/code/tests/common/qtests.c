@@ -38,7 +38,7 @@ static adlb_code check_hostnames(struct xlb_hostnames *hostnames,
 static adlb_code setup_hostmap(struct xlb_hostnames *hostnames,
                               const char **hosts, int comm_size);
 
-const char *prio_mix_str(prio_mix prio)
+const char* prio_mix_str(prio_mix prio)
 {
   if (prio == EQUAL)
   {
@@ -51,7 +51,7 @@ const char *prio_mix_str(prio_mix prio)
   }
 }
 
-const char *tgt_mix_str(tgt_mix tgt)
+const char* tgt_mix_str(tgt_mix tgt)
 {
   switch (tgt)
   {
@@ -63,7 +63,7 @@ const char *tgt_mix_str(tgt_mix tgt)
     case NODE_SOFT_TARGETED: return "NODE_SOFT_TARGETED";
     default: assert(false);
   }
-  // Cannot get here:
+  // Unreachable:
   assert(false);
   return NULL;
 }
@@ -351,7 +351,7 @@ int select_wu_target(tgt_mix tgts)
 
     // Return random worker on host
     int my_worker_idx = workers->arr[(rand() >> 8) % (int)workers->size];
-    int rank = xlb_rank_from_my_worker_idx(&xlb_s.layout, my_worker_idx);
+    int rank = xlb_rank_from_worker_idx(&xlb_s.layout, my_worker_idx);
     assert(rank >= 0 && rank < xlb_s.layout.workers);
 
     return rank;
@@ -504,8 +504,8 @@ adlb_code warmup_rq(void)
     struct dyn_array_i *host_workers;
     host_workers = &xlb_s.layout.my_host2workers[host_idx];
     int other_worker_idx = host_workers->arr[rand() % (int)host_workers->size];
-    int other_rank = xlb_rank_from_my_worker_idx(&xlb_s.layout,
-                                            other_worker_idx);
+    int other_rank = xlb_rank_from_worker_idx(&xlb_s.layout,
+                                              other_worker_idx);
     assert(other_rank >= 0 && other_rank < xlb_s.layout.workers);
 
     ac = xlb_requestqueue_add(rank, type, 1, true);

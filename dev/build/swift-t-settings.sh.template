@@ -70,6 +70,8 @@ SWIFT_T_CUSTOM_MPI=0
 # MPI_INCLUDE=/path/to/mpi/include
 # MPI_LIB_DIR=/path/to/mpi/lib
 # MPI_LIB_NAME=funny.mpi.a
+# If needed, you can provide mpiexec here:
+# LAUNCHER=/path/to/bin/mpiexec
 
 # C build settings: Swift/T C compile settings default to -O2
 # Optimized build (set to 1 to enable): Set -O3, NDEBUG
@@ -215,22 +217,23 @@ ENABLE_MKSTATIC_CRC=0
 # module load mvapich2 # or
 # module load gcc/7.1.0-4bgguyp mpich/3.2-bsq4vhr
 
-# Beagle:
-# module unload PrgEnv-gnu
-# module load PrgEnv-gnu
-# module load cray-mpich
-
-# Titan:
-# module load deeplearning # If you want Python
-# module swap PrgEnv-pgi PrgEnv-gnu
-# module load java
-
-# Summitdev:
+# Summit
+# set +eu
+# module load gcc
+# # echo MODULES
 # module load spectrum-mpi
+# # module load ibm-wml-ce/1.6.2-3
+# module load gcc/9.1.0
+# module load spectrum-mpi/10.4.0.3-20210112
+# module load ibm-wml-ce/1.6.2-3
+# set -eu
+
+# Spock:
+# module load gcc/10.3.0
+# module load PrgEnv-gnu/8.1.0
+# module load swig
 
 # Midway:
-
-
 
 #+===================+
 #|| Editor settings ||

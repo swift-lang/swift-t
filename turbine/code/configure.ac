@@ -26,7 +26,6 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
-
 DEBIAN_BUILD=0
 AC_ARG_ENABLE(debian-build,
   AS_HELP_STRING(
@@ -84,7 +83,7 @@ then
 fi
 
 AC_MSG_RESULT([using CC='$CC'])
-if [[ ${CC} != "" ]]
+if [[ "${CC}" != "" ]]
 then
   AC_MSG_RESULT([which CC='$(which $CC)'])
 fi
@@ -93,7 +92,7 @@ AC_PROG_CC
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using CC='$USE_CC'])
 AC_SUBST(USE_CC)
 
 # Checks for programs
@@ -329,33 +328,57 @@ fi
 # Set MPI_DIR with respect to a system MPICH (NEWER c. 2021)
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-    MPICH=/usr/lib/x86_64-linux-gnu/mpich
-    if [[ -r ${MPICH}/include/mpi.h ]]
+    if [[ -r /usr/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
     then
-        AC_MSG_RESULT([Using MPICH directory: ${MPICH}])
-        USE_MPI_DIR=${MPICH}
+        # APT
+        DIR=/usr/lib/x86_64-linux-gnu/mpich
+        AC_MSG_RESULT([Using MPICH (APT) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
         if [[ ${USE_LAUNCHER} == 0 ]]
         then
           USE_LAUNCHER=/usr/bin/mpiexec
         fi
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
         USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
+    elif [[ -r /usr/include/mpich-x86_64/mpi.h ]]
+    then
+        # Yum MPICH
+        DIR=/usr/lib64/mpich
+        AC_MSG_RESULT([Using MPICH (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/mpich/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=/usr/include/mpich-x86_64
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
     fi
 fi
 
 # Try to set MPI_DIR with respect to a system OpenMPI
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-    OPENMPI=/usr/lib/x86_64-linux-gnu/openmpi
-    if [[ -r ${OPENMPI}/include/mpi.h ]]
+    if [[ -r /usr/lib/x86_64-linux-gnu/openmpi/include/mpi.h ]]
     then
-        AC_MSG_RESULT([Using OpenMPI directory: ${OPENMPI}])
-        USE_MPI_DIR=${OPENMPI}
+        AC_MSG_RESULT([Using OpenMPI (Debian) directory: ${OPENMPI}])
+        USE_MPI_DIR=/usr/lib/x86_64-linux-gnu/openmpi
         if [[ $USE_LAUNCHER == 0 ]]
         then
           USE_LAUNCHER=/usr/bin/mpiexec
         fi
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    elif [[ -r /usr/include/openmpi-x86_64/mpi.h ]]
+    then
+        # Yum OpenMPI
+        DIR=/usr/lib64/openmpi
+        AC_MSG_RESULT([Using OpenMPI (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/openmpi/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=/usr/include/openmpi-x86_64
         USE_MPI_LIB=${USE_MPI_DIR}/lib
     fi
 fi
@@ -374,8 +397,11 @@ if [[ ${USE_LAUNCHER} == 0 ]]
 then
     # Try to set launcher based on PATH
     program=$( which mpiexec 2> /dev/null )
-    if [[ ${?} != 0 ]]
+    if [[ ${?} == 0 ]]
     then
+        AC_MSG_RESULT([Found ${program} in PATH.])
+        USE_LAUNCHER=${program}
+    else
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
     fi
 fi
@@ -1051,6 +1077,8 @@ AC_ARG_WITH(tcl,
     [
         AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
+        AC_CHECK_FILE(${withval},[],
+          AC_MSG_ERROR([Given Tcl directory does not exist: $withval]))
     ],
     [
       AC_MSG_NOTICE([Tcl location not specified, trying to find tclsh on path])
@@ -1068,6 +1096,21 @@ AC_ARG_WITH(tcl,
           AC_MSG_RESULT([no])
         fi
       done
+
+      if [[ ${USE_TCL} == 0 ]]
+      then
+        AC_MSG_CHECKING([for tclsh on path])
+        program=$( which tclsh 2>&1 )
+        if [[ ${?} == 0 ]]
+        then
+          AC_MSG_RESULT([yes: ${program}])
+          USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
+          AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
+          break
+        else
+          AC_MSG_RESULT([no])
+        fi
+      fi
 
       if [[ ${USE_TCL} == 0 ]]
       then
