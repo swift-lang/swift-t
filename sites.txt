@@ -200,6 +200,7 @@ Cobalt:: +turbine-cobalt-run.zsh+
 Cray/APRUN:: +turbine-cray-run.zsh+ (PBS with Cray's +aprun+)
 SLURM:: +turbine-slurm-run.zsh+
 Theta:: +turbine-theta-run.zsh+ (Cobalt with Cray's +aprun+)
+ThetaGPU:: +turbine-theta-run.zsh+ (Cobalt with +mpirun+)
 LSF:: +turbine-lsf-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
@@ -962,20 +963,6 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 https://www.alcf.anl.gov/theta[Theta] is a Cray at ALCF.
 
-Dependencies are installed in:
-
-----
-/projects/Swift-T/public/sfw/login/mpich-3.2
-/projects/Swift-T/public/sfw/compute/Python-2.7.12
-/projects/Swift-T/public/sfw/compute/tcl-8.6.6
-/home/wozniak/Public/sfw/theta/swig-3.0.12
-
-# Older locations follow...
-/home/wozniak/Public/sfw/theta/Python-2.7.12
-/home/wozniak/Public/sfw/theta/tcl-8.6.1
-/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
-----
-
 ==== Public installation
 
 ===== Login nodes
@@ -1008,6 +995,20 @@ $ swift-t -m theta workflow.swift
 ==== Build instructions
 
 *As of:* 2020-03-10
+
+Dependencies are installed in:
+
+----
+/projects/Swift-T/public/sfw/login/mpich-3.2
+/projects/Swift-T/public/sfw/compute/Python-2.7.12
+/projects/Swift-T/public/sfw/compute/tcl-8.6.6
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+
+# Older locations follow...
+/home/wozniak/Public/sfw/theta/Python-2.7.12
+/home/wozniak/Public/sfw/theta/tcl-8.6.1
+/home/wozniak/Public/sfw/theta/R-3.4.0/lib64/R
+----
 
 Use
 
@@ -1042,6 +1043,45 @@ Use the link:guide.html#install_source[+dev/build+ scripts].
 ----
 $ nice dev/build/build-swift-t.sh
 ----
+
+=== ThetaGPU
+
+https://www.alcf.anl.gov/theta[ThetaGPU] is a NVIDIA DGX at ALCF.
+
+==== Public installation
+
+===== Compute nodes
+
+*No Python or R:*
+
+Add to +PATH+: +
+
++/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin+
+
+===== Build instructions
+
+*As of:* 2021-05-13
+
+Dependencies are installed in:
+
+----
+/projects/Swift-T/public/sfw/thetagpu/tcl-8.6.6
+/home/wozniak/Public/sfw/theta/swig-3.0.12
+/home/wozniak/Public/sfw/x86_64/jdk-1.8.0_291
+----
+
+Add to +PATH+:
+
+----
+/lus/theta-fs0/software/thetagpu/openmpi-4.0.5/bin
+# The SWIG above.
+# The JDK above.
+----
+
+In +swift-t-settings.sh+
+. Set +TCL_INSTALL+ to the location above.
+. Set +CC=mpicc+
+. Build as usual.
 
 === Blue Waters
 
@@ -1554,6 +1594,33 @@ to solve the problem, you make a one-line change in the Tcl source
 file +unix/tclLoadDl.c+ to ensure that +dlopenflags |= RTLD_GLOBAL+,
 thus, it will always use +dlopen(..., RTLD_NOW | RTLD_GLOBAL)+.  For
 example, in Tcl 8.6.6, change line 90 to +if (1) {+.
+
+This may also be necessary when running with OpenMPI.  The error you
+will see is:
+
+----
+
+It looks like MPI_INIT failed for some reason; your parallel process is
+likely to abort.  There are many reasons that a parallel process can
+fail during MPI_INIT; some of which are due to configuration or environment
+problems.  This failure appears to be an internal failure; here's some
+additional information (which may only be relevant to an Open MPI
+developer):
+
+  ompi_mpi_init: ompi_rte_init failed
+  --> Returned "Error" (-1) instead of "Success" (0)
+
+It looks like opal_init failed for some reason; your parallel process is
+likely to abort.  There are many reasons that a parallel process can
+fail during opal_init; some of which are due to configuration or
+environment problems.  This failure appears to be an internal failure;
+here's some additional information (which may only be relevant to an
+Open MPI developer):
+
+  opal_shmem_base_select failed
+  --> Returned value -1 instead of OPAL_SUCCESS
+
+----
 
 == Archive
 
