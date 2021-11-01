@@ -30,6 +30,10 @@ To make PDF, use:
 
 wkhtmltopdf -s Letter guide.html guide.pdf
 
+The swift-lang.org site is at:
+
+https://github.com/swift-lang/swiftweb
+
 ////
 Local Variables:
 mode: doc

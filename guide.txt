@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.5.0, April 2021
+v1.5.0, September 2021
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -587,6 +587,7 @@ Swift has the conventional types:
 +boolean+:: A boolean (true/false).
 +file+:: A file (see <<section_files,Section Files>>).
 +blob+:: External byte data (see <<section_blobs,Section Blobs>>).
++void+:: An empty data type that can be used for controlling workflow progress.
 
 Literals for these types use conventional syntax:
 
