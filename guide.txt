@@ -3158,6 +3158,11 @@ Directory location for <<unmapped_files,unmapped files>> and
 Setting this to 0 logs these temporary files when created and prevents
 Swift/T from automatically deleting them.
 
++STC_AUTODELETE=0+:: By default, Swift/T deletes
+compiler temporary files when they are no longer needed.
+Setting this to 0 prevents
+Swift/T from automatically deleting them.
+
 +TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
 standard output.
 
