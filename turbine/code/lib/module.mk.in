@@ -34,8 +34,10 @@ TCL_SRC := $(DIR)/helpers.tcl       \
 # Builds the Turbine Tcl package
 $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
             $(TCL_SRC)
+        # Must unset TCL_LIBRARY for Spack builds
 	$(Q) "  TCL		$(@)"
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
 	     USE_MPE=@USE_MPE@ \
 	     USE_MAC=@USE_MAC@ \
+	     TCL_LIBRARY=unset \
              $(TCLSH_LOCAL) $(<) > lib/pkgIndex.tcl
