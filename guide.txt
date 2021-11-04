@@ -3917,7 +3917,12 @@ will download, compile, and install all necessary dependencies,
 including an MPI implementation.
 
 Spack, by default, will try to install a lot of software that is
-already installed on your system.  To avoid this, add entries to your
+already installed on your system.  In particular, you will want to
+point Spack to existing tools on your system, including MPI, SWIG,
+etc., so that they are not rebuilt from scratch, along with all of
+their dependencies.
+
+To avoid this, add entries to your
 +~/.spack/packages.yaml+ file for software that is already installed,
 such as the following:
 
