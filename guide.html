@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 9.0.5" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -818,13 +818,13 @@ Install:
 </div>
 <div class="sect2">
 <h3 id="spack">2.2. From Spack</h3>
-<div class="paragraph"><p>Simply clone Spack and install STC.  Use the version spec <code>@develop</code> .</p></div>
+<div class="paragraph"><p>Simply clone Spack and install STC.  Use the version spec <code>@master</code> .</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>$ git clone https://github.com/spack/spack.git
 $ . spack/share/spack/setup-env.sh
-$ spack install turbine@develop
-$ spack install stc@develop</code></pre>
+$ spack install turbine@master
+$ spack install stc@master</code></pre>
 </div></div>
 <div class="paragraph"><p>This will install all necessary dependencies.  See the
 <a href="#_spack_tips">Spack tips</a> to reduce the number of dependencies that
@@ -5413,6 +5413,17 @@ Swift/T from automatically deleting them.
 </p>
 </dd>
 <dt class="hdlist1">
+<code>STC_AUTODELETE=0</code>
+</dt>
+<dd>
+<p>
+By default, Swift/T deletes
+compiler temporary files when they are no longer needed.
+Setting this to 0 prevents
+Swift/T from automatically deleting them.
+</p>
+</dd>
+<dt class="hdlist1">
 <code>TURBINE_LOG_FILE=&lt;file&gt;</code>
 </dt>
 <dd>
@@ -6549,13 +6560,17 @@ Swift/T JVM Engine classes (where <code>SWIFT_T</code> is your Swift/T source di
 <div class="paragraph"><p>Running</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ spack install turbine@develop
-$ spack install stc@develop</code></pre>
+<pre><code>$ spack install turbine@master
+$ spack install stc@master</code></pre>
 </div></div>
 <div class="paragraph"><p>will download, compile, and install all necessary dependencies,
 including an MPI implementation.</p></div>
 <div class="paragraph"><p>Spack, by default, will try to install a lot of software that is
-already installed on your system.  To avoid this, add entries to your
+already installed on your system.  In particular, you will want to
+point Spack to existing tools on your system, including MPI, SWIG,
+etc., so that they are not rebuilt from scratch, along with all of
+their dependencies.</p></div>
+<div class="paragraph"><p>To avoid this, add entries to your
 <code>~/.spack/packages.yaml</code> file for software that is already installed,
 such as the following:</p></div>
 <div class="listingblock">
@@ -6684,7 +6699,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2021-09-27 16:53:15 CST
+ 2021-11-04 11:38:28 CDT
 </div>
 </div>
 
