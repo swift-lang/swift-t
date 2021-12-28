@@ -10,18 +10,18 @@ pragma worktypedef a_new_work_type;
 
 @dispatch=a_new_work_type
 (void o) f1(int i) "turbine" "0.0" [
-  "puts \"f1(<<i>>) ran on $turbine::mode ([ adlb::rank ])\""
+  "puts \"f1(<<i>>) ran on $turbine::mode ([ adlb::comm_rank ])\""
 ];
 
 // Should not be case-sensitive
 @dispatch=A_NEW_WORK_TYPE
 (void o) f2(int i) "turbine" "0.0" [
-  "puts \"f2(<<i>>) ran on $turbine::mode ([ adlb::rank ])\""
+  "puts \"f2(<<i>>) ran on $turbine::mode ([ adlb::comm_rank ])\""
 ];
 
 @dispatch=WORKER
 (void o) f3(int i) "turbine" "0.0" [
-  "puts \"f3(<<i>>) ran on $turbine::mode ([ adlb::rank ])\""
+  "puts \"f3(<<i>>) ran on $turbine::mode ([ adlb::comm_rank ])\""
 ];
 
 main () {
@@ -39,7 +39,7 @@ main () {
   f3(-2) =>
     f1(-2) =>
     f2(-2);
-  
+
   f1(-3) =>
     f3(-3) =>
     f2(-3);

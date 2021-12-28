@@ -65,14 +65,14 @@ then
   TURBINE=$( which turbine )
   if [[ ! -x ${TURBINE} ]]
   then
-    print "Could not locate turbine on path"
+    print "Could not locate turbine on PATH"
     exit 1
   fi
 fi
 
 # Allow user to override these from environment
 export PROCS=${TEST_PROCS:-0}
-if [[ ${PROCS} == 0 ]]
+if (( PROCS == 0 ))
 then
   export ADLB_SERVERS=${TEST_ADLB_SERVERS:-1}
   WORKERS=${TEST_ADLB_WORKERS:-1}

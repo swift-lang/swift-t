@@ -144,7 +144,7 @@ static adlb_code xlb_recheck_single_queues(void);
 
 static adlb_code xlb_recheck_parallel_queues(void);
 
-static inline adlb_code xlb_check_parallel_tasks(int work_type);
+static inline adlb_code xlb_check_parallel_queue(int work_type);
 
 static inline adlb_code redirect_work(int type, int putter, int answer,
                                       int worker, int length);
@@ -223,7 +223,8 @@ void xlb_print_handler_counters(void)
     if (xlb_handlers[tag] != NULL)
     {
       PRINT_COUNTER("%s=%"PRId64"\n",
-              xlb_get_tag_name(tag), xlb_handler_counters[tag]);
+                    xlb_get_tag_name(tag),
+                    xlb_handler_counters[tag]);
     }
   }
 }
@@ -451,7 +452,7 @@ put(int type, int putter, int answer, int target, int length,
     WAIT(&req, &status);
   }
 
-  DEBUG("work unit: x%i %s ", opts.parallelism, work->payload);
+  DEBUG("recvd work unit: x%i %s ", opts.parallelism, work->payload);
 
   if (opts.parallelism > 1)
   {
@@ -801,7 +802,7 @@ process_get_request(int caller, int type, int count, bool blocking)
   {
     // TODO: for count > 0 this early exit may leave unmatched work
     // without initiating a steal
-    code = xlb_check_parallel_tasks(type);
+    code = xlb_check_parallel_queue(type);
     if (code == ADLB_SUCCESS)
       return ADLB_SUCCESS;
     else if (code != ADLB_NOTHING)
@@ -897,14 +898,15 @@ xlb_recheck_single_queues(void)
   return ADLB_SUCCESS if any matches, ADLB_NOTHING if no matches
  */
 static adlb_code
-xlb_check_parallel_tasks(int type)
+xlb_check_parallel_queue(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  TRACE("\t tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
+  DEBUG("xlb_check_parallel_queue(): size=%"PRId64"",
+        xlb_workq_parallel_tasks());
 
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
@@ -938,7 +940,7 @@ xlb_recheck_parallel_queues(void)
 
   for (int t = 0; t < xlb_s.types_size; t++)
   {
-    adlb_code rc = xlb_check_parallel_tasks(t);
+    adlb_code rc = xlb_check_parallel_queue(t);
     if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING)
       ADLB_CHECK(rc);
   }
@@ -956,14 +958,17 @@ static inline adlb_code send_parallel_work(int *workers,
     xlb_work_unit_id wuid, int type, int answer,
     const void* payload, int length, int parallelism)
 {
+  INFO("[%i] send_parallel_work: worker=%i",
+       xlb_s.layout.rank, workers[0]);
   for (int i = 0; i < parallelism; i++)
   {
     adlb_code rc = send_work(workers[i], wuid, type, answer,
-                       payload, length, parallelism);
+                             payload, length, parallelism);
     ADLB_CHECK(rc);
     SEND(workers, parallelism, MPI_INT, workers[i],
          ADLB_TAG_RESPONSE_GET);
   }
+  INFO("[%i] send_parallel_work: OK", xlb_s.layout.rank);
   return ADLB_SUCCESS;
 }
 
@@ -1188,7 +1193,7 @@ handle_store(int caller)
     rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
                                 &prep, &send_notifs);
     ADLB_CHECK(rc);
-    DEBUG("SEnding store response");
+    DEBUG("handle_store(): sending store response");
 
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
@@ -1217,13 +1222,15 @@ handle_retrieve(int caller)
   // TRACE("ADLB_TAG_RETRIEVE");
   MPE_LOG(xlb_mpe_svr_retrieve_start);
 
+  unused double t0 = MPI_Wtime();
+
   MPI_Status status;
 
   RECV(xlb_xfer, ADLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_RETRIEVE);
 
   // Interpret xlb_xfer buffer as struct
   struct packed_retrieve_hdr *hdr =
-        (struct packed_retrieve_hdr*)xlb_xfer;
+        (struct packed_retrieve_hdr*) xlb_xfer;
   adlb_subscript subscript = ADLB_NO_SUB;
   if (hdr->subscript_len > 0)
   {
@@ -1289,6 +1296,9 @@ handle_retrieve(int caller)
   xlb_free_notif(&notifs);
 
   ADLB_Free_binary_data2(&result, xlb_scratch);
+
+  unused double t1 = MPI_Wtime();
+  INFO("handle_retrieve: rank=%i %8.5f", xlb_s.layout.rank, t1-t0);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;

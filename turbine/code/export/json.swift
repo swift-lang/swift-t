@@ -22,39 +22,101 @@
 
 import python;
 
-(string t) json_type(file f, string path)
-{
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_type('%s','%s')" %
-                       (filename(f), path));
-  }
-}
+// Parsers
 
-(string t) json_list_length(file f, string path)
+(string t) json_type(string J, string path)
 {
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_list_length('%s','%s')" %
-                       (filename(f), path));
-  }
+  t = python_persist("from turbine_helpers import *",
+                     "json_type('''%s''','''%s''')" %
+                     (J, path));
 }
 
 (string t) json_get(string J, string path)
 {
     t = python_persist("from turbine_helpers import *",
-                       "json_get('%s','%s')" %
+                       "json_get('''%s''','''%s''')" %
                        (J, path));
 }
 
-(string t) json_dict_entries(file f, string path)
+(int t) json_get_int(string J, string path)
 {
-  wait (f)
-  {
-    t = python_persist("from turbine_helpers import *",
-                       "json_dict_entries('%s','%s')" %
-                       (filename(f), path));
-  }
+  s = json_get(J, path);
+  t = string2int(s);
 }
+
+(float t) json_get_float(string J, string path)
+{
+  s = json_get(J, path);
+  t = string2float(s);
+}
+
+(int t) json_array_size(string J, string path)
+{
+  s = python_persist("from turbine_helpers import *",
+                     "json_array_size('''%s''','''%s''')" %
+                     (J, path));
+  t = string2int(s);
+}
+
+(string t) json_object_names(string J, string path)
+{
+  t = python_persist("from turbine_helpers import *",
+                     "json_object_names('''%s''','''%s''')" %
+                     (J, path));
+}
+
+// Encoders
+
+(string o) json_arrayify(string text)
+{
+  o = "[" + text + "]";
+}
+
+(string o) json_objectify(string text)
+{
+  o = "{" + text + "}";
+}
+
+(string o) json_encode_array(int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array";
+
+(string o) json_encode_array_contents(int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents";
+
+(string o) json_encode_array_retype(string types[],
+                                    int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_retype";
+
+(string o) json_encode_array_contents_retype(string types[],
+                                             int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents_retype";
+
+(string o) json_encode_array_format(string format,
+                                    int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_format";
+
+(string o) json_encode_array_contents_format(string format,
+                                             int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_array_contents_format";
+
+(string o) json_encode_object(string names[], int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object";
+
+(string o) json_encode_object_contents(string names[], int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object_contents";
+
+(string o) json_encode_object_retype(string names[], string types[],
+                                     int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object_retype";
+
+(string o) json_encode_object_contents_retype(string names[], string types[],
+                                              int|float|string|boolean... args) // OK
+"turbine" "1.2.3" "json_encode_object_contents_retype";
+
+(string o) json_encode_object_format(string names[], string format,
+                                    int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object_format";
+
+(string o) json_encode_object_contents_format(string names[], string format,
+                                              int|float|string|boolean... args)
+"turbine" "1.2.3" "json_encode_object_contents_format";

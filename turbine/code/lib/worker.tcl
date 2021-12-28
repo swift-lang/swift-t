@@ -21,7 +21,7 @@ namespace eval turbine {
     proc standard_worker { rules startup_cmd {mode WORK}} {
 
         eval $startup_cmd
-        set rank [ adlb::rank ]
+        set rank [ adlb::comm_rank ]
         if { $rank == 0 } {
             # First rank should start execution
             eval $rules
@@ -100,7 +100,7 @@ namespace eval turbine {
         async_exec_configure $work_type $config_str
 
         eval $startup_cmd
-        if { [ adlb::rank ] == 0 } {
+        if { [ adlb::comm_rank ] == 0 } {
             # First rank should start execution
             eval $rules
         }

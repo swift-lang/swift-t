@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
+// If this system does not have strchrnul(),
+// see ExM c-utils strchrnul.h
+#include <config.h>
+#include <strchrnul.h>
+
 #include "MPIX_Comm_launch.h"
 
 static char* old_pwd = NULL;
@@ -89,8 +94,8 @@ static int info_get_ppw(MPI_Info info) {
 	return ppw;
 }
 
-static int info_get_numproc(MPI_Info info) {
-	int numproc = 1;
+static int info_get_numproc(MPI_Info info, int size) {
+	int numproc = size;
 	int flag = 0;
 	if(MPI_INFO_NULL != info) {
 		int len = 0;
@@ -228,7 +233,7 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	if(MPI_INFO_NULL == info) {
 		return MPI_SUCCESS;
 	}
-	MPI_Info_get_valuelen(info, "write_hosts", &len, &flag);
+        MPI_Info_get_valuelen(info, "write_hosts", &len, &flag);
 	if(!flag) {
 		return MPI_SUCCESS;
 	}
@@ -254,7 +259,7 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	return MPI_SUCCESS;
 }
 
-int MPIX_Comm_launch(const char* cmd, char** argv,
+int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		MPI_Info info, int root, MPI_Comm comm,
 		int* exit_code) {
 
@@ -278,8 +283,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		if(!allhosts) goto fn_error;
 	}
 	r = MPI_Gather(procname, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
-			allhosts, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
-			root, comm);
+	               allhosts, MPI_MAX_PROCESSOR_NAME+1, MPI_CHAR,
+	               root, comm);
 	if(r) goto fn_error;
 
 	// printf("exec\n");   fflush(stdout);
@@ -294,9 +299,8 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		// get the timeout
 		float timeout = (float) info_get_timeout(comm, info);
 		int ppw = info_get_ppw(info);
-		int numproc = info_get_numproc(info);
+		int numproc = info_get_numproc(info, size);
 		assert(numproc <= ppw * size);
-
 		info_chdir(comm, info);
 
 		char timeout_string[64];
@@ -355,7 +359,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 			sprintf(mpicmd, "%s -n %d ", launcher, (numproc+1));
 		} else {
 			sprintf(mpicmd, "%s%s%s -n %d -ppn %d -hosts %s -launcher ssh ",
-					print_time, timeout_string, launcher, numproc, ppw, allhosts);
+                                print_time, timeout_string, launcher, numproc, ppw, allhosts);
 		}
 
 		if (envs != NULL)
@@ -375,7 +379,7 @@ int MPIX_Comm_launch(const char* cmd, char** argv,
 		// concatenate the redirection
 		strcat(mpicmd, redirect);
 
-		printf("mpicmd: %s\n", mpicmd); fflush(stdout);
+		// printf("mpicmd: %s\n", mpicmd); fflush(stdout);
 
 		// calls the system command
 		*exit_code = system(mpicmd);

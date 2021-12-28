@@ -240,6 +240,7 @@ public class Main {
     System.out.println(
       "The first filename is the input; it is required.\n"   +
       "The second filename is the output; it is optional.\n" +
+      "The options must be placed before the filenames.\n"   +
       "Use stc -h for full help.");
   }
 

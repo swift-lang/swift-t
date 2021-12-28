@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// For systems without strlcpy(), e.g., Linux
+#include <strlcpy.h>
+
 #include "MPIX_Comm_launch.h"
 
 int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
@@ -30,7 +34,7 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
     argvc[i] = argv[i];
   }
   argvc[argc] = NULL;
-  MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
     MPI_Comm_free(&comm);
@@ -90,7 +94,6 @@ special_envs(MPI_Info info, int envc, char** envs) {
     MPI_Info_set(info,"numproc",value);
   if (get_envs(envc,envs,"swift_ppw",&index,&value))
     MPI_Info_set(info,"ppw",value);
-
 }
 
 /**
@@ -131,7 +134,7 @@ int launch_envs(MPI_Comm comm, char* cmd,
   argvc[argc] = NULL;
 
   MPI_Info info = envs2info(envc, envs);
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   if (info != MPI_INFO_NULL) {
     MPI_Info_free(&info);
   }
@@ -153,7 +156,7 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   MPI_Info info;
   MPI_Info_create(&info);
   MPI_Info_set(info,"launcher","turbine");
-  MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
+  turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
   if(comm != MPI_COMM_SELF) {
@@ -184,7 +187,7 @@ int launch_multi(MPI_Comm comm, int count, int* procs,
   int result = launch_envs(subcomm, cmd[color],
                            argc[color], argv[color],
                            envc[color], envs[color]);
-  MPI_Reduce(&result, &status, 1, MPI_INT, MPI_MAX, 0, comm);
+  MPI_Reduce(&status, &result, 1, MPI_INT, MPI_MAX, 0, comm);
   return status;
 }
 
@@ -206,16 +209,16 @@ get_color(int rank, MPI_Comm comm, int count, int* procs,
 
   // Else: Use default in-order layout
   int p = 0; // running total procs
-  int i;
-  for (i = 0; i < count; i++)
+  for (int color = 0; color < count; color++)
   {
     // printf("procs[%i]=%i\n", i, procs[i]);
-    p += procs[i];
+    p += procs[color];
     if (rank < p)
-      return i;
+      return color;
   }
   // Unreachable (guarded by sanity_check())
-  assert(0);
+  assert(false);
+  return -1;
 }
 
 static const int MAX_SPEC=1024;

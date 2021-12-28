@@ -21,8 +21,7 @@
  *      Author: wozniak
  */
 
-#ifndef TOOLS_H
-#define TOOLS_H
+#pragma once
 
 #include <assert.h>
 #include <inttypes.h>
@@ -45,7 +44,8 @@
           do this because of C auto-casting limits.)
 
 */
-static inline void null(void* p)
+static inline void
+null(void* p)
 {
   void** pp = (void**) p;
   free(*pp);
@@ -60,11 +60,13 @@ static inline void null(void* p)
          (Thus actually a pointer-pointer.  We
           do this because of C auto-casting limits.)
 */
-static inline bool nullp(void* p)
+static inline bool
+nullp(void* p)
 {
   void** pp = (void**) p;
   if (*pp == NULL)
     return false;
+  // TODO: use null(p)
   free(*pp);
   *pp = NULL;
   return true;
@@ -347,5 +349,3 @@ int slurp_process(const char** argv);
 void print_ints(const int* A, int n);
 
 void quicksort_ints(int* A, int first, int last);
-
-#endif

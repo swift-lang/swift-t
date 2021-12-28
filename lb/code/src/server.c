@@ -181,6 +181,8 @@ xlb_server_init(const struct xlb_state *state)
   code = xlb_steal_init();
   ADLB_CHECK(code);
 
+  TRACE("server_init(): rank=%i\n", state->layout.rank);
+
   xlb_engine_code tc = xlb_engine_init(state->layout.rank);
   ADLB_CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
 
@@ -297,7 +299,6 @@ serve_several()
       {
         code = xlb_handle_pending(&req_status);
         ADLB_CHECK(code);
-
         handled = true;
       }
       else if (code != ADLB_NOTHING)
@@ -350,11 +351,9 @@ serve_several()
 
 /**
    Poll msg queue for requests
-
-   prefer_sync: if true, check for server-server syncs first
  */
 static inline adlb_code
-xlb_poll(int source, MPI_Status *req_status)
+xlb_poll(int source, MPI_Status* req_status)
 {
   int new_message;
   IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
@@ -364,7 +363,7 @@ xlb_poll(int source, MPI_Status *req_status)
 static inline adlb_code
 xlb_handle_pending(MPI_Status* status)
 {
-  adlb_tag tag = (adlb_tag)status->MPI_TAG;
+  adlb_tag tag = (adlb_tag) status->MPI_TAG;
   // Call appropriate RPC handler:
   adlb_code rc = xlb_handle(tag, status->MPI_SOURCE);
 
@@ -416,10 +415,27 @@ xlb_handle_ready_work(void)
 static adlb_code xlb_process_ready_work(void)
 {
   adlb_code rc;
+  bool ready = false;
+
+  unused double t0 = MPI_Wtime();
+
+  if (xlb_server_ready_work.count > 0)
+  {
+    ready = true;
+    INFO("xlb_process_ready_work(): count=%i", xlb_server_ready_work.count);
+  }
+
   for (int i = 0; i < xlb_server_ready_work.count; i++)
   {
     rc = xlb_put_work_unit(xlb_server_ready_work.work[i]);
     ADLB_CHECK(rc);
+  }
+
+  unused double t1 = MPI_Wtime();
+
+  if (ready)
+  {
+    INFO("xlb_process_ready_work(): %f", t1-t0);
   }
 
   if (xlb_server_ready_work.size > 1024)
@@ -559,7 +575,8 @@ setup_par_mod()
     return ADLB_ERROR;
   }
   if (xlb_s.par_mod != 1)
-    printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
+    if (xlb_s.layout.rank == xlb_s.layout.master_server_rank)
+      printf("ADLB_PAR_MOD: %i\n", xlb_s.par_mod);
   return ADLB_SUCCESS;
 }
 
@@ -715,7 +732,7 @@ servers_idle()
 
   // New serial number for round of checks
   xlb_idle_check_attempt++;
-  DEBUG("Master server initiating idle check attempt #%"PRId64,
+  DEBUG("master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
 
   // Arrays containing request and work counts from all servers
@@ -802,7 +819,7 @@ servers_idle()
     }
   }
 
-  DEBUG("[%i] done checking idle %.4f\n", xlb_s.layout.rank, MPI_Wtime());
+  DEBUG("[%i] done checking idle\n", xlb_s.layout.rank);
   free(request_counts);
   free(work_counts);
   return all_idle;
@@ -813,9 +830,10 @@ shutdown_all_servers()
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
-  DEBUG("Initiating server shutdown");
+  DEBUG("initiating server shutdown");
   xlb_server_shutting_down = true;
-  for (int rank = xlb_s.layout.master_server_rank+1; rank < xlb_s.layout.size;
+  for (int rank = xlb_s.layout.master_server_rank+1;
+       rank < xlb_s.layout.size;
        rank++)
   {
     adlb_code rc = xlb_sync_shutdown(rank);

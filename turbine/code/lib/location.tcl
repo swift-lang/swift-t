@@ -24,7 +24,7 @@ namespace eval turbine {
   }
 
   proc check_rank { rank } {
-    if { $rank < 0 || $rank >= [ adlb::size ] } {
+    if { $rank < 0 || $rank >= [ adlb::comm_size ] } {
       error "Rank out of range: ${rank}"
     }
   }

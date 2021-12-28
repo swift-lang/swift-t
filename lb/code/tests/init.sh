@@ -1,8 +1,18 @@
 #!/bin/bash
-set -e
+set -eux
 
 THIS=$0
 EXEC=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
-mpiexec -n 2 ${EXEC} > ${OUTPUT} 2>&1
+if mpiexec -n 4 ${EXEC} > ${OUTPUT} 2>&1
+then
+  CODE=0
+  echo "OK"
+else
+  CODE=$?
+  echo "FAILED: CODE=$CODE"
+  cat $OUTPUT
+fi
+
+exit $CODE

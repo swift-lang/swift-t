@@ -26,7 +26,6 @@ TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
 AC_SUBST(TURBINE_VERSION)
 
-
 DEBIAN_BUILD=0
 AC_ARG_ENABLE(debian-build,
   AS_HELP_STRING(
@@ -83,12 +82,17 @@ then
   AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
 fi
 
+AC_MSG_RESULT([using CC='$CC'])
+if [[ "${CC}" != "" ]]
+then
+  AC_MSG_RESULT([which CC='$(which $CC)'])
+fi
 # Check for CC
 AC_PROG_CC
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using CC='$USE_CC'])
 AC_SUBST(USE_CC)
 
 # Checks for programs
@@ -224,7 +228,8 @@ USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
 ENABLE_MPI_CHECKS=1
-# The label is just for 'turbine -v' output
+# The label is just for 'turbine -v' output and the
+#     Turbine runtime environment, which is available to workflows
 # It may be "(unknown)" if MPI checks are disabled
 MPI_LABEL=""
 MPI_LABEL_DIR=""
@@ -234,12 +239,27 @@ MPI_LABEL_LIB=""
 AC_ARG_WITH(mpi,
     AS_HELP_STRING([--with-mpi], [location of MPI installation]),
     [
-        if [[ ! -d ${withval} ]]
+        if ! test -d ${withval}
         then
             AC_MSG_ERROR(No MPI directory at $withval)
         fi
+        if test ${withval} = /usr
+        then # Spack external /usr installation of OpenMPI:
+          if which mpicc > /dev/null 2>&1
+          then
+            if mpicc -show | grep -q openmpi
+            then
+              withval=/usr/lib/x86_64-linux-gnu/openmpi
+              AC_MSG_RESULT([user specified --with-mpi=/usr -- detected $withval])
+              USE_LAUNCHER=/usr/bin/mpiexec
+            fi
+          fi
+        fi
         USE_MPI_DIR=${withval}
-        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        if [[ -d ${USE_MPI_DIR}/include ]]
+        then
+          USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        fi
         MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
@@ -274,16 +294,27 @@ AC_ARG_ENABLE(mpi-checks,
                     disables these checks.]),
     [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
-# Set MPI_DIR with respect to an mpicc in PATH
-if [[ ${USE_MPI_DIR} == 0 ]]
+# Try to set MPI_DIR with respect to an mpicc in PATH
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-   # Last chance to configure MPI: look for mpiexec in PATH
    program=$( which mpicc 2> /dev/null)
    if [[ ${?} == 0 ]]
    then
        AC_MSG_RESULT([PATH contains: ${program}])
-       USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+       TRY_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
+       if   [[ -f ${TRY_MPI_DIR}/include/mpich/mpi.h ]]
+       then
+         USE_MPI_DIR=${TRY_MPI_DIR}
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/include/mpich
+       elif [[ -f ${TRY_MPI_DIR}/include/mpi.h ]]
+       then
+         USE_MPI_DIR=${TRY_MPI_DIR}
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+       elif [[ -f ${TRY_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
+       then
+         USE_MPI_DIR=${TRY_MPI_DIR}
+         USE_MPI_INCLUDE=${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
+       fi
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
    elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
    then
@@ -292,6 +323,64 @@ then
                                   or mpicc in PATH .])
    fi
    MPI_LABEL_DIR="${USE_MPI_DIR}"
+fi
+
+# Set MPI_DIR with respect to a system MPICH (NEWER c. 2021)
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+then
+    if [[ -r /usr/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
+    then
+        # APT
+        DIR=/usr/lib/x86_64-linux-gnu/mpich
+        AC_MSG_RESULT([Using MPICH (APT) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
+    elif [[ -r /usr/include/mpich-x86_64/mpi.h ]]
+    then
+        # Yum MPICH
+        DIR=/usr/lib64/mpich
+        AC_MSG_RESULT([Using MPICH (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/mpich/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=/usr/include/mpich-x86_64
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    fi
+fi
+
+# Try to set MPI_DIR with respect to a system OpenMPI
+if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+then
+    if [[ -r /usr/lib/x86_64-linux-gnu/openmpi/include/mpi.h ]]
+    then
+        AC_MSG_RESULT([Using OpenMPI (Debian) directory: ${OPENMPI}])
+        USE_MPI_DIR=/usr/lib/x86_64-linux-gnu/openmpi
+        if [[ $USE_LAUNCHER == 0 ]]
+        then
+          USE_LAUNCHER=/usr/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    elif [[ -r /usr/include/openmpi-x86_64/mpi.h ]]
+    then
+        # Yum OpenMPI
+        DIR=/usr/lib64/openmpi
+        AC_MSG_RESULT([Using OpenMPI (Yum) directory: ${DIR}])
+        USE_MPI_DIR=${DIR}
+        if [[ ${USE_LAUNCHER} == 0 ]]
+        then
+          USE_LAUNCHER=/usr/lib64/openmpi/bin/mpiexec
+        fi
+        USE_MPI_INCLUDE=/usr/include/openmpi-x86_64
+        USE_MPI_LIB=${USE_MPI_DIR}/lib
+    fi
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
@@ -308,8 +397,11 @@ if [[ ${USE_LAUNCHER} == 0 ]]
 then
     # Try to set launcher based on PATH
     program=$( which mpiexec 2> /dev/null )
-    if [[ ${?} != 0 ]]
+    if [[ ${?} == 0 ]]
     then
+        AC_MSG_RESULT([Found ${program} in PATH.])
+        USE_LAUNCHER=${program}
+    else
         AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
     fi
 fi
@@ -321,6 +413,7 @@ if [[ ! -f ${USE_MPI_INCLUDE}/mpi.h ]]
 then
     if [[ -f ${USE_MPI_INCLUDE}/mpi/mpi.h ]]
     then
+        # Obsolete location?  2020-01-04
         USE_MPI_INCLUDE=${USE_MPI_INCLUDE}/mpi
     fi
 fi
@@ -380,7 +473,6 @@ MPI_LIB_FOUND=0
 if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
   MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-  echo MPI_LIB_DIR_ALTS $MPI_LIB_DIR_ALTS
   if [[ ! -z "${DPKG_ARCH}" ]]
   then
     MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
@@ -431,7 +523,7 @@ then
 else
   MPI_LABEL="(unknown)"
 fi
-echo MPI_LABEL $MPI_LABEL
+AC_MSG_RESULT([Setting MPI_LABEL: ${MPI_LABEL}])
 
 # Set MPI options
 
@@ -520,11 +612,13 @@ AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
 if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
 then
    HAVE_MPI_IMPL_OPENMPI=1
+   OMPI_MAJOR_VERSION=$( grep OMPI_MAJOR_VERSION ${MPI_H} | \
+                         head -1 | cut -d ' ' -f 3 )
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL="OpenMPI"
    HAVE_MPI_IMPL_OPENMPI=1
-   if (( OMPI_MINOR_VERSION >= 3 ))
+   if (( OMPI_MAJOR_VERSION > 3 || OMPI_MINOR_VERSION >= 3 ))
    then
      MPI_LINE_OUTPUT_FLAG="--tag-output"
    else
@@ -534,7 +628,7 @@ elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    HAVE_MPI_IMPL_MPICH=1
    MPI_IMPL="MPICH"
-   MPI_LINE_OUTPUT_FLAG=-l
+   MPI_LINE_OUTPUT_FLAG="-l"
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 fi # ENABLE_MPI_CHECKS==1
@@ -730,6 +824,13 @@ AC_ARG_WITH(r,
         PATH=$R_BIN:$PATH
       fi
       AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+      AC_MSG_RESULT([Using Rscript: $( which Rscript )])
+      if Rscript -e '"R_IS_OK"' | grep R_IS_OK
+      then
+        AC_MSG_RESULT(["Rscript works."])
+      else
+        AC_MSG_ERROR([Cannot execute simple Rscript program.])
+      fi
   ])
 
 AC_ARG_WITH(rinside,
@@ -919,11 +1020,11 @@ AC_ARG_ENABLE(shared,
     ])
 AC_SUBST(ENABLE_SHARED)
 
-ENABLE_STATIC_PKG=1
+ENABLE_STATIC_PKG=0
 AC_ARG_ENABLE(static-pkg,
     AS_HELP_STRING([--enable-static-pkg],
        [Create statically linkable Turbine Tcl package with Tcl source.
-        Default: yes]),
+        Default: disabled]),
     [
        if test "$enableval" = no ; then
          ENABLE_STATIC_PKG=0
@@ -933,11 +1034,11 @@ AC_ARG_ENABLE(static-pkg,
     ])
 AC_SUBST(ENABLE_STATIC_PKG)
 
-ENABLE_STATIC=1
+ENABLE_STATIC=0
 AC_ARG_ENABLE(static,
     AS_HELP_STRING([--enable-static],
              [Create static libraries.
-              Default: enabled]),
+              Default: disabled]),
   [
        if test "$enableval" = no ; then
          ENABLE_STATIC=0
@@ -953,11 +1054,11 @@ AC_PROG_RANLIB
 export TCL_VERSION=0
 
 # In order from most to least preferred
-TCL_VERSION_PREFS="8.6 8.5"
+TCL_VERSION_PREFS="8.6"
 
 AC_ARG_WITH(tcl-version,
     AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.5. If not specified,
+                   [Tcl version. Minimum is 8.6. If not specified,
                     use highest version we can find]),
     [
         TCL_VERSION=${withval}
@@ -976,6 +1077,8 @@ AC_ARG_WITH(tcl,
     [
         AC_MSG_RESULT([using Tcl: ${withval}])
         USE_TCL=${withval}
+        AC_CHECK_FILE(${withval},[],
+          AC_MSG_ERROR([Given Tcl directory does not exist: $withval]))
     ],
     [
       AC_MSG_NOTICE([Tcl location not specified, trying to find tclsh on path])
@@ -993,6 +1096,21 @@ AC_ARG_WITH(tcl,
           AC_MSG_RESULT([no])
         fi
       done
+
+      if [[ ${USE_TCL} == 0 ]]
+      then
+        AC_MSG_CHECKING([for tclsh on path])
+        program=$( which tclsh 2>&1 )
+        if [[ ${?} == 0 ]]
+        then
+          AC_MSG_RESULT([yes: ${program}])
+          USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
+          AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
+          break
+        else
+          AC_MSG_RESULT([no])
+        fi
+      fi
 
       if [[ ${USE_TCL} == 0 ]]
       then
@@ -1079,7 +1197,7 @@ do
       LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
       LIBTCL_PREFIX=libtcl${TCLVER}
       LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
-      AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
+      AC_MSG_CHECKING([for Tcl ${TCLVER} library at ${LIB_DIR}/${LIBTCL}])
       if [[ -r ${LIB_DIR}/${LIBTCL} ]]
       then
         AC_MSG_RESULT([yes])

@@ -33,12 +33,11 @@ turbine_io_bcast(MPI_Comm comm, char** s, int* length)
   int rc;
   int mpi_rank;
   MPI_Comm_rank(comm, &mpi_rank);
-  size_t size;
-  int bytes;
 
+  int bytes;
   if (mpi_rank == 0)
   {
-    size = strlen(*s)+1;
+    size_t size = strlen(*s)+1;
     if (size > INT_MAX)
       return false;
     bytes = (int) size;

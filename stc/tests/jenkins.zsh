@@ -21,9 +21,12 @@ set -eu
 
 # Any arguments to this script are passed to run-tests.zsh
 
-print "JENKINS.ZSH"
-print " in $(/bin/pwd)"
-printf "DATE: $(date "+%m/%d/%Y %I:%M%p")"
+print "JENKINS ZSH"
+print "DATE: $( date "+%Y-%m-%d %H:%M" )\n"
+
+THIS=$( readlink --canonicalize $( dirname $0 ) )
+print "THIS: ${THIS}"
+cd $THIS
 print
 
 TESTS_SKIP=0
@@ -58,7 +61,7 @@ then
   export TEST_ADLB_WORKERS=0
   while (( TEST_ADLB_WORKERS < TEST_ADLB_SERVERS ))
   do
-    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 1 ))
+    TEST_ADLB_WORKERS=$(( RANDOM % 10 + 10 ))
   done
   print "TEST_ADLB_WORKERS=${TEST_ADLB_WORKERS}"
 fi
@@ -67,18 +70,23 @@ print "stc -v"
 ${STC} -v
 print
 
-cat ${TURBINE_INSTALL}/export/files.swift
-
 export ADLB_PERF_COUNTERS=0
-nice ./run-tests.zsh -O0 -O1 -O2 -O3 -p 5671 \
+if ! ./run-tests.zsh -O0 -O1 -O2 -O3 \
      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} ${*} |& \
      tee results.out
+then
+  print "run-tests failed!"
+  return 1
+fi
 print
 
 print "Aggregating results..."
 SUITE_RESULT="result_aggregate.xml";
-./jenkins-results.zsh > ${SUITE_RESULT}
-
+if ! ./jenkins-results.zsh > ${SUITE_RESULT}
+then
+  print "jenkins-results failed!"
+  return 1
+fi
 print
 print "SUITE RESULT XML:"
 cat ${SUITE_RESULT}

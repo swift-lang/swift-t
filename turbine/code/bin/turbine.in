@@ -131,29 +131,29 @@ fi
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if (( ${?} != 0 ))
 then
-  echo "Turbine installation is broken!"
+  print "Turbine installation is broken!"
   exit 1
 fi
 
 report_version()
 {
   print "Turbine ${TURBINE_VERSION}"
-  print " in: ${TURBINE_HOME}"
+  print " installed:    ${TURBINE_HOME}"
   SOURCE_TXT=${TURBINE_HOME}/etc/source.txt
   if [[ -f ${SOURCE_TXT} ]]
   then
-    print " installed from: $( cat ${SOURCE_TXT} )"
+    print " source:       $( cat ${SOURCE_TXT} )"
   fi
-  print " using CC:  ${USE_CC}"
-  print " using MPI: ${MPI_LABEL}"
-  print " using Tcl: ${TCLSH}"
+  print " using CC:     ${USE_CC}"
+  print " using MPI:    ${MPI_LABEL} \"${MPI_IMPL}\""
+  print " using Tcl:    ${TCLSH}"
   if (( ${#TURBINE_USE_PYTHON} + ${#TURBINE_USE_PYTHON_NAME} ))
   then
     print " using Python: ${TURBINE_USE_PYTHON} ${TURBINE_USE_PYTHON_NAME}"
   fi
   if [[ ${TURBINE_USE_R} != 0 ]]
   then
-    print " using R: ${TURBINE_USE_R}"
+    print " using R:      ${TURBINE_USE_R}"
   fi
 }
 
@@ -179,9 +179,9 @@ print_help()
 
 if (( PRINT_HELP ))
 then
-  echo
+  print
   report_version
-  echo
+  print
   print_help
   exit 0
 fi
@@ -210,14 +210,14 @@ ARGS=( ${*} )
 
 if [[ ! -f ${PROGRAM} ]]
 then
-  echo "turbine: Program not found: ${PROGRAM}"
+  print "turbine: program not found: ${PROGRAM}"
   exit 1
 fi
 if [[ ${#PROGRAM%.swift} != ${#PROGRAM} ]]
 then
-  echo "turbine: Given a Swift script: ${PROGRAM}"
-  echo "\t Turbine inputs are normally *.tic or *.tcl"
-  echo "\t Use stc to generate a *.tic from a *.swift"
+  print "turbine: Given a Swift script: ${PROGRAM}"
+  print "\t Turbine inputs are normally *.tic or *.tcl"
+  print "\t Use stc to generate a *.tic from a *.swift"
   exit 1
 fi
 
@@ -235,7 +235,7 @@ fi
 LAUNCH_OPTIONS=()
 LAUNCH_OPTIONS+=${LINE_PREFIX}
 LAUNCH_OPTIONS+=( -n ${PROCS} )
-LAUNCH_OPTIONS+=( ${TURBINE_LAUNCH_OPTIONS} )
+LAUNCH_OPTIONS+=( ${=TURBINE_LAUNCH_OPTIONS} )
 
 if (( VERBOSE ))
 then
@@ -251,11 +251,11 @@ check_machine()
     [[ ${MACHINE_MODE} == ${M} ]] && return
   done
   # We didn't find a match
-  echo "No such machine: ${MACHINE_MODE}"
+  print "No such machine: ${MACHINE_MODE}"
   exit 1
 }
 
-if [[ -n ${MACHINE_MODE} ]]
+if (( ${#MACHINE_MODE} != 0 ))
 then
   # Use a scheduler script...
   check_machine
@@ -286,10 +286,38 @@ then
   exit 1
 fi
 
+# Set up user environment:
 for KV in ${ENV_VARS}
 do
+  # Set this environment variable
   export ${KV}
+  if [[ ${MPI_IMPL} == "OpenMPI" ]]
+  then
+    # Cut off the value part:
+    K=${KV%=*}
+    # Tell OpenMPI to set this environment variable:
+    LAUNCH_OPTIONS+=( -x ${K} )
+  fi
 done
+
+# Set up Swift/T environment for OpenMPI:
+if [[ ${MPI_IMPL} == "OpenMPI" ]]
+then
+  # Cf. scripts/submit/run-init.zsh
+  AUTO_VARS=(
+    TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
+    MPI_LABEL TURBINE_STDOUT
+    TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
+  )
+  for K in ${AUTO_VARS}
+  do
+    # If the variable is set, tell OpenMPI about it:
+    if (( ${(P)+K} ))
+    then
+      LAUNCH_OPTIONS+=( -x ${K} )
+    fi
+  done
+fi
 
 # Set up PYTHONPATH for turbine_helpers
 if (( ${#TURBINE_USE_PYTHON} ))

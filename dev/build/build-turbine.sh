@@ -3,19 +3,23 @@ set -eu
 
 # BUILD TURBINE
 
-THIS=$(   dirname  $0 )
+THIS=$(   readlink --canonicalize $( dirname  $0 ) )
 SCRIPT=$( basename $0 )
 
-${THIS}/check-settings.sh
-source ${THIS}/functions.sh
-source ${THIS}/options.sh
-source ${THIS}/swift-t-settings.sh
-source ${THIS}/setup.sh
+cd $THIS
+
+$THIS/check-settings.sh
+source $THIS/functions.sh
+source $THIS/options.sh
+source $THIS/swift-t-settings.sh
+source $THIS/setup.sh
 
 [[ $SKIP == *T* ]] && exit
 
 LOG $LOG_INFO "Building Turbine"
 cd ${TURBINE_SRC}
+
+check_lock $SWIFT_T_PREFIX/turbine
 
 run_bootstrap
 
@@ -159,6 +163,15 @@ if [[ ${LAUNCHER:-} != "" ]]; then
   EXTRA_ARGS+=" --with-launcher=${LAUNCHER}"
 fi
 
+if (( ENABLE_R ))
+then
+  # May need this to find Rscript, which is used for installation:
+  if [[ ${R_INSTALL:-} != "" ]]
+  then
+    PATH=$R_INSTALL/bin:$PATH
+  fi
+fi
+
 common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
@@ -170,7 +183,8 @@ then
   rm -f config.cache
   (
     set -ex
-    ${NICE_CMD} ./configure --config-cache \
+    ${NICE_CMD} ./configure \
+                ${CONFIGURE_ARGS[@]} \
                 --prefix=${TURBINE_INSTALL} \
                 --with-c-utils=${C_UTILS_INSTALL} \
                 --with-adlb=${LB_INSTALL} \

@@ -18,8 +18,10 @@ set -eu
 # See run-init.zsh for usage
 
 # Convention note: This script uses -n <processes>
+#                  APRUN       uses -n <processes>
+#                  MPIEXEC     uses -n <processes>
 #                  Cobalt qsub uses -n <nodes>
-# (We follow the mpiexec convention.)
+# (We follow the MPIEXEC convention.)
 
 print "TURBINE-THETA SCRIPT"
 

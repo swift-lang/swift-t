@@ -25,11 +25,13 @@
   http://swift-lang.github.io/swift-t/blob.html
 */
 
-#ifndef BLOB_H
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include <mpi.h>
 
 /** The M4 macro DOC CODE() (leave that space) allows us to extract
     C code into Asciidoc, this preprocessor macro simply passes it through.
@@ -309,4 +311,4 @@ void* blobutils_strdup(char* s);
 bool blobutils_hdf_write(const char* output, const char* dataset,
                           turbine_blob* blob);
 
-#endif
+MPI_Comm turbine_get_task_comm(void);

@@ -4,7 +4,7 @@ import io;
 
 @dispatch=WORKER
 (int rank) f(int i) "turbine" "0.0.1" [
-  "set <<rank>> [ adlb::rank ]; after 5"
+  "set <<rank>> [ adlb::comm_rank ]; after 5"
 ];
 
 

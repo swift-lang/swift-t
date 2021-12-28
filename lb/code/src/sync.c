@@ -158,7 +158,7 @@ xlb_sync_init(void)
   xlb_pending_sync_size = PENDING_SYNC_INIT_SIZE;
 
   // Optionally have different min size - otherwise we won't cover the
-  // resizing cases in testing`
+  // resizing cases in testing
   rc = xlb_env_long("ADLB_DEBUG_SYNC_BUFFER_SIZE", &tmp);
   ADLB_CHECK(rc);
 
@@ -185,7 +185,7 @@ xlb_sync_init(void)
       xlb_sync_perf_counters[i].sent = 0;
       xlb_sync_perf_counters[i].accepted = 0;
     }
-    
+
     // Register human-readable names
     xlb_add_sync_type_name(ADLB_SYNC_REQUEST);
     xlb_add_sync_type_name(ADLB_SYNC_STEAL_PROBE);
@@ -213,7 +213,7 @@ void xlb_sync_finalize(void)
   xlb_sync_recvs = NULL;
   xlb_sync_recv_size = 0;
 
-  DEBUG("[%i] Pending syncs at finalize: %i", xlb_s.layout.rank,
+  DEBUG("[%i] pending syncs at finalize: %i", xlb_s.layout.rank,
        xlb_pending_sync_count);
 
   /*
@@ -277,7 +277,7 @@ adlb_code
 xlb_sync(int target)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+  struct packed_sync* hdr = (struct packed_sync*) hdr_storage;
 #ifndef NDEBUG
   // Avoid send uninitialized bytes for memory checking tools
   memset(hdr, 0, PACKED_SYNC_SIZE);
@@ -288,10 +288,10 @@ xlb_sync(int target)
 
 /*
   Core function for sending a sync message.  Sends a pre-assembled message.
-  response: response code from target process, meaningful to some sync  
+  response: response code from target process, meaningful to some sync
             types.  Only set if that sync type must be accepted by target.
             Can be NULL to ignore.
-   
+
    While attempting a sync, one of three things may happen:
    1) The target responds.  It either accepts or rejects the sync
       request.  If it rejects, this process retries
@@ -301,7 +301,7 @@ xlb_sync(int target)
    3) The master server tells this process to shut down
  */
 static adlb_code
-xlb_sync2(int target, const struct packed_sync *hdr, int *response)
+xlb_sync2(int target, const struct packed_sync* hdr, int* response)
 {
   TRACE_START;
   DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_s.layout.rank,
@@ -312,7 +312,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 
   // Track sent sync message and response
   MPI_Request isend_request, accept_request;
-  // Response from target if needed 
+  // Response from target if needed
   int accept_response;
   bool accept_required = sync_accept_required(hdr->mode);
 
@@ -340,7 +340,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     if (accept_required)
     {
       IRECV2(&accept_response, 1, MPI_INT, target, ADLB_TAG_SYNC_RESPONSE,
-            &accept_request);
+             &accept_request);
     }
 
     /*
@@ -357,7 +357,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     ISEND(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, target,
           ADLB_TAG_SYNC_REQUEST, &isend_request);
     requests_pending = true;
-    
+
     DEBUG("server_sync: [%d] waiting for sync response from %d",
                           xlb_s.layout.rank, target);
   }
@@ -391,12 +391,12 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     }
 
     TRACE("xlb_sync: loop");
-    
+
     if (accept_required)
     {
       // Check for response from target
       MPI_TEST(&accept_request, &flag1);
-      
+
       if (flag1)
       {
         int tmp_flag;
@@ -404,7 +404,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 
         rc = msg_from_target(target, accept_response);
         ADLB_CHECK(rc);
-        
+
         if (response != NULL)
           *response = accept_response;
         requests_pending = false; // ISend must have completed too
@@ -416,7 +416,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     {
       // just check that send went through
       MPI_TEST(&isend_request, &flag1);
-      
+
       if (flag1)
       {
         requests_pending = false;
@@ -507,7 +507,7 @@ send_subscribe_sync(adlb_sync_mode mode,
   req->subscribe.id = id;
   req->subscribe.subscript_len = sub.length;
 
-  bool inlined_subscript; 
+  bool inlined_subscript;
   if (sub.length <= SYNC_DATA_SIZE)
   {
     if (sub.length > 0)
@@ -532,7 +532,7 @@ send_subscribe_sync(adlb_sync_mode mode,
     // are generally quite rare.
     SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
   }
-  
+
   return ADLB_SUCCESS;
 }
 
@@ -586,7 +586,7 @@ xlb_sync_steal_probe_resp(int target, const int *work_counts,
   // Fill counts
   memcpy(hdr->sync_data, work_counts,
          sizeof(work_counts[0]) * (size_t)size);
-  
+
   return xlb_sync2(target, hdr, NULL);
 }
 
@@ -607,8 +607,9 @@ xlb_sync_steal(int target, const int *work_counts, int size,
   return xlb_sync2(target, req, response);
 }
 
-adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
-                            adlb_refc change, bool wait)
+adlb_code
+xlb_sync_refcount(int target, adlb_datum_id id,
+                  adlb_refc change, bool wait)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
@@ -658,7 +659,7 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
 {
   TRACE_START;
   adlb_code code;
-  
+
   *shutting_down = false;
 
   xlb_sync_recv *sync_msg = xlb_next_sync_msg();
@@ -666,7 +667,7 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
 
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
-   * to serve B, which is waiting to serve C, which is waiting to serve A, 
+   * to serve B, which is waiting to serve C, which is waiting to serve A,
    * so don't serve higher ranked servers until we've finished our
    * sync request. We choose this ordering because the master server is
    * somewhat more likely to be busy and should be unblocked. */
@@ -675,7 +676,7 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
     // accept incoming sync
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
                         xlb_s.layout.rank, other_server);
-    
+
     code = xlb_accept_sync(other_server, other_hdr, true);
     ADLB_CHECK(code);
 
@@ -690,7 +691,7 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
     code = enqueue_pending(DEFERRED_SYNC, other_server, other_hdr, NULL);
     ADLB_CHECK(code);
   }
-  
+
   code = xlb_sync_msg_done();
   ADLB_CHECK(code);
   TRACE_END;
@@ -710,7 +711,7 @@ static xlb_sync_recv *xlb_next_sync_msg(void)
 static adlb_code xlb_sync_msg_done(void)
 {
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
- 
+
   IRECV2(head->buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &head->req);
 
@@ -734,7 +735,7 @@ adlb_code xlb_handle_next_sync_msg(int caller)
 
   adlb_code rc = xlb_sync_msg_done();
   ADLB_CHECK(rc);
-  
+
   rc = xlb_accept_sync(caller, hdr, false);
   MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
@@ -753,7 +754,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
 
   DEBUG("[%i] xlb_accept_sync() from: %i sync_mode: %s", xlb_s.layout.rank,
         rank, xlb_sync_mode_name[mode]);
-  
+
   if (xlb_s.perfc_enabled)
   {
     assert(mode >= 0 && mode < ADLB_SYNC_ENUM_COUNT);
@@ -818,7 +819,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
              processing any operation that could decrement refcount
          -> read refcount decrements - safe to defer indefinitely,
               but delays freeing memory
-         -> write refcount decrements - safe to defer indefinitely, 
+         -> write refcount decrements - safe to defer indefinitely,
               but will delay notifications
        */
 
@@ -863,7 +864,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       DEBUG("[%d] received shutdown!", xlb_s.layout.rank);
 
       xlb_server_shutting_down = true;
-      
+
       code = ADLB_SHUTDOWN;
       break;
 
@@ -938,7 +939,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
 
   if (sub_hdr->subscript_len == 0)
   {
-    sub.key = NULL; 
+    sub.key = NULL;
   }
   else if (sub_hdr->subscript_len <= SYNC_DATA_SIZE)
   {
@@ -950,7 +951,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
     assert(sub_hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(sub_hdr->subscript_len);
     ADLB_CHECK_MALLOC(malloced_subscript);
-    
+
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)sub_hdr->subscript_len, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
@@ -999,7 +1000,7 @@ adlb_code xlb_send_unsent_notify(int rank,
 
   if (sub.length == 0)
   {
-    sub.key = NULL; 
+    sub.key = NULL;
   }
   else if (sub.length <= SYNC_DATA_SIZE)
   {
@@ -1042,7 +1043,7 @@ static adlb_code enqueue_deferred_notify(int rank,
     assert(sub_length <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(sub_length);
     ADLB_CHECK_MALLOC(malloced_subscript);
-    
+
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)sub_length, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
@@ -1073,7 +1074,7 @@ adlb_code xlb_handle_notify_sync(int rank,
 
   if (hdr->subscript_len == 0)
   {
-    sub.key = NULL; 
+    sub.key = NULL;
   }
   else if (hdr->subscript_len <= SYNC_DATA_SIZE)
   {
@@ -1089,7 +1090,7 @@ adlb_code xlb_handle_notify_sync(int rank,
     assert(hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
     malloced_subscript = malloc(hdr->subscript_len);
     ADLB_CHECK_MALLOC(malloced_subscript);
-    
+
     // receive subscript as separate message with special tag
     RECV(malloced_subscript, (int)hdr->subscript_len, MPI_BYTE,
          rank, ADLB_TAG_SYNC_SUB);
@@ -1192,7 +1193,7 @@ adlb_code xlb_pending_shrink(void)
   const int head = xlb_pending_sync_head;
   assert(head <= old_size);
   assert(count <= new_size);
-  /* 
+  /*
     Need to pack into smaller new array
     Entries are in [head..head+count).
   */
@@ -1293,4 +1294,3 @@ static inline void delay_check(struct sync_delay *state,
     }
   }
 }
-

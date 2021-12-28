@@ -183,6 +183,11 @@ Makefile: configure Makefile.in
 
 ### DEPS
 
+# Allow the user to set DEPCC
+ifeq (${DEPCC},)
+  DEPCC = $(CC)
+endif
+
 deps: $(DEPS) $(TEST_DEPS)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
@@ -191,7 +196,7 @@ endif
 
 %.d: %.c Makefile
 	$(Q) "  DEP		$(@)"
-	$(E) CC=$(CC) maint/depend.sh \
+	$(E) CC=$(DEPCC) maint/depend.sh \
              $(dir $(<)) $(CFLAGS) $(<) > $(@)
 
 deps.txt: $(DEPS) $(TEST_DEPS)
@@ -251,6 +256,7 @@ install: $(INSTALL_TOKEN)
 $(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
 	$(Q)
 	$(Q) "  INSTALL	$(INSTALL_PREFIX)"
+	test ! -f $(INSTALL_PREFIX)/lock
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)

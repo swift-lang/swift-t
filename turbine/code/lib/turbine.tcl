@@ -86,6 +86,11 @@ namespace eval turbine {
     #           normally "Swift", defaults to ""
     proc init { rank_config {lang ""} } {
 
+        variable language
+        if { $lang != "" } {
+            set language $lang
+        }
+      
         # Initialize debugging in case other functions want to debug
         variable debug_categories
         c::init_debug
@@ -105,19 +110,13 @@ namespace eval turbine {
 
         if { $rank_config == {}} {
             # Use standard rank configuration mechanism
-            set rank_allocation [ rank_allocation [ adlb::size ] ]
+            set rank_allocation [ rank_allocation [ adlb::comm_size ] ]
         } elseif { [ string is integer -strict $rank_config ] } {
             # Interpret as servers count
             set rank_allocation [ basic_rank_allocation $rank_config ]
         } else {
             # Interpret as custom rank configuration
             set rank_allocation $rank_config
-        }
-
-        variable language
-
-        if { $lang != "" } {
-            set language $lang
         }
 
         set servers [ dict get $rank_allocation servers ]
@@ -144,7 +143,8 @@ namespace eval turbine {
 
         assert_sufficient_procs
 
-        c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
+        c::init [ adlb::amserver ] \
+            [ adlb::comm_rank ] [ adlb::comm_size ]
 
         setup_mode $rank_allocation $work_types
 
@@ -190,6 +190,10 @@ namespace eval turbine {
             turbine_fail "You have 0 workers!\n" \
                 "Check your MPI configuration. " \
                 "There may be a mix of MPICH and OpenMPI."
+        }
+
+        if { $n_workers < $n_servers } {
+            turbine_fail "You have more ADLB servers than workers!\n"
         }
 
         set workers_running_sum 0
@@ -261,7 +265,7 @@ namespace eval turbine {
 
     # Basic rank allocation with only servers and regular workers
     proc basic_rank_allocation { servers } {
-        set workers [ expr {[ adlb::size ] - $servers } ]
+        set workers [ expr {[ adlb::comm_size ] - $servers } ]
         return [ dict create servers $servers workers $workers \
                  workers_by_type [ dict create WORK $workers ] ]
     }
@@ -296,7 +300,7 @@ namespace eval turbine {
 
         set n_workers [ dict get $rank_allocation workers ]
         set n_adlb_servers [ dict get $rank_allocation servers ]
-
+        
         variable n_workers_by_type
         set n_workers_by_type [ dict get $rank_allocation workers_by_type ]
         set n_regular_workers [ dict get $n_workers_by_type WORK ]
@@ -310,7 +314,7 @@ namespace eval turbine {
           foreach work_type $work_types {
             set n [ dict get $n_workers_by_type $work_type ]
             incr k $n
-            if { [ adlb::rank ] < $k } {
+            if { [ adlb::comm_rank ] < $k } {
               set mode $work_type
               break
             }
@@ -318,15 +322,15 @@ namespace eval turbine {
         }
 
         debug "MODE: $mode"
-        if { [ adlb::rank ] == 0 } {
+        if { [ adlb::comm_rank ] == 0 } {
             log_rank_layout $work_types
         }
     }
 
     proc assert_sufficient_procs { } {
-        if { [ adlb::size ] < 2 } {
+        if { [ adlb::comm_size ] < 2 } {
             error "Too few processes specified by user:\
-                    [adlb::size], must be at least 2"
+                    [adlb::comm_size], must be at least 2"
         }
     }
 
@@ -349,9 +353,9 @@ namespace eval turbine {
         log "WORK TYPES: $work_types"
 
         set first_worker 0
-        set first_server [ expr [adlb::size] - $n_adlb_servers ]
+        set first_server [ expr [adlb::comm_size] - $n_adlb_servers ]
         set last_worker  [ expr $first_server - 1 ]
-        set last_server  [ expr [adlb::size] - 1 ]
+        set last_server  [ expr [adlb::comm_size] - 1 ]
         log [ cat "WORKERS: $n_workers" \
                   "RANKS: $first_worker - $last_worker" ]
         log [ cat "SERVERS: $n_adlb_servers" \
@@ -362,7 +366,7 @@ namespace eval turbine {
         }
 
         # Remove REPUT for the following log message
-        set work_types_user [ lreplace $work_types end-1 end ]
+        set work_types_user [ lreplace $work_types end end ]
 
         # Report on how workers are subdivided for user work types
         set curr_rank 0
@@ -472,8 +476,8 @@ namespace eval turbine {
     }
 
     proc turbine_fail { args } {
-        if { [ adlb::rank ] == 0 } {
-            puts* {*}$args
+        if { [ adlb::comm_rank ] == 0 } {
+            puts* $turbine::language ": " {*}$args
         }
         exit 1
     }

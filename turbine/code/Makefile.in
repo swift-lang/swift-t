@@ -526,7 +526,7 @@ endif
 
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
-	DEP_DROP = -d mpi.h
+	DEP_DROP = -d mpi\\.h
 endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
@@ -777,6 +777,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
+	test ! -f $(INSTALL_PREFIX)/lock
 	$(E) rm -f $(@)
 # 	Configure-generated files
 	$(E) chmod u+x bin/turbine bin/turbine-pilot
@@ -791,6 +792,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_TOP)
 	$(E) ln -fs $(INSTALL_SCRIPTS)/main-wrap/genleaf $(INSTALL_BIN)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_TOP)
+	$(E) $(CP_PARENTS) $(CP_ARGS) etc/turbine.supp $(INSTALL_TOP)
 ifeq ($(HAVE_PYTHON),1)
 	$(E) cp $(CP_ARGS) py/*.py $(INSTALL_PY)
 endif
@@ -801,7 +803,7 @@ endif
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
 	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
-	$(E) date "+DATE:   %m/%d/%Y %I:%M%p"    >> $(@)
+	$(E) date "+DATE:   %Y-%m-%d %I:%M%p"    >> $(@)
 #       Use true to ignore errors (e.g., if this is not an git clone)
 	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
@@ -824,18 +826,22 @@ Makefile: configure.ac
 
 ### CLEAN
 
-clean::
+clean:: clean-objs
 	@echo
 	@echo "  CLEAN"
 	@rm -fv  $(PACKAGE) install.txt
-	@rm -fv  $(TCL_TURBINE_A) $(TCL_TURBINE_SO)
 	@rm -fv  $(STATIC_PKG_A)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
-	@rm -fv  $(TURBINE_OBJS) $(STATIC_PACKAGE_OBJS)
-	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_RESOURCE_O)
 	@rm -fvr tests/data
+
+clean-objs:
+	@echo
+	@echo "  CLEAN-OBJS"
+	@rm -fv  $(TCL_TURBINE_A) $(TCL_TURBINE_SO)
+	@rm -fv  $(TURBINE_OBJS) $(STATIC_PACKAGE_OBJS)
+	@rm -fv  $(STATIC_PKG_RESOURCE_O)
 
 clean-results:
 	@echo
@@ -855,7 +861,8 @@ distclean:: clean
 	@rm -fv system-libs.txt
 
 # This line causes a false autoscan warning on token 'install'
-.PHONY: clean install package package_static libs test_results
+.PHONY: clean clean-objs clean-results \
+        install package package_static libs test_results
 
 ### DEBUG BUILD SYSTEM
 

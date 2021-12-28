@@ -217,7 +217,7 @@ then
   STC_OPTS+=( ${STC_DEPS_ARGS} )
 fi
 
-if (( ! SKIP_COMPILE ))
+if (( ! ${SKIP_COMPILE:-0} ))
 then
   # Run STC
   make_stc_output
@@ -237,16 +237,18 @@ verbose_cmd ${TURBINE} ${TURBINE_OPTS} ${PROGRAM_TCL} ${ARGS} || \
   EXITCODE=1
 
 # Clean up
-if (( DELETE_PROGRAM_TCL ))
+if (( ${STC_AUTODELETE:-1} ))
 then
-  verbose "Removing: ${PROGRAM_TCL}"
-  rm ${PROGRAM_TCL}
-fi
-
-if (( DELETE_PROGRAM_SWIFT ))
-then
-  verbose "Removing: ${PROGRAM_SWIFT}"
-  rm ${PROGRAM_SWIFT}
+  if (( DELETE_PROGRAM_TCL ))
+  then
+    verbose "Removing: ${PROGRAM_TCL}"
+    rm ${PROGRAM_TCL}
+  fi
+  if (( DELETE_PROGRAM_SWIFT ))
+  then
+    verbose "Removing: ${PROGRAM_SWIFT}"
+    rm ${PROGRAM_SWIFT}
+  fi
 fi
 
 return ${EXITCODE}

@@ -26,8 +26,8 @@ namespace eval turbine {
     # Unpack args TDs
     lassign $args cmd argv
     # Receive MPI task information
-    set comm [ turbine::c::task_comm ]
-    set rank [ adlb::rank $comm ]
+    set comm [ turbine::c::task_comm_int ]
+    set rank [ adlb::comm_rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
       set cmd_value [ turbine::retrieve_decr $cmd ]
@@ -55,8 +55,8 @@ namespace eval turbine {
     # Unpack args TDs
     lassign $args cmd argv envs
     # Receive MPI task information
-    set comm [ turbine::c::task_comm ]
-    set rank [ adlb::rank $comm ]
+    set comm [ turbine::c::task_comm_int ]
+    set rank [ adlb::comm_rank $comm ]
     # Retrieve data
     if { $rank == 0 } {
       set cmd_value [ turbine::retrieve_decr $cmd ]
@@ -67,10 +67,7 @@ namespace eval turbine {
     set argv_length [ dict size $argv_tds ]
     set envs_tds    [ adlb::enumerate $envs dict all 0 ]
     set envs_length [ dict size $envs_tds ]
-    # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
-    # Construct char**
+    # Construct char**s
     set argv_charpp [ turbine::blob_strings_to_char_ptr_ptr $argv_tds ]
     set envs_charpp [ turbine::blob_strings_to_char_ptr_ptr $envs_tds ]
     # Run the user code
@@ -97,8 +94,8 @@ namespace eval turbine {
     set length [ adlb::container_size $argv ]
     set tds    [ adlb::enumerate $argv dict all 0 ]
     # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
+    set comm   [ turbine::c::task_comm_int ]
+    set rank   [ adlb::comm_rank $comm ]
     # Construct a char**
     set charpp [ turbine::blob_strings_to_char_ptr_ptr $tds ]
     # Run the user code
@@ -134,6 +131,7 @@ namespace eval turbine {
     set envc_dict [ dict create ]
 
     # This is a nested dict [ int->int->arg ]
+    #      i.e., one argv for each of the multiple launches
     set argv_all  [ dict create ]
     set argv_dict_size [ dict size $argv_dict ]
     if { $argv_dict_size != $count } {
@@ -148,6 +146,7 @@ namespace eval turbine {
       # show k n
     }
     # This is a nested dict [ int->int->env ]
+    #      i.e., one env for each of the multiple launches
     set envs_all  [ dict create ]
     set envs_dict_size [ dict size $envs_dict ]
     if { $envs_dict_size == 0 } {
@@ -170,8 +169,8 @@ namespace eval turbine {
     # show envc_dict
 
     # Receive MPI task information
-    set comm   [ turbine::c::task_comm ]
-    set rank   [ adlb::rank $comm ]
+    set comm   [ turbine::c::task_comm_int ]
+    set rank   [ adlb::comm_rank $comm ]
 
     # show rank
 
@@ -198,6 +197,6 @@ namespace eval turbine {
     if { $rank == 0 } {
       store_integer $exit_code $exit_code_value
     }
-    # puts "returned: [ adlb::rank ]"
+    # puts "returned: [ adlb::comm_rank ]"
   }
 }

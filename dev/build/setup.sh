@@ -25,3 +25,9 @@ then
   # Runs all key build steps under nice
   NICE_CMD="nice -n ${NICE}"
 fi
+
+CONFIGURE_ARGS=( --config-cache )
+if [[ $VERBOSITY < $LOG_INFO ]]
+then
+  CONFIGURE_ARGS+=( --quiet )
+fi

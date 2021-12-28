@@ -150,8 +150,7 @@ turbine_init(int amserver, int rank, int size)
     mpi_rank = rank;
     initialized = true;
 
-    bool b;
-    b = setup_cache();
+    bool b = setup_cache();
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 

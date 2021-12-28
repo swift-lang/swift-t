@@ -161,7 +161,7 @@ proc do_test { i } {
 
 if { ! [ adlb::amserver ] } {
 
-    set rank [ adlb::rank ]
+    set rank [ adlb::comm_rank ]
     puts "rank: $rank"
     set workers [ adlb::workers ]
     puts "workers:    $workers"

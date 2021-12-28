@@ -33,7 +33,7 @@ if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
 
 if { ! [ adlb::amserver ] } {
 
-    set rank [ adlb::rank ]
+    set rank [ adlb::comm_rank ]
     puts "rank: $rank"
 
     set id 1001

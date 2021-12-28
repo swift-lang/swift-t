@@ -64,8 +64,9 @@ static int nblocked;
 static struct list2* type_requests;
 
 /** Cache list nodes to avoid malloc/free calls on critical path */
-static struct {
-  struct list2_item **free_array;
+static struct
+{
+  struct list2_item** free_array;
   int free_array_size; // Size of free array
   int nfree; // Number of items in free array
 } list2_node_pool;
@@ -97,20 +98,21 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
   assert(layout->my_workers >= 0);
   assert(ntypes >= 1);
 
+  // INFO("requestqueue_init");
+
   targets = malloc(sizeof(targets[0]) * (size_t)layout->my_workers);
   ADLB_CHECK_MALLOC(targets);
 
   for (int i = 0; i < layout->my_workers; i++)
-  {
     targets[i].item = NULL;
-  }
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)ntypes);
+  type_requests = malloc(sizeof(struct list2) * (size_t) ntypes);
   ADLB_CHECK_MALLOC(type_requests);
   for (int i = 0; i < ntypes; i++)
     list2_init(&type_requests[i]);
 
-  // Allocate one list node per worker - otherwise will fallback to malloc/free
+  // Allocate one list node per worker -
+  //          otherwise will fallback to malloc/free
   adlb_code ac = list2_node_pool_init(layout->my_workers);
   ADLB_CHECK(ac);
 
@@ -122,32 +124,35 @@ xlb_requestqueue_init(int ntypes, const xlb_layout *layout)
 adlb_code
 xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 {
-  DEBUG("requestqueue_add(rank=%i,type=%i,count=%i,blocking=%s)", rank,
-        type, count, blocking ? "true" : "false");
+  /* if (rank % 100 == 0) */
+  /*   INFO("requestqueue_add(server=%i, rank=%i,type=%i,count=%i,blocking=%s)\n", */
+  /*          xlb_s.layout.rank, rank, type, count, blocking ? "true" : "false"); */
   assert(count >= 1);
   request* R;
 
   // Whether we need to merge requests
   // Store in targets if it is one of our workers
-  if (xlb_map_to_server(&xlb_s.layout, rank) == xlb_s.layout.rank)
+  if (xlb_worker_maps_to_server(&xlb_s.layout, rank, xlb_s.layout.rank))
   {
-    int targets_ix = xlb_my_worker_idx(&xlb_s.layout, rank);
+    int targets_ix = xlb_worker_idx(&xlb_s.layout, rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
-       * Assuming that types match avoid complications with responding to
-       * requests out of order, and with more complicated data structures.
-       * We leave it to the client code to avoid doing this for now.
-       */
-      ADLB_CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
-            " for different work types from same rank."
-            " Rank: %i Types: %i, %i", rank, R->type, type);
+         Assuming that types match avoids complications with responding to
+         requests out of order, and with more complicated data structures.
+         We leave it to the client code to avoid doing this for now.
+      */
+      ADLB_CHECK_MSG(R->type == type,
+                     "Do not yet support simultaneous requests"
+                     " for different work types from same rank."
+                     " Rank: %i Types: %i, %i", rank, R->type, type);
       return merge_request(R, rank, type, count, blocking);
     }
   }
   else
   {
     // Otherwise store on heap
+    // When would this happen? - Justin 2020-05-13
     R = malloc(sizeof(*R));
     ADLB_CHECK_MALLOC(R);
   }
@@ -166,7 +171,7 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   list2_add_item(L, item);
   request_queue_size++;
 
-  // printf("request_queue_size: %i\n", request_queue_size);
+  DEBUG("request_queue_add(): size=%i", request_queue_size);
 
   if (blocking)
   {
@@ -181,11 +186,14 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
  * Caller is responsible for ensuring types and ranks match.
  */
 static inline adlb_code
-merge_request(request *R, int rank, int type, int count, bool blocking)
+merge_request(request* R, int rank, int type, int count, bool blocking)
 {
-  assert(R->rank == rank);
-  assert(R->type == type);
-  assert(R->item != NULL);
+  valgrind_assert_msg(R->rank == rank,
+		      "attempt to merge request rank %i "
+		      "into slot rank %i",
+		      R->rank, rank);
+  valgrind_assert(R->type == type);
+  valgrind_assert(R->item != NULL);
 
   R->count += count;
   if (blocking)
@@ -204,7 +212,8 @@ merge_request(request *R, int rank, int type, int count, bool blocking)
   in_targets: if true, is target array entry
   count: number to remove, must be >= 1
  */
-static void request_match_update(request *R, bool in_targets, int count)
+static void
+request_match_update(request* R, bool in_targets, int count)
 {
   assert(count >= 1);
 
@@ -238,7 +247,7 @@ static void request_match_update(request *R, bool in_targets, int count)
 }
 
 /* Mark request as empty */
-static inline void invalidate_request(request *R)
+static inline void invalidate_request(request* R)
 {
   R->item = NULL; // Clear item if needed for targets array
 }
@@ -253,7 +262,7 @@ static bool in_targets_array(request *R)
   if (target_server != xlb_s.layout.rank) {
     return false;
   }
-  int targets_ix = xlb_my_worker_idx(&xlb_s.layout, R->rank);
+  int targets_ix = xlb_worker_idx(&xlb_s.layout, R->rank);
   return (R == &targets[targets_ix]);
 }
 
@@ -289,7 +298,7 @@ xlb_requestqueue_matches_target(int task_target_rank, int task_type,
   DEBUG("requestqueue_matches_target(rank=%i, type=%i)",
         task_target_rank, task_type);
 
-  int task_tgt_idx = xlb_my_worker_idx(&xlb_s.layout, task_target_rank);
+  int task_tgt_idx = xlb_worker_idx(&xlb_s.layout, task_target_rank);
   request* R = &targets[task_tgt_idx];
   if (R->item != NULL && R->type == task_type)
   {
@@ -322,7 +331,7 @@ requestq_matches_tgt_node(int task_tgt_idx, int task_type)
     if (R->item != NULL && R->type == task_type)
     {
       request_match_update(R, true, 1);
-      result = xlb_rank_from_my_worker_idx(&xlb_s.layout, worker_idx);
+      result = xlb_rank_from_worker_idx(&xlb_s.layout, worker_idx);
       break;
     }
   }
@@ -340,13 +349,13 @@ xlb_requestqueue_matches_type(int type)
 
 static inline bool get_parallel_workers_unordered(int count,
                                                   int parallelism,
-                                                  int* ranks,
-                                                  struct list2* L);
+                                                  struct list2* L,
+                                                  int* ranks);
 
 static inline bool get_parallel_workers_ordered(int count,
                                                 int parallelism,
-                                                int* ranks,
-                                                struct list2* L);
+                                                struct list2* L,
+                                                int* ranks);
 
 bool
 xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
@@ -355,23 +364,23 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
   struct list2* L = &type_requests[type];
   int count = list2_size(L);
 
-  TRACE("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
-        type, parallelism, count);
+  /* INFO("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...", */
+  /*       type, parallelism, count); */
 
   if (count < parallelism)
     return false;
 
   if (xlb_s.par_mod == 1)
-    result = get_parallel_workers_unordered(count, parallelism, ranks, L);
+    result = get_parallel_workers_unordered(count, parallelism, L, ranks);
   else
-    result = get_parallel_workers_ordered(count, parallelism, ranks, L);
+    result = get_parallel_workers_ordered(count, parallelism, L, ranks);
   TRACE_END;
   return result;
 }
 
 static inline bool
-get_parallel_workers_unordered(int count, int parallelism, int* ranks,
-                               struct list2* L)
+get_parallel_workers_unordered(int count, int parallelism,
+                               struct list2* L, int* ranks)
 {
   TRACE("\t found: count: %i needed: %i", count, parallelism);
   for (int i = 0; i < parallelism; i++)
@@ -388,42 +397,74 @@ static inline bool find_contig(int* A, int n, int k, int m, int* result);
 
 static inline request* find_request(struct list2* L, int rank);
 
+static void update_parallel_requests(struct list2* L, int* ranks, int count);
+
+
+/**
+   ranks: output array of ranks
+   returns true if ranks were found, else false
+ */
 static inline bool
-get_parallel_workers_ordered(int count, int parallelism, int* ranks,
-                             struct list2* L)
+get_parallel_workers_ordered(int count, int parallelism,
+                             struct list2* L, int* ranks)
 {
-  int t[count];
+  double t0 = MPI_Wtime();
   if (count < parallelism)
       return false;
 
-  // printf("\nget_parallel_workers_ordered(count: %i parallelism: %i)\n", count, parallelism);
+  /* INFO("get_parallel_workers_ordered(server=%i count=%i parallelism=%i) ...", */
+  /*       xlb_s.layout.rank, count, parallelism); */
 
-  extract_worker_ranks(L, t);
-  quicksort_ints(t, 0, count-1);
+  // Flat array representation of available ranks:
+  int flat[count];
+  extract_worker_ranks(L, flat);
+  // Timing data: only used by logging
+  unused double t1, t2, t3, t4, duration;
+  t1 = MPI_Wtime();
+  // INFO("qsort: %i", count);
+  quicksort_ints(flat, 0, count-1);
+  t2 = MPI_Wtime();
 
   // print_ints(t, count);
 
-  int p; // Index of start rank in t
-  bool result = find_contig(t, count, parallelism, xlb_s.par_mod, &p);
+  int p; // Index of start rank in flat array
+  bool result = find_contig(flat, count, parallelism, xlb_s.par_mod, &p);
+  t3 = MPI_Wtime();
 
   if (!result)
   {
-    // printf("Could not satisfy ADLB_PAR_MOD=%i\n", xlb_s.par_mod);
+    /* INFO("get_parallel_workers_ordered(): " */
+    /*       "could not satisfy ADLB_PAR_MOD=%i", xlb_s.par_mod); */
     return false;
   }
 
+  /* for (int i = 0; i < parallelism; i++) */
+  /* { */
+  /*   ranks[i] = flat[p]+i; */
+  /*   request* R = find_request(L, ranks[i]); */
+  /*   request_match_update(R, in_targets_array(R), 1); */
+  /* } */
+
   for (int i = 0; i < parallelism; i++)
-  {
-    ranks[i] = t[p]+i;
-    request* R = find_request(L, ranks[i]);
-    request_match_update(R, in_targets_array(R), 1);
-  }
+    ranks[i] = flat[p]+i;
+  update_parallel_requests(L, ranks, parallelism);
+
+  t4 = MPI_Wtime();
+
+  duration = t4 - t0;
+
+  INFO("get_parallel_workers_ordered(server=%i count=%i parallelism=%i) OK "
+       "%.4f extract=%.4f sort=%.4f %.4f %.4f",
+        xlb_s.layout.rank, count, parallelism,
+       duration, t1-t0, t2-t1, t3-t2, t4-t3);
+
 
   // print_ints(ranks, parallelism);
 
   return true;
 }
 
+/** Extract all worker ranks in the requestqueue */
 static inline void
 extract_worker_ranks(struct list2* L, int* result)
 {
@@ -445,12 +486,13 @@ find_contig(int* A, int n, int k, int m, int* result)
 {
   int n_k = n-k; // Useful place to give up
   int p = 0;
-  // printf("find_contig: n=%i k=%i m=%i\n", n, k, m);
+  // INFO("find_contig(): n=%i k=%i m=%i", n, k, m);
   do
   {
     // printf("p trial1: %i\n", p);
     // Advance to next allowable PAR_MOD start point
-    while (A[p] % m != 0){
+    while (A[p] % m != 0)
+    {
       // printf(" A[p]: %i\n", A[p]);
       if (++p > n_k) return false;
     }
@@ -463,16 +505,20 @@ find_contig(int* A, int n, int k, int m, int* result)
     int z = q+k-1;
     if (z > n) break;
     for ( ; q < z; q++)
+    {
+      // printf("A[%i]=%i\n", q, A[q]);
       // Proceed while we have sequential ranks
       if (A[q] != next++) goto loop;
+    }
     // Found it!
     *result = p;
+    // INFO("find_contig(): found: p=%i", p);
     return true;
 
     loop: p = q; // Not sequential: try again
     // printf("loop: p=%i n_k=%i\n", p, n_k);
-  }
-  while (p < n_k);
+  } while (p < n_k);
+  // INFO("find_contig(): nothing.");
   return false;
 }
 
@@ -495,12 +541,33 @@ find_request(struct list2* L, int rank)
   return result;
 }
 
-void
-xlb_requestqueue_remove(xlb_request_entry *e, int count)
+static void
+update_parallel_requests(struct list2* L, int* ranks, int count)
 {
-  TRACE("pequestqueue_remove(%i)", e->rank);
+  int copy[count];
+  memcpy(copy, ranks, count*sizeof(int));
+  for (struct list2_item *item = L->head; item != NULL;
+       item = item->next)
+  {
+    request* R = (request*) item->data;
+    for (int i = 0; i < count; i++)
+    {
+      if (R->rank == copy[i])
+      {
+        request_match_update(R, in_targets_array(R), 1);
+        // Move last element to present element, shrink array
+        copy[i] = copy[count-1];
+        count--;
+      }
+    }
+  }
+}
+void
+xlb_requestqueue_remove(xlb_request_entry* e, int count)
+{
+  TRACE("requestqueue_remove(%i)", e->rank);
   // Recover request from stored pointer
-  request *r = (request*)e->_internal;
+  request* r = (request*) e->_internal;
   assert(r != NULL);
   if (count >= r->count)
   {
@@ -537,10 +604,12 @@ adlb_code xlb_requestqueue_decr_blocked(void)
   return ADLB_SUCCESS;
 }
 
-void xlb_requestqueue_type_counts(int* types, int size) {
+void xlb_requestqueue_type_counts(int* types, int size)
+{
   assert(size >= xlb_s.types_size);
   int total = 0;
-  for (int t = 0; t < xlb_s.types_size; t++) {
+  for (int t = 0; t < xlb_s.types_size; t++)
+  {
     struct list2* L = &type_requests[t];
     types[t] = L->size;
     total += L->size;
@@ -566,10 +635,11 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
       r[ix].count = rq->count;
       r[ix]._internal = rq; // Store for later reference
       ix++;
-      if (ix == max)
-        return max;
+      if (ix == max) break;
     }
+    if (ix == max) break;
   }
+  TRACE("xlb_requestqueue_get() => %i", ix);
   return ix;
 }
 
@@ -643,7 +713,7 @@ static inline adlb_code list2_node_pool_init(int size)
 
   for (int i = 0; i < size; i++)
   {
-    struct list2_item *item = malloc(sizeof(struct list2_item));
+    struct list2_item* item = malloc(sizeof(struct list2_item));
     ADLB_CHECK_MALLOC(item);
     list2_node_pool.free_array[i] = item;
   }
@@ -664,7 +734,7 @@ static inline void list2_node_pool_finalize(void)
   list2_node_pool.nfree = 0;
 }
 
-static inline struct list2_item *alloc_list2_node(void)
+static inline struct list2_item* alloc_list2_node(void)
 {
   if (list2_node_pool.nfree > 0)
   {
@@ -677,7 +747,7 @@ static inline struct list2_item *alloc_list2_node(void)
   }
 }
 
-static inline void free_list2_node(struct list2_item *node)
+static inline void free_list2_node(struct list2_item* node)
 {
   if (list2_node_pool.nfree == list2_node_pool.free_array_size)
   {
