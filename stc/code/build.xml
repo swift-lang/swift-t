@@ -21,7 +21,7 @@
   <property name="stc.test.jar"
             value="lib/stc-tests.jar"/>
   <property name="log4j.jar"
-            value="lib/log4j-1.2.16.jar"/>
+            value="lib/log4j-1.2-api-2.17.2.jar"/>
   <property name="commons-cli.jar"
             value="lib/commons-cli-1.2.jar"/>
   <property name="commons-io.jar"
