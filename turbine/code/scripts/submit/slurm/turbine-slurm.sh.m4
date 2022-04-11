@@ -106,6 +106,11 @@ getenv(TURBINE_PRELAUNCH)
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
 
+if [[ ${TURBINE_LAUNCHER} == 0 ]]
+then
+  TURBINE_LAUNCHER=srun
+fi
+
 (
 echo
 set -x
