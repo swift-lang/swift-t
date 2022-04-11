@@ -164,4 +164,11 @@ check_lock()
   fi
 }
 
+log_path()
+# Pretty print a colon-separated variable
+{
+  echo ${1}:
+  eval echo \$$1 | tr : '\n' | nl
+}
+
 FUNCTIONS_DONE=1
