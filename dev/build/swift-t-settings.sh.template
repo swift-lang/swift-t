@@ -233,7 +233,11 @@ ENABLE_MKSTATIC_CRC=0
 # module load PrgEnv-gnu/8.1.0
 # module load swig
 
-# Midway:
+# Stampede2:
+# module swap intel gcc
+# module swap impi mvapich2
+
+# Midway: ???
 
 #+===================+
 #|| Editor settings ||
