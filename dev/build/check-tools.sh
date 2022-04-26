@@ -11,7 +11,7 @@ TOOLS=( ant autoconf make ${CC:-} swig zsh )
 
 if [[ $SKIP != *S* ]]
 then
-  TOOLS+=(javac)
+  TOOLS+=( javac )
 fi
 
 declare -a MISSING=()
