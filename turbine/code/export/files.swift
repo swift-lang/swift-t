@@ -16,6 +16,10 @@
 
 // FILES.SWIFT
 
+/*
+  We use temporary variables named l:t for "library-temporary".
+*/
+
 #ifndef FILES_SWIFT
 #define FILES_SWIFT
 
@@ -79,7 +83,7 @@
 @pure
 (string f) basename(file p)
 "turbine" "0.0"
-[ "set <<f>> [ file tail <<p>> ]" ];
+[ "set l:t [ lindex <<p>> 0 ] ; set <<f>> [ file tail ${l:t} ]" ];
 
 @pure
 (string f) rootname_string(string p)
@@ -89,7 +93,7 @@
 @pure
 (string f) rootname(file p)
 "turbine" "0.0"
-[ "set <<f>> [ file rootname <<p>> ]" ];
+[ "set l:t [ lindex <<p>> 0 ] ; set <<f>> [ file rootname ${l:t} ]" ];
 
 @pure
 (string f) extension_string(string p)
@@ -99,7 +103,7 @@
 @pure
 (string f) extension(file p)
 "turbine" "0.0"
-[ "set <<f>> [ file extension <<p>> ]" ];
+[ "set l:t [ lindex <<p>> 0 ] ; set <<f>> [ file extension ${l:t} ]" ];
 
 (file o)
 write_array_string(string a[], int chunk)
