@@ -105,6 +105,9 @@ getenv(TURBINE_PRELAUNCH)
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
 
+# Report modules to output.txt for debugging:
+# module list
+
 TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
 TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
