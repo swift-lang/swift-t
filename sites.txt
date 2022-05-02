@@ -964,7 +964,7 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 https://www.tacc.utexas.edu/systems/stampede2[Stampede2] is a
 KNL-based system at TACC.
 
-Some TACC-specific notes are https://github.com/swift-lang/swift-work/tree/master/tacc-tests[here]:
+Some TACC-specific notes are https://github.com/swift-lang/swift-work/tree/master/tacc-tests[here].
 
 ==== Public installation
 
@@ -989,7 +989,7 @@ Dependencies are installed in:
 +/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6+
 
 . Use the +dev/build/build-swift-t.sh+ method.
-. Set +TCL_INSTALL+.
+. Set +TCL_INSTALL+
 . Set
 +MPI_INCLUDE=/opt/intel/compilers_and_libraries_2018.2.199/linux/mpi/intel64/include+
 . Add any needed modules at the end of the file.
