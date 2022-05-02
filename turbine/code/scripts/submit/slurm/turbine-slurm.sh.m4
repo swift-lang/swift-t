@@ -117,11 +117,13 @@ then
 fi
 
 (
-echo
-set -x
-${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
-                    ${TURBINE_INTERPOSER} \
-                    ${COMMAND}
+  # Report the environment to a sorted file for debugging:
+  printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+
+  set -x
+  ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
+                      ${TURBINE_INTERPOSER} \
+                      ${COMMAND}
 )
 CODE=$?
 
