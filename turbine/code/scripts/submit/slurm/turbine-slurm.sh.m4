@@ -95,15 +95,18 @@ getenv(TURBINE_PRELAUNCH)
 # module load icc
 # module load mvapich2
 
+# Use this on Stampede2
+#  TURBINE_LAUNCHER=ibrun
+
 # Use mpiexec on Midway
-# TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
-# TURBINE_LAUNCHER=${TURBINE_LAUNCHER:-mpiexec}
-# TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
 # Use this on Cori:
 # TURBINE_LAUNCHER=srun
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
+
+TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
+TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
 
 if [[ ${TURBINE_LAUNCHER} == 0 ]]
 then
