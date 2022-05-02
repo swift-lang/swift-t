@@ -3061,8 +3061,16 @@ StackOverflow thread</a> for details.</p></div>
 <div class="paragraph"><p>In Swift/T, the top-level calling C code is the Tcl interpreter.  So
 to solve the problem, you make a one-line change in the Tcl source
 file <code>unix/tclLoadDl.c</code> to ensure that <code>dlopenflags |= RTLD_GLOBAL</code>,
-thus, it will always use <code>dlopen(&#8230;, RTLD_NOW | RTLD_GLOBAL)</code>.  For
-example, in Tcl 8.6.6, change line 90 to <code>if (1) {</code>.</p></div>
+thus, it will always use<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>dlopen(..., RTLD_NOW | RTLD_GLOBAL)</code></pre>
+</div></div>
+<div class="paragraph"><p>For example, in Tcl 8.6.6, change line 90 to<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>if (1) {</code></pre>
+</div></div>
 <div class="paragraph"><p>This may also be necessary when running with OpenMPI.  The error you
 will see is:</p></div>
 <div class="listingblock">
@@ -4004,7 +4012,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-05-02 13:55:13 CST
+ 2022-05-02 14:02:19 CST
 </div>
 </div>
 </body>
