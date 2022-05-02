@@ -1628,14 +1628,19 @@ StackOverflow thread] for details.
 In Swift/T, the top-level calling C code is the Tcl interpreter.  So
 to solve the problem, you make a one-line change in the Tcl source
 file +unix/tclLoadDl.c+ to ensure that +dlopenflags |= RTLD_GLOBAL+,
-thus, it will always use +dlopen(..., RTLD_NOW | RTLD_GLOBAL)+.  For
-example, in Tcl 8.6.6, change line 90 to +if (1) {+.
+thus, it will always use +
+----
+dlopen(..., RTLD_NOW | RTLD_GLOBAL)
+----
+For example, in Tcl 8.6.6, change line 90 to +
+----
+if (1) {
+----
 
 This may also be necessary when running with OpenMPI.  The error you
 will see is:
 
 ----
-
 It looks like MPI_INIT failed for some reason; your parallel process is
 likely to abort.  There are many reasons that a parallel process can
 fail during MPI_INIT; some of which are due to configuration or environment
