@@ -90,15 +90,18 @@ getenv(TURBINE_PRELAUNCH)
 
 # Use this on Midway:
 # module load openmpi gcc/4.9
+# Use mpiexec on Midway
 
 # Use this on Bebop:
-# module load icc
+# module unload intel-mpi
+# module unload intel-mkl
+# module load gcc/7.1.0
 # module load mvapich2
+# module list
+# TURBINE_LAUNCHER=srun
 
 # Use this on Stampede2
 #  TURBINE_LAUNCHER=ibrun
-
-# Use mpiexec on Midway
 
 # Use this on Cori:
 # TURBINE_LAUNCHER=srun
