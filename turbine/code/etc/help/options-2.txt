@@ -14,3 +14,6 @@
           Report version number
    -V
           Make this script verbose
+   -Y
+          DrY run.  Produce a scheduler script for human
+          inspection but do not submit it.
