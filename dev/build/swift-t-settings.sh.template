@@ -70,7 +70,8 @@ SWIFT_T_CUSTOM_MPI=0
 # MPI_INCLUDE=/path/to/mpi/include
 # MPI_LIB_DIR=/path/to/mpi/lib
 # MPI_LIB_NAME=funny.mpi.a
-# If needed, you can provide mpiexec here:
+# If needed, you can provide a full path to the launcher here.
+# This could be mpiexec, srun, aprun, etc.
 # LAUNCHER=/path/to/bin/mpiexec
 
 # C build settings: Swift/T C compile settings default to -O2
