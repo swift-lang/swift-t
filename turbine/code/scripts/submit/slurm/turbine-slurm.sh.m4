@@ -84,10 +84,6 @@ do
     export "$P"
 done
 
-# BEGIN TURBINE_PRELAUNCH
-getenv(TURBINE_PRELAUNCH)
-# END TURBINE_PRELAUNCH
-
 # Use this on Midway:
 # module load openmpi gcc/4.9
 # Use mpiexec on Midway
@@ -108,16 +104,20 @@ getenv(TURBINE_PRELAUNCH)
 # module swap PrgEnv-intel PrgEnv-gnu
 # module load gcc
 
-# Report modules to output.txt for debugging:
-# module list
-
 TURBINE_LAUNCHER="getenv(TURBINE_LAUNCHER)"
 TURBINE_INTERPOSER="getenv(TURBINE_INTERPOSER)"
+
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
 
 if [[ ${TURBINE_LAUNCHER} == 0 ]]
 then
   TURBINE_LAUNCHER=srun
 fi
+
+# Report modules to output.txt for debugging:
+module list
 
 (
   # Report the environment to a sorted file for debugging:
