@@ -283,7 +283,7 @@ AC_ARG_WITH(launcher,
     [
         USE_LAUNCHER=${withval}
         AC_CHECK_FILE(${USE_LAUNCHER}, [],
-                      AC_MSG_ERROR("Launcher not found!"))
+           AC_MSG_ERROR("Launcher '$USE_LAUNCHER' not found! "))
     ])
 
 # Allow user to disable MPI checks (useful on Cray)
