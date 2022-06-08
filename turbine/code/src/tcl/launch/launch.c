@@ -86,6 +86,8 @@ special_envs(MPI_Info info, int envc, char** envs) {
     MPI_Info_set(info,"write_hosts",value);
   if (get_envs(envc,envs,"swift_chdir",&index,&value))
     MPI_Info_set(info,"chdir",value);
+  if (get_envs(envc,envs,"swift_output",&index,&value))
+    MPI_Info_set(info,"output",value);
 }
 
 /**
