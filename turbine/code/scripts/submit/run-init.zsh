@@ -276,9 +276,6 @@ fi
 export TURBINE_OUTPUT
 declare TURBINE_OUTPUT
 
-# All output from job, including error stream
-export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
-
 mkdir -p ${TURBINE_OUTPUT}
 if [[ ${OUTPUT_SOFTLINK} != /dev/null ]]
 then
@@ -289,6 +286,11 @@ if [[ ${OUTPUT_TOKEN_FILE} != /dev/null ]]
 then
   print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 fi
+
+# All output from job, including error stream
+export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
+# Create the file now so the user can tail it immediately
+touch ${OUTPUT_FILE}
 
 if [[ ${INIT_SCRIPT} != 0 ]]
 then
