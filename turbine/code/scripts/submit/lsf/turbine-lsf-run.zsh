@@ -49,6 +49,12 @@ BSUB=bsub
 cd ${TURBINE_OUTPUT:A} # Canonicalize
 echo "PWD: ${PWD}"
 
+if (( DRY_RUN ))
+then
+  print "turbine: dry run: submit with 'bsub ${PWD}/turbine-lsf.sh'"
+  return 0
+fi
+
 # Submit it!
 ${BSUB} ${TURBINE_LSF} | read MESSAGE
 echo $MESSAGE

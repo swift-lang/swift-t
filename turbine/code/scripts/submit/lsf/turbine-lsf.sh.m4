@@ -50,8 +50,7 @@ echo "TURBINE-LSF"
 echo "TURBINE: DATE START: $( date "+%Y-%m-%d %H:%M:%S" )"
 echo
 
-cd ${TURBINE_OUTPUT}
-
+TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 TURBINE_HOME=getenv(TURBINE_HOME)
 COMMAND="getenv(COMMAND)"
 PROCS=getenv(PROCS)
@@ -61,8 +60,6 @@ PPN=getenv(PPN)
 export PYTHONPATH=getenv(PYTHONPATH)
 # Add Turbine Python utilities:
 PYTHONPATH=$PYTHONPATH:${TURBINE_HOME}/py
-
-# USER_ENV_ARRAY=( getenv(USER_ENV_ARRAY) )
 
 # Construct jsrun-formatted user environment variable arguments
 # The dummy is needed for old GNU bash (4.2.46, Summit) under set -eu
@@ -74,11 +71,14 @@ for (( i=0 ; i < USER_ENV_COUNT ; i+=2 ))
 do
   K=${USER_ENV_ARRAY[i]}
   V=${USER_ENV_ARRAY[i+1]}
-  USER_ENV_ARGS+=( -E $K="${V}" )
+  KV="$K=$V"
+  USER_ENV_ARGS+=( -E "${KV}" )
 done
 
 export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/turbine-config.sh
+
+cd ${TURBINE_OUTPUT}
 
 # User prelaunch commands:
 # BEGIN TURBINE_PRELAUNCH

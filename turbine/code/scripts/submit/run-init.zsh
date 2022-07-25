@@ -140,7 +140,7 @@ OUTPUT_SOFTLINK=${TURBINE_OUTPUT_SOFTLINK:-turbine-output}
 OUTPUT_TOKEN_FILE=/dev/null
 
 # Regexp for environment variable key=value pairs
-ENV_RE='(.*)=(.*)'
+ENV_RE='([A-Z0-9_]*)=(.*)'
 
 export USER_ENV_CODE="" USER_ENV_ARRAY=""
 
@@ -157,7 +157,7 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
        if [[ ${KV} =~ ${ENV_RE} ]]
        then
          USER_ENV_CODE+="${match[1]}='${match[2]}' "
-         USER_ENV_ARRAY+="${match[1]} '${match[2]}' "
+         USER_ENV_ARRAY+="${match[1]} '${match[2]}' \n"
        else
          if (( ! ${(P)+KV} ))
          then
@@ -166,7 +166,7 @@ while getopts "d:D:e:i:M:n:o:s:t:VwxXY" OPTION
          fi
          # Look up unset environment variables
          USER_ENV_CODE+="${KV}='${(P)KV}' "
-         USER_ENV_ARRAY+="${KV} '${(P)KV}' "
+         USER_ENV_ARRAY+="${KV} '${(Pq)KV}' \n"
        fi
        ;;
     i) INIT_SCRIPT=${OPTARG}
@@ -347,14 +347,16 @@ fi
 # Keep this in sync with AUTO_VARS in bin/turbine.in
 AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
             TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
-            MPI_LABEL TURBINE_STDOUT
+            TURBINE_STDOUT
             TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
             )
+# Omitted: MPI_LABEL due to quoting issues (TODO)
 
 for NAME in ${AUTO_VARS}
 do
+  if (( ! ${(P)#NAME} )) continue
   USER_ENV_CODE+="${NAME}='${(P)NAME}' "
-  USER_ENV_ARRAY+="${NAME} '${(P)NAME}' "
+  USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 
 # This is being phased in to capture common M4 functions (2018-12-18)
