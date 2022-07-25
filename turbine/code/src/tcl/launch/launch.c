@@ -26,25 +26,28 @@
 
 #include "MPIX_Comm_launch.h"
 
-int launch(MPI_Comm comm, char* cmd, int argc, char** argv) {
+int launch(MPI_Comm comm, char* cmd, int argc, char** argv)
+{
   int status = 0;
-  char** argvc = (char**)malloc((argc+1)*sizeof(char*));
-  int i;
-  for(i=0; i<argc; i++) {
+  char** argvc = malloc((argc+1)*sizeof(char*));
+
+  for(int i = 0; i < argc; i++) {
     argvc[i] = argv[i];
   }
   argvc[argc] = NULL;
   turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
-  if(comm != MPI_COMM_SELF) {
+  if (comm != MPI_COMM_SELF)
     MPI_Comm_free(&comm);
-  }
+
   return status;
 }
 
 static void special_envs(MPI_Info info, int envc, char** envs);
 
-MPI_Info envs2info(int envc, char** envs) {
+MPI_Info
+envs2info(int envc, char** envs)
+{
   // printf("envs2info: envc=%i\n", envc);
   if (envc == 0)
     return MPI_INFO_NULL;
@@ -69,19 +72,22 @@ MPI_Info envs2info(int envc, char** envs) {
   return info;
 }
 
-static bool get_envs(int envc, char** envs, char* key, int* index, char** result);
+static bool get_envs(int envc, char** envs, const char* key, int* index, char** result);
 
 /**
    Handle special swift-* environment variables that we use to control MPIX_Launch
  */
 static void
-special_envs(MPI_Info info, int envc, char** envs) {
+special_envs(MPI_Info info, int envc, char** envs)
+{
   int index;
   char* value;
   if (get_envs(envc,envs,"swift_timeout",&index,&value))
     MPI_Info_set(info,"timeout",value);
   if (get_envs(envc,envs,"swift_launcher",&index,&value))
     MPI_Info_set(info,"launcher",value);
+  if (get_envs(envc,envs,"swift_launcher_options",&index,&value))
+    MPI_Info_set(info,"options",value);
   if (get_envs(envc,envs,"swift_write_hosts",&index,&value))
     MPI_Info_set(info,"write_hosts",value);
   if (get_envs(envc,envs,"swift_chdir",&index,&value))
@@ -99,15 +105,22 @@ special_envs(MPI_Info info, int envc, char** envs) {
    result is a read-only pointer into envs data
  */
 static bool
-get_envs(int envc, char** envs, char* match, int* index, char** result) {
-  int i;
-  for (i=0; i<envc; i++) {
+get_envs(int envc, char** envs, const char* match, int* index, char** result)
+{
+  // Need copy to include '=' as common string terminator
+  char match_copy[1024];
+  sprintf(match_copy, "%s=", match);
+
+  for (int i = 0; i < envc; i++)
+  {
     size_t n = strlen(envs[i]);
     char* p = &envs[i][0];
     char* q = strchr(envs[i], '=');
     if (q-p == n) return false;
-    int k = q-p; // Length of envs key
-    if (strncmp(envs[i], match, k) == 0) {
+    int k = q-p+1; // Length of envs key plus '='
+                   // (avoid prefix matching!)
+    if (strncmp(envs[i], match_copy, k) == 0)
+    {
       *index = i;
       *result = q+1;
       return true;
@@ -118,7 +131,8 @@ get_envs(int envc, char** envs, char* match, int* index, char** result) {
 
 int launch_envs(MPI_Comm comm, char* cmd,
                 int argc, char** argv,
-                int envc, char** envs) {
+                int envc, char** envs)
+{
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
   int i;

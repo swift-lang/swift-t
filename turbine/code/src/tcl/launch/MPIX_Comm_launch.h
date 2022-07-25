@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#define MPI_DEFAULT_LAUNCHER "mpiexec"
+#define MPI_DEFAULT_LAUNCHER "mpiexec "
 
 /** This is renamed to turbine_ ... because of the Cray implementation
     and other external implementations that may appear.

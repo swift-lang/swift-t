@@ -29,10 +29,28 @@ static char* info_get_launcher(MPI_Info info) {
 	}
 	if(!flag) {
 		launcher = (char*)malloc(sizeof(char)*(strlen(MPI_DEFAULT_LAUNCHER)+1));
-		strcpy(launcher,MPI_DEFAULT_LAUNCHER);
+		strcpy(launcher, MPI_DEFAULT_LAUNCHER);
 	}
 	return launcher;
 }
+
+static char* info_get_launcher_options(MPI_Info info) {
+	char* result; int flag = 0;
+	if(MPI_INFO_NULL != info) {
+		int len = 0;
+		MPI_Info_get_valuelen(info, "options", &len, &flag);
+		if(flag) {
+			result = (char*)malloc(sizeof(char)*(len+1));
+			MPI_Info_get(info,"options",len+1,result,&flag);
+		}
+	}
+	if(!flag) {
+		result = (char*)malloc(sizeof(char)*1);
+		strcpy(result, "");
+	}
+	return result;
+}
+
 
 static char* info_get_output_redirection(MPI_Info info) {
 	char* redirect; int flag = 0;
@@ -83,7 +101,7 @@ static int info_get_envs(MPI_Comm comm, MPI_Info info,
 	MPI_Info_get(info,"envs",len+1,count_string,&flag);
 	long count = strtod(count_string, NULL);
 	int* lengths = alloca(count * sizeof(int));
-	char* env_word = "env ";
+	char* env_word = "env  ";
 	size_t env_word_length = strlen(env_word);
 	size_t total = env_word_length;
 	char key[16];
@@ -229,6 +247,8 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 
 		// get the launcher
 		char* launcher = info_get_launcher(info);
+		char* launcher_options = info_get_launcher_options(info);
+		printf("launcher_options: '%s'\n", launcher_options);
 		// get output redirection string
 		char* redirect = info_get_output_redirection(info);
 		// get the timeout
@@ -289,9 +309,14 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 			setenv("TURBINE_LAUNCH_OPTIONS", mpicmd, 1);
 			sprintf(mpicmd, "%s -n %d ", launcher, (size+1));
 		} else {
-			sprintf(mpicmd, "%s -n %d -hosts %s -launcher ssh ",
-                                launcher, size, allhosts);
+			/* sprintf(mpicmd, "%s -n %d -hosts %s -launcher ssh ", */
+                        /*         launcher, size, allhosts); */
+		  sprintf(mpicmd,
+			  "%s -n %d --nodelist=%s ",
+			  launcher, size, allhosts);
 		}
+		strcat(mpicmd, launcher_options);
+		strcat(mpicmd, " ");
 
 		strcat(mpicmd, timeout_string);
 		if (envs != NULL)
@@ -311,7 +336,7 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		// concatenate the redirection
 		strcat(mpicmd, redirect);
 
-		// printf("mpicmd: %s\n", mpicmd); fflush(stdout);
+		printf("mpicmd: %s\n", mpicmd); fflush(stdout);
 
 		// calls the system command
 		*exit_code = system(mpicmd);
