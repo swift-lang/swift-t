@@ -2186,11 +2186,12 @@ Run with:
 <h2 id="_cray">Cray</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_spock">Spock</h3>
-<div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
+<h3 id="_crusher">Crusher</h3>
+<div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html">Crusher</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p>Thanks to John Gounley for developing these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2206,12 +2207,75 @@ Edit <code>swift-t-settings.sh</code>:
 <div class="olist loweralpha"><ol class="loweralpha">
 <li>
 <p>
-set <code>CC=cc</code>.
+Set <code>CC=cc</code>.
 </p>
 </li>
 <li>
 <p>
-set MPI as
+Set MPI as
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code># Check for mpicc (set to 0 to use, e.g., cc)
+SWIFT_T_CHECK_MPICC=0
+# Enable custom MPI settings
+SWIFT_T_CUSTOM_MPI=0
+MPI_DIR=/opt/cray/pe/mpich/8.1.16/ofi/gnu/9.1
+MPI_INCLUDE=$MPI_DIR/include
+MPI_LIB_DIR=$MPI_DIR/lib
+HAVE_MPI_IMPL_MPICH=1
+MPI_IMPL=MPICH</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At the end of the file, set your environment with this:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load PrgEnv-gnu
+module load gcc/10.3.0
+module load rocm/5.2.0
+module load swig</code></pre>
+</div></div>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Then build with <code>build-swift-t.sh</code>.
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_spock">Spock</h3>
+<div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
+is a Cray/AMD system at OLCF.</p></div>
+<div class="sect3">
+<h4 id="_build_instructions_6">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <code>dev/build/build-swift-t.sh</code> method as described in the
+<a href="./guide.html">Swift/T Guide</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Set <code>CC=cc</code>.
+</p>
+</li>
+<li>
+<p>
+Set MPI as
 </p>
 <div class="listingblock">
 <div class="content">
@@ -2265,7 +2329,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2329,7 +2393,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2425,7 +2489,7 @@ Build with:
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_8">Build instructions</h5>
+<h5 id="_build_instructions_9">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2667,7 +2731,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_9">Build instructions</h4>
+<h4 id="_build_instructions_10">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2896,7 +2960,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_10">Build instructions</h4>
+<h4 id="_build_instructions_11">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2937,7 +3001,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_11">Build instructions</h4>
+<h4 id="_build_instructions_12">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -4072,7 +4136,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-08-04 15:35:19 CDT
+ 2022-08-04 16:25:14 CDT
 </div>
 </div>
 </body>
