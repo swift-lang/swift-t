@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 9.0.5" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.5.0,</span>
-<span id="revdate">May 2022</span>
+<span id="revdate">August 2022</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2186,6 +2186,66 @@ Run with:
 <h2 id="_cray">Cray</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="_spock">Spock</h3>
+<div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
+is a Cray/AMD system at OLCF.</p></div>
+<div class="sect3">
+<h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <code>dev/build/build-swift-t.sh</code> method as described in the
+<a href="./guide.html">Swift/T Guide</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+set <code>CC=cc</code>.
+</p>
+</li>
+<li>
+<p>
+set MPI as
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>SWIFT_T_CUSTOM_MPI=1
+MPI=/opt/cray/pe/mpich/8.1.12/ofi/gnu/9.1
+MPI_INCLUDE=$MPI/include
+MPI_LIB_DIR=$MPI/lib</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+At the end of the file, set your environment with this:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>module load gcc/11.2.0
+module load PrgEnv-gnu/8.2.0
+module load cray-mpich/8.1.12
+module load swig
+PATH=/gpfs/alpine/world-shared/med106/sw/spock/other/jdk1.8.0_291/bin:$PATH
+PATH=/ccs/home/wozniak/Public/sfw/ant-1.10.3/bin:$PATH</code></pre>
+</div></div>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Then build with <code>build-swift-t.sh</code>.
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_stampede2">Stampede2</h3>
 <div class="paragraph"><p><a href="https://www.tacc.utexas.edu/systems/stampede2">Stampede2</a> is a
 KNL-based system at TACC.</p></div>
@@ -2205,7 +2265,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2269,7 +2329,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2365,7 +2425,7 @@ Build with:
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_7">Build instructions</h5>
+<h5 id="_build_instructions_8">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2607,7 +2667,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_8">Build instructions</h4>
+<h4 id="_build_instructions_9">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2836,7 +2896,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_9">Build instructions</h4>
+<h4 id="_build_instructions_10">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2877,7 +2937,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_10">Build instructions</h4>
+<h4 id="_build_instructions_11">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -4012,7 +4072,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-05-02 14:04:06 CST
+ 2022-08-04 15:35:19 CDT
 </div>
 </div>
 </body>
