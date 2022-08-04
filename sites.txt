@@ -971,7 +971,7 @@ is a Cray/AMD system at OLCF.
 . Use the +dev/build/build-swift-t.sh+ method as described in the
 link:./guide.html[Swift/T Guide].
 . Edit +swift-t-settings.sh+:
-.. Set +CC=cc+.
+.. Set +CC=cc+
 .. Set MPI as
 +
 ----
@@ -991,7 +991,7 @@ module load swig
 PATH=/gpfs/alpine/world-shared/med106/sw/spock/other/jdk1.8.0_291/bin:$PATH
 PATH=/ccs/home/wozniak/Public/sfw/ant-1.10.3/bin:$PATH
 ----
-. Then build with +build-swift-t.sh+.
+. Then build with +build-swift-t.sh+
 
 === Stampede2
 
