@@ -971,8 +971,8 @@ is a Cray/AMD system at OLCF.
 . Use the +dev/build/build-swift-t.sh+ method as described in the
 link:./guide.html[Swift/T Guide].
 . Edit +swift-t-settings.sh+:
-.. set +CC=cc+.
-.. set MPI as
+.. Set +CC=cc+.
+.. Set MPI as
 +
 ----
 SWIFT_T_CUSTOM_MPI=1
