@@ -959,6 +959,40 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 == Cray
 
+=== Spock
+
+https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html[Spock]
+is a Cray/AMD system at OLCF.
+
+==== Build instructions
+
+*As of:* 2022-03-16
+
+. Use the +dev/build/build-swift-t.sh+ method as described in the
+link:./guide.html[Swift/T Guide].
+. Edit +swift-t-settings.sh+:
+.. set +CC=cc+.
+.. set MPI as
++
+----
+SWIFT_T_CUSTOM_MPI=1
+MPI=/opt/cray/pe/mpich/8.1.12/ofi/gnu/9.1
+MPI_INCLUDE=$MPI/include
+MPI_LIB_DIR=$MPI/lib
+----
++
+.. At the end of the file, set your environment with this:
++
+----
+module load gcc/11.2.0
+module load PrgEnv-gnu/8.2.0
+module load cray-mpich/8.1.12
+module load swig
+PATH=/gpfs/alpine/world-shared/med106/sw/spock/other/jdk1.8.0_291/bin:$PATH
+PATH=/ccs/home/wozniak/Public/sfw/ant-1.10.3/bin:$PATH
+----
+. Then build with +build-swift-t.sh+.
+
 === Stampede2
 
 https://www.tacc.utexas.edu/systems/stampede2[Stampede2] is a
