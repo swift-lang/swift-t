@@ -959,6 +959,45 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 == Cray
 
+=== Crusher
+
+https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html[Crusher]
+is a Cray/AMD system at OLCF.
+
+==== Build instructions
+
+Thanks to John Gounley for developing these instructions.
+
+*As of:* 2022-08-04
+
+. Use the +dev/build/build-swift-t.sh+ method as described in the
+link:./guide.html[Swift/T Guide].
+. Edit +swift-t-settings.sh+:
+.. Set +CC=cc+
+.. Set MPI as
++
+----
+# Check for mpicc (set to 0 to use, e.g., cc)
+SWIFT_T_CHECK_MPICC=0
+# Enable custom MPI settings
+SWIFT_T_CUSTOM_MPI=0
+MPI_DIR=/opt/cray/pe/mpich/8.1.16/ofi/gnu/9.1
+MPI_INCLUDE=$MPI_DIR/include
+MPI_LIB_DIR=$MPI_DIR/lib
+HAVE_MPI_IMPL_MPICH=1
+MPI_IMPL=MPICH
+----
++
+.. At the end of the file, set your environment with this:
++
+----
+module load PrgEnv-gnu
+module load gcc/10.3.0
+module load rocm/5.2.0
+module load swig
+----
+. Then build with +build-swift-t.sh+.
+
 === Spock
 
 https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html[Spock]
