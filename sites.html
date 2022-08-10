@@ -2191,8 +2191,8 @@ Run with:
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
-<div class="paragraph"><p>Thanks to John Gounley for developing these instructions.</p></div>
-<div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
+<div class="paragraph"><p>Thanks to John Gounley for prototyping these instructions.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2022-08-10</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
@@ -2207,7 +2207,7 @@ Edit <code>swift-t-settings.sh</code>:
 <div class="olist loweralpha"><ol class="loweralpha">
 <li>
 <p>
-Set <code>CC=cc</code>.
+Set <code>CC=cc</code>
 </p>
 </li>
 <li>
@@ -2217,14 +2217,14 @@ Set MPI as
 <div class="listingblock">
 <div class="content">
 <pre><code># Check for mpicc (set to 0 to use, e.g., cc)
-SWIFT_T_CHECK_MPICC=0
+SWIFT_T_CHECK_MPI=0
 # Enable custom MPI settings
-SWIFT_T_CUSTOM_MPI=0
-MPI_DIR=/opt/cray/pe/mpich/8.1.16/ofi/gnu/9.1
-MPI_INCLUDE=$MPI_DIR/include
-MPI_LIB_DIR=$MPI_DIR/lib
-HAVE_MPI_IMPL_MPICH=1
-MPI_IMPL=MPICH</code></pre>
+SWIFT_T_CUSTOM_MPI=1
+MPI_DIR=/opt/cray/pe/mpich/default/ofi/gnu/9.1
+# MPI_INCLUDE=$MPI_DIR/include
+# MPI_LIB_DIR=$MPI_DIR/lib
+# HAVE_MPI_IMPL_MPICH=1
+# MPI_IMPL=MPICH</code></pre>
 </div></div>
 </li>
 <li>
@@ -2270,7 +2270,7 @@ Edit <code>swift-t-settings.sh</code>:
 <div class="olist loweralpha"><ol class="loweralpha">
 <li>
 <p>
-Set <code>CC=cc</code>.
+Set <code>CC=cc</code>
 </p>
 </li>
 <li>
@@ -2303,7 +2303,7 @@ PATH=/ccs/home/wozniak/Public/sfw/ant-1.10.3/bin:$PATH</code></pre>
 </li>
 <li>
 <p>
-Then build with <code>build-swift-t.sh</code>.
+Then build with <code>build-swift-t.sh</code>
 </p>
 </li>
 </ol></div>
@@ -4136,7 +4136,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-08-04 16:25:14 CDT
+ 2022-08-10 14:21:45 CDT
 </div>
 </div>
 </body>
