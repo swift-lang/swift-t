@@ -62,8 +62,8 @@ export CC=mpicc
 MPI_VERSION=3
 
 # MPI custom layouts (uncomment below options to enable)
-# Check for mpicc (set to 0 to use, e.g., cc)
-SWIFT_T_CHECK_MPICC=1
+# Check for MPI implementation and tools (set to 0 to use, e.g., cc)
+SWIFT_T_CHECK_MPI=1
 # Enable custom MPI settings
 SWIFT_T_CUSTOM_MPI=0
 # MPI_DIR=/path/to/mpi

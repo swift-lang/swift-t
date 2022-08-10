@@ -592,9 +592,7 @@ AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
 # MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
-# 2018/09/29: We no longer put version information in these tokens
-#             Add new variables if we need that.
-MPI_IMPL=unknown
+MPI_IMPL=${MPI_IMPL:-unknown}
 HAVE_MPI_IMPL_MPICH=0
 HAVE_MPI_IMPL_OPENMPI=0
 # Set to flag for line numbers if supported
@@ -602,6 +600,7 @@ MPI_LINE_OUTPUT_FLAG=
 
 if (( ${ENABLE_MPI_CHECKS} ))
 then
+AC_MSG_RESULT([Checking MPI implementation and tools...])
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
    MPI_H=${USE_MPI_INCLUDE}/mpi.h
@@ -624,14 +623,20 @@ then
    else
      MPI_LINE_OUTPUT_FLAG=""
    fi
+   AC_MSG_RESULT([OK])
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    HAVE_MPI_IMPL_MPICH=1
    MPI_IMPL="MPICH"
    MPI_LINE_OUTPUT_FLAG="-l"
+   AC_MSG_RESULT([OK])
+else
+   AC_MSG_RESULT([Not found.])
+   AC_MSG_WARN([No MPI implementation tokens found in mpi.h !])
 fi
-AC_MSG_RESULT([${MPI_IMPL}])
 fi # ENABLE_MPI_CHECKS==1
+
+AC_MSG_RESULT([Setting MPI_IMPL: '${MPI_IMPL}'])
 AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
                    ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
 AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
