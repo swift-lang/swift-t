@@ -191,13 +191,13 @@ then
                 ${EXTRA_ARGS} \
                 ${CUSTOM_CFG_ARGS_TURBINE:-}
     )
-  assert ${?} "Configure failed!"
+  assert ${?} "build-turbine.sh: configure failed!"
 fi
 
 report_turbine_includes()
 {
   echo
-  echo "Make failed.  The following may be useful:"
+  echo "build-turbine.sh: make failed.  The following may be useful:"
   echo
   set -x
   rm -fv deps_contents.txt

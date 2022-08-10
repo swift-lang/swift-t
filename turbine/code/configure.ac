@@ -718,7 +718,7 @@ AC_ARG_WITH(adlb,
         then
             AC_MSG_ERROR(Could not find ADLB in $withval)
         fi
-        AC_MSG_RESULT(ok)
+        AC_MSG_RESULT([OK])
         USE_ADLB=${withval}
     ],
     [
