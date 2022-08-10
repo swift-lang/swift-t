@@ -76,12 +76,22 @@ TURBINE_THETA=${TURBINE_OUTPUT}/turbine-theta.sh
 m4 ${COMMON_M4} ${TURBINE_THETA_M4} > ${TURBINE_THETA}
 print "wrote submit script: ${TURBINE_THETA}"
 chmod u+x ${TURBINE_OUTPUT}/turbine-theta.sh
-print "running qsub ..."
-qsub ${TURBINE_OUTPUT}/turbine-theta.sh | read JOB_ID
 
-if [[ ${pipestatus[1]} != 0 ]] || [[ ${JOB_ID} == "" ]]
+print "turbine-theta-run: running qsub ..."
+# Ensure this is on to handle errors:
+setopt pipefail
+# Use if-block to catch read errors:
+qsub ${TURBINE_OUTPUT}/turbine-theta.sh | \
+  if read JOB_ID
+  then
+    : OK
+  else
+    print "turbine-theta-run: Could not read JOB_ID from qsub!"
+  fi
+if (( ${pipestatus[1]} != 0 )) || (( ! ${+JOB_ID} ))
 then
-  abort "qsub failed! ${JOB_ID}" # JOB_ID may have an error message
+  # JOB_ID may have an error message
+  abort "turbine-theta-run: qsub failed! ${JOB_ID:-}"
 fi
 
 declare JOB_ID
