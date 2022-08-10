@@ -28,7 +28,7 @@ print "TURBINE-THETA SCRIPT"
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 if (( ${?} != 0 ))
 then
-  print "Broken Turbine installation!"
+  print "turbine-theta-run: Broken Turbine installation!"
   declare TURBINE_HOME
   return 1
 fi
@@ -97,7 +97,7 @@ then
   exit 0
 fi
 
-print "waiting for job completion..."
+print "turbine-theta-run: waiting for job completion..."
 
 # Wait for job completion
 cqwait ${JOB_ID}
