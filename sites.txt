@@ -982,10 +982,8 @@ SWIFT_T_CHECK_MPI=0
 # Enable custom MPI settings
 SWIFT_T_CUSTOM_MPI=1
 MPI_DIR=/opt/cray/pe/mpich/default/ofi/gnu/9.1
-# MPI_INCLUDE=$MPI_DIR/include
-# MPI_LIB_DIR=$MPI_DIR/lib
-# HAVE_MPI_IMPL_MPICH=1
-# MPI_IMPL=MPICH
+# Leave other settings here commented out.
+LAUNCHER=/usr/bin/srun
 ----
 +
 .. At the end of the file, set your environment with this:
