@@ -35,7 +35,6 @@ source /opt/modules/default/init/bash
 module load modules
 module load alps
 module swap PrgEnv-intel PrgEnv-gnu
-PATH=/opt/cray/elogin/eproxy/2.0.14-4.3/bin:$PATH # For aprun
 
 set -eu
 
