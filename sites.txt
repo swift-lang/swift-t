@@ -966,9 +966,9 @@ is a Cray/AMD system at OLCF.
 
 ==== Build instructions
 
-Thanks to John Gounley for developing these instructions.
+Thanks to John Gounley for prototyping these instructions.
 
-*As of:* 2022-08-04
+*As of:* 2022-08-10
 
 . Use the +dev/build/build-swift-t.sh+ method as described in the
 link:./guide.html[Swift/T Guide].
@@ -978,14 +978,14 @@ link:./guide.html[Swift/T Guide].
 +
 ----
 # Check for mpicc (set to 0 to use, e.g., cc)
-SWIFT_T_CHECK_MPICC=0
+SWIFT_T_CHECK_MPI=0
 # Enable custom MPI settings
-SWIFT_T_CUSTOM_MPI=0
-MPI_DIR=/opt/cray/pe/mpich/8.1.16/ofi/gnu/9.1
-MPI_INCLUDE=$MPI_DIR/include
-MPI_LIB_DIR=$MPI_DIR/lib
-HAVE_MPI_IMPL_MPICH=1
-MPI_IMPL=MPICH
+SWIFT_T_CUSTOM_MPI=1
+MPI_DIR=/opt/cray/pe/mpich/default/ofi/gnu/9.1
+# MPI_INCLUDE=$MPI_DIR/include
+# MPI_LIB_DIR=$MPI_DIR/lib
+# HAVE_MPI_IMPL_MPICH=1
+# MPI_IMPL=MPICH
 ----
 +
 .. At the end of the file, set your environment with this:
