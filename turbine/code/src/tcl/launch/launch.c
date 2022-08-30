@@ -31,9 +31,9 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv)
   int status = 0;
   char** argvc = malloc((argc+1)*sizeof(char*));
 
-  for(int i = 0; i < argc; i++) {
+  for(int i = 0; i < argc; i++)
     argvc[i] = argv[i];
-  }
+
   argvc[argc] = NULL;
   turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
@@ -60,11 +60,12 @@ envs2info(int envc, char** envs)
   strcpy(key, "envs");
   sprintf(value, "%i", envc);
   MPI_Info_set(info, key, value);
-  int i;
-  for(i=0; i<envc; i++) {
+
+  for(int i = 0; i < envc; i++)
+  {
     sprintf(key, "env%i", i);
     // printf("info set: %s=%s\n", key, envs[i]);
-    MPI_Info_set(info,key,envs[i]);
+    MPI_Info_set(info, key, envs[i]);
   }
 
   special_envs(info, envc, envs);
@@ -153,13 +154,13 @@ int launch_envs(MPI_Comm comm, char* cmd,
   return status;
 }
 
-int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
+int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv)
+{
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
   int i;
-  for(i=0; i<argc; i++) {
+  for(i=0; i<argc; i++)
     argvc[i] = argv[i];
-  }
   argvc[argc] = NULL;
   MPI_Info info;
   MPI_Info_create(&info);
@@ -167,9 +168,8 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
-  if(comm != MPI_COMM_SELF) {
+  if (comm != MPI_COMM_SELF)
     MPI_Comm_free(&comm);
-  }
   return status;
 }
 
@@ -180,7 +180,8 @@ int launch_multi(MPI_Comm comm, int count, int* procs,
                  char** cmd,
                  int* argc, char*** argv,
                  int* envc, char*** envs,
-                 char* color_setting) {
+                 char* color_setting)
+{
   int rank;
   MPI_Comm_rank(comm, &rank);
   int color = get_color(rank, comm, count, procs, color_setting);
@@ -207,8 +208,8 @@ get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
 
 static int
 get_color(int rank, MPI_Comm comm, int count, int* procs,
-          char* color_setting) {
-
+          char* color_setting)
+{
   sanity_check(comm, count, procs);
 
   if (strlen(color_setting) > 0)
@@ -237,11 +238,13 @@ static bool setting_match(int rank, char* spec, bool* match);
 
 static int
 get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
-                       char* color_setting) {
+                       char* color_setting)
+{
   char  spec[MAX_SPEC];
   char* p = color_setting;
   int   color = 0;
-  while (true) {
+  while (true)
+  {
     char* q = strpbrk(p, ",;");
     // printf("p: '%s' q-p: %li\n", p, q-p);
     strlcpy(spec, p, q-p+1);
@@ -267,7 +270,8 @@ get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
    Returns true on parse success, false on parse error
  */
 static bool
-setting_match(int rank, char* spec, bool* match) {
+setting_match(int rank, char* spec, bool* match)
+{
   // printf("spec: '%s'\n", spec);
   char* d = strchr(spec, '-');
   if (d == NULL)
@@ -291,14 +295,14 @@ setting_match(int rank, char* spec, bool* match) {
 }
 
 static void
-sanity_check(MPI_Comm comm, int count, int* procs) {
+sanity_check(MPI_Comm comm, int count, int* procs)
+{
   int size;
   MPI_Comm_size(comm, &size);
   int total = 0;
   int i;
-  for (i = 0; i < count; i++) {
+  for (i = 0; i < count; i++)
     total += procs[i];
-  }
   if (total != size)
   {
     printf("procs total=%i does not equal comm size=%i\n", total, size);
