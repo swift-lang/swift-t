@@ -56,10 +56,10 @@ void turbine_version(version* output);
 
 #define TURBINE_CODE_STRING_MAX 64
 
-/*
+/**
   Convert code to string.
   output: buffer of at least TURBINE_CODE_STRING_MAX bytes
- */
+*/
 int turbine_code_tostring(char* output, turbine_code code);
 
 void turbine_finalize(Tcl_Interp *interp);
