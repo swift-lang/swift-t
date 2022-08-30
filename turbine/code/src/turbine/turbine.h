@@ -45,8 +45,7 @@ typedef struct {
 
 /**
    If the user parallel task is being released, this
-
-   if (rc will be set to the communicator to use.
+   will be set to the communicator to use.
    If task is not parallel, this is MPI_COMM_SELF
 */
 extern MPI_Comm turbine_task_comm;
