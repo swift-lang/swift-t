@@ -29,20 +29,6 @@
 #include <version.h>
 #include <turbine-defs.h>
 
-typedef int64_t turbine_transform_id;
-
-typedef struct {
-  char *key;
-  size_t length;
-} turbine_subscript;
-
-static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
-
-typedef struct {
-  turbine_datum_id td;
-  turbine_subscript subscript;
-} td_sub_pair;
-
 /**
    If the user parallel task is being released, this
    will be set to the communicator to use.
