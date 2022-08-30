@@ -21,8 +21,7 @@
  *      Author: wozniak
  * */
 
-#ifndef TURBINE_H
-#define TURBINE_H
+#pragma once
 
 #include <mpi.h>
 #include <tcl.h>
@@ -80,5 +79,3 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
 turbine_code turbine_run_interp(MPI_Comm comm, const char* script_file,
                                 int argc, char const *const * argv, char* output,
                                 Tcl_Interp* interp);
-
-#endif
