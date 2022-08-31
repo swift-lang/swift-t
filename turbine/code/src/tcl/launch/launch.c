@@ -144,22 +144,22 @@ int launch_envs(MPI_Comm comm, char* cmd,
 
   MPI_Info info = envs2info(envc, envs);
   turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
-  if (info != MPI_INFO_NULL) {
+  if (info != MPI_INFO_NULL)
     MPI_Info_free(&info);
-  }
+
   free(argvc);
-  if(comm != MPI_COMM_SELF) {
+  if(comm != MPI_COMM_SELF)
     MPI_Comm_free(&comm);
-  }
+
   return status;
 }
 
-int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv)
+int
+launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv)
 {
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
-  int i;
-  for(i=0; i<argc; i++)
+  for(int i = 0; i < argc; i++)
     argvc[i] = argv[i];
   argvc[argc] = NULL;
   MPI_Info info;
@@ -300,8 +300,7 @@ sanity_check(MPI_Comm comm, int count, int* procs)
   int size;
   MPI_Comm_size(comm, &size);
   int total = 0;
-  int i;
-  for (i = 0; i < count; i++)
+  for (int i = 0; i < count; i++)
     total += procs[i];
   if (total != size)
   {
