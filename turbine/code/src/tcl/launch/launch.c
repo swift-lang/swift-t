@@ -136,10 +136,9 @@ int launch_envs(MPI_Comm comm, char* cmd,
 {
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
-  int i;
-  for(i=0; i<argc; i++) {
+  for (int i = 0; i < argc; i++)
     argvc[i] = argv[i];
-  }
+
   argvc[argc] = NULL;
 
   MPI_Info info = envs2info(envc, envs);
