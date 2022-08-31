@@ -32,11 +32,3 @@ int launch_multi(MPI_Comm comm, int count, int* procs,
                  int* argc, char*** argv,
                  int* envc, char*** envs,
                  char* color_setting);
-
-/* WIP
-MPI_Info info_create(void);
-
-void info_set(MPI_Info info, char* key, char* value);
-
-void info_free(MPI_Info info);
-*/
