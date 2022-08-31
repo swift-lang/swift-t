@@ -263,6 +263,7 @@ void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
 
     if (list_item != NULL)
     {
+      // This rank is the leader on my node:
       int leader_rank = list_item->data;
 
       leader_ranks[leader_rank_count++] = leader_rank;
