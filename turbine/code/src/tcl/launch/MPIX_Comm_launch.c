@@ -3,6 +3,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -214,6 +215,29 @@ static int write_hosts(MPI_Info info, const char* allhosts, int size) {
 	return MPI_SUCCESS;
 }
 
+/**
+   Return true; false on invalid input
+   If a slurm_bind setting set the mask, store it in *mask
+   Else set *mask=NULL
+*/
+static bool
+info_get_map(MPI_Info info, char** map)
+{
+  // Default:
+  *map = NULL;
+  int length, flag=0;
+  if (info == MPI_INFO_NULL)
+    return true;
+  MPI_Info_get_valuelen(info, "slurm_bind", &length, &flag);
+  if (!flag)
+    return true;
+  char* s = malloc((length+1) * sizeof(char));
+  MPI_Info_get(info, "slurm_bind", length+1, s, &flag);
+  assert(flag);
+  *map = s;
+  return true;
+}
+
 int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		MPI_Info info, int root, MPI_Comm comm,
 		int* exit_code) {
@@ -317,6 +341,16 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		}
 		strcat(mpicmd, launcher_options);
 		strcat(mpicmd, " ");
+
+		char* map;
+		info_get_map(info, &map);
+		if (map != NULL)
+		{
+		  strcat(mpicmd, "-N 1 --cpu-bind=verbose,map_cpu:");
+		  strcat(mpicmd, map);
+		  strcat(mpicmd, " ");
+		  free(map);
+		}
 
 		strcat(mpicmd, timeout_string);
 		if (envs != NULL)
