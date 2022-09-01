@@ -151,13 +151,11 @@ xlb_hostmap_init(const xlb_layout *layout,
   *hostmap = malloc(sizeof(**hostmap));
   ADLB_CHECK_MALLOC(*hostmap);
 
-  bool debug_hostmap = false;
-  char* t = getenv("ADLB_DEBUG_HOSTMAP");
-  if (t != NULL && strcmp(t, "1") == 0)
-    debug_hostmap = true;
+  bool debug_hostmap;
+  bool rc = getenv_integer("ADLB_DEBUG_HOSTMAP", false,
+                           &debug_hostmap);
 
   table_init(&(*hostmap)->map, 1024);
-
   for (int rank = 0; rank < layout->size; rank++)
   {
     const char* name = xlb_hostnames_lookup(hostnames, rank);
