@@ -27,6 +27,7 @@ TCL_SRC := $(DIR)/helpers.tcl       \
 	   $(DIR)/app.tcl           \
 	   $(DIR)/langs.tcl         \
 	   $(DIR)/launch.tcl        \
+	   $(DIR)/job.tcl           \
 	   $(DIR)/python.tcl        \
 	   $(DIR)/json.tcl          \
 	   $(DIR)/gemtc_worker.tcl
