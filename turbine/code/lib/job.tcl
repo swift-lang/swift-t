@@ -32,13 +32,18 @@ namespace eval turbine {
 
   proc job_srun_impl { cpj ppj cmd } {
     try {
-      set fp [ open "|echo srun -n $ppj $cmd" "r" ]
+      puts "turbine: srun: exec: srun -n $ppj $cmd"
+      set fp [ open "|srun -n $ppj $cmd" "r" ]
+      show fp
       while { [ gets $fp line ] >= 0 } {
         puts "srun: $line"
       }
+      close $fp
     } on error e {
-      puts "srun failed!"
-      puts "srun error: $e"
+      puts "turbine: srun failed!"
+      puts "turbine: srun error message begin:"
+      puts $e
+      puts "turbine: srun error message end."
       return 1
     }
     return 0
