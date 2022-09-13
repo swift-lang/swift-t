@@ -5,10 +5,8 @@ set -eu
 
 rm -rf autom4te.cache
 
-echo "Running autoconf..."
-autoconf -f
-echo "Running autoheader..."
-autoheader
+echo "Running autoreconf..."
+autoreconf --force --install
 
 echo "ExM C-UTILS: bootstrap: OK"
 exit 0
