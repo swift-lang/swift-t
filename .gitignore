@@ -18,7 +18,9 @@ config.cache
 config.h*
 config.status
 autom4te.cache
+config.guess
 config.log
+config.sub
 
 # Autoconf-generated Makefiles
 Makefile
