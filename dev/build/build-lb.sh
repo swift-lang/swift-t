@@ -3,7 +3,7 @@ set -eu
 
 # BUILD LB
 
-THIS=$(   readlink --canonicalize $( dirname  $0 ) )
+THIS=$(   cd $( dirname $0 ) ; /bin/pwd )
 SCRIPT=$( basename $0 )
 
 cd $THIS
