@@ -152,7 +152,7 @@ xlb_hostmap_init(const xlb_layout *layout,
   ADLB_CHECK_MALLOC(*hostmap);
 
   bool debug_hostmap;
-  bool rc = getenv_integer("ADLB_DEBUG_HOSTMAP", false,
+  bool rc = getenv_boolean("ADLB_DEBUG_HOSTMAP", false,
                            &debug_hostmap);
 
   table_init(&(*hostmap)->map, 1024);
