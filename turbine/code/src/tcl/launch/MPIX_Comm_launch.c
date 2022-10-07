@@ -379,7 +379,8 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 			printf("MPIX_Comm_launch(): command exited with code 127.\n"
 					"Check that your desired program is in PATH.\n"
 					"command was: %s\n", mpicmd);
-
+		printf("mpicmd: done.\n");
+		fflush(stdout);
 		// unset TURBINE_LAUNCH_OPTIONS (in case turbine is the launcher)
 		unsetenv("TURBINE_LAUNCH_OPTIONS");
 
