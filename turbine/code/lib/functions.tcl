@@ -592,9 +592,37 @@ namespace eval turbine {
         }
         return $result
     }
+
+  proc contig { start count { step 1 } } {
+    set result [ list ]
+    set value $start
+    for { set i 0 } { $i < $count } { incr i } {
+      lappend result $value
+      incr value $step
+    }
+    return $result
+  }
+
+  # Break list L into count equal-size chunks (of size s)
+  proc fragment { L count } {
+    set result [ list ]
+    set n [ llength $L ]
+    set s [ expr $n / $count ]
+    set index 0
+    for { set c 0 } { $c < $count } { incr c } {
+      set chunk [ list ]
+      for { set i 0 } { $i < $s } { incr i } {
+        lappend chunk [ lindex $L [ expr $index + $i ] ]
+      }
+      lappend result $chunk
+      incr index $i
+    }
+
+    return $result
+  }
 }
 
 # Local Variables:
 # mode: tcl
-# tcl-indent-level: 4
+# tcl-indent-level: 2
 # End:
