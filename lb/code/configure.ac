@@ -49,13 +49,14 @@ fi
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using  CC=$USE_CC])
 
-AC_MSG_RESULT([PREFIX: ${prefix}])
+AC_MSG_RESULT([PREFIX:   ${prefix}])  # Space to align path with above
 SOFTWARE=$( dirname ${prefix} 2>&1 )
 SOFTWARE=$( test -d ${SOFTWARE} && cd ${SOFTWARE} 2>&1 && /bin/pwd )
 if [[ ${?} == 0 ]]
 then
+  # Space to align path with above
   AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 else
   SOFTWARE=0
