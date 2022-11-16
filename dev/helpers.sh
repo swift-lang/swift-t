@@ -21,5 +21,5 @@ pop()
 
 git-log()
 {
-  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%h %ad %s%n"
+  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%h :: %ad :: %s%n"
 }
