@@ -28,11 +28,11 @@
  */
 
 adlb_code ADLBP_Init(int nservers, int ntypes, int type_vect[],
-                     int *am_server, MPI_Comm adlb_comm,
-                     MPI_Comm *worker_comm);
+                     int* am_server, MPI_Comm adlb_comm,
+                     MPI_Comm* worker_comm);
 adlb_code ADLB_Init(int nservers, int ntypes, int type_vect[],
-                    int *am_server, MPI_Comm adlb_comm,
-                    MPI_Comm *worker_comm);
+                    int* am_server, MPI_Comm adlb_comm,
+                    MPI_Comm* worker_comm);
 
 adlb_code ADLB_Server(long max_memory);
 

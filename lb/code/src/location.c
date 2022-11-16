@@ -53,9 +53,12 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
-  struct utsname u;
-  uname(&u);
-  xlb_s.my_name = strdup(u.nodename);
+  /* struct utsname u; */
+  /* uname(&u); */
+  /* printf("uname: %p\n", u.nodename);  fflush(stdout); */
+  /* printf("uname: '%s'\n", u.nodename);  fflush(stdout); */
+  /* xlb_s.my_name = strdup(u.nodename); */
+  xlb_s.my_name = strdup("fake-name");
 
   report_ranks(comm);
 
@@ -63,11 +66,11 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
   rc = MPI_Comm_size(comm, &comm_size);
   MPI_CHECK(rc);
 
-  adlb_code ac = hostnames_alloc(hostnames, comm_size,
-                                  sizeof(u.nodename));
+  adlb_code ac = hostnames_alloc(hostnames, comm_size, 1024);
+
   ADLB_CHECK(ac);
 
-  strcpy(hostnames->my_name, u.nodename);
+  strcpy(hostnames->my_name, xlb_s.my_name);
 
   rc = MPI_Allgather(
       hostnames->my_name,   (int)hostnames->name_length, MPI_CHAR,
@@ -154,7 +157,7 @@ xlb_hostmap_init(const xlb_layout *layout,
   bool debug_hostmap;
   bool rc = getenv_boolean("ADLB_DEBUG_HOSTMAP", false,
                            &debug_hostmap);
-  ADLB_CHECK_MSG(rc, "Bad value for ADLB_DEBUG_HOSTMAP");
+  check_msg(rc, "ADLB: Bad value for ADLB_DEBUG_HOSTMAP");
 
   table_init(&(*hostmap)->map, 1024);
   for (int rank = 0; rank < layout->size; rank++)
