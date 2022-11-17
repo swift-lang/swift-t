@@ -9,8 +9,6 @@ set -eu
 setopt PUSHD_SILENT
 setopt PIPE_FAIL
 
-set -x
-
 # Get the Swift/T source directory, canonicalized:
 SWIFT_T_SRC=${ZSH_ARGZERO:A:h:h}
 # Formulate the installation directory:
@@ -48,7 +46,7 @@ print
 
 # Define and reset the settings file:
 SETTINGS=dev/build/swift-t-settings.sh
-rm -rv $SETTINGS
+rm -fv $SETTINGS
 dev/build/init-settings.sh
 
 # Products from other Jenkins projects:
