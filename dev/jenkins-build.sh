@@ -9,6 +9,8 @@ set -eu
 setopt PUSHD_SILENT
 setopt PIPE_FAIL
 
+set -x
+
 # Get the Swift/T source directory, canonicalized:
 SWIFT_T_SRC=${ZSH_ARGZERO:A:h:h}
 # Formulate the installation directory:
