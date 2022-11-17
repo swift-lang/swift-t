@@ -1412,6 +1412,7 @@ AC_CONFIG_FILES(
         scripts/submit/ec2/module.mk
         scripts/submit/lsf/module.mk
         scripts/submit/pbs/module.mk
+        scripts/submit/psij/module.mk
         scripts/submit/slurm/module.mk
         scripts/submit/sge/module.mk
         scripts/submit/theta/module.mk
