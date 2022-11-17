@@ -68,9 +68,16 @@ EOF
 
 sed -i -f settings.sed $SETTINGS
 
+set -x
+
 # Run the build!
 nice -n 19 dev/build/build-swift-t.sh |& tee build.out
 # Produce build.out for shell inspection later.
+
+# See if it worked:
+PATH=$SWIFT_T_SFW/stc/bin:$PATH
+swift-t -v
+swift-t -E 'trace(42);'
 
 # Prevent future rebuild until Git changes
 #         or someone deletes timestamp-old.txt
