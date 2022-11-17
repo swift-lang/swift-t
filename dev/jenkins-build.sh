@@ -21,11 +21,10 @@ cd $SWIFT_T_SRC
 
 source dev/helpers.sh
 
+# Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
-
 print "New timestamp:"
 git-log | tee timestamp-new.txt
-
 if [[ -r timestamp-old.txt ]] {
   print "Old timestamp:"
   cat timestamp-old.txt
@@ -34,14 +33,11 @@ if [[ -r timestamp-old.txt ]] {
     GIT_CHANGED=0
   fi
 }
-
-echo GIT_CHANGED=$GIT_CHANGED
-
+print GIT_CHANGED=$GIT_CHANGED
 if (( ! GIT_CHANGED )) {
   print "Git did not change - exit."
   exit
 }
-
 print
 
 # Define and reset the settings file:
@@ -68,7 +64,9 @@ EOF
 
 sed -i -f settings.sed $SETTINGS
 
+# Run the build!
 nice -n 19 dev/build/build-swift-t.sh |& tee build.out
+# Produce build.out for shell inspection later.
 
 # Prevent future rebuild until Git changes
 #         or someone deletes timestamp-old.txt
