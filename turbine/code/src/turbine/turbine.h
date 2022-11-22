@@ -21,8 +21,7 @@
  *      Author: wozniak
  * */
 
-#ifndef TURBINE_H
-#define TURBINE_H
+#pragma once
 
 #include <mpi.h>
 #include <tcl.h>
@@ -30,24 +29,9 @@
 #include <version.h>
 #include <turbine-defs.h>
 
-typedef int64_t turbine_transform_id;
-
-typedef struct {
-  char *key;
-  size_t length;
-} turbine_subscript;
-
-static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
-
-typedef struct {
-  turbine_datum_id td;
-  turbine_subscript subscript;
-} td_sub_pair;
-
 /**
    If the user parallel task is being released, this
-
-   if (rc will be set to the communicator to use.
+   will be set to the communicator to use.
    If task is not parallel, this is MPI_COMM_SELF
 */
 extern MPI_Comm turbine_task_comm;
@@ -58,10 +42,10 @@ void turbine_version(version* output);
 
 #define TURBINE_CODE_STRING_MAX 64
 
-/*
+/**
   Convert code to string.
   output: buffer of at least TURBINE_CODE_STRING_MAX bytes
- */
+*/
 int turbine_code_tostring(char* output, turbine_code code);
 
 void turbine_finalize(Tcl_Interp *interp);
@@ -80,5 +64,3 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
 turbine_code turbine_run_interp(MPI_Comm comm, const char* script_file,
                                 int argc, char const *const * argv, char* output,
                                 Tcl_Interp* interp);
-
-#endif

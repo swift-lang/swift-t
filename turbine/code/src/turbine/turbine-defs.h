@@ -33,7 +33,7 @@ typedef adlb_datum_id turbine_datum_id;
 
 typedef enum
 {
-  TURBINE_TYPE_NULL = 0,
+  TURBINE_TYPE_NULL      = 0,
   TURBINE_TYPE_INTEGER   = ADLB_DATA_TYPE_INTEGER,
   TURBINE_TYPE_FLOAT     = ADLB_DATA_TYPE_FLOAT,
   TURBINE_TYPE_STRING    = ADLB_DATA_TYPE_STRING,

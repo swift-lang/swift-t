@@ -49,13 +49,14 @@ fi
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using  CC=$USE_CC])
 
-AC_MSG_RESULT([PREFIX: ${prefix}])
+AC_MSG_RESULT([PREFIX:   ${prefix}])  # Space to align path with above
 SOFTWARE=$( dirname ${prefix} 2>&1 )
 SOFTWARE=$( test -d ${SOFTWARE} && cd ${SOFTWARE} 2>&1 && /bin/pwd )
 if [[ ${?} == 0 ]]
 then
+  # Space to align path with above
   AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 else
   SOFTWARE=0
@@ -220,11 +221,12 @@ AC_DEFINE_UNQUOTED(ADLB_MPI_VERSION, [${ADLB_MPI_VERSION}],
 
 # if user wants to build with MPI 3,
 # check the reported MPI_VERSION number
-if [[ ${ADLB_MPI_VERSION} == 3 ]]
+if (( ${ADLB_MPI_VERSION} >= 3 ))
 then
 AC_MSG_CHECKING([MPI version])
 ${CC} ${CFLAGS} -o maint/mpi_version3_test maint/mpi_version3_test.c
-[[ ${?} != 0 ]] && AC_MSG_ERROR([MPI_VERSION 3 is required for parallel tasks!
+[[ ${?} != 0 ]] && AC_MSG_ERROR(
+      [MPI_VERSION >= 3 is required for parallel tasks!
                    You must 1) re-configure with --enable-mpi-2
                                which disables parallel tasks; or
                             2) use an MPI 3 implementation])

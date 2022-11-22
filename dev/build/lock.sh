@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 set -eu
 
 # LOCK SH
@@ -43,7 +43,7 @@ if (( ${#V} )) {
 if (( ${#} > 0 )) {
      THIS=$1
 } else {
-     THIS=$( readlink --canonicalize $( dirname $0 ) )
+     THIS=$( cd $( dirname $0 ) ; /bin/pwd ) )
 }
 
 LOCKS=( lock {c-utils,lb,turbine,stc}/lock )

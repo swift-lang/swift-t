@@ -53,9 +53,12 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
-  struct utsname u;
-  uname(&u);
-  xlb_s.my_name = strdup(u.nodename);
+  /* struct utsname u; */
+  /* uname(&u); */
+  /* printf("uname: %p\n", u.nodename);  fflush(stdout); */
+  /* printf("uname: '%s'\n", u.nodename);  fflush(stdout); */
+  /* xlb_s.my_name = strdup(u.nodename); */
+  xlb_s.my_name = strdup("fake-name");
 
   report_ranks(comm);
 
@@ -63,11 +66,11 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
   rc = MPI_Comm_size(comm, &comm_size);
   MPI_CHECK(rc);
 
-  adlb_code ac = hostnames_alloc(hostnames, comm_size,
-                                  sizeof(u.nodename));
+  adlb_code ac = hostnames_alloc(hostnames, comm_size, 1024);
+
   ADLB_CHECK(ac);
 
-  strcpy(hostnames->my_name, u.nodename);
+  strcpy(hostnames->my_name, xlb_s.my_name);
 
   rc = MPI_Allgather(
       hostnames->my_name,   (int)hostnames->name_length, MPI_CHAR,
@@ -151,13 +154,12 @@ xlb_hostmap_init(const xlb_layout *layout,
   *hostmap = malloc(sizeof(**hostmap));
   ADLB_CHECK_MALLOC(*hostmap);
 
-  bool debug_hostmap = false;
-  char* t = getenv("ADLB_DEBUG_HOSTMAP");
-  if (t != NULL && strcmp(t, "1") == 0)
-    debug_hostmap = true;
+  bool debug_hostmap;
+  bool rc = getenv_boolean("ADLB_DEBUG_HOSTMAP", false,
+                           &debug_hostmap);
+  check_msg(rc, "ADLB: Bad value for ADLB_DEBUG_HOSTMAP");
 
   table_init(&(*hostmap)->map, 1024);
-
   for (int rank = 0; rank < layout->size; rank++)
   {
     const char* name = xlb_hostnames_lookup(hostnames, rank);
@@ -263,6 +265,7 @@ void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
 
     if (list_item != NULL)
     {
+      // This rank is the leader on my node:
       int leader_rank = list_item->data;
 
       leader_ranks[leader_rank_count++] = leader_rank;

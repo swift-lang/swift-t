@@ -7,7 +7,7 @@ set -eu
 # Swift/T build script: runs configuration and compilation
 # See options.sh for options
 
-THIS=$(   readlink --canonicalize $( dirname $0 ) )
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 SCRIPT=$( basename $0 )
 
 cd $THIS

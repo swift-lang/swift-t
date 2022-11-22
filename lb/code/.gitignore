@@ -7,7 +7,3 @@ system-libs.txt
 
 # Link to Debian control files
 debian
-
-# Autoconf stuff:
-config.guess
-config.sub

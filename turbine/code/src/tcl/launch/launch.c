@@ -21,19 +21,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-// For systems without strlcpy(), e.g., Linux
+// For systems without strlcpy(), e.g., Linux:
 #include <strlcpy.h>
+// ExM c-utils:
+#include <tools.h>
 
 #include "MPIX_Comm_launch.h"
 
-int launch(MPI_Comm comm, char* cmd, int argc, char** argv)
+static void get_cpu_map_slurm(MPI_Comm comm, char* output);
+
+int
+launch(MPI_Comm comm, char* cmd, int argc, char** argv)
 {
   int status = 0;
   char** argvc = malloc((argc+1)*sizeof(char*));
 
-  for(int i = 0; i < argc; i++) {
+  for(int i = 0; i < argc; i++)
     argvc[i] = argv[i];
-  }
+
   argvc[argc] = NULL;
   turbine_MPIX_Comm_launch(cmd, argvc, MPI_INFO_NULL, 0, comm, &status);
   free(argvc);
@@ -43,31 +48,32 @@ int launch(MPI_Comm comm, char* cmd, int argc, char** argv)
   return status;
 }
 
-static void special_envs(MPI_Info info, int envc, char** envs);
+static void special_envs(MPI_Comm comm, MPI_Info info,
+                         int envc, char** envs);
 
 MPI_Info
-envs2info(int envc, char** envs)
+envs2info(MPI_Comm comm, int envc, char** envs)
 {
   // printf("envs2info: envc=%i\n", envc);
   if (envc == 0)
     return MPI_INFO_NULL;
 
   MPI_Info info;
-
   MPI_Info_create(&info);
   char key[16];
   char value[16];
   strcpy(key, "envs");
   sprintf(value, "%i", envc);
   MPI_Info_set(info, key, value);
-  int i;
-  for(i=0; i<envc; i++) {
+
+  for(int i = 0; i < envc; i++)
+  {
     sprintf(key, "env%i", i);
     // printf("info set: %s=%s\n", key, envs[i]);
-    MPI_Info_set(info,key,envs[i]);
+    MPI_Info_set(info, key, envs[i]);
   }
 
-  special_envs(info, envc, envs);
+  special_envs(comm, info, envc, envs);
 
   return info;
 }
@@ -78,7 +84,7 @@ static bool get_envs(int envc, char** envs, const char* key, int* index, char** 
    Handle special swift-* environment variables that we use to control MPIX_Launch
  */
 static void
-special_envs(MPI_Info info, int envc, char** envs)
+special_envs(MPI_Comm comm, MPI_Info info, int envc, char** envs)
 {
   int index;
   char* value;
@@ -94,6 +100,14 @@ special_envs(MPI_Info info, int envc, char** envs)
     MPI_Info_set(info,"chdir",value);
   if (get_envs(envc,envs,"swift_output",&index,&value))
     MPI_Info_set(info,"output",value);
+  if (get_envs(envc,envs,"slurm_bind",&index,&value))
+  {
+    char map[1024];
+    get_cpu_map_slurm(comm, map);
+    // strcpy(map, "0,1");
+    printf("map: \"%s\"\n", map);
+    MPI_Info_set(info,"slurm_bind",map);
+  }
 }
 
 /**
@@ -135,31 +149,30 @@ int launch_envs(MPI_Comm comm, char* cmd,
 {
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
-  int i;
-  for(i=0; i<argc; i++) {
+  for (int i = 0; i < argc; i++)
     argvc[i] = argv[i];
-  }
+
   argvc[argc] = NULL;
 
-  MPI_Info info = envs2info(envc, envs);
+  MPI_Info info = envs2info(comm, envc, envs);
   turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
-  if (info != MPI_INFO_NULL) {
+  if (info != MPI_INFO_NULL)
     MPI_Info_free(&info);
-  }
+
   free(argvc);
-  if(comm != MPI_COMM_SELF) {
+  if(comm != MPI_COMM_SELF)
     MPI_Comm_free(&comm);
-  }
+
   return status;
 }
 
-int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
+int
+launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv)
+{
   int status = 0;
   char** argvc = (char**)malloc((argc+1)*sizeof(char*));
-  int i;
-  for(i=0; i<argc; i++) {
+  for(int i = 0; i < argc; i++)
     argvc[i] = argv[i];
-  }
   argvc[argc] = NULL;
   MPI_Info info;
   MPI_Info_create(&info);
@@ -167,9 +180,8 @@ int launch_turbine(MPI_Comm comm, char* cmd, int argc, char** argv) {
   turbine_MPIX_Comm_launch(cmd, argvc, info, 0, comm, &status);
   MPI_Info_free(&info);
   free(argvc);
-  if(comm != MPI_COMM_SELF) {
+  if (comm != MPI_COMM_SELF)
     MPI_Comm_free(&comm);
-  }
   return status;
 }
 
@@ -180,7 +192,8 @@ int launch_multi(MPI_Comm comm, int count, int* procs,
                  char** cmd,
                  int* argc, char*** argv,
                  int* envc, char*** envs,
-                 char* color_setting) {
+                 char* color_setting)
+{
   int rank;
   MPI_Comm_rank(comm, &rank);
   int color = get_color(rank, comm, count, procs, color_setting);
@@ -207,8 +220,8 @@ get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
 
 static int
 get_color(int rank, MPI_Comm comm, int count, int* procs,
-          char* color_setting) {
-
+          char* color_setting)
+{
   sanity_check(comm, count, procs);
 
   if (strlen(color_setting) > 0)
@@ -237,11 +250,13 @@ static bool setting_match(int rank, char* spec, bool* match);
 
 static int
 get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
-                       char* color_setting) {
+                       char* color_setting)
+{
   char  spec[MAX_SPEC];
   char* p = color_setting;
   int   color = 0;
-  while (true) {
+  while (true)
+  {
     char* q = strpbrk(p, ",;");
     // printf("p: '%s' q-p: %li\n", p, q-p);
     strlcpy(spec, p, q-p+1);
@@ -267,7 +282,8 @@ get_color_from_setting(int rank, MPI_Comm comm, int count, int* procs,
    Returns true on parse success, false on parse error
  */
 static bool
-setting_match(int rank, char* spec, bool* match) {
+setting_match(int rank, char* spec, bool* match)
+{
   // printf("spec: '%s'\n", spec);
   char* d = strchr(spec, '-');
   if (d == NULL)
@@ -291,17 +307,85 @@ setting_match(int rank, char* spec, bool* match) {
 }
 
 static void
-sanity_check(MPI_Comm comm, int count, int* procs) {
+sanity_check(MPI_Comm comm, int count, int* procs)
+{
   int size;
   MPI_Comm_size(comm, &size);
   int total = 0;
-  int i;
-  for (i = 0; i < count; i++) {
+  for (int i = 0; i < count; i++)
     total += procs[i];
-  }
   if (total != size)
   {
     printf("procs total=%i does not equal comm size=%i\n", total, size);
     abort();
   }
+}
+
+/// SRUN CPU MAP
+//  These functions set up the arguments for SLURM cpu-bind
+//  so that each running parallel task has its processes bound
+//  to unique core IDs
+
+// Rank in the main ADLB communicator:
+extern int adlb_comm_rank;
+
+static void make_cpu_map_slurm(int offset, int size, int* L);
+static void cpu_list2map_slurm(int* L, int n, char* output);
+
+/**
+   Create SLURM CPU ID map for given communicator string
+   @return string i,j,k,... of consecutive integers
+*/
+static void
+get_cpu_map_slurm(MPI_Comm comm, char* output)
+{
+  // Rank, size in task communicator:
+  int rank, size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+
+  if (rank != 0)
+  {
+    // Only the root rank needs to do this
+    output[0] = '\0';
+    return;
+  }
+
+  char* s = getenv("ADLB_RANK_LEADER");
+  assert(s != NULL);
+  int leader;
+  int n = sscanf(s, "%i", &leader);
+  assert(n == 1);
+  printf("rank: %i my leader: %i\n", adlb_comm_rank, leader);
+
+  // job: A job number on node, from 0 to how many jobs can run on the node
+  int job = (adlb_comm_rank - leader) / size;
+
+  int L[size];
+  make_cpu_map_slurm(job, size, L);
+  print_ints(L, size);
+  cpu_list2map_slurm(L, size, output);
+}
+
+/**
+    Generate the list of CPU IDs starting from the given offset
+    for a parallel task of the given size
+    @return Output CPU IDs in L with length=size
+ */
+static void
+make_cpu_map_slurm(int offset, int size, int* L)
+{
+  int first = offset * size;
+  int i = first;
+  int slot = 0;
+  for ( ; i < first+size; i++)
+    L[slot++] = i;
+}
+
+/** Convert the CPU ID list to an srun-compatible CPU map */
+static void
+cpu_list2map_slurm(int* L, int n, char* output)
+{
+  for (int i = 0; i < n; i++)
+    append(output, "%i,", L[i]);
 }
