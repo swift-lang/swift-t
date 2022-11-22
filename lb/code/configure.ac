@@ -9,7 +9,7 @@ define([adlb_version],
 
 m4_include([../../dev/m4/ifblank.m4])
 
-AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
+AC_INIT([XLB], [adlb_version()], [woz@anl.gov])
 AC_PREREQ(2.63)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
