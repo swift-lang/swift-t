@@ -316,8 +316,8 @@ export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 # The modifier :A produces canonicalized file paths
 if [[ ${SCRIPT:A} != ${PROGRAM:A} ]]
 then
-  cp -v ${SCRIPT} ${PROGRAM}
-  chmod -v a+r ${PROGRAM}
+  cp ${SCRIPT} ${PROGRAM}
+  chmod a+r ${PROGRAM}
 fi
 if (( TURBINE_STATIC_EXEC ))
 then
