@@ -592,9 +592,19 @@ AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
 # MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
-MPI_IMPL=${MPI_IMPL:-unknown}
+# User can set MPI_IMPL in advance to force that implementation
 HAVE_MPI_IMPL_MPICH=0
 HAVE_MPI_IMPL_OPENMPI=0
+if   [[ ${MPI_IMPL:-unknown} == "MPICH" ]]
+then
+  AC_MSG_RESULT([User set MPI_IMPL=MPICH])
+  HAVE_MPI_IMPL_MPICH=1
+elif [[ ${MPI_IMPL:-unknown} == "OpenMPI" ]]
+then
+  AC_MSG_RESULT([User set MPI_IMPL=OpenMPI])
+  HAVE_MPI_IMPL_OPENMPI=1
+fi
+MPI_IMPL=${MPI_IMPL:-unknown}
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 

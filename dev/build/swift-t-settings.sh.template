@@ -78,6 +78,8 @@ SWIFT_T_CUSTOM_MPI=0
 # If needed, you can provide a full path to the launcher here.
 # This could be mpiexec, srun, aprun, etc.
 # LAUNCHER=/path/to/bin/mpiexec
+# If needed, you can force MPI_IMPL here:
+# export MPI_IMPL="MPICH" or "OpenMPI"
 
 # C build settings: Swift/T C compile settings default to -O2
 # Optimized build (set to 1 to enable): Set -O3, NDEBUG
@@ -244,6 +246,9 @@ ENABLE_MKSTATIC_CRC=0
 # module swap impi mvapich2
 
 # Midway: ???
+
+# Polaris:
+# PATH=/home/wozniak/Public/sfw/x86_64/jdk-1.8.0_291/bin:$PATH
 
 #+===================+
 #|| Editor settings ||
