@@ -1190,148 +1190,6 @@ In +swift-t-settings.sh+
 . Set +CC=mpicc+
 . Build as usual.
 
-=== Blue Waters
-
-Blue Waters is a Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.
-
-==== Public installation
-
-*As of:*  2017/09
-
-===== Login nodes
-
-Add to +PATH+:
-----
-~wozniak/Public/sfw/login/swift-t/stc/bin
-~wozniak/Public/sfw/login/swift-t/turbine/bin
-----
-
-===== Compute nodes
-
-Add to +PATH+:
-----
-~wozniak/Public/sfw/compute/swift-t/stc/bin
-~wozniak/Public/sfw/compute/swift-t/turbine/bin
-----
-
-==== Submitting jobs
-
-Submit a compute job with:
-
-----
-export QUEUE=normal CRAY_PPN=true PROJECT=<project>
-swift-t -m cray workflow.swift
-----
-
-==== Build procedure
-
-*As of:*  2017/01
-
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
-+
-----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
-----
-+
-* Configure Turbine with:
-+
-----
---with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
-----
-
-==== Details
-
-Submitting jobs on Blue Waters is largely the same with with other Cray
-systems. One difference is that the size of the job is specified using a
-different notation.
-
-Blue Waters requires the submit script to specify job size using
-different directives to other Cray systems.  It does not support the
-+mpp+ directives: trying to use an +mpp+ directive may cause your job
-to be rejected or stuck in the queue. The correct directive is:
-----
-#PBS -l nodes=1:ppn=32
-----
-
-The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
-it as follows (for a single node/32 processes per node):
-----
-QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
-----
-
-=== JYC
-
-JYC is a small Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.
-
-==== Public installation
-
-===== Login nodes
-
-Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
-
-Run with:
-
-----
-$ nice swift-t -n 8 workflow.swift
-----
-
-This installation has Python 3.6.1.
-
-===== Dependencies
-
-Dependencies are installed in:
-
-* +~wozniak/Public/sfw/Python-3.6.1rc1+
-* +~wozniak/Public/sfw/tcl-8.6.1+
-* +~wozniak/Public/sfw/login/mpich-3.2+
-
-===== Compute nodes
-
-Simply add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
-
-Run with:
-
-----
-$ export CRAY_PPN=true
-$ swift-t -n 8 workflow.swift
-----
-
-This installation has Python 3.6.1.
-
-==== Build procedure
-
-===== Compute nodes
-
-*As of:*  2017/03
-
-(Same as Blue Waters.)
-
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
-+
-----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
-----
-+
-* Configure Turbine with:
-+
-----
---with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
-----
-
 === Cori
 
 http://www.nersc.gov/users/computational-systems/cori/[Cori]
@@ -2450,6 +2308,147 @@ Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT 
 cat $TURBINE_OUTPUT/joined4.txt
 ----
 
+=== Blue Waters
+
+Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Public installation
+
+*As of:*  2017/09
+
+===== Login nodes
+
+Add to +PATH+:
+----
+~wozniak/Public/sfw/login/swift-t/stc/bin
+~wozniak/Public/sfw/login/swift-t/turbine/bin
+----
+
+===== Compute nodes
+
+Add to +PATH+:
+----
+~wozniak/Public/sfw/compute/swift-t/stc/bin
+~wozniak/Public/sfw/compute/swift-t/turbine/bin
+----
+
+==== Submitting jobs
+
+Submit a compute job with:
+
+----
+export QUEUE=normal CRAY_PPN=true PROJECT=<project>
+swift-t -m cray workflow.swift
+----
+
+==== Build procedure
+
+*As of:*  2017/01
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
+----
++
+* Configure Turbine with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
+----
+
+==== Details
+
+Submitting jobs on Blue Waters is largely the same with with other Cray
+systems. One difference is that the size of the job is specified using a
+different notation.
+
+Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does not support the
++mpp+ directives: trying to use an +mpp+ directive may cause your job
+to be rejected or stuck in the queue. The correct directive is:
+----
+#PBS -l nodes=1:ppn=32
+----
+
+The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
+----
+
+=== JYC
+
+JYC is a small Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Public installation
+
+===== Login nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+Run with:
+
+----
+$ nice swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+===== Dependencies
+
+Dependencies are installed in:
+
+* +~wozniak/Public/sfw/Python-3.6.1rc1+
+* +~wozniak/Public/sfw/tcl-8.6.1+
+* +~wozniak/Public/sfw/login/mpich-3.2+
+
+===== Compute nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
+
+Run with:
+
+----
+$ export CRAY_PPN=true
+$ swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+==== Build procedure
+
+===== Compute nodes
+
+*As of:*  2017/03
+
+(Same as Blue Waters.)
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
+----
++
+* Configure Turbine with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
+----
 
 ////
 Local Variables:
