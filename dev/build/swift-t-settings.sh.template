@@ -34,6 +34,11 @@ export CC=mpicc
 # export CFLAGS=
 # export LDFLAGS=
 
+# Set the compiler type
+# Supported options are "GCC", "XLC", or "NVC"
+# For Intel or Clang, just say GCC here.
+COMPILER=GCC
+
 # Host to use when cross-compiling
 # This is passed to configure as --host=CROSS_HOST
 # CROSS_HOST=

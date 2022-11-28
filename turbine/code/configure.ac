@@ -1346,6 +1346,16 @@ AC_ARG_ENABLE(xlc,
               ])
 AC_SUBST(USE_XLC)
 
+USE_NVC=0
+AC_ARG_ENABLE(nvc,
+              AS_HELP_STRING(
+                    [--enable-nvc],
+                    [Enable NVIDIA NVC flags]),
+              [
+                USE_NVC=1
+              ])
+AC_SUBST(USE_NVC)
+
 m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 if [[ "${HAVE_HDF5}" == 1 ]]
