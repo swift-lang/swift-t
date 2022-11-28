@@ -43,7 +43,7 @@
 #   USER_ENV_CODE:  User environment variables  in Bash code:
 #                   K1='V1' K2='V2' ...
 #   SCRIPT_NAME=$( basename ${SCRIPT} )
-#   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
+#   PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}  # A copy of SCRIPT to run
 #   TURBINE_WORKERS
 #   COMMAND="${TCLSH} ${PROGRAM} ${ARGS}"
 #       or: "${PROGRAM} ${ARGS}" for executables
@@ -56,6 +56,8 @@
 #   DRY_RUN: If 1, generate submit scripts but do not execute
 # INPUT/OUTPUT:
 #   TURBINE_JOBNAME
+#   PROCS: may be overridden by flag -n
+#   PPN:   may be set to default 1
 # NORMAL SWIFT/T ENVIRONMENT VARIABLES SUPPORTED:
 #   TURBINE_OUTPUT: See sites guide
 #   ADLB_SERVERS
@@ -314,7 +316,8 @@ export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 # The modifier :A produces canonicalized file paths
 if [[ ${SCRIPT:A} != ${PROGRAM:A} ]]
 then
-  cp ${SCRIPT} ${PROGRAM}
+  cp -v ${SCRIPT} ${PROGRAM}
+  chmod -v a+r ${PROGRAM}
 fi
 if (( TURBINE_STATIC_EXEC ))
 then
@@ -350,7 +353,7 @@ AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
             TURBINE_STDOUT
             TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
             )
-# Omitted: MPI_LABEL due to quoting issues (TODO)
+# Omitted: MPI_LABEL due to quoting issues
 
 for NAME in ${AUTO_VARS}
 do
@@ -359,7 +362,6 @@ do
   USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 
-# This is being phased in to capture common M4 functions (2018-12-18)
 COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
 
 ## Local Variables:
