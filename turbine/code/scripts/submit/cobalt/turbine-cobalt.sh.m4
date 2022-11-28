@@ -77,3 +77,7 @@ echo "COMPLETE: $(date)"
 
 # Return exit code from launcher (mpiexec)
 exit ${CODE}
+
+# Local Variables:
+# mode: m4
+# End:
