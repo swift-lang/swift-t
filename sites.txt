@@ -959,6 +959,51 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 
 == Cray
 
+=== Polaris
+
+https://www.alcf.anl.gov/support/user-guides/polaris/getting-started[Polaris]
+is a Cray/AMD/NVIDIA system with PBS.
+
+==== Public installation
+
+*As of:* 2022-11-30
+
+Add to +PATH+: +
+----
+/grand/CSC249ADOA01/public/sfw/polaris/swift-t/2022-11-28/stc/bin
+----
+
+Run with: +
+----
+$ export TURBINE_POLARIS=1
+$ swift-t -m pbs workflow.swift ...
+----
+
+==== Build instructions
+
+*As of:* 2022-11-30
+
+Building Tcl:
+
+. Remove the use of +-pie+ and +-pipe+ from the +Makefile+
+. Compile with module +PrgEnv-nvhpc+ and +cc+, then modify the
++Makefile+ to link with +gcc+
+
+For Java, add to +PATH+: +
+----
+/home/wozniak/Public/sfw/x86_64/jdk-1.8.0_291/bin
+----
+
+In +swift-t-settings.sh+, set: +
+----
+CC=cc
+COMPILER=NVC
+export MPI_IMPL="MPICH"
+----
+You can use any Python.
+
+Use module +PrgEnv-nvhpc+ and build as usual with +build-swift-t.sh+.
+
 === Crusher
 
 https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html[Crusher]
