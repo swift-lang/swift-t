@@ -983,6 +983,8 @@ $ swift-t -m pbs workflow.swift ...
 
 *As of:* 2022-11-30
 
+Use Swift/T from Git after +ede90591+ (2022-11-28).
+
 Building Tcl:
 
 . Remove the use of +-pie+ and +-pipe+ from the +Makefile+
