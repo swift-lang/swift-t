@@ -962,7 +962,7 @@ turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/
 === Polaris
 
 https://www.alcf.anl.gov/support/user-guides/polaris/getting-started[Polaris]
-is a Cray/AMD/NVIDIA system with PBS.
+is a Cray/AMD/NVIDIA system with PBS at ALCF.
 
 ==== Public installation
 
