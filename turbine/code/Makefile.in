@@ -816,7 +816,7 @@ endif
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
 	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
-	$(E) date "+DATE:   %Y-%m-%d %I:%M%p"    >> $(@)
+	$(E) date "+DATE:   %Y-%m-%d %H:%M"      >> $(@)
 #       Use true to ignore errors (e.g., if this is not an git clone)
 	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
