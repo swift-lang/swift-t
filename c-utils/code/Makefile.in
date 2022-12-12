@@ -1,10 +1,14 @@
 
 # EXM C UTILS
 
-# Usage notes:
-# make V=1 turns on verbose output
-
-# Useful targets: all, install, tests, test_results
+# Features:
+# Use 'make V=1' to get verbose output
+# Use 'make tags' to make a tags file
+# Use 'make install' to compile and install in one step
+# Use 'make tests' to compile the tests
+# Use 'make test_results' to run the tests
+# Use 'make clean'
+# Parallel builds are supported
 
 USE_MAC = @USE_MAC@
 

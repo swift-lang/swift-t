@@ -1,4 +1,17 @@
 
+# TURBINE MAKEFILE
+
+# Features:
+# Use 'make V=1' to get verbose output
+# Use 'make check_includes' to debug missing headers
+# Use 'make debug_build' to debug the build settings
+# Use 'make tags' to make a tags file
+# Use 'make install' to compile and install in one step
+# Use 'make tests' to compile the tests
+# Use 'make test_results' to run the tests
+# Use 'make clean' or one of the other clean-* targets to clean
+# Parallel builds are supported
+
 TURBINE_VERSION = @TURBINE_VERSION@
 
 ENABLE_SHARED = @ENABLE_SHARED@
