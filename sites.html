@@ -2188,7 +2188,7 @@ Run with:
 <div class="sect2">
 <h3 id="_polaris">Polaris</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/support/user-guides/polaris/getting-started">Polaris</a>
-is a Cray/AMD/NVIDIA system with PBS.</p></div>
+is a Cray/AMD/NVIDIA system with PBS at ALCF.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_7">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
@@ -2200,13 +2200,23 @@ is a Cray/AMD/NVIDIA system with PBS.</p></div>
 <div class="paragraph"><p>Run with:<br /></p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ export TURBINE_POLARIS=1
+<pre><code># Set PROJECT/QUEUE:
+$ export PROJECT=&lt;your project&gt;
+$ export QUEUE=debug
+# The default walltime may be too short for Polaris
+$ export WALLTIME=00:10:00
+# Turn on Polaris-specific PBS settings
+$ export TURBINE_POLARIS=1
+# Turn on the ALCF filesystems
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+# Run Swift/T!
 $ swift-t -m pbs workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
+<div class="paragraph"><p>Use Swift/T from Git after <code>ede90591</code> (2022-11-28).</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -4186,7 +4196,7 @@ Configure Turbine with:
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-11-30 12:42:42 CDT
+ 2022-12-15 12:10:59 CDT
 </div>
 </div>
 </body>
