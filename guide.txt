@@ -160,7 +160,7 @@ the <<build_manual,manual build process>>).
    Kit (+default-jdk+), Make (+make+), and GCC for C (+gcc+).
 
 STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
-Turbine is compatible with GCC, ICC, Clang, and XLC.
+Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.
 If you have difficulties with compiler compatibility,
 please <<support,contact us>>.
 
