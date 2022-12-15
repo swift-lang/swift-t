@@ -975,7 +975,16 @@ Add to +PATH+: +
 
 Run with: +
 ----
+# Set PROJECT/QUEUE:
+$ export PROJECT=<your project>
+$ export QUEUE=debug
+# The default walltime may be too short for Polaris
+$ export WALLTIME=00:10:00
+# Turn on Polaris-specific PBS settings
 $ export TURBINE_POLARIS=1
+# Turn on the ALCF filesystems
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+# Run Swift/T!
 $ swift-t -m pbs workflow.swift ...
 ----
 
