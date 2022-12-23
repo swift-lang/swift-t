@@ -246,8 +246,9 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
 /**
 
  */
-void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
-                          bool setenvs, int* leader_ranks, int* count)
+void
+xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                     bool setenvs, int* leader_ranks, int* count)
 {
   int leader_rank_count = 0;
   TABLE_FOREACH(&hosts->map, table_item)
