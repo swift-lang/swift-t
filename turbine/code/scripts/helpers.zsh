@@ -445,3 +445,19 @@ rm0()
   fi
   rm ${R} ${V} ${*}
 }
+
+log_path()
+# Pretty print a colon-separated variable
+{
+  local v
+  for v in ${*}
+  do
+    _log_path ${v}
+  done
+}
+_log_path()
+{
+  local v=$1
+  print ${v}:
+  print -l ${(Ps.:.)v} | nl
+}
