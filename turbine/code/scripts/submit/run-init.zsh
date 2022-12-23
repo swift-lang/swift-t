@@ -361,8 +361,10 @@ if (( ${#TURBINE_USE_PYTHON} )) {
 
 for NAME in ${AUTO_VARS}
 do
+  # (P) pulls out value by name (like bash ${!x})
   if (( ! ${(P)#NAME} )) continue
   USER_ENV_CODE+="${NAME}='${(P)NAME}' "
+  # (q) quotes special characters
   USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 
