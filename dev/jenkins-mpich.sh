@@ -6,7 +6,7 @@ set -eu
 
 renice --priority 19 --pid $$
 
-rm -fv mpich-4.0.3.tar.gz mpich-4.0.3/
+rm -rfv mpich-4.0.3.tar.gz mpich-4.0.3/
 wget --no-verbose https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
 tar xfz mpich-4.0.3.tar.gz
 cd mpich-4.0.3
@@ -17,5 +17,5 @@ CFG=( --prefix=$WORKSPACE/sfw/mpich-4.0.3
 
 set -x
 ./configure ${CFG[@]}
-make -j 2
+make -j 8
 make install
