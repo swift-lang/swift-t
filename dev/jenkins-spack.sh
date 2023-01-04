@@ -111,7 +111,8 @@ if [[ -f $WORKSPACE/success.txt ]] {
 #     git clone https://github.com/spack/spack.git
 #     cd spack
 #     # git checkout develop
-cp -v $WORKSPACE/swift-t/dev/jenkins-packages.yaml etc/spack/packages.yaml
+cp -v $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
+      $WORKSPACE/spack/etc/spack/packages.yaml
 #   )
 #   SPACK_CHANGED=1
 # }
