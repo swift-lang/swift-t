@@ -77,9 +77,6 @@ git-hash ()
   git log -n 1 --pretty=format:"%h"
 }
 
-git-log
-
-
 # Set a default workspace when running outside Jenkins
 WORKSPACE=${WORKSPACE:-/tmp/${USER}/workspace}
 
@@ -114,6 +111,7 @@ if [[ ! -d spack ]] {
 
 set -x
 pushd $SPACK_HOME
+git-log
 git branch
 print "Old hash:"
 git-hash | tee hash-old.txt
