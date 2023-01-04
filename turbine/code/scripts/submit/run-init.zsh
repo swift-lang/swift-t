@@ -352,13 +352,19 @@ AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
             TCLLIBPATH ADLB_SERVERS TURBINE_WORKERS
             TURBINE_STDOUT
             TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
+            PATH
             )
+if (( ${#TURBINE_USE_PYTHON} )) {
+  AUTO_VARS+=PYTHONPATH
+}
 # Omitted: MPI_LABEL due to quoting issues
 
 for NAME in ${AUTO_VARS}
 do
+  # (P) pulls out value by name (like bash ${!x})
   if (( ! ${(P)#NAME} )) continue
   USER_ENV_CODE+="${NAME}='${(P)NAME}' "
+  # (q) quotes special characters
   USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 

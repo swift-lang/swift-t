@@ -52,6 +52,7 @@ set -eu
 
 START=$( date "+%s.%N" )
 echo "TURBINE-PBS.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+echo
 
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
@@ -72,11 +73,14 @@ cd ${TURBINE_OUTPUT}
 export PYTHONPATH=getenv(PYTHONPATH)
 
 export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
+source ${TURBINE_HOME}/scripts/helpers.sh
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # PBS exports all environment variables to the job under #PBS -V
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
+
+log_path LD_LIBRARY_PATH
 
 (
   # Report the environment to a sorted file for debugging:

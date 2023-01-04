@@ -53,12 +53,9 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 {
   int rc;
-  /* struct utsname u; */
-  /* uname(&u); */
-  /* printf("uname: %p\n", u.nodename);  fflush(stdout); */
-  /* printf("uname: '%s'\n", u.nodename);  fflush(stdout); */
-  /* xlb_s.my_name = strdup(u.nodename); */
-  xlb_s.my_name = strdup("fake-name");
+  struct utsname u;
+  uname(&u);
+  xlb_s.my_name = strdup(u.nodename);
 
   report_ranks(comm);
 
@@ -246,8 +243,9 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
 /**
 
  */
-void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
-                          bool setenvs, int* leader_ranks, int* count)
+void
+xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                     bool setenvs, int* leader_ranks, int* count)
 {
   int leader_rank_count = 0;
   TABLE_FOREACH(&hosts->map, table_item)

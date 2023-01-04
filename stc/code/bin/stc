@@ -406,7 +406,7 @@ else
   print "Use 'stc -h' for help."
   return ${EXIT_ERROR_SCRIPT}
 fi
-if [[ ${#*} > 1 ]]
+if (( ${#*} > 1 ))
 then
   # This is optional (STC Java implementation defaults to *.tic)
   # OUTPUT may have been set by stc -o
