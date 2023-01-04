@@ -66,6 +66,13 @@ EXTERNAL_PASTES=(
 
 setopt PUSHD_SILENT
 
+@()
+# Verbose command
+{
+  print ">>" ${*}
+  ${*}
+}
+
 git-log()
 {
   git log -n 1 --date=format:"%Y-%m-%d %H:%M" \
@@ -98,16 +105,16 @@ if [[ -f $WORKSPACE/success.txt ]] {
   PRIOR_SUCCESS=1
 }
 
-if [[ ! -d spack ]] {
-  (
-    set -x
-    git clone https://github.com/spack/spack.git
-    cd spack
-    git checkout develop
-    cp -v $WORKSPACE/dev/jenkins-packages.yaml etc/spack/packages.yaml
-  )
-  SPACK_CHANGED=1
-}
+# if [[ ! -d spack ]] {
+#   (
+#     set -x
+#     git clone https://github.com/spack/spack.git
+#     cd spack
+#     # git checkout develop
+cp -v $WORKSPACE/dev/jenkins-packages.yaml etc/spack/packages.yaml
+#   )
+#   SPACK_CHANGED=1
+# }
 
 set -x
 pushd $SPACK_HOME
@@ -141,11 +148,11 @@ if (( ! SPACK_CHANGED && PRIOR_SUCCESS )) {
 # New run: reset success.txt
 rm -v $WORKSPACE/success.txt || true
 
-set -x
-ls $SPACK_HOME/bin
 PATH=$SPACK_HOME/bin:$PATH
-which spack
-set +x
+(
+  set -x
+  which spack
+)
 
 uninstall()
 {
