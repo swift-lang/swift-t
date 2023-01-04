@@ -5,19 +5,23 @@ set -eu
 # Install Swift/T from GCE Jenkins with Spack under various techniques
 # We install Spack externals in advance but list them here
 # Prereqs that we must build in Spack are built here
+# Provide -u to uninstall first
+
+UNINSTALL=""
+zparseopts u=UNINSTALL
 
 WORKSPACES=/scratch/jenkins-slave/workspace
 PY=$WORKSPACES/Swift-T-Python/sfw/Anaconda3
 PATH=$PY/bin:$PATH
 
-START=${SECONDS}
+START=$SECONDS
 
 # The packages we want to test in Spack:
 PACKAGES=(
-  spack install exmcutils@master
-  spack install adlbx@master
-  spack install turbine@master
-  spack install stc@master
+  exmcutils@master
+  adlbx@master
+  turbine@master
+  stc@master
 )
 
 # Prereqs needed to install in Spack (not external):
@@ -85,18 +89,16 @@ git-hash ()
 }
 
 # Set a default workspace when running outside Jenkins
-WORKSPACE=${WORKSPACE:-/tmp/${USER}/workspace}
+WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
 
 SPACK_HOME=$WORKSPACE/spack
+SWIFT_HOME=$WORKSPACE/swift-t
 
 renice --priority 19 --pid $$
 mkdir -pv $WORKSPACE
 pushd     $WORKSPACE
 
-pwd
-ls
-
-SPACK_CHANGED=0
+GIT_CHANGED=0
 # True if the last build was a success
 PRIOR_SUCCESS=0
 
@@ -105,41 +107,42 @@ if [[ -f $WORKSPACE/success.txt ]] {
   PRIOR_SUCCESS=1
 }
 
-# if [[ ! -d spack ]] {
-#   (
-#     set -x
-#     git clone https://github.com/spack/spack.git
-#     cd spack
-#     # git checkout develop
-cp -v $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
-      $WORKSPACE/spack/etc/spack/packages.yaml
-#   )
-#   SPACK_CHANGED=1
-# }
+cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
+       $WORKSPACE/spack/etc/spack/packages.yaml
+
 
 set -x
-pushd $SPACK_HOME
-git-log
-git branch
-print "Old hash:"
-git-hash | tee hash-old.txt
-git-log
-if ! git pull
-then
-  print "WARNING: git pull failed!"
-fi
-print "New hash:"
-git-hash | tee hash-new.txt
-git-log
-if ! diff -q hash-{old,new}.txt
-then
-  SPACK_CHANGED=1
-fi
-popd
+cd spack
+git checkout develop
+cd -
+for DIR in $SPACK_HOME $SWIFT_HOME
+do
+  pushd $DIR
+  git-log
+  git branch
+  print "Old hash:"
+  git-hash | tee hash-old.txt
+  git-log
+  if ! git pull
+  then
+    print "WARNING: git pull failed!"
+  fi
+  print "New hash:"
+  git-hash | tee hash-new.txt
+  git-log
+  if ! diff -q hash-{old,new}.txt
+  then
+    print "Git changed in $DIR"
+    GIT_CHANGED=1
+    popd
+    break
+  fi
+  popd
+done
 
-print SPACK_CHANGED=$SPACK_CHANGED
+print GIT_CHANGED=$GIT_CHANGED
 
-if (( ! SPACK_CHANGED && PRIOR_SUCCESS )) {
+if (( ! GIT_CHANGED && PRIOR_SUCCESS )) {
   print
   print "No Spack changes - exit."
   print
@@ -165,44 +168,42 @@ uninstall-all()
   # Uninstall packages in reverse order
   for p in ${(Oa)PACKAGES}
   do
-    uninstall ${p}
+    uninstall $p
   done
-  for p in ${PREREQS}
+  for p in $PREREQS
   do
-    uninstall ${p}
+    uninstall $p
   done
 }
 
+@ spack find
+
+if (( ${#UNINSTALL} )) uninstall-all
+
+# Install all packages, dependencies first
 (
   set -x
-  spack find
-)
-
-# uninstall-all
-
-(
-  set -x
-  for p in ${EXTERNAL_FINDS} ${EXTERNAL_SRC_JENKINS_FINDS}
+  for p in $EXTERNAL_FINDS $EXTERNAL_SRC_JENKINS_FINDS
   do
-    spack external find ${p}
-    spack install       ${p}
+    spack external find $p
+    spack install       $p
   done
-  for p in ${EXTERNAL_PASTES} ${EXTERNAL_SRC_JENKINS_PASTES}
+  for p in $EXTERNAL_PASTES $EXTERNAL_SRC_JENKINS_PASTES
   do
     # These are in jenkins-packages.yaml
-    spack install ${p}
+    spack install $p
   done
-  for p in ${PREREQS}
+  for p in $PREREQS
   do
-    spack install ${p}
+    spack install $p
   done
-  for p in ${PACKAGES}
+  for p in $PACKAGES
   do
-    spack install ${p}
+    spack install $p
   done
 )
 
-source ${SPACK_HOME}/share/spack/setup-env.sh
+source $SPACK_HOME/share/spack/setup-env.sh
 
 # Test the plain Swift/T installation (no Python):
 spack load 'stc@master^turbine@master -python'
@@ -226,9 +227,10 @@ spack load 'stc@master^turbine@master+python'
 
 # nice spack install 'stc@master^turbine@master+python+r'
 
+# Prevent future rebuilds until Git changes
 touch $WORKSPACE/success.txt
 
-STOP=${SECONDS}
+STOP=$SECONDS
 DURATION=$(( (STOP-START) / 60 ))  # whole minutes
 
-printf "SUCCESS: duration: %i minutes.\n" ${DURATION}
+printf "SUCCESS: duration: %i minutes.\n" $DURATION
