@@ -112,6 +112,7 @@ if [[ ! -d spack ]] {
   SPACK_CHANGED=1
 }
 
+set -x
 pushd $SPACK_HOME
 git branch
 print "Old hash:"
