@@ -14,6 +14,8 @@ WORKSPACES=/scratch/jenkins-slave/workspace
 PY=$WORKSPACES/Swift-T-Python/sfw/Anaconda3
 PATH=$PY/bin:$PATH
 
+setopt PUSHD_SILENT
+
 START=$SECONDS
 
 # The packages we want to test in Spack:
@@ -67,8 +69,6 @@ EXTERNAL_PASTES=(
   ant
   zsh
 )
-
-setopt PUSHD_SILENT
 
 @()
 # Verbose command
