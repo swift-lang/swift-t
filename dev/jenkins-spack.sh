@@ -83,21 +83,15 @@ git-log()
                --pretty=format:"%h %ad %s%n"
 }
 
-git-hash ()
-{
-  git log -n 1 --pretty=format:"%h"
-}
-
-# Set a default workspace when running outside Jenkins
+# Setup a default workspace when running outside Jenkins
 WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
+mkdir -pv $WORKSPACE
+cd        $WORKSPACE
 
 SPACK_HOME=$WORKSPACE/spack
 SWIFT_HOME=$WORKSPACE/swift-t
 
-renice --priority 19 --pid $$
-mkdir -pv $WORKSPACE
-pushd     $WORKSPACE
-
+# True if either git changed
 GIT_CHANGED=0
 # True if the last build was a success
 PRIOR_SUCCESS=0
@@ -107,33 +101,24 @@ if [[ -f $WORKSPACE/success.txt ]] {
   PRIOR_SUCCESS=1
 }
 
+# Install packages.yaml
 cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
        $WORKSPACE/spack/etc/spack/packages.yaml
 
-
-set -x
-cd spack
-git checkout develop
-cd -
 for DIR in $SPACK_HOME $SWIFT_HOME
 do
   pushd $DIR
-  git-log
-  git branch
+  @ git branch
+  touch hash-old.txt
   print "Old hash:"
-  git-hash | tee hash-old.txt
-  git-log
-  if ! git pull
-  then
-    print "WARNING: git pull failed!"
-  fi
+  cat hash-old.txt
   print "New hash:"
-  git-hash | tee hash-new.txt
-  git-log
+  git-log | tee hash-new.txt
   if ! diff -q hash-{old,new}.txt
   then
     print "Git changed in $DIR"
     GIT_CHANGED=1
+    cp -v hash-{new,old}.txt
     popd
     break
   fi
