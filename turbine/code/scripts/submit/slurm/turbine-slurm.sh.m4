@@ -81,7 +81,13 @@ module load mvapich2
 
 TURBINE_LAUNCHER=srun
 
+DSS=/home/wozniak/sfw/blues/login/dataspaces-1.6.4/bin/dataspaces_server
+$DSS -s $DS_SERVERS -c $DS_CLIENTS &
+DS_PID=$!
+# echo DS_PID: $DS_PID
+
 echo
 set -x
 ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) ${VALGRIND} ${COMMAND}
+# Use this for DS: -n $DS_CLIENTS
 # Return exit code from mpirun
