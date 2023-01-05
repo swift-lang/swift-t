@@ -29,7 +29,6 @@ float E = 2.7182818284590452354;
 @pure @builtin_op=ROUND
 (float o) round           (float i) "turbine"  "0.0.2" "round";
 @pure @builtin_op=LOG
-(float o) log           (float i) "turbine"  "0.0.2" "log_e";
 @pure @builtin_op=EXP
 (float o) exp           (float i) "turbine"  "0.0.2" "exp";
 @pure @builtin_op=SQRT
@@ -53,8 +52,16 @@ float E = 2.7182818284590452354;
 }
 
 @pure @builtin_op=LOG
-(float o) ln (float x) "turbine" "0.7.0" "log_e";
-
+(float o) log (float i) "turbine" "0.0.2" "log_e";
+@pure @builtin_op=LOG
+(float o) ln  (float x) "turbine" "0.7.0" "log_e";
+@pure
+(float o) log2(float i)
+"turbine"  "1.0"
+[
+  // Save on evaluation of divisor: http://wiki.tcl.tk/819
+  "set _i <<i>> ; set <<o>> [ expr {log(\\$_i) / [expr log(2)]} ]"
+ ];
 @pure
 (float o) log10 (float x) "turbine" "0.7.0" [
   "set <<o>> [ turbine::log10_impl <<x>> ]"
