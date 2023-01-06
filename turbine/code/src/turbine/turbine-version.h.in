@@ -6,8 +6,7 @@
  * Edit this file to update the required ADLB, c-utils versions
  * */
 
-#ifndef TURBINE_VERSION_H
-#define TURBINE_VERSION_H
+#pragma once
 
 /** Version from version.txt as a string */
 #define TURBINE_VERSION "@TURBINE_VERSION@"
@@ -17,5 +16,3 @@
 
 /** Required c-utils version */
 #define C_UTILS_REQUIRED_VERSION "0.6.1"
-
-#endif
