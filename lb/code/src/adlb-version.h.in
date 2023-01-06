@@ -13,6 +13,6 @@
 #define ADLB_VERSION "@ADLB_VERSION@"
 
 /** Required c-utils version */
-#define C_UTILS_REQUIRED_VERSION "0.6.0"
+#define C_UTILS_REQUIRED_VERSION "0.6.1"
 
 #endif
