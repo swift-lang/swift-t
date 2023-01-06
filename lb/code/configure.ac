@@ -75,7 +75,7 @@ AC_TYPE_SSIZE_T
 
 # Checks for functions
 AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
-AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
+AC_CHECK_FUNCS([setenv stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -83,7 +83,7 @@ AC_FUNC_REALLOC
 # Checks for headers
 # Note: Mac OS does not have malloc.h
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h memory.h ])
-AC_CHECK_HEADERS([stddef.h])
+AC_CHECK_HEADERS([stddef.h stdint.h])
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AC_HEADER_STDBOOL
 
