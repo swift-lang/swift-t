@@ -136,8 +136,8 @@ AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
 AC_SUBST([HAVE_CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stddef.h sys/param.h])
-AC_CHECK_HEADERS([sys/time.h])
+AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stddef.h])
+AC_CHECK_HEADERS([stdint.h unistd.h sys/param.h sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
