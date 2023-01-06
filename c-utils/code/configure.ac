@@ -47,7 +47,7 @@ USE_CC=$( which $CC )
 AC_MSG_RESULT([using CC=$USE_CC])
 
 # Checks for header files
-AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
+AC_CHECK_HEADERS([inttypes.h stddef.h stdint.h stdlib.h string.h unistd.h])
 AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
 AC_HEADER_STDBOOL
 
