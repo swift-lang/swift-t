@@ -9,11 +9,11 @@ define([adlb_version],
 
 m4_include([../../dev/m4/ifblank.m4])
 
-AC_INIT([XLB], [adlb_version()], [woz@anl.gov])
-AC_PREREQ(2.63)
+AC_INIT([XLB],[adlb_version()],[woz@anl.gov])
+AC_PREREQ([2.68])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
-AC_CONFIG_HEADER(config.h src/mpe-settings.h)
+AC_CONFIG_HEADERS([config.h src/mpe-settings.h])
 
 ADLB_VERSION=adlb_version()
 AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
