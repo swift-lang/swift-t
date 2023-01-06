@@ -9,4 +9,3 @@ echo "Running autoreconf..."
 autoreconf --force --install
 
 echo "ExM C-UTILS: bootstrap: OK"
-exit 0
