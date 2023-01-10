@@ -178,8 +178,9 @@ typedef struct {
   #endif
 
   // Struct to specify a subscript into e.g. an ADLB data container
-  typedef struct {
-    const void *key; // Set key to NULL to indicate no subscript
+  typedef struct
+  {
+    const void* key; // Set key to NULL to indicate no subscript
     size_t length;
   } adlb_subscript;
 

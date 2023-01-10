@@ -80,6 +80,8 @@ then
   fi
 fi
 
+which mpicc
+
 check_make
 make_clean
 make_all
