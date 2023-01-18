@@ -2,6 +2,7 @@
 set -eu
 
 # JENKINS SPACK SH
+# Developed for ANL/GCE
 # Install Swift/T from GCE Jenkins with Spack under various techniques
 # We install Spack externals in advance but list them here
 # Prereqs that we must build in Spack are built here
