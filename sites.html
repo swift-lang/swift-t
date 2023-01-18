@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.5.0,</span>
-<span id="revdate">November 2022</span>
+<span id="revdate">January 2023</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -760,8 +760,8 @@ asciidoc.install(2);
 <div class="paragraph"><p>This manual provides a reference on how to run Swift/Turbine
 programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.</p></div>
-<div class="paragraph"><p>For each machine, a <strong>public installation</strong> and/or a <strong>build procedure</strong> will
-be provided.  The user need follow only one set of directions.</p></div>
+<div class="paragraph"><p>For each machine, a <strong>public installation</strong> and/or a <strong>build procedure</strong>
+will be provided.  The user need follow only one set of directions.</p></div>
 <div class="paragraph" id="login_node"><p>A <strong>login node installation</strong> may be available on certain systems.  This
 will run Swift/T on the login node of that system.  This only
 acceptable for short debugging runs of 1 minute or less.  If you do
@@ -1948,236 +1948,38 @@ Simply set the MPI, Tcl (and optionally Python and R) locations in
 </div>
 </div>
 <div class="sect2">
-<h3 id="_jlse_knl">JLSE KNL</h3>
-<div class="paragraph"><p>These are the Knights Landing nodes at ANL/JLSE.</p></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
-<div class="paragraph"><p>Dependencies are installed in:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>~wozniak/Public/sfw/icc/Python-2.7.12
-~wozniak/Public/sfw/icc/mpich-3.2
-~wozniak/Public/sfw/icc/tcl-8.6.6
-~wozniak/Public/sfw/ant-1.10.1</code></pre>
-</div></div>
-<div class="paragraph"><p>The same build can be used for login and compute nodes, since the
-architecture and MPI library are the same &#x1f632;.  The only potential
-gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
+<h3 id="_florentia">Florentia</h3>
+<div class="paragraph"><p>Florentia is an ANL/JLSE testbed system: <a href="https://www.jlse.anl.gov/hardware-under-development">https://www.jlse.anl.gov/hardware-under-development</a></p></div>
 <div class="sect3">
 <h4 id="_public_installation_6">Public installation</h4>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
-<div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
-<div class="sect4">
-<h5 id="_login_node">Login node</h5>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2023-01-18</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ nice swift-t workflow.swift</code></pre>
+<pre><code>/home/woz/Public/sfw/swift-t/2023-01-18/stc/bin</code></pre>
 </div></div>
-</div>
-<div class="sect4">
-<h5 id="_compute_node">Compute node</h5>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
-$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+<pre><code>swift-t -m cobalt workflow.swift</code></pre>
 </div></div>
-<div class="paragraph"><p>The following Swift script will validate that you have 256 cores to
-use:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>app processors() {
-  "cat" "/proc/cpuinfo" ;
-}
-processors();</code></pre>
-</div></div>
-</div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_4">Build instructions</h4>
-<div class="paragraph"><p>Apply</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2023-01-18</p></div>
+<div class="paragraph"><p>Dependencies:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh</code></pre>
+<pre><code>/home/woz/Public/sfw/ant-1.10.5
+/home/woz/Public/sfw/jdk-1.8.0_291
+/home/woz/Public/sfw/swig-4.0.2</code></pre>
 </div></div>
-<div class="paragraph"><p>Configure ADLB and Turbine as usual, no special settings are required.</p></div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_blue_gene">Blue Gene</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>The Blue Gene systems at ANL are <a href="#scheduled_systems">scheduled systems</a> that use Cobalt.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-The job ID is placed in <code>TURBINE_OUTPUT/jobid.txt</code>
-</p>
-</li>
-<li>
-<p>
-Job metadata is placed in <code>TURBINE_OUTPUT/turbine-cobalt.log</code>
-</p>
-</li>
-<li>
-<p>
-The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
-</p>
-</li>
-</ul></div>
-<div class="sect2">
-<h3 id="_blue_gene_q">Blue Gene/Q</h3>
-<div class="sect3">
-<h4 id="_alcf">ALCF</h4>
-<div class="ulist"><ul>
-<li>
-<p>
-Run with:
-</p>
+<div class="paragraph"><p>Modules:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export MODE=BGQ
-export PROJECT=&lt;project_name&gt;
-export QUEUE=&lt;queue_name&gt;
-swift-t -m cobalt -n 3 program.swift</code></pre>
+<pre><code>module load openmpi/4.1.1-gcc</code></pre>
 </div></div>
-<div class="paragraph"><p>or:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export MODE=BGQ
-export PROJECT=&lt;project_name&gt;
-export QUEUE=&lt;queue_name&gt;
-stc program.swift
-turbine-cobalt-run.zsh -n 2 program.tic</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p>The normal Turbine environment variables are honored, plus the
-<a href="#variables">Turbine scheduler variables</a>.</p></div>
-<div class="sect4">
-<h5 id="_public_installation_mira_cetus">Public installation: Mira/Cetus</h5>
-<div class="paragraph"><p><strong>As of:</strong> 0.8.0 - 5/26/2015</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Swift/T: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
-</p>
-</li>
-<li>
-<p>
-STC: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
-</p>
-</li>
-<li>
-<p>
-Turbine: <code>/soft/workflows/swift/T/turbine/bin/turbine</code>
-</p>
-</li>
-<li>
-<p>
-Turbine/Cobalt: <code>/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="_public_installation_vesta">Public installation: Vesta</h5>
-<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 12/16/2014</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-STC: <code>~wozniak/Public/sfw/stc/bin/stc</code>
-</p>
-</li>
-<li>
-<p>
-Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
-</p>
-</li>
-</ul></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_build_procedure_4">Build procedure</h4>
-<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
-<div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
-<div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with <code>bgxlc</code>.  You must modify the Makefile to use
-<code>bgxlc</code> arguments: <code>-qpic</code>, <code>-qmkshrobj</code>.  You must link with
-<code>-qnostaticlink</code>.</p></div>
-<div class="paragraph"><p>You may get errors that say <code>wrong digit</code>.  This is apparently a bgxlc
-bug when applied to Tcl&#8217;s <code>StrToD.c</code>.  Compiling this file with <code>-O3</code> fixes
-the problem.</p></div>
-<div class="paragraph"><p><strong>Building Swift/T:</strong></p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Compile c-utils with <code>CC=powerpc64-bgq-linux-gcc</code>
-</p>
-</li>
-<li>
-<p>
-Configure ADLB with <code>CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint</code>
-</p>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>CC=mpixlc
---enable-xlc
---disable-static
---with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
---with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
---with-mpi-lib-name=mpich-xl
---without-zlib
---without-hdf5
---disable-static-pkg
---disable-checkpoint</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p><strong>External scripting:</strong></p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Python
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure Python with BGXLC
-</p>
-</li>
-</ul></div>
-</li>
-<li>
-<p>
-R
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure R with GCC as usual
-</p>
-</li>
-<li>
-<p>
-Run with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib</code></pre>
-</div></div>
-</li>
-</ul></div>
-</li>
-</ul></div>
+<div class="paragraph"><p>Simply use the <code>dev/build/build-swift-t.sh</code> method.</p></div>
 </div>
 </div>
 </div>
@@ -2702,7 +2504,7 @@ SWIG: <code>/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig</code>
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_5">Build procedure</h4>
+<h4 id="_build_procedure_4">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2746,7 +2548,7 @@ Compile STC as usual.
 <h3 id="_raven">Raven</h3>
 <div class="paragraph"><p>Raven is a Cray XE6/XK7 at Cray.</p></div>
 <div class="sect3">
-<h4 id="_build_procedure_6">Build procedure</h4>
+<h4 id="_build_procedure_5">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3146,7 +2948,7 @@ STC: <code>~wozniak/Public/stc-trunk/bin/stc</code>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_build_procedure_7">Build procedure</h5>
+<h5 id="_build_procedure_6">Build procedure</h5>
 <div class="paragraph"><p>To run on the <a href="#login_node">login node</a>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3288,7 +3090,7 @@ turbine-cobalt-run.zsh -n 3 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_8">Build procedure</h4>
+<h4 id="_build_procedure_7">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3337,7 +3139,7 @@ $ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 
 <a href="#options">Turbine run script options</a> for additional settings.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_9">Build procedure</h4>
+<h4 id="_build_procedure_8">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3459,7 +3261,7 @@ swift-t -m cray -n 64 workflow.swift</code></pre>
 <a href="#options">settings file</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_10">Build procedure</h4>
+<h4 id="_build_procedure_9">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2018-12-13</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -3647,7 +3449,7 @@ Run Swift:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_11">Build procedure</h4>
+<h4 id="_build_procedure_10">Build procedure</h4>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
 <div class="ulist"><ul>
@@ -3746,7 +3548,7 @@ turbine-pbs-run.zsh -n 8 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_12">Build procedure</h4>
+<h4 id="_build_procedure_11">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.8.2 and MVAPICH 2.0:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3837,7 +3639,7 @@ done</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_13">Build Procedure</h4>
+<h4 id="_build_procedure_12">Build Procedure</h4>
 <div class="paragraph"><p>Load (and unload) appropriate modules:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4056,7 +3858,7 @@ swift-t -m cray workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_14">Build procedure</h4>
+<h4 id="_build_procedure_13">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
@@ -4155,7 +3957,7 @@ $ swift-t -n 8 workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_15">Build procedure</h4>
+<h4 id="_build_procedure_14">Build procedure</h4>
 <div class="sect4">
 <h5 id="_compute_nodes_10">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
@@ -4188,6 +3990,233 @@ Configure Turbine with:
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_jlse_knl">JLSE KNL</h3>
+<div class="paragraph"><p>These are the Knights Landing nodes at ANL/JLSE.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
+<div class="paragraph"><p>Dependencies are installed in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/icc/Python-2.7.12
+~wozniak/Public/sfw/icc/mpich-3.2
+~wozniak/Public/sfw/icc/tcl-8.6.6
+~wozniak/Public/sfw/ant-1.10.1</code></pre>
+</div></div>
+<div class="paragraph"><p>The same build can be used for login and compute nodes, since the
+architecture and MPI library are the same &#x1f632;.  The only potential
+gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_24">Public installation</h4>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
+<div class="sect4">
+<h5 id="_login_node">Login node</h5>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ nice swift-t workflow.swift</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_node">Compute node</h5>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The following Swift script will validate that you have 256 cores to
+use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>app processors() {
+  "cat" "/proc/cpuinfo" ;
+}
+processors();</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_14">Build instructions</h4>
+<div class="paragraph"><p>Apply</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure ADLB and Turbine as usual, no special settings are required.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blue_gene">Blue Gene</h3>
+<div class="paragraph"><p>The Blue Gene systems at ANL are <a href="#scheduled_systems">scheduled systems</a> that use Cobalt.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The job ID is placed in <code>TURBINE_OUTPUT/jobid.txt</code>
+</p>
+</li>
+<li>
+<p>
+Job metadata is placed in <code>TURBINE_OUTPUT/turbine-cobalt.log</code>
+</p>
+</li>
+<li>
+<p>
+The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_blue_gene_q">Blue Gene/Q</h4>
+<div class="sect4">
+<h5 id="_alcf">ALCF</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+swift-t -m cobalt -n 3 program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>The normal Turbine environment variables are honored, plus the
+<a href="#variables">Turbine scheduler variables</a>.</p></div>
+<div class="paragraph"><p><strong>Public installation: Mira/Cetus</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 0.8.0 - 5/26/2015</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>/soft/workflows/swift/T/turbine/bin/turbine</code>
+</p>
+</li>
+<li>
+<p>
+Turbine/Cobalt: <code>/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><strong>Public installation: Vesta</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 12/16/2014</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/stc/bin/stc</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_build_procedure_15">Build procedure</h5>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
+<div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
+<div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with <code>bgxlc</code>.  You must modify the Makefile to use
+<code>bgxlc</code> arguments: <code>-qpic</code>, <code>-qmkshrobj</code>.  You must link with
+<code>-qnostaticlink</code>.</p></div>
+<div class="paragraph"><p>You may get errors that say <code>wrong digit</code>.  This is apparently a bgxlc
+bug when applied to Tcl&#8217;s <code>StrToD.c</code>.  Compiling this file with <code>-O3</code> fixes
+the problem.</p></div>
+<div class="paragraph"><p><strong>Building Swift/T:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compile c-utils with <code>CC=powerpc64-bgq-linux-gcc</code>
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p><strong>External scripting:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Python
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Python with BGXLC
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+R
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure R with GCC as usual
+</p>
+</li>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -4196,7 +4225,7 @@ Configure Turbine with:
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-12-15 12:10:59 CDT
+ 2023-01-18 10:34:38 CDT
 </div>
 </div>
 </body>
