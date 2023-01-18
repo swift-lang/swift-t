@@ -147,7 +147,11 @@ turbine_log >> ${LOG_FILE}
 print ${JOB_ID} > ${JOB_ID_FILE}
 
 # Wait for job completion
-cqwait ${JOB_ID}
+if (( WAIT_FOR_JOB ))
+then
+  print "turbine-cobalt-run: waiting for job completion..."
+  cqwait ${JOB_ID}
+fi
 
 STOP=$( date +%s )
 TOTAL_TIME=$( tformat $(( STOP-START )) )
