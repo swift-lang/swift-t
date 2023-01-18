@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.5.0, December 2022
+v1.5.0, January 2023
 
 
 == How to use this guide
@@ -31,8 +31,8 @@ This manual provides a reference on how to run Swift/Turbine
 programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.
 
-For each machine, a *public installation* and/or a *build procedure* will
-be provided.  The user need follow only one set of directions.
+For each machine, a *public installation* and/or a *build procedure*
+will be provided.  The user need follow only one set of directions.
 
 [[login_node]]
 A *login node installation* may be available on certain systems.  This
@@ -795,167 +795,6 @@ This installation has Python and R enabled.
 Use the +dev/build/build-swift-t.sh+ method.
 Simply set the MPI, Tcl (and optionally Python and R) locations in
 +swift-t-settings.sh+ and build.
-
-=== JLSE KNL
-
-These are the Knights Landing nodes at ANL/JLSE.
-
-*As of:* 2017/03/09
-
-Dependencies are installed in:
-
-----
-~wozniak/Public/sfw/icc/Python-2.7.12
-~wozniak/Public/sfw/icc/mpich-3.2
-~wozniak/Public/sfw/icc/tcl-8.6.6
-~wozniak/Public/sfw/ant-1.10.1
-----
-
-The same build can be used for login and compute nodes, since the
-architecture and MPI library are the same &#x1f632;.  The only potential
-gotcha is loading the Intel +compilervars.sh+ script to set library paths.
-
-==== Public installation
-
-Add to +PATH+: +~wozniakPublic/sfw/icc/swift-t/stc/bin+
-
-This version is linked to Python 2.7.12.
-
-===== Login node
-
-Run with
-
-----
-$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ nice swift-t workflow.swift
-----
-
-===== Compute node
-
-Run with
-
-----
-$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
-$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
-----
-
-The following Swift script will validate that you have 256 cores to
-use:
-
-----
-app processors() {
-  "cat" "/proc/cpuinfo" ;
-}
-processors();
-----
-
-==== Build instructions
-
-Apply
-
-----
-source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
-----
-
-Configure ADLB and Turbine as usual, no special settings are required.
-
-== Blue Gene
-
-The Blue Gene systems at ANL are <<scheduled_systems,scheduled
-systems>> that use Cobalt.
-
-* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
-* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
-* The Cobalt log is placed in +TURBINE_OUTPUT+
-
-=== Blue Gene/Q
-
-==== ALCF
-
-* Run with:
-+
-----
-export MODE=BGQ
-export PROJECT=<project_name>
-export QUEUE=<queue_name>
-swift-t -m cobalt -n 3 program.swift
-----
-+
-or:
-+
-----
-export MODE=BGQ
-export PROJECT=<project_name>
-export QUEUE=<queue_name>
-stc program.swift
-turbine-cobalt-run.zsh -n 2 program.tic
-----
-
-The normal Turbine environment variables are honored, plus the
-<<variables,Turbine scheduler variables>>.
-
-===== Public installation: Mira/Cetus
-
-*As of:* 0.8.0 - 5/26/2015
-
-* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
-* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
-* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
-* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
-
-===== Public installation: Vesta
-
-*As of:* 0.7.0 - 12/16/2014
-
-* STC: +~wozniak/Public/sfw/stc/bin/stc+
-* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
-
-==== Build procedure
-
-*As of:* 0.7.0 - 11/20/2014
-
-*Building Tcl:*
-
-The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with +bgxlc+.  You must modify the Makefile to use
-+bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
-+-qnostaticlink+.
-
-You may get errors that say +wrong digit+.  This is apparently a bgxlc
-bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
-the problem.
-
-*Building Swift/T:*
-
-* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
-* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
-* Configure Turbine with:
-+
-----
-CC=mpixlc
---enable-xlc
---disable-static
---with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
---with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
---with-mpi-lib-name=mpich-xl
---without-zlib
---without-hdf5
---disable-static-pkg
---disable-checkpoint
-----
-
-*External scripting:*
-
-* Python
-** Configure Python with BGXLC
-* R
-** Configure R with GCC as usual
-** Run with:
-+
-----
-turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
-----
 
 == Cray
 
@@ -2505,6 +2344,168 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
 ----
 --with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
 ----
+
+=== JLSE KNL
+
+These are the Knights Landing nodes at ANL/JLSE.
+
+*As of:* 2017/03/09
+
+Dependencies are installed in:
+
+----
+~wozniak/Public/sfw/icc/Python-2.7.12
+~wozniak/Public/sfw/icc/mpich-3.2
+~wozniak/Public/sfw/icc/tcl-8.6.6
+~wozniak/Public/sfw/ant-1.10.1
+----
+
+The same build can be used for login and compute nodes, since the
+architecture and MPI library are the same &#x1f632;.  The only potential
+gotcha is loading the Intel +compilervars.sh+ script to set library paths.
+
+==== Public installation
+
+Add to +PATH+: +~wozniakPublic/sfw/icc/swift-t/stc/bin+
+
+This version is linked to Python 2.7.12.
+
+===== Login node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ nice swift-t workflow.swift
+----
+
+===== Compute node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
+----
+
+The following Swift script will validate that you have 256 cores to
+use:
+
+----
+app processors() {
+  "cat" "/proc/cpuinfo" ;
+}
+processors();
+----
+
+==== Build instructions
+
+Apply
+
+----
+source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+----
+
+Configure ADLB and Turbine as usual, no special settings are required.
+
+=== Blue Gene
+
+The Blue Gene systems at ANL are <<scheduled_systems,scheduled
+systems>> that use Cobalt.
+
+* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
+* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
+* The Cobalt log is placed in +TURBINE_OUTPUT+
+
+==== Blue Gene/Q
+
+===== ALCF
+
+* Run with:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+swift-t -m cobalt -n 3 program.swift
+----
++
+or:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic
+----
+
+The normal Turbine environment variables are honored, plus the
+<<variables,Turbine scheduler variables>>.
+
+*Public installation: Mira/Cetus*
+
+*As of:* 0.8.0 - 5/26/2015
+
+* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
+* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
+* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
+* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+*Public installation: Vesta*
+
+*As of:* 0.7.0 - 12/16/2014
+
+* STC: +~wozniak/Public/sfw/stc/bin/stc+
+* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+===== Build procedure
+
+*As of:* 0.7.0 - 11/20/2014
+
+*Building Tcl:*
+
+The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with +bgxlc+.  You must modify the Makefile to use
++bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
++-qnostaticlink+.
+
+You may get errors that say +wrong digit+.  This is apparently a bgxlc
+bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
+the problem.
+
+*Building Swift/T:*
+
+* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
+* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
+* Configure Turbine with:
++
+----
+CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint
+----
+
+*External scripting:*
+
+* Python
+** Configure Python with BGXLC
+* R
+** Configure R with GCC as usual
+** Run with:
++
+----
+turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
+----
+
 
 ////
 Local Variables:
