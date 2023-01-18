@@ -796,6 +796,42 @@ Use the +dev/build/build-swift-t.sh+ method.
 Simply set the MPI, Tcl (and optionally Python and R) locations in
 +swift-t-settings.sh+ and build.
 
+=== Florentia
+
+Florentia is an ANL/JLSE testbed system: https://www.jlse.anl.gov/hardware-under-development
+
+==== Public installation
+
+*As of:* 2023-01-18
+
+Add to +PATH+:
+----
+/home/woz/Public/sfw/swift-t/2023-01-18/stc/bin
+----
+
+Run with:
+----
+swift-t -m cobalt workflow.swift
+----
+
+==== Build instructions
+
+*As of:* 2023-01-18
+
+Dependencies:
+----
+/home/woz/Public/sfw/ant-1.10.5
+/home/woz/Public/sfw/jdk-1.8.0_291
+/home/woz/Public/sfw/swig-4.0.2
+----
+
+Modules:
+----
+module load openmpi/4.1.1-gcc
+----
+
+Simply use the +dev/build/build-swift-t.sh+ method.
+
 == Cray
 
 === Polaris
