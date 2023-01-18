@@ -49,21 +49,8 @@ then
       NODE_ARG="-f ${COBALT_NODEFILE}"
 fi
 
-echo "TURBINE SETTINGS"
-echo "JOB_ID:       ${COBALT_JOBID}"
-echo "DATE:         $(date)"
-echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "COMMAND:      ${COMMAND}"
-echo "PROCS:        ${PROCS}"
-echo "PPN:          ${PPN}"
-echo "TCLLIBPATH:   ${TCLLIBPATH}"
-echo "LAUNCHER:     ${LAUNCHER}"
-[[ -n ${VALGRIND} ]] && \
-echo "VALGRIND:     ${VALGRIND}"
-echo
-
 # Export all user environment variables
-export getenv(USER_ENV_ARRAY)
+export getenv(USER_ENV_CODE)
 
 # Run Turbine:
 ${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
