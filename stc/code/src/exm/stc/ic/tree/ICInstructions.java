@@ -901,9 +901,6 @@ public class ICInstructions {
 
           List<Var> result = new ArrayList<Var>();
           Function f = fns == null ? null : fns.get(this.id);
-          if (f != null )
-            // && f.getId().equals("f"))
-            System.out.println(f.getId());
           for (int i = 0; i < outputs.size(); i++) {
             Var o = outputs.get(i);
 
