@@ -238,6 +238,17 @@ export_copy *.m4
 popd
 printf "OK\n\n"
 
+# Make timestamp
+print "Timestamp:"
+{
+  print -n "TIMESTAMP GIT: "
+  git log -n 1 '--date=format:%Y-%m-%d %H:%M:%S' \
+               '--pretty=format:%H : %ad : %s %n'
+  print -n "TIMESTAMP PKG: "
+  date "+%Y-%m-%d %H:%M:%S"
+} | tee ${EXPORT}/dev/build/timestamp.txt
+print
+
 if (( ENABLE_COASTER ))
 then
   TARGET=${EXPORT}/coaster-c-client
