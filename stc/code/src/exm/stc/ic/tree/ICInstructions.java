@@ -70,6 +70,7 @@ import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+
 /**
  * This class contains instructions used in the intermediate representation.
  * Each instruction is responsible for making particular modifications to
@@ -87,7 +88,6 @@ public class ICInstructions {
       super();
       this.op = op;
     }
-
 
     @Override
     public StatementType type() {
@@ -782,7 +782,6 @@ public class ICInstructions {
       this.props = props;
       this.foreignFuncs = foreignFunctions;
 
-
       boolean hasUpdateableInputs = false;
       for(Arg v: inputs) {
         assert(v != null);
@@ -883,38 +882,42 @@ public class ICInstructions {
       switch (op) {
         case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL: {
-          List<Var> res = new ArrayList<Var>();
+          List<Var> result = new ArrayList<Var>();
           // Only some output types might be read
           for (Var o: outputs) {
             if (Types.hasReadableSideChannel(o)) {
-              res.add(o);
+              result.add(o);
             }
           }
           if (treatUpdInputsAsOutputs()) {
-            addAllUpdateableInputs(res);
+            addAllUpdateableInputs(result);
           }
-          return res;
+          return result;
         }
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL:
         case CALL_SYNC:
         case CALL_CONTROL: {
-          List<Var> res = new ArrayList<Var>();
+
+          List<Var> result = new ArrayList<Var>();
           Function f = fns == null ? null : fns.get(this.id);
+          if (f != null )
+            // && f.getId().equals("f"))
+            System.out.println(f.getId());
           for (int i = 0; i < outputs.size(); i++) {
             Var o = outputs.get(i);
 
             // Check to see if function might read the output
             if (Types.hasReadableSideChannel(o.type()) &&
                 (f == null || !f.isOutputWriteOnly(i))) {
-              res.add(o);
+              result.add(o);
             }
           }
 
           if (treatUpdInputsAsOutputs()) {
-            addAllUpdateableInputs(res);
+            addAllUpdateableInputs(result);
           }
-          return res;
+          return result;
         }
         default:
           throw new STCRuntimeError("unexpected op: " + op);
