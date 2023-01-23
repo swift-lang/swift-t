@@ -40,6 +40,6 @@ do
 done
 
 # The new script:
-turbine-psij.py $TCLSH $PROGRAM
+turbine-psij.py # $TCLSH $PROGRAM
 
 # wait for job completion?
