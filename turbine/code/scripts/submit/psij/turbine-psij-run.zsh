@@ -21,7 +21,7 @@ print "TURBINE-PSIJ SCRIPT"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
@@ -32,12 +32,17 @@ declare TURBINE_HOME
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
-# SLURM exports all environment variables to the job by default
-# Evaluate any user turbine-slurm-run -e K=V settings here:
+# Environment variables
+# Evaluate any user 'swift-t -e K=V' settings here:
 for kv in ${USER_ENV_CODE}
 do
-  eval export ${kv}
+  print export ${kv}
 done
+
+cd $TURBINE_OUTPUT
+
+# Report the environment to a sorted file for debugging:
+printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
 # The new script:
 turbine-psij.py # $TCLSH $PROGRAM
