@@ -1,0 +1,4 @@
+
+DIR := scripts/submit/psij
+
+SCRIPTS_SUBMIT += $(DIR)/turbine-psij-run.zsh
