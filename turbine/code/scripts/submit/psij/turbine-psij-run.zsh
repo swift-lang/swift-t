@@ -32,11 +32,11 @@ declare TURBINE_HOME
 checkvars PROGRAM NODES PPN
 export    PROGRAM NODES PPN
 
-# SLURM exports all environment variables to the job by default
-# Evaluate any user turbine-slurm-run -e K=V settings here:
+# Environment variables
+# Evaluate any user 'swift-t -e K=V' settings here:
 for kv in ${USER_ENV_CODE}
 do
-  eval export ${kv}
+  print export ${kv}
 done
 
 cd $TURBINE_OUTPUT
