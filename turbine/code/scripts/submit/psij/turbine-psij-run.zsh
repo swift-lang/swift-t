@@ -21,7 +21,7 @@ print "TURBINE-PSIJ SCRIPT"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
