@@ -39,6 +39,11 @@ do
   eval export ${kv}
 done
 
+cd $TURBINE_OUTPUT
+
+# Report the environment to a sorted file for debugging:
+printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+
 # The new script:
 turbine-psij.py # $TCLSH $PROGRAM
 
