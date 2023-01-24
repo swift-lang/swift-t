@@ -255,6 +255,34 @@ check_machine()
   exit 1
 }
 
+# Advisory Python PATH check:
+# Disable with TURBINE_PYTHON_CHECK=0
+if (( ${#TURBINE_USE_PYTHON} && ${TURBINE_PYTHON_CHECK:-1} ))
+then
+  # Get absolute path, then up 1 level:
+  USE_PYTHON_HOME=${TURBINE_USE_PYTHON:A:h}
+  WHICH_PYTHON=""
+  if which python >& /dev/null
+  then
+    WHICH_PYTHON==python   # This is the =executable syntax
+  elif which python3 >& /dev/null
+  then
+    WHICH_PYTHON==python3  # This is the =executable syntax
+  fi
+  if (( ${#WHICH_PYTHON} ))
+  then
+    # Get absolute path, then up 2 levels:
+    WHICH_PYTHON_HOME=${WHICH_PYTHON:A:h:h}
+    if [[ ${USE_PYTHON_HOME} != ${WHICH_PYTHON_HOME} ]]
+    then
+      print "turbine: warning: python in PATH does not match the Python"
+      print "         used at compile time.  This may cause library errors."
+      print "         compiled with: ${USE_PYTHON_HOME}"
+      print "         found in PATH: ${WHICH_PYTHON}"
+    fi
+  fi
+fi
+
 if (( ${#MACHINE_MODE} != 0 ))
 then
   # Use a scheduler script...
