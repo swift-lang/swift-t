@@ -81,13 +81,14 @@ public class VarRepr {
                                boolean passThroughNulls)
   {
     Arg result = null;
-    if (frontendArg == null && ! passThroughNulls)
-      throw new STCRuntimeError("argument was null");
+    if (frontendArg == null) {
+      if (passThroughNulls)
+        return null;
+      else
+        throw new STCRuntimeError("argument was null");
 
     if (frontendArg.isVar())
-    {
       result = backendArg(frontendArg.getVar());
-    }
     else
       // Constants don't change
       result = frontendArg;
