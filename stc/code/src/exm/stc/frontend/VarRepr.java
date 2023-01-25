@@ -81,7 +81,7 @@ public class VarRepr {
                                boolean passThroughNulls)
   {
     Arg result = null;
-    if (frontendArg == null) {
+    if (frontendArg == null)
       if (passThroughNulls)
         return null;
       else
