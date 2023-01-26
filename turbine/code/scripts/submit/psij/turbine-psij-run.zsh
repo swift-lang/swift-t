@@ -37,6 +37,7 @@ export    PROGRAM NODES PPN
 for kv in ${USER_ENV_CODE}
 do
   print export ${kv}
+  echo ${kv}
 done
 
 cd $TURBINE_OUTPUT
@@ -46,8 +47,10 @@ export PSIJ_DEBUG=1
 
 # Report the environment to a sorted file for debugging:
 printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
-
+printenv -0 | sort -z | tr '\0' '\n'
 # The new script:
-turbine-psij.py # $TCLSH $PROGRAM
+
+ls 
+python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py # $TCLSH $PROGRAM
 
 # wait for job completion?
