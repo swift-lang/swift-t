@@ -41,6 +41,9 @@ done
 
 cd $TURBINE_OUTPUT
 
+# Set debugging for PSIJ
+export PSIJ_DEBUG=1
+
 # Report the environment to a sorted file for debugging:
 printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
