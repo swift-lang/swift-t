@@ -87,12 +87,52 @@ if not args.executable:
     print("Missing command to be executed. Aborting.")
     sys.exit()
 
-# parser.add_argument("
 
 
 jex = psij.JobExecutor.get_instance(args.executor)
-
 job = psij.Job()
+
+
+# Get Job Resource
+
+# node_count (Optional[int]) – If specified, request that the backend allocate this many compute nodes for the job.
+# process_count (Optional[int]) – If specified, instruct the backend to start this many process instances. This defaults to 1.
+# processes_per_node (Optional[int]) – Instruct the backend to run this many process instances on each node.
+# cpu_cores_per_process (Optional[int]) – Request this many CPU cores for each process instance. This property is used by a backend to calculate the number of nodes from the process_count
+# gpu_cores_per_process (Optional[int]) –
+
+exclusive_node_use (bool) –
+resource = psij.ResourceSpecV1(
+    node_count : None ,
+    process_count : args.PROCS ,
+    processes_per_node : args.PPN ,
+    cpu_cores_per_process : None ,
+    gpu_cores_per_process : None ,
+    exclusive_node_use : False , # What is a good default ?
+)
+
+
+
+
+# Get Job Attributes
+
+attributes = psij.JobAttributes(
+    duration : None ,
+    queue_name : args.QUEUE ,
+    project_name : args.PROJECT ,
+    reservation_id : None ,
+    custom_attributes : {} ,
+)
+
+# duration (timedelta) – Specifies the duration (walltime) of the job. A job whose execution exceeds its walltime can be terminated forcefully.
+# queue_name (Optional[str]) – If a backend supports multiple queues, this parameter can be used to instruct the backend to send this job to a particular queue.
+# project_name (Optional[str]) – If a backend supports multiple projects for billing purposes, setting this attribute instructs the backend to bill the indicated project for the resources consumed by this job.
+# reservation_id (Optional[str]) – Allows specifying an advanced reservation ID. Advanced reservations enable the pre-allocation of a set of resources/compute nodes for a certain duration such that jobs can be run immediately, without waiting in the queue for resources to become available.
+# custom_attributes (Optional[Dict[str, object]]) – Specifies a dictionary of custom attributes. Implementations of JobExecutor define and are responsible for interpreting custom attributes.
+
+
+
+
 
 
 # Create job specification
@@ -106,7 +146,7 @@ spec = psij.JobSpec(
     stdin_path : None ,
     stdout_path : args.TURBINE_STDOUT ,
     stderr_path : args.TURBINE_OUTPUT + "/stderr.log" ,
-    resources : None , # HERE comes the MPI stuff etc
+    resources : resource , # HERE comes the MPI stuff etc
     attributes : None , # Empty for initial draft
     pre_launch : None ,
     post_launch : None ,
@@ -114,45 +154,7 @@ spec = psij.JobSpec(
 )
 
 
-if args.executable:
-    spec.executable = args.executable
-else:
-    # exit
-    sys.exit('127')
-
-spec.directory = args.TURBINE_OUTPUT if args.TURBINE_OUTPUT else None
-
-spec.arguments = args.arguments if args.arguments else None
-
-
-# Attributs
-# duration (timedelta) – Specifies the duration (walltime) of the job. A job whose execution exceeds its walltime can be terminated forcefully.
-
-# queue_name (Optional[str]) – If a backend supports multiple queues, this parameter can be used to instruct the backend to send this job to a particular queue.
-
-# project_name (Optional[str]) – If a backend supports multiple projects for billing purposes, setting this attribute instructs the backend to bill the indicated project for the resources consumed by this job.
-
-# reservation_id (Optional[str]) – Allows specifying an advanced reservation ID. Advanced reservations enable the pre-allocation of a set of resources/compute nodes for a certain duration such that jobs can be run immediately, without waiting in the queue for resources to become available.
-
-# custom_attributes (Optional[Dict[str, object]]) – Specifies a dictionary of custom attributes. Implementations of JobExecutor define and are responsible for interpreting custom attributes.
-
-
-if args.PROJECT:
-    spec.attributes.project_name = args.PROJECT
-if args.QUEUE:
-    spec.attributes.queue_name = args.QUEUE
-
-
-spec.stdout_path = "out.txt"
-
-# set node count
-resource = psij.ResourceSpecV1()
-spec.resources = resource
-
-resource.node_count = int(args.PROCS / args.PPN) + 1
-
 job.spec = spec
-
 print(spec)
 
 # Submit Job
