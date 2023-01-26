@@ -65,9 +65,9 @@ parser.add_argument("--TURBINE_WORKERS", default=os.environ.get('TURBINE_WORKERS
 parser.add_argument("--ADLB_SERVERS", default=os.environ.get('ADLB_SERVERS', None ))
 
 parser.add_argument(
-    "--executable", help='program to be executed', default=os.environ.get('PSIJ_EXECUTABLE', None ) )
+    "--executable", help='program to be executed', default=os.environ.get('SCRIPT', None ) )
 parser.add_argument(
-    "--arguments", help="list of arguments passed to the executable", default=os.environ.get('PSIJ_ARGUMENTS', [] ), nargs="*")
+    "--arguments", help="list of arguments passed to the executable", default=os.environ.get('PROGRAM', [] ), nargs="*")
 parser.add_argument("--executor", help="Batch submission system", default=os.environ.get('PSIJ_EXECUTOR', "slurm" ),
                     choices=['slurm', 'pbs', 'batch'])
 parser.add_argument("--debug", action='store_true' , default=os.environ.get('PSIJ_DEBUG', None ))
@@ -96,10 +96,23 @@ job = psij.Job()
 
 
 # Create job specification
-spec = psij.JobSpec()
+spec = psij.JobSpec(
+    name : arg.TURNINE_JOBNAME ,
+    executable : args.executable ,
+    arguments : arge.arguments ,
+    directory : args.TURBINE_OUTPUT, # why not TURBINE_OUTPUT_ROOT ?
+    inherit_environment : True , # check with Justin
+    environment : {} ;
+    stdin_path : None ,
+    stdout_path : args.TURBINE_STDOUT ,
+    stderr_path : args.TURBINE_OUTPUT + "/stderr.log" ,
+    resources : None , # HERE comes the MPI stuff etc
+    attributes : None , # Empty for initial draft
+    pre_launch : None ,
+    post_launch : None ,
+    launcher: "mpirun"   
+)
 
-# Job
-spec.name(args.TURBINE_JOBNAME)
 
 if args.executable:
     spec.executable = args.executable
