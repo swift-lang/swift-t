@@ -81,6 +81,9 @@ if args.debug:
 
 
 if not args.executable:
+    print(os.environ.get("SCRIPT"))
+    print(os.environ.get("PROGRAM", None))
+    print(os.environ.get("COMMAND"))
     print("Missing command to be executed. Aborting.")
     sys.exit()
 
