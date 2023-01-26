@@ -95,20 +95,20 @@ job = psij.Job()
 
 # Get Job Resource
 
-# node_count (Optional[int]) – If specified, request that the backend allocate this many compute nodes for the job.
-# process_count (Optional[int]) – If specified, instruct the backend to start this many process instances. This defaults to 1.
-# processes_per_node (Optional[int]) – Instruct the backend to run this many process instances on each node.
-# cpu_cores_per_process (Optional[int]) – Request this many CPU cores for each process instance. This property is used by a backend to calculate the number of nodes from the process_count
-# gpu_cores_per_process (Optional[int]) –
+# node_count (Optional[int]) If specified, request that the backend allocate this many compute nodes for the job.
+# process_count (Optional[int]) If specified, instruct the backend to start this many process instances. This defaults to 1.
+# processes_per_node (Optional[int]) Instruct the backend to run this many process instances on each node.
+# cpu_cores_per_process (Optional[int]) Request this many CPU cores for each process instance. This property is used by a backend to calculate the number of nodes from the process_count
+# gpu_cores_per_process (Optional[int]) 
+# exclusive_node_use (bool)
 
-exclusive_node_use (bool) –
 resource = psij.ResourceSpecV1(
-    node_count : None ,
-    process_count : args.PROCS ,
-    processes_per_node : args.PPN ,
-    cpu_cores_per_process : None ,
-    gpu_cores_per_process : None ,
-    exclusive_node_use : False , # What is a good default ?
+    node_count = None ,
+    process_count = args.PROCS ,
+    processes_per_node = args.PPN ,
+    cpu_cores_per_process = None ,
+    gpu_cores_per_process = None ,
+    exclusive_node_use = False , # What is a good default ?
 )
 
 
@@ -117,11 +117,11 @@ resource = psij.ResourceSpecV1(
 # Get Job Attributes
 
 attributes = psij.JobAttributes(
-    duration : None ,
-    queue_name : args.QUEUE ,
-    project_name : args.PROJECT ,
-    reservation_id : None ,
-    custom_attributes : {} ,
+    duration = None ,
+    queue_name = args.QUEUE ,
+    project_name = args.PROJECT ,
+    reservation_id = None ,
+    custom_attributes = {} ,
 )
 
 # duration (timedelta) – Specifies the duration (walltime) of the job. A job whose execution exceeds its walltime can be terminated forcefully.
@@ -137,20 +137,20 @@ attributes = psij.JobAttributes(
 
 # Create job specification
 spec = psij.JobSpec(
-    name : arg.TURNINE_JOBNAME ,
-    executable : args.executable ,
-    arguments : arge.arguments ,
-    directory : args.TURBINE_OUTPUT, # why not TURBINE_OUTPUT_ROOT ?
-    inherit_environment : True , # check with Justin
-    environment : {} ;
-    stdin_path : None ,
-    stdout_path : args.TURBINE_STDOUT ,
-    stderr_path : args.TURBINE_OUTPUT + "/stderr.log" ,
-    resources : resource , # HERE comes the MPI stuff etc
-    attributes : None , # Empty for initial draft
-    pre_launch : None ,
-    post_launch : None ,
-    launcher: "mpirun"   
+    name = arg.TURNINE_JOBNAME ,
+    executable = args.executable ,
+    arguments = arge.arguments ,
+    directory = args.TURBINE_OUTPUT, # why not TURBINE_OUTPUT_ROOT ?
+    inherit_environment = True , # check with Justin
+    environment = {} ,
+    stdin_path = None ,
+    stdout_path = args.TURBINE_STDOUT ,
+    stderr_path = args.TURBINE_OUTPUT + "/stderr.log" ,
+    resources = resource , # HERE comes the MPI stuff etc
+    attributes = None , # Empty for initial draft
+    pre_launch = None ,
+    post_launch = None ,
+    launcher = "mpirun"   
 )
 
 
