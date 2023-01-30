@@ -51,6 +51,6 @@ printenv -0 | sort -z | tr '\0' '\n'
 # The new script:
 
 ls 
-python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py # $TCLSH $PROGRAM
+python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py 2>&1 > ~/my-out.log # $TCLSH $PROGRAM
 
 # wait for job completion?
