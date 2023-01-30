@@ -120,12 +120,20 @@ resource = psij.ResourceSpecV1(
 
 
 # Get Job Attributes
+
+# Default WALLTIME is one minute 
+(h,m,ss)=(0,1,0) 
+
+# Parse time componenys from argument and create timdedaelta object
+if args.WALLTIME :
+    (h,m,s)=args.WALLTIME.split(";")
 duration = timedelta(
-    seconds=0,
-    minutes=1,
-    hours=0
+    seconds=s,
+    minutes:=m,
+    hours=h
 )
 
+# set attributes
 attributes = psij.JobAttributes(
     duration = duration ,
     queue_name = args.QUEUE ,
