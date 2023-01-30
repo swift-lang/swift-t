@@ -2,14 +2,18 @@ import psij
 import sys
 import argparse
 import os
+import datetime
+from datetime import timedelta
+import pathlib
+from pathlib import Path
 
 # Get swift-t parameters from the command line
 
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--PROCS", help="Number of processes to use" , default=os.environ.get('PROCS', None ))
-parser.add_argument("--PPN", help="Number of processes per node", default=os.environ.get('PPN', None ))
+parser.add_argument("--PROCS", help="Number of processes to use" , type=int , default=os.environ.get('PROCS', None ))
+parser.add_argument("--PPN", help="Number of processes per node", type=int , default=os.environ.get('PPN', None ))
 parser.add_argument(
     "--PROJECT", help="The project name to use with the system scheduler", default=os.environ.get('PROJECT', None ))
 parser.add_argument("--QUEUE", help="Name of queue in which to run", default=os.environ.get('QUEUE', None ))
@@ -18,11 +22,12 @@ parser.add_argument(
 parser.add_argument(
     "--TURBINE_OUTPUT", 
     help="The run directory for the workflow. Turbine will create this directory if it does not exist. If unset, a default value is automatically set. The TIC file is copied here before execution. Normally, this is unique to a Swift/T workflow execution, and starts out empty.",
-    default=os.environ.get('TURBINE_OUTPUT', None ))
+    default=os.environ.get('TURBINE_OUTPUT', None ), 
+    type=pathlib.Path )
 
 parser.add_argument("--TURBINE_OUTPUT_ROOT",
                     help="Directory under which Turbine will automatically create TURBINE_OUTPUT if necessary",
-                    default=os.environ.get('TURBINE_OUTPUT_ROOT', None )
+                    default=os.environ.get('TURBINE_OUTPUT_ROOT', None ), type=pathlib.Path
                     )
 parser.add_argument("--TURBINE_OUTPUT_FORMAT",
                     help="Allows customization of the automatic output directory creation. See Turbine output",
@@ -55,7 +60,7 @@ parser.add_argument(
 
 
 parser.add_argument("--TURBINE_JOBNAME", default=os.environ.get('TURBINE_JOBNAME', None ))
-parser.add_argument("--TURBINE_STDOUT", default=os.environ.get('TURBINE_STDOUT', None ))
+parser.add_argument("--TURBINE_STDOUT", type=pathlib.Path, default=os.environ.get('TURBINE_STDOUT', None ))
 parser.add_argument("--TURBINE_LOG", default=os.environ.get('TURBINE_LOG', None ))
 parser.add_argument("--TURBINE_DEBUG", default=os.environ.get('TURBINE_DEBUG', None ))
 parser.add_argument("--ADLB_DEBUG", default=os.environ.get('ADLB_DEBUG', None ))
@@ -67,7 +72,7 @@ parser.add_argument("--ADLB_SERVERS", default=os.environ.get('ADLB_SERVERS', Non
 parser.add_argument(
     "--executable", help='program to be executed', default=os.environ.get('SCRIPT', None ) )
 parser.add_argument(
-    "--arguments", help="list of arguments passed to the executable", default=os.environ.get('PROGRAM', [] ), nargs="*")
+    "--arguments", help="list of arguments passed to the executable", default=[os.environ.get('PROGRAM', None)], nargs="*")
 parser.add_argument("--executor", help="Batch submission system", default=os.environ.get('PSIJ_EXECUTOR', "slurm" ),
                     choices=['slurm', 'pbs', 'batch'])
 parser.add_argument("--debug", action='store_true' , default=os.environ.get('PSIJ_DEBUG', None ))
@@ -77,7 +82,7 @@ args = parser.parse_args()
 
 if args.debug:
     print(args)
-    sys.exit()
+    # sys.exit()
 
 
 if not args.executable:
@@ -115,9 +120,14 @@ resource = psij.ResourceSpecV1(
 
 
 # Get Job Attributes
+duration = timedelta(
+    seconds=0,
+    minutes=1,
+    hours=0
+)
 
 attributes = psij.JobAttributes(
-    duration = None ,
+    duration = duration ,
     queue_name = args.QUEUE ,
     project_name = args.PROJECT ,
     reservation_id = None ,
@@ -137,15 +147,15 @@ attributes = psij.JobAttributes(
 
 # Create job specification
 spec = psij.JobSpec(
-    name = arg.TURNINE_JOBNAME ,
+    name = args.TURBINE_JOBNAME ,
     executable = args.executable ,
-    arguments = arge.arguments ,
+    arguments = args.arguments ,
     directory = args.TURBINE_OUTPUT, # why not TURBINE_OUTPUT_ROOT ?
     inherit_environment = True , # check with Justin
     environment = {} ,
     stdin_path = None ,
     stdout_path = args.TURBINE_STDOUT ,
-    stderr_path = args.TURBINE_OUTPUT + "/stderr.log" ,
+    stderr_path = args.TURBINE_OUTPUT / "/stderr.log" ,
     resources = resource , # HERE comes the MPI stuff etc
     attributes = None , # Empty for initial draft
     pre_launch = None ,
@@ -158,4 +168,12 @@ job.spec = spec
 print(spec)
 
 # Submit Job
-# jex.submit(job)
+jex.submit(job)
+
+status = job.wait(timedelta(seconds=3))  # 3 sec should be plenty in this case
+if status is None:
+    raise RuntimeError("Job did not complete")
+if status.exit_code != 0:
+    raise RuntimeError(f"Job failed with status {status}")
+with output_path.open("r") as fd:
+    assert socket.gethostname() in fd.read()
