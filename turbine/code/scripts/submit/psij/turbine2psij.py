@@ -70,7 +70,7 @@ parser.add_argument("--TURBINE_WORKERS", default=os.environ.get('TURBINE_WORKERS
 parser.add_argument("--ADLB_SERVERS", default=os.environ.get('ADLB_SERVERS', None ))
 
 parser.add_argument(
-    "--executable", help='program to be executed', default=os.environ.get('SCRIPT', None ) )
+    "--executable", help='program to be executed', default=os.environ.get('TCLSH', None ) )
 parser.add_argument(
     "--arguments", help="list of arguments passed to the executable", default=[os.environ.get('PROGRAM', None)], nargs="*")
 parser.add_argument("--executor", help="Batch submission system", default=os.environ.get('PSIJ_EXECUTOR', "slurm" ),
