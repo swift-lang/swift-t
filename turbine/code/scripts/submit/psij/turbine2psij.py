@@ -134,6 +134,9 @@ duration = timedelta(
 )
 
 # set attributes
+
+#### MISSING Partition #######
+
 attributes = psij.JobAttributes(
     duration = duration ,
     queue_name = args.QUEUE ,
