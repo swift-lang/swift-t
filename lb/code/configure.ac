@@ -9,11 +9,11 @@ define([adlb_version],
 
 m4_include([../../dev/m4/ifblank.m4])
 
-AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
-AC_PREREQ(2.63)
+AC_INIT([XLB],[adlb_version()],[woz@anl.gov])
+AC_PREREQ([2.68])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
-AC_CONFIG_HEADER(config.h src/mpe-settings.h)
+AC_CONFIG_HEADERS([config.h src/mpe-settings.h])
 
 ADLB_VERSION=adlb_version()
 AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
@@ -49,13 +49,14 @@ fi
 
 # Report location of CC
 USE_CC=$( which $CC )
-AC_MSG_RESULT([using CC=$USE_CC])
+AC_MSG_RESULT([using  CC=$USE_CC])
 
-AC_MSG_RESULT([PREFIX: ${prefix}])
+AC_MSG_RESULT([PREFIX:   ${prefix}])  # Space to align path with above
 SOFTWARE=$( dirname ${prefix} 2>&1 )
 SOFTWARE=$( test -d ${SOFTWARE} && cd ${SOFTWARE} 2>&1 && /bin/pwd )
 if [[ ${?} == 0 ]]
 then
+  # Space to align path with above
   AC_MSG_RESULT([SOFTWARE: ${SOFTWARE}])
 else
   SOFTWARE=0
@@ -74,7 +75,7 @@ AC_TYPE_SSIZE_T
 
 # Checks for functions
 AC_CHECK_FUNCS([clock_gettime memchr memmove memset pow])
-AC_CHECK_FUNCS([stpcpy strdup strtol strerror uname])
+AC_CHECK_FUNCS([setenv stpcpy strdup strtol strerror uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
@@ -82,7 +83,7 @@ AC_FUNC_REALLOC
 # Checks for headers
 # Note: Mac OS does not have malloc.h
 AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h memory.h ])
-AC_CHECK_HEADERS([stddef.h])
+AC_CHECK_HEADERS([stddef.h stdint.h])
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AC_HEADER_STDBOOL
 

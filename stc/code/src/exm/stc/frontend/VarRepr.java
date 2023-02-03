@@ -27,7 +27,7 @@ import exm.stc.common.lang.WaitVar;
  * This class contains logic for translating frontend variables to
  * middle/backend variables.  For example, frontend variables will have
  * additional logical type information that is not relevant to the
- * actual implementation or optimisation.  We also have the option
+ * actual implementation or optimization.  We also have the option
  * of representing the same logical variable in different ways.
  */
 public class VarRepr {
@@ -78,20 +78,22 @@ public class VarRepr {
   }
 
   public static Arg backendArg(Arg frontendArg,
-            boolean passThroughNulls) {
-    if (frontendArg == null) {
-      if (passThroughNulls) {
+                               boolean passThroughNulls)
+  {
+    Arg result = null;
+    if (frontendArg == null)
+      if (passThroughNulls)
         return null;
-      } else {
+      else
         throw new STCRuntimeError("argument was null");
-      }
-    }
-    if (frontendArg.isVar()) {
-      return backendArg(frontendArg.getVar());
-    } else {
+
+    if (frontendArg.isVar())
+      result = backendArg(frontendArg.getVar());
+    else
       // Constants don't change
-      return frontendArg;
-    }
+      result = frontendArg;
+
+    return result;
   }
 
   public static List<Arg> backendArgs(Arg ...frontendArgs) {
@@ -107,11 +109,11 @@ public class VarRepr {
   }
 
   public static TaskProps backendProps(TaskProps props) {
-    TaskProps res = new TaskProps();
+    TaskProps result = new TaskProps();
     for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
-      res.put(e.getKey(), backendArg(e.getValue()));
+      result.put(e.getKey(), backendArg(e.getValue()));
     }
-    return res;
+    return result;
   }
 
   /**

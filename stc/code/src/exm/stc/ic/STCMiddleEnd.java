@@ -127,7 +127,9 @@ public class STCMiddleEnd {
 
   public void optimize() throws UserException {
     logger.debug("Optimising Swift IC");
-    this.program = ICOptimizer.optimize(logger, icOutput, program);
+    // System.out.println(program);
+    program = ICOptimizer.optimize(logger, icOutput, program);
+    // System.out.println(program);
     logger.debug("Optimisation done");
   }
 

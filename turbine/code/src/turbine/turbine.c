@@ -348,7 +348,7 @@ turbine_register_finalizer(void (*func)(void*), void* context)
 {
   if (finalizers == NULL)
     finalizers = list_create();
-  struct finalizer* fzr = malloc(sizeof(fzr));
+  struct finalizer* fzr = malloc(sizeof(*fzr));
   fzr->func    = func;
   fzr->context = context;
   struct list_item* item = list_add(finalizers, fzr);

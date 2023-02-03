@@ -17,9 +17,10 @@
 #pragma once
 
 #include <stdbool.h>
+
 /**
-  Struct that encapsulates MPI rank layout info
- */
+   Struct that encapsulates MPI rank layout info
+*/
 typedef struct {
   /** Number of processes in total */
   int size;
@@ -44,7 +45,7 @@ typedef struct {
 
   /** Lowest-ranked server */
   int master_server_rank;
-  
+
   /** Number of workers associated with this server */
   int my_workers;
 

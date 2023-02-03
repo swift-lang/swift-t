@@ -138,6 +138,7 @@ valgrind_assert_failed_msg(const char* file, int line,
   {
     printf("valgrind_assert(): inducing memory fault...\n");
     // This will give us more information from valgrind
+    // This will trigger a known warning in GCC 11+
     puts((char*) 1);
   }
   abort();

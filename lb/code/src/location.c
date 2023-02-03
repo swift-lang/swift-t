@@ -63,11 +63,11 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
   rc = MPI_Comm_size(comm, &comm_size);
   MPI_CHECK(rc);
 
-  adlb_code ac = hostnames_alloc(hostnames, comm_size,
-                                  sizeof(u.nodename));
+  adlb_code ac = hostnames_alloc(hostnames, comm_size, 1024);
+
   ADLB_CHECK(ac);
 
-  strcpy(hostnames->my_name, u.nodename);
+  strcpy(hostnames->my_name, xlb_s.my_name);
 
   rc = MPI_Allgather(
       hostnames->my_name,   (int)hostnames->name_length, MPI_CHAR,
@@ -154,6 +154,7 @@ xlb_hostmap_init(const xlb_layout *layout,
   bool debug_hostmap;
   bool rc = getenv_boolean("ADLB_DEBUG_HOSTMAP", false,
                            &debug_hostmap);
+  check_msg(rc, "ADLB: Bad value for ADLB_DEBUG_HOSTMAP");
 
   table_init(&(*hostmap)->map, 1024);
   for (int rank = 0; rank < layout->size; rank++)
@@ -242,8 +243,9 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
 /**
 
  */
-void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
-                          bool setenvs, int* leader_ranks, int* count)
+void
+xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+                     bool setenvs, int* leader_ranks, int* count)
 {
   int leader_rank_count = 0;
   TABLE_FOREACH(&hosts->map, table_item)

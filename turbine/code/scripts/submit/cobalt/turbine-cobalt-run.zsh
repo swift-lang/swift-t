@@ -31,7 +31,7 @@ print "TURBINE-COBALT SCRIPT"
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 # source ${TURBINE_HOME}/scripts/turbine-config.sh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
@@ -147,7 +147,11 @@ turbine_log >> ${LOG_FILE}
 print ${JOB_ID} > ${JOB_ID_FILE}
 
 # Wait for job completion
-cqwait ${JOB_ID}
+if (( WAIT_FOR_JOB ))
+then
+  print "turbine-cobalt-run: waiting for job completion..."
+  cqwait ${JOB_ID}
+fi
 
 STOP=$( date +%s )
 TOTAL_TIME=$( tformat $(( STOP-START )) )

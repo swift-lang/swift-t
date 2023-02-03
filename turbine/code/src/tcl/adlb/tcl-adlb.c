@@ -297,21 +297,27 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
 
-#define CHECK_ADLB_STORE(rc, id, sub) {                                 \
-    if (adlb_has_sub((sub))) {                                          \
-      TCL_CONDITION(rc != ADLB_REJECTED,                                \
-                    "<%"PRId64">[\"%s\"], double assign!",              \
-                    (id), (const char*)(sub).key);                      \
-      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
-                    "<%"PRId64">[\"%s\"] failed",                       \
-                    (id), (const char*)(sub).key);                      \
-    } else {                                                            \
-      TCL_CONDITION(rc != ADLB_REJECTED,                                \
-                    "<%"PRId64"> failed: double assign!", (id));        \
-      TCL_CONDITION(rc == ADLB_SUCCESS,                                 \
-                    "<%"PRId64"> failed!", (id));                       \
-    }                                                                   \
+static int
+CHECK_ADLB_STORE(Tcl_Interp* interp, Tcl_Obj* const objv[],
+                 int rc, int64_t id, adlb_subscript sub)
+{
+  if (adlb_has_sub(sub))
+  {
+    TCL_CONDITION(rc != ADLB_REJECTED,
+                  "<%"PRId64">[\"%s\"] failed: double assign!",
+                  id, (const char*) sub.key);
+    TCL_CONDITION(rc == ADLB_SUCCESS,
+                  "<%"PRId64">[\"%s\"] failed!",
+                  id, (const char*) sub.key);
   }
+  else
+  {
+    TCL_CONDITION(rc != ADLB_REJECTED,
+                  "<%"PRId64">, double assign!", id);
+    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed", id);
+  }
+  return TCL_OK;
+}
 
 #define CHECK_ADLB_RETRIEVE(rc, handle) {                  \
   if (adlb_has_sub((handle).sub.val)) {                    \
@@ -336,11 +342,11 @@ static bool must_comm_free = false;
 
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[], bool decr);
+                  int objc, Tcl_Obj* const objv[], bool decr);
 
 static int
-ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
-          int objc, Tcl_Obj *const objv[], bool write_ref,
+ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp* interp,
+          int objc, Tcl_Obj* const objv[], bool write_ref,
           adlb_subscript_kind sub_kind);
 
 /**
@@ -2629,8 +2635,8 @@ exit_err:
           stored reference variables.   Defaults are 2 read, 0 write
 */
 static int
-ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
-               int objc, Tcl_Obj *const objv[])
+ADLB_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
+               int objc, Tcl_Obj* const objv[])
 {
   TCL_CONDITION(objc >= 4, "requires at least 4 args!");
   int rc;
@@ -2713,7 +2719,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
 
-  CHECK_ADLB_STORE(store_rc, handle.id, handle.sub.val);
+  CHECK_ADLB_STORE(interp, objv, store_rc, handle.id, handle.sub.val);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
@@ -3655,7 +3661,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   pointer, (size_t) length, decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
+  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3698,7 +3704,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
         xfer, (size_t)length*sizeof(double), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
+  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3741,7 +3747,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, (size_t)length*sizeof(int), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(rc, id, ADLB_NO_SUB);
+  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
 
   return TCL_OK;
 }
@@ -3918,7 +3924,7 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Store(handle.id, handle.sub.val, type,
                   member.data, member.length, decr, store_rc);
 
-  CHECK_ADLB_STORE(rc, handle.id, handle.sub.val);
+  CHECK_ADLB_STORE(interp, objv, rc, handle.id, handle.sub.val);
 
   // Free if needed
   if (member.data != xfer_buf.data)

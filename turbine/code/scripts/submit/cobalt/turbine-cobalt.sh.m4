@@ -49,26 +49,32 @@ then
       NODE_ARG="-f ${COBALT_NODEFILE}"
 fi
 
-echo "TURBINE SETTINGS"
-echo "JOB_ID:       ${COBALT_JOBID}"
-echo "DATE:         $(date)"
-echo "TURBINE_HOME: ${TURBINE_HOME}"
-echo "COMMAND:      ${COMMAND}"
-echo "PROCS:        ${PROCS}"
-echo "PPN:          ${PPN}"
-echo "TCLLIBPATH:   ${TCLLIBPATH}"
-echo "LAUNCHER:     ${LAUNCHER}"
-[[ -n ${VALGRIND} ]] && \
-echo "VALGRIND:     ${VALGRIND}"
-echo
-
 # Export all user environment variables
-export getenv(USER_ENV_ARRAY)
+export getenv(USER_ENV_CODE)
 
 # Run Turbine:
-${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
-            ${TURBINE_INTERPOSER:-} ${COMMAND}
-CODE=${?}
+printf "turbine-cobalt.sh: MPI_IMPL='%s'\n" ${MPI_IMPL}
+if [[ ${MPI_IMPL} == "MPICH" ]]
+then
+  (
+    set -x
+    ${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
+                ${TURBINE_INTERPOSER:-} ${COMMAND}
+  )
+  CODE=${?}
+elif [[ ${MPI_IMPL} == "OpenMPI" ]]
+then
+  (
+    set -x
+    ${LAUNCHER} -n ${PROCS} --map-by ppr:${PPN}:node \
+                ${TURBINE_INTERPOSER:-} ${COMMAND}
+  )
+  CODE=${?}
+else
+  printf "turbine-cobalt.sh: unknown MPI_IMPL: '%s'\n" ${MPI_IMPL}
+  exit 1
+fi
+)
 
 echo
 echo "Turbine launcher done."
@@ -77,3 +83,7 @@ echo "COMPLETE: $(date)"
 
 # Return exit code from launcher (mpiexec)
 exit ${CODE}
+
+# Local Variables:
+# mode: m4
+# End:

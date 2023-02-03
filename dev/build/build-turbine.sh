@@ -25,6 +25,16 @@ run_bootstrap
 
 EXTRA_ARGS=""
 
+if [[ $COMPILER == "XLC" ]]
+then
+  EXTRA_ARGS+=" --with-xlc"
+fi
+
+if [[ $COMPILER == "NVC" ]]
+then
+  EXTRA_ARGS+=" --with-nvc"
+fi
+
 if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
 fi

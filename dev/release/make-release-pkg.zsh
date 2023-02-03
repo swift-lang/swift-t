@@ -118,8 +118,6 @@ distclean()
 
 # SECTION I
 
-# Directory containing this script
-THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 # Top level of Swift/T Git clone
 TOP=$( cd ${THIS}/../../ ; /bin/pwd )
 

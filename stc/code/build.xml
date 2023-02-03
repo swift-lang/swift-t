@@ -301,12 +301,14 @@
     <isset property="use.java"/>
   </condition>
 
-  <!-- Install: User must have set dist.dir -->
+  <!-- Install: User must have set dist.dir, turbine.home -->
   <target name="install"
           depends="jar,source.txt">
 
     <fail unless="dist.dir"
           message="Target install requires -Ddist.dir=..."/>
+    <fail unless="turbine.home"
+          message="Target install requires -Dturbine.home=..."/>
 
     <echo message="INSTALL: dist.dir=${dist.dir}"/>
     <echo message="INSTALL: turbine.home=${turbine.home}"/>
