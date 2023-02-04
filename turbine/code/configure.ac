@@ -282,7 +282,7 @@ AC_ARG_WITH(launcher,
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
-        AC_CHECK_FILE(${USE_LAUNCHER}, [],
+        AC_CHECK_FILE($( which ${USE_LAUNCHER} ), [],
            AC_MSG_ERROR("Launcher '$USE_LAUNCHER' not found! "))
     ])
 
