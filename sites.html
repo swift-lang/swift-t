@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.5.0,</span>
-<span id="revdate">January 2023</span>
+<span id="revdate">March 2023</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1400,22 +1400,6 @@ default Turbine output directories are automatically created based on
 the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
 </p>
 </dd>
-<dt class="hdlist1">
-<code>-Y</code>
-</dt>
-<dd>
-<p>
-DrY run.  Produces the scheduler script, but does not submit it.
-This allows the user to make customizations before submission.
-For example:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ swift-t -m slurm -t Y workflow.swift
-turbine: dry run: submit with .../submit.sh
-$ sbatch .../submit.sh</code></pre>
-</div></div>
-</dd>
 </dl></div>
 <a name="settings_file"></a>
 <div class="dlist"><dl>
@@ -1474,11 +1458,18 @@ Run standalone Turbine executable
 </dt>
 <dd>
 <p>
-Create a batch submission file, report its name,
-       and exit before submitting it.  Useful for users that need
-       to edit the batch file before submission.<br />
-       (Currently supported systems: <code>slurm</code>)
+DrY run.  Create a batch submission file, report its name,
+and exit before submitting it.  Useful for users that need to
+edit the batch file before submission.  For example:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh
+Submitted batch job 123456</code></pre>
+</div></div>
+<div class="paragraph"><p>Currently supported systems: <code>slurm</code></p></div>
 </dd>
 </dl></div>
 </div>
@@ -4241,7 +4232,7 @@ Run with:
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2023-03-07 16:45:48 CST
+ 2023-03-07 16:49:25 CST
 </div>
 </div>
 </body>
