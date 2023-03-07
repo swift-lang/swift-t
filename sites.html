@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 10.1.2" />
+<meta name="generator" content="AsciiDoc 10.2.0" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -1399,6 +1399,22 @@ Set the Turbine output directory root, in which
 default Turbine output directories are automatically created based on
 the date.  (Overrides <code>TURBINE_OUTPUT_ROOT</code>.)
 </p>
+</dd>
+<dt class="hdlist1">
+<code>-Y</code>
+</dt>
+<dd>
+<p>
+DrY run.  Produces the scheduler script, but does not submit it.
+This allows the user to make customizations before submission.
+For example:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh</code></pre>
+</div></div>
 </dd>
 </dl></div>
 <a name="settings_file"></a>
@@ -4225,7 +4241,7 @@ Run with:
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2023-01-18 10:34:38 CDT
+ 2023-03-07 16:45:48 CST
 </div>
 </div>
 </body>
