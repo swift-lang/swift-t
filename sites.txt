@@ -421,17 +421,6 @@ shell scripting.
 default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
-+-Y+::
-DrY run.  Produces the scheduler script, but does not submit it.
-This allows the user to make customizations before submission.
-For example:
-+
-----
-$ swift-t -m slurm -t Y workflow.swift
-turbine: dry run: submit with .../submit.sh
-$ sbatch .../submit.sh
-----
-
 ////
 Had to do a passthrough manual anchor to get this to work right:
 ////
@@ -461,10 +450,19 @@ system scheduler (e.g., +qsub+).
         (created by link:guide.html#mkstatic[+mkstatic.tcl+]) instead of
         +program.tic+.
 
-+-Y+:: Create a batch submission file, report its name,
-       and exit before submitting it.  Useful for users that need
-       to edit the batch file before submission. +
-       (Currently supported systems: +slurm+)
++-Y+::
+DrY run.  Create a batch submission file, report its name,
+and exit before submitting it.  Useful for users that need to
+edit the batch file before submission.  For example:
++
+----
+$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh
+Submitted batch job 123456
+----
++
+Currently supported systems: +slurm+
 
 [[turbine_output]]
 === Turbine output directory
