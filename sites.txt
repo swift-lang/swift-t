@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.5.0, January 2023
+v1.5.0, March 2023
 
 
 == How to use this guide
@@ -421,6 +421,16 @@ shell scripting.
 default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
++-Y+::
+DrY run.  Produces the scheduler script, but does not submit it.
+This allows the user to make customizations before submission.
+For example:
++
+----
+$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh
+----
 
 ////
 Had to do a passthrough manual anchor to get this to work right:
