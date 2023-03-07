@@ -275,8 +275,7 @@ set_stdout(int rank, int size)
   log_printf("redirecting output to: %s", filename);
   log_flush();
 
-  bool rc;
-  rc = make_parents(filename);
+  bool rc = make_parents(filename);
   if (!rc) return false;
   FILE* fp = freopen(filename, "w", stdout);
   if (fp == NULL)
