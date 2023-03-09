@@ -124,7 +124,7 @@ resource = psij.ResourceSpecV1(
 # Default WALLTIME is one minute 
 (h,m,ss)=(0,1,0) 
 
-# Parse time componenys from argument and create timdedaelta object
+# Parse time components from argument and create timedelta object
 if args.WALLTIME :
     (h,m,s)=args.WALLTIME.split(";")
 duration = timedelta(
