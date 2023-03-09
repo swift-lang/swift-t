@@ -93,8 +93,8 @@ if not args.executable:
     sys.exit()
 
 
-
-jex = psij.JobExecutor.get_instance(args.executor)
+cfg = psij.JobExecutorConfig(launcher_log_file=args.TURBINE_OUTPUT / "launcher.log")
+jex = psij.JobExecutor.get_instance(args.executor, config=cfg)
 job = psij.Job()
 
 
