@@ -34,10 +34,10 @@ export    PROGRAM NODES PPN
 
 # Environment variables
 # Evaluate any user 'swift-t -e K=V' settings here:
-for kv in ${USER_ENV_CODE}
+for kv in ${=USER_ENV_CODE}
 do
-  print export ${kv}
-  echo ${kv}
+  eval export ${kv}
+  echo ENV KV: ${kv}
 done
 
 cd $TURBINE_OUTPUT
