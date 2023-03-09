@@ -181,10 +181,12 @@ print(spec)
 # Submit Job
 jex.submit(job)
 
-# status = job.wait(timedelta(seconds=60))  # 3 sec should be plenty in this case
-# if status is None:
-#     raise RuntimeError("Job did not complete")
-# if status.exit_code != 0:
-#     raise RuntimeError(f"Job failed with status {status}")
-# with output_path.open("r") as fd:
-#     assert socket.gethostname() in fd.read()
+while True:
+    status = job.wait(timedelta(seconds=5))  # 3 sec should be plenty in this case
+    if status is None:
+        raise RuntimeError("Job status is None!")
+    print(str(status.state))
+    if status.exit_code != 0:
+        raise RuntimeError(f"Job failed with status {status}")
+with output_path.open("r") as fd:
+    assert socket.gethostname() in fd.read()
