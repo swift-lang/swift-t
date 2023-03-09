@@ -126,11 +126,11 @@ resource = psij.ResourceSpecV1(
 
 # Parse time components from argument and create timedelta object
 if args.WALLTIME :
-    (h,m,s)=args.WALLTIME.split(";")
+    (h,m,s)=args.WALLTIME.split(":")
 duration = timedelta(
-    seconds=s,
-    minutes:=m,
-    hours=h
+    seconds=int(s),
+    minutes=int(m),
+    hours=int(h)
 )
 
 # set attributes
