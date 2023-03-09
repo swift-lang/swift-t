@@ -20,7 +20,8 @@
 # Please fill in all of these variables
 
 # Install root: change to your install location
-export SWIFT_T_PREFIX=/tmp/swift-t-install
+# For Anaconda, refer to $PREFIX
+export SWIFT_T_PREFIX=$PREFIX/swift-t
 
 #+====================================+
 #|| Optional configuration variables ||
@@ -58,6 +59,8 @@ COMPILER=GCC
 # tcl system library directory.  Must contain init.tcl in root or
 # tcl${TCL_VERSION} subdirectory
 # TCL_SYSLIB_DIR=/path/to/tcl/lib
+# For Anaconda, use tclsh from PATH:
+TCLSH=tclsh8.6
 
 # Location of MPI install to override autodetected location
 # MPI_INSTALL=${EXM_PREFIX}/mpi
@@ -78,6 +81,8 @@ SWIFT_T_CUSTOM_MPI=0
 # If needed, you can provide a full path to the launcher here.
 # This could be mpiexec, srun, aprun, etc.
 # LAUNCHER=/path/to/bin/mpiexec
+# For Anaconda, use mpiexec from PATH:
+LAUNCHER=mpiexec
 # If needed, you can force MPI_IMPL here:
 # export MPI_IMPL="MPICH" or "OpenMPI"
 
@@ -92,10 +97,10 @@ SWIFT_T_TRACE_BUILD=0
 # NOTE: Python detection may require PYTHONPATH and PYTHONHOME
 # in the environment
 # Enable Python integration
-ENABLE_PYTHON=0
+ENABLE_PYTHON=1
 # Specify the Python interpreter executable below;
 # if empty, looks for python in PATH
-PYTHON_EXE=""
+PYTHON_EXE="$PYTHON"
 # PYTHON_EXE=$HOME/sfw/Python-2.7.10/bin/python
 
 # Enable R integration
@@ -157,7 +162,7 @@ STC_ANT_ARGS=""
 # export ANT_HOME=
 
 # Make build parallelism: increase to speed up builds
-MAKE_PARALLELISM=1
+MAKE_PARALLELISM=4
 
 #+================================+
 #| Configure-time customizations  |

@@ -1,4 +1,17 @@
 
+# TURBINE MAKEFILE
+
+# Features:
+# Use 'make V=1' to get verbose output
+# Use 'make check_includes' to debug missing headers
+# Use 'make debug_build' to debug the build settings
+# Use 'make tags' to make a tags file
+# Use 'make install' to compile and install in one step
+# Use 'make tests' to compile the tests
+# Use 'make test_results' to run the tests
+# Use 'make clean' or one of the other clean-* targets to clean
+# Parallel builds are supported
+
 TURBINE_VERSION = @TURBINE_VERSION@
 
 ENABLE_SHARED = @ENABLE_SHARED@
@@ -803,7 +816,7 @@ endif
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
 	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
-	$(E) date "+DATE:   %Y-%m-%d %I:%M%p"    >> $(@)
+	$(E) date "+DATE:   %Y-%m-%d %H:%M"      >> $(@)
 #       Use true to ignore errors (e.g., if this is not an git clone)
 	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)

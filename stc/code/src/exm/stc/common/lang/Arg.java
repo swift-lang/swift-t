@@ -50,7 +50,7 @@ public class Arg implements Comparable<Arg>, Typed {
   private final int hashCode;
 
   /**
-   * Private constructors so that it can only be build using static builder
+   * Private constructor: it can only be built using the static builder
    * methods (below)
    *
    * @param type
@@ -246,16 +246,17 @@ public class Arg implements Comparable<Arg>, Typed {
     case INTVAL:
       return Long.toString(this.intlit);
     case STRINGVAL:
-      // use same escaping as TCL
+      // use same escaping as Tcl
       return "\"" + TclString.tclEscapeString(this.stringlit) + "\"";
     case FLOATVAL:
       return Double.toString(this.floatlit);
     case BOOLVAL:
       return Boolean.toString(this.boollit);
     case VAR:
-      return this.var.name();
+      // return this.var.name();
+      return "Arg: Var: " + this.var.name();
     default:
-      throw new STCRuntimeError("Unknown oparg type " + this.kind.toString());
+      throw new STCRuntimeError("Unknown Arg type: " + this.kind.toString());
     }
   }
 

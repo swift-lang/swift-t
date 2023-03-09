@@ -22,6 +22,9 @@
  * */
 
 #include <ctype.h>
+#include <errno.h>
+#include <libgen.h>
+#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -138,6 +141,7 @@ valgrind_assert_failed_msg(const char* file, int line,
   {
     printf("valgrind_assert(): inducing memory fault...\n");
     // This will give us more information from valgrind
+    // This will trigger a known warning in GCC 11+
     puts((char*) 1);
   }
   abort();
@@ -299,6 +303,16 @@ getenv_double(const char* name, double dflt, double* result)
   return true;
 }
 
+void
+getenv_string(const char* name, char* dflt, char** result)
+{
+  char* v = getenv(name);
+  if (v == NULL || strlen(v) == 0)
+    *result = dflt;
+  else
+    *result = v;
+}
+
 /**
 
  */
@@ -421,4 +435,44 @@ quicksort_ints(int* A, int first, int last)
     quicksort_ints(A,first,j-1);
     quicksort_ints(A,j+1,last);
   }
+}
+
+bool
+make_parents(const char* filename)
+{
+  bool b;
+  int rc;
+  struct stat s;
+  char f[PATH_MAX];
+  // printf("make_parents(): '%s'\n", filename);
+  if (strcmp(filename, ".") == 0)
+    return true;
+  strcpy(f, filename);
+  char* d = dirname(f);
+  // printf("parent: '%s'\n", d);
+  if (strcmp(d, ".") == 0)
+    return true;
+  rc = stat(d, &s);
+  if (errno == ENOENT)
+  {
+    b = make_parents(d);
+    if (!b) return false;
+    // printf("mkdir: '%s'\n", d);
+    rc = mkdir(d, S_IRWXU|S_IRWXG|S_IRWXO);
+    // printf("mkdir: %i\n", rc);
+    if (rc != 0)
+    {
+      printf("could not mkdir: '%s'\n", d);
+      error(1, errno, "error");
+      return false;
+    }
+  }
+  else if (rc != 0)
+  {
+    printf("could not stat: '%s'\n", d);
+    error(1, errno, "error");
+    return false;
+  }
+
+  return true;
 }

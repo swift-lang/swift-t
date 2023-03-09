@@ -18,3 +18,8 @@ pop()
 {
   popd $@ 2>&1 > /dev/null
 }
+
+git-log()
+{
+  git log -n 1 --date="format:%Y-%m-%d %H:%M" --pretty=format:"%h :: %ad :: %s%n"
+}

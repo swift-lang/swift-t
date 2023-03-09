@@ -169,7 +169,7 @@ int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
     turbine_tcl_condition_failed(interp, objv[0], format, ## args); \
     return TCL_ERROR;                                            \
   }
-
+// (set-window-width 80)
 /**
    Print error message and jump to label
    Requires Tcl_Interp interp and Tcl_Obj* objv in scope
@@ -179,8 +179,6 @@ int turbine_user_errorv(Tcl_Interp* interp, const char* fmt, ...);
     turbine_tcl_condition_failed(interp, objv[0], format, ## args); \
     goto label;                                                  \
   }
-
-
 
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.

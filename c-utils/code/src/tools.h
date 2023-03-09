@@ -327,6 +327,15 @@ bool getenv_boolean(const char* name, bool dflt, bool* result);
 bool getenv_double(const char* name, double dflt, double* result);
 
 /**
+   Lookup environment variable name, store it in result
+   if found and non-empty.  Else store the default value.
+   Set dflt to NULL if you want to simply test for a
+   found and non-empty variable.
+   @param dflt The default value
+*/
+void getenv_string(const char* name, char* dflt, char** result);
+
+/**
    Shuffle array A in-place
  */
 void shuffle(long* A, int count);
@@ -349,3 +358,9 @@ int slurp_process(const char** argv);
 void print_ints(const int* A, int n);
 
 void quicksort_ints(int* A, int first, int last);
+
+/**
+   Make all parent directories for this file
+   @return True on success, else false.
+*/
+bool make_parents(const char* filename);

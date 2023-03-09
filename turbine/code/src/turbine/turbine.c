@@ -253,15 +253,15 @@ set_stdout(int rank, int size)
 {
   char tmpfname[PATH_MAX];
   char filename[PATH_MAX];
-  char* s = getenv("TURBINE_STDOUT");
-  if (s == NULL || strlen(s) == 0)
-    return true;
+  char* s;
+  getenv_string("TURBINE_STDOUT", NULL, &s);
+  if (s == NULL) return true;
 
   strcpy(filename, s);
 
   // Substitute rank (as zero-padded string r) for %r into filename
   char* p;
-  if ((p = strstr(filename, "%r")))
+  while ((p = strstr(filename, "%r")))
   {
     ptrdiff_t c = p - &filename[0];
     strcpy(tmpfname, filename);
@@ -275,8 +275,18 @@ set_stdout(int rank, int size)
   log_printf("redirecting output to: %s", filename);
   log_flush();
 
+  bool rc = make_parents(filename);
+  if (!rc) return false;
   FILE* fp = freopen(filename, "w", stdout);
-  if (fp == NULL) return false;
+  if (fp == NULL)
+  {
+    // This has to go on stderr
+    fprintf(stderr,
+            "turbine: TURBINE_STDOUT: could not freopen: '%s'\n",
+            filename);
+    perror("turbine");
+    return false;
+  }
   return true;
 }
 
@@ -348,7 +358,7 @@ turbine_register_finalizer(void (*func)(void*), void* context)
 {
   if (finalizers == NULL)
     finalizers = list_create();
-  struct finalizer* fzr = malloc(sizeof(fzr));
+  struct finalizer* fzr = malloc(sizeof(*fzr));
   fzr->func    = func;
   fzr->context = context;
   struct list_item* item = list_add(finalizers, fzr);

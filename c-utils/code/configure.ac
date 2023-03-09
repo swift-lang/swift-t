@@ -8,7 +8,7 @@ define([c_utils_version],
        regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
 AC_PREREQ([2.62])
-AC_INIT([EXMCUTILS], [c_utils_version()], [wozniak@mcs.anl.gov])
+AC_INIT([EXMCUTILS], [c_utils_version()], [woz@anl.gov])
 AC_CONFIG_SRCDIR([src/table.c])
 AC_CONFIG_HEADERS([c-utils-config.h])
 
@@ -47,7 +47,7 @@ USE_CC=$( which $CC )
 AC_MSG_RESULT([using CC=$USE_CC])
 
 # Checks for header files
-AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h string.h])
+AC_CHECK_HEADERS([inttypes.h stddef.h stdint.h stdlib.h string.h unistd.h])
 AC_CHECK_HEADERS([sys/param.h] [sys/time.h])
 AC_HEADER_STDBOOL
 

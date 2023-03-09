@@ -24,7 +24,7 @@ print "TURBINE-PBS SCRIPT"
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
@@ -33,13 +33,13 @@ fi
 
 # We use PBS -V to export all environment variables to the job
 # Evaluate any user turbine-pbs-run -e K=V settings here:
-for kv in ${USER_ENV_PAIRS}
+for kv in ${USER_ENV_CODE}
 do
   eval export ${kv}
 done
 
-TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine.pbs.m4
-TURBINE_PBS=${TURBINE_OUTPUT}/turbine.pbs
+TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine-pbs.sh.m4
+TURBINE_PBS=${TURBINE_OUTPUT}/turbine-pbs.sh
 
 # Filter/create the PBS submit file
 m4 ${COMMON_M4} ${TURBINE_PBS_M4} > ${TURBINE_PBS}

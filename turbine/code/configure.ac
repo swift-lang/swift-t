@@ -16,7 +16,7 @@ define([turbine_version],
        regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
 AC_PREREQ([2.62])
-AC_INIT([Turbine], [turbine_version()], [wozniak@mcs.anl.gov])
+AC_INIT([Turbine], [turbine_version()], [woz@anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
@@ -136,8 +136,8 @@ AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
 AC_SUBST([HAVE_CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
-AC_CHECK_HEADERS([fcntl.h limits.h malloc.h stddef.h sys/param.h])
-AC_CHECK_HEADERS([sys/time.h])
+AC_CHECK_HEADERS([fcntl.h inttypes.h limits.h malloc.h stddef.h])
+AC_CHECK_HEADERS([stdint.h unistd.h sys/param.h sys/time.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
@@ -592,9 +592,19 @@ AC_SUBST(MPI_LABEL)
 
 # Discover MPI implementation:
 # MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
-MPI_IMPL=${MPI_IMPL:-unknown}
+# User can set MPI_IMPL in advance to force that implementation
 HAVE_MPI_IMPL_MPICH=0
 HAVE_MPI_IMPL_OPENMPI=0
+if   [[ ${MPI_IMPL:-unknown} == "MPICH" ]]
+then
+  AC_MSG_RESULT([User set MPI_IMPL=MPICH])
+  HAVE_MPI_IMPL_MPICH=1
+elif [[ ${MPI_IMPL:-unknown} == "OpenMPI" ]]
+then
+  AC_MSG_RESULT([User set MPI_IMPL=OpenMPI])
+  HAVE_MPI_IMPL_OPENMPI=1
+fi
+MPI_IMPL=${MPI_IMPL:-unknown}
 # Set to flag for line numbers if supported
 MPI_LINE_OUTPUT_FLAG=
 
@@ -1345,6 +1355,16 @@ AC_ARG_ENABLE(xlc,
                 USE_XLC=1
               ])
 AC_SUBST(USE_XLC)
+
+USE_NVC=0
+AC_ARG_ENABLE(nvc,
+              AS_HELP_STRING(
+                    [--enable-nvc],
+                    [Enable NVIDIA NVC flags]),
+              [
+                USE_NVC=1
+              ])
+AC_SUBST(USE_NVC)
 
 m4_include([../../dev/m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()

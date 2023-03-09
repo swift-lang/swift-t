@@ -103,7 +103,6 @@ public class FunctionCallEvaluator {
 
     TaskProps propVals = new TaskProps();
     openedWait = evalCallProperties(context, concreteID, f, propVals, renames);
-
     evalFunctionCallInner(context, concreteID, f.kind(), concreteType, outVars,
                           inVars, concrete.overload.defaultVals, propVals);
 
@@ -280,13 +279,13 @@ public class FunctionCallEvaluator {
    *
    * @param context
    * @param fc
-   * @param propVals
+   * @param propVals: results go in here.
    * @param renames
    * @throws UserException
    * @returns true if a wait statement was opened
    */
   private boolean evalCallProperties(Context context, FnID id, FunctionCall fc,
-              TaskProps propVals, Map<String, String> renames) throws UserException {
+		  TaskProps propVals, Map<String, String> renames) throws UserException {
     List<Pair<TaskPropKey, Var>> propFutures =
           new ArrayList<Pair<TaskPropKey, Var>>();
     List<Var> waitVars = new ArrayList<Var>();
@@ -294,13 +293,13 @@ public class FunctionCallEvaluator {
 
     for (TaskPropKey ann: fc.annotations().keySet()) {
       checkCallAnnotation(context, id, fc, ann);
-
       SwiftAST expr = fc.annotations().get(ann);
       Type exprType = TypeChecker.findExprType(context, expr);
       Type concreteType = TaskProp.checkFrontendType(context, ann, exprType);
       Var future = exprWalker.eval(context, expr, concreteType, false, renames);
       waitVars.add(future);
-      propFutures.add(Pair.create(ann, future));
+      Pair<TaskPropKey,Var> pair = Pair.create(ann, future);
+      propFutures.add(pair);
     }
 
     if (fc.location() != null) {

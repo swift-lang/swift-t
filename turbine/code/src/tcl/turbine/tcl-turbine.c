@@ -420,6 +420,7 @@ rule_set_name_default(char* name, size_t size, const char* action)
   else
   {
     size_t n = q-action+1;
+    // Do this instead of str[n]cpy to avoid GCC warnings:
     memcpy(name, action, n);
     name[n] = '\0';
   }
@@ -434,7 +435,7 @@ Turbine_RuleOpts_Cmd(ClientData cdata, Tcl_Interp* interp,
   struct rule_opts opts;
   opts.name = NULL;
 
-  const char *action = "dummy action";
+  const char* action = "dummy action";
   // User gave us a list of optional args
   rule_opts_from_list(interp, objv, &opts, objv + 1, objc - 1,
                       t, name_buf_size, action);
@@ -469,14 +470,15 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
   rule_set_opts_default(opts, NULL, NULL, 0);
 
-  for (int keypos = 0; keypos < count; keypos+=2)
+  for (int keypos = 0; keypos < count; keypos += 2)
   {
     int valpos = keypos + 1;
     int rc = rule_opt_from_kv(interp, objv, opts,
                               objs[keypos], objs[valpos]);
     TCL_CHECK(rc);
   }
-  if (opts->name == NULL) {
+  if (opts->name == NULL)
+  {
     rule_set_name_default(name_buffer, name_buffer_size, action);
     opts->name = name_buffer;
   }
