@@ -133,7 +133,7 @@ SETTINGS=0
 export MAIL_ENABLED=${MAIL_ENABLED:-0}
 export MAIL_ADDRESS=${MAIL_ADDRESS:-0}
 export DRY_RUN=0
-WAIT_FOR_JOB=0
+export WAIT_FOR_JOB=0
 
 # Place to link to output directory
 # If TURBINE_OUTPUT_SOFTLINK==/dev/null , this behavior is suppressed

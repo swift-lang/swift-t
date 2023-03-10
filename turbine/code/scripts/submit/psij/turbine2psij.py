@@ -274,13 +274,30 @@ job.spec = spec
 # Submit Job
 jex.submit(job)
 
+print("turbine2psij: job submitted: ID: " + job.native_id)
+
+# Check if we are waiting for job completion:
+w = os.environ.get("WAIT_FOR_JOB", "0")
+if int(w) == 0:
+    # If not, we are done:
+    exit()
+
+# Wait for job completion
+print("turbine2psij: waiting for job completion...")
+# Give PSI/J time to make its first poll:
+# https://github.com/ExaWorks/psij-python/issues/358
+time.sleep(polling_interval * 2)
 while True:
-    status = job.wait(timedelta(seconds=5))  # 3 sec should be plenty in this case
-    if status is None:
-        print("Job status is None: loop ...")
-        continue
-    print(str(status.state))
-    if status.exit_code != 0:
-        raise RuntimeError(f"Job failed with status {status}")
-with output_path.open("r") as fd:
-    assert socket.gethostname() in fd.read()
+    status = job.wait(timedelta(seconds=polling_interval))
+    if status is not None:
+        print("PSI/J job status: " + str(status.state))
+        if status.final:
+            break
+    else:
+        print("PSI/J job status: None")
+
+if status.exit_code != 0:
+    print("turbine2psij: PSI/J job failed with exit code %i" % status)
+    exit(status.exit_code)
+
+print("turbine2psij: OK.")
