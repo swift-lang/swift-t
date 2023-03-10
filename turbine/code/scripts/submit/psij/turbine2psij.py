@@ -1,4 +1,4 @@
-import psij
+
 import sys
 import argparse
 import os
@@ -6,6 +6,9 @@ import datetime
 from datetime import timedelta
 import pathlib
 from pathlib import Path
+
+import psij
+from psij.executors.batch.batch_scheduler_executor import BatchSchedulerExecutorConfig
 
 # Get swift-t parameters from the command line
 
@@ -93,7 +96,8 @@ if not args.executable:
     sys.exit()
 
 
-cfg = psij.JobExecutorConfig(launcher_log_file=args.TURBINE_OUTPUT / "launcher.log")
+cfg = BatchSchedulerExecutorConfig(launcher_log_file=
+                                   args.TURBINE_OUTPUT / "psij-logs")
 jex = psij.JobExecutor.get_instance(args.executor, config=cfg)
 job = psij.Job()
 
@@ -184,7 +188,8 @@ jex.submit(job)
 while True:
     status = job.wait(timedelta(seconds=5))  # 3 sec should be plenty in this case
     if status is None:
-        raise RuntimeError("Job status is None!")
+        print("Job status is None: loop ...")
+        continue
     print(str(status.state))
     if status.exit_code != 0:
         raise RuntimeError(f"Job failed with status {status}")
