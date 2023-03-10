@@ -30,9 +30,9 @@ parser.add_argument("--QUEUE", help="Name of queue in which to run", default=os.
 parser.add_argument(
     "--WALLTIME", help="Wall time argument to pass to scheduler, typically HH:MM:SS", default=os.environ.get('WALLTIME', None ))
 parser.add_argument(
-    "--TURBINE_OUTPUT", 
+    "--TURBINE_OUTPUT",
     help="The run directory for the workflow. Turbine will create this directory if it does not exist. If unset, a default value is automatically set. The TIC file is copied here before execution. Normally, this is unique to a Swift/T workflow execution, and starts out empty.",
-    default=os.environ.get('TURBINE_OUTPUT', None ), 
+    default=os.environ.get('TURBINE_OUTPUT', None ),
     type=pathlib.Path )
 
 parser.add_argument("--TURBINE_OUTPUT_ROOT",
@@ -43,16 +43,16 @@ parser.add_argument("--TURBINE_OUTPUT_FORMAT",
                     help="Allows customization of the automatic output directory creation. See Turbine output",
                     default=os.environ.get('TURBINE_OUTPUT_FORMAT', None ))
 parser.add_argument(
-    "--TURBINE_BASH_L", 
-    default=os.environ.get('TURBINE_BASH_L', 0 ), 
+    "--TURBINE_BASH_L",
+    default=os.environ.get('TURBINE_BASH_L', 0 ),
     help="By default, Swift/T creates a Bash script for job submission that will be invoked with #!/bin/bash -l . Set TURBINE_BASH_L=0 to run with #!/bin/bash . This can avoid problems with environment modules on certain systems.")
 parser.add_argument(
-    "--TURBINE_DIRECTIVE", 
+    "--TURBINE_DIRECTIVE",
     help="Paste the given text into the submit script just after the scheduler directives. Allows users to insert, e.g., reservation information into the script. For example, on PBS, this text will be inserted just after the last default #PBS .",
     default=os.environ.get('TURBINE_DIRECTIVE', None )
     )
 parser.add_argument(
-    "--TURBINE_PRELAUNCH", 
+    "--TURBINE_PRELAUNCH",
     help="Paste the given text into the submit script. Allows users to insert, e.g., module load statements into the script. These shell commands will be inserted just before the execution is launched via mpiexec, aprun, or equivalent.",
     default=os.environ.get('TURBINE_PRELAUNCH', None )
     )
@@ -115,7 +115,7 @@ job = psij.Job()
 # process_count (Optional[int]) If specified, instruct the backend to start this many process instances. This defaults to 1.
 # processes_per_node (Optional[int]) Instruct the backend to run this many process instances on each node.
 # cpu_cores_per_process (Optional[int]) Request this many CPU cores for each process instance. This property is used by a backend to calculate the number of nodes from the process_count
-# gpu_cores_per_process (Optional[int]) 
+# gpu_cores_per_process (Optional[int])
 # exclusive_node_use (bool)
 
 resource = psij.ResourceSpecV1(
@@ -132,8 +132,8 @@ resource = psij.ResourceSpecV1(
 
 # Get Job Attributes
 
-# Default WALLTIME is one minute 
-(h,m,ss)=(0,1,0) 
+# Default WALLTIME is one minute
+(h,m,ss)=(0,1,0)
 
 # Parse time components from argument and create timedelta object
 if args.WALLTIME :
@@ -182,7 +182,7 @@ spec = psij.JobSpec(
     attributes = None , # Empty for initial draft
     pre_launch = None ,
     post_launch = None ,
-    launcher = "mpirun"   
+    launcher = "mpirun"
 )
 
 
