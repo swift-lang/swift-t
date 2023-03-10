@@ -1,4 +1,11 @@
 
+"""
+TURBINE 2 PSI/J
+
+Turbine scheduler script for PSI/J
+https://exaworks.org/psij-python
+"""
+
 import sys
 import argparse
 import os
