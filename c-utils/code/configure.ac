@@ -65,7 +65,7 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
-AC_CHECK_FUNCS([floor gettimeofday memchr memmove memset])
+AC_CHECK_FUNCS([error floor gettimeofday memchr memmove memset])
 AC_CHECK_FUNCS([strchr strdup strnlen strtol])
 # These vary: strchrnul is on Linux but not Mac
 #             strlcpy   is on Mac   but not Linux

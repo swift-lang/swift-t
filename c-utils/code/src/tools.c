@@ -22,6 +22,10 @@
  * */
 
 #include <ctype.h>
+#ifdef HAVE_ERROR
+// GNU extension
+#include <error.h>
+#endif
 #include <errno.h>
 #include <libgen.h>
 #include <limits.h>
@@ -39,6 +43,20 @@
 #include <unistd.h>
 
 #include "src/tools.h"
+
+#ifndef HAVE_ERROR
+void
+error(int status, int errnum, const char* format, ...)
+{
+  printf("error(): %s\n", strerror(errnum));
+  fflush(stdout);
+  va_list ap;
+  va_start(ap, format);
+  vprintf(format, ap);
+  va_end(ap);
+  exit(status);
+}
+#endif
 
 int
 array_length(const void** array)
