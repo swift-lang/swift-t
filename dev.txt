@@ -14,7 +14,7 @@ Settings:
 
 = Swift/T Developers' Guide
 Justin M. Wozniak
-April 2019
+March 2023
 
 This document is for developers interested in modifying or extending
 the Swift/T codebase.
@@ -1701,6 +1701,14 @@ The Swift/T maintainer does this for each Swift/T release.
 ==== Release tester
 
 If these instructions do not work exactly as written, that is a bug.
+
+==== Anaconda package
+
+See:
+
+----
+git@github.com:j-woz/lightsource2-recipes.git
+----
 
 ===== TGZ installations
 
