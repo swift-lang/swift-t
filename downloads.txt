@@ -24,8 +24,11 @@ the +minor+ version number.
 
 [[stable]]
 == Current/stable: Series 1.6
+
+=== 1.6.0
+
 ** http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz[swift-t-1.6.0.tar.gz] (8.3 MB)
-** 2023-01-18
+** 2022-01-18
 ** ExM c-utils 0.6.1
 ** ADLB/X 1.0.1
 ** Turbine 1.4.0
@@ -33,6 +36,8 @@ the +minor+ version number.
 
 *Changes:*
 
+** Support for NVCC compiler
+** Support for SLURM CPU maps
 
 == Series 1.5
 
