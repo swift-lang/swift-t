@@ -43,6 +43,13 @@ the +minor+ version number.
 
 === 1.5.0
 
+NOTE: This version requires Autoconf 2.68 or earlier
+      The workaround is to use Swift/T 1.6.0,
+      install a compatible Autoconf,
+      or edit the Swift/T files named `bootstrap` to run
+      `autoreconf --force --install` instead of
+      `autoconf` / `autoheader`
+
 ** http://swift-lang.github.io/swift-t-downloads/1.5/swift-t-1.5.0.tar.gz[swift-t-1.5.0.tar.gz] (8.3 MB)
 ** 2021-05-12
 ** ExM c-utils 0.6.0
