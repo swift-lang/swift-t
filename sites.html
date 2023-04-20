@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 9.0.0rc1" />
+<meta name="generator" content="AsciiDoc 10.2.0" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.5.0,</span>
-<span id="revdate">August 2022</span>
+<span id="revdate">March 2023</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -760,8 +760,8 @@ asciidoc.install(2);
 <div class="paragraph"><p>This manual provides a reference on how to run Swift/Turbine
 programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.</p></div>
-<div class="paragraph"><p>For each machine, a <strong>public installation</strong> and/or a <strong>build procedure</strong> will
-be provided.  The user need follow only one set of directions.</p></div>
+<div class="paragraph"><p>For each machine, a <strong>public installation</strong> and/or a <strong>build procedure</strong>
+will be provided.  The user need follow only one set of directions.</p></div>
 <div class="paragraph" id="login_node"><p>A <strong>login node installation</strong> may be available on certain systems.  This
 will run Swift/T on the login node of that system.  This only
 acceptable for short debugging runs of 1 minute or less.  If you do
@@ -1453,16 +1453,26 @@ Run standalone Turbine executable
         <code>program.tic</code>.
 </p>
 </dd>
+</dl></div>
+<a name="dry_run"></a>
+<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>-Y</code>
 </dt>
 <dd>
 <p>
-Create a batch submission file, report its name,
-       and exit before submitting it.  Useful for users that need
-       to edit the batch file before submission.<br />
-       (Currently supported systems: <code>slurm</code>)
+DrY run.  Create a batch submission file, report its name,
+and exit before submitting it.  Useful for users that need to
+edit the batch file before submission.  For example:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh
+Submitted batch job 123456</code></pre>
+</div></div>
+<div class="paragraph"><p>Currently supported systems: <code>slurm</code></p></div>
 </dd>
 </dl></div>
 </div>
@@ -1948,236 +1958,38 @@ Simply set the MPI, Tcl (and optionally Python and R) locations in
 </div>
 </div>
 <div class="sect2">
-<h3 id="_jlse_knl">JLSE KNL</h3>
-<div class="paragraph"><p>These are the Knights Landing nodes at ANL/JLSE.</p></div>
-<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
-<div class="paragraph"><p>Dependencies are installed in:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>~wozniak/Public/sfw/icc/Python-2.7.12
-~wozniak/Public/sfw/icc/mpich-3.2
-~wozniak/Public/sfw/icc/tcl-8.6.6
-~wozniak/Public/sfw/ant-1.10.1</code></pre>
-</div></div>
-<div class="paragraph"><p>The same build can be used for login and compute nodes, since the
-architecture and MPI library are the same &#x1f632;.  The only potential
-gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
+<h3 id="_florentia">Florentia</h3>
+<div class="paragraph"><p>Florentia is an ANL/JLSE testbed system: <a href="https://www.jlse.anl.gov/hardware-under-development">https://www.jlse.anl.gov/hardware-under-development</a></p></div>
 <div class="sect3">
 <h4 id="_public_installation_6">Public installation</h4>
-<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
-<div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
-<div class="sect4">
-<h5 id="_login_node">Login node</h5>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2023-01-18</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ nice swift-t workflow.swift</code></pre>
+<pre><code>/home/woz/Public/sfw/swift-t/2023-01-18/stc/bin</code></pre>
 </div></div>
-</div>
-<div class="sect4">
-<h5 id="_compute_node">Compute node</h5>
-<div class="paragraph"><p>Run with</p></div>
+<div class="paragraph"><p>Run with:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
-$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+<pre><code>swift-t -m cobalt workflow.swift</code></pre>
 </div></div>
-<div class="paragraph"><p>The following Swift script will validate that you have 256 cores to
-use:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>app processors() {
-  "cat" "/proc/cpuinfo" ;
-}
-processors();</code></pre>
-</div></div>
-</div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_4">Build instructions</h4>
-<div class="paragraph"><p>Apply</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2023-01-18</p></div>
+<div class="paragraph"><p>Dependencies:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh</code></pre>
+<pre><code>/home/woz/Public/sfw/ant-1.10.5
+/home/woz/Public/sfw/jdk-1.8.0_291
+/home/woz/Public/sfw/swig-4.0.2</code></pre>
 </div></div>
-<div class="paragraph"><p>Configure ADLB and Turbine as usual, no special settings are required.</p></div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_blue_gene">Blue Gene</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>The Blue Gene systems at ANL are <a href="#scheduled_systems">scheduled systems</a> that use Cobalt.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-The job ID is placed in <code>TURBINE_OUTPUT/jobid.txt</code>
-</p>
-</li>
-<li>
-<p>
-Job metadata is placed in <code>TURBINE_OUTPUT/turbine-cobalt.log</code>
-</p>
-</li>
-<li>
-<p>
-The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
-</p>
-</li>
-</ul></div>
-<div class="sect2">
-<h3 id="_blue_gene_q">Blue Gene/Q</h3>
-<div class="sect3">
-<h4 id="_alcf">ALCF</h4>
-<div class="ulist"><ul>
-<li>
-<p>
-Run with:
-</p>
+<div class="paragraph"><p>Modules:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>export MODE=BGQ
-export PROJECT=&lt;project_name&gt;
-export QUEUE=&lt;queue_name&gt;
-swift-t -m cobalt -n 3 program.swift</code></pre>
+<pre><code>module load openmpi/4.1.1-gcc</code></pre>
 </div></div>
-<div class="paragraph"><p>or:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export MODE=BGQ
-export PROJECT=&lt;project_name&gt;
-export QUEUE=&lt;queue_name&gt;
-stc program.swift
-turbine-cobalt-run.zsh -n 2 program.tic</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p>The normal Turbine environment variables are honored, plus the
-<a href="#variables">Turbine scheduler variables</a>.</p></div>
-<div class="sect4">
-<h5 id="_public_installation_mira_cetus">Public installation: Mira/Cetus</h5>
-<div class="paragraph"><p><strong>As of:</strong> 0.8.0 - 5/26/2015</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Swift/T: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
-</p>
-</li>
-<li>
-<p>
-STC: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
-</p>
-</li>
-<li>
-<p>
-Turbine: <code>/soft/workflows/swift/T/turbine/bin/turbine</code>
-</p>
-</li>
-<li>
-<p>
-Turbine/Cobalt: <code>/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="_public_installation_vesta">Public installation: Vesta</h5>
-<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 12/16/2014</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-STC: <code>~wozniak/Public/sfw/stc/bin/stc</code>
-</p>
-</li>
-<li>
-<p>
-Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
-</p>
-</li>
-</ul></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_build_procedure_4">Build procedure</h4>
-<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
-<div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
-<div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with <code>bgxlc</code>.  You must modify the Makefile to use
-<code>bgxlc</code> arguments: <code>-qpic</code>, <code>-qmkshrobj</code>.  You must link with
-<code>-qnostaticlink</code>.</p></div>
-<div class="paragraph"><p>You may get errors that say <code>wrong digit</code>.  This is apparently a bgxlc
-bug when applied to Tcl&#8217;s <code>StrToD.c</code>.  Compiling this file with <code>-O3</code> fixes
-the problem.</p></div>
-<div class="paragraph"><p><strong>Building Swift/T:</strong></p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Compile c-utils with <code>CC=powerpc64-bgq-linux-gcc</code>
-</p>
-</li>
-<li>
-<p>
-Configure ADLB with <code>CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint</code>
-</p>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>CC=mpixlc
---enable-xlc
---disable-static
---with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
---with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
---with-mpi-lib-name=mpich-xl
---without-zlib
---without-hdf5
---disable-static-pkg
---disable-checkpoint</code></pre>
-</div></div>
-</li>
-</ul></div>
-<div class="paragraph"><p><strong>External scripting:</strong></p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Python
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure Python with BGXLC
-</p>
-</li>
-</ul></div>
-</li>
-<li>
-<p>
-R
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure R with GCC as usual
-</p>
-</li>
-<li>
-<p>
-Run with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib</code></pre>
-</div></div>
-</li>
-</ul></div>
-</li>
-</ul></div>
+<div class="paragraph"><p>Simply use the <code>dev/build/build-swift-t.sh</code> method.</p></div>
 </div>
 </div>
 </div>
@@ -2186,11 +1998,73 @@ Run with:
 <h2 id="_cray">Cray</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="_polaris">Polaris</h3>
+<div class="paragraph"><p><a href="https://www.alcf.anl.gov/support/user-guides/polaris/getting-started">Polaris</a>
+is a Cray/AMD/NVIDIA system with PBS at ALCF.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_7">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/grand/CSC249ADOA01/public/sfw/polaris/swift-t/2022-11-28/stc/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>Run with:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Set PROJECT/QUEUE:
+$ export PROJECT=&lt;your project&gt;
+$ export QUEUE=debug
+# The default walltime may be too short for Polaris
+$ export WALLTIME=00:10:00
+# Turn on Polaris-specific PBS settings
+$ export TURBINE_POLARIS=1
+# Turn on the ALCF filesystems
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+# Run Swift/T!
+$ swift-t -m pbs workflow.swift ...</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
+<div class="paragraph"><p>Use Swift/T from Git after <code>ede90591</code> (2022-11-28).</p></div>
+<div class="paragraph"><p>Building Tcl:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Remove the use of <code>-pie</code> and <code>-pipe</code> from the <code>Makefile</code>
+</p>
+</li>
+<li>
+<p>
+Compile with module <code>PrgEnv-nvhpc</code> and <code>cc</code>, then modify the
+<code>Makefile</code> to link with <code>gcc</code>
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>For Java, add to <code>PATH</code>:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/home/wozniak/Public/sfw/x86_64/jdk-1.8.0_291/bin</code></pre>
+</div></div>
+<div class="paragraph"><p>In <code>swift-t-settings.sh</code>, set:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=cc
+COMPILER=NVC
+export MPI_IMPL="MPICH"</code></pre>
+</div></div>
+<div class="paragraph"><p>You can use any Python.</p></div>
+<div class="paragraph"><p>Use module <code>PrgEnv-nvhpc</code> and build as usual with <code>build-swift-t.sh</code>.</p></div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_crusher">Crusher</h3>
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html">Crusher</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p>Thanks to John Gounley for prototyping these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2022-08-10</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2252,7 +2126,7 @@ Then build with <code>build-swift-t.sh</code>.
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2313,7 +2187,7 @@ Then build with <code>build-swift-t.sh</code>
 KNL-based system at TACC.</p></div>
 <div class="paragraph"><p>Some TACC-specific notes are <a href="https://github.com/swift-lang/swift-work/tree/master/tacc-tests">here</a>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_7">Public installation</h4>
+<h4 id="_public_installation_8">Public installation</h4>
 <div class="sect4">
 <h5 id="_compute_nodes">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
@@ -2327,7 +2201,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2365,7 +2239,7 @@ Run <code>build-swift-t.sh</code>
 <h3 id="_theta">Theta</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/theta">Theta</a> is a Cray at ALCF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_8">Public installation</h4>
+<h4 id="_public_installation_9">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes">Login nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:<br />
@@ -2391,7 +2265,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_8">Build instructions</h4>
+<h4 id="_build_instructions_9">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2479,7 +2353,7 @@ Build with:
 <h3 id="_thetagpu">ThetaGPU</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/theta">ThetaGPU</a> is a NVIDIA DGX at ALCF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_9">Public installation</h4>
+<h4 id="_public_installation_10">Public installation</h4>
 <div class="sect4">
 <h5 id="_compute_nodes_4">Compute nodes</h5>
 <div class="paragraph"><p><strong>No Python or R:</strong></p></div>
@@ -2487,7 +2361,7 @@ Build with:
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_9">Build instructions</h5>
+<h5 id="_build_instructions_10">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2511,174 +2385,6 @@ Build with:
 </div>
 </div>
 <div class="sect2">
-<h3 id="_blue_waters">Blue Waters</h3>
-<div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.</p></div>
-<div class="sect3">
-<h4 id="_public_installation_10">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong>  2017/09</p></div>
-<div class="sect4">
-<h5 id="_login_nodes_3">Login nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>~wozniak/Public/sfw/login/swift-t/stc/bin
-~wozniak/Public/sfw/login/swift-t/turbine/bin</code></pre>
-</div></div>
-</div>
-<div class="sect4">
-<h5 id="_compute_nodes_5">Compute nodes</h5>
-<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>~wozniak/Public/sfw/compute/swift-t/stc/bin
-~wozniak/Public/sfw/compute/swift-t/turbine/bin</code></pre>
-</div></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_submitting_jobs">Submitting jobs</h4>
-<div class="paragraph"><p>Submit a compute job with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export QUEUE=normal CRAY_PPN=true PROJECT=&lt;project&gt;
-swift-t -m cray workflow.swift</code></pre>
-</div></div>
-</div>
-<div class="sect3">
-<h4 id="_build_procedure_5">Build procedure</h4>
-<div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
-<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
-flags to configure the MPI library.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure ADLB with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1</code></pre>
-</div></div>
-</li>
-</ul></div>
-</div>
-<div class="sect3">
-<h4 id="_details">Details</h4>
-<div class="paragraph"><p>Submitting jobs on Blue Waters is largely the same with with other Cray
-systems. One difference is that the size of the job is specified using a
-different notation.</p></div>
-<div class="paragraph"><p>Blue Waters requires the submit script to specify job size using
-different directives to other Cray systems.  It does not support the
-<code>mpp</code> directives: trying to use an <code>mpp</code> directive may cause your job
-to be rejected or stuck in the queue. The correct directive is:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>#PBS -l nodes=1:ppn=32</code></pre>
-</div></div>
-<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Blue Waters.  You can invoke
-it as follows (for a single node/32 processes per node):</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic</code></pre>
-</div></div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_jyc">JYC</h3>
-<div class="paragraph"><p>JYC is a small Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.</p></div>
-<div class="sect3">
-<h4 id="_public_installation_11">Public installation</h4>
-<div class="sect4">
-<h5 id="_login_nodes_4">Login nodes</h5>
-<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
-<div class="paragraph"><p>Run with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ nice swift-t -n 8 workflow.swift</code></pre>
-</div></div>
-<div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
-</div>
-<div class="sect4">
-<h5 id="_dependencies_2">Dependencies</h5>
-<div class="paragraph"><p>Dependencies are installed in:</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-<code>~wozniak/Public/sfw/Python-3.6.1rc1</code>
-</p>
-</li>
-<li>
-<p>
-<code>~wozniak/Public/sfw/tcl-8.6.1</code>
-</p>
-</li>
-<li>
-<p>
-<code>~wozniak/Public/sfw/login/mpich-3.2</code>
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect4">
-<h5 id="_compute_nodes_6">Compute nodes</h5>
-<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
-<div class="paragraph"><p>Run with:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ export CRAY_PPN=true
-$ swift-t -n 8 workflow.swift</code></pre>
-</div></div>
-<div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_build_procedure_6">Build procedure</h4>
-<div class="sect4">
-<h5 id="_compute_nodes_7">Compute nodes</h5>
-<div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
-<div class="paragraph"><p>(Same as Blue Waters.)</p></div>
-<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
-flags to configure the MPI library.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Configure ADLB with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
-</div></div>
-</li>
-<li>
-<p>
-Configure Turbine with:
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1</code></pre>
-</div></div>
-</li>
-</ul></div>
-</div>
-</div>
-</div>
-<div class="sect2">
 <h3 id="_cori">Cori</h3>
 <div class="paragraph"><p><a href="http://www.nersc.gov/users/computational-systems/cori/">Cori</a>
 is a Cray XC40 at NERSC.</p></div>
@@ -2691,9 +2397,9 @@ is a Cray XC40 at NERSC.</p></div>
 /global/common/software/nstaff/swift-t/deps/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_public_installation_12">Public installation</h4>
+<h4 id="_public_installation_11">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_5">Login nodes</h5>
+<h5 id="_login_nodes_3">Login nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-12</p></div>
 <div class="paragraph"><p>This installation was configured with the Python 2.7.12 at:</p></div>
 <div class="listingblock">
@@ -2729,7 +2435,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_10">Build instructions</h4>
+<h4 id="_build_instructions_11">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2737,12 +2443,12 @@ $ swift-t -m slurm workflow.swift</code></pre>
 <pre><code>module load gcc</code></pre>
 </div></div>
 <div class="sect4">
-<h5 id="_login_nodes_6">Login nodes</h5>
+<h5 id="_login_nodes_4">Login nodes</h5>
 <div class="paragraph"><p>No special configuration is necessary.  You can use the login node
 MPICH dependency noted above.</p></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_8">Compute nodes</h5>
+<h5 id="_compute_nodes_5">Compute nodes</h5>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
@@ -2783,7 +2489,7 @@ Then build as usual.
 <div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_13">Public installation</h4>
+<h4 id="_public_installation_12">Public installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2808,7 +2514,7 @@ SWIG: <code>/home/users/p01951/Public/sfw/swig-3.0.2/bin/swig</code>
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_7">Build procedure</h4>
+<h4 id="_build_procedure_4">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2852,7 +2558,7 @@ Compile STC as usual.
 <h3 id="_raven">Raven</h3>
 <div class="paragraph"><p>Raven is a Cray XE6/XK7 at Cray.</p></div>
 <div class="sect3">
-<h4 id="_build_procedure_8">Build procedure</h4>
+<h4 id="_build_procedure_5">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2942,7 +2648,7 @@ $ swift-t -m lsf -E 'trace(42);'</code></pre>
 <div class="paragraph"><p>Thanks to the OLCF staff for installing and maintaining this build.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_public_installation_14">Public installation</h4>
+<h4 id="_public_installation_13">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
@@ -2958,7 +2664,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_11">Build instructions</h4>
+<h4 id="_build_instructions_12">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2985,7 +2691,7 @@ build as on any other system.</p></div>
 is a 54-node IBM POWER8 x2 plus NVIDIA Tesla P100 x4 system at OLCF.
 It uses LSF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_15">Public installation</h4>
+<h4 id="_public_installation_14">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2999,7 +2705,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_12">Build instructions</h4>
+<h4 id="_build_instructions_13">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -3232,7 +2938,7 @@ Open MPI developer):
 (ALCF).  Other existing Blue Gene/P systems may be configured in a
 similar way.</p></div>
 <div class="sect4">
-<h5 id="_public_installation_16">Public installation</h5>
+<h5 id="_public_installation_15">Public installation</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3252,7 +2958,7 @@ STC: <code>~wozniak/Public/stc-trunk/bin/stc</code>
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_build_procedure_9">Build procedure</h5>
+<h5 id="_build_procedure_6">Build procedure</h5>
 <div class="paragraph"><p>To run on the <a href="#login_node">login node</a>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3370,7 +3076,7 @@ cluster at the Argonne Leadership Computing Facility (ALCF).  It used
 the Cobalt scheduler.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
 <div class="sect3">
-<h4 id="_public_installation_17">Public installation</h4>
+<h4 id="_public_installation_16">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3394,7 +3100,7 @@ turbine-cobalt-run.zsh -n 3 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_10">Build procedure</h4>
+<h4 id="_build_procedure_7">Build procedure</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3424,7 +3130,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> was a 320-node x86
 cluster at ANL.  It used PBS.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_18">Public installation</h4>
+<h4 id="_public_installation_17">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3443,7 +3149,7 @@ $ ~wozniak/Public/sfw/compute/turbine/scripts/submit/pbs/turbine-pbs-run.zsh -n 
 <a href="#options">Turbine run script options</a> for additional settings.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_11">Build procedure</h4>
+<h4 id="_build_procedure_8">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.7.2 and set <code>LD_LIBRARY_PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3459,9 +3165,9 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 was a Cray XK7 at the Oak Ridge Leadership Computing Facility that
 used PBS+APRUN.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_19">Public installation</h4>
+<h4 id="_public_installation_18">Public installation</h4>
 <div class="sect4">
-<h5 id="_dependencies_3">Dependencies</h5>
+<h5 id="_dependencies_2">Dependencies</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3483,7 +3189,7 @@ Tcl (compute):<br />
 </ul></div>
 </div>
 <div class="sect4">
-<h5 id="_login_nodes_7">Login nodes</h5>
+<h5 id="_login_nodes_5">Login nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2018/03/05</p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.</p></div>
 <div class="paragraph"><p>Add to PATH:<br /></p></div>
@@ -3506,7 +3212,7 @@ MPICH: <code>~wozniak/Public/sfw/login/mpich-3.1.3</code>
 </ul></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_9">Compute nodes</h5>
+<h5 id="_compute_nodes_6">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2018-12-13</p></div>
 <div class="paragraph"><p>This installation is for the general public, particularly INSPIRE and
 CANDLE users.</p></div>
@@ -3534,7 +3240,7 @@ Cray MPI: <code>/opt/cray/mpt/default/gni/mpich-gnu/5.1</code>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_submitting_jobs_2">Submitting jobs</h4>
+<h4 id="_submitting_jobs">Submitting jobs</h4>
 <div class="paragraph"><p>Titan requires that user output goes to a Lustre file system.  Set a
 soft link like this so that Turbine output goes to Lustre:</p></div>
 <div class="listingblock">
@@ -3565,7 +3271,7 @@ swift-t -m cray -n 64 workflow.swift</code></pre>
 <a href="#options">settings file</a>.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_12">Build procedure</h4>
+<h4 id="_build_procedure_9">Build procedure</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2018-12-13</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -3638,7 +3344,7 @@ Run:
 </ol></div>
 </div>
 <div class="sect3">
-<h4 id="_submitting_jobs_3">Submitting jobs</h4>
+<h4 id="_submitting_jobs_2">Submitting jobs</h4>
 <div class="paragraph"><p>Titan requires the submit script to specify job size using different
 directives to other Cray systems.  It does not support the <code>#PBS -l ppn:</code>
 directive. The correct directive is:</p></div>
@@ -3667,9 +3373,9 @@ export PPN=32</code></pre>
 install Turbine and its libraries in <code>/lustre</code>.  Also, your data must
 be in <code>/lustre</code>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_20">Public installation</h4>
+<h4 id="_public_installation_19">Public installation</h4>
 <div class="sect4">
-<h5 id="_login_nodes_8">Login nodes</h5>
+<h5 id="_login_nodes_6">Login nodes</h5>
 <div class="paragraph"><p><strong>As of: Swift/T 1.3.0, October 2017</strong></p></div>
 <div class="paragraph"><p>This installation is for use on the <a href="#login_node">login node</a>.  It has
 <a href="http://swift-lang.github.io/swift-t/guide.html#leaf_python">Python</a>
@@ -3695,7 +3401,7 @@ and
 </div></div>
 </div>
 <div class="sect4">
-<h5 id="_compute_nodes_10">Compute nodes</h5>
+<h5 id="_compute_nodes_7">Compute nodes</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3753,7 +3459,7 @@ Run Swift:
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_13">Build procedure</h4>
+<h4 id="_build_procedure_10">Build procedure</h4>
 <div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
 flags to configure the MPI library.</p></div>
 <div class="ulist"><ul>
@@ -3812,7 +3518,7 @@ export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
 cluster at ANL.  It uses PBS.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Master, 8/17/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_21">Public installation</h4>
+<h4 id="_public_installation_20">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3852,7 +3558,7 @@ turbine-pbs-run.zsh -n 8 program.tic</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_14">Build procedure</h4>
+<h4 id="_build_procedure_11">Build procedure</h4>
 <div class="paragraph"><p>Use GCC 4.8.2 and MVAPICH 2.0:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3934,7 +3640,7 @@ done</code></pre>
 <h3 id="_edison">Edison</h3>
 <div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_22">Public Installation</h4>
+<h4 id="_public_installation_21">Public Installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -3943,7 +3649,7 @@ done</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_procedure_15">Build Procedure</h4>
+<h4 id="_build_procedure_12">Build Procedure</h4>
 <div class="paragraph"><p>Load (and unload) appropriate modules:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4126,6 +3832,401 @@ JOB_ID=2835290.edique02</code></pre>
 </div></div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_blue_waters">Blue Waters</h3>
+<div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_22">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong>  2017/09</p></div>
+<div class="sect4">
+<h5 id="_login_nodes_7">Login nodes</h5>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/login/swift-t/stc/bin
+~wozniak/Public/sfw/login/swift-t/turbine/bin</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_8">Compute nodes</h5>
+<div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/compute/swift-t/stc/bin
+~wozniak/Public/sfw/compute/swift-t/turbine/bin</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_submitting_jobs_3">Submitting jobs</h4>
+<div class="paragraph"><p>Submit a compute job with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export QUEUE=normal CRAY_PPN=true PROJECT=&lt;project&gt;
+swift-t -m cray workflow.swift</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_13">Build procedure</h4>
+<div class="paragraph"><p><strong>As of:</strong>  2017/01</p></div>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
+flags to configure the MPI library.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_details">Details</h4>
+<div class="paragraph"><p>Submitting jobs on Blue Waters is largely the same with with other Cray
+systems. One difference is that the size of the job is specified using a
+different notation.</p></div>
+<div class="paragraph"><p>Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does not support the
+<code>mpp</code> directives: trying to use an <code>mpp</code> directive may cause your job
+to be rejected or stuck in the queue. The correct directive is:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>#PBS -l nodes=1:ppn=32</code></pre>
+</div></div>
+<div class="paragraph"><p>The <code>turbine-aprun-run.zsh</code> script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_jyc">JYC</h3>
+<div class="paragraph"><p>JYC is a small Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_23">Public installation</h4>
+<div class="sect4">
+<h5 id="_login_nodes_8">Login nodes</h5>
+<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ nice swift-t -n 8 workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
+</div>
+<div class="sect4">
+<h5 id="_dependencies_3">Dependencies</h5>
+<div class="paragraph"><p>Dependencies are installed in:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>~wozniak/Public/sfw/Python-3.6.1rc1</code>
+</p>
+</li>
+<li>
+<p>
+<code>~wozniak/Public/sfw/tcl-8.6.1</code>
+</p>
+</li>
+<li>
+<p>
+<code>~wozniak/Public/sfw/login/mpich-3.2</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_nodes_9">Compute nodes</h5>
+<div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/compute/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ export CRAY_PPN=true
+$ swift-t -n 8 workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>This installation has Python 3.6.1.</p></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_procedure_14">Build procedure</h4>
+<div class="sect4">
+<h5 id="_compute_nodes_10">Compute nodes</h5>
+<div class="paragraph"><p><strong>As of:</strong>  2017/03</p></div>
+<div class="paragraph"><p>(Same as Blue Waters.)</p></div>
+<div class="paragraph"><p>Cray systems do not use <code>mpicc</code>.  We set <code>CC=gcc</code> and use compiler
+flags to configure the MPI library.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure ADLB with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1</code></pre>
+</div></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_jlse_knl">JLSE KNL</h3>
+<div class="paragraph"><p>These are the Knights Landing nodes at ANL/JLSE.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2017/03/09</p></div>
+<div class="paragraph"><p>Dependencies are installed in:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/icc/Python-2.7.12
+~wozniak/Public/sfw/icc/mpich-3.2
+~wozniak/Public/sfw/icc/tcl-8.6.6
+~wozniak/Public/sfw/ant-1.10.1</code></pre>
+</div></div>
+<div class="paragraph"><p>The same build can be used for login and compute nodes, since the
+architecture and MPI library are the same &#x1f632;.  The only potential
+gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_24">Public installation</h4>
+<div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
+<div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
+<div class="sect4">
+<h5 id="_login_node">Login node</h5>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ nice swift-t workflow.swift</code></pre>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_compute_node">Compute node</h5>
+<div class="paragraph"><p>Run with</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The following Swift script will validate that you have 256 cores to
+use:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>app processors() {
+  "cat" "/proc/cpuinfo" ;
+}
+processors();</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_14">Build instructions</h4>
+<div class="paragraph"><p>Apply</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh</code></pre>
+</div></div>
+<div class="paragraph"><p>Configure ADLB and Turbine as usual, no special settings are required.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_blue_gene">Blue Gene</h3>
+<div class="paragraph"><p>The Blue Gene systems at ANL are <a href="#scheduled_systems">scheduled systems</a> that use Cobalt.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The job ID is placed in <code>TURBINE_OUTPUT/jobid.txt</code>
+</p>
+</li>
+<li>
+<p>
+Job metadata is placed in <code>TURBINE_OUTPUT/turbine-cobalt.log</code>
+</p>
+</li>
+<li>
+<p>
+The Cobalt log is placed in <code>TURBINE_OUTPUT</code>
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_blue_gene_q">Blue Gene/Q</h4>
+<div class="sect4">
+<h5 id="_alcf">ALCF</h5>
+<div class="ulist"><ul>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+swift-t -m cobalt -n 3 program.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>or:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MODE=BGQ
+export PROJECT=&lt;project_name&gt;
+export QUEUE=&lt;queue_name&gt;
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>The normal Turbine environment variables are honored, plus the
+<a href="#variables">Turbine scheduler variables</a>.</p></div>
+<div class="paragraph"><p><strong>Public installation: Mira/Cetus</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 0.8.0 - 5/26/2015</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Swift/T: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+STC: <code>/soft/workflows/swift/T/stc/bin/swift-t</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>/soft/workflows/swift/T/turbine/bin/turbine</code>
+</p>
+</li>
+<li>
+<p>
+Turbine/Cobalt: <code>/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><strong>Public installation: Vesta</strong></p></div>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 12/16/2014</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+STC: <code>~wozniak/Public/sfw/stc/bin/stc</code>
+</p>
+</li>
+<li>
+<p>
+Turbine: <code>~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh</code>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect4">
+<h5 id="_build_procedure_15">Build procedure</h5>
+<div class="paragraph"><p><strong>As of:</strong> 0.7.0 - 11/20/2014</p></div>
+<div class="paragraph"><p><strong>Building Tcl:</strong></p></div>
+<div class="paragraph"><p>The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with <code>bgxlc</code>.  You must modify the Makefile to use
+<code>bgxlc</code> arguments: <code>-qpic</code>, <code>-qmkshrobj</code>.  You must link with
+<code>-qnostaticlink</code>.</p></div>
+<div class="paragraph"><p>You may get errors that say <code>wrong digit</code>.  This is apparently a bgxlc
+bug when applied to Tcl&#8217;s <code>StrToD.c</code>.  Compiling this file with <code>-O3</code> fixes
+the problem.</p></div>
+<div class="paragraph"><p><strong>Building Swift/T:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Compile c-utils with <code>CC=powerpc64-bgq-linux-gcc</code>
+</p>
+</li>
+<li>
+<p>
+Configure ADLB with <code>CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint</code>
+</p>
+</li>
+<li>
+<p>
+Configure Turbine with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p><strong>External scripting:</strong></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Python
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure Python with BGXLC
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+R
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Configure R with GCC as usual
+</p>
+</li>
+<li>
+<p>
+Run with:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -4134,7 +4235,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div id="footer-text">
 Version 1.5.0<br />
 Last updated
- 2022-08-10 14:29:17 CDT
+ 2023-03-07 16:54:15 CST
 </div>
 </div>
 </body>

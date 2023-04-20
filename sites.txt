@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.5.0, August 2022
+v1.5.0, March 2023
 
 
 == How to use this guide
@@ -31,8 +31,8 @@ This manual provides a reference on how to run Swift/Turbine
 programs on a variety of systems.  It also contains an index of sites
 maintained by the Swift/T team for use by Turbine.
 
-For each machine, a *public installation* and/or a *build procedure* will
-be provided.  The user need follow only one set of directions.
+For each machine, a *public installation* and/or a *build procedure*
+will be provided.  The user need follow only one set of directions.
 
 [[login_node]]
 A *login node installation* may be available on certain systems.  This
@@ -421,7 +421,6 @@ shell scripting.
 default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
-
 ////
 Had to do a passthrough manual anchor to get this to work right:
 ////
@@ -451,10 +450,23 @@ system scheduler (e.g., +qsub+).
         (created by link:guide.html#mkstatic[+mkstatic.tcl+]) instead of
         +program.tic+.
 
-+-Y+:: Create a batch submission file, report its name,
-       and exit before submitting it.  Useful for users that need
-       to edit the batch file before submission. +
-       (Currently supported systems: +slurm+)
+++++
+<a name="dry_run"></a>
+++++
+
++-Y+::
+DrY run.  Create a batch submission file, report its name,
+and exit before submitting it.  Useful for users that need to
+edit the batch file before submission.  For example:
++
+----
+$ swift-t -m slurm -t Y workflow.swift
+turbine: dry run: submit with .../submit.sh
+$ sbatch .../submit.sh
+Submitted batch job 123456
+----
++
+Currently supported systems: +slurm+
 
 [[turbine_output]]
 === Turbine output directory
@@ -796,168 +808,99 @@ Use the +dev/build/build-swift-t.sh+ method.
 Simply set the MPI, Tcl (and optionally Python and R) locations in
 +swift-t-settings.sh+ and build.
 
-=== JLSE KNL
+=== Florentia
 
-These are the Knights Landing nodes at ANL/JLSE.
-
-*As of:* 2017/03/09
-
-Dependencies are installed in:
-
-----
-~wozniak/Public/sfw/icc/Python-2.7.12
-~wozniak/Public/sfw/icc/mpich-3.2
-~wozniak/Public/sfw/icc/tcl-8.6.6
-~wozniak/Public/sfw/ant-1.10.1
-----
-
-The same build can be used for login and compute nodes, since the
-architecture and MPI library are the same &#x1f632;.  The only potential
-gotcha is loading the Intel +compilervars.sh+ script to set library paths.
+Florentia is an ANL/JLSE testbed system: https://www.jlse.anl.gov/hardware-under-development
 
 ==== Public installation
 
-Add to +PATH+: +~wozniakPublic/sfw/icc/swift-t/stc/bin+
+*As of:* 2023-01-18
 
-This version is linked to Python 2.7.12.
-
-===== Login node
-
-Run with
-
+Add to +PATH+:
 ----
-$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ nice swift-t workflow.swift
+/home/woz/Public/sfw/swift-t/2023-01-18/stc/bin
 ----
 
-===== Compute node
-
-Run with
-
+Run with:
 ----
-$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
-$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
-$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
-----
-
-The following Swift script will validate that you have 256 cores to
-use:
-
-----
-app processors() {
-  "cat" "/proc/cpuinfo" ;
-}
-processors();
+swift-t -m cobalt workflow.swift
 ----
 
 ==== Build instructions
 
-Apply
+*As of:* 2023-01-18
 
+Dependencies:
 ----
-source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
-----
-
-Configure ADLB and Turbine as usual, no special settings are required.
-
-== Blue Gene
-
-The Blue Gene systems at ANL are <<scheduled_systems,scheduled
-systems>> that use Cobalt.
-
-* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
-* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
-* The Cobalt log is placed in +TURBINE_OUTPUT+
-
-=== Blue Gene/Q
-
-==== ALCF
-
-* Run with:
-+
-----
-export MODE=BGQ
-export PROJECT=<project_name>
-export QUEUE=<queue_name>
-swift-t -m cobalt -n 3 program.swift
-----
-+
-or:
-+
-----
-export MODE=BGQ
-export PROJECT=<project_name>
-export QUEUE=<queue_name>
-stc program.swift
-turbine-cobalt-run.zsh -n 2 program.tic
+/home/woz/Public/sfw/ant-1.10.5
+/home/woz/Public/sfw/jdk-1.8.0_291
+/home/woz/Public/sfw/swig-4.0.2
 ----
 
-The normal Turbine environment variables are honored, plus the
-<<variables,Turbine scheduler variables>>.
-
-===== Public installation: Mira/Cetus
-
-*As of:* 0.8.0 - 5/26/2015
-
-* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
-* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
-* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
-* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
-
-===== Public installation: Vesta
-
-*As of:* 0.7.0 - 12/16/2014
-
-* STC: +~wozniak/Public/sfw/stc/bin/stc+
-* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
-
-==== Build procedure
-
-*As of:* 0.7.0 - 11/20/2014
-
-*Building Tcl:*
-
-The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with +bgxlc+.  You must modify the Makefile to use
-+bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
-+-qnostaticlink+.
-
-You may get errors that say +wrong digit+.  This is apparently a bgxlc
-bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
-the problem.
-
-*Building Swift/T:*
-
-* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
-* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
-* Configure Turbine with:
-+
+Modules:
 ----
-CC=mpixlc
---enable-xlc
---disable-static
---with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
---with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
---with-mpi-lib-name=mpich-xl
---without-zlib
---without-hdf5
---disable-static-pkg
---disable-checkpoint
+module load openmpi/4.1.1-gcc
 ----
 
-*External scripting:*
-
-* Python
-** Configure Python with BGXLC
-* R
-** Configure R with GCC as usual
-** Run with:
-+
-----
-turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
-----
+Simply use the +dev/build/build-swift-t.sh+ method.
 
 == Cray
+
+=== Polaris
+
+https://www.alcf.anl.gov/support/user-guides/polaris/getting-started[Polaris]
+is a Cray/AMD/NVIDIA system with PBS at ALCF.
+
+==== Public installation
+
+*As of:* 2022-11-30
+
+Add to +PATH+: +
+----
+/grand/CSC249ADOA01/public/sfw/polaris/swift-t/2022-11-28/stc/bin
+----
+
+Run with: +
+----
+# Set PROJECT/QUEUE:
+$ export PROJECT=<your project>
+$ export QUEUE=debug
+# The default walltime may be too short for Polaris
+$ export WALLTIME=00:10:00
+# Turn on Polaris-specific PBS settings
+$ export TURBINE_POLARIS=1
+# Turn on the ALCF filesystems
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+# Run Swift/T!
+$ swift-t -m pbs workflow.swift ...
+----
+
+==== Build instructions
+
+*As of:* 2022-11-30
+
+Use Swift/T from Git after +ede90591+ (2022-11-28).
+
+Building Tcl:
+
+. Remove the use of +-pie+ and +-pipe+ from the +Makefile+
+. Compile with module +PrgEnv-nvhpc+ and +cc+, then modify the
++Makefile+ to link with +gcc+
+
+For Java, add to +PATH+: +
+----
+/home/wozniak/Public/sfw/x86_64/jdk-1.8.0_291/bin
+----
+
+In +swift-t-settings.sh+, set: +
+----
+CC=cc
+COMPILER=NVC
+export MPI_IMPL="MPICH"
+----
+You can use any Python.
+
+Use module +PrgEnv-nvhpc+ and build as usual with +build-swift-t.sh+.
 
 === Crusher
 
@@ -1189,148 +1132,6 @@ In +swift-t-settings.sh+
 . Set +TCL_INSTALL+ to the location above.
 . Set +CC=mpicc+
 . Build as usual.
-
-=== Blue Waters
-
-Blue Waters is a Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.
-
-==== Public installation
-
-*As of:*  2017/09
-
-===== Login nodes
-
-Add to +PATH+:
-----
-~wozniak/Public/sfw/login/swift-t/stc/bin
-~wozniak/Public/sfw/login/swift-t/turbine/bin
-----
-
-===== Compute nodes
-
-Add to +PATH+:
-----
-~wozniak/Public/sfw/compute/swift-t/stc/bin
-~wozniak/Public/sfw/compute/swift-t/turbine/bin
-----
-
-==== Submitting jobs
-
-Submit a compute job with:
-
-----
-export QUEUE=normal CRAY_PPN=true PROJECT=<project>
-swift-t -m cray workflow.swift
-----
-
-==== Build procedure
-
-*As of:*  2017/01
-
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
-+
-----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
-----
-+
-* Configure Turbine with:
-+
-----
---with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
-----
-
-==== Details
-
-Submitting jobs on Blue Waters is largely the same with with other Cray
-systems. One difference is that the size of the job is specified using a
-different notation.
-
-Blue Waters requires the submit script to specify job size using
-different directives to other Cray systems.  It does not support the
-+mpp+ directives: trying to use an +mpp+ directive may cause your job
-to be rejected or stuck in the queue. The correct directive is:
-----
-#PBS -l nodes=1:ppn=32
-----
-
-The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
-it as follows (for a single node/32 processes per node):
-----
-QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
-----
-
-=== JYC
-
-JYC is a small Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign.
-
-==== Public installation
-
-===== Login nodes
-
-Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
-
-Run with:
-
-----
-$ nice swift-t -n 8 workflow.swift
-----
-
-This installation has Python 3.6.1.
-
-===== Dependencies
-
-Dependencies are installed in:
-
-* +~wozniak/Public/sfw/Python-3.6.1rc1+
-* +~wozniak/Public/sfw/tcl-8.6.1+
-* +~wozniak/Public/sfw/login/mpich-3.2+
-
-===== Compute nodes
-
-Simply add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
-
-Run with:
-
-----
-$ export CRAY_PPN=true
-$ swift-t -n 8 workflow.swift
-----
-
-This installation has Python 3.6.1.
-
-==== Build procedure
-
-===== Compute nodes
-
-*As of:*  2017/03
-
-(Same as Blue Waters.)
-
-Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
-flags to configure the MPI library.
-
-* Configure ADLB with:
-+
-----
-./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
-CC=gcc
-CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
-LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
-----
-+
-* Configure Turbine with:
-+
-----
---with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
-----
 
 === Cori
 
@@ -2448,6 +2249,309 @@ Inspect one of the output files +joined<n>.txt+ produced in the $TURBINE_OUTPUT 
 
 ----
 cat $TURBINE_OUTPUT/joined4.txt
+----
+
+=== Blue Waters
+
+Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Public installation
+
+*As of:*  2017/09
+
+===== Login nodes
+
+Add to +PATH+:
+----
+~wozniak/Public/sfw/login/swift-t/stc/bin
+~wozniak/Public/sfw/login/swift-t/turbine/bin
+----
+
+===== Compute nodes
+
+Add to +PATH+:
+----
+~wozniak/Public/sfw/compute/swift-t/stc/bin
+~wozniak/Public/sfw/compute/swift-t/turbine/bin
+----
+
+==== Submitting jobs
+
+Submit a compute job with:
+
+----
+export QUEUE=normal CRAY_PPN=true PROJECT=<project>
+swift-t -m cray workflow.swift
+----
+
+==== Build procedure
+
+*As of:*  2017/01
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
+----
++
+* Configure Turbine with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
+----
+
+==== Details
+
+Submitting jobs on Blue Waters is largely the same with with other Cray
+systems. One difference is that the size of the job is specified using a
+different notation.
+
+Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does not support the
++mpp+ directives: trying to use an +mpp+ directive may cause your job
+to be rejected or stuck in the queue. The correct directive is:
+----
+#PBS -l nodes=1:ppn=32
+----
+
+The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+QUEUE=normal CRAY_PPN=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tic
+----
+
+=== JYC
+
+JYC is a small Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign.
+
+==== Public installation
+
+===== Login nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/login/swift-t/stc/bin+
+
+Run with:
+
+----
+$ nice swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+===== Dependencies
+
+Dependencies are installed in:
+
+* +~wozniak/Public/sfw/Python-3.6.1rc1+
+* +~wozniak/Public/sfw/tcl-8.6.1+
+* +~wozniak/Public/sfw/login/mpich-3.2+
+
+===== Compute nodes
+
+Simply add to +PATH+: +~wozniak/Public/sfw/compute/swift-t/stc/bin+
+
+Run with:
+
+----
+$ export CRAY_PPN=true
+$ swift-t -n 8 workflow.swift
+----
+
+This installation has Python 3.6.1.
+
+==== Build procedure
+
+===== Compute nodes
+
+*As of:*  2017/03
+
+(Same as Blue Waters.)
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich-gnu/5.1/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich-gnu/5.1/lib -lmpich"
+----
++
+* Configure Turbine with:
++
+----
+--with-mpi=/opt/cray/mpt/default/gni/mpich-gnu/5.1
+----
+
+=== JLSE KNL
+
+These are the Knights Landing nodes at ANL/JLSE.
+
+*As of:* 2017/03/09
+
+Dependencies are installed in:
+
+----
+~wozniak/Public/sfw/icc/Python-2.7.12
+~wozniak/Public/sfw/icc/mpich-3.2
+~wozniak/Public/sfw/icc/tcl-8.6.6
+~wozniak/Public/sfw/ant-1.10.1
+----
+
+The same build can be used for login and compute nodes, since the
+architecture and MPI library are the same &#x1f632;.  The only potential
+gotcha is loading the Intel +compilervars.sh+ script to set library paths.
+
+==== Public installation
+
+Add to +PATH+: +~wozniakPublic/sfw/icc/swift-t/stc/bin+
+
+This version is linked to Python 2.7.12.
+
+===== Login node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ nice swift-t workflow.swift
+----
+
+===== Compute node
+
+Run with
+
+----
+$ source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh intel64
+$ export QUEUE=knl_7210 MODE=cluster WALLTIME=HH:MM:SS
+$ swift-t -m cobalt -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH workflow.swift
+----
+
+The following Swift script will validate that you have 256 cores to
+use:
+
+----
+app processors() {
+  "cat" "/proc/cpuinfo" ;
+}
+processors();
+----
+
+==== Build instructions
+
+Apply
+
+----
+source /soft/compilers/intel/compilers_and_libraries/linux/bin/compilervars.sh
+----
+
+Configure ADLB and Turbine as usual, no special settings are required.
+
+=== Blue Gene
+
+The Blue Gene systems at ANL are <<scheduled_systems,scheduled
+systems>> that use Cobalt.
+
+* The job ID is placed in +TURBINE_OUTPUT/jobid.txt+
+* Job metadata is placed in +TURBINE_OUTPUT/turbine-cobalt.log+
+* The Cobalt log is placed in +TURBINE_OUTPUT+
+
+==== Blue Gene/Q
+
+===== ALCF
+
+* Run with:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+swift-t -m cobalt -n 3 program.swift
+----
++
+or:
++
+----
+export MODE=BGQ
+export PROJECT=<project_name>
+export QUEUE=<queue_name>
+stc program.swift
+turbine-cobalt-run.zsh -n 2 program.tic
+----
+
+The normal Turbine environment variables are honored, plus the
+<<variables,Turbine scheduler variables>>.
+
+*Public installation: Mira/Cetus*
+
+*As of:* 0.8.0 - 5/26/2015
+
+* Swift/T: +/soft/workflows/swift/T/stc/bin/swift-t+
+* STC: +/soft/workflows/swift/T/stc/bin/swift-t+
+* Turbine: +/soft/workflows/swift/T/turbine/bin/turbine+
+* Turbine/Cobalt: +/soft/workflows/swift/T/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+*Public installation: Vesta*
+
+*As of:* 0.7.0 - 12/16/2014
+
+* STC: +~wozniak/Public/sfw/stc/bin/stc+
+* Turbine: +~wozniak/Public/sfw/turbine/scripts/submit/cobalt/turbine-cobalt-run.zsh+
+
+===== Build procedure
+
+*As of:* 0.7.0 - 11/20/2014
+
+*Building Tcl:*
+
+The GCC installation does not support shared libraries.  Thus, you
+must compile Tcl with +bgxlc+.  You must modify the Makefile to use
++bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
++-qnostaticlink+.
+
+You may get errors that say +wrong digit+.  This is apparently a bgxlc
+bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
+the problem.
+
+*Building Swift/T:*
+
+* Compile c-utils with +CC=powerpc64-bgq-linux-gcc+
+* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc --disable-checkpoint+
+* Configure Turbine with:
++
+----
+CC=mpixlc
+--enable-xlc
+--disable-static
+--with-tcl=/home/wozniak/Public/sfw/ppc64/bgxlc/dynamic/tcl-8.5.12
+--with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm
+--with-mpi-lib-name=mpich-xl
+--without-zlib
+--without-hdf5
+--disable-static-pkg
+--disable-checkpoint
+----
+
+*External scripting:*
+
+* Python
+** Configure Python with BGXLC
+* R
+** Configure R with GCC as usual
+** Run with:
++
+----
+turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
 ----
 
 

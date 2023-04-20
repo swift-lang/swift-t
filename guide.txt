@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.5.0, November 2021
+v1.5.0, March 2023
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -51,7 +51,8 @@ http://github.com/swift-lang/swift-t/issues
 == Installation
 
 Swift/T may be installed via binary Debian (and Ubuntu) packages,
-from http://spack.io[Spack], or
+from http://spack.io[Spack],
+via Anaconda, or
 from source.
 
 Our GitHub repository is here:
@@ -160,7 +161,7 @@ the <<build_manual,manual build process>>).
    Kit (+default-jdk+), Make (+make+), and GCC for C (+gcc+).
 
 STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
-Turbine is compatible with GCC, ICC, Clang, and XLC.
+Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.
 If you have difficulties with compiler compatibility,
 please <<support,contact us>>.
 
