@@ -23,7 +23,18 @@ Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
 [[stable]]
-== Current/stable: Series 1.5
+== Current/stable: Series 1.6
+** http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz[swift-t-1.6.0.tar.gz] (8.3 MB)
+** 2023-01-18
+** ExM c-utils 0.6.1
+** ADLB/X 1.0.1
+** Turbine 1.4.0
+** STC 1.0.0
+
+*Changes:*
+
+
+== Series 1.5
 
 === 1.5.0
 
