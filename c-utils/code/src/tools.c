@@ -48,6 +48,8 @@
 void
 error(int status, int errnum, const char* format, ...)
 {
+  // GNU doc says that error() should flush stdout first:
+  fflush(stdout);
   printf("error(): %s\n", strerror(errnum));
   fflush(stdout);
   va_list ap;
