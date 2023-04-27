@@ -478,12 +478,13 @@ make_parents(const char* filename)
   {
     b = make_parents(d);
     if (!b) return false;
-    // printf("mkdir: '%s'\n", d);
+    // printf("mkdir: '%s' ...\n", d); fflush(stdout);
     rc = mkdir(d, S_IRWXU|S_IRWXG|S_IRWXO);
-    // printf("mkdir: %i\n", rc);
+    // printf("mkdir: '%s' -> %i\n", d, rc); fflush(stdout);
     if (rc != 0)
     {
       printf("could not mkdir: '%s'\n", d);
+      fflush(stdout);
       error(1, errno, "error");
       return false;
     }
@@ -491,6 +492,7 @@ make_parents(const char* filename)
   else if (rc != 0)
   {
     printf("could not stat: '%s'\n", d);
+    fflush(stdout);
     error(1, errno, "error");
     return false;
   }
