@@ -472,6 +472,7 @@ make_parents(const char* filename)
   // printf("parent: '%s'\n", d);
   if (strcmp(d, ".") == 0)
     return true;
+  errno = 0;
   rc = stat(d, &s);
   if (errno == ENOENT)
   {
