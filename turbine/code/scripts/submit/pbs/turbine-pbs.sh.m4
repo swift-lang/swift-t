@@ -82,11 +82,13 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 export getenv(USER_ENV_CODE)
 
 log_path LD_LIBRARY_PATH
+echo
 
 (
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
+  set -x
   # Run Turbine!
   ${TURBINE_LAUNCHER} \
     ${TURBINE_LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER:-} ${COMMAND[@]}
