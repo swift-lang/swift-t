@@ -10,7 +10,7 @@ TCL_BLOB_SRC := $(SWIG_C_FILE_BLOB) $(DIR)/blob.c
 
 TCL_BLOB_O := $(TCL_BLOB_SRC:.c=.o)
 
-# Disable conversion warnings for Swift-generated code
+# Disable conversion warnings for SWIG-generated code
 ifeq ($(USE_XLC),0)
 ifeq ($(USE_NVC),0)
 $(TCL_BLOB_O): CFLAGS+=-Wno-conversion
