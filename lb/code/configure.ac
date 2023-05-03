@@ -1,7 +1,7 @@
 
 # EXM ADLB/X (XLB)
 # configure.ac
-# Compile this with: ./setup.sh
+# Compile this with: ./bootstrap
 # After compiling this, get help with: ./configure --help
 
 define([adlb_version],
