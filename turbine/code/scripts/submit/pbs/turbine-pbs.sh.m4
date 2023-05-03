@@ -52,6 +52,7 @@ set -eu
 
 START=$( date "+%s.%N" )
 echo "TURBINE-PBS.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
 PROCS=getenv(PROCS)
