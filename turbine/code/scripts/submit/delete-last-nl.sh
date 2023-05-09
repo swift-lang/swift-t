@@ -3,6 +3,8 @@ set -eu
 
 # DELETE LAST NL
 # Deletes last character of given file
+# Modifies file in place
+# Just run ./delete-last-nl.sh common.m4
 # See common.m4
 
 if [ ${#} != 1 ]
