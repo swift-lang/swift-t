@@ -23,31 +23,31 @@
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
-ifelse(getenv_nospace(QUEUE),`',,
+ifelse(getenv(QUEUE),`',,
 #SBATCH --partition=getenv(QUEUE)
 )
 
-ifelse(getenv_nospace(PROJECT),`',,
+ifelse(getenv(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
-#SBATCH --job-name=getenv_nospace(TURBINE_JOBNAME)
+#SBATCH --job-name=getenv(TURBINE_JOBNAME)
 
-#SBATCH --time=getenv_nospace(WALLTIME)
-#SBATCH --nodes=getenv_nospace(NODES)
-#SBATCH --ntasks-per-node=getenv_nospace(PPN)
-#SBATCH -D getenv_nospace(TURBINE_OUTPUT)
+#SBATCH --time=getenv(WALLTIME)
+#SBATCH --nodes=getenv(NODES)
+#SBATCH --ntasks-per-node=getenv(PPN)
+#SBATCH -D getenv(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
-ifelse(getenv_nospace(MAIL_ENABLED),`1',
-#SBATCH --mail-user=getenv_nospace(MAIL_ADDRESS)
+ifelse(getenv(MAIL_ENABLED),`1',
+#SBATCH --mail-user=getenv(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
 )
 
 # This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
 # Note this works because sbatch ignores all but the last of duplicate arguments
 # TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
+ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
 #SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
