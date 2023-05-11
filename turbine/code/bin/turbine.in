@@ -198,7 +198,7 @@ fi
 
 shift $(( OPTIND-1 ))
 
-if [[ ${#*} < 1 ]]
+if (( ${#*} < 1 ))
 then
   echo "turbine: no program!"
   exit 1
@@ -213,7 +213,7 @@ then
   print "turbine: program not found: ${PROGRAM}"
   exit 1
 fi
-if [[ ${#PROGRAM%.swift} != ${#PROGRAM} ]]
+if (( ${#PROGRAM%.swift} != ${#PROGRAM} ))
 then
   print "turbine: Given a Swift script: ${PROGRAM}"
   print "\t Turbine inputs are normally *.tic or *.tcl"
