@@ -242,19 +242,6 @@ then
   which ${TURBINE_LAUNCHER}
 fi
 
-check_machine()
-# Confirm that we have a script for this machine type
-{
-  local M
-  for M in $( ls ${TURBINE_HOME}/scripts/submit )
-  do
-    [[ ${MACHINE_MODE} == ${M} ]] && return
-  done
-  # We didn't find a match
-  print "No such machine: ${MACHINE_MODE}"
-  exit 1
-}
-
 # Advisory Python PATH check:
 # Disable with TURBINE_PYTHON_CHECK=0
 if (( ${#TURBINE_USE_PYTHON} && ${TURBINE_PYTHON_CHECK:-1} ))
@@ -282,6 +269,19 @@ then
     fi
   fi
 fi
+
+check_machine()
+# Confirm that we have a script for this machine type
+{
+  local M
+  for M in $( ls ${TURBINE_HOME}/scripts/submit )
+  do
+    [[ ${MACHINE_MODE} == ${M} ]] && return
+  done
+  # We didn't find a match
+  print "No such machine: ${MACHINE_MODE}"
+  exit 1
+}
 
 if (( ${#MACHINE_MODE} != 0 ))
 then
