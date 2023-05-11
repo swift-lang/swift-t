@@ -56,7 +56,6 @@ namespace eval turbine {
     # Count of particular worker types (dict from type name to count)
     variable n_workers_by_type
 
-
     # How to display string values in the log
     variable log_string_mode
 
