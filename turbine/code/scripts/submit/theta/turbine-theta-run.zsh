@@ -73,7 +73,7 @@ export ENV_LIST
 export COMMAND
 TURBINE_THETA_M4=${TURBINE_HOME}/scripts/submit/theta/turbine-theta.sh.m4
 TURBINE_THETA=${TURBINE_OUTPUT}/turbine-theta.sh
-m4 ${COMMON_M4} ${TURBINE_THETA_M4} > ${TURBINE_THETA}
+m4 -P ${COMMON_M4} ${TURBINE_THETA_M4} > ${TURBINE_THETA}
 print "wrote submit script: ${TURBINE_THETA}"
 chmod u+x ${TURBINE_OUTPUT}/turbine-theta.sh
 

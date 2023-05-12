@@ -42,7 +42,7 @@ TURBINE_PBS_M4=${TURBINE_HOME}/scripts/submit/pbs/turbine-pbs.sh.m4
 TURBINE_PBS=${TURBINE_OUTPUT}/turbine-pbs.sh
 
 # Filter/create the PBS submit file
-m4 ${COMMON_M4} ${TURBINE_PBS_M4} > ${TURBINE_PBS}
+m4 -P ${COMMON_M4} ${TURBINE_PBS_M4} > ${TURBINE_PBS}
 print "wrote: ${TURBINE_PBS}"
 
 # Launch it!

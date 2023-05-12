@@ -49,7 +49,7 @@ TURBINE_SGE_M4=${TURBINE_HOME}/scripts/submit/sge/turbine.sge.m4
 TURBINE_SGE=${TURBINE_OUTPUT}/turbine.sge
 
 # Filter/create the SGE submit file
-m4 ${TURBINE_SGE_M4} > ${TURBINE_SGE}
+m4 -P ${TURBINE_SGE_M4} > ${TURBINE_SGE}
 print "wrote: ${TURBINE_SGE}"
 
 # Launch it!

@@ -79,7 +79,7 @@ TURBINE_APRUN=${TURBINE_OUTPUT}/turbine-aprun.sh
 mkdir -pv ${TURBINE_OUTPUT}
 touch ${TURBINE_APRUN}
 
-m4 ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
+m4 -P ${TURBINE_APRUN_M4} > ${TURBINE_APRUN}
 
 print "wrote: ${TURBINE_APRUN}"
 

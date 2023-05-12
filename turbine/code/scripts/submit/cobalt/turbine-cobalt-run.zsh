@@ -103,7 +103,7 @@ then
   export COMMAND
   TURBINE_COBALT_M4=${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4
   TURBINE_COBALT=${TURBINE_OUTPUT}/turbine-cobalt.sh
-  m4 ${COMMON_M4} ${TURBINE_COBALT_M4} > ${TURBINE_COBALT}
+  m4 -P ${COMMON_M4} ${TURBINE_COBALT_M4} > ${TURBINE_COBALT}
   print "wrote: ${TURBINE_COBALT}"
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
   qsub -n ${NODES}             \
