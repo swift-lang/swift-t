@@ -50,6 +50,14 @@ The platform directory, e.g., `/path/to/swift-t/dev/conda/linux-64`
 LOG::
 The output from `conda-build.sh`.  Should be in `PLATFORM`.
 
+== Script architecture
+
+. Each PLATFORM directory has a `build-platform.sh` script to start the build.
+. This calls the top-level `conda-build.sh` script.
+. This sets up meta.yaml for the PLATFORM
+. `conda build` calls `build.sh` for the PLATFORM, but this simply
+  calls the reusable `build-generic.sh` at the top level.
+
 == Maintainer workflow
 
 Setup:
