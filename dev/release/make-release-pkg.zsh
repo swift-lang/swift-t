@@ -22,8 +22,16 @@ set -eu
 # Section III: Copy (export) into TMP/distro/RELEASE
 # Section IV:  Make tar.gz
 
+# Get this directory (absolute):
+THIS=${0:A:h}
+# Top level of Swift/T Git clone
+TOP=${THIS:h:h}
+
+# Work from the top level:
+cd ${TOP}
+
 # Define RELEASE numbers
-source dev/get-versions.sh
+source $TOP/dev/get-versions.sh
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
@@ -37,9 +45,6 @@ export PKG_TYPE=src
 
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
-
-# Canonicalize this directory
-THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 setopt PUSHD_SILENT KSH_GLOB
 
@@ -114,9 +119,6 @@ distclean()
 }
 
 # SECTION I
-
-# Top level of Swift/T Git clone
-TOP=$( cd ${THIS}/../../ ; /bin/pwd )
 
 TMP=${TMP:-/tmp}
 DISTRO=${TMP}/distro
