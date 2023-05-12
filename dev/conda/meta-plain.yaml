@@ -1,0 +1,49 @@
+{% set name = "swift-t" %}
+{% set version = "1.6.0" %}
+{% set major = version.rpartition('.')[0] %}
+{% set sha256 = 'f5b26bb1ac427c271e19dff2146101f7c4da03652d66426a291e96638ba15c03' %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+  sha256: {{ sha256 }}
+
+source:
+  path: /tmp/distro/{{ name }}-{{ version }}/{{ name }}-{{ version }}
+
+build:
+  number: 1
+
+requirements:
+  build:
+    - ant
+    - autoconf
+    - gcc
+    - make
+    - openjdk
+    - mpich-mpicc
+    - python==3.9
+    - swig
+    - zsh
+  run:
+    - mpich-mpicc
+    - openjdk
+    - python==3.9
+    - zsh
+
+test:
+  commands:
+    - swift-t -h
+    - swift-t -v
+#< - false
+
+about:
+  home: http://swift-lang.org/Swift-T
+  license: Apache License 2.0
+  summary: Swift/T - High Performance Parallel Scripting Language
+
+extra:
+  recipe-maintainers:
+    - mrakitin
+    - wozniak
+    - swift-t
