@@ -136,6 +136,7 @@ We use M4 to preprocess `meta.yaml` and `settings.sed`.
 .. enable/disable R
 
 We restrict our M4 usage to:
+
 * `m4_include()`: does simple file insertion
 * `m4_ifelse()`: does conditional substitution
 * `getenv()`: substitutes in an environment variable value
