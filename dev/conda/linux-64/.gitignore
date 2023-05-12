@@ -1,2 +1,4 @@
 # Ignore local copies:
 meta.yaml
+
+*.log
