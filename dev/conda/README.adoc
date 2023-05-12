@@ -1,0 +1,79 @@
+
+= Swift/T Anaconda Packages
+
+== Quickstart
+
+* Use `./conda-build.sh` to build the Conda package.
+** This always does `conda build purge-all`, which is necessary
+* Use `conda-install.sh` to install the Conda package
+** This installs the deps separately
+
+== End user interface
+
+The users should be able to simply do:
+
+----
+$ conda install -c conda-forge mamba
+$ mamba install -c conda-forge -c swift-t swift-t-r
+----
+
+== Anaconda tips
+
+Input files:
+
+* meta.yaml
+** Used by `conda build` to find metadata and dependencies
+* build.sh
+** Executed by `conda build` to compile C code, etc.
+
+== `conda build` behavior
+
+. conda build
+.. Conda creates a temporary environment
+.. Installs your packages from meta.yaml
+.. Runs your build.sh script in that environment
+.. Bundles the environment
+.. Leaves it at: `CONDA/conda-bld/linux-64/swift-t-*.tar.bz2`
+. conda install
+.. Unpacks the bundle
+.. String renaming for libraries and scripts
+.. Copies everything into the conda space
+
+== Supported platforms
+
+These are standard directory names:
+
+* `linux-64`:  "Linux on PC":  Works
+* `osx-64`:    "Mac on PC":    WIP
+* `aarch64`:   "Linux on ARM": TODO
+* `osx-arm64`: "Mac on ARM":   ?
+
+== Maintainer workflow
+
+Setup:
+
+* Run `setup-conda.sh` to setup a working Conda environment
+* Run the Swift/T `dev/release/make-release-pkg.sh` script to
+  create the "exported" Swift/T source tree in `/tmp`
+
+Loop:
+
+* Run `conda-build.sh`.  See notes there.
+* Check `conda-build.log` for errors.
+* Add debug output to `build.sh` as needed to diagnose problems.
+* Run `conda-install.sh` to test the installation.  See notes there.
+
+== To create a new platform
+
+* Copy the platform-specific directory
+* Run the conda-build script and debug it
+
+== Upload to Anaconda
+
+The Anaconda package name is taken from `meta.yaml` and put in the PKG.
+
+----
+$ P=/tmp/woz/miniconda-3.9-build-r-2023-04-21/conda-bld/linux-64/swift-t-r-1.6.0-py39r42_1.tar.bz2
+$ anaconda login
+$ anaconda upload $P
+----
