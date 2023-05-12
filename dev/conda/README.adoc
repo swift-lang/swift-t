@@ -142,3 +142,11 @@ We restrict our M4 usage to:
 * `getenv()`: substitutes in an environment variable value
 
 We pull `common.m4` from Turbine to get `getenv()`.
+
+Example:
++
+----
+m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+----
++
+means: if `$ENABLE_R == 1`, include file `pkgs-R.yaml` here.
