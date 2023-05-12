@@ -25,8 +25,6 @@ if (( ${#R} )) export ENABLE_R=1
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
-exit
-
 # Backup the old log
 LOG=conda-build.log
 if [[ -f $LOG ]]
