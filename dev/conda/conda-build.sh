@@ -72,20 +72,3 @@ FILE=${UPLOAD[-1]}
   echo md5sum: $( md5sum $FILE )
 ) | tee --append $LOG
 echo
-
-
-
-# --debug
-
-#      --no-remove-work-dir
-
-# --bootstrap NAME
-
-# --keep-old-work       .
-  #
-
-# --skip-existing
-
-# -c "bioconda/label/cf201901"
-
-# --output # <-- This skips the build and just does a print!
