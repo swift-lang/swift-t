@@ -1,6 +1,8 @@
 
 = Swift/T Anaconda Packages
 
+:toc:
+
 == Quickstart
 
 * Use `./conda-build.sh` to build the Conda package.
