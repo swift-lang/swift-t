@@ -371,7 +371,7 @@ do
   USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 
-COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
+COMMON_M4=${TURBINE_HOME}/scripts/common.m4
 
 ## Local Variables:
 ## mode: sh
