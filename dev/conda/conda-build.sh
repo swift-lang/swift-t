@@ -20,7 +20,12 @@ COMMON_M4=$SWIFT_T_TOP/turbine/code/scripts/common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
 
-if (( ${#R} )) export ENABLE_R=1
+if (( ! ${#R} )) {
+  export NAME="swift-t"
+} else {
+  export ENABLE_R=1
+  export NAME="swift-t-r"
+}
 
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
