@@ -98,7 +98,7 @@ We call `conda build` inside our `conda-build.sh`
 === Speed
 
 It is best to create a Miniconda installation in RAM disk on your system
-for building the packages.
+for building the packages.  Installing Miniconda should take less than 10 seconds.
 
 == Upload to Anaconda
 
