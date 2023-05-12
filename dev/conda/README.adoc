@@ -1,7 +1,10 @@
 
+:toc:
+:toc-placement!:
+
 = Swift/T Anaconda Packages
 
-:toc:
+toc::[]
 
 == Quickstart
 
