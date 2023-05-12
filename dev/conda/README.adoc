@@ -49,7 +49,7 @@ One such directory per platform, e.g., `/path/to/swift-t/dev/conda/linux-64` +
 This is set in the environment at build time by Conda.
 
 LOG::
-The output from `conda-build.sh`.  Should be in `RECIPE_DIR`.
+The output from `build-generic.sh`.  Should be in `RECIPE_DIR`.
 
 == Script architecture
 
@@ -70,7 +70,7 @@ Setup:
 
 Loop:
 
-* Run `conda-build.sh`.  See notes there.
+* Run `build-platform.sh`.  See notes there.
 * Check `conda-build.log` (`LOG`) for errors.
 * Add debug output to `build.sh` as needed to diagnose problems.
 * Run `conda-install.sh` to test the installation.  See notes there.
