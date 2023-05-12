@@ -53,7 +53,7 @@ The output from `conda-build.sh`.  Should be in `RECIPE_DIR`.
 
 == Script architecture
 
-. Each RECIPE_DIR directory has a `build-platform.sh` script to start the build.
+. Each `RECIPE_DIR` directory has a `build-platform.sh` script to start the build.
 . This calls the top-level `conda-build.sh` script.
 . This sets up meta.yaml for the `RECIPE_DIR`
 . `conda build` calls `build.sh` for the `RECIPE_DIR`, but this simply
@@ -95,15 +95,15 @@ We call `conda build` inside our `conda-build.sh`
 
 . `conda build`
 .. Conda creates a temporary environment
-.. Installs your packages from meta.yaml
-.. Copies build.sh to that environment as `conda_build.sh'
-.. Runs your build.sh script in that environment
+.. Installs your packages from `meta.yaml` in that environment
+.. Copies `build.sh` to that environment as `conda_build.sh'
+.. Runs your `build.sh` script in that environment
 .. Bundles the environment
 .. Leaves it at: `CONDA/conda-bld/linux-64/swift-t-*.tar.bz2`
 . `conda install`
 .. Unpacks the bundle
-.. String renaming for libraries and scripts
-.. Copies everything into the Conda environment
+.. Performs path string renaming for libraries and scripts
+.. Copies everything into the target Conda environment
 
 === Speed
 
