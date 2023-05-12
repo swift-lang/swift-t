@@ -36,7 +36,6 @@ then
     exit 1
   fi
   export R_HOME=$( R RHOME )
-  SETTINGS_SED=$RECIPE_DIR/settings-R.sed
   R --vanilla --no-echo \
     -e 'install.packages("RInside", repos="http://cran.us.r-project.org")'
 fi

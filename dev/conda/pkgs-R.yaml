@@ -1,0 +1,5 @@
+# pkgs-R.yaml: START
+# Extra packages for R
+    - r
+    - r-rinside
+# pkgs-R.yaml: STOP

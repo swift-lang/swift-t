@@ -1,0 +1,5 @@
+# env-R.yaml: START
+# Extra environment setting for R
+  script_env:
+    - ENABLE_R=1
+# env-R.yaml: STOP

@@ -10,18 +10,22 @@ set -eu
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
+# The Swift/T Git clone:
+SWIFT_T_TOP=${DEV_CONDA:h:h}
 
 R=""
 zparseopts -D -E R=R
 
-if (( ${#R} ))
-then
-  cp -v $DEV_CONDA/meta-R.yaml meta.yaml
-  cp -v $DEV_CONDA/settings-R.sed settings.sed
-else
-  cp -v $DEV_CONDA/meta-plain.yaml meta.yaml
-  cp -v $DEV_CONDA/settings.sed settings.sed
-fi
+COMMON_M4=$SWIFT_T_TOP/turbine/code/scripts/common.m4
+META_TEMPLATE=$DEV_CONDA/meta-template.yaml
+SETTINGS_SED=$DEV_CONDA/settings.sed
+
+if (( ${#R} )) export ENABLE_R=1
+
+m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
+m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
+
+exit
 
 # Backup the old log
 LOG=conda-build.log

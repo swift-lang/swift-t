@@ -121,3 +121,23 @@ $ P=CONDA/conda-bld/linux-64/swift-t-*.tar.bz2
 $ anaconda login
 $ anaconda upload $P
 ----
+
+== M4 usage
+
+We use M4 to preprocess `meta.yaml` and `settings.sed`.
+
+. `meta.yaml` configures the Conda environment,
+  so we preprocess this file to:
+.. set metadata
+.. set environment variables
+.. select dependency packages
+. `settings.sed` preprocesses `swift-t-settings.sh`
+  so we preprocess this file to:
+.. enable/disable R
+
+We restrict our M4 usage to:
+* `m4_include()`: does simple file insertion
+* `m4_ifelse()`: does conditional substitution
+* `getenv()`: substitutes in an environment variable value
+
+We pull `common.m4` from Turbine to get `getenv()`.
