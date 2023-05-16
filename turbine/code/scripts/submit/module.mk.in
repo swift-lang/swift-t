@@ -3,8 +3,7 @@ SCRIPTS_SUBMIT_DIR := scripts/submit
 
 SCRIPTS_SUBMIT += $(SCRIPTS_SUBMIT_DIR)/run-init.zsh \
                   $(SCRIPTS_SUBMIT_DIR)/turbine-output-search.zsh \
-                  $(SCRIPTS_SUBMIT_DIR)/turbine-output-list.zsh \
-                  $(SCRIPTS_SUBMIT_DIR)/common.m4
+                  $(SCRIPTS_SUBMIT_DIR)/turbine-output-list.zsh
 
 include $(SCRIPTS_SUBMIT_DIR)/cobalt/module.mk
 include $(SCRIPTS_SUBMIT_DIR)/cray/module.mk
