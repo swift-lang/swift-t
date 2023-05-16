@@ -7,15 +7,11 @@ set -eu
 
 renice --priority 19 --pid $$
 
-pwd
-ls
-
 MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
 
 rm -fv $MINICONDA
 rm -fr $WORKSPACE/sfw/Miniconda-build
 rm -fr $WORKSPACE/sfw/Miniconda-install
-
 
 (
   set -x
@@ -26,12 +22,26 @@ rm -fr $WORKSPACE/sfw/Miniconda-install
 
 echo NOW
 
-PATH=$WORKSPACE/sfw/Miniconda-build/bin:$PATH
+PY=$WORKSPACE/sfw/Miniconda-build
+PATH=$PY/bin:$PATH
 
-set +x
-source "$WORKSPACE/sfw/Miniconda-build/etc/profile.d/conda.sh"
+source $PY/etc/profile.d/conda.sh
 conda activate base
+conda env list
 
-swift-t/dev/conda/setup-conda.sh
+task()
+{
+  echo task: ${*}
+  /bin/time --format "time: %E" ${*}
+}
+
+task swift-t/dev/conda/setup-conda.sh
+task swift-t/dev/conda/linux-64/conda-platform.sh
+
+PY=$WORKSPACE/sfw/Miniconda-install
+PATH=$PY/bin:$PATH
+source $PY/etc/profile.d/conda.sh
+conda activate base
+conda env list
 
 # PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
