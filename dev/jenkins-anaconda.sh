@@ -14,4 +14,6 @@ bash Anaconda3-2022.10-Linux-x86_64.sh -b -p $WORKSPACE/sfw/Anaconda3
 PATH=$WORKSPACE/sfw/Anaconda3/bin:$PATH
 which pip
 pip install deap
-pip install python-csv
+
+# python-csv is broken - 2023-05-16
+# pip install python-csv
