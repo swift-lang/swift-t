@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # JENKINS ANACONDA SH
 # Install Anaconda for GCE Jenkins
@@ -24,6 +25,6 @@ PATH=$WORKSPACE/sfw/Miniconda-build/bin:$PATH
 source "$WORKSPACE/sfw/Miniconda-build/etc/profile.d/conda.sh"
 conda activate base
 
-dev/conda/setup-conda.sh
+src/swift-t/dev/conda/setup-conda.sh
 
 # PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
