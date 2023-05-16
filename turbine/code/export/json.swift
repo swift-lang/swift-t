@@ -50,6 +50,12 @@ import python;
   t = string2float(s);
 }
 
+(boolean t) json_get_boolean(string J, string path)
+{
+  s = json_get(J, path);
+  t = string2boolean(s);
+}
+
 (int t) json_array_size(string J, string path)
 {
   s = python_persist("from turbine_helpers import *",
