@@ -24,6 +24,8 @@ rm -fr $WORKSPACE/sfw/Miniconda-install
   bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
 )
 
+echo NOW
+
 PATH=$WORKSPACE/sfw/Miniconda-build/bin:$PATH
 
 set +x
