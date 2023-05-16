@@ -9,13 +9,13 @@ renice --priority 19 --pid $$
 pwd
 ls
 
-MINICONDA=Miniconda3-py39_22.11.1-1-Linux-x86_64.sh
+MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
 
 rm -fv $MINICONDA
 rm -fr $WORKSPACE/sfw/Miniconda-build
 rm -fr $WORKSPACE/sfw/Miniconda-install
 
-wget --no-verbose https://repo.anaconda.com/archive/$MINICONDA
+wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
 bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-build
 bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
 
