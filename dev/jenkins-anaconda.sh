@@ -6,14 +6,24 @@ set -eux
 
 renice --priority 19 --pid $$
 
-rm -fv Anaconda3-2022.10-Linux-x86_64.sh
-rm -fr $WORKSPACE/sfw/Anaconda3
-wget --no-verbose https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
-bash Anaconda3-2022.10-Linux-x86_64.sh -b -p $WORKSPACE/sfw/Anaconda3
+pwd
+ls
 
-PATH=$WORKSPACE/sfw/Anaconda3/bin:$PATH
-which pip
-pip install deap
+MINICONDA=Miniconda3-py39_22.11.1-1-Linux-x86_64.sh
 
-# python-csv is broken - 2023-05-16
-# pip install python-csv
+rm -fv $MINICONDA
+rm -fr $WORKSPACE/sfw/Miniconda-build
+rm -fr $WORKSPACE/sfw/Miniconda-install
+
+wget --no-verbose https://repo.anaconda.com/archive/$MINICONDA
+bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-build
+bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
+
+PATH=$WORKSPACE/sfw/Miniconda-build/bin:$PATH
+
+source "$WORKSPACE/sfw/Miniconda-build/etc/profile.d/conda.sh"
+conda activate base
+
+dev/conda/setup-conda.sh
+
+# PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
