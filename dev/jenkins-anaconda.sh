@@ -3,7 +3,7 @@
 # JENKINS ANACONDA SH
 # Install Anaconda for GCE Jenkins
 
-set -eux
+set -eu
 
 renice --priority 19 --pid $$
 
@@ -16,15 +16,20 @@ rm -fv $MINICONDA
 rm -fr $WORKSPACE/sfw/Miniconda-build
 rm -fr $WORKSPACE/sfw/Miniconda-install
 
-wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
-bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-build
-bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
+
+(
+  set -x
+  wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
+  bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-build
+  bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
+)
 
 PATH=$WORKSPACE/sfw/Miniconda-build/bin:$PATH
 
+set +x
 source "$WORKSPACE/sfw/Miniconda-build/etc/profile.d/conda.sh"
 conda activate base
 
-src/swift-t/dev/conda/setup-conda.sh
+swift-t/dev/conda/setup-conda.sh
 
 # PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
