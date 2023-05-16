@@ -7,7 +7,7 @@ set -eux
 renice --priority 19 --pid $$
 
 rm -fv Anaconda3-2022.10-Linux-x86_64.sh
-rm -fv $WORKSPACE/sfw/Anaconda3
+rm -fr $WORKSPACE/sfw/Anaconda3
 wget --no-verbose https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
 bash Anaconda3-2022.10-Linux-x86_64.sh -b -p $WORKSPACE/sfw/Anaconda3
 
