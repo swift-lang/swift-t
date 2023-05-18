@@ -16,6 +16,11 @@ SWIFT_T_TOP=${DEV_CONDA:h:h}
 R=""
 zparseopts -D -E R=R
 
+if [[ ! -d /tmp/distro ]] {
+  print "conda-build.sh: Swift/T source not found at: /tmp/distro"
+  return 1
+}
+
 COMMON_M4=$SWIFT_T_TOP/turbine/code/scripts/common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
