@@ -66,26 +66,27 @@ then
   echo
 fi
 
-(
+{
   DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
   print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
+  (
+    echo "using python, conda:"
+    which python conda
+    conda env list
+    echo
 
-  echo "using conda:"
-  which conda
-  echo
+    set -x
+    # This purge-all is extremely important:
+    conda build purge-all
 
-  set -x
-  # This purge-all is extremely important:
-  conda build purge-all
-
-  # Build the package!
-  conda build \
-        -c conda-forge \
-        --dirty \
-        .
-
+    # Build the package!
+    conda build \
+          -c conda-forge \
+          --dirty \
+          .
+  )
   print "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
-) |& tee $LOG
+} |& tee $LOG
 echo
 echo "conda build succeeded."
 echo
