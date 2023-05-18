@@ -12,4 +12,5 @@ PLATFORM=${0:A:h}
 # The Swift/T Conda script directory:
 DEV_CONDA=${PLATFORM:h}
 
+cd $PLATFORM
 $DEV_CONDA/conda-build.sh $R
