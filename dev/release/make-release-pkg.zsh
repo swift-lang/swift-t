@@ -102,7 +102,9 @@ crash()
 # Copy into export directory
 export_copy()
 {
+  echo export_copy ...
   cp -uv --parents ${*} ${TARGET}
+  echo cp ok
 }
 
 export_copy_dir()
@@ -205,6 +207,7 @@ mkdir -pv ${TARGET}
 pushd turbine/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
+print copy ok
 popd
 printf "OK\n\n"
 
