@@ -197,6 +197,7 @@ export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
+set -x
 # Turbine
 print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
