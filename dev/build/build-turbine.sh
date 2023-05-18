@@ -94,6 +94,10 @@ if [[ "${TCL_VERSION:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
+if [[ "${TCLSH:-}" != "" ]]; then
+  EXTRA_ARGS+=" --with-tclsh=${TCLSH}"
+fi
+
 if [[ "${TCLSH_LOCAL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tclsh-local=${TCLSH_LOCAL}"
 fi
