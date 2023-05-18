@@ -52,16 +52,16 @@ sed -i -f $SETTINGS_SED swift-t-settings.sh
 ### BIN ###
 cd $PREFIX/bin
 for file in stc swift-t helpers.zsh; do
-    ln -sv ../swift-t/stc/bin/$file .
+  ln -sv ../swift-t/stc/bin/$file .
 done
 for file in turbine; do
-    ln -sv ../swift-t/turbine/bin/$file .
+  ln -sv ../swift-t/turbine/bin/$file .
 done
 
 ### ETC ###
 cd $PREFIX/etc
 for file in stc-config.sh turbine-version.txt; do
-    ln -sv ../swift-t/stc/etc/$file .
+  ln -sv ../swift-t/stc/etc/$file .
 done
 ln -sv ../swift-t/stc/etc/help .
 ln -sv ../swift-t/turbine/etc/version.txt .
@@ -75,7 +75,7 @@ ln -sv libmpi.so libmpi.so.20
 ### SCRIPTS ###
 cd $PREFIX/scripts
 for file in turbine-config.sh; do
-    ln -sv ../swift-t/turbine/scripts/$file .
+  ln -sv ../swift-t/turbine/scripts/$file .
 done
 
 echo "BUILD.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"
