@@ -21,6 +21,29 @@ if [[ ! -d /tmp/distro ]] {
   return 1
 }
 
+# Check that the conda-build tool in use is in the
+#       selected Python installation
+if ! which conda-build >& /dev/null
+then
+  print "conda-build.sh: could not find tool: conda-build"
+  print "                run ./setup-conda.sh"
+  return 1
+fi
+# Look up executable:
+CONDA_BUILD_TOOL=( =conda-build )
+# Get its directory:
+TOOLDIR=${CONDA_BUILD_TOOL:h}
+# Look up executable:
+PYTHON_EXE=( =python )
+# Get its directory:
+PYTHON_BIN=${PYTHON_EXE:h}
+if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
+  print "conda-build.sh: conda-build is not in your python directory!"
+  print "                this is probably wrong!"
+  print "                run ./setup-conda.sh"
+  return 1
+}
+
 COMMON_M4=$SWIFT_T_TOP/turbine/code/scripts/common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
