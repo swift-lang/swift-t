@@ -20,8 +20,6 @@ rm -fr $WORKSPACE/sfw/Miniconda-install
   bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
 )
 
-echo NOW
-
 PY=$WORKSPACE/sfw/Miniconda-build
 PATH=$PY/bin:$PATH
 
@@ -34,6 +32,8 @@ task()
   echo task: ${*}
   /bin/time --format "time: %E" ${*}
 }
+
+task swift-t/dev/release/make-release-pkg.zsh
 
 task swift-t/dev/conda/setup-conda.sh
 task swift-t/dev/conda/linux-64/conda-platform.sh
