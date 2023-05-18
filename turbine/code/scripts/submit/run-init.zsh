@@ -216,6 +216,7 @@ then
 fi
 
 # Round NODES up for extra processes
+#   i.e.: if there is a remainder, add an extra node
 export NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
 export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
