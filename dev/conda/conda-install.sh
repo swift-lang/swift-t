@@ -42,5 +42,5 @@ LIST=(
 )
 
 set -x
-conda install -c conda-forge $LIST
-conda install $PKG
+conda install --yes -c conda-forge $LIST
+conda install --yes $PKG
