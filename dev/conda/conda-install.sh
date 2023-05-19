@@ -22,6 +22,7 @@ if (( ${#*} != 1 )) {
 }
 PKG=$1
 
+zmodload zsh/stat
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
 print ${A[mtime]} ${A[size]} $PKG
 printf "md5sum: "
