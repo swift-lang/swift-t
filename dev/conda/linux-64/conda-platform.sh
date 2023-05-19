@@ -8,7 +8,7 @@ R=""
 zparseopts -D -E R=R
 
 # Get this directory (absolute):
-PLATFORM=${0:A:h}
+export PLATFORM=${0:A:h}
 # The Swift/T Conda script directory:
 DEV_CONDA=${PLATFORM:h}
 

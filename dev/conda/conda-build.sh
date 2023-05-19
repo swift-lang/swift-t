@@ -7,6 +7,14 @@ set -eu
 # Generates meta.yaml and runs `conda build'
 # This script runs in the PLATFORM subdirectory
 #      and should not change directories
+# A LOG is produced named conda-build.log
+
+if (( ${#PLATFORM:-} == 0 )) {
+  print "conda-build.sh: unset: PLATFORM"
+  print "                This script should be called by"
+  print "                a conda-platform.sh"
+  return 1
+}
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
