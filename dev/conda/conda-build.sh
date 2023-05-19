@@ -100,12 +100,17 @@ echo "conda build succeeded."
 echo
 
 # Find the "upload" text for the PKG in the LOG,
+#      this will give us the PKG file name
 UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
-FILE=${UPLOAD[-1]}
+PKG=${UPLOAD[-1]}
 
-# Capture the checksum for later
+# Print metadata about the PKG
 (
   echo
-  echo md5sum: $( md5sum $FILE )
+  zmodload zsh/stat
+  zstat -H A -F "%Y-%m-%d %H:%M" $PKG
+  print ${A[mtime]} ${A[size]} $PKG
+  printf "md5sum: "
+  md5sum $PKG
 ) | tee --append $LOG
 echo
