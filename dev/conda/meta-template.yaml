@@ -38,9 +38,7 @@ m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
 
 test:
   commands:
-    - swift-t -h
     - swift-t -v
-#< - false
 
 about:
   home: http://swift-lang.org/Swift-T
@@ -49,4 +47,5 @@ about:
 
 extra:
   recipe-maintainers:
+    - swift-t
     - mrakitin
