@@ -3,8 +3,13 @@
 # Simply calls build-generic.
 # `conda build` calls this as Bash.
 
-set -x
-# THIS=$( cd $( dirname $0 ) ; /bin/pwd -P )
+echo "build.sh: START"
+
 DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
-$DEV_CONDA/build-generic.sh
+(
+  set -x
+  $DEV_CONDA/build-generic.sh
+)
+
+echo "build.sh: STOP"
