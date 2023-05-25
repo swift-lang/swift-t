@@ -22,9 +22,9 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 
 # Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
-ifelse(getenv(PROJECT), `',,
+m4_ifelse(getenv(PROJECT), `',,
 #BSUB -P getenv(PROJECT))
-ifelse(getenv(QUEUE), `',,
+m4_ifelse(getenv(QUEUE), `',,
 #BSUB -q getenv(QUEUE))
 #BSUB -J getenv(TURBINE_JOBNAME)
 #BSUB -nnodes getenv_nospace(NODES)

@@ -23,11 +23,11 @@
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
-ifelse(getenv(QUEUE),`',,
+m4_ifelse(getenv(QUEUE),`',,
 #SBATCH --partition=getenv(QUEUE)
 )
 
-ifelse(getenv(PROJECT),`',,
+m4_ifelse(getenv(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
@@ -39,7 +39,7 @@ ifelse(getenv(PROJECT),`',,
 #SBATCH -D getenv(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
-ifelse(getenv(MAIL_ENABLED),`1',
+m4_ifelse(getenv(MAIL_ENABLED),`1',
 #SBATCH --mail-user=getenv(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
 )
@@ -47,7 +47,7 @@ ifelse(getenv(MAIL_ENABLED),`1',
 # This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
 # Note this works because sbatch ignores all but the last of duplicate arguments
 # TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
+m4_ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
 #SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
@@ -119,6 +119,7 @@ fi
 module list
 
 (
+  export PMI_MMAP_SYNC_WAIT_TIME=1800
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
