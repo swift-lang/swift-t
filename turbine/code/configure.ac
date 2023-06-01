@@ -1313,7 +1313,6 @@ else
                       executable at ${USE_TCL}!])
     fi
 fi
-AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
 # Allow user to override Tcl include
 AC_ARG_WITH(tcl-include,
@@ -1335,10 +1334,11 @@ AC_ARG_WITH(tclsh,
                [full path to runtime tclsh (optional override)]),
             [
              # No error checks- let the user be creative
-             AC_MSG_RESULT([overriding Tcl shell: ${withval}])
+             AC_MSG_RESULT([overriding Tcl shell to: ${withval}])
              USE_TCLSH=${withval}
             ],
             [])
+
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
 AC_SUBST(USE_TCL)
