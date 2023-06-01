@@ -3,7 +3,7 @@
 # from all Swift/T components
 
 # This has to be manually edited:
-SWIFT_T_VERSION=1.6.0
+SWIFT_T_VERSION=1.6.1
 
 # These are automatically extracted:
 CUTILS_VERSION=$(  cat c-utils/code/version.txt )
