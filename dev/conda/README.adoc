@@ -113,7 +113,8 @@ We call `conda build` inside our `conda-build.sh`
 === Speed
 
 It is best to create a Miniconda installation in RAM disk on your system
-for building the packages.  Installing Miniconda should take less than 10 seconds.
+for building the packages.
+Installing Miniconda should take less than 10 seconds.
 
 == Upload to Anaconda
 
@@ -124,6 +125,12 @@ $ P=CONDA/conda-bld/linux-64/swift-t-*.tar.bz2
 $ anaconda login
 $ anaconda upload $P
 ----
+
+== Dependencies
+
+`r-rinside`::
+This package does not exist for `linux-aarch-64` +
+
 
 == M4 usage
 
