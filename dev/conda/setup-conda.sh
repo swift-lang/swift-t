@@ -4,6 +4,7 @@ set -eu
 # SETUP CONDA
 # Install Anaconda build tools
 
+echo "setting up Anaconda build tools in:"
 which conda
 
 conda env list

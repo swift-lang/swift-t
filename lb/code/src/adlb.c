@@ -1744,8 +1744,8 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(ac);
 
   double unused t1 = MPI_Wtime();
-  INFO("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
-       xlb_s.layout.rank, to_server_rank, id, t1-t0);
+  DEBUG("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
+        xlb_s.layout.rank, to_server_rank, id, t1-t0);
 
   return ADLB_SUCCESS;
 }

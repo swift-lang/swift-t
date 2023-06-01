@@ -23,7 +23,7 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 # Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #PBS -N getenv(TURBINE_JOBNAME)
-ifelse(getenv(TURBINE_POLARIS),`1',
+m4_ifelse(getenv(TURBINE_POLARIS),`1',
 #PBS -l select=getenv(NODES):system=polaris ,
 #PBS -l nodes=getenv_nospace(NODES):ppn=getenv(PPN))
 #PBS -l walltime=getenv(WALLTIME)
@@ -31,10 +31,10 @@ ifelse(getenv(TURBINE_POLARIS),`1',
 #PBS -o getenv(OUTPUT_FILE)
 #PBS -V
 
-ifelse(getenv(PROJECT),`',,
+m4_ifelse(getenv(PROJECT),`',,
 #PBS -A getenv(PROJECT)
 )
-ifelse(getenv(QUEUE),`',,
+m4_ifelse(getenv(QUEUE),`',,
 #PBS -q getenv(QUEUE)
 )
 
@@ -59,7 +59,7 @@ PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
 # On Polaris, provide PROCS/PPN to mpiexec:
-ifelse(getenv(TURBINE_POLARIS),1,
+m4_ifelse(getenv(TURBINE_POLARIS),1,
 TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS) -n ${PROCS} --ppn ${PPN:-1} )
 )
 
