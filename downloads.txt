@@ -25,6 +25,23 @@ the +minor+ version number.
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.1
+
+** http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.1.tar.gz[swift-t-1.6.1.tar.gz] (8.6 MB)
+** 2023-06-01
+** ExM c-utils 0.6.2
+** ADLB/X 1.0.2
+** Turbine 1.4.1
+** STC 1.0.1
+
+*Changes:*
+* Critical bug fix in STC +app+ functions
+* Auto-create directories in +TURBINE_STDOUT+
+* New +json_get_boolean()+
+* Start using prefix +m4_+ in Turbine submit scripts
+* New run-time Python check to avert misconfigurations
+* New https://anaconda.org/swift-t[Anaconda package]
+
 === 1.6.0
 
 ** http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz[swift-t-1.6.0.tar.gz] (8.3 MB)
