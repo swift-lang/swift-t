@@ -103,9 +103,7 @@ crash()
 # Copy into export directory
 export_copy()
 {
-  echo export_copy ...
   cp -uv --parents ${*} ${TARGET}
-  echo cp ok
 }
 
 export_copy_dir()
@@ -184,7 +182,6 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd ${TOP}/c-utils/code
-pwd
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
@@ -200,7 +197,6 @@ export_copy ${FILE_LIST}
 popd
 printf "OK\n\n"
 
-set -x
 # Turbine
 print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
@@ -208,7 +204,6 @@ mkdir -pv ${TARGET}
 pushd ${TOP}/turbine/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
-print copy ok
 popd
 printf "OK\n\n"
 
