@@ -290,6 +290,10 @@ Directory under which Turbine will automatically create
 Allows customization of the automatic output directory creation.
 See <<turbine_output,Turbine output>>
 
++TURBINE_JOBNAME+::
+Set a name for the job using the system scheduler.
+Some schedulers may restrict this to 8 characters.
+
 ++++
 <a name="turbine_bash_l"></a>
 ++++
