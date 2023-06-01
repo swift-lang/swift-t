@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.6.0, April 2023
+v1.6.1, June 2023
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -174,14 +174,14 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz
+$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.1.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-$ tar xfz swift-t-1.6.0.tar.gz
-$ cd swift-t-1.6.0
+$ tar xfz swift-t-1.6.1.tar.gz
+$ cd swift-t-1.6.1
 ----
 +
 3. Create a settings file by running:
