@@ -28,7 +28,7 @@ the +minor+ version number.
 === 1.6.0
 
 ** http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz[swift-t-1.6.0.tar.gz] (8.3 MB)
-** 2022-01-18
+** 2023-01-18
 ** ExM c-utils 0.6.1
 ** ADLB/X 1.0.1
 ** Turbine 1.4.0
