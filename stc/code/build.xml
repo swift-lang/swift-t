@@ -99,7 +99,9 @@
            debug="true"
            debuglevel="source,lines,vars"
            includeantruntime="false"
-           classpath="${classpath}">
+           classpath="${classpath}"
+           target="1.8"
+           source="1.8">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
     </javac>
@@ -142,8 +144,8 @@
           debuglevel="source,lines,vars"
           includeantruntime="false"
           classpath=".:${antlr.jar}"
-          target="1.7"
-          source="1.7">
+          target="1.8"
+          source="1.8">
      <compilerarg value="-Xlint"/>
      <compilerarg value="-Xlint:-cast"/>
    </javac>
