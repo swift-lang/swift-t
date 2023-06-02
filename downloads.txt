@@ -35,6 +35,7 @@ the +minor+ version number.
 * STC 1.0.2
 
 *Changes:*
+
 * Force Java source and target version to 1.8 (Java SE 8 = class file format 52)
 
 === 1.6.1
