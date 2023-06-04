@@ -84,7 +84,7 @@ export getenv(USER_ENV_CODE)
 log_path LD_LIBRARY_PATH
 echo
 
-(
+if (
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
@@ -93,7 +93,11 @@ echo
   ${TURBINE_LAUNCHER} \
     ${TURBINE_LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER:-} ${COMMAND[@]}
 )
-CODE=$?
+then
+  CODE=0
+else
+  CODE=$?
+fi
 
 STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:
