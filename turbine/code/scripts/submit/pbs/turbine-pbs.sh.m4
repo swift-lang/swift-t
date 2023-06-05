@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash`'bash_l()
+m4_changecom(`dnl')#!/bin/bash`'bash_l()
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -20,7 +20,7 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 # Turbine PBS template.  This is automatically filled in
 # by M4 in turbine-pbs-run.zsh
 
-# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
+# Created: m4_esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #PBS -N getenv(TURBINE_JOBNAME)
 m4_ifelse(getenv(TURBINE_POLARIS),`1',
@@ -80,6 +80,10 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # PBS exports all environment variables to the job under #PBS -V
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
+
+module list
+module load PrgEnv-nvhpc
+module list
 
 log_path LD_LIBRARY_PATH
 echo

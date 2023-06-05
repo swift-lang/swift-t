@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash
+m4_changecom(`dnl')#!/bin/bash
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -19,15 +19,11 @@ changecom(`dnl')#!/bin/bash
 # Turbine SGE template.  This is automatically filled in
 # by M4 in turbine-sge-run.zsh
 
-# Created: esyscmd(`date')
+# Created: m4_esyscmd(`date')
 
-# Define convenience macros
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
-define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
-
-ifelse(getenv_nospace(PROJECT), `',,
+m4_ifelse(getenv(PROJECT), `',,
 #$ -A getenv(PROJECT))
-ifelse(getenv_nospace(QUEUE), `',,
+m4_ifelse(getenv(QUEUE), `',,
 #$ -q getenv(QUEUE))
 #$ -l h_rt=getenv(WALLTIME)
 #$ -N getenv(TURBINE_JOBNAME)

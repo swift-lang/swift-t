@@ -29,7 +29,7 @@ m4_ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 
 # TURBINE-THETA.SH
 
-# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
+# Created: m4_esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 source /opt/modules/default/init/bash
 module load modules
