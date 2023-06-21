@@ -59,6 +59,17 @@ Our GitHub repository is here:
 
 http://github.com/swift-lang/swift-t
 
+[[conda]]
+=== From Conda
+
+Simply install with the +conda+ tool:
+
+----
+$ conda install -c swift-t swift-t
+----
+
+This version includes <<leaf_python,Python support>>.
+
 === For Debian-based systems (including Ubuntu)
 
 1. Obtain the Swift/T Debian packages from the
@@ -96,19 +107,6 @@ $ spack install stc@master
 This will install all necessary dependencies.  See the
 <<_spack_tips,Spack tips>> to reduce the number of dependencies that
 Spack will install from source.
-
-[[conda]]
-=== From Conda
-
-Simply install with the +conda+ tool:
-
-----
-$ conda install -c lightsource2-tag swift-t
-----
-
-This version includes <<leaf_python,Python support>>.
-
-Thanks to Maksim Rakitin for producing this installer.
 
 [[install_source]]
 === From source
