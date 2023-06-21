@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 10.2.0" />
+<meta name="generator" content="AsciiDoc 10.1.2" />
 <title>Swift/T Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.6.0, April 2023</span><br />
+<span id="author">v1.6.1, June 2023</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -784,7 +784,16 @@ from source.</p></div>
 <div class="paragraph"><p>Our GitHub repository is here:</p></div>
 <div class="paragraph"><p><a href="http://github.com/swift-lang/swift-t">http://github.com/swift-lang/swift-t</a></p></div>
 <div class="sect2">
-<h3 id="_for_debian_based_systems_including_ubuntu">2.1. For Debian-based systems (including Ubuntu)</h3>
+<h3 id="conda">2.1. From Conda</h3>
+<div class="paragraph"><p>Simply install with the <code>conda</code> tool:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ conda install -c swift-t swift-t</code></pre>
+</div></div>
+<div class="paragraph"><p>This version includes <a href="#leaf_python">Python support</a>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_for_debian_based_systems_including_ubuntu">2.2. For Debian-based systems (including Ubuntu)</h3>
 <div class="olist arabic"><ol class="arabic">
 <li>
 <p>
@@ -818,7 +827,7 @@ Install:
 </ol></div>
 </div>
 <div class="sect2">
-<h3 id="spack">2.2. From Spack</h3>
+<h3 id="spack">2.3. From Spack</h3>
 <div class="paragraph"><p>Simply clone Spack and install STC.  Use the version spec <code>@master</code> .</p></div>
 <div class="listingblock">
 <div class="content">
@@ -830,16 +839,6 @@ $ spack install stc@master</code></pre>
 <div class="paragraph"><p>This will install all necessary dependencies.  See the
 <a href="#_spack_tips">Spack tips</a> to reduce the number of dependencies that
 Spack will install from source.</p></div>
-</div>
-<div class="sect2">
-<h3 id="conda">2.3. From Conda</h3>
-<div class="paragraph"><p>Simply install with the <code>conda</code> tool:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>$ conda install -c lightsource2-tag swift-t</code></pre>
-</div></div>
-<div class="paragraph"><p>This version includes <a href="#leaf_python">Python support</a>.</p></div>
-<div class="paragraph"><p>Thanks to Maksim Rakitin for producing this installer.</p></div>
 </div>
 <div class="sect2">
 <h3 id="install_source">2.4. From source</h3>
@@ -948,7 +947,7 @@ Obtain the Swift/T source package from the
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.0.tar.gz</code></pre>
+<pre><code>$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.1.tar.gz</code></pre>
 </div></div>
 </li>
 <li>
@@ -957,8 +956,8 @@ Unpack and enter package directory
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ tar xfz swift-t-1.6.0.tar.gz
-$ cd swift-t-1.6.0</code></pre>
+<pre><code>$ tar xfz swift-t-1.6.1.tar.gz
+$ cd swift-t-1.6.1</code></pre>
 </div></div>
 </li>
 <li>
@@ -6691,7 +6690,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2023-04-20 14:03:33 CDT
+ 2023-06-21 13:10:00 CDT
 </div>
 </div>
 
