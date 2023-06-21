@@ -62,7 +62,9 @@ http://github.com/swift-lang/swift-t
 [[conda]]
 === From Conda
 
-Simply install with the +conda+ tool:
+Simply install the
+https://anaconda.org/swift-t[Swift/T Anaconda package]
+with the +conda+ tool:
 
 ----
 $ conda install -c swift-t swift-t
