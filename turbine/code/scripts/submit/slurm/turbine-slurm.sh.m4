@@ -129,9 +129,16 @@ module list
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
+  LAUNCH_OPTIONS=(
+    --nodes=getenv(NODES)
+    --ntasks=getenv(PROCS)
+    --ntasks-per-node=getenv(PPN)
+    getenv(TURBINE_LAUNCH_OPTIONS)
+  )
+
+  echo
   set -x
-  ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
-                      ${TURBINE_INTERPOSER} \
+  ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER} \
                       ${COMMAND}
 )
 CODE=$?
