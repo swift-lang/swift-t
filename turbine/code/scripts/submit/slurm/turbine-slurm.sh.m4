@@ -44,7 +44,9 @@ m4_ifelse(getenv(MAIL_ENABLED),`1',
 #SBATCH --mail-type=ALL
 )
 
-# This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
+# This block should be here, after other arguments to #SBATCH,
+# so that the user can overwrite automatically set values
+# such as --nodes (which is set in run-init.zsh using PROCS / PPN)
 # Note this works because sbatch ignores all but the last of duplicate arguments
 # TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
 m4_ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
