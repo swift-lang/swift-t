@@ -83,6 +83,7 @@ set -eu
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
+source ${TURBINE_HOME}/scripts/helpers.sh
 
 # Turbine-specific environment (with defaults)
 # Only export a variable if it is not the default
@@ -101,24 +102,6 @@ export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
 export TCLLIBPATH=${TCLLIBPATH:-}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
-
-turbine_log()
-# Fills in turbine.log file after job submission
-{
-  print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${COMMAND}"
-  print "TURBINE_OUTPUT:    ${TURBINE_OUTPUT}"
-  print "HOSTNAME:          $( hostname -d )"
-  print "SUBMITTED:         $( date_nice )"
-  print "PROCS:             ${PROCS}"
-  print "NODES:             ${NODES}"
-  print "PPN:               ${PPN}"
-  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
-  print "WALLTIME:          ${WALLTIME}"
-  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
-  print "TURBINE_HOME:      ${TURBINE_HOME}"
-}
 
 # Defaults:
 PROJECT=${PROJECT:-}

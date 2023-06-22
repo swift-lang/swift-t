@@ -55,8 +55,10 @@ m4_ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
 getenv(TURBINE_DIRECTIVE)
 # END TURBINE_DIRECTIVE
 
-START=$( date "+%s.%N" )
-echo "TURBINE-SLURM.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+source ${TURBINE_HOME}/scripts/helpers.sh
+
+START=$( nanos )
+echo "TURBINE-SLURM.SH START: $( date_nice_s )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
@@ -120,6 +122,8 @@ module list
 
 (
   export PMI_MMAP_SYNC_WAIT_TIME=1800
+  turbine_log_start | tee -a turbine.log
+
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
@@ -130,15 +134,11 @@ module list
 )
 CODE=$?
 
-STOP=$( date "+%s.%N" )
-# Bash cannot do floating point arithmetic:
-DURATION=$( awk -v START=${START} -v STOP=${STOP} \
-            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+STOP=$( nanos )
+DURATION=$( duration )
 
 echo
-echo "MPIEXEC TIME: ${DURATION}"
-echo "EXIT CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
+turbine_log_stop | tee -a turbine.log
 
 # Return exit code from launcher
 exit ${CODE}
