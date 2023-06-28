@@ -430,8 +430,8 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, adlb_put_opts opts, const char *name,
-        const adlb_datum_id *wait_ids, int wait_id_count,
-        const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
+        const adlb_datum_id* wait_ids, int wait_id_count,
+        const adlb_datum_id_sub* wait_id_subs, int wait_id_sub_count)
 {
   MPI_Status status;
   MPI_Request request;
