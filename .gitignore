@@ -38,6 +38,7 @@ pkgIndex.tcl
 
 # Scheduler output directory file
 turbine-directory.txt
+turbine-output
 
 # Fortran output
 *.mod
@@ -62,3 +63,6 @@ changelog
 
 # The Swift/T Debian distribution
 swift-t-debs-*.tgz
+
+# Visual Studio Code
+.vscode
