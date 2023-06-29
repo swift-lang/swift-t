@@ -22,8 +22,7 @@
  *      Author: wozniak
  */
 
-#ifndef BACKOFFS_H
-#define BACKOFFS_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -102,5 +101,3 @@ bool xlb_backoff_server(int attempt, bool *slept);
    Backoff during sync() spin loop
  */
 void xlb_backoff_sync(void);
-
-#endif
