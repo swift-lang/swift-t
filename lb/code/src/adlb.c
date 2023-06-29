@@ -130,6 +130,8 @@ check_versions()
 
 static inline int get_next_server();
 
+static adlb_code xlb_setup_output(MPI_Comm comm);
+
 adlb_code
 ADLBP_Init(int nservers, int ntypes, int type_vect[],
            int *am_server, MPI_Comm comm, MPI_Comm *worker_comm)
@@ -148,6 +150,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   xlb_s.status = ADLB_STATUS_RUNNING;
   xlb_s.start_time = MPI_Wtime();
+
+  code = xlb_setup_output(comm);
+  ADLB_CHECK(code);
 
   code = xlb_setup_layout(comm, nservers);
   ADLB_CHECK(code);
@@ -200,6 +205,47 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   *worker_comm = xlb_s.worker_comm;
 
   TRACE_END;
+  return ADLB_SUCCESS;
+}
+
+/**
+   Upon user request, freopen stdout based on rank
+*/
+static adlb_code
+xlb_setup_output(MPI_Comm comm)
+{
+  bool enable_stdout;
+  bool b = getenv_boolean("ADLB_STDOUT", false, &enable_stdout);
+  ADLB_CHECK_MSG_CODE(b, ADLB_ERROR,
+                      "ADLB_STDOUT must be boolean: got: '%s'",
+                      getenv("ADLB_STDOUT"));
+  if (!enable_stdout) return ADLB_SUCCESS;
+
+  int rc;
+  int comm_size;
+  int comm_rank;
+  rc = MPI_Comm_size(comm, &comm_size);
+  MPI_CHECK(rc);
+  rc = MPI_Comm_rank(comm, &comm_rank);
+  MPI_CHECK(rc);
+
+  int pad = get_pad(comm_size);
+
+  char filename[PATH_MAX];
+  sprintf(filename, "adlb-%0*i.out", pad, comm_rank);
+
+  printf("filename: %s\n", filename);
+
+  FILE* fp = freopen(filename, "w", stdout);
+  if (fp == NULL)
+  {
+    // This has to go on stderr
+    fprintf(stderr,
+            "ADLB_STDOUT: could not freopen: '%s'\n",
+            filename);
+    perror("ADLB");
+    return ADLB_ERROR;
+  }
   return ADLB_SUCCESS;
 }
 

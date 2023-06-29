@@ -499,3 +499,9 @@ make_parents(const char* filename)
 
   return true;
 }
+
+int
+get_pad(int max)
+{
+  return (int) rintl(ceil(log(max+1)/log(10)));
+}

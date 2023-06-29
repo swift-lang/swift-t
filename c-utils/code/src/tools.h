@@ -364,3 +364,8 @@ void quicksort_ints(int* A, int first, int last);
    @return True on success, else false.
 */
 bool make_parents(const char* filename);
+
+/**
+   return field width of integers up to max
+*/
+int get_pad(int max);
