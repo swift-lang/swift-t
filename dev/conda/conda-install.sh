@@ -26,21 +26,21 @@ zmodload zsh/stat
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
 print ${A[mtime]} ${A[size]} $PKG
 printf "md5sum: "
-md5sum $PKG
+md5 -r $PKG
 
 which conda
 conda env list
 
 LIST=(
-  ant
-  autoconf
-  gcc
-  make
+#  ant
+#  autoconf
+#  gcc
+#  make
   mpich-mpicc
   openjdk
   python
   swig
-  zsh
+#  zsh
   $R
 )
 

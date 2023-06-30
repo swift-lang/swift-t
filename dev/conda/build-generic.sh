@@ -41,7 +41,7 @@ then
 fi
 
 # Edit swift-t-settings
-sed -i -f $SETTINGS_SED swift-t-settings.sh
+sed -i '' -f $SETTINGS_SED swift-t-settings.sh
 
 # Build it!
 # Merge output streams to try to prevent buffering

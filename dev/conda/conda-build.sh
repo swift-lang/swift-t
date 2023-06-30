@@ -85,7 +85,7 @@ m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 LOG=conda-build.log
 if [[ -f $LOG ]]
 then
-  mv -v --backup=numbered $LOG $LOG.bak
+  # mv -v --backup=numbered $LOG $LOG.bak
   echo
 fi
 
@@ -126,6 +126,6 @@ PKG=${UPLOAD[-1]}
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
   print ${A[mtime]} ${A[size]} $PKG
   printf "md5sum: "
-  md5sum $PKG
-) | tee --append $LOG
+  md5 -r $PKG
+) | tee -a $LOG
 echo
