@@ -8,7 +8,7 @@ toc::[]
 
 == Quickstart
 
-* Use `./conda-build.sh` to build the Conda package.
+* Use `PLATFORM/conda-platform.sh` to build the Conda package.
 ** This always does `conda build purge-all`, which is necessary
 * Use `conda-install.sh` to install the Conda package
 ** This installs the deps separately
@@ -39,6 +39,8 @@ These are standard directory names:
 * `linux-64`:  "Linux on PC":  Works
 * `osx-64`:    "Mac on PC":    WIP
 * `osx-arm64`: "Mac on ARM":   DRAFT
++
+This plaform skips Ant, the C compiler, and ZSH, and assumes they are on the user system
 * `aarch64`:   "Linux on ARM": TODO
 
 == Definitions
