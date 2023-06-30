@@ -17,23 +17,23 @@ m4_ifelse(getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 
 requirements:
   build:
-    - ant
     - autoconf
-    - gcc
     - make
     - openjdk
     - mpich-mpicc
     - python==3.9.16
     - swig
-    - zsh
+m4_ifelse(getenv(USE_ANT),`1',m4_include(pkgs-ant.yaml))
+m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
   run:
-    - gcc
     - mpich-mpicc
     - openjdk
     - python==3.9.16
     - swig
-    - zsh
+m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
 
 test:

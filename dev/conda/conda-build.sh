@@ -63,6 +63,18 @@ if (( ! ${#R} )) {
   export PKG_NAME="swift-t-r"
 }
 
+# Default dependencies:
+export USE_ANT=1
+export USE_GCC=1
+export USE_ZSH=1
+
+if (( ${USE_OSX_ARM64:-0} == 1 )) {
+  # For OSX/Arm64, we rely on these in the system:
+  USE_ANT=0
+  USE_GCC=0
+  USE_ZSH=0
+}
+
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
