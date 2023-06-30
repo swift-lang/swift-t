@@ -16,6 +16,8 @@ if (( ${#PLATFORM:-} == 0 )) {
   return 1
 }
 
+print "PLATFORM: $PLATFORM"
+
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
 # The Swift/T Git clone:
@@ -68,7 +70,8 @@ export USE_ANT=1
 export USE_GCC=1
 export USE_ZSH=1
 
-if (( ${USE_OSX_ARM64:-0} == 1 )) {
+# Check last entry in PLATFORM path:
+if [[ ${PLATFORM:t} == "osx-arm64" ]] {
   # For OSX/Arm64, we rely on these in the system:
   USE_ANT=0
   USE_GCC=0
