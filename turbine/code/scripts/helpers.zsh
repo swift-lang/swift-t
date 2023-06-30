@@ -212,13 +212,6 @@ uptodate()
   return 0
 }
 
-rm0()
-# Allows for no arguments without the danger of rm -f
-{
-  (( ! ${#*} )) && return
-  rm ${*}
-}
-
 within()
 {
   local TIME=$1
