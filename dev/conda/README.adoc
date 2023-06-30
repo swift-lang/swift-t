@@ -38,8 +38,8 @@ These are standard directory names:
 
 * `linux-64`:  "Linux on PC":  Works
 * `osx-64`:    "Mac on PC":    WIP
+* `osx-arm64`: "Mac on ARM":   DRAFT
 * `aarch64`:   "Linux on ARM": TODO
-* `osx-arm64`: "Mac on ARM":   ?
 
 == Definitions
 
