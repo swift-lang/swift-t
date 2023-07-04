@@ -110,9 +110,9 @@ fi
   )
   print "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
 } |& tee $LOG
-echo
-echo "conda build succeeded."
-echo
+print
+print "conda build succeeded."
+print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
@@ -121,11 +121,11 @@ PKG=${UPLOAD[-1]}
 
 # Print metadata about the PKG
 (
-  echo
+  print
   zmodload zsh/stat
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
   print ${A[mtime]} ${A[size]} $PKG
   printf "md5sum: "
   md5sum $PKG
 ) | tee --append $LOG
-echo
+print
