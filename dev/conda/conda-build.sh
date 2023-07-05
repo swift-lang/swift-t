@@ -2,12 +2,15 @@
 set -eu
 
 # CONDA BUILD
-# Generic interface to `conda build'
+# Generic wrapper around `conda build'
 # Called by platform/conda-platform.sh
 # Generates meta.yaml and runs `conda build'
 # This script runs in the PLATFORM subdirectory
 #      and should not change directories
-# A LOG is produced named conda-build.log
+# A LOG is produced named platform/conda-build.log
+# Flags:
+#  -C configure-only- generate meta.yaml and settings.sed, then stop
+#  -R for the R version
 
 if (( ${#PLATFORM:-} == 0 )) {
   print "conda-build.sh: unset: PLATFORM"
@@ -23,8 +26,8 @@ DEV_CONDA=${0:A:h}
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
 
-R=""
-zparseopts -D -E R=R
+C="" R=""
+zparseopts -D -E C=C R=R
 
 if [[ ! -d /tmp/distro ]] {
   print "conda-build.sh: Swift/T source not found at: /tmp/distro"
@@ -81,6 +84,11 @@ if [[ ${PLATFORM:t} == "osx-arm64" ]] {
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
+if (( ${#C} )) {
+  print "conda-build.sh: configure-only: exit."
+  exit
+}
+
 # Backup the old log
 LOG=conda-build.log
 if [[ -f $LOG ]]
@@ -119,6 +127,12 @@ print
 UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 PKG=${UPLOAD[-1]}
 
+if [[ $PLATFORM =~ osx-* ]] {
+  MD5=( md5 -r )
+} else {
+  MD5=( md5sum )
+}
+
 # Print metadata about the PKG
 (
   print
@@ -126,6 +140,6 @@ PKG=${UPLOAD[-1]}
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
   print ${A[mtime]} ${A[size]} $PKG
   printf "md5sum: "
-  md5sum $PKG
+  $MD5 $PKG
 ) | tee --append $LOG
 print

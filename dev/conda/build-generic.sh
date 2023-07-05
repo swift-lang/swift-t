@@ -10,8 +10,7 @@ set -o pipefail
 # PREFIX is provided by Conda
 # ENABLE_R may be set by meta.yaml
 
-echo "BUILD.SH START $( date '+%Y-%m-%d %H:%M:%S' )"
-echo PREFIX $PREFIX
+echo "BUILD-GENERIC.SH START $( date '+%Y-%m-%d %H:%M:%S' )"
 
 install -d $PREFIX/bin
 install -d $PREFIX/etc
@@ -40,8 +39,15 @@ then
     -e 'install.packages("RInside", repos="http://cran.us.r-project.org")'
 fi
 
+if [[ $PLATFORM =~ osx-* ]]
+then
+  SED_I=( sed -i '' )
+else
+  SED_I=( sed -i )
+fi
+
 # Edit swift-t-settings
-sed -i -f $SETTINGS_SED swift-t-settings.sh
+${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 
 # Build it!
 # Merge output streams to try to prevent buffering
@@ -78,4 +84,4 @@ for file in turbine-config.sh; do
   ln -sv ../swift-t/turbine/scripts/$file .
 done
 
-echo "BUILD.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"
+echo "BUILD-GENERIC.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"

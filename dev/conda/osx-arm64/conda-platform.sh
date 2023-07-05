@@ -2,15 +2,21 @@
 set -eu
 
 # osx-arm64 CONDA PLATFORM
-# Provide -R for the R version
+# Flags:
+#  -C configure-only- generate meta.yaml and settings.sed, then stop
+#  -R for the R version
 
-R=""
-zparseopts -D -E R=R
+C="" R=""
+zparseopts -D -E C=C R=R
 
-# Get this directory (absolute):
-export PLATFORM=${0:A:h}
+# Get this script path name (absolute):
+SCRIPT=${0:A}
+# Path to this directory
+THIS=${SCRIPT:h}
+# Tail name of this directory
+export PLATFORM=${THIS:t}
 # The Swift/T Conda script directory:
-DEV_CONDA=${PLATFORM:h}
+DEV_CONDA=${THIS:h}
 
-cd $PLATFORM
-$DEV_CONDA/conda-build.sh $R
+cd $THIS
+$DEV_CONDA/conda-build.sh $C $R
