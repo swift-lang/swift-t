@@ -153,7 +153,7 @@ We restrict our M4 usage to:
 * `m4_ifelse()`: does conditional substitution
 * `getenv()`: substitutes in an environment variable value
 
-We pull `common.m4` from Turbine to get `getenv()`.
+See `dev/conda/common.m4` for `getenv()` - this is a different script from the `common.m4' for the Turbine submit scripts due to newline requirements.
 
 Example:
 ----

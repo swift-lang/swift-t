@@ -57,7 +57,7 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
   return 1
 }
 
-COMMON_M4=$SWIFT_T_TOP/turbine/code/scripts/common.m4
+COMMON_M4=common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
 
