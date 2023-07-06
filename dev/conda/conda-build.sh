@@ -91,11 +91,10 @@ if (( ${#C} )) {
 
 # Backup the old log
 LOG=conda-build.log
-if [[ -f $LOG ]]
-then
-  mv -v --backup=numbered $LOG $LOG.bak
+if [[ -f $LOG ]] {
+  mv -v $LOG $LOG.bak
   echo
-fi
+}
 
 {
   DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
