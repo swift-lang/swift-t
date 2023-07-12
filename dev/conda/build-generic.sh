@@ -41,7 +41,7 @@ fi
 
 if [[ $PLATFORM =~ osx-* ]]
 then
-  SED_I=( sed -i '' )
+  SED_I=( sed -i "''" )
 else
   SED_I=( sed -i )
 fi

@@ -140,5 +140,5 @@ if [[ $PLATFORM =~ osx-* ]] {
   print ${A[mtime]} ${A[size]} $PKG
   printf "md5sum: "
   $MD5 $PKG
-) | tee --append $LOG
+) | tee -a $LOG
 print
