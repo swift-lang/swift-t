@@ -1334,19 +1334,12 @@ AC_ARG_WITH(tcl-include,
 # Allow user to override Tcl shell
 AC_ARG_WITH(tclsh,
             AS_HELP_STRING(
-<<<<<<< HEAD
-               [--with-tcl-shell],
-               [full path to runtime tclsh (optional override)]),
-            [
-             # No error checks- let the user be creative
-             AC_MSG_RESULT([overriding Tcl shell: ${withval}])
-=======
+
                [--with-tclsh],
                [full path to runtime tclsh (optional override)]),
             [
              # No error checks- let the user be creative
              AC_MSG_RESULT([overriding Tcl shell to: ${withval}])
->>>>>>> master
              USE_TCLSH=${withval}
             ],
             [])
