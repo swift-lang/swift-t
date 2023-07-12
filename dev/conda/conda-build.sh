@@ -93,17 +93,17 @@ if (( ${#C} )) {
 LOG=conda-build.log
 if [[ -f $LOG ]] {
   mv -v $LOG $LOG.bak
-  echo
+  print
 }
 
 {
   DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
   print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
   (
-    echo "using python, conda:"
+    print "using python, conda:"
     which python conda
     conda env list
-    echo
+    print
 
     set -x
     # This purge-all is extremely important:
