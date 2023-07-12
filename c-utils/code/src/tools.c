@@ -22,6 +22,13 @@
  * */
 
 #include <ctype.h>
+#ifdef HAVE_ERROR
+// GNU extension
+#include <error.h>
+#endif
+#include <errno.h>
+#include <libgen.h>
+#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -36,6 +43,22 @@
 #include <unistd.h>
 
 #include "src/tools.h"
+
+#ifndef HAVE_ERROR
+void
+error(int status, int errnum, const char* format, ...)
+{
+  // GNU doc says that error() should flush stdout first:
+  fflush(stdout);
+  printf("error(): %s\n", strerror(errnum));
+  fflush(stdout);
+  va_list ap;
+  va_start(ap, format);
+  vprintf(format, ap);
+  va_end(ap);
+  exit(status);
+}
+#endif
 
 int
 array_length(const void** array)
@@ -300,6 +323,16 @@ getenv_double(const char* name, double dflt, double* result)
   return true;
 }
 
+void
+getenv_string(const char* name, char* dflt, char** result)
+{
+  char* v = getenv(name);
+  if (v == NULL || strlen(v) == 0)
+    *result = dflt;
+  else
+    *result = v;
+}
+
 /**
 
  */
@@ -422,4 +455,47 @@ quicksort_ints(int* A, int first, int last)
     quicksort_ints(A,first,j-1);
     quicksort_ints(A,j+1,last);
   }
+}
+
+bool
+make_parents(const char* filename)
+{
+  bool b;
+  int rc;
+  struct stat s;
+  char f[PATH_MAX];
+  // printf("make_parents(): '%s'\n", filename);
+  if (strcmp(filename, ".") == 0)
+    return true;
+  strcpy(f, filename);
+  char* d = dirname(f);
+  // printf("parent: '%s'\n", d);
+  if (strcmp(d, ".") == 0)
+    return true;
+  errno = 0;
+  rc = stat(d, &s);
+  if (errno == ENOENT)
+  {
+    b = make_parents(d);
+    if (!b) return false;
+    // printf("mkdir: '%s' ...\n", d); fflush(stdout);
+    rc = mkdir(d, S_IRWXU|S_IRWXG|S_IRWXO);
+    // printf("mkdir: '%s' -> %i\n", d, rc); fflush(stdout);
+    if (rc != 0)
+    {
+      printf("could not mkdir: '%s'\n", d);
+      fflush(stdout);
+      error(1, errno, "error");
+      return false;
+    }
+  }
+  else if (rc != 0)
+  {
+    printf("could not stat: '%s'\n", d);
+    fflush(stdout);
+    error(1, errno, "error");
+    return false;
+  }
+
+  return true;
 }

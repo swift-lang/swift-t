@@ -18,36 +18,38 @@
 
 # TURBINE-SLURM.SH
 
-# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
+# Created: m4_esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #SBATCH --output=getenv(OUTPUT_FILE)
 #SBATCH --error=getenv(OUTPUT_FILE)
 
-ifelse(getenv_nospace(QUEUE),`',,
+m4_ifelse(getenv(QUEUE),`',,
 #SBATCH --partition=getenv(QUEUE)
 )
 
-ifelse(getenv_nospace(PROJECT),`',,
+m4_ifelse(getenv(PROJECT),`',,
 #SBATCH --account=getenv(PROJECT)
 )
 
-#SBATCH --job-name=getenv_nospace(TURBINE_JOBNAME)
+#SBATCH --job-name=getenv(TURBINE_JOBNAME)
 
-#SBATCH --time=getenv_nospace(WALLTIME)
-#SBATCH --nodes=getenv_nospace(NODES)
-#SBATCH --ntasks-per-node=getenv_nospace(PPN)
-#SBATCH -D getenv_nospace(TURBINE_OUTPUT)
+#SBATCH --time=getenv(WALLTIME)
+#SBATCH --nodes=getenv(NODES)
+#SBATCH --ntasks-per-node=getenv(PPN)
+#SBATCH -D getenv(TURBINE_OUTPUT)
 
 # M4 conditional to optionally perform user email notifications
-ifelse(getenv_nospace(MAIL_ENABLED),`1',
-#SBATCH --mail-user=getenv_nospace(MAIL_ADDRESS)
+m4_ifelse(getenv(MAIL_ENABLED),`1',
+#SBATCH --mail-user=getenv(MAIL_ADDRESS)
 #SBATCH --mail-type=ALL
 )
 
-# This block should be here, after other arguments to #SBATCH, so that the user can overwrite automatically set values such as --nodes (which is set in run-init.zsh using PROCS / PPN)
+# This block should be here, after other arguments to #SBATCH,
+# so that the user can overwrite automatically set values
+# such as --nodes (which is set in run-init.zsh using PROCS / PPN)
 # Note this works because sbatch ignores all but the last of duplicate arguments
 # TURBINE_SBATCH_ARGS could include --exclusive, --constraint=..., etc.
-ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
+m4_ifelse(getenv(TURBINE_SBATCH_ARGS),`',,
 #SBATCH getenv(TURBINE_SBATCH_ARGS)
 )
 
@@ -55,8 +57,10 @@ ifelse(getenv_nospace(TURBINE_SBATCH_ARGS),`',,
 getenv(TURBINE_DIRECTIVE)
 # END TURBINE_DIRECTIVE
 
-START=$( date "+%s.%N" )
-echo "TURBINE-SLURM.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+source ${TURBINE_HOME}/scripts/helpers.sh
+
+START=$( nanos )
+echo "TURBINE-SLURM.SH START: $( date_nice_s )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
@@ -119,25 +123,31 @@ fi
 module list
 
 (
+  export PMI_MMAP_SYNC_WAIT_TIME=1800
+  turbine_log_start | tee -a turbine.log
+
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
+  LAUNCH_OPTIONS=(
+    --nodes=getenv(NODES)
+    --ntasks=getenv(PROCS)
+    --ntasks-per-node=getenv(PPN)
+    getenv(TURBINE_LAUNCH_OPTIONS)
+  )
+
+  echo
   set -x
-  ${TURBINE_LAUNCHER} getenv(TURBINE_LAUNCH_OPTIONS) \
-                      ${TURBINE_INTERPOSER} \
+  ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER} \
                       ${COMMAND}
 )
 CODE=$?
 
-STOP=$( date "+%s.%N" )
-# Bash cannot do floating point arithmetic:
-DURATION=$( awk -v START=${START} -v STOP=${STOP} \
-            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
+STOP=$( nanos )
+DURATION=$( duration )
 
 echo
-echo "MPIEXEC TIME: ${DURATION}"
-echo "EXIT CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
+turbine_log_stop | tee -a turbine.log
 
 # Return exit code from launcher
 exit ${CODE}

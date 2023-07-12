@@ -1158,7 +1158,12 @@ USE_TCLSH_LOCAL=0
 AC_ARG_WITH(tclsh-local,
     AS_HELP_STRING(
         [--with-tclsh-local],
+<<<<<<< HEAD
         [name of tclsh compatible with build system (optional override)]),
+=======
+        [name of tclsh compatible with build system
+         (optional override)]),
+>>>>>>> master
     [
         AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION)
                          executable in: ${withval}])
@@ -1178,7 +1183,6 @@ then
   # Can use shared library in this case
   TCL_LIB_SUFFIX_PREFS="${SO_SUFFIX} ${TCL_LIB_SUFFIX_PREFS}"
 fi
-
 
 # Locate one or both variant of libtcl
 USE_LIBTCL_A=
@@ -1300,7 +1304,8 @@ then
     USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable in ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION}
+                      executable in ${USE_TCL}!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
@@ -1329,11 +1334,19 @@ AC_ARG_WITH(tcl-include,
 # Allow user to override Tcl shell
 AC_ARG_WITH(tclsh,
             AS_HELP_STRING(
+<<<<<<< HEAD
                [--with-tcl-shell],
                [full path to runtime tclsh (optional override)]),
             [
              # No error checks- let the user be creative
              AC_MSG_RESULT([overriding Tcl shell: ${withval}])
+=======
+               [--with-tclsh],
+               [full path to runtime tclsh (optional override)]),
+            [
+             # No error checks- let the user be creative
+             AC_MSG_RESULT([overriding Tcl shell to: ${withval}])
+>>>>>>> master
              USE_TCLSH=${withval}
             ],
             [])

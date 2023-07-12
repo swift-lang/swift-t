@@ -80,7 +80,12 @@ then
   fi
 fi
 
-which mpicc
+if which mpicc
+then
+  : OK
+else
+  echo "build-lb.sh: compiling without mpicc ..."
+fi
 
 check_make
 make_clean

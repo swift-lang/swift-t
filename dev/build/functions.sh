@@ -50,7 +50,10 @@ LOG_WAIT()
   if [ -t 1 ] # Is the output a terminal?
   then
     echo "  waiting $* seconds: press enter to skip ..."
-    sleep $*
+    if read -t $*
+    then
+      echo "  skipped."
+    fi
   fi
 }
 

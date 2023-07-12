@@ -22,6 +22,19 @@ set -eu
 # Section III: Copy (export) into TMP/distro/RELEASE
 # Section IV:  Make tar.gz
 
+# Get this directory (absolute):
+THIS=${0:A:h}
+# Top level of Swift/T Git clone
+TOP=${THIS:h:h}
+
+# Work from the top level:
+cd ${TOP}
+
+# Define RELEASE numbers
+source $TOP/dev/get-versions.sh
+
+SWIFT_K_VERSION=swift-k-NONE
+
 # If USE_MASTER=1, use master instead of release numbers
 export USE_MASTER=0
 
@@ -33,16 +46,6 @@ export PKG_TYPE=src
 
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
-
-# Canonicalize this directory
-THIS=$( cd $( dirname $0 ) ; /bin/pwd )
-
-# Top level of Swift/T Git clone
-TOP=$( cd ${THIS}/../../ ; /bin/pwd )
-
-# Define RELEASE numbers
-source ${TOP}/dev/get-versions.sh
-SWIFT_K_VERSION=swift-k-NONE
 
 setopt PUSHD_SILENT KSH_GLOB
 
@@ -118,9 +121,6 @@ distclean()
 
 # SECTION I
 
-# Top level of Swift/T Git clone
-TOP=$( cd ${THIS}/../../ ; /bin/pwd )
-
 TMP=${TMP:-/tmp}
 DISTRO=${TMP}/distro
 
@@ -182,7 +182,10 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd ${TOP}/c-utils/code
+<<<<<<< HEAD
 pwd
+=======
+>>>>>>> master
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
@@ -289,4 +292,5 @@ RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
 tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
 print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-du -h ${RELEASE_TGZ}
+du -h  ${RELEASE_TGZ}
+md5sum ${RELEASE_TGZ}

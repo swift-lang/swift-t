@@ -15,7 +15,7 @@ $ spack install stc
 * https://conda.io[Conda]
 +
 ----
-$ conda install -c lightsource2-tag swift-t
+$ conda install -c swift-t swift-t
 ----
 * Debian (Ubuntu) packages
 * A script (+build-swift-t.sh+) that automates the +configure+/+make+ process

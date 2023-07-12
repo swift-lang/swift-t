@@ -311,7 +311,7 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		write_hosts(info, allhosts, size);
 
 		// compute the size of the string to pass to system()
-		size_t s = strlen(cmd)+512;
+		size_t s = strlen(cmd)+1024;
 		s += timeout_string_length;
 		s += env_length;
 
@@ -335,9 +335,10 @@ int turbine_MPIX_Comm_launch(const char* cmd, char** argv,
 		} else {
 			/* sprintf(mpicmd, "%s -n %d -hosts %s -launcher ssh ", */
                         /*         launcher, size, allhosts); */
-		  sprintf(mpicmd,
-			  "%s -n %d --nodelist=%s ",
-			  launcher, size, allhosts);
+		  size_t n = snprintf(mpicmd, s,
+				      "%s %s %d --nodelist=%s ",
+				      launcher, "-n", size, allhosts);
+		  assert(n < s);
 		}
 		strcat(mpicmd, launcher_options);
 		strcat(mpicmd, " ");

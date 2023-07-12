@@ -141,23 +141,6 @@ checkint()
   return 0
 }
 
-date_nice()
-# Human-readable date: minute resolution
-{
-  date "+%Y-%m-%d %H:%M"
-}
-
-date_path()
-# E.g., 2006/10/13/14/26/12 : Good for path names
-{
-  date "+%Y/%m/%d/%H/%M/%S"
-}
-
-nanos()
-{
-  date +%s.%N
-}
-
 compile()
 {
   SWIFT=$1
@@ -227,13 +210,6 @@ uptodate()
     fi
   done
   return 0
-}
-
-rm0()
-# Allows for no arguments without the danger of rm -f
-{
-  (( ! ${#*} )) && return
-  rm ${*}
 }
 
 within()

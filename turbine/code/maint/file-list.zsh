@@ -10,22 +10,21 @@ print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf,file-list.zsh}
 print maint/*.sh
-print bin/turbine{,.in} bin/turbine-pilot.in
+print bin/turbine.in bin/turbine-pilot.in
 print bin/turbine-{read,write}-doubles
-print scripts/*-config.sh.in scripts/helpers.zsh
 print **/*.[cChi] **/*.{tcl,swift}
 print tests/{runbin.zsh.in,run-mpi.zsh}
 print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in
 print src/**/*.manifest
 print py/*.py
-print scripts/{data-log.sh,leak-find.py,rank.zsh}
+print scripts/*-config.sh.in scripts/helpers.zsh
+print scripts/{data-log.sh,leak-find.py,rank.zsh,common.m4}
 print scripts/main-wrap/genleaf
 print scripts/main-wrap/settings/*.sh
 print scripts/mkstatic/*.{sh,template}
 print scripts/mkstatic/About.txt
 print scripts/submit/*.*sh*
-print scripts/submit/common.m4
 print scripts/submit/cray/*.*sh*
 print scripts/submit/cobalt/*turbine*.*sh*
 print scripts/submit/ec2/turbine-setup-ec2.zsh

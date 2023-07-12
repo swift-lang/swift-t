@@ -782,8 +782,9 @@ ifeq ($(ENABLE_STATIC_PKG),1)
 endif
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) \
-		     $(SCRIPTS_SUBMIT) py/*.py )
+                     scripts/*.m4                             \
+                     scripts/mkstatic/* $(SCRIPTS_MAINWRAP)   \
+                     $(SCRIPTS_SUBMIT) py/*.py )
 
 install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
               $(TURBINE_HEADERS) $(SCRIPTS) $(SCRIPTS_SUBMIT)

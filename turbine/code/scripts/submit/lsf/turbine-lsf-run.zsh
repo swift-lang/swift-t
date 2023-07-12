@@ -41,7 +41,7 @@ TURBINE_LSF_M4=${TURBINE_HOME}/scripts/submit/lsf/turbine-lsf.sh.m4
 TURBINE_LSF=${TURBINE_OUTPUT}/turbine-lsf.sh
 
 # Filter/create the LSF submit file
-m4 ${COMMON_M4} ${TURBINE_LSF_M4} > ${TURBINE_LSF}
+m4 -P ${COMMON_M4} ${TURBINE_LSF_M4} > ${TURBINE_LSF}
 print "wrote: ${TURBINE_LSF}"
 
 BSUB=bsub

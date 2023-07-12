@@ -1,0 +1,5 @@
+# Ignore local copies:
+meta.yaml
+settings.sed
+
+*.log

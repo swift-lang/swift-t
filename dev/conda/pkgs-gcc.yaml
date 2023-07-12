@@ -1,0 +1,4 @@
+# pkgs-gcc.yaml: START
+# Extra packages for gcc
+    - gcc
+# pkgs-gcc.yaml: STOP
