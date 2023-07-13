@@ -1158,12 +1158,8 @@ USE_TCLSH_LOCAL=0
 AC_ARG_WITH(tclsh-local,
     AS_HELP_STRING(
         [--with-tclsh-local],
-<<<<<<< HEAD
-        [name of tclsh compatible with build system (optional override)]),
-=======
         [name of tclsh compatible with build system
          (optional override)]),
->>>>>>> master
     [
         AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION)
                          executable in: ${withval}])
