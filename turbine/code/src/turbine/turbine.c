@@ -243,7 +243,8 @@ setup_cache()
 }
 
 /** return field width of integers up to max */
-static int get_pad(int max)
+static int
+get_pad(int max)
 {
   return (int) rintl(ceil(log(max+1)/log(10)));
 }

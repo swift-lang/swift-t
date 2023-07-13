@@ -22,7 +22,7 @@ print "TURBINE-SLURM SCRIPT"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Broken Turbine installation!"
   declare TURBINE_HOME
@@ -46,7 +46,7 @@ fi
 TURBINE_SLURM_M4=${TURBINE_HOME}/scripts/submit/slurm/turbine-slurm.sh.m4
 TURBINE_SLURM=${TURBINE_OUTPUT}/turbine-slurm.sh
 
-m4 ${COMMON_M4} ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
+m4 -P ${COMMON_M4} ${TURBINE_SLURM_M4} > ${TURBINE_SLURM}
 chmod u+x ${TURBINE_SLURM}
 
 print "wrote: ${TURBINE_SLURM}"

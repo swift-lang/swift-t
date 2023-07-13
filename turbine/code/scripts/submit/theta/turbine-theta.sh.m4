@@ -1,13 +1,13 @@
 #!/bin/bash`'bash_l()
-ifelse(getenv(PROJECT), `',,#COBALT -A getenv(PROJECT)
-)ifelse(getenv(QUEUE), `',,#COBALT -q getenv(QUEUE)
+m4_ifelse(getenv(PROJECT), `',,#COBALT -A getenv(PROJECT)
+)m4_ifelse(getenv(QUEUE), `',,#COBALT -q getenv(QUEUE)
 )#COBALT -n getenv(NODES)
 #COBALT -t getenv(WALLTIME)
 #COBALT --cwd getenv(WORK_DIRECTORY)
 #COBALT -o getenv(TURBINE_OUTPUT)/output.txt
 #COBALT -e getenv(TURBINE_OUTPUT)/output.txt
 #COBALT --jobname getenv(TURBINE_JOBNAME)
-ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
+m4_ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 )getenv(TURBINE_DIRECTIVE)
 
 # These COBALT directives have to stay right at the top of the file!
@@ -29,7 +29,7 @@ ifelse(getenv(MAIL_ARG), `',,#COBALT 'getenv(MAIL_ARG)'
 
 # TURBINE-THETA.SH
 
-# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
+# Created: m4_esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 source /opt/modules/default/init/bash
 module load modules

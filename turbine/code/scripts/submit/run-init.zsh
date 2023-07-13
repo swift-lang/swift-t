@@ -83,39 +83,25 @@ set -eu
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
+source ${TURBINE_HOME}/scripts/helpers.sh
 
 # Turbine-specific environment (with defaults)
+# Only export a variable if it is not the default
+# The := syntax does a default assignment
+if (( ${ADLB_SERVERS:=1} != 1 )) export ADLB_SERVERS
+if (( ${ADLB_EXHAUST_TIME:=1} != 1 )) exportADLB_EXHAUST_TIME
+if (( ${ADLB_PRINT_TIME:=1} != 0 )) export ADLB_PRINT_TIME
+if [[ ${TURBINE_STDOUT:=} != "" ]] export TURBINE_STDOUT
+if (( ${TURBINE_LOG:=0} != 0 )) export TURBINE_LOG
+if (( ${TURBINE_DEBUG:=0} != 0 )) export TURBINE_DEBUG
+if (( ${ADLB_DEBUG:=0} != 0 )) export ADLB_DEBUG
+if (( ${ADLB_TRACE:=0} != 0 )) export ADLB_TRACE
+if (( ${VERBOSE:=0} != 0 )) export VERBOSE
+# These must be set
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-SWIFT}
-export ADLB_SERVERS=${ADLB_SERVERS:-1}
-export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
-export TURBINE_STDOUT=${TURBINE_STDOUT:-}
-export TURBINE_LOG=${TURBINE_LOG:-0}
-export TURBINE_DEBUG=${TURBINE_DEBUG:-0}
-export ADLB_DEBUG=${ADLB_DEBUG:-0}
-export ADLB_TRACE=${ADLB_TRACE:-0}
 export TCLLIBPATH=${TCLLIBPATH:-}
 export WALLTIME=${WALLTIME:-00:05:00}
 export PPN=${PPN:-1}
-export VERBOSE=0
-export ADLB_PRINT_TIME=${ADLB_PRINT_TIME:-1}
-
-turbine_log()
-# Fills in turbine.log file after job submission
-{
-  print "JOB:               ${JOB_ID}"
-  print "COMMAND:           ${COMMAND}"
-  print "TURBINE_OUTPUT:    ${TURBINE_OUTPUT}"
-  print "HOSTNAME:          $( hostname -d )"
-  print "SUBMITTED:         $( date_nice )"
-  print "PROCS:             ${PROCS}"
-  print "NODES:             ${NODES}"
-  print "PPN:               ${PPN}"
-  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
-  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
-  print "WALLTIME:          ${WALLTIME}"
-  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
-  print "TURBINE_HOME:      ${TURBINE_HOME}"
-}
 
 # Defaults:
 PROJECT=${PROJECT:-}
@@ -369,7 +355,7 @@ do
   USER_ENV_ARRAY+="${NAME} '${(Pq-)NAME}' \n"
 done
 
-COMMON_M4=${TURBINE_HOME}/scripts/submit/common.m4
+COMMON_M4=${TURBINE_HOME}/scripts/common.m4
 
 ## Local Variables:
 ## mode: sh

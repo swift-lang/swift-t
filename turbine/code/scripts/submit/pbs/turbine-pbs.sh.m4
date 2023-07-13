@@ -1,4 +1,4 @@
-changecom(`dnl')#!/bin/bash`'bash_l()
+m4_changecom(`dnl')#!/bin/bash`'bash_l()
 # We use changecom to change the M4 comment to dnl, not hash
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
@@ -20,10 +20,10 @@ changecom(`dnl')#!/bin/bash`'bash_l()
 # Turbine PBS template.  This is automatically filled in
 # by M4 in turbine-pbs-run.zsh
 
-# Created: esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
+# Created: m4_esyscmd(`date "+%Y-%m-%d %H:%M:%S"')
 
 #PBS -N getenv(TURBINE_JOBNAME)
-ifelse(getenv(TURBINE_POLARIS),`1',
+m4_ifelse(getenv(TURBINE_POLARIS),`1',
 #PBS -l select=getenv(NODES):system=polaris ,
 #PBS -l nodes=getenv_nospace(NODES):ppn=getenv(PPN))
 #PBS -l walltime=getenv(WALLTIME)
@@ -31,10 +31,10 @@ ifelse(getenv(TURBINE_POLARIS),`1',
 #PBS -o getenv(OUTPUT_FILE)
 #PBS -V
 
-ifelse(getenv(PROJECT),`',,
+m4_ifelse(getenv(PROJECT),`',,
 #PBS -A getenv(PROJECT)
 )
-ifelse(getenv(QUEUE),`',,
+m4_ifelse(getenv(QUEUE),`',,
 #PBS -q getenv(QUEUE)
 )
 
@@ -52,13 +52,14 @@ set -eu
 
 START=$( date "+%s.%N" )
 echo "TURBINE-PBS.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
 # On Polaris, provide PROCS/PPN to mpiexec:
-ifelse(getenv(TURBINE_POLARIS),1,
+m4_ifelse(getenv(TURBINE_POLARIS),1,
 TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS) -n ${PROCS} --ppn ${PPN:-1} )
 )
 
@@ -80,17 +81,27 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
 
-log_path LD_LIBRARY_PATH
+module list
+module load PrgEnv-nvhpc
+module list
 
-(
+log_path LD_LIBRARY_PATH
+echo
+
+if (
   # Report the environment to a sorted file for debugging:
   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
+  set -x
   # Run Turbine!
   ${TURBINE_LAUNCHER} \
     ${TURBINE_LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER:-} ${COMMAND[@]}
 )
-CODE=$?
+then
+  CODE=0
+else
+  CODE=$?
+fi
 
 STOP=$( date "+%s.%N" )
 # Bash cannot do floating point arithmetic:

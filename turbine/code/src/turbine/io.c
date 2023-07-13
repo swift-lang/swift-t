@@ -144,6 +144,8 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
   size_t chunk_max = TURBINE_IO_FILE_CHUNK_SIZE;
   void* buffer = malloc(chunk_max);
 
+  double start = log_time();
+
   // Open files
   MPI_File fd_in;
   // Cast only needed for MPI-2
@@ -157,6 +159,8 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
 
   FILE* fd_out = copy_destination(name_in, name_out);
   if (fd_out == NULL) return false;
+
+  log_printf("turbine_io_copy_to: size %"PRId64"\n", file_size);
 
   // Do the copy
   MPI_Status status;
@@ -179,5 +183,11 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
   free(buffer);
   MPI_File_close(&fd_in);
   fclose(fd_out);
+
+  double stop = log_time();
+  double duration = stop - start;
+  log_printf("turbine_io_copy_to: wrote %"PRId64" bytes in %0.2f seconds.\n",
+             total, duration);
+
   return true;
 }

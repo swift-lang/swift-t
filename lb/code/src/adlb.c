@@ -430,8 +430,8 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, adlb_put_opts opts, const char *name,
-        const adlb_datum_id *wait_ids, int wait_id_count,
-        const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
+        const adlb_datum_id* wait_ids, int wait_id_count,
+        const adlb_datum_id_sub* wait_id_subs, int wait_id_sub_count)
 {
   MPI_Status status;
   MPI_Request request;
@@ -1744,8 +1744,8 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(ac);
 
   double unused t1 = MPI_Wtime();
-  INFO("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
-       xlb_s.layout.rank, to_server_rank, id, t1-t0);
+  DEBUG("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
+        xlb_s.layout.rank, to_server_rank, id, t1-t0);
 
   return ADLB_SUCCESS;
 }

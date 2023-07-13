@@ -1,0 +1,55 @@
+{% set name = "getenv(PKG_NAME)" %}
+{% set version = "1.6.2" %}
+{% set major = version.rpartition('.')[0] %}
+{% set sha256 = 'f5b26bb1ac427c271e19dff2146101f7c4da03652d66426a291e96638ba15c03' %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+  sha256: {{ sha256 }}
+
+source:
+  path: /tmp/distro/swift-t-{{ version }}/swift-t-{{ version }}
+
+build:
+  number: 1
+  # Environment variables for build.sh must be listed here,
+  # normal environment inheritance does not happen!
+  script_env:
+    - PLATFORM=getenv(PLATFORM)
+m4_ifelse(getenv(ENABLE_R),`1',m4_include(env-R.yaml))
+
+requirements:
+  build:
+    - autoconf
+    - make
+    - openjdk
+    - mpich-mpicc
+    - python==3.9.16
+    - swig
+m4_ifelse(getenv(USE_ANT),`1',m4_include(pkgs-ant.yaml))
+m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
+m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+  run:
+    - mpich-mpicc
+    - openjdk
+    - python==3.9.16
+    - swig
+m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
+m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+
+test:
+  commands:
+    - swift-t -v
+
+about:
+  home: http://swift-lang.org/Swift-T
+  license: Apache License 2.0
+  summary: Swift/T - High Performance Parallel Scripting Language
+
+extra:
+  recipe-maintainers:
+    - swift-t
+    - mrakitin

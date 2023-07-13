@@ -56,7 +56,6 @@ namespace eval turbine {
     # Count of particular worker types (dict from type name to count)
     variable n_workers_by_type
 
-
     # How to display string values in the log
     variable log_string_mode
 
@@ -90,7 +89,7 @@ namespace eval turbine {
         if { $lang != "" } {
             set language $lang
         }
-      
+
         # Initialize debugging in case other functions want to debug
         variable debug_categories
         c::init_debug
@@ -300,7 +299,7 @@ namespace eval turbine {
 
         set n_workers [ dict get $rank_allocation workers ]
         set n_adlb_servers [ dict get $rank_allocation servers ]
-        
+
         variable n_workers_by_type
         set n_workers_by_type [ dict get $rank_allocation workers_by_type ]
         set n_regular_workers [ dict get $n_workers_by_type WORK ]

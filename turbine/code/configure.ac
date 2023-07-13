@@ -282,7 +282,7 @@ AC_ARG_WITH(launcher,
                        (mpiexec, etc.)]),
     [
         USE_LAUNCHER=${withval}
-        AC_CHECK_FILE(${USE_LAUNCHER}, [],
+        AC_CHECK_FILE($( which ${USE_LAUNCHER} ), [],
            AC_MSG_ERROR("Launcher '$USE_LAUNCHER' not found! "))
     ])
 
@@ -1138,7 +1138,8 @@ USE_TCL_LIB_DIR=0
 
 AC_ARG_WITH(tcl-lib-dir,
     AC_HELP_STRING([--with-tcl-lib-dir],
-                   [directory containing Tcl shared library]),
+                   [directory containing Tcl shared library
+                    (optional override)]),
     [
         USE_TCL_LIB_DIR=${withval}
         AC_MSG_RESULT([using Tcl lib dir: ${USE_TCL_LIB_DIR}])
@@ -1157,9 +1158,11 @@ USE_TCLSH_LOCAL=0
 AC_ARG_WITH(tclsh-local,
     AS_HELP_STRING(
         [--with-tclsh-local],
-        [name of tclsh compatible with build system]),
+        [name of tclsh compatible with build system
+         (optional override)]),
     [
-        AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION) executable in: ${withval}])
+        AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION)
+                         executable in: ${withval}])
         USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
         if [[ ${?} != 0 ]]
         then
@@ -1176,7 +1179,6 @@ then
   # Can use shared library in this case
   TCL_LIB_SUFFIX_PREFS="${SO_SUFFIX} ${TCL_LIB_SUFFIX_PREFS}"
 fi
-
 
 # Locate one or both variant of libtcl
 USE_LIBTCL_A=
@@ -1298,7 +1300,8 @@ then
     USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable in ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION}
+                      executable in ${USE_TCL}!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
@@ -1306,16 +1309,16 @@ else
     USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} executable at ${USE_TCL}!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION}
+                      executable at ${USE_TCL}!])
     fi
 fi
-AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
-# Now, allow user to override Tcl include
+# Allow user to override Tcl include
 AC_ARG_WITH(tcl-include,
             AS_HELP_STRING(
                [--with-tcl-include],
-               [directory containing tcl.h]),
+               [directory containing tcl.h (optional override)]),
             [AC_CHECK_FILE(${withval}/tcl.h,[],[FAIL=1])
              [[ ${FAIL} == 1 ]] &&
                AC_MSG_ERROR(Could not find tcl.h in ${withval})
@@ -1323,6 +1326,21 @@ AC_ARG_WITH(tcl-include,
              TCL_INCLUDE_SPEC=-I${withval}
             ],
             [])
+
+# Allow user to override Tcl shell
+AC_ARG_WITH(tclsh,
+            AS_HELP_STRING(
+
+               [--with-tclsh],
+               [full path to runtime tclsh (optional override)]),
+            [
+             # No error checks- let the user be creative
+             AC_MSG_RESULT([overriding Tcl shell to: ${withval}])
+             USE_TCLSH=${withval}
+            ],
+            [])
+
+AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
 AC_SUBST(USE_TCL)
 AC_SUBST(USE_TCL_LIB_DIR)

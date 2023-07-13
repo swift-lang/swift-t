@@ -22,8 +22,17 @@ set -eu
 # Section III: Copy (export) into TMP/distro/RELEASE
 # Section IV:  Make tar.gz
 
+# Get this directory (absolute):
+THIS=${0:A:h}
+# Top level of Swift/T Git clone
+TOP=${THIS:h:h}
+
+# Work from the top level:
+cd ${TOP}
+
 # Define RELEASE numbers
-source dev/get-versions.sh
+source $TOP/dev/get-versions.sh
+
 SWIFT_K_VERSION=swift-k-NONE
 
 # If USE_MASTER=1, use master instead of release numbers
@@ -37,9 +46,6 @@ export PKG_TYPE=src
 
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
-
-# Canonicalize this directory
-THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 
 setopt PUSHD_SILENT KSH_GLOB
 
@@ -115,9 +121,6 @@ distclean()
 
 # SECTION I
 
-# Top level of Swift/T Git clone
-TOP=$( cd ${THIS}/../../ ; /bin/pwd )
-
 TMP=${TMP:-/tmp}
 DISTRO=${TMP}/distro
 
@@ -178,8 +181,11 @@ pushd ${TOP}
 print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
-pushd c-utils/code
+pushd ${TOP}/c-utils/code
+<<<<<<< HEAD
 pwd
+=======
+>>>>>>> master
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
@@ -189,7 +195,7 @@ printf "OK\n\n"
 print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
 mkdir -pv ${TARGET}
-pushd lb/code
+pushd ${TOP}/lb/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
@@ -199,7 +205,7 @@ printf "OK\n\n"
 print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
 mkdir -pv ${TARGET}
-pushd turbine/code
+pushd ${TOP}/turbine/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
@@ -207,7 +213,7 @@ printf "OK\n\n"
 
 # STC
 print "Copying STC..."
-pushd stc
+pushd ${TOP}/stc
 pushd code
 TARGET=${EXPORT}/stc/code
 mkdir -pv ${TARGET}
@@ -228,24 +234,30 @@ printf "OK\n\n"
 print "Copying build scripts..."
 TARGET=${EXPORT}/dev/build
 mkdir -pv ${TARGET}
-pushd dev/build
+pushd ${TOP}/dev/build
 export_copy *.template !(swift-t-settings).sh
 popd
 TARGET=${EXPORT}/dev/m4
 mkdir -pv ${TARGET}
-pushd dev/m4
+pushd ${TOP}/dev/m4
 export_copy *.m4
 popd
 printf "OK\n\n"
 
 # Make timestamp
-print "Timestamp:"
+P="%~"
+print "Timestamp in ${(%)P} :"
 {
-  print -n "TIMESTAMP GIT: "
-  git log -n 1 '--date=format:%Y-%m-%d %H:%M:%S' \
-               '--pretty=format:%H : %ad : %s %n'
-  print -n "TIMESTAMP PKG: "
-  date "+%Y-%m-%d %H:%M:%S"
+  FIELDWIDTH="%-15s"
+  printf ${FIELDWIDTH} "GIT TIMESTAMP:"
+  git log -n 1 '--date=format:%Y-%m-%d %H:%M' \
+               '--pretty=format:%ad%n'
+  printf ${FIELDWIDTH} "GIT HASH:"
+  git log -n 1 '--pretty=format:%H%n'
+  printf ${FIELDWIDTH} "GIT MESSAGE:"
+  git log -n 1 '--pretty=format:%s%n'
+  printf ${FIELDWIDTH} "PKG TIMESTAMP:"
+  date "+%Y-%m-%d %H:%M"
 } | tee ${EXPORT}/dev/build/timestamp.txt
 print
 
@@ -253,7 +265,7 @@ if (( ENABLE_COASTER ))
 then
   TARGET=${EXPORT}/coaster-c-client
   mkdir -p ${TARGET}
-  pushd coaster-c-client
+  pushd ${TOP}/coaster-c-client
   export_copy aclocal.m4 configure.ac configure config/** m4/**
   export_copy **/Makefile.in **/Makefile.am
   export_copy AUTHORS ChangeLog COPYING INSTALL NEWS README
@@ -280,4 +292,5 @@ RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
 tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
 print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-du -h ${RELEASE_TGZ}
+du -h  ${RELEASE_TGZ}
+md5sum ${RELEASE_TGZ}

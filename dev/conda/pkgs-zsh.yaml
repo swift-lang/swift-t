@@ -1,0 +1,4 @@
+# pkgs-zsh.yaml: START
+# Extra packages for zsh
+    - zsh
+# pkgs-zsh.yaml: STOP
