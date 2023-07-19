@@ -70,6 +70,7 @@ turbine_log_submit()
 # Fills in turbine.log file during job submission
 # The variables referenced here must be in the environment or globals
 {
+  turbine_log_kv "SCRIPT:"            "${SCRIPT}"
   turbine_log_kv "JOB:"               "${JOB_ID}"
   turbine_log_kv "COMMAND:"           "${COMMAND}"
   turbine_log_kv "TURBINE_OUTPUT:"    "${TURBINE_OUTPUT}"
