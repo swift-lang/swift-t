@@ -182,10 +182,6 @@ print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
 mkdir -pv ${TARGET}
 pushd ${TOP}/c-utils/code
-<<<<<<< HEAD
-pwd
-=======
->>>>>>> master
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
