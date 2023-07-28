@@ -297,7 +297,6 @@ LOG_FILE=${TURBINE_OUTPUT}/turbine.log
 # All output from job, including error stream
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
-print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 # The modifier :A produces canonicalized file paths
