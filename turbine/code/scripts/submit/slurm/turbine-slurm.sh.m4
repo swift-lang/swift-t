@@ -60,6 +60,7 @@ getenv(TURBINE_DIRECTIVE)
 source ${TURBINE_HOME}/scripts/helpers.sh
 
 START=$( nanos )
+echo # Separate from startup junk
 echo "TURBINE-SLURM.SH START: $( date_nice_s )"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
