@@ -20,7 +20,16 @@ set -eu
 # Section I:   Setup
 # Section II:  Run autotools
 # Section III: Copy (export) into TMP/distro/RELEASE
-# Section IV:  Make tar.gz
+# Section IV:  Make tar.gz from export directory
+
+# TOOLS: On Linux, we use 'cp -u --parents'
+#        On Mac, we do this manually (slower)
+#        Specify Mac mode with the flag -m
+
+# NOTE:  We use zsh/files here so many common tools are
+#        replaced with ZSH builtins for speed
+#        (unless called via 'command')
+zmodload zsh/files
 
 # Get this directory (absolute):
 THIS=${0:A:h}
@@ -47,16 +56,33 @@ export PKG_TYPE=src
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
 
-setopt PUSHD_SILENT KSH_GLOB
+# Use Linux tools by default; may be set to "Mac"
+OS="Linux"
 
-while getopts "bcpt" opt
+# Make pushd silent:
+setopt PUSHD_SILENT
+# Allow for additional glob patterns:
+setopt KSH_GLOB
+
+help()
+{
+  print "See file header for usage."
+  print " -b : skip bootstrap (autotools) step for speed"
+  print " -m : use Mac tools"
+  print " -t : call this 'master' instead of a release number"
+}
+
+while getopts "bchmpt" opt
 do
   case ${opt} in
     b) BOOTSTRAP=0      ;;
     c) ENABLE_COASTER=1 ;;
+    h) help ; exit      ;;
+    m) OS="Mac"         ;;
     t) USE_MASTER=1     ;;
     \?)
-      echo "make-release-package.zsh: unknown option: ${OPTARG}"
+      print "make-release-package.zsh: unknown option: ${OPTARG}"
+      help
       exit 1
       ;;
   esac
@@ -100,6 +126,9 @@ crash()
   exit 1
 }
 
+if [[ ${OS} == "Linux" ]]
+then
+
 # Copy into export directory
 export_copy()
 {
@@ -110,6 +139,35 @@ export_copy_dir()
 {
   cp -uvr --parents ${*} ${TARGET}
 }
+
+else  # Mac does not have 'cp --parents'
+
+# Copy into export directory
+export_copy()
+{
+  local F D
+  for F in ${*}
+  do
+    # ZSH dirname:
+    D=${F:h}
+    mkdir -p ${TARGET}/${D}
+    cp -v ${F} ${TARGET}/${D}
+  done
+}
+
+export_copy_dir()
+{
+  local F D
+  for F in ${*}
+  do
+    # ZSH dirname:
+    D=${F:h}
+    mkdir -p ${TARGET}/${D}
+    cp -vr ${F} ${TARGET}/${D}
+  done
+}
+
+fi
 
 distclean()
 {
@@ -174,13 +232,13 @@ fi
 # SECTION III
 
 print
-mkdir -pv ${EXPORT}
+command mkdir -pv ${EXPORT}
 pushd ${TOP}
 
 # c-utils
 print "Copying c-utils..."
 TARGET=${EXPORT}/c-utils/code
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 pushd ${TOP}/c-utils/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
@@ -190,7 +248,7 @@ printf "OK\n\n"
 # LB
 print "Copying ADLB/X..."
 TARGET=${EXPORT}/lb/code
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 pushd ${TOP}/lb/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
@@ -200,7 +258,7 @@ printf "OK\n\n"
 # Turbine
 print "Copying Turbine..."
 TARGET=${EXPORT}/turbine/code
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 pushd ${TOP}/turbine/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
@@ -212,13 +270,13 @@ print "Copying STC..."
 pushd ${TOP}/stc
 pushd code
 TARGET=${EXPORT}/stc/code
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
 pushd tests
 TARGET=${EXPORT}/stc/tests
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 export_copy *.sh run-*.zsh
 export_copy {make-package.tcl,valgrind-patterns.grep}
 export_copy **/*.swift
@@ -229,12 +287,12 @@ printf "OK\n\n"
 # Build scripts
 print "Copying build scripts..."
 TARGET=${EXPORT}/dev/build
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 pushd ${TOP}/dev/build
 export_copy *.template !(swift-t-settings).sh
 popd
 TARGET=${EXPORT}/dev/m4
-mkdir -pv ${TARGET}
+mkdir -p ${TARGET}
 pushd ${TOP}/dev/m4
 export_copy *.m4
 popd
