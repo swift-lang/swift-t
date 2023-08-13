@@ -14,7 +14,6 @@
  * limitations under the License
  */
 
-
 /**
  * ADLB SERVER
  *
@@ -145,7 +144,8 @@ xlb_process_ready_work(void);
 
 /**
    Serve a single request then return
-   @param source MPI rank of allowable client: usually MPI_ANY_SOURCE unless syncing
+   @param source MPI rank of allowable client:
+          usually MPI_ANY_SOURCE unless syncing
  */
 static inline adlb_code xlb_serve_one(int source);
 
@@ -162,7 +162,8 @@ xlb_server_init(const struct xlb_state *state)
   ADLB_CHECK(code);
   code = xlb_requestqueue_init(state->types_size, &state->layout);
   ADLB_CHECK(code);
-  xlb_data_init(state->layout.servers, xlb_server_number(state->layout.rank));
+  xlb_data_init(state->layout.servers,
+                xlb_server_number(state->layout.rank));
   code = setup_idle_time();
   ADLB_CHECK(code);
   code = setup_load_min();
