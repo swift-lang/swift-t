@@ -1298,7 +1298,7 @@ handle_retrieve(int caller)
   ADLB_Free_binary_data2(&result, xlb_scratch);
 
   unused double t1 = MPI_Wtime();
-  INFO("handle_retrieve: rank=%i %8.5f", xlb_s.layout.rank, t1-t0);
+  DEBUG("handle_retrieve: rank=%i %8.5f", xlb_s.layout.rank, t1-t0);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
