@@ -39,6 +39,8 @@ task()
   /bin/time --format "time: %E" ${*}
 }
 
+git clone https://github.com/swift-lang/swift-t.git
+
 # Create the "exported" Swift/T source tree in /tmp/distro
 task swift-t/dev/release/make-release-pkg.sh
 # Set up the build environment:
