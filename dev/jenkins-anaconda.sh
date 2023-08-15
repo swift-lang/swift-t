@@ -2,7 +2,7 @@
 set -eu
 
 # JENKINS ANACONDA SH
-# Install Anaconda for GCE Jenkins
+# Test the Swift/T Anaconda packages
 # Sets up 3 Minicondas: one in which to build   the package
 #                   and one in which to install the package
 
