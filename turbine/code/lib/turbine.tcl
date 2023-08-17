@@ -185,10 +185,12 @@ namespace eval turbine {
         set n_workers_by_type [ dict create ]
         set n_workers [ expr { $adlb_size - $n_servers } ]
 
-        if { $n_workers == 0 } {
-            turbine_fail "You have 0 workers!\n" \
-                "Check your MPI configuration. " \
-                "There may be a mix of MPICH and OpenMPI."
+        if { $n_workers <= 0 } {
+            turbine_fail "You have $n_workers workers!\n"     \
+                "Check your MPI configuration, "              \
+                "there may be a mix of MPICH and OpenMPI.\n"  \
+                "Also note that: ADLB_SERVERS=$n_servers\n"   \
+                "                world size:  $adlb_size\n\n"
         }
 
         if { $n_workers < $n_servers } {
