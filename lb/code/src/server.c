@@ -419,7 +419,8 @@ static adlb_code xlb_process_ready_work(void)
   if (xlb_server_ready_work.count > 0)
   {
     ready = true;
-    INFO("xlb_process_ready_work(): count=%i", xlb_server_ready_work.count);
+    DEBUG("xlb_process_ready_work(): count=%i",
+          xlb_server_ready_work.count);
   }
 
   for (int i = 0; i < xlb_server_ready_work.count; i++)
