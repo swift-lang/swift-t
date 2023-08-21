@@ -124,23 +124,19 @@ static adlb_code setup_par_mod(void);
 static inline int xlb_server_number(int rank);
 
 __attribute__((always_inline))
-static inline adlb_code xlb_poll(int source, MPI_Status *req_status);
+static inline adlb_code xlb_poll(int source, MPI_Status* req_status);
 
 // Service request from queue
 __attribute__((always_inline))
-static inline adlb_code
-xlb_handle_pending(MPI_Status *status);
+static inline adlb_code xlb_handle_pending(MPI_Status* status);
 
 // Handle pending sync requests, etc
 __attribute__((always_inline))
-static inline adlb_code
-xlb_handle_pending_syncs(void);
+static inline adlb_code xlb_handle_pending_syncs(void);
 
-static inline adlb_code
-xlb_handle_ready_work(void);
+static inline adlb_code xlb_handle_ready_work(void);
 
-static adlb_code
-xlb_process_ready_work(void);
+static adlb_code xlb_process_ready_work(void);
 
 /**
    Serve a single request then return
