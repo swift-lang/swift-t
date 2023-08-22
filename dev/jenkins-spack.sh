@@ -163,6 +163,7 @@ PATH=$SPACK_HOME/bin:$PATH
   which spack
 )
 
+spack find
 spack load tcl
 set -x
 which tclsh8.6 tclsh || true
