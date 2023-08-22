@@ -32,7 +32,7 @@ if (( UNINSTALL )) {
        wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
   for LABEL in build install
   do
-    if [[ ! -f sfw/Miniconda-$LABEL ]] \
+    if [[ ! -d sfw/Miniconda-$LABEL ]] \
          bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-$LABEL
   done
 )
