@@ -54,6 +54,7 @@ task()
 if [[ -d swift-t ]]
 then
   cd swift-t
+  git checkout master
   git pull
   cd -
 else
