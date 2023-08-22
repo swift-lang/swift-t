@@ -84,6 +84,23 @@ git-log()
                --pretty=format:"%h %ad %s%n"
 }
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+
+msg()
+{
+  print ${(%)DATE_FMT_S} "JENKINS-SPACK:" ${*}
+}
+
+section()
+{
+  print ""
+  msg ${*}
+}
+
+# Allow Git checkout to complete?
+sleep 10
+section START
+
 # Setup a default workspace when running outside Jenkins
 WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
 mkdir -pv $WORKSPACE
@@ -106,9 +123,11 @@ if [[ -f $WORKSPACE/success.txt ]] {
 cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
        $WORKSPACE/spack/etc/spack/packages.yaml
 
+section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
 do
   pushd $DIR
+  msg   $DIR
   @ git branch
   touch hash-old.txt
   print "Old hash:"
@@ -144,6 +163,12 @@ PATH=$SPACK_HOME/bin:$PATH
   which spack
 )
 
+spack load tcl
+set -x
+which tclsh8.6 tclsh || true
+tclsh8.6 < /dev/null
+set +x
+
 uninstall()
 {
   # Ignore errors here - package may not yet be installed
@@ -162,6 +187,7 @@ uninstall-all()
   done
 }
 
+print
 @ spack find
 
 if (( ${#UNINSTALL} )) uninstall-all
