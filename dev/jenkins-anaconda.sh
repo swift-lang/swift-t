@@ -75,4 +75,8 @@ source $PY/etc/profile.d/conda.sh
 conda activate base
 conda env list
 
-# PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+set -x
+PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+which swift-t
+swift-t -v
+swift-t -E 'trace(42);'
