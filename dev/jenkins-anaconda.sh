@@ -3,26 +3,38 @@ set -eu
 
 # JENKINS ANACONDA SH
 # Test the Swift/T Anaconda packages
-# Sets up 3 Minicondas: one in which to build   the package
+# Sets up 2 Minicondas: one in which to build   the package
 #                   and one in which to install the package
 
+UNINSTALL=""
+zparseopts u=UNINSTALL
+
 renice --priority 19 --pid $$
+
+setopt PUSHD_SILENT
 
 # The Miniconda we are working with:
 MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
 
 # Clean up prior runs
-rm -fv $MINICONDA
-rm -fr $WORKSPACE/sfw/Miniconda-build
-rm -fr $WORKSPACE/sfw/Miniconda-install
-rm -fr /tmp/distro
+if (( UNINSTALL )) {
+  rm -fv $MINICONDA
+  rm -fr $WORKSPACE/sfw/Miniconda-build
+  rm -fr $WORKSPACE/sfw/Miniconda-install
+  rm -fr swift-t
+  rm -fr /tmp/distro
+}
 
 (
   # Download and install both Minicondas:
   set -x
-  wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
-  bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-build
-  bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-install
+  if [[ ! -f $MINICONDA ]] \
+       wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
+  for LABEL in build install
+  do
+    if [[ ! -f sfw/Miniconda-$LABEL ]] \
+         bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-$LABEL
+  done
 )
 
 # Enable the build environment
@@ -39,7 +51,14 @@ task()
   /bin/time --format "time: %E" ${*}
 }
 
-git clone https://github.com/swift-lang/swift-t.git
+if [[ -d swift-t ]]
+then
+  cd swift-t
+  git pull
+  cd -
+else
+  git clone https://github.com/swift-lang/swift-t.git
+fi
 
 # Create the "exported" Swift/T source tree in /tmp/distro
 task swift-t/dev/release/make-release-pkg.sh
