@@ -62,7 +62,7 @@ else
 fi
 
 # Create the "exported" Swift/T source tree in /tmp/distro
-task swift-t/dev/release/make-release-pkg.sh
+task swift-t/dev/release/make-release-pkg.zsh
 # Set up the build environment:
 task swift-t/dev/conda/setup-conda.sh
 # Build the Swift/T package:
