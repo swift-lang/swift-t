@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/zsh
 set -eu
 
 # JENKINS ANACONDA SH
