@@ -11,9 +11,10 @@ set -eu
 # NOTE: Keep LIST in sync with meta.yaml
 # USAGE: Provide PKG
 #        Provide -R to install R
+#        Provide -D to skip installing dependencies
 
-R=""
-zparseopts -D -E R=R
+D="" R=""
+zparseopts -D -E D=D R=R
 if (( ${#R} )) R="r"
 
 if (( ${#*} != 1 )) {
@@ -49,5 +50,5 @@ LIST=(
 )
 
 set -x
-conda install --yes -c conda-forge $LIST
+if (( ! ${#D} )) conda install --yes -c conda-forge $LIST
 conda install --yes $PKG
