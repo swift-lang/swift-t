@@ -31,10 +31,14 @@ md5sum $PKG
 which conda
 conda env list
 
+USE_GCC="gcc"
+# Skip GCC on osx-64
+if [[ $PKG =~ "/osx-64/" ]] USE_GCC=""
+
 LIST=(
   ant
   autoconf
-  gcc
+  $USE_GCC
   make
   mpich-mpicc
   openjdk

@@ -80,6 +80,10 @@ if [[ ${PLATFORM:t} == "osx-arm64" ]] {
   USE_GCC=0
   USE_ZSH=0
 }
+if [[ ${PLATFORM:t} == "osx-64" ]] {
+  # For OSX/Intel, we rely on Clang:
+  USE_GCC=0
+}
 
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
