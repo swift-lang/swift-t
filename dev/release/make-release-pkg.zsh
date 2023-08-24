@@ -25,6 +25,7 @@ set -eu
 # TOOLS: On Linux, we use 'cp -u --parents'
 #        On Mac, we do this manually (slower)
 #        Specify Mac mode with the flag -m
+#        Alternatively, you can install GNU coreutils via Homebrew
 
 # NOTE:  We use zsh/files here so many common tools are
 #        replaced with ZSH builtins for speed
