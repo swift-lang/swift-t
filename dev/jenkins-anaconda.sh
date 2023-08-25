@@ -72,6 +72,16 @@ task swift-t/dev/conda/setup-conda.sh
 # Build the Swift/T package:
 task swift-t/dev/conda/linux-64/conda-platform.sh
 
+print "CHECKING PACKAGE..."
+PKG=$WORKSPACE/Swift-T-Anaconda/sfw/Miniconda-build/conda-bld/linux-64/swift-t-1.6.2-py39_1.tar.bz2
+if ! ls -l $PKG
+then
+  print "Could not find the PKG at: $PKG"
+  return 1
+fi
+md5sum $PKG
+print
+
 # Enable the install environment
 print "ACTIVATING ENVIRONMENT..."
 PY=$WORKSPACE/sfw/Miniconda-install
@@ -81,6 +91,8 @@ conda activate base
 conda env list
 print "ACTIVATED ENVIRONMENT."
 print
+
+task swift-t/dev/conda/conda-install.sh
 
 print "TRY SWIFT/T..."
 set -x

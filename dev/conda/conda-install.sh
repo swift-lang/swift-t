@@ -13,6 +13,8 @@ set -eu
 #        Provide -R to install R
 #        Provide -D to skip installing dependencies
 
+# If the user requested an R installation,
+# variable R will be set to the package name for R:
 D="" R=""
 zparseopts -D -E D=D R=R
 if (( ${#R} )) R="r"
