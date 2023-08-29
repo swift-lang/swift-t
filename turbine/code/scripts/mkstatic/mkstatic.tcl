@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Tcl script to generate entry point C code for statically linked 
+# Tcl script to generate entry point C code for statically linked
 # application.  Uses template C code and manifest file to output
 # an appropriate C main program.
 
@@ -160,7 +160,7 @@ proc main { } {
       lappend non_flag_args $arg
     }
   }
-  
+
   if { [ llength $non_flag_args ] != 1 } {
     if { $ignore_no_manifest } {
       set manifest_filename ""
@@ -184,7 +184,7 @@ proc main { } {
   }
 
   print_link_info stdout $manifest_dict $print_link_objs $print_link_flags
-  
+
   if { [ string length $link_deps_output_file ] > 0 } {
     write_link_deps_file $manifest_dict $link_deps_output_file $link_deps_target
   }
@@ -216,7 +216,7 @@ proc user_warn { msg } {
 }
 
 proc setonce { varname val } {
-  upvar 1 $varname var 
+  upvar 1 $varname var
   if { [ string length $var ] > 0 } {
     user_err "$varname had two values: $val and $var"
   }
@@ -278,7 +278,7 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
       # Remove whitespace from key
       set key [ string trim [ string range $line 0 [ expr $eq_index - 1 ] ] ]
       # Keep whitespace for value in case it's significant - can be stripped later
-      set val [ string range $line [ expr $eq_index + 1 ] [ string length $line ] ] 
+      set val [ string range $line [ expr $eq_index + 1 ] [ string length $line ] ]
       set trimmed_val [ string trim $val ]
       #puts "Key: \"$key\" Val: \"$val\""
 
@@ -341,7 +341,7 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
 # - Plain Tcl source files with .tcl extensions to be evaled
 # - Tcl packages with pkgIndex.tcl files to be indexed
 # - Tcl modules with .tm extensions to be bundled and loaded on demand
-# 
+#
 # Result is list of lists.  Each list has two forms:
 # FILE src_file
 # PACKAGE name version (src_file)*
@@ -383,7 +383,7 @@ proc locate_lib_src { tcl_version lib_dir } {
   # In the Tcl layouts with version-specific subdirectories, that is where
   # the base Tcl functionality is: check those first.
   lappend check_dirs [ file join $lib_dir "tcl${tcl_version}" ]
-  
+
   # Loadable Tcl modules are in a version-specific subdirectory.
   # We can load any modules with the same major version and equal or
   # lower minor version
@@ -408,7 +408,7 @@ proc locate_lib_src { tcl_version lib_dir } {
       verbose_msg "Found Tcl lib file $tcl_file"
       lappend found [ list FILE $tcl_file ]
     }
-    
+
     foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tm" ] {
       verbose_msg "Found Tcl module lib file $tcl_file"
       lassign [ tm_package_version $tcl_file ] tm_package tm_version
@@ -446,7 +446,7 @@ proc locate_lib_src { tcl_version lib_dir } {
 # Each list entry is of form: (package_name, package_version, (src_file)*
 proc pkgindex_analyse { f } {
   set pkgs_info [ pkgindex_tryload $f ]
-  set src_packages [ list ] 
+  set src_packages [ list ]
   foreach pkg_info $pkgs_info {
     lassign $pkg_info name version init_script
     set src_files [ pkg_analyse $name $version $init_script ]
@@ -483,14 +483,14 @@ proc lib_init_order { tcl_version lib1 lib2 } {
 
   if { $core_ix1 >= 0 } {
     if { $core_ix2 >= 0 && $core_ix2 <= $core_ix1 } {
-      return 1 
+      return 1
     } else {
       return -1
     }
   } elseif { $core_ix2 >= 0 } {
     return 1
   }
- 
+
   # Then setup package/module subsystem and register packages/modules
   if { $lib_type1 == "PACKAGE" } {
     if { $lib_type2 == "PACKAGE" } {
@@ -502,7 +502,7 @@ proc lib_init_order { tcl_version lib1 lib2 } {
   } elseif { $lib_type2 == "PACKAGE" } {
     return 1
   }
-  
+
   # Then load other scripts in some deterministic order
   set file1 [ lindex $lib1 1 ]
   set file2 [ lindex $lib2 1 ]
@@ -535,7 +535,7 @@ proc pkg_analyse { name version init_script } {
     if { [ string length $cmd ] == 0 } {
       continue
     }
-    
+
     if { ! [ string is list $cmd ] } {
       # Could not tokenise command
       return ""
@@ -559,9 +559,9 @@ proc pkgindex_tryload { f } {
 
   set share_procs [ list pkgindex_tryload_child ]
   foreach share_proc $share_procs {
-    interp alias $int $share_proc  {} $share_proc 
+    interp alias $int $share_proc  {} $share_proc
   }
- 
+
   set res [ interp eval $int "
     return \[ pkgindex_tryload_child $f \]
   "]
@@ -601,7 +601,7 @@ proc write_deps_file { manifest_dict init_lib_src deps_output_file \
   if { $main_script != "" } {
     lappend all_scripts $main_script
   }
-  
+
   foreach lib $init_lib_src {
     set lib_type [ lindex $lib 0 ]
     if { $lib_type == "FILE" } {
@@ -613,7 +613,7 @@ proc write_deps_file { manifest_dict init_lib_src deps_output_file \
       error "unexpected type $lib_type in $lib"
     }
   }
-  
+
   foreach script $all_scripts {
     puts -nonewline $deps_output " $script"
   }
@@ -657,7 +657,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
 
   set pkg_name [ dict get $manifest_dict pkg_name ]
   set pkg_version [ dict get $manifest_dict pkg_version ]
- 
+
  if { [ string length $pkg_name ] == 0 } {
     set pkg_name "TurbineUserPackage"
   }
@@ -688,7 +688,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
       set package_info ""
     } elseif { $lib_type == "PACKAGE" } {
       set src_files [ lrange $lib 3 [ llength $lib ] ]
-      set package_info [ list [ lindex $lib 1 ] [ lindex $lib 2 ] ] 
+      set package_info [ list [ lindex $lib 1 ] [ lindex $lib 2 ] ]
     } else {
       error "Unexpected lib type $lib_type in $lib"
     }
@@ -696,7 +696,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
     foreach src_file $src_files {
       set src_var [ varname_from_file $resource_var_prefix \
                                       $src_file $all_vars ]
-      lappend src_vars $src_var 
+      lappend src_vars $src_var
       lappend all_vars $src_var
     }
     lappend init_lib_package_info $package_info
@@ -709,7 +709,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
   foreach lib_script $lib_scripts {
     set lib_script_var [ varname_from_file $resource_var_prefix \
                                            $lib_script $all_vars ]
-    lappend lib_script_vars $lib_script_var 
+    lappend lib_script_vars $lib_script_var
     lappend all_vars $lib_script_var
   }
 
@@ -724,7 +724,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
 
     set bundled_basename [ bundled_file_basename $bundled_file ]
     if { [ lsearch -exact $bundled_basenames $bundled_basename ] >= 0 } {
-      user_err "Duplicate base names for bundled files: $bundled_basename"    
+      user_err "Duplicate base names for bundled files: $bundled_basename"
     }
   }
 
@@ -744,7 +744,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
       # Text before match
       puts -nonewline $c_output \
         [ string range $line 0 [ expr {$match_start - 1} ] ]
-      
+
       # Sub var name without @ @
       set sub_var_name [ string range $line [ expr {$match_start + 1} ] \
                                             [ expr {$match_end - 1} ] ]
@@ -783,7 +783,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
               $lib_script_vars $lib_scripts
         }
         MAIN_SCRIPT_STRING {
-          puts -nonewline $c_output $MAIN_SCRIPT_STRING 
+          puts -nonewline $c_output $MAIN_SCRIPT_STRING
         }
         HAS_MAIN_SCRIPT_STRING {
           set main_script [ dict get $manifest_dict main_script ]
@@ -830,19 +830,19 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
 
           puts $c_output "static const unsigned char *bundled_file_data\[\] = {"
           foreach var $bundled_vars {
-            puts $c_output "$var, " 
+            puts $c_output "$var, "
           }
           puts $c_output "};"
-          
+
           puts $c_output "static const size_t *bundled_file_lens\[\] = {"
           foreach var $bundled_vars {
-            puts $c_output "&${var}_len, " 
+            puts $c_output "&${var}_len, "
           }
           puts $c_output "};"
-          
+
           puts $c_output "static const char *bundled_file_names\[\] = {"
           foreach bundled_file $bundled_files {
-            puts $c_output "\"[ bundled_file_basename $bundled_file ]\", " 
+            puts $c_output "\"[ bundled_file_basename $bundled_file ]\", "
           }
           puts $c_output "};"
         }
@@ -872,7 +872,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
               user_err "could not convert tcl file $src_file to C array"
             }
           }
-          
+
           foreach var $bundled_vars bundled_file $bundled_files {
             verbose_msg "ingesting file: $var $bundled_file"
             puts $c_output "/* data from $bundled_file */"
@@ -912,7 +912,7 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version sys_lib_dir } {
     if { ! [ catch [ package vcompare $tcl_version 0 ] ] } {
       user_err "Invalid version number: \"$tcl_version\""
     }
-    
+
     # Versions that we've tested with
     set min_ver 8.5
     set max_ver 8.6
@@ -921,7 +921,7 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version sys_lib_dir } {
                  for Tcl version $tcl_version < $min_ver. This may work but\
                  do not be surprised if Tcl initialization fails!"
     }
-    
+
     if { [ package vcompare $tcl_version $max_ver ] > 0 } {
       user_warn "Do not officially support including initialization library\
                  for Tcl version $tcl_version > $max_ver. This may work but\
@@ -1010,18 +1010,18 @@ proc tcl_lib_init { outf package_infos init_lib_vars init_lib_src \
 # Parse into package name and version, return as list
 proc tm_package_version { src_file } {
   set basename [ file tail $src_file ]
-  set ext [ file extension $basename ] 
+  set ext [ file extension $basename ]
   if { $ext != ".tm" } {
     error "Expected .tm extension for $basename"
   }
   set module_name [ file rootname $basename ]
   # module_name is of form ${package_name}-${package_version}
   set module_parts [ split $module_name "-" ]
-  if { [ llength $module_parts ] != 2 } { 
+  if { [ llength $module_parts ] != 2 } {
     error "Expected .tm name \"$module_name\" to consist of name-version\
           with no other \"-\" separators"
   }
-  return $module_parts 
+  return $module_parts
 }
 proc pkg_init_fn_name { pkg_name version } {
   regsub -all {\.} ${version} "_" version2
@@ -1051,7 +1051,7 @@ proc gen_pkg_init_fn { outf init_fn_name lib_init_fns \
     puts $outf "    return rc;"
     puts $outf "  }"
   }
- 
+
   foreach var $resource_vars resource_file $resource_files {
     eval_resource_var $outf $var $resource_file
   }
@@ -1075,7 +1075,7 @@ proc print_link_info { outfile manifest_dict link_objs link_flags } {
     puts -nonewline $outfile [ string trim \
         [ dict get $manifest_dict lib_objects ] ]
   }
-  
+
   if { $link_flags } {
     if { $link_objs } {
       puts -nonewline $outfile  " "
