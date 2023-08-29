@@ -42,16 +42,16 @@ m4_ifelse(getenv(QUEUE),`',,
 getenv(TURBINE_DIRECTIVE)
 # END TURBINE_DIRECTIVE
 
+set -eu
+
 VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))
 then
  set -x
 fi
 
-set -eu
-
-START=$( date "+%s.%N" )
-echo "TURBINE-PBS.SH START: $( date '+%Y-%m-%d %H:%M:%S' )"
+START=$( nanos )
+echo "TURBINE-PBS"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
@@ -81,16 +81,12 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
 
-module list
-module load PrgEnv-nvhpc
-module list
-
 log_path LD_LIBRARY_PATH
 echo
 
 if (
-  # Report the environment to a sorted file for debugging:
-  printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+  turbine_log_start | tee -a turbine.log
+  turbine_report_env > turbine-env.txt
 
   set -x
   # Run Turbine!
@@ -101,19 +97,19 @@ then
   CODE=0
 else
   CODE=$?
+  echo
+  echo "TURBINE-PBS: jsrun returned an error code!"
+  echo
 fi
 
-STOP=$( date "+%s.%N" )
-# Bash cannot do floating point arithmetic:
-DURATION=$( awk -v START=${START} -v STOP=${STOP} \
-            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
-echo "MPIEXEC TIME: ${DURATION}"
+echo
+STOP=$( nanos )
+DURATION=$( duration )
 
-echo "CODE: ${CODE}"
-echo "COMPLETE: $( date '+%Y-%m-%d %H:%M:%S' )"
+turbine_log_stop | tee -a turbine.log
 
 # Return exit code from launcher
-exit ${CODE}
+exit $CODE
 
 # Local Variables:
 # mode: m4
