@@ -32,7 +32,7 @@ adlb_code
 xlb_debug_check_environment()
 {
   bool rc;
-    
+
   // Note that getenv_boolean() prints a warning message on
   //      invalid input
 
