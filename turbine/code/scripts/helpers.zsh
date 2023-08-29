@@ -31,35 +31,35 @@ GB=$(( 1024*MB ))
 
 abort()
 {
-  MSG=${*}
+  local MSG="${*}"
   print ${MSG}
   exit 1
 }
 
 assert()
 {
-  ERR=$1
+  local ERR=$1
   shift
-  MSG="${*}"
+  local MSG="${*}"
   check ${ERR} "${MSG}" || exit ${ERR}
   return 0
 }
 
 exitcode()
 {
-  ERR=$?
-  MSG="${*}"
+  local ERR=$?
+  local MSG="${*}"
   assert ${ERR} "${MSG}"
 }
 
 # If CODE is non-zero, print MSG and return CODE
 check()
 {
-  CODE=$1
+  local CODE=$1
   shift
-  MSG=${*}
+  local MSG=${*}
 
-  if [[ ${CODE} != 0 ]]
+  if (( ${CODE} != 0 ))
     then
     print ${MSG}
     return ${CODE}

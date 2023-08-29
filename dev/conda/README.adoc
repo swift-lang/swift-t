@@ -60,7 +60,7 @@ The output from `build-generic.sh`.  Should be in `RECIPE_DIR`.
 
 == Script architecture
 
-. Each `RECIPE_DIR` directory has a `build-platform.sh` script to start the build.
+. Each `RECIPE_DIR` directory has a `conda-platform.sh` script to start the build.
 . This calls the top-level `conda-build.sh` script.
 . This sets up `meta.yaml` for the `RECIPE_DIR`
 . `conda build` calls `build.sh` for the `RECIPE_DIR`, but this simply
@@ -77,7 +77,7 @@ Setup:
 
 Loop:
 
-* Run `build-platform.sh`.  See notes there.
+* Run `conda-platform.sh`.  See notes there.
 * Check `conda-build.log` (`LOG`) for errors.
 * Add debug output to `build.sh` as needed to diagnose problems.
 * Run `conda-install.sh` to test the installation.  See notes there.
@@ -85,7 +85,7 @@ Loop:
 == To create a new platform
 
 * Copy the platform-specific directory
-* Run the `build-platform.sh` script and debug it
+* Run the `conda-platform.sh` script and debug it
 
 == Anaconda tips
 

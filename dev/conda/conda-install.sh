@@ -11,9 +11,12 @@ set -eu
 # NOTE: Keep LIST in sync with meta.yaml
 # USAGE: Provide PKG
 #        Provide -R to install R
+#        Provide -D to skip installing dependencies
 
-R=""
-zparseopts -D -E R=R
+# If the user requested an R installation,
+# variable R will be set to the package name for R:
+D="" R=""
+zparseopts -D -E D=D R=R
 if (( ${#R} )) R="r"
 
 if (( ${#*} != 1 )) {
@@ -31,10 +34,14 @@ md5sum $PKG
 which conda
 conda env list
 
+USE_GCC="gcc"
+# Skip GCC on osx-64
+if [[ $PKG =~ "/osx-64/" ]] USE_GCC=""
+
 LIST=(
   ant
   autoconf
-  gcc
+  $USE_GCC
   make
   mpich-mpicc
   openjdk
@@ -45,5 +52,5 @@ LIST=(
 )
 
 set -x
-conda install --yes -c conda-forge $LIST
+if (( ! ${#D} )) conda install --yes -c conda-forge $LIST
 conda install --yes $PKG

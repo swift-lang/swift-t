@@ -2,8 +2,12 @@
 set -eu
 
 # JENKINS SPACK SH
-# Developed for ANL/GCE
 # Install Swift/T from GCE Jenkins with Spack under various techniques
+# Developed for ANL/GCE
+# Can also be run outside Jenkins for diagnosis,
+#     in which case it will install under /tmp/$USER/workspace
+#     and you must previously clone spack and swift-t there.
+#     You have to fix the Tcl location
 # We install Spack externals in advance but list them here
 # Prereqs that we must build in Spack are built here
 # Provide -u to uninstall first
@@ -84,6 +88,23 @@ git-log()
                --pretty=format:"%h %ad %s%n"
 }
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+
+msg()
+{
+  print ${(%)DATE_FMT_S} "JENKINS-SPACK:" ${*}
+}
+
+section()
+{
+  print ""
+  msg ${*}
+}
+
+# Allow Git checkout to complete?
+sleep 10
+section START
+
 # Setup a default workspace when running outside Jenkins
 WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
 mkdir -pv $WORKSPACE
@@ -102,14 +123,18 @@ if [[ -f $WORKSPACE/success.txt ]] {
   PRIOR_SUCCESS=1
 }
 
-# Install packages.yaml
-cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
-       $WORKSPACE/spack/etc/spack/packages.yaml
+# Install packages.yaml if really under Jenkins
+if (( ${#JENKINS_HOME} )) {
+  cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
+         $WORKSPACE/spack/etc/spack/packages.yaml
+}
 
+section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
 do
   pushd $DIR
-  @ git branch
+  msg   $DIR
+  git branch | cat
   touch hash-old.txt
   print "Old hash:"
   cat hash-old.txt
@@ -144,6 +169,15 @@ PATH=$SPACK_HOME/bin:$PATH
   which spack
 )
 
+# echo spack find
+# spack find
+# echo spack load
+# spack load tcl
+# set -x
+# which tclsh8.6 tclsh || true
+# tclsh8.6 < /dev/null
+# set +x
+
 uninstall()
 {
   # Ignore errors here - package may not yet be installed
@@ -162,6 +196,7 @@ uninstall-all()
   done
 }
 
+print
 @ spack find
 
 if (( ${#UNINSTALL} )) uninstall-all
@@ -183,6 +218,8 @@ if (( ${#UNINSTALL} )) uninstall-all
   do
     spack install $p
   done
+which tclsh tclsh8.6
+
   for p in $PACKAGES
   do
     spack install $p
