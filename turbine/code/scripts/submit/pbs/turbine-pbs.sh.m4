@@ -60,7 +60,8 @@ PPN=getenv(PPN)
 
 # On Polaris, provide PROCS/PPN to mpiexec:
 m4_ifelse(getenv(TURBINE_POLARIS),1,
-TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS) -n ${PROCS} --ppn ${PPN:-1} )
+TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS)
+                         -n ${PROCS} --ppn ${PPN:-1} )
 )
 
 TURBINE_HOME=getenv(TURBINE_HOME)
