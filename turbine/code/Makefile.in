@@ -385,7 +385,7 @@ ifeq ($(USE_MAC),yes)
   FIX_RINSIDE_INSTALL_NAME = install_name_tool -change $(RINSIDE_INSTALL_NAME) $(RINSIDE_LIB)/libRInside.dylib $(TCL_TURBINE_SO)
 
   ifneq ($(PYTHON_LIBDIR),)
-    PYTHON_LIB_NAME =  $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
+    PYTHON_LIB_NAME = $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
     PYTHON_INSTALL_NAME = $(shell otool -D $(PYTHON_LIB_NAME) | sed -n 2p)
     FIX_PYTHON_INSTALL_NAME = install_name_tool -change $(PYTHON_INSTALL_NAME) $(PYTHON_LIB_NAME) $(TCL_TURBINE_SO)
   endif
