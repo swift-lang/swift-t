@@ -217,11 +217,17 @@ AC_SUBST(USE_LIBCUTILS_A)
 
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
+
 # The "launcher" is used by job submission systems to launch jobs
 # Usually a path to mpiexec
 # Note: schedulers are handled by turbine/scripts/submit/*
 USE_LAUNCHER=0
+
+# This is set my --with-mpi
+# Normally this is the prefix of an MPI build,
+# or /usr in an APT or Yum installation
 USE_MPI_DIR=0
+
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
@@ -256,10 +262,6 @@ AC_ARG_WITH(mpi,
           fi
         fi
         USE_MPI_DIR=${withval}
-        if [[ -d ${USE_MPI_DIR}/include ]]
-        then
-          USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-        fi
         MPI_LABEL_DIR="${USE_MPI_DIR}"
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
@@ -298,89 +300,20 @@ AC_ARG_ENABLE(mpi-checks,
 if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
    program=$( which mpicc 2> /dev/null)
-   if [[ ${?} == 0 ]]
+   if (( ${?} == 0 ))
    then
        AC_MSG_RESULT([PATH contains: ${program}])
-       TRY_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       if   [[ -f ${TRY_MPI_DIR}/include/mpich/mpi.h ]]
-       then
-         USE_MPI_DIR=${TRY_MPI_DIR}
-         USE_MPI_INCLUDE=${USE_MPI_DIR}/include/mpich
-       elif [[ -f ${TRY_MPI_DIR}/include/mpi.h ]]
-       then
-         USE_MPI_DIR=${TRY_MPI_DIR}
-         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-       elif [[ -f ${TRY_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
-       then
-         USE_MPI_DIR=${TRY_MPI_DIR}
-         USE_MPI_INCLUDE=${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
-       fi
-       AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-   elif (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
-   then
-       AC_MSG_ERROR([Turbine requires --with-mpi or
-                                  --enable-custom-mpi or
-                                  or mpicc in PATH .])
-   fi
+       USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
+       AC_MSG_RESULT([Setting MPI_DIR to ${USE_MPI_DIR} ...])
    MPI_LABEL_DIR="${USE_MPI_DIR}"
 fi
 
-# Set MPI_DIR with respect to a system MPICH (NEWER c. 2021)
-if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+# At this point, USE_MPI_DIR must be set!
+if (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
 then
-    if [[ -r /usr/lib/x86_64-linux-gnu/mpich/include/mpi.h ]]
-    then
-        # APT
-        DIR=/usr/lib/x86_64-linux-gnu/mpich
-        AC_MSG_RESULT([Using MPICH (APT) directory: ${DIR}])
-        USE_MPI_DIR=${DIR}
-        if [[ ${USE_LAUNCHER} == 0 ]]
-        then
-          USE_LAUNCHER=/usr/bin/mpiexec
-        fi
-        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-        USE_MPI_LIB=/usr/lib/x86_64-linux-gnu
-    elif [[ -r /usr/include/mpich-x86_64/mpi.h ]]
-    then
-        # Yum MPICH
-        DIR=/usr/lib64/mpich
-        AC_MSG_RESULT([Using MPICH (Yum) directory: ${DIR}])
-        USE_MPI_DIR=${DIR}
-        if [[ ${USE_LAUNCHER} == 0 ]]
-        then
-          USE_LAUNCHER=/usr/lib64/mpich/bin/mpiexec
-        fi
-        USE_MPI_INCLUDE=/usr/include/mpich-x86_64
-        USE_MPI_LIB=${USE_MPI_DIR}/lib
-    fi
-fi
-
-# Try to set MPI_DIR with respect to a system OpenMPI
-if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
-then
-    if [[ -r /usr/lib/x86_64-linux-gnu/openmpi/include/mpi.h ]]
-    then
-        AC_MSG_RESULT([Using OpenMPI (Debian) directory: ${OPENMPI}])
-        USE_MPI_DIR=/usr/lib/x86_64-linux-gnu/openmpi
-        if [[ $USE_LAUNCHER == 0 ]]
-        then
-          USE_LAUNCHER=/usr/bin/mpiexec
-        fi
-        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-        USE_MPI_LIB=${USE_MPI_DIR}/lib
-    elif [[ -r /usr/include/openmpi-x86_64/mpi.h ]]
-    then
-        # Yum OpenMPI
-        DIR=/usr/lib64/openmpi
-        AC_MSG_RESULT([Using OpenMPI (Yum) directory: ${DIR}])
-        USE_MPI_DIR=${DIR}
-        if [[ ${USE_LAUNCHER} == 0 ]]
-        then
-          USE_LAUNCHER=/usr/lib64/openmpi/bin/mpiexec
-        fi
-        USE_MPI_INCLUDE=/usr/include/openmpi-x86_64
-        USE_MPI_LIB=${USE_MPI_DIR}/lib
-    fi
+  AC_MSG_ERROR([Turbine requires --with-mpi or
+                                 --enable-custom-mpi or
+                                 or mpicc in PATH .])
 fi
 
 if [[ ${USE_LAUNCHER} == 0 ]]
@@ -397,26 +330,19 @@ if [[ ${USE_LAUNCHER} == 0 ]]
 then
     # Try to set launcher based on PATH
     program=$( which mpiexec 2> /dev/null )
-    if [[ ${?} == 0 ]]
+    if (( ${?} == 0 ))
     then
         AC_MSG_RESULT([Found ${program} in PATH.])
         USE_LAUNCHER=${program}
-    else
-        AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
     fi
 fi
 
-AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
-
-# Look for mpi.h at its APT location
-if [[ ! -f ${USE_MPI_INCLUDE}/mpi.h ]]
+# At this point, USE_LAUNCHER must be set!
+if [[ ${USE_LAUNCHER} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
 then
-    if [[ -f ${USE_MPI_INCLUDE}/mpi/mpi.h ]]
-    then
-        # Obsolete location?  2020-01-04
-        USE_MPI_INCLUDE=${USE_MPI_INCLUDE}/mpi
-    fi
+  AC_MSG_WARN([No MPI launcher (e.g., mpiexec) was found!])
 fi
+AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
 
 AC_ARG_WITH(mpi-include,
     AS_HELP_STRING([--with-mpi-include],
@@ -425,6 +351,27 @@ AC_ARG_WITH(mpi-include,
         USE_MPI_INCLUDE=${withval}
     ],
     [])
+
+MPI_INCLUDE_TRIES=(
+  # Normal location for source build:
+  ${USE_MPI_DIR}/include
+  # MPICH via APT:
+  ${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
+  # MPICH via Yum:
+  ${USE_MPI_DIR}/include/mpich-x86_64
+  # OpenMPI via APT:
+  ${USE_MPI_DIR}/lib/x86_64-linux-gnu/openmpi/include
+  # OpenMPI via Yum:
+  ${USE_MPI_DIR}/include/openmpi-x86_64
+)
+for TRY in ${MPI_INCLUDE_TRIES[@]}
+do
+  if [[ ${USE_MPI_INCLUDE} != 0 ]]
+  then
+    break
+  fi
+  AC_CHECK_FILE($TRY/mpi.h, [USE_MPI_INCLUDE=$TRY])
+fi
 
 AC_ARG_WITH(mpi-lib-dir,
     AS_HELP_STRING([--with-mpi-lib-dir],
@@ -459,13 +406,15 @@ AC_ARG_WITH(mpi-lib-extra,
     ],
     [])
 
+
+
 # Now check MPI settings
 
 if (( ENABLE_MPI_CHECKS ))
 then
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
-                [],
+                [AC_MSG_RESULT([Found ${USE_MPI_INCLUDE}/mpi.h])],
                 [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
 
 MPI_LIB_FOUND=0
