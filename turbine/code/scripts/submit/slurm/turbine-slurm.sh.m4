@@ -61,7 +61,7 @@ source ${TURBINE_HOME}/scripts/helpers.sh
 
 START=$( nanos )
 echo # Separate from startup junk
-echo "TURBINE-SLURM.SH START: $( date_nice_s )"
+echo "TURBINE-SLURM.SH"
 
 export TURBINE_HOME=$( cd "$(dirname "$0")/../../.." ; /bin/pwd )
 
@@ -120,15 +120,13 @@ then
   TURBINE_LAUNCHER=srun
 fi
 
-# Report modules to output.txt for debugging:
-module list
-
-(
+# module load cpe/23.05
+# export LD_LIBRARY_PATH+=:/opt/cray/pe/mpich/8.1.26/ofi/gnu/9.1/lib
+if (
   export PMI_MMAP_SYNC_WAIT_TIME=1800
-  turbine_log_start | tee -a turbine.log
 
-  # Report the environment to a sorted file for debugging:
-  printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
+  turbine_log_start | tee -a turbine.log
+  turbine_report_env > turbine-env.txt
 
   LAUNCH_OPTIONS=(
     --nodes=getenv(NODES)
@@ -137,21 +135,32 @@ module list
     getenv(TURBINE_LAUNCH_OPTIONS)
   )
 
+  # Report modules to output.txt for debugging:
+  module list
+
   echo
   set -x
+  # Launch it!
   ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS[@]} ${TURBINE_INTERPOSER} \
                       ${COMMAND}
 )
-CODE=$?
+then
+  CODE=0
+else
+  CODE=$?
+  echo
+  echo "TURBINE-SLURM: MPI launcher returned an error code!"
+  echo
+fi
 
+echo
 STOP=$( nanos )
 DURATION=$( duration )
 
-echo
 turbine_log_stop | tee -a turbine.log
 
 # Return exit code from launcher
-exit ${CODE}
+exit $CODE
 
 # Local Variables:
 # mode: m4;

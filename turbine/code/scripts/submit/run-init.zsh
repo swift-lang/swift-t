@@ -276,10 +276,16 @@ then
   print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 fi
 
-# All output from job, including error stream
+# All output from job, including error stream,
+#     unless using TURBINE_STDOUT
 export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 # Create the file now so the user can tail it immediately
 touch ${OUTPUT_FILE}
+if [[ ${TURBINE_STDOUT} != "" ]]
+then
+  # Create this directory now to avoid contention later:
+  mkdir -pv ${TURBINE_OUTPUT}/out
+fi
 
 if [[ ${INIT_SCRIPT} != 0 ]]
 then

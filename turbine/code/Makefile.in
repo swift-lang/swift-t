@@ -19,9 +19,9 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ENABLE_STATIC_PKG = @ENABLE_STATIC_PKG@
 
 CC = @CC@
+CPPFLAGS := @CPPFLAGS@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
-CPPFLAGS := @CPPFLAGS@
 
 # C++ is only used if R is enabled
 CXX = @CXX@
@@ -385,7 +385,7 @@ ifeq ($(USE_MAC),yes)
   FIX_RINSIDE_INSTALL_NAME = install_name_tool -change $(RINSIDE_INSTALL_NAME) $(RINSIDE_LIB)/libRInside.dylib $(TCL_TURBINE_SO)
 
   ifneq ($(PYTHON_LIBDIR),)
-    PYTHON_LIB_NAME =  $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
+    PYTHON_LIB_NAME = $(PYTHON_LIBDIR)/lib$(PYTHON_NAME).dylib
     PYTHON_INSTALL_NAME = $(shell otool -D $(PYTHON_LIB_NAME) | sed -n 2p)
     FIX_PYTHON_INSTALL_NAME = install_name_tool -change $(PYTHON_INSTALL_NAME) $(PYTHON_LIB_NAME) $(TCL_TURBINE_SO)
   endif
@@ -537,6 +537,8 @@ ifeq (${DEPCC},)
 DEPCC = gcc
 endif
 
+CPPFLAGS += $(INCLUDES)
+
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
 	DEP_DROP = -d mpi\\.h
@@ -548,7 +550,7 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
              $(DEP_DROP) $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
-	     $(INCLUDES) $(HDF5_CPPFLAGS) $(DEFINES)
+	     $(CPPFLAGS) $(HDF5_CPPFLAGS) $(DEFINES)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -586,8 +588,7 @@ TAGS: deps.txt
 %.o: %.c
 # This line produces a false autoscan message on token 'CC' (C++)
 	$(Q) "  CC		$(@)"
-	$(E) $(CC) $(CFLAGS) \
-             -c $(<) -o $(@)
+	$(E) $(CC) -o $(@) $(CPPFLAGS) $(CFLAGS) -c $(<)
 
 ### LINK
 

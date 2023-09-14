@@ -31,6 +31,7 @@ export SWIFT_T_PREFIX=/tmp/swift-t-install
 
 # C compiler and flags
 export CC=mpicc
+# export CPPFLAGS=
 # export CFLAGS=
 # export LDFLAGS=
 

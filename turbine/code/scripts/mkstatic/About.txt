@@ -15,16 +15,16 @@ The basic workflow is as follows:
   for an example.
 
 2. User invokes mkstatic.tcl to generate C source code for the main file
-  
+
   mkstatic.tcl example.manifest -c example.c
 
-4. User compiles C source code 
-  
+4. User compiles C source code
+
   gcc -c example.c -o example.o
-    
+
 5. User invokes mkstatic.tcl to produce correct linker flags
-  
-  LINK_OBJS=$( mkstatic.tcl example.manifest --link-objs )
+
+  LINK_OBJS=$(  mkstatic.tcl example.manifest --link-objs )
   LINK_FLAGS=$( mkstatic.tcl example.manifest --link-flags )
 
 5. User links executable
@@ -40,7 +40,7 @@ The basic workflow is as follows:
 
 Features:
 - The executable can have a main script compiled in, or it can accept
-  a command link parameter to specify a main script at launch time.
+  a command line parameter to specify a main script at launch time.
 
 
 TODOs:

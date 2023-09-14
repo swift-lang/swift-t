@@ -101,3 +101,9 @@ turbine_log_stop()
   turbine_log_kv "EXIT CODE:"    "${CODE}"
   turbine_log_kv "COMPLETED:"    "$( date_nice_s )"
 }
+
+turbine_report_env()
+# Report the environment to a sorted file for debugging
+{
+  printenv -0 | sort -z | tr '\0' '\n'
+}

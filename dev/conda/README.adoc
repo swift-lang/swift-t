@@ -123,16 +123,15 @@ Installing Miniconda should take less than 10 seconds.
 The Anaconda package name is taken from `meta.yaml` and put in the PKG.
 
 ----
-$ P=CONDA/conda-bld/linux-64/swift-t-*.tar.bz2
+$ PKG=CONDA/conda-bld/linux-64/swift-t-*.tar.bz2
 $ anaconda login
-$ anaconda upload $P
+$ anaconda upload $PKG
 ----
 
 == Dependencies
 
 `r-rinside`::
 This package does not exist for `linux-aarch-64` +
-
 
 == M4 usage
 

@@ -47,7 +47,7 @@ then
 fi
 
 echo "TURBINE-LSF"
-echo "TURBINE: DATE START: $( date "+%Y-%m-%d %H:%M:%S" )"
+
 echo
 
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
@@ -112,15 +112,16 @@ TURBINE_LAUNCH_OPTIONS=( -n $PROCS -r $PPN getenv(TURBINE_LAUNCH_OPTIONS) )
 
 START=$( date +%s.%N )
 if (
-   # Dump the environment to a sorted file for debugging:
-   printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
-   set -x
-   # Launch it!
-   jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
-            -E TCLLIBPATH \
-            -E ADLB_PRINT_TIME=1 \
-            "${USER_ENV_ARGS[@]}" \
-            ${COMMAND}
+  turbine_log_start | tee -a turbine.log
+  turbine_report_env > turbine-env.txt
+
+  set -x
+  # Launch it!
+  jsrun ${TURBINE_LAUNCH_OPTIONS[@]} \
+           -E TCLLIBPATH \
+           -E ADLB_PRINT_TIME=1 \
+           "${USER_ENV_ARGS[@]}" \
+           ${COMMAND}
 )
 then
     CODE=0
@@ -130,15 +131,16 @@ else
     echo "TURBINE-LSF: jsrun returned an error code!"
     echo
 fi
-echo
-echo "TURBINE: EXIT CODE: $CODE"
-STOP=$( date +%s.%N )
-
-# Bash cannot do floating point arithmetic:
-DURATION=$( awk -v START=${START} -v STOP=${STOP} \
-            'BEGIN { printf "%.3f\n", STOP-START }' < /dev/null )
 
 echo
-echo "TURBINE: MPIEXEC TIME: ${DURATION}"
-echo "TURBINE: DATE STOP:  $( date "+%Y-%m-%d %H:%M:%S" )"
+STOP=$( nanos )
+DURATION=$( duration )
+
+turbine_log_stop | tee -a turbine.log
+
+# Return exit code from launcher
 exit $CODE
+
+# Local Variables:
+# mode: m4
+# End:
