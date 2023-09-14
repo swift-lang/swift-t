@@ -113,9 +113,11 @@ INCLUDES = -I . -I src -I $(C_UTILS)/include
 
 SYSTEM_LIBS = $(shell cat system-libs.txt)
 
+CPPFLAGS = @CPPFLAGS@ $(INCLUDES)
+CFLAGS   = @CFLAGS@ $(PIC) $(STD) $(WARNS)
 LDFLAGS  = @LDFLAGS@
-LIBS = @LIBS@
-CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
+LIBS     = @LIBS@
+
 ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
@@ -203,7 +205,7 @@ endif
 %.d: %.c Makefile
 	$(Q) "  DEP		$(@)"
 	$(E) CC=$(DEPCC) maint/depend.sh \
-             $(dir $(<)) $(CFLAGS) $(<) > $(@)
+             $(dir $(<)) $(CPPFLAGS) $(<) > $(@)
 
 deps.txt: $(DEPS) $(TEST_DEPS)
 	$(Q) "  DEPS.TXT $(TEST_DEPS)"
@@ -214,7 +216,7 @@ deps.txt: $(DEPS) $(TEST_DEPS)
 %.o: %.c
 #       This gives a false autoscan warning for C++ (token 'CC'):
 	$(Q) "  CC		$(@)"
-	$(E) $(CC) $(CFLAGS) -c -o $(@) $(<)
+	$(E) $(CC) -o $(@) $(CPPFLAGS) $(CFLAGS) -c $(<)
 
 ### LINK
 

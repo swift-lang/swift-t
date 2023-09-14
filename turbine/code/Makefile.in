@@ -19,9 +19,9 @@ ENABLE_STATIC = @ENABLE_STATIC@
 ENABLE_STATIC_PKG = @ENABLE_STATIC_PKG@
 
 CC = @CC@
+CPPFLAGS := @CPPFLAGS@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
-CPPFLAGS := @CPPFLAGS@
 
 # C++ is only used if R is enabled
 CXX = @CXX@
@@ -537,6 +537,8 @@ ifeq (${DEPCC},)
 DEPCC = gcc
 endif
 
+CPPFLAGS += $(INCLUDES)
+
 # Avoid dependency mpi.h if we don't know where it is:
 ifeq ($(MPI_INCLUDE),0)
 	DEP_DROP = -d mpi\\.h
@@ -548,7 +550,7 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 	$(Q) "  DEP		$(@)"
 	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
              $(DEP_DROP) $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
-	     $(INCLUDES) $(HDF5_CPPFLAGS) $(DEFINES)
+	     $(CPPFLAGS) $(HDF5_CPPFLAGS) $(DEFINES)
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -586,8 +588,7 @@ TAGS: deps.txt
 %.o: %.c
 # This line produces a false autoscan message on token 'CC' (C++)
 	$(Q) "  CC		$(@)"
-	$(E) $(CC) $(CFLAGS) \
-             -c $(<) -o $(@)
+	$(E) $(CC) -o $(@) $(CPPFLAGS) $(CFLAGS) -c $(<)
 
 ### LINK
 

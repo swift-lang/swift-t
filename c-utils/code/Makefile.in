@@ -121,17 +121,15 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 
 CC = @CC@
 DEP_CC = gcc
-CPPFLAGS := @CPPFLAGS@
-CFLAGS := @CFLAGS@
-LDFLAGS := @LDFLAGS@
-CPPFLAGS += -I $(srcdir) -I $(srcdir)/src
-CFLAGS +=  $(STD) $(WARNS)
+CPPFLAGS := @CPPFLAGS@ -I $(srcdir) -I $(srcdir)/src
+CFLAGS   := @CFLAGS@ $(STD) $(WARNS)
+LDFLAGS  := @LDFLAGS@
+RPATH     = -Wl,-rpath -Wl,$(INSTALL_LIB)
+
 ifeq ($(ENABLE_SHARED),1)
 	PIC = $(PIC_FLAG)
 	CFLAGS += $(PIC)
 endif
-
-RPATH = -Wl,-rpath -Wl,$(INSTALL_LIB)
 
 AR      = @AR@
 ARFLAGS = cr
@@ -185,14 +183,14 @@ $(EXM_CUTILS_SO): $(OBJS)
 	$(Q) "  LINK		$@"
 #       This line causes a false autoscan warning on token 'install'
 	$(E) install -d lib
-	$(E) $(CC) $(SHARED) $(PIC) $(MAC_NAME) -o $(@) $(OBJS) -lm
+	$(E) $(CC) $(SHARED) $(PIC) $(MAC_NAME) -o $(@) $(OBJS) $(LDFLAGS) -lm
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
 
 $(EXM_CUTILS_A): $(OBJS)
 	$(Q) "  AR		$@"
 	$(E) install -d lib
-	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
+	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS) $(LDFLAGS)
 	$(E) $(RANLIB) $(@)
 
 ### TEST
