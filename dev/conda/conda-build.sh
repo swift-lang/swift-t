@@ -8,9 +8,14 @@ set -eu
 # This script runs in the PLATFORM subdirectory
 #      and should not change directories
 # A LOG is produced named platform/conda-build.log
-# Flags:
-#  -C configure-only- generate meta.yaml and settings.sed, then stop
-#  -R for the R version
+
+help()
+{
+  cat <<END
+   -C configure-only- generate meta.yaml and settings.sed, then stop
+   -R for the R version
+END
+}
 
 if (( ${#PLATFORM:-} == 0 )) {
   print "conda-build.sh: unset: PLATFORM"
@@ -21,13 +26,18 @@ if (( ${#PLATFORM:-} == 0 )) {
 
 print "PLATFORM: $PLATFORM"
 
+C="" R=""
+zparseopts -D -E h=HELP C=C R=R
+
+if (( ${#HELP} )) {
+  help
+  exit
+}
+
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
-
-C="" R=""
-zparseopts -D -E C=C R=R
 
 if [[ ! -d /tmp/distro ]] {
   print "conda-build.sh: Swift/T source not found at: /tmp/distro"
