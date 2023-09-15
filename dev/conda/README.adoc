@@ -71,7 +71,7 @@ The output from `build-generic.sh`.  Should be in `RECIPE_DIR`.
 Setup:
 
 * Run `setup-conda.sh` to setup a working Conda environment
-* Run the Swift/T `dev/release/make-release-pkg.sh` script to
+* Run the Swift/T `dev/release/make-release-pkg.zsh` script to
   create the "exported" Swift/T source tree in `/tmp`.
   This source code location is hard-coded into `meta.yaml`.
 
