@@ -595,7 +595,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
                int max_memory, int *response)
 {
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
-  struct packed_sync *req = (struct packed_sync *)req_storage;
+  struct packed_sync* req = (struct packed_sync *)req_storage;
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
   req->steal.idle_check_attempt = xlb_idle_check_attempt;
