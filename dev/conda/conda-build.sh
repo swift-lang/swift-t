@@ -113,9 +113,11 @@ if [[ -f $LOG ]] {
 {
   DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
   print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
+  print
   (
-    print "using python, conda:"
-    which python conda
+    print "using python: " $( which python )
+    print "using conda:  " $( which conda  )
+    print
     conda env list
     print
 

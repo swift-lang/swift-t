@@ -31,7 +31,17 @@ print ${A[mtime]} ${A[size]} $PKG
 printf "md5sum: "
 md5sum $PKG
 
-which conda
+if ! which conda >& /dev/null
+then
+  print "No conda!"
+  return 1
+fi
+
+print
+print "using python:" $( which python )
+print "using conda: " $( which conda )
+print
+
 conda env list
 
 USE_GCC="gcc"

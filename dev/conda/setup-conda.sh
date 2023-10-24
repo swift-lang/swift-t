@@ -6,6 +6,7 @@ set -eu
 
 echo "setting up Anaconda build tools in:"
 which conda
+echo
 
 conda env list
 
