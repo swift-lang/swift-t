@@ -75,16 +75,16 @@ adlb_code xlb_env_long(const char *env_var, long *val)
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_env_placement(adlb_placement *placement)
+adlb_code
+xlb_env_placement(adlb_placement* placement)
 {
-  const char *s = getenv("ADLB_PLACEMENT");
+  const char* s = getenv("ADLB_PLACEMENT");
   if (s == NULL || strlen(s) == 0)
   {
-    // Undefined or empty: leave val untouched
+    // Undefined or empty: use default
     *placement = ADLB_PLACE_DEFAULT;
     return ADLB_NOTHING;
   }
-
 
   return ADLB_string_to_placement(s, placement);
 }
