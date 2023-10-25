@@ -22,7 +22,7 @@ numbers.  The release numbers are formatted as +major.minor.bugfix+.
 Swift/T will make feature releases on a monthly basis, which increment
 the +minor+ version number.
 
-After downloading Swift/T, see the
+*Installation:* After downloading Swift/T, see the
 link:guide.html[installation instructions].
 
 [[stable]]
