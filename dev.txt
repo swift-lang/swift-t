@@ -862,7 +862,7 @@ proc f_body { x y z } {
   set s1 [ retrieve_string $x ]
   set s2 [ retrieve_string $y ]
   set s3 [ f_impl $s1 $s2 ]
-  store_string $z $s3 
+  store_string $z $s3
 }
 
 # x and y are string values
