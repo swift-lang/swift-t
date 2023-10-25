@@ -1678,15 +1678,16 @@ The Swift/T maintainer does this for each Swift/T release.
 **** Increment +version.txt+
 *** ADLB/X:
 **** Increment +version.txt+
-**** Edit +adlb-version.h.in+: update required c-utils version
+**** Edit +src/adlb-version.h.in+: update required c-utils version
 *** Turbine:
 **** Increment +version.txt+
-**** Edit +turbine-version.h.in+: update required c-utils, ADLB versions
+**** Edit +src/turbine/turbine-version.h.in+: update required c-utils, ADLB versions
 *** STC:
 **** Increment +etc/version.txt+
-**** Edit +turbine-version.txt+: update required Turbine version
+**** Edit +etc/turbine-version.txt+: update required Turbine version
 **** Edit +guide.txt+: update version number for download and date
 * Apply +git tag release-x.y.z+
+* +$ git push --tags+
 * Build release packages
 ** Edit +dev/get-versions.sh+ to set the Swift/T version
 ** Use +dev/release/make-release-pkg.zsh+ to make the release package
