@@ -4,7 +4,8 @@
 # Bash and ZSH compatible script that loads STC configuration settings into
 # shell variables.
 # Can be sourced by other scripts.
-# This is filtered by build.xml target "install"
+# The @@ substitutions are performed by filters in build.xml
+#                      target "install"
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
@@ -30,8 +31,8 @@ fi
 
 if [[ ! -x "${TURBINE_HOME}/bin/turbine" ]]
 then
-  print "Invalid Turbine installation: ${TURBINE_HOME}"
-  print "Turbine is not executable: ${TURBINE_HOME}/bin/turbine"
+  print "STC: Invalid Turbine installation: ${TURBINE_HOME}"
+  print "STC: Turbine is not executable: ${TURBINE_HOME}/bin/turbine"
   exit ${EXIT_ERROR_SCRIPT}
 fi
 
