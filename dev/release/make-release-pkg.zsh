@@ -57,6 +57,9 @@ export PKG_TYPE=src
 # Run ./bootstrap by default; may be disabled
 BOOTSTRAP=1
 
+# Make tar.gz by default; may be disabled
+MAKE_TAR=1
+
 # Use Linux tools by default; may be set to "Mac"
 OS="Linux"
 
@@ -69,11 +72,14 @@ help()
 {
   print "See file header for usage."
   print " -b : skip bootstrap (autotools) step for speed"
+  print " -h : show help"
   print " -m : use Mac tools"
   print " -t : call this 'master' instead of a release number"
+  print " -T : do not make a tar.gz"
 }
 
-while getopts "bchmpt" opt
+
+while getopts "bchmtT" opt
 do
   case ${opt} in
     b) BOOTSTRAP=0      ;;
@@ -81,6 +87,7 @@ do
     h) help ; exit      ;;
     m) OS="Mac"         ;;
     t) USE_MASTER=1     ;;
+    T) MAKE_TAR=0       ;;
     \?)
       print "make-release-package.zsh: unknown option: ${OPTARG}"
       help
@@ -340,12 +347,17 @@ fi
 # Pop back up to TOP
 popd
 
-# Create tarball from contents of export/
-print "Creating tar.gz ..."
-pushd ${DISTRO}/${SWIFT_T_RELEASE}
-RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
-tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
+if (( MAKE_TAR ))
+then
+  # Create tarball from contents of export/
+  print "Creating tar.gz ..."
+  pushd ${DISTRO}/${SWIFT_T_RELEASE}
+  RELEASE_TGZ=${SWIFT_T_RELEASE}.tar.gz
+  tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
-print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-du -h  ${RELEASE_TGZ}
-md5sum ${RELEASE_TGZ}
+  print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
+  du -h  ${RELEASE_TGZ}
+  md5sum ${RELEASE_TGZ}
+else
+  print "Swift/T exported to ${DISTRO}/${SWIFT_T_RELEASE}"
+fi
