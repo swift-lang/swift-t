@@ -7,6 +7,7 @@ set -eu
 # Input: Given INPUT file
 # Output: Given OUTPUT file or standard output
 # Exit code: Result from java
+# The @@ substitutions are performed by filters in build.xml
 
 # Run "stc -h" for full options list
 
@@ -14,8 +15,20 @@ set -eu
 JVM=unset
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
+
+if [[ ${DEBIAN_BUILD} == "@DEBIAN_BUILD@" ]]
+then
+  # This is the first @@ substitution in the script
+  # If it not filtered, we know the user is trying to run
+  # this script directly out of the source tree
+  print "STC: ERROR. You must compile this software."
+  print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
+  return 1
+fi
+
 if (( DEBIAN_BUILD ))
 then
+  # The HOME location is different for a Debian package install
   STC_HOME=/usr/lib/stc
 else
   STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
