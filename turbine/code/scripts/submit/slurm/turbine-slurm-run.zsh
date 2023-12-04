@@ -78,6 +78,7 @@ fi
 if (( ! TURBINE_PREALLOCATION ))
 then
   # Submit it!
+  # Most systems put error messages on stderr
   # Stampede2 produces useful error messages on stdout
   SUBMIT_OUT=$( ${SUBMIT_COMMAND} || true )
   JOB_ID=$( echo ${SUBMIT_OUT} | grep -o "[1-9][0-9]*$" || true )
