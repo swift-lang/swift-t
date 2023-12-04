@@ -85,7 +85,7 @@ then
   # JOB_ID must be an integer:
   if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
   then
-    echo  ${SUBMIT_OUT}
+    print ${SUBMIT_OUT}
     abort "sbatch failed!"
   fi
 else
