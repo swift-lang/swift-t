@@ -16,11 +16,9 @@ JVM=unset
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
 
-if [[ ${DEBIAN_BUILD} == "@DEBIAN_BUILD@" ]]
+if [[ ${DEBIAN_BUILD} == "@DEBIAN\_BUILD@" ]]
 then
-  # This is the first @@ substitution in the script
-  # If it not filtered, we know the user is trying to run
-  # this script directly out of the source tree
+  # See the notes under DEBIAN_BUILD in ./swift-t
   print "STC: ERROR. You must compile this software."
   print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
   return 1
@@ -323,7 +321,7 @@ report_version()
   then
     print "Using Java VM:    ${JVM}"
   else
-    print "Could not find Java!"
+    print "stc: could not find Java!"
   fi
   print "Using Turbine in: ${TURBINE_HOME}"
   exit 0
@@ -436,7 +434,7 @@ fi
 lookup_java
 if [[ ${JVM} == "unset" ]]
 then
-  print "Could not find java!"
+  print "stc: could not find java!"
   print "Put java in your PATH or use stc -j /path/to/java"
   exit 1
 fi
