@@ -155,10 +155,9 @@ We use M4 to preprocess `meta.yaml` and `settings.sed`.
 We restrict our M4 usage to:
 
 * `m4_include()`: does simple file insertion
-* `m4_ifelse()`: does conditional substitution
-+
+* `m4_ifelse()`: does conditional substitution +
 Syntax: `m4_ifelse(VALUE1, VALUE2, TEXT1)` ⇒ +
-_if VALUE1 == VALUE2 then insert TEXT1_
+> _if VALUE1 == VALUE2 then insert TEXT1_
 * `getenv()`: substitutes in an environment variable value
 
 See `dev/conda/common.m4` for `getenv()` - this is a different script from the `common.m4' for the Turbine submit scripts due to newline requirements.
