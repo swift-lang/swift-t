@@ -31,13 +31,13 @@ if (( ${ENABLE_R:-0} == 1 ))
 then
   if ! which R > /dev/null
   then
-    echo "build.sh: Could not find Rscript!"
+    echo "build.sh: Could not find R!"
     exit 1
   fi
   export R_HOME=$( R RHOME )
   R --vanilla --no-echo \
     -e 'install.packages("RInside", repos="http://cran.us.r-project.org")'
-  
+
   # Copy the [de]activate scripts to $PREFIX/etc/conda/[de]activate.d.
   # This will allow them to be run on environment activation.
   for CHANGE in "activate" "deactivate"
