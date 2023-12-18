@@ -1,3 +1,11 @@
+COMMENT(
+# META TEMPLATE YAML
+# Will be filtered into PLATFORM/meta.yaml by conda-build.sh:m4
+)
+
+# Date that this meta.yaml was filtered:
+# DATE: getenv(DATE)
+
 {% set name = "getenv(PKG_NAME)" %}
 {% set version = "1.6.3" %}
 {% set major = version.rpartition('.')[0] %}
