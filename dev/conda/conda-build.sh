@@ -24,10 +24,10 @@ if (( ${#PLATFORM:-} == 0 )) {
   return 1
 }
 
-print "PLATFORM: $PLATFORM"
+print "PLATFORM: $PLATFORM $*"
 
 C="" R=""
-zparseopts -D -E h=HELP C=C R=R
+zparseopts -D -E -F h=HELP C=C R=R
 
 if (( ${#HELP} )) {
   help
@@ -86,6 +86,9 @@ export USE_ZSH=1
 # Allow platform to modify dependencies
 source $DEV_CONDA/$PLATFORM/deps.sh
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+
+export DATE=${(%)DATE_FMT_S}
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
@@ -102,7 +105,6 @@ if [[ -f $LOG ]] {
 }
 
 {
-  DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
   print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
   print
   (

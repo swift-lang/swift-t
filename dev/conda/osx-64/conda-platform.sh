@@ -7,7 +7,7 @@ set -eu
 #  -R for the R version
 
 HELP="" C="" R=""
-zparseopts -D -E h=HELP C=C R=R
+zparseopts -D -E -F h=HELP C=C R=R
 
 # Get this script path name (absolute):
 SCRIPT=${0:A}
