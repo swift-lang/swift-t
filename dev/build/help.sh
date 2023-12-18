@@ -53,5 +53,7 @@ The following options change this behavior:
 
 Later options override earlier options.
 
+Set environment variable WAIT=0 to avoid any user check delays.
+
 EOF
 }
