@@ -1098,6 +1098,16 @@ Use the link:guide.html#install_source[+dev/build+ scripts].
 $ nice dev/build/build-swift-t.sh
 ----
 
+==== Environment
+
+These environment settings may be needed for +app+ functions on Theta:
+
+----
+export MPICH_GNI_FORK_MODE=FULLCOPY
+export PMI_NO_FORK=1
+export PMI_NO_PREINITIALIZE=1
+----
+
 === ThetaGPU
 
 https://www.alcf.anl.gov/theta[ThetaGPU] is a NVIDIA DGX at ALCF.
