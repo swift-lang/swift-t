@@ -787,6 +787,8 @@ SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
                      scripts/mkstatic/* $(SCRIPTS_MAINWRAP)   \
                      $(SCRIPTS_SUBMIT) py/*.py )
 
+# install.txt is a small text file containing human-readable build
+#             provenance info - see maint/create-install.sh
 install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
               $(TURBINE_HEADERS) $(SCRIPTS) $(SCRIPTS_SUBMIT)
 #       Note: this is re-run if anything changes
@@ -815,12 +817,8 @@ endif
 	$(E) $(CP_PARENTS) $(CP_ARGS) etc/help/*.txt $(INSTALL_TOP)
 	@echo
 	$(Q) "  CREATE  	$(@)"
-	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
-	$(E) echo  "ENABLE_DEB: $(ENABLE_DEB)"   >> $(@)
-	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
-	$(E) date "+DATE:   %Y-%m-%d %H:%M"      >> $(@)
-#       Use true to ignore errors (e.g., if this is not an git clone)
-	$(E) ( git log -n 1 --pretty=format:"COMMIT: %h %aD %s%n" ; true ) >> $(@) 2>&1
+#       Make the install.txt file
+	$(E) maint/create-install.sh $(@) $(INSTALL_PREFIX) $(ENABLE_DEB)
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
 
 ### Autoconf sanity:
