@@ -43,8 +43,8 @@ else    # Mac:
 #	No longer need flat_namespace on Mac?  2023-12-18
 #	On Mac M1 Darwin 14.2 this gives:
 # 	ld: file not found: /System/.../Foundation for architecture arm64
-	MAC_FLAT= -Wl,-flat_namespace
-	SHARED = -dynamiclib
+	MAC_FLAT= # -Wl,-flat_namespace
+	SHARED = -dynamiclib $(MAC_FLAT)
 endif
 
 # Products:
