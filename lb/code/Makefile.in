@@ -12,7 +12,7 @@
 
 ifeq (@ENABLE_DEV@,1)
 	WARN_EXTRA = -Wconversion -Wshadow -Wenum-compare \
-                          -Winline -Wunreachable-code
+	             -Winline -Wunreachable-code
 endif
 
 # Shared object suffix is .so on Linux, .dylib on Mac
