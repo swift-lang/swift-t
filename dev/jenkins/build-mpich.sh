@@ -1,10 +1,10 @@
 #!/bin/zsh
 set -eu
 
-# JENKINS BUILD SH
-# Install Swift/T from Git under various techniques on GCE Jenkins
+# JENKINS BUILD MPICH SH
+# Install Swift/T from Git under with MPICH on CELS Jenkins
 # Can also be run interactively on GCE
-#     => Thus, we do not refer to the Jenkins variable $WORKSPACE
+#     -> Uses hard-coded dependencies from other Jenkins projects
 
 setopt PUSHD_SILENT
 setopt PIPE_FAIL
@@ -18,6 +18,8 @@ SWIFT_T_SFW=${SWIFT_T_SRC/src/sfw}
 WORKSPACE_ROOT=/scratch/jenkins-slave/workspace
 
 cd $SWIFT_T_SRC
+
+renice --priority 19 --pid $$
 
 source dev/helpers.sh
 
