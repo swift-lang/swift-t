@@ -39,7 +39,7 @@ task()
 # Run a command line verbosely and report the time in simple format:
 {
   log "TASK START:" ${*}
-  if /bin/time --format "time: %E" ${*}
+  if /bin/time --format "TASK TIME: %E" ${*}
   then
     log "TASK DONE:" ${*}
     CODE=0
@@ -69,7 +69,6 @@ downloads()
   log "DOWNLOADS ..."
   (
     # Download and install both Minicondas:
-    set -x
     mkdir -pv $WORKSPACE/downloads
     cd $WORKSPACE/downloads
     if [[ ! -f $MINICONDA ]] \
@@ -138,10 +137,12 @@ print
 task swift-t/dev/conda/conda-install.sh $PKG
 
 log "TRY SWIFT/T..."
-set -x
-PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
-which swift-t
-swift-t -v
-swift-t -E 'trace(42);'
+(
+  set -x
+  PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+  which swift-t
+  swift-t -v
+  swift-t -E 'trace(42);'
+)
 log "SWIFT/T OK."
 print
