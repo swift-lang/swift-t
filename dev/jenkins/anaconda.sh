@@ -21,7 +21,7 @@ renice --priority 19 --pid $$
 
 setopt PUSHD_SILENT
 
-DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
 log()
 # General-purpose log line
 {
