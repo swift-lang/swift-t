@@ -1,8 +1,8 @@
 #!/bin/bash
 set -eu
 
-# Jenkins Python
-# Install Anaconda for GCE Jenkins
+# JENKINS INSTALL PYTHON
+# Install Miniconda for CELS Jenkins
 
 renice --priority 19 --pid $$
 
