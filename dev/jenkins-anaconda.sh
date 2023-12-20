@@ -6,99 +6,142 @@ set -eu
 # Sets up 2 Minicondas: one in which to build   the package
 #                   and one in which to install the package
 
-UNINSTALL=""
-zparseopts u=UNINSTALL
+# Defaults:
+PYTHON_VERSION="39"
+CONDA_LABEL="23.11.0-1"
+# py39_23.11.0-1
+# py310_23.11.0-1
+# py311_23.11.0-1
+UNINSTALL="" PV="" CL=""
+zparseopts u=UNINSTALL c:=CL p:=PV
+if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
+if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
 renice --priority 19 --pid $$
 
 setopt PUSHD_SILENT
 
-# The Miniconda we are working with:
-MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
-
-# Clean up prior runs
-if (( UNINSTALL )) {
-  rm -fv $MINICONDA
-  rm -fr $WORKSPACE/sfw/Miniconda-build
-  rm -fr $WORKSPACE/sfw/Miniconda-install
-  rm -fr swift-t
-  rm -fr /tmp/distro
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+{
+  print ${(%)DATE_FMT_NICE} ${*}
 }
 
-(
-  # Download and install both Minicondas:
-  set -x
-  if [[ ! -f $MINICONDA ]] \
-       wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
-  for LABEL in build install
-  do
-    if [[ ! -d sfw/Miniconda-$LABEL ]] \
-         bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-$LABEL
-  done
-)
+SWIFT_T_VERSION=1.6.3
+log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 
-# Enable the build environment
+# The Miniconda we are working with:
+MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}-Linux-x86_64.sh
+log "MINICONDA: $MINICONDA"
+
+task()
+# Run a command line verbosely and report the time in simple format:
+{
+  log "TASK START:" ${*}
+  if /bin/time --format "time: %E" ${*}
+  then
+    log "TASK DONE:" ${*}
+    CODE=0
+  else
+    log "TASK FAILED:" ${*}
+    CODE=1
+  fi
+  print
+  return $CODE
+}
+
+# Clean up prior runs
+uninstall()
+{
+  log "UNINSTALL ..."
+  rm -fv $MINICONDA
+  foreach LABEL ( build install ) \
+          rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
+  end
+  rm -fr swift-t
+  rm -fr /tmp/distro
+  log "UNINSTALL OK."
+}
+
+downloads()
+{
+  log "DOWNLOADS ..."
+  (
+    # Download and install both Minicondas:
+    set -x
+    mkdir -pv $WORKSPACE/downloads
+    cd $WORKSPACE/downloads
+    if [[ ! -f $MINICONDA ]] \
+         wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
+    foreach LABEL ( build install ) \
+            if [[ ! -d $WORKSPACE/sfw/Miniconda-$LABEL ]] \
+               bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-$LABEL
+    end
+  )
+  log "DOWNLOADS OK."
+}
+
+if (( ${#UNINSTALL} )) uninstall
+downloads
+
+# Enable the build environment in Miniconda-build
 PY=$WORKSPACE/sfw/Miniconda-build
 PATH=$PY/bin:$PATH
 source $PY/etc/profile.d/conda.sh
 conda activate base
 conda env list
+conda update --yes conda
 
-task()
-# Run a command line verbosely and report the time in simple format:
-{
-  print "TASK START:" ${*}
-  /bin/time --format "time: %E" ${*}
-  print "TASK DONE:" ${*}
-  print
-}
+cd $WORKSPACE/downloads
 
 if [[ -d swift-t ]]
 then
   cd swift-t
   git checkout master
-  git pull
+  task git pull
   cd -
 else
-  git clone https://github.com/swift-lang/swift-t.git
+  task git clone https://github.com/swift-lang/swift-t.git
 fi
 
 # THE ACTUAL TESTS:
 # Create the "exported" Swift/T source tree in /tmp/distro
 print
 task swift-t/dev/release/make-release-pkg.zsh
-# Set up the build environment:
+# Set up the build environment in Miniconda-build
 task swift-t/dev/conda/setup-conda.sh
-# Build the Swift/T package:
+# Build the Swift/T package!
 task swift-t/dev/conda/linux-64/conda-platform.sh
 
-print "CHECKING PACKAGE..."
-PKG=$WORKSPACE/Swift-T-Anaconda/sfw/Miniconda-build/conda-bld/linux-64/swift-t-1.6.2-py39_1.tar.bz2
+log "CHECKING PACKAGE..."
+BZ2=swift-t-${SWIFT_T_VERSION}-py${PYTHON_VERSION}_1.tar.bz2
+PKG=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64/$BZ2
 if ! ls -l $PKG
 then
-  print "Could not find the PKG at: $PKG"
+  log "Could not find the PKG at: $PKG"
   return 1
 fi
 md5sum $PKG
 print
 
 # Enable the install environment
-print "ACTIVATING ENVIRONMENT..."
+log "ACTIVATING ENVIRONMENT..."
 PY=$WORKSPACE/sfw/Miniconda-install
 PATH=$PY/bin:$PATH
 source $PY/etc/profile.d/conda.sh
 conda activate base
 conda env list
-print "ACTIVATED ENVIRONMENT."
+log "ACTIVATED ENVIRONMENT."
 print
 
-task swift-t/dev/conda/conda-install.sh
+task swift-t/dev/conda/conda-install.sh $PKG
 
-print "TRY SWIFT/T..."
+log "TRY SWIFT/T..."
 set -x
 PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
 which swift-t
 swift-t -v
 swift-t -E 'trace(42);'
-print "SWIFT/T OK."
+log "SWIFT/T OK."
 print
