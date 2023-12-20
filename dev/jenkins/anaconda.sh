@@ -55,11 +55,11 @@ task()
 uninstall()
 {
   log "UNINSTALL ..."
-  rm -fv $MINICONDA
+  rm -fv $WORKSPACE/downloads/$MINICONDA
   foreach LABEL ( build install ) \
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
   end
-  rm -fr swift-t
+  rm -fr $WORKSPACE/downloads/swift-t
   rm -fr /tmp/distro
   log "UNINSTALL OK."
 }
