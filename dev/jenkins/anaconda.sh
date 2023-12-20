@@ -5,6 +5,7 @@ set -eu
 # Test the Swift/T Anaconda packages
 # Sets up 2 Minicondas: one in which to build   the package
 #                   and one in which to install the package
+# May be run interactively, just set environment variable WORKSPACE
 
 # Defaults:
 PYTHON_VERSION="39"
@@ -35,6 +36,10 @@ log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}-Linux-x86_64.sh
 log "MINICONDA: $MINICONDA"
 
+# Force Conda packages to be cached here so they are separate
+#       among Minicondas and easy to delete:
+export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
+
 task()
 # Run a command line verbosely and report the time in simple format:
 {
@@ -55,6 +60,8 @@ task()
 uninstall()
 {
   log "UNINSTALL ..."
+  du -sh $CONDA_PKGS_DIRS
+  rm -fr $CONDA_PKGS_DIRS
   rm -fv $WORKSPACE/downloads/$MINICONDA
   foreach LABEL ( build install ) \
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
