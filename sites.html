@@ -746,8 +746,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.5.0,</span>
-<span id="revdate">March 2023</span>
+<span id="revnumber">version 1.6.3,</span>
+<span id="revdate">December 2023</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2357,6 +2357,16 @@ Build with:
 </ol></div>
 </div>
 </div>
+<div class="sect3">
+<h4 id="_environment">Environment</h4>
+<div class="paragraph"><p>These environment settings may be needed for <code>app</code> functions on Theta:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export MPICH_GNI_FORK_MODE=FULLCOPY
+export PMI_NO_FORK=1
+export PMI_NO_PREINITIALIZE=1</code></pre>
+</div></div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_thetagpu">ThetaGPU</h3>
@@ -2868,8 +2878,15 @@ be useful.</td>
 <h2 id="_mac_os_x">Mac OS X</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
-other single system.</p></div>
+other single-node system.  Packages from Anaconda also work, see
+below.  Note that there are some system settings required under the
+<a href="#mac_sdk">Mac SDK</a>.</p></div>
 <div class="ulist"><ul>
+<li>
+<p>
+Ant: You can run from a manual unzip or Homebrew
+</p>
+</li>
 <li>
 <p>
 SWIG: You may use SWIG from source or the MacPorts <code>swig-tcl</code> package
@@ -2881,6 +2898,91 @@ MPI: You may use any MPI implementation
 </p>
 </li>
 </ul></div>
+<div class="sect2">
+<h3 id="_clang">Clang</h3>
+<div class="paragraph"><p>To reduce warnings specific to Clang, set:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export CFLAGS="-Wno-nullability-completeness -Wno-availability -Wno-visibility"</code></pre>
+</div></div>
+<div class="paragraph"><p>You can set that in <code>swift-t-settings.sh</code></p></div>
+</div>
+<div class="sect2">
+<h3 id="mac_sdk">Mac SDK settings</h3>
+<div class="paragraph"><p>To build, run:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Install Xcode Command Line Tools (~1.2 GB):
+$ xcode-select --install
+# Get system information:
+$ SDK=$( xcrun --show-sdk-path )
+$ export CPPFLAGS="-I$SDK/usr/include"
+$ export LDFLAGS="-L$SDK/usr/lib"
+# Build Swift/T!
+$ dev/build/swift-t-settings.sh</code></pre>
+</div></div>
+<div class="paragraph"><p>These settings can also be stored in <code>swift-t-settings.sh</code></p></div>
+</div>
+<div class="sect2">
+<h3 id="_conda_builds">Conda builds</h3>
+<div class="paragraph"><p>You can build using dependencies from Anaconda.</p></div>
+<div class="sect3">
+<h4 id="_mac_with_x86">Mac with x86</h4>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Install Miniconda
+</p>
+</li>
+<li>
+<p>
+Install
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ conda install -c conda-forge autoconf make openjdk mpich-mpicc \
+                               swig ant</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Build with the Mac SDK settings above.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="_mac_m1">Mac M1</h4>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Install Miniconda
+</p>
+</li>
+<li>
+<p>
+Install
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ conda install -c conda-forge autoconf make openjdk mpich-mpicc swig</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Ant is not available for in Anaconda.org for this architecture (as
+of 2023-12-21), so install Ant via Homebrew or a manual download/unzip
+(Ant has pre-compiled binary packages).
+</p>
+</li>
+<li>
+<p>
+Build with the Mac SDK settings above.
+</p>
+</li>
+</ol></div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -3705,7 +3807,7 @@ ant install -Ddist.dir=$SCRATCH/exm-install/stc -Dturbine.home=$SCRATCH/exm-inst
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_environment">Environment</h4>
+<h4 id="_environment_2">Environment</h4>
 <div class="paragraph"><p>Set environment. Add the following to your .bashrc.ext (or equivalent)</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4242,9 +4344,9 @@ Run with:
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.5.0<br />
+Version 1.6.3<br />
 Last updated
- 2023-06-01 13:38:46 CDT
+ 2023-12-21 16:09:36 CST
 </div>
 </div>
 </body>
