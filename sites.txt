@@ -1492,10 +1492,68 @@ be useful.
 == Mac OS X
 
 Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
-other single system.
+other single-node system.  Packages from Anaconda also work, see
+below.  Note that there are some system settings required under the
+<<mac_sdk,Mac SDK>>.
 
+* Ant: You can run from a manual unzip or Homebrew
 * SWIG: You may use SWIG from source or the MacPorts +swig-tcl+ package
 * MPI: You may use any MPI implementation
+
+=== Clang
+
+To reduce warnings specific to Clang, set:
+
+----
+export CFLAGS="-Wno-nullability-completeness -Wno-availability -Wno-visibility"
+----
+
+You can set that in +swift-t-settings.sh+
+
+[[mac_sdk]]
+=== Mac SDK settings
+
+To build, run: +
+----
+# Install Xcode Command Line Tools (~1.2 GB):
+$ xcode-select --install
+# Get system information:
+$ SDK=$( xcrun --show-sdk-path )
+$ export CPPFLAGS="-I$SDK/usr/include"
+$ export LDFLAGS="-L$SDK/usr/lib"
+# Build Swift/T!
+$ dev/build/swift-t-settings.sh
+----
+
+These settings can also be stored in +swift-t-settings.sh+
+
+=== Conda builds
+
+You can build using dependencies from Anaconda.
+
+==== Mac with x86
+
+. Install Miniconda
+. Install
++
+----
+$ conda install -c conda-forge autoconf make openjdk mpich-mpicc \
+                               swig ant
+----
+. Build with the Mac SDK settings above.
+
+==== Mac M1
+
+. Install Miniconda
+. Install
++
+----
+$ conda install -c conda-forge autoconf make openjdk mpich-mpicc swig
+----
+. Ant is not available for in Anaconda.org for this architecture (as
+of 2023-12-21), so install Ant via Homebrew or a manual download/unzip
+(Ant has pre-compiled binary packages).
+. Build with the Mac SDK settings above.
 
 == Miscellaneous notes
 
