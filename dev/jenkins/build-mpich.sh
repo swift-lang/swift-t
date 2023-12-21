@@ -13,16 +13,17 @@ setopt PIPE_FAIL
 # Get the Swift/T source directory, canonicalized:
 SWIFT_T_SRC=${ZSH_ARGZERO:A:h:h}
 # Formulate the installation directory:
-SWIFT_T_SFW=${SWIFT_T_SRC/src/sfw}
+SWIFT_T_SFW=${WORKSPACE/sfw}
 
 # Directory containing all Jenkins workspaces
 WORKSPACE_ROOT=/scratch/jenkins-slave/workspace
 
 cd $SWIFT_T_SRC
+pwd
 
 renice --priority 19 --pid $$
 
-source dev/helpers.sh
+source $SWIFT_T_SRC/dev/helpers.sh
 
 # Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
