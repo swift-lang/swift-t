@@ -20,7 +20,6 @@ SWIFT_T_SFW=${WORKSPACE/sfw}
 WORKSPACE_ROOT=/scratch/jenkins-slave/workspace
 
 cd $SWIFT_T_SRC
-pwd
 
 # Passed to build-swift-t.sh:
 B=""
@@ -28,7 +27,7 @@ zparseopts -B=B
 
 renice --priority 19 --pid $$ >& /dev/null
 
-source $SWIFT_T_SRC/dev/helpers.sh
+source dev/helpers.sh
 
 # Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
@@ -75,16 +74,20 @@ s/\\# TCL_INSTALL/TCL_INSTALL/
 /PYTHON_EXE=/s@=.*@=$PYTHON_EXE@
 EOF
 
+# Can add this for faster interactive builds:
+# /PARALLELISM=/s@=.*@=3@
+
 sed -i -f settings.sed $SETTINGS
 
-set -x
-
+print
+print "Running build-swift-t.sh ..."
 # Run the build!
 dev/build/build-swift-t.sh ${B} |& tee build.out
 # Produce build.out for shell inspection later.
 
 # See if it worked:
 PATH=$SWIFT_T_SFW/stc/bin:$PATH
+set -x
 swift-t -v
 swift-t -E 'trace(42);'
 
