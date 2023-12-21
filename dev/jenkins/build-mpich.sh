@@ -22,7 +22,11 @@ WORKSPACE_ROOT=/scratch/jenkins-slave/workspace
 cd $SWIFT_T_SRC
 pwd
 
-renice --priority 19 --pid $$
+# Passed to build-swift-t.sh:
+B=""
+zparseopts -B=B
+
+renice --priority 19 --pid $$ >& /dev/null
 
 source $SWIFT_T_SRC/dev/helpers.sh
 
@@ -76,7 +80,7 @@ sed -i -f settings.sed $SETTINGS
 set -x
 
 # Run the build!
-nice -n 19 dev/build/build-swift-t.sh |& tee build.out
+dev/build/build-swift-t.sh ${B} |& tee build.out
 # Produce build.out for shell inspection later.
 
 # See if it worked:
