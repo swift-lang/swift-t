@@ -4,7 +4,8 @@ set -o pipefail
 
 # BUILD GENERIC SH
 # Generic builder for all platforms
-# Called internally by "conda build" -> build.sh -> build-generic.sh
+# Called internally by
+#   "conda build" -> PLATFORM/build.sh -> build-generic.sh
 
 # Environment notes:
 # Generally, environment variables are not inherited into here.
