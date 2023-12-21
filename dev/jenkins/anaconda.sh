@@ -60,8 +60,10 @@ task()
 uninstall()
 {
   log "UNINSTALL ..."
-  du -sh $CONDA_PKGS_DIRS
-  rm -fr $CONDA_PKGS_DIRS
+  if [[ -d $CONDA_PKGS_DIRS ]] {
+    du -sh $CONDA_PKGS_DIRS
+    rm -fr $CONDA_PKGS_DIRS
+  }
   rm -fv $WORKSPACE/downloads/$MINICONDA
   foreach LABEL ( build install ) \
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
