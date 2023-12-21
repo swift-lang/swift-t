@@ -1,9 +1,13 @@
-#!/bin/bash
+#!/bin/zsh
 set -eux
 
 # JENKINS TCL
 
-renice --priority 19 --pid $$
+renice --priority 19 --pid $$ >& /dev/null
+
+pwd
+ls -l
+
 rm -rfv downloads
 rm -fv tcl8.6.12-src.tar.gz
 wget --no-verbose https://prdownloads.sourceforge.net/tcl/tcl8.6.12-src.tar.gz
