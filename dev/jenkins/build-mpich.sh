@@ -3,7 +3,8 @@ set -eu
 
 # JENKINS BUILD MPICH SH
 # Install Swift/T from Git under with MPICH on CELS Jenkins
-# Can also be run interactively on GCE
+# Can also be run interactively on GCE,
+#     just set environment variable WORKSPACE
 #     -> Uses hard-coded dependencies from other Jenkins projects
 
 setopt PUSHD_SILENT
