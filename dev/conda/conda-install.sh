@@ -8,16 +8,22 @@ set -eu
 # Provide the PKG on the command line.
 # NOTE: conda install from file does not install dependencies!
 #       Cf. https://docs.anaconda.com/free/anaconda/packages/install-packages
+#       Thus this script installs dependencies using PLATFORM/deps.sh
 # NOTE: Keep LIST in sync with meta.yaml
 # USAGE: Provide PKG
 #        Provide -R to install R
 #        Provide -D to skip installing dependencies
 
-# If the user requested an R installation,
-# variable R will be set to the package name for R:
 D="" R=""
 zparseopts -D -E D=D R=R
-if (( ${#R} )) R="r"
+
+# Default behavior:
+INSTALL_DEPS=1
+USE_R=0
+
+# Handle user flags:
+if (( ${#D} )) INSTALL_DEPS=0
+if (( ${#R} )) USE_R=1
 
 if (( ${#*} != 1 )) {
   print "Provide PKG!"
@@ -25,32 +31,61 @@ if (( ${#*} != 1 )) {
 }
 PKG=$1
 
+# Get this directory (absolute):
+DEV_CONDA=${0:A:h}
+
+# Report information about given PKG:
 zmodload zsh/stat
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
 print ${A[mtime]} ${A[size]} $PKG
 printf "md5sum: "
 md5sum $PKG
 
-which conda
+# Report information about active Python/Conda:
+if ! which conda >& /dev/null
+then
+  print "No conda!"
+  return 1
+fi
+
+print
+print "using python:" $( which python )
+print "using conda: " $( which conda )
+print
+
 conda env list
 
-USE_GCC="gcc"
-# Skip GCC on osx-64
-if [[ $PKG =~ "/osx-64/" ]] USE_GCC=""
+# PKG is of form
+# ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
+# Pull out PLATFORM (head then tail):
+PLATFORM=${PKG:h:t}
+print "platform: $PLATFORM"
 
-LIST=(
-  ant
+set -x
+# Defaults:
+USE_ANT=1
+USE_GCC=1
+USE_ZSH=1
+
+source $DEV_CONDA/$PLATFORM/deps.sh
+
+# Build dependency list:
+LIST=()
+if (( USE_ANT )) LIST+=ant
+if (( USE_GCC )) LIST+=gcc
+if (( USE_ZSH )) LIST+=zsh
+LIST+=(
   autoconf
-  $USE_GCC
   make
   mpich-mpicc
   openjdk
   python
   swig
-  zsh
-  $R
 )
+if (( USE_R )) LIST+=r
+
+# Run conda install!
 
 set -x
-if (( ! ${#D} )) conda install --yes -c conda-forge $LIST
+if (( INSTALL_DEPS )) conda install --yes -c conda-forge $LIST
 conda install --yes $PKG

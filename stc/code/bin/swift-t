@@ -5,8 +5,21 @@ set -eu
 # Main user interface script
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
+
+if [[ ${DEBIAN_BUILD} == "@DEBIAN\_BUILD@" ]]
+then
+  # DEBIAN_BUILD should be 0 or 1.
+  # This is the first @@ substitution in the script
+  # If it not filtered, we know the user is trying to run
+  # this script directly out of the source tree
+  print "swift-t: ERROR. You must compile this software."
+  print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
+  return 1
+fi
+
 if (( DEBIAN_BUILD ))
 then
+  # The HOME location is different for a Debian package install
   STC_HOME=/usr
   STC_TOP=/usr/lib/stc
 else
@@ -191,7 +204,7 @@ ARGS=( ${*} )
 
 if [[ ! -r ${PROGRAM_SWIFT} ]]
 then
-  print "Could not read: ${PROGRAM_SWIFT}"
+  print "swift-t: could not read: ${PROGRAM_SWIFT}"
   exit 1
 fi
 

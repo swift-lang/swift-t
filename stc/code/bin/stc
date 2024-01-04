@@ -7,6 +7,7 @@ set -eu
 # Input: Given INPUT file
 # Output: Given OUTPUT file or standard output
 # Exit code: Result from java
+# The @@ substitutions are performed by filters in build.xml
 
 # Run "stc -h" for full options list
 
@@ -14,8 +15,18 @@ set -eu
 JVM=unset
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
+
+if [[ ${DEBIAN_BUILD} == "@DEBIAN\_BUILD@" ]]
+then
+  # See the notes under DEBIAN_BUILD in ./swift-t
+  print "STC: ERROR. You must compile this software."
+  print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
+  return 1
+fi
+
 if (( DEBIAN_BUILD ))
 then
+  # The HOME location is different for a Debian package install
   STC_HOME=/usr/lib/stc
 else
   STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
@@ -310,7 +321,7 @@ report_version()
   then
     print "Using Java VM:    ${JVM}"
   else
-    print "Could not find Java!"
+    print "stc: could not find Java!"
   fi
   print "Using Turbine in: ${TURBINE_HOME}"
   exit 0
@@ -423,7 +434,7 @@ fi
 lookup_java
 if [[ ${JVM} == "unset" ]]
 then
-  print "Could not find java!"
+  print "stc: could not find java!"
   print "Put java in your PATH or use stc -j /path/to/java"
   exit 1
 fi

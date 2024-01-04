@@ -4,6 +4,8 @@ set -o pipefail
 
 # BUILD GENERIC SH
 # Generic builder for all platforms
+# Called internally by
+#   "conda build" -> PLATFORM/build.sh -> build-generic.sh
 
 # Environment notes:
 # Generally, environment variables are not inherited into here.
@@ -31,12 +33,20 @@ if (( ${ENABLE_R:-0} == 1 ))
 then
   if ! which R > /dev/null
   then
-    echo "build.sh: Could not find Rscript!"
+    echo "build.sh: Could not find R!"
     exit 1
   fi
   export R_HOME=$( R RHOME )
   R --vanilla --no-echo \
     -e 'install.packages("RInside", repos="http://cran.us.r-project.org")'
+
+  # Copy the [de]activate scripts to $PREFIX/etc/conda/[de]activate.d.
+  # This will allow them to be run on environment activation.
+  for CHANGE in "activate" "deactivate"
+  do
+    mkdir -p "${PREFIX}/etc/conda/${CHANGE}.d"
+    cp "${RECIPE_DIR}/../${CHANGE}.sh" "${PREFIX}/etc/conda/${CHANGE}.d/${PKG_NAME}_${CHANGE}.sh"
+  done
 fi
 
 if [[ $PLATFORM =~ osx-* ]]

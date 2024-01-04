@@ -308,8 +308,6 @@ xlb_sync2(int target, const struct packed_sync* hdr, int* response)
         target, xlb_sync_mode_name[hdr->mode]);
   adlb_code rc = ADLB_SUCCESS;
 
-  MPE_LOG(xlb_mpe_dmn_sync_start);
-
   // Track sent sync message and response
   MPI_Request isend_request, accept_request;
   // Response from target if needed
@@ -473,7 +471,6 @@ xlb_sync2(int target, const struct packed_sync* hdr, int* response)
   DEBUG("server_sync: [%d] sync with %d successful", xlb_s.layout.rank, target);
   xlb_server_sync_in_progress = false;
   TRACE_END;
-  MPE_LOG(xlb_mpe_dmn_sync_end);
 
   return rc;
 }
@@ -595,7 +592,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
                int max_memory, int *response)
 {
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
-  struct packed_sync *req = (struct packed_sync *)req_storage;
+  struct packed_sync* req = (struct packed_sync *)req_storage;
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
   req->steal.idle_check_attempt = xlb_idle_check_attempt;

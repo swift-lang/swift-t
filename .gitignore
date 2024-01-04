@@ -50,6 +50,9 @@ turbine-directory.txt
 *.error
 *.cobaltlog
 
+# VSCode project data
+.vscode
+
 # Eclipse project data
 .project
 .cproject

@@ -8,9 +8,14 @@ set -eu
 # This script runs in the PLATFORM subdirectory
 #      and should not change directories
 # A LOG is produced named platform/conda-build.log
-# Flags:
-#  -C configure-only- generate meta.yaml and settings.sed, then stop
-#  -R for the R version
+
+help()
+{
+  cat <<END
+   -C configure-only- generate meta.yaml and settings.sed, then stop
+   -R for the R version
+END
+}
 
 if (( ${#PLATFORM:-} == 0 )) {
   print "conda-build.sh: unset: PLATFORM"
@@ -19,15 +24,20 @@ if (( ${#PLATFORM:-} == 0 )) {
   return 1
 }
 
-print "PLATFORM: $PLATFORM"
+print "PLATFORM: $PLATFORM $*"
+
+C="" R=""
+zparseopts -D -E -F h=HELP C=C R=R
+
+if (( ${#HELP} )) {
+  help
+  exit
+}
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
-
-C="" R=""
-zparseopts -D -E C=C R=R
 
 if [[ ! -d /tmp/distro ]] {
   print "conda-build.sh: Swift/T source not found at: /tmp/distro"
@@ -73,18 +83,12 @@ export USE_ANT=1
 export USE_GCC=1
 export USE_ZSH=1
 
-# Check last entries in PLATFORM path (:t):
-if [[ ${PLATFORM:t} == "osx-arm64" ]] {
-  # For OSX/ARM64, we rely on these in the system:
-  USE_ANT=0
-  USE_GCC=0
-  USE_ZSH=0
-}
-if [[ ${PLATFORM:t} == "osx-64" ]] {
-  # For OSX/Intel, we rely on Clang:
-  USE_GCC=0
-}
+# Allow platform to modify dependencies
+source $DEV_CONDA/$PLATFORM/deps.sh
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+
+export DATE=${(%)DATE_FMT_S}
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
@@ -101,11 +105,12 @@ if [[ -f $LOG ]] {
 }
 
 {
-  DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
   print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
+  print
   (
-    print "using python, conda:"
-    which python conda
+    print "using python: " $( which python )
+    print "using conda:  " $( which conda  )
+    print
     conda env list
     print
 

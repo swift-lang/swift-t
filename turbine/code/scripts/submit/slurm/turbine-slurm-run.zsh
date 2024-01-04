@@ -78,13 +78,14 @@ fi
 if (( ! TURBINE_PREALLOCATION ))
 then
   # Submit it!
+  # Most systems put error messages on stderr
   # Stampede2 produces useful error messages on stdout
   SUBMIT_OUT=$( ${SUBMIT_COMMAND} || true )
   JOB_ID=$( echo ${SUBMIT_OUT} | grep -o "[1-9][0-9]*$" || true )
   # JOB_ID must be an integer:
   if [[ ${JOB_ID} == "" || ${JOB_ID} != <-> ]]
   then
-    echo  ${SUBMIT_OUT}
+    print ${SUBMIT_OUT}
     abort "sbatch failed!"
   fi
 else

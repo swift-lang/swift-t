@@ -1,23 +1,31 @@
 #!/bin/zsh
 set -eu
 
-# JENKINS BUILD SH
-# Install Swift/T from Git under various techniques on GCE Jenkins
-# Can also be run interactively on GCE
-#     => Thus, we do not refer to the Jenkins variable $WORKSPACE
+# JENKINS BUILD MPICH SH
+# Install Swift/T from Git under with MPICH on CELS Jenkins
+# Can also be run interactively on GCE,
+#     if on the correct compute server!
+#     just set environment variable WORKSPACE
+#     -> Uses hard-coded dependencies from other Jenkins projects
 
 setopt PUSHD_SILENT
 setopt PIPE_FAIL
 
 # Get the Swift/T source directory, canonicalized:
-SWIFT_T_SRC=${ZSH_ARGZERO:A:h:h}
+SWIFT_T_SRC=${ZSH_ARGZERO:A:h:h:h}
 # Formulate the installation directory:
-SWIFT_T_SFW=${SWIFT_T_SRC/src/sfw}
+SWIFT_T_SFW=${WORKSPACE/sfw}
 
 # Directory containing all Jenkins workspaces
 WORKSPACE_ROOT=/scratch/jenkins-slave/workspace
 
 cd $SWIFT_T_SRC
+
+# Passed to build-swift-t.sh:
+B=""
+zparseopts -B=B
+
+renice --priority 19 --pid $$ >& /dev/null
 
 source dev/helpers.sh
 
@@ -66,16 +74,20 @@ s/\\# TCL_INSTALL/TCL_INSTALL/
 /PYTHON_EXE=/s@=.*@=$PYTHON_EXE@
 EOF
 
+# Can add this for faster interactive builds:
+# /PARALLELISM=/s@=.*@=3@
+
 sed -i -f settings.sed $SETTINGS
 
-set -x
-
+print
+print "Running build-swift-t.sh ..."
 # Run the build!
-nice -n 19 dev/build/build-swift-t.sh |& tee build.out
+dev/build/build-swift-t.sh ${B} |& tee build.out
 # Produce build.out for shell inspection later.
 
 # See if it worked:
 PATH=$SWIFT_T_SFW/stc/bin:$PATH
+set -x
 swift-t -v
 swift-t -E 'trace(42);'
 

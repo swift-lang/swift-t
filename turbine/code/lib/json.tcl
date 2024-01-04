@@ -117,7 +117,7 @@ namespace eval turbine {
       set fmti  [ lindex $fmts $i ]
       if { [ string first "%" $fmti ] != 0 } {
         turbine_error "json_encode_array_format(): " \
-            "format token without %: '$fmti'"
+                      "format token without %: '$fmti'"
       }
       set value [ retrieve_decr $a ]
       lappend L [ list $name $fmti $value ]

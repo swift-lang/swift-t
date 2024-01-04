@@ -286,7 +286,12 @@
   </target>
 
 
-  <!-- Determine if this is a Debian build or a source build -->
+  <!-- Determine if this is a Debian build or a source build
+       The token DEBIAN_BUILD is also used as a sanity
+       to detect if the user is running a properly-installed
+       STC or a plain copy of the source scripts.
+       DEBIAN_BUILD==1 if this is a Debian package, else 0.
+  -->
   <condition property="debian_build"
              value="1"
              else="0">

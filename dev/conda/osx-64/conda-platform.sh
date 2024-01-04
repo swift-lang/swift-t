@@ -6,8 +6,8 @@ set -eu
 #  -C configure-only- generate meta.yaml and settings.sed, then stop
 #  -R for the R version
 
-C="" R=""
-zparseopts -D -E C=C R=R
+HELP="" C="" R=""
+zparseopts -D -E -F h=HELP C=C R=R
 
 # Get this script path name (absolute):
 SCRIPT=${0:A}
@@ -19,4 +19,4 @@ export PLATFORM=${THIS:t}
 DEV_CONDA=${THIS:h}
 
 cd $THIS
-$DEV_CONDA/conda-build.sh $C $R
+$DEV_CONDA/conda-build.sh $HELP $C $R
