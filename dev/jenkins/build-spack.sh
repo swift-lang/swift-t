@@ -1,9 +1,9 @@
 #!/bin/zsh
 set -eu
 
-# JENKINS SPACK SH
-# Install Swift/T from GCE Jenkins with Spack under various techniques
-# Developed for ANL/GCE
+# JENKINS BUILD SPACK SH
+# Install Swift/T from CELS Jenkins with Spack under various techniques
+# Developed for ANL/CELS
 # Can also be run outside Jenkins for diagnosis,
 #     in which case it will install under /tmp/$USER/workspace
 #     and you must previously clone spack and swift-t there.
@@ -12,14 +12,26 @@ set -eu
 # Prereqs that we must build in Spack are built here
 # Provide -u to uninstall first
 
+setopt PUSHD_SILENT
+
+DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+{
+  print ${(%)DATE_FMT_NICE} ${*}
+}
+
+print
+log "BUILD SPACK ..."
+
 UNINSTALL=""
 zparseopts u=UNINSTALL
 
 WORKSPACES=/scratch/jenkins-slave/workspace
 PY=$WORKSPACES/Swift-T-Python/sfw/Anaconda3
-PATH=$PY/bin:$PATH
+if [[ -d $PY ]] PATH=$PY/bin:$PATH
 
-setopt PUSHD_SILENT
+log "PYTHON: $( which python )"
 
 START=$SECONDS
 
@@ -61,6 +73,7 @@ EXTERNAL_FINDS=(
   berkeley-db
   bzip2
   diffutils
+  gmake
   jdk
   libtool
   m4
@@ -124,10 +137,9 @@ if [[ -f $WORKSPACE/success.txt ]] {
 }
 
 # Install packages.yaml if really under Jenkins
-if (( ${#JENKINS_HOME} )) {
-  cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
+if (( ${#JENKINS_HOME} )) \
+  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-gce.yaml \
          $WORKSPACE/spack/etc/spack/packages.yaml
-}
 
 section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
