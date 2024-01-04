@@ -66,6 +66,7 @@ uninstall()
   }
   rm -fv $WORKSPACE/downloads/$MINICONDA
   foreach LABEL ( build install ) \
+          log "  DELETE: $WORKSPACE/sfw/Miniconda-$LABEL ..."
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
   end
   rm -fr $WORKSPACE/downloads/swift-t
