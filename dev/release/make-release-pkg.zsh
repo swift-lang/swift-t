@@ -78,7 +78,6 @@ help()
   print " -T : do not make a tar.gz"
 }
 
-
 while getopts "bchmtT" opt
 do
   case ${opt} in
