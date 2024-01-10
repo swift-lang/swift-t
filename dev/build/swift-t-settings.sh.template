@@ -29,8 +29,12 @@ export SWIFT_T_PREFIX=/tmp/swift-t-install
 # provide information about your system and required software packages.
 # For many systems the default settings are adequate.
 
-# C compiler and flags
+# C compiler and flags, normally mpicc
 export CC=mpicc
+# DEPCC: the C compiler for dependency analysis
+# You may need to change this to gcc and check the CPPFLAGS for MPI
+export DEPCC=$CC
+
 # export CPPFLAGS=
 # export CFLAGS=
 # export LDFLAGS=
@@ -52,39 +56,17 @@ COMPILER=GCC
 # Specify details of non-standard Tcl layouts
 # name of tclsh runnable on build system
 # TCLSH_LOCAL=/usr/bin/tclsh
-# directory containing Tcl library
-# TCL_LIB_DIR=/path/to/tcl/lib
-# directory containing tcl.h
-# TCL_INCLUDE_DIR=/path/to/tcl/include
-# tcl system library directory.  Must contain init.tcl in root or
-# tcl${TCL_VERSION} subdirectory
-# TCL_SYSLIB_DIR=/path/to/tcl/lib
-# For Anaconda, use tclsh from PATH:
-# TCLSH=tclsh8.6
 
-# Location of MPI install to override autodetected location
-# MPI_INSTALL=${EXM_PREFIX}/mpi
-# MPE_INSTALL=${EXM_PREFIX}/mpe
 # Set MPI version
 # (version 3 required for parallel tasks but version 2 is also allowed)
 MPI_VERSION=3
 
-# MPI custom layouts (uncomment below options to enable)
-# Check for MPI implementation and tools (set to 0 to use, e.g., cc)
-SWIFT_T_CHECK_MPI=1
-# Enable custom MPI settings
-SWIFT_T_CUSTOM_MPI=0
-# MPI_DIR=/path/to/mpi
-# MPI_INCLUDE=/path/to/mpi/include
-# MPI_LIB_DIR=/path/to/mpi/lib
-# MPI_LIB_NAME=funny.mpi.a
 # If needed, you can provide a full path to the launcher here.
 # This could be mpiexec, srun, aprun, etc.
+# Defaults to mpiexec in PATH
 # LAUNCHER=/path/to/bin/mpiexec
 # For Anaconda, use mpiexec from PATH:
 # LAUNCHER=mpiexec
-# If needed, you can force MPI_IMPL here:
-# export MPI_IMPL="MPICH" or "OpenMPI"
 
 # C build settings: Swift/T C compile settings default to -O2
 # Optimized build (set to 1 to enable): Set -O3, NDEBUG
