@@ -8,8 +8,6 @@ set -eu
 # May be run interactively, just set environment variable WORKSPACE
 
 # Defaults:
-# Swift/T branch:
-BRANCH="master"
 PYTHON_VERSION="39"
 CONDA_LABEL="23.11.0-1"
 # py39_23.11.0-1
@@ -19,7 +17,6 @@ CONDA_LABEL="23.11.0-1"
 help()
 {
   cat <<EOF
--b BRANCH          branch for Swift/T, default "master"
 -p PYTHON_VERSION  default "$PYTHON_VERSION"
 -c CONDA_LABEL     default "$CONDA_LABEL"
 -r                 install R, default does not
@@ -32,7 +29,7 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
-zparseopts b:=BRANCH c:=CL p:=PV r=R u=UNINSTALL
+zparseopts c:=CL p:=PV r=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
