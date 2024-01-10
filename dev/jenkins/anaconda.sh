@@ -8,17 +8,35 @@ set -eu
 # May be run interactively, just set environment variable WORKSPACE
 
 # Defaults:
+# Swift/T branch:
+BRANCH="master"
 PYTHON_VERSION="39"
 CONDA_LABEL="23.11.0-1"
 # py39_23.11.0-1
 # py310_23.11.0-1
 # py311_23.11.0-1
-UNINSTALL="" PV="" CL=""
-zparseopts u=UNINSTALL c:=CL p:=PV
+
+help()
+{
+  cat <<EOF
+-b BRANCH          branch for Swift/T, default "master"
+-p PYTHON_VERSION  default "$PYTHON_VERSION"
+-c CONDA_LABEL     default "$CONDA_LABEL"
+-r                 install R, default does not
+-u                 delete prior artifacts, default does not
+EOF
+}
+
+# Run plain help as needed before possibly affecting settings:
+zparseopts h=HELP
+if (( ${#HELP} )) help
+
+# Main argument processing
+zparseopts b:=BRANCH c:=CL p:=PV r=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
-renice --priority 19 --pid $$
+renice --priority 19 --pid $$ >& /dev/null
 
 setopt PUSHD_SILENT
 
@@ -121,7 +139,7 @@ task swift-t/dev/release/make-release-pkg.zsh
 # Set up the build environment in Miniconda-build
 task swift-t/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task swift-t/dev/conda/linux-64/conda-platform.sh
+task swift-t/dev/conda/linux-64/conda-platform.sh ${R}
 
 log "CHECKING PACKAGE..."
 BZ2=swift-t-${SWIFT_T_VERSION}-py${PYTHON_VERSION}_1.tar.bz2
