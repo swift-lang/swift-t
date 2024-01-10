@@ -10,9 +10,24 @@ set -eu
 # Defaults:
 PYTHON_VERSION="39"
 CONDA_LABEL="23.11.0-1"
+# Examples:
 # py39_23.11.0-1
 # py310_23.11.0-1
 # py311_23.11.0-1
+
+DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+{
+  print ${(%)DATE_FMT_NICE} ${*}
+}
+
+if (( ${WORKSPACE:-0} == 0 )) {
+  log "anaconda.sh: Set WORKSPACE!"
+  exit 1
+}
+
+export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
 help()
 {
@@ -36,13 +51,6 @@ if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 renice --priority 19 --pid $$ >& /dev/null
 
 setopt PUSHD_SILENT
-
-DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
-log()
-# General-purpose log line
-{
-  print ${(%)DATE_FMT_NICE} ${*}
-}
 
 SWIFT_T_VERSION=1.6.3
 log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
@@ -85,7 +93,8 @@ uninstall()
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
   end
   rm -fr $WORKSPACE/downloads/swift-t
-  rm -fr /tmp/distro
+  # The Swift/T release export
+  rm -fr $TMP/distro
   log "UNINSTALL OK."
 }
 
@@ -118,7 +127,7 @@ conda env list
 conda update --yes conda
 
 # THE ACTUAL TESTS:
-# Create the "exported" Swift/T source tree in /tmp/distro
+# Create the Swift/T source release export in $TMP/distro
 print
 task swift-t/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
