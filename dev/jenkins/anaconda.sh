@@ -120,22 +120,10 @@ conda activate base
 conda env list
 conda update --yes conda
 
-cd $WORKSPACE/downloads
-
-if [[ -d swift-t ]]
-then
-  cd swift-t
-  git checkout master
-  task git pull
-  cd -
-else
-  task git clone https://github.com/swift-lang/swift-t.git
-fi
-
 # THE ACTUAL TESTS:
 # Create the "exported" Swift/T source tree in /tmp/distro
 print
-task swift-t/dev/release/make-release-pkg.zsh
+task swift-t/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
 task swift-t/dev/conda/setup-conda.sh
 # Build the Swift/T package!
