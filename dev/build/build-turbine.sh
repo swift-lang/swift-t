@@ -90,10 +90,6 @@ if [[ "${TCL_INSTALL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl=${TCL_INSTALL}"
 fi
 
-if [[ "${TCL_VERSION:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
-fi
-
 if [[ "${TCLSH:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tclsh=${TCLSH}"
 fi
@@ -128,35 +124,6 @@ fi
 
 if (( DISABLE_STATIC_PKG )); then
   EXTRA_ARGS+=" --disable-static-pkg"
-fi
-
-if [[ "${MPI_INSTALL:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
-fi
-
-if (( ! SWIFT_T_CHECK_MPI ))
-then
-  EXTRA_ARGS+=" --disable-mpi-checks"
-fi
-
-if (( SWIFT_T_CUSTOM_MPI )); then
-  EXTRA_ARGS+=" --enable-custom-mpi"
-fi
-
-if [[ "${MPI_DIR:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-mpi=${MPI_DIR}"
-fi
-
-if [[ "${MPI_INCLUDE:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-mpi-include=${MPI_INCLUDE}"
-fi
-
-if [[ "${MPI_LIB_DIR:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-mpi-lib-dir=${MPI_LIB_DIR}"
-fi
-
-if [[ "${MPI_LIB_NAME:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-mpi-lib-name=${MPI_LIB_NAME}"
 fi
 
 if (( DISABLE_ZLIB )); then

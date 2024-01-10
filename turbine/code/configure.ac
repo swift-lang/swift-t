@@ -21,6 +21,7 @@ AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
 m4_include([../../dev/m4/ifblank.m4])
+m4_include([../../dev/m4/tcl.m4])
 
 TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
@@ -223,12 +224,6 @@ USE_MACHINE=normal
 # Note: schedulers are handled by turbine/scripts/submit/*
 USE_LAUNCHER=0
 
-# This is set my --with-mpi
-# Normally this is the prefix of an MPI build,
-# or /usr in an APT or Yum installation
-USE_MPI_DIR=0
-
-USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
@@ -240,53 +235,17 @@ ENABLE_MPI_CHECKS=1
 MPI_LABEL=""
 MPI_LABEL_DIR=""
 MPI_LABEL_LIB=""
-
-# Set MPI_DIR directly
-AC_ARG_WITH(mpi,
-    AS_HELP_STRING([--with-mpi], [location of MPI installation]),
-    [
-        if ! test -d ${withval}
-        then
-            AC_MSG_ERROR(No MPI directory at $withval)
-        fi
-        if test ${withval} = /usr
-        then # Spack external /usr installation of OpenMPI:
-          if which mpicc > /dev/null 2>&1
-          then
-            if mpicc -show | grep -q openmpi
-            then
-              withval=/usr/lib/x86_64-linux-gnu/openmpi
-              AC_MSG_RESULT([user specified --with-mpi=/usr -- detected $withval])
-              USE_LAUNCHER=/usr/bin/mpiexec
-            fi
-          fi
-        fi
-        USE_MPI_DIR=${withval}
-        MPI_LABEL_DIR="${USE_MPI_DIR}"
-        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-    ],
-    [])
-
-# In custom-mpi, the user will optionally specify MPI directories below
-AC_ARG_ENABLE(custom-mpi,
-    AS_HELP_STRING([--enable-custom-mpi],
-                   [Select MPI include and lib separately,
-                    do not use mpicc]),
-    [
-        ENABLE_CUSTOM_MPI=1
-        USE_MACHINE=custom
-    ],
-    [])
+HAVE_MPI_IMPL_OPENMPI=0
+HAVE_MPI_IMPL_MPICH=0
 
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
-                   [full path to job launcher
-                       (mpiexec, etc.)]),
-    [
-        USE_LAUNCHER=${withval}
-        AC_CHECK_FILE($( which ${USE_LAUNCHER} ), [],
-           AC_MSG_ERROR("Launcher '$USE_LAUNCHER' not found! "))
-    ])
+                   [full path to job launcher (mpiexec, etc.)]),
+    [USE_LAUNCHER=${withval}],
+    [USE_LAUNCHER=$(which mpiexec)]
+)
+AC_CHECK_FILE($USE_LAUNCHER, [],
+    AC_MSG_ERROR([Launcher not found: '$USE_LAUNCHER']))
 
 # Allow user to disable MPI checks (useful on Cray)
 AC_ARG_ENABLE(mpi-checks,
@@ -296,310 +255,70 @@ AC_ARG_ENABLE(mpi-checks,
                     disables these checks.]),
     [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
-# Try to set MPI_DIR with respect to an mpicc in PATH
-if [[ ${USE_MPI_DIR} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
+AC_CHECK_HEADER([mpi.h], [], [AC_MSG_ERROR([Could not find mpi.h!])])
+AC_CHECK_LIB([mpi], [MPI_Init], [],
+             [AC_MSG_ERROR([Could not find MPI library!])])
+
+# Set MPI_IMPL
+# Use the preprocessor to extract tokens that identify MPICH or OpenMPI:
+MPI_OUTPUT=$( mktemp )
+$CC -E $CPPFLAGS $CFLAGS maint/mpi_identification.c 2>&1 > $MPI_OUTPUT
+
+if grep -q FOUND_MPICH $MPI_OUTPUT
 then
-   program=$( which mpicc 2> /dev/null)
-   if (( ${?} == 0 ))
-   then
-       AC_MSG_RESULT([PATH contains: ${program}])
-       USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
-       AC_MSG_RESULT([Setting MPI_DIR to ${USE_MPI_DIR} ...])
-   MPI_LABEL_DIR="${USE_MPI_DIR}"
-fi
-
-# At this point, USE_MPI_DIR must be set!
-if (( ! ENABLE_CUSTOM_MPI && ENABLE_MPI_CHECKS ))
+  MPI_IMPL="MPICH"
+elif grep -q FOUND_OpenMPI $MPI_OUTPUT
 then
-  AC_MSG_ERROR([Turbine requires --with-mpi or
-                                 --enable-custom-mpi or
-                                 or mpicc in PATH .])
+  MPI_IMPL="OpenMPI"
+else
+  MPI_IMPL="UNKNOWN"
 fi
+AC_MSG_RESULT([Setting MPI_IMPL: ${MPI_IMPL}])
 
-if [[ ${USE_LAUNCHER} == 0 ]]
+# Set to flag for per-rank line numbers if supported by mpiexec:
+MPI_LINE_OUTPUT_FLAG=""
+
+if [[ $MPI_IMPL == "OpenMPI" ]]
 then
-    # Try to set launcher based on MPI_DIR
-    if [[ -x ${USE_MPI_DIR}/bin/mpiexec ]]
-    then
-        AC_MSG_RESULT([Found ${USE_MPI_DIR}/bin/mpiexec])
-        USE_LAUNCHER=${USE_MPI_DIR}/bin/mpiexec
-    fi
-fi
-
-if [[ ${USE_LAUNCHER} == 0 ]]
-then
-    # Try to set launcher based on PATH
-    program=$( which mpiexec 2> /dev/null )
-    if (( ${?} == 0 ))
-    then
-        AC_MSG_RESULT([Found ${program} in PATH.])
-        USE_LAUNCHER=${program}
-    fi
-fi
-
-# At this point, USE_LAUNCHER must be set!
-if [[ ${USE_LAUNCHER} == 0 ]] && [[ ${ENABLE_CUSTOM_MPI} == 0 ]]
-then
-  AC_MSG_WARN([No MPI launcher (e.g., mpiexec) was found!])
-fi
-AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
-
-AC_ARG_WITH(mpi-include,
-    AS_HELP_STRING([--with-mpi-include],
-                   [directory containing MPI header (mpi.h).]),
-    [
-        USE_MPI_INCLUDE=${withval}
-    ],
-    [])
-
-MPI_INCLUDE_TRIES=(
-  # Normal location for source build:
-  ${USE_MPI_DIR}/include
-  # MPICH via APT:
-  ${USE_MPI_DIR}/lib/x86_64-linux-gnu/mpich/include
-  # MPICH via Yum:
-  ${USE_MPI_DIR}/include/mpich-x86_64
-  # OpenMPI via APT:
-  ${USE_MPI_DIR}/lib/x86_64-linux-gnu/openmpi/include
-  # OpenMPI via Yum:
-  ${USE_MPI_DIR}/include/openmpi-x86_64
-)
-for TRY in ${MPI_INCLUDE_TRIES[@]}
-do
-  if [[ ${USE_MPI_INCLUDE} != 0 ]]
+  HAVE_MPI_IMPL_OPENMPI=1
+  OMPI_MAJOR_VERSION=$( awk '$1 == "MAJOR-VERSION" {print $2}' \
+                        $MPI_OUTPUT )
+  OMPI_MINOR_VERSION=$( awk '$1 == "MINOR-VERSION" {print $2}' \
+                         $MPI_OUTPUT )
+  AC_MSG_RESULT(
+    [OpenMPI version is $OMPI_MAJOR_VERSION . $OMPI_MINOR_VERSION])
+  if (( OMPI_MAJOR_VERSION > 3 || OMPI_MINOR_VERSION >= 3 ))
   then
-    break
+    # These versions support tagged output
+    MPI_LINE_OUTPUT_FLAG="--tag-output"
+  else
+    MPI_LINE_OUTPUT_FLAG=""
   fi
-  AC_CHECK_FILE($TRY/mpi.h, [USE_MPI_INCLUDE=$TRY])
-fi
-
-AC_ARG_WITH(mpi-lib-dir,
-    AS_HELP_STRING([--with-mpi-lib-dir],
-                   [directory containing MPI lib (usually libmpich)]),
-    [
-        USE_MPI_LIB_DIR=${withval}
-        MPI_LABEL_DIR="${USE_MPI_LIB_DIR}"
-    ],
-    [])
-
-AC_ARG_WITH(mpi-lib-name,
-    AS_HELP_STRING([--with-mpi-lib-name],
-                   [name of MPI lib (usually mpi or mpich) -
-                    assumes mpi-lib-dir has been given]),
-    [
-        USE_MPI_LIB_NAME=${withval}
-	MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
-    ],
-    [])
-
-MPI_EXTRA_LIBS=
-AC_ARG_WITH(mpi-lib-extra,
-    AS_HELP_STRING([--with-mpi-lib-extra],
-                   [comma-separated list of names of any additional MPI
-                    libraries in MPI lib directory that must be linked
-                    against.  Mainly useful for static linking against
-                    uncommon MPI implementations or when not using
-                    mpicc.]),
-    [
-      # Switch to space separated
-      MPI_EXTRA_LIBS=$(echo "${withval}" | tr "," " ")
-    ],
-    [])
-
-
-
-# Now check MPI settings
-
-if (( ENABLE_MPI_CHECKS ))
+elif [[ $MPI_IMPL == "MPICH" ]]
 then
-
-AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
-                [AC_MSG_RESULT([Found ${USE_MPI_INCLUDE}/mpi.h])],
-                [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
-
-MPI_LIB_FOUND=0
-
-if [[ -z "${USE_MPI_LIB_DIR}" ]]
-then
-  MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
-  if [[ ! -z "${DPKG_ARCH}" ]]
-  then
-    MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
-  fi
+  HAVE_MPI_IMPL_MPICH=1
+  MPI_LINE_OUTPUT_FLAG="-l"
 else
-  MPI_LIB_DIR_ALTS="${USE_MPI_LIB_DIR}"
+  AC_MSG_WARN([No MPI implementation tokens found in mpi.h !])
 fi
 
-if [[ -z "${USE_MPI_LIB_NAME}" ]]
-then
-  MPI_LIB_NAME_ALTS="mpi mpich mpi_ibm"
-else
-  MPI_LIB_NAME_ALTS="${USE_MPI_LIB_NAME}"
-fi
+# Clean up temp file:
+rm $MPI_OUTPUT
 
-for MPI_LIB_DIR_ALT in ${MPI_LIB_DIR_ALTS}
-do
-  for MPI_LIB_NAME_ALT in ${MPI_LIB_NAME_ALTS}
-  do
-    MPI_LIB_SO=${MPI_LIB_DIR_ALT}/lib${MPI_LIB_NAME_ALT}.${SO_SUFFIX}
-    MPI_LIB_A=${MPI_LIB_DIR_ALT}/lib${MPI_LIB_NAME_ALT}.${AR_SUFFIX}
-    AC_MSG_CHECKING([for MPI library lib${MPI_LIB_NAME_ALT} at ${MPI_LIB_DIR_ALT}])
-    if [[ -f "${MPI_LIB_SO}" -o -f "${MPI_LIB_A}"  ]]
-    then
-      AC_MSG_RESULT([yes])
-      MPI_LIB_FOUND=1
-      USE_MPI_LIB_DIR="${MPI_LIB_DIR_ALT}"
-      USE_MPI_LIB_NAME="${MPI_LIB_NAME_ALT}"
-      MPI_LABEL_DIR=${USE_MPI_LIB_DIR}
-      MPI_LABEL_LIB=${USE_MPI_LIB_NAME}
-      break 2
-    else
-      AC_MSG_RESULT([no])
-    fi
-  done
-done
-
-if (( ! MPI_LIB_FOUND ))
-then
-  AC_MSG_ERROR([Could not find MPI library in any alternative locations])
-fi
-fi
-
-# Set MPI_LABEL
-if [[ -n "${MPI_LABEL_DIR}${MPI_LABEL_LIB}" ]]
-then
-  MPI_LABEL="${MPI_LABEL_DIR} ${MPI_LABEL_LIB}"
-else
-  MPI_LABEL="(unknown)"
-fi
-AC_MSG_RESULT([Setting MPI_LABEL: ${MPI_LABEL}])
-
-# Set MPI options
-
-if [[ -n "${USE_MPI_LIB_NAME}" ]]
-then
-    USE_MPI_LIB_SPEC="-l${USE_MPI_LIB_NAME}"
-fi
-for extra_lib in ${MPI_EXTRA_LIBS}
-do
-  USE_MPI_LIB_SPEC+=" -l${extra_lib}"
-done
-
-USE_MPI_LIB_A=
-USE_MPI_LIB_EXTRA_A=
-if [[ -f ${MPI_LIB_A} ]]
-then
-  MPI_LIB_FOUND=1
-  USE_MPI_LIB_A=${MPI_LIB_A}
-
-  for extra_lib in ${MPI_EXTRA_LIBS}
-  do
-    extra_lib_a=${USE_MPI_LIB_DIR}/lib${extra_lib}.${AR_SUFFIX}
-    if [[ ! -f "${extra_lib_a}" ]]
-    then
-      AC_MSG_ERROR([Expected library ${extra_lib_a} to exist])
-    fi
-    USE_MPI_LIB_EXTRA_A+=" ${extra_lib_a}"
-  done
-
-  # Locate common extra dependencies
-  for extra_lib in opa mpl open-rte open-pal
-  do
-    extra_lib_a=${USE_MPI_LIB_DIR}/lib${extra_lib}.${AR_SUFFIX}
-    if [[ -f "${extra_lib_a}" ]]
-    then
-      USE_MPI_LIB_EXTRA_A+=" ${extra_lib_a}"
-      USE_MPI_LIB_SPEC+=" -l${extra_lib}"
-    fi
-  done
-fi
-
-if [[ ${ENABLE_MPI_CHECKS} == yes ]]
-then
-if (( ! MPI_LIB_FOUND ))
-then
-  AC_MSG_ERROR([Could not find MPI library:
-                   ${MPI_LIB_SO} or ${MPI_LIB_A}.
-                   MPI may not be installed at this
-                   location or library may not
-                   have been built.])
-fi
-fi
-
-MPI_LABEL=${MPI_LABEL:-(unknown)}
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
+                   ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
+                   ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
 
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
-AC_SUBST(USE_MPI_INCLUDE)
 AC_SUBST(USE_MPI_LIB_DIR)
 AC_SUBST(USE_MPI_LIB_NAME)
 AC_SUBST(USE_MPI_LIB_SPEC)
 AC_SUBST(USE_MPI_LIB_A)
 AC_SUBST(USE_MPI_LIB_EXTRA_A)
 AC_SUBST(MPI_LABEL)
-
-# Discover MPI implementation:
-# MPI_IMPL will be "unknown", "OpenMPI", or "MPICH"
-# User can set MPI_IMPL in advance to force that implementation
-HAVE_MPI_IMPL_MPICH=0
-HAVE_MPI_IMPL_OPENMPI=0
-if   [[ ${MPI_IMPL:-unknown} == "MPICH" ]]
-then
-  AC_MSG_RESULT([User set MPI_IMPL=MPICH])
-  HAVE_MPI_IMPL_MPICH=1
-elif [[ ${MPI_IMPL:-unknown} == "OpenMPI" ]]
-then
-  AC_MSG_RESULT([User set MPI_IMPL=OpenMPI])
-  HAVE_MPI_IMPL_OPENMPI=1
-fi
-MPI_IMPL=${MPI_IMPL:-unknown}
-# Set to flag for line numbers if supported
-MPI_LINE_OUTPUT_FLAG=
-
-if (( ${ENABLE_MPI_CHECKS} ))
-then
-AC_MSG_RESULT([Checking MPI implementation and tools...])
-if [[ ${USE_MPI_INCLUDE} != 0 ]]
-then
-   MPI_H=${USE_MPI_INCLUDE}/mpi.h
-else
-   MPI_H=${USE_MPI_DIR}/include/mpi.h
-fi
-AC_MSG_CHECKING([MPI implementation in ${MPI_H} ])
-if grep -q OMPI_MPI_H ${MPI_H} > /dev/null 2>&1
-then
-   HAVE_MPI_IMPL_OPENMPI=1
-   OMPI_MAJOR_VERSION=$( grep OMPI_MAJOR_VERSION ${MPI_H} | \
-                         head -1 | cut -d ' ' -f 3 )
-   OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
-                         head -1 | cut -d ' ' -f 3 )
-   MPI_IMPL="OpenMPI"
-   HAVE_MPI_IMPL_OPENMPI=1
-   if (( OMPI_MAJOR_VERSION > 3 || OMPI_MINOR_VERSION >= 3 ))
-   then
-     MPI_LINE_OUTPUT_FLAG="--tag-output"
-   else
-     MPI_LINE_OUTPUT_FLAG=""
-   fi
-   AC_MSG_RESULT([OK])
-elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
-then
-   HAVE_MPI_IMPL_MPICH=1
-   MPI_IMPL="MPICH"
-   MPI_LINE_OUTPUT_FLAG="-l"
-   AC_MSG_RESULT([OK])
-else
-   AC_MSG_RESULT([Not found.])
-   AC_MSG_WARN([No MPI implementation tokens found in mpi.h !])
-fi
-fi # ENABLE_MPI_CHECKS==1
-
-AC_MSG_RESULT([Setting MPI_IMPL: '${MPI_IMPL}'])
-AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
-                   ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
-AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
-                   ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
@@ -1014,269 +733,15 @@ AC_SUBST(ENABLE_STATIC)
 AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
 AC_PROG_RANLIB
 
-# Tcl version is initially unknown (needed by find-tcl.sh)
-export TCL_VERSION=0
-
-# In order from most to least preferred
-TCL_VERSION_PREFS="8.6"
-
-AC_ARG_WITH(tcl-version,
-    AS_HELP_STRING([--with-tcl-version],
-                   [Tcl version. Minimum is 8.6. If not specified,
-                    use highest version we can find]),
-    [
-        TCL_VERSION=${withval}
-        AC_MSG_NOTICE([user specified Tcl version ${TCL_VERSION}])
-        LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
-    ],
-    [
-        AC_MSG_NOTICE([Tcl version is not specified.])
-    ]
-)
-
-USE_TCL=0
-# Set USE_TCL
-AC_ARG_WITH(tcl,
-    AS_HELP_STRING([--with-tcl], [location of Tcl]),
-    [
-        AC_MSG_RESULT([using Tcl: ${withval}])
-        USE_TCL=${withval}
-        AC_CHECK_FILE(${withval},[],
-          AC_MSG_ERROR([Given Tcl directory does not exist: $withval]))
-    ],
-    [
-      AC_MSG_NOTICE([Tcl location not specified, trying to find tclsh on path])
-      for TCLVER in ${TCL_VERSION_PREFS}
-      do
-        AC_MSG_CHECKING([for tclsh${TCLVER} on path])
-        program=$( which tclsh${TCLVER} 2>&1 )
-        if [[ ${?} == 0 ]]
-        then
-          AC_MSG_RESULT([yes: ${program}])
-          USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
-          AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
-          break
-        else
-          AC_MSG_RESULT([no])
-        fi
-      done
-
-      if [[ ${USE_TCL} == 0 ]]
-      then
-        AC_MSG_CHECKING([for tclsh on path])
-        program=$( which tclsh 2>&1 )
-        if [[ ${?} == 0 ]]
-        then
-          AC_MSG_RESULT([yes: ${program}])
-          USE_TCL=$( cd $(dirname ${program})/.. ; /bin/pwd )
-          AC_MSG_RESULT([Found Tcl at ${USE_TCL}]);
-          break
-        else
-          AC_MSG_RESULT([no])
-        fi
-      fi
-
-      if [[ ${USE_TCL} == 0 ]]
-      then
-        AC_MSG_ERROR([Could not find tclsh for any version: ${TCL_VERSION_PREFS}!])
-      fi
-    ]
-)
-
-USE_TCL_LIB_DIR=0
-
-AC_ARG_WITH(tcl-lib-dir,
-    AC_HELP_STRING([--with-tcl-lib-dir],
-                   [directory containing Tcl shared library
-                    (optional override)]),
-    [
-        USE_TCL_LIB_DIR=${withval}
-        AC_MSG_RESULT([using Tcl lib dir: ${USE_TCL_LIB_DIR}])
-    ])
-
-if [[ ${TCL_VERSION} != 0 ]]
-then
-  # We have locked in a version choice
-  TCL_VERSION_PREFS=${TCL_VERSION}
-fi
-
-# tclsh is used in the build process (cf. debug-auto.tcl)
-# Allow user to specify a native tclsh for use when cross-compiling
-# The user has not yet provided tclsh-local (default to USE_TCLSH):
-USE_TCLSH_LOCAL=0
-AC_ARG_WITH(tclsh-local,
-    AS_HELP_STRING(
-        [--with-tclsh-local],
-        [name of tclsh compatible with build system
-         (optional override)]),
-    [
-        AC_MSG_CHECKING([for local Tcl (version: $TCL_VERSION)
-                         executable in: ${withval}])
-        USE_TCLSH_LOCAL=$( maint/find-tcl.sh ${withval} )
-        if [[ ${?} != 0 ]]
-        then
-            AC_MSG_ERROR([failed!])
-        fi
-        AC_MSG_RESULT($(basename ${USE_TCLSH_LOCAL}))
-    ],
-    [])
-
-# Can always use static Tcl library
-TCL_LIB_SUFFIX_PREFS="a"
-if [[ ${ENABLE_SHARED} != 0 ]]
-then
-  # Can use shared library in this case
-  TCL_LIB_SUFFIX_PREFS="${SO_SUFFIX} ${TCL_LIB_SUFFIX_PREFS}"
-fi
-
-# Locate one or both variant of libtcl
-USE_LIBTCL_A=
-USE_LIBTCL_SO=
-
-# Check in order from most to least preferred
-for TCLVER in ${TCL_VERSION_PREFS}
-do
-
-  if [[ ${USE_TCL_LIB_DIR} == 0 ]]
-  then
-    LIB_DIR_OPTS="${USE_TCL}/lib ${USE_TCL}/lib64"
-
-    # Debian distros may put in architecture-specific subdirectory
-    if [[ ! -z "${DPKG_ARCH}" ]]
-    then
-      LIB_DIR_ARCH_OPTS=""
-      for opt in $LIB_DIR_OPTS
-      do
-        LIB_DIR_ARCH_OPTS+=" $opt/${DPKG_ARCH}"
-      done
-      LIB_DIR_OPTS="$LIB_DIR_OPTS $LIB_DIR_ARCH_OPTS"
-    fi
-  else
-    LIB_DIR_OPTS="${USE_TCL_LIB_DIR}"
-  fi
-
-  for TCL_LIB_SUFFIX in ${TCL_LIB_SUFFIX_PREFS}
-  do
-    for LIB_DIR in ${LIB_DIR_OPTS}
-    do
-      test -d ${LIB_DIR} || continue
-      LIB_DIR=$( cd ${LIB_DIR} ; /bin/pwd ) # Canonicalize
-      LIBTCL_PREFIX=libtcl${TCLVER}
-      LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
-      AC_MSG_CHECKING([for Tcl ${TCLVER} library at ${LIB_DIR}/${LIBTCL}])
-      if [[ -r ${LIB_DIR}/${LIBTCL} ]]
-      then
-        AC_MSG_RESULT([yes])
-        TCL_VERSION=${TCLVER}
-        USE_TCL_LIB_DIR=${LIB_DIR}
-
-        # We found the library - work out which variants are present
-        MAYBE_LIBTCL_SO="${LIB_DIR}/${LIBTCL_PREFIX}.${SO_SUFFIX}"
-        MAYBE_LIBTCL_A="${LIB_DIR}/${LIBTCL_PREFIX}.${AR_SUFFIX}"
-        if [[ -r "${MAYBE_LIBTCL_SO}" ]]
-        then
-          USE_LIBTCL_SO="${MAYBE_LIBTCL_SO}"
-        fi
-        if [[ -r "${MAYBE_LIBTCL_A}" ]]
-        then
-          USE_LIBTCL_A="${MAYBE_LIBTCL_A}"
-        fi
-        break 3
-      else
-        AC_MSG_RESULT([no])
-      fi
-    done
-  done
-done
-
-if [[ -z "${USE_LIBTCL_A}" -a -z "${USE_LIBTCL_SO}" ]]
-then
-    AC_MSG_ERROR([could not find libtcl!])
-fi
-
-AC_MSG_RESULT([using Tcl version: ${TCL_VERSION}])
-AC_MSG_RESULT([Tcl shared library: ${USE_LIBTCL_SO}])
-AC_MSG_RESULT([Tcl static library: ${USE_LIBTCL_A}])
-AC_SUBST(TCL_VERSION)
-
-# Set USE_TCL_CFG_DIR: location of tclConfig.sh
-USE_TCL_CFG_DIR=0
-
-# This is a location used e.g. by the APT tcl8.6-dev package.
-# Put first to maximize chance of getting Tcl version correct
-TCL_CFG_DIR_ALTS="${USE_TCL_LIB_DIR}/tcl${TCL_VERSION}"
-# This location is for Tcl installation from source
-TCL_CFG_DIR_ALTS+=" ${USE_TCL_LIB_DIR}"
-
-for TCL_CFG_DIR_ALT in $TCL_CFG_DIR_ALTS
-do
-  AC_MSG_CHECKING([for tclConfig.sh at ${TCL_CFG_DIR_ALT}])
-  if [[ -r "$TCL_CFG_DIR_ALT/tclConfig.sh" ]]
-  then
-    USE_TCL_CFG_DIR="${TCL_CFG_DIR_ALT}"
-    AC_MSG_RESULT([found])
-    break
-  else
-    AC_MSG_RESULT([no])
-  fi
-done
-
-if [[ ${USE_TCL_CFG_DIR} == 0 ]]
-then
-    AC_MSG_ERROR([Could not find tclConfig.sh!])
-fi
-AC_MSG_RESULT([using tclConfig.sh in: ${USE_TCL_CFG_DIR}/])
-
-# Make copy of old version since it can be clobbered by tclConfig.sh
-TCL_OLD_VERSION="$TCL_VERSION"
-
-# Source tclConfig.sh to obtain Tcl settings
-source ${USE_TCL_CFG_DIR}/tclConfig.sh
-if [[ ${?} != 0 ]]
-then
-    AC_MSG_ERROR([could not source: ${USR_TCL_CFG_DIR}/tclConfig.sh])
-fi
-if [[ "$TCL_VERSION" != "$TCL_OLD_VERSION" ]]
-then
-  AC_MSG_ERROR([${USE_TCL_CFG_DIR}/tclConfig.sh is not for appropriate \
-      Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
-fi
-
-# Find tclsh binary name (may be tclsh8.5)
-if [[ ${USE_TCLSH_LOCAL} == 0 ]]
-then
-    AC_MSG_RESULT([checking for Tcl executable in ${USE_TCL} ...])
-    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
-    if [[ ${?} != 0 ]]
-    then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION}
-                      executable in ${USE_TCL}!])
-    fi
-    USE_TCLSH_LOCAL=${USE_TCLSH}
-else
-    export NO_RUN=1
-    USE_TCLSH=$( maint/find-tcl.sh ${USE_TCL} )
-    if [[ ${?} != 0 ]]
-    then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION}
-                      executable at ${USE_TCL}!])
-    fi
-fi
-
-# Allow user to override Tcl include
-AC_ARG_WITH(tcl-include,
-            AS_HELP_STRING(
-               [--with-tcl-include],
-               [directory containing tcl.h (optional override)]),
-            [AC_CHECK_FILE(${withval}/tcl.h,[],[FAIL=1])
-             [[ ${FAIL} == 1 ]] &&
-               AC_MSG_ERROR(Could not find tcl.h in ${withval})
-             AC_MSG_RESULT([using Tcl include: ${withval}/tcl.h])
-             TCL_INCLUDE_SPEC=-I${withval}
-            ],
-            [])
+# Configure Tcl:
+AC_MSG_RESULT([The following config script can help configure Tcl:])
+# This above sets $TCL_BIN_DIR to the directory containing tclConfig.sh:
+TEA_PATH_TCLCONFIG()
+# This load the Tcl settings as variables TCL_*
+. $TCL_BIN_DIR/tclConfig.sh
 
 # Allow user to override Tcl shell
+USE_TCLSH=$TCL_PREFIX/bin/tclsh$TCL_VERSION
 AC_ARG_WITH(tclsh,
             AS_HELP_STRING(
 
@@ -1289,13 +754,25 @@ AC_ARG_WITH(tclsh,
             ],
             [])
 
+# Allow user to override Tcl shell
+USE_TCLSH_LOCAL=$USE_TCLSH  # Default
+AC_ARG_WITH(tclsh-local,
+            AS_HELP_STRING(
+
+               [--with-tclsh-local],
+               [full path to local tclsh on build system
+                (defaults to --with-tclsh)]),
+            [
+             # No error checks- let the user be creative
+             AC_MSG_RESULT([overriding local Tcl shell to: ${withval}])
+             USE_TCLSH_LOCAL=${withval}
+            ],
+            [])
+
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
-AC_SUBST(USE_TCL)
-AC_SUBST(USE_TCL_LIB_DIR)
-AC_SUBST(USE_TCL_SYSLIB_DIR)
-AC_SUBST(USE_LIBTCL_A)
-AC_SUBST(USE_LIBTCL_SO)
+USE_TCL=$TCL_PREFIX
+AC_SUBST(TCL_VERSION)
 AC_SUBST(USE_TCLSH)
 AC_SUBST(USE_TCLSH_LOCAL)
 AC_SUBST(TCL_INCLUDE_SPEC)

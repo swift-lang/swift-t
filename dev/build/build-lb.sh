@@ -80,6 +80,7 @@ then
   fi
 fi
 
+echo "build-lb.sh: checking for mpicc ..."
 if which mpicc
 then
   : OK

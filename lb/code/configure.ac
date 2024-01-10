@@ -103,6 +103,10 @@ AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 [[ -r cp_u.token ]] && rm cp_u.token
 
+AC_CHECK_HEADER([mpi.h], [], [AC_MSG_ERROR([Could not find mpi.h!])])
+AC_CHECK_LIB([mpi], [MPI_Init], [],
+             [AC_MSG_ERROR([Could not find MPI library!])])
+
 ADLB_ENABLE_MPE=no
 AC_ARG_WITH(mpe,
   AS_HELP_STRING([--with-mpe],
