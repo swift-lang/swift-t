@@ -145,7 +145,7 @@ report_version()
     print " source:       $( cat ${SOURCE_TXT} )"
   fi
   print " using CC:     ${USE_CC}"
-  print " using MPI:    ${MPI_LABEL} \"${MPI_IMPL}\""
+  print " using MPI:    ${MPI_IMPL}"
   print " using Tcl:    ${TCLSH}"
   if (( ${#TURBINE_USE_PYTHON} + ${#TURBINE_USE_PYTHON_NAME} ))
   then
