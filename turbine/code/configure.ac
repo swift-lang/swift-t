@@ -243,8 +243,9 @@ AC_ARG_WITH(launcher,
     [USE_LAUNCHER=${withval}],
     [USE_LAUNCHER=$(which mpiexec)]
 )
-AC_CHECK_FILE($USE_LAUNCHER, [],
-    AC_MSG_ERROR([Launcher not found: '$USE_LAUNCHER']))
+AC_CHECK_FILE($USE_LAUNCHER,
+    [AC_MSG_RESULT([Using Turbine MPI launcher: $USE_LAUNCHER])],
+    [AC_MSG_ERROR([Launcher not found: '$USE_LAUNCHER'])])
 
 AC_CHECK_HEADER([mpi.h], [], [AC_MSG_ERROR([Could not find mpi.h!])])
 AC_CHECK_LIB([mpi], [MPI_Init], [],
