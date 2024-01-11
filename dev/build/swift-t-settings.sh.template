@@ -48,13 +48,11 @@ COMPILER=GCC
 # This is passed to configure as --host=CROSS_HOST
 # CROSS_HOST=
 
-# Location of Tcl to override autodetected Tcl
-# TCL_INSTALL=${EXM_PREFIX}/tcl
-# Tcl version: specify in case of multiple competing versions
-# TCL_VERSION=8.6
+# Location of Tcl to override autodetected Tcl from PATH
+# This is the directory containing tclConfig.sh
+# TCL_INSTALL=${EXM_PREFIX}/tcl/lib
 
-# Specify details of non-standard Tcl layouts
-# name of tclsh runnable on build system
+# Path to tclsh runnable on build system
 # TCLSH_LOCAL=/usr/bin/tclsh
 
 # Set MPI version
