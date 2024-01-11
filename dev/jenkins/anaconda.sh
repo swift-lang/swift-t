@@ -22,7 +22,7 @@ log()
   print ${(%)DATE_FMT_NICE} ${*}
 }
 
-if (( ${WORKSPACE:-0} == 0 )) {
+if [[ ${WORKSPACE:-0} == 0 ]] {
   log "anaconda.sh: Set WORKSPACE!"
   exit 1
 }
