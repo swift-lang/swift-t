@@ -57,7 +57,12 @@ AC_DEFUN([TEA_PATH_TCLCONFIG], [
             )
 	AC_MSG_CHECKING([for Tcl configuration])
 	AC_CACHE_VAL(ac_cv_c_tclconfig,[
-
+            # Hack for Spack in this if-block: # Wozniak 2023-01-11
+            if [[ ${with_tclconfig} == /usr ]]
+            then
+                TCL_FOUND=$( /usr/bin/tclsh maint/find-tclConfig.tcl )
+                with_tclconfig="${TCL_FOUND}"
+            fi
 	    # First check to see if --with-tcl was specified.
 	    if test x"${with_tclconfig}" != x ; then
 		case "${with_tclconfig}" in
