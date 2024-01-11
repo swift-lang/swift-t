@@ -7,7 +7,7 @@ set -eu
 #  -R for the R version
 
 C="" R=""
-zparseopts -D -E C=C R=R
+zparseopts -D -E h=HELP C=C R=R
 
 # Get this script path name (absolute):
 SCRIPT=${0:A}
@@ -21,4 +21,4 @@ DEV_CONDA=${THIS:h}
 source $DEV_CONDA/get-python-version.sh
 
 cd $THIS
-$DEV_CONDA/conda-build.sh $C $R
+$DEV_CONDA/conda-build.sh $HELP $C $R

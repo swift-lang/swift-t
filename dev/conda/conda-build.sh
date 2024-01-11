@@ -12,8 +12,11 @@ set -eu
 help()
 {
   cat <<END
+
+Options:
    -C configure-only- generate meta.yaml and settings.sed, then stop
    -R for the R version
+
 END
 }
 
@@ -24,8 +27,6 @@ if (( ${#PLATFORM:-} == 0 )) {
   return 1
 }
 
-print "PLATFORM: $PLATFORM $*"
-
 C="" R=""
 zparseopts -D -E -F h=HELP C=C R=R
 
@@ -33,6 +34,8 @@ if (( ${#HELP} )) {
   help
   exit
 }
+
+print "PLATFORM: $PLATFORM $*"
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
