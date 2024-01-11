@@ -533,8 +533,8 @@ endif
 deps: $(DEPS)
 
 ifeq (${DEPCC},)
-# Assume we always have gcc for deps processing
-DEPCC = gcc
+# User may want to use DEPCC=gcc for deps processing
+DEPCC = $(CC)
 endif
 
 CPPFLAGS += $(INCLUDES)
