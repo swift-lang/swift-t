@@ -228,7 +228,6 @@ USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=
 USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
-ENABLE_MPI_CHECKS=1
 # The label is just for 'turbine -v' output and the
 #     Turbine runtime environment, which is available to workflows
 # It may be "(unknown)" if MPI checks are disabled
@@ -246,14 +245,6 @@ AC_ARG_WITH(launcher,
 )
 AC_CHECK_FILE($USE_LAUNCHER, [],
     AC_MSG_ERROR([Launcher not found: '$USE_LAUNCHER']))
-
-# Allow user to disable MPI checks (useful on Cray)
-AC_ARG_ENABLE(mpi-checks,
-    AC_HELP_STRING([--disable-mpi-checks],
-                   [Turbine checks for mpi.h and MPI libs to obtain
-                    the MPI version and enforce sanity.  This flag
-                    disables these checks.]),
-    [ [[ ${enableval} = no ]] && ENABLE_MPI_CHECKS=0 ])
 
 AC_CHECK_HEADER([mpi.h], [], [AC_MSG_ERROR([Could not find mpi.h!])])
 AC_CHECK_LIB([mpi], [MPI_Init], [],
@@ -734,41 +725,82 @@ AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
 AC_PROG_RANLIB
 
 # Configure Tcl:
-AC_MSG_RESULT([The following config script can help configure Tcl:])
-# This above sets $TCL_BIN_DIR to the directory containing tclConfig.sh:
-TEA_PATH_TCLCONFIG()
-# This load the Tcl settings as variables TCL_*
-. $TCL_BIN_DIR/tclConfig.sh
+# Defaults:
+# These will be full paths to a tclsh.  They may be the same.
+# This is the runtime (compute node) tclsh
+USE_TCLSH=0
+# This is the build system tclsh
+USE_TCLSH_LOCAL=0
 
-# Allow user to override Tcl shell
-USE_TCLSH=$TCL_PREFIX/bin/tclsh$TCL_VERSION
 AC_ARG_WITH(tclsh,
             AS_HELP_STRING(
-
                [--with-tclsh],
                [full path to runtime tclsh (optional override)]),
             [
              # No error checks- let the user be creative
              AC_MSG_RESULT([overriding Tcl shell to: ${withval}])
              USE_TCLSH=${withval}
-            ],
-            [])
+            ])
 
-# Allow user to override Tcl shell
+# Allow user to override build-system-compatible Tcl shell
 USE_TCLSH_LOCAL=$USE_TCLSH  # Default
 AC_ARG_WITH(tclsh-local,
             AS_HELP_STRING(
-
                [--with-tclsh-local],
                [full path to local tclsh on build system
                 (defaults to --with-tclsh)]),
             [
-             # No error checks- let the user be creative
+             # Use error checks- this tclsh must work on build system:
+             AC_CHECK_FILE(${withval})
              AC_MSG_RESULT([overriding local Tcl shell to: ${withval}])
              USE_TCLSH_LOCAL=${withval}
-            ],
-            [])
+            ])
 
+# If one is set but not the other, make them agree:
+if [[ $USE_TCLSH == 0 ]] && [[ $USE_TCLSH_LOCAL != 0 ]]
+then
+    USE_TCLSH=$USE_TCLSH_LOCAL
+    AC_MSG_RESULT(
+      [assigning to Tcl shell from local Tcl shell: ${USE_TCLSH}])
+fi
+if [[ $USE_TCLSH_LOCAL == 0 ]] && [[ $USE_TCLSH != 0 ]]
+then
+    USE_TCLSH_LOCAL=$USE_TCLSH
+    AC_MSG_RESULT(
+      [assigning to local Tcl shell from Tcl shell: ${USE_TCLSH_LOCAL}])
+fi
+
+# If not USE_TCLSH_LOCAL not set, find any tclsh in PATH:
+if [[ $USE_TCLSH_LOCAL == 0 ]]
+then
+    AC_MSG_RESULT([No local tclsh set; checking PATH ...])
+    if which tclsh 2>&1 > /dev/null
+    then
+        USE_TCLSH_LOCAL=$( which tclsh )
+    elif which tclsh8.7 2>&1 /dev/null
+    then
+        USE_TCLSH_LOCAL=$( which tclsh8.7 )
+    elif which tclsh8.6 2>&1 /dev/null
+    then
+        USE_TCLSH_LOCAL=$( which tclsh8.6 )
+    else
+        AC_MSG_ERROR([Could not find a local tclsh!])
+    fi
+    AC_MSG_RESULT([Found local tclsh in PATH at ${USE_TCLSH_LOCAL}])
+fi
+
+# Find tclConfig.sh from the local tclsh as a default:
+# We modified tcl.m4 to refer to TCL_FOUND if needed
+TCL_FOUND=$( $USE_TCLSH_LOCAL maint/find-tclConfig.tcl )
+AC_MSG_RESULT([Found local tclConfig.sh at ${TCL_FOUND}])
+
+# This sets $TCL_BIN_DIR to the directory containing tclConfig.sh
+#      allowing for user --with-tcl
+TEA_PATH_TCLCONFIG()
+# This loads the Tcl settings as variables TCL_*
+. $TCL_BIN_DIR/tclConfig.sh
+
+USE_TCLSH=$TCL_PREFIX/bin/tclsh$TCL_VERSION
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
 USE_TCL=$TCL_PREFIX
