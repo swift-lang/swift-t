@@ -116,7 +116,7 @@ section()
 
 # Allow Git checkout to complete?
 sleep 10
-section START
+section "START"
 
 # Setup a default workspace when running outside Jenkins
 WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
@@ -268,4 +268,5 @@ touch $WORKSPACE/success.txt
 STOP=$SECONDS
 DURATION=$(( (STOP-START) / 60 ))  # whole minutes
 
+print
 printf "SUCCESS: duration: %i minutes.\n" $DURATION
