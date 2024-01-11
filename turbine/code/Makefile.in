@@ -11,6 +11,7 @@
 # Use 'make test_results' to run the tests
 # Use 'make clean' or one of the other clean-* targets to clean
 # Parallel builds are supported
+# Set CC, CXX, CPPFLAGS, CFLAGS, LDFLAGS via Autotools
 
 TURBINE_VERSION = @TURBINE_VERSION@
 
@@ -212,16 +213,10 @@ RANLIB  = @RANLIB@
 C_UTILS = @USE_C_UTILS@
 LIBCUTILS_A := @USE_LIBCUTILS_A@
 
-TCL := @USE_TCL@
-TCL_VERSION := @TCL_VERSION@
-TCLSH := @USE_TCLSH@
-TCL_LIB_DIR := @USE_TCL_LIB_DIR@
-TCL_SYSLIB_DIR := @USE_TCL_SYSLIB_DIR@
-TCL_LIB_NAME := tcl$(TCL_VERSION)
-TCL_LIB_SO := @USE_LIBTCL_SO@
-TCL_LIB_A := @USE_LIBTCL_A@
-TCLSH_LOCAL := @USE_TCLSH_LOCAL@
-
+# Tcl settings:
+TCL_VERSION  := @TCL_VERSION@
+TCLSH        := @USE_TCLSH@
+TCLSH_LOCAL  := @USE_TCLSH_LOCAL@
 TCL_LIB_DEPS := @TCL_LIB_SPEC_EXTRA@
 
 MKSTATIC := scripts/mkstatic/mkstatic.tcl
@@ -331,11 +326,6 @@ CFLAGS += $(DEFINES) $(INCLUDES) $(HDF5_CPPFLAGS)
 LIBS :=
 LIBS += -L$(ADLB)/lib -ladlb
 LIBS += -L$(C_UTILS)/lib -lexmcutils
-ifeq ($(filter $(TCL_LIB_DIR),$(SYSTEM_LIBS)),)
-  LIBS += -L$(TCL_LIB_DIR)
-  RPATH_TCL = yes
-endif
-LIBS += -l$(TCL_LIB_NAME)
 ifeq ($(ENABLE_MPE),1)
   ifeq ($(filter $(USE_MPE),$(SYSTEM_LIBS)),)
     LIBS += -L$(USE_MPE)/lib
