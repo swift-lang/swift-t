@@ -232,22 +232,6 @@ MKSTATIC_RUN := $(TCLSH_LOCAL) $(MKSTATIC) $(MKSTATIC_FLAGS)
 
 MACHINE = @USE_MACHINE@
 
-# On some systems, the user will use mpicc,
-# and the user may specify the MPI include and lib paths
-# The actual linker arguments:
-MPI_LIB :=
-ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
-  ifneq ($(MPI_LIB_DIR),)
-    MPI_LIB += -L$(MPI_LIB_DIR)
-    RPATH_MPI = yes
-  endif
-endif
-MPI_LIB_FLAGS = @USE_MPI_LIB_SPEC@
-MPI_LIB += $(MPI_LIB_FLAGS)
-MPI_LIB_A := @USE_MPI_LIB_A@
-MPI_LIB_EXTRA_A := @USE_MPI_LIB_EXTRA_A@ # extra deps, e.g. mpl
-MPE_LIB_A := @USE_MPE_LIB_A@
-
 LAUNCHER = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
