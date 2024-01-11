@@ -123,6 +123,12 @@ WORKSPACE=${WORKSPACE:-/tmp/$USER/workspace}
 mkdir -pv $WORKSPACE
 cd        $WORKSPACE
 
+# Setting TMP changes the spack-stage directory
+# Make this publically-readable on GCE:
+NAME=${WORKSPACE:t}
+export TMP=/tmp/$USER/jenkins-$NAME/spack-stage
+mkdir -pv $TMP
+
 SPACK_HOME=$WORKSPACE/spack
 SWIFT_HOME=$WORKSPACE/swift-t
 
