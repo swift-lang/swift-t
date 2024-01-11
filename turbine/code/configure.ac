@@ -224,19 +224,6 @@ USE_MACHINE=normal
 # Note: schedulers are handled by turbine/scripts/submit/*
 USE_LAUNCHER=0
 
-USE_MPI_LIB_DIR=0
-USE_MPI_LIB_NAME=
-USE_MPI_LIB_DIR=
-ENABLE_CUSTOM_MPI=0
-# The label is just for 'turbine -v' output and the
-#     Turbine runtime environment, which is available to workflows
-# It may be "(unknown)" if MPI checks are disabled
-MPI_LABEL=""
-MPI_LABEL_DIR=""
-MPI_LABEL_LIB=""
-HAVE_MPI_IMPL_OPENMPI=0
-HAVE_MPI_IMPL_MPICH=0
-
 AC_ARG_WITH(launcher,
     AS_HELP_STRING([--with-launcher],
                    [full path to job launcher (mpiexec, etc.)]),
@@ -253,6 +240,8 @@ AC_CHECK_LIB([mpi], [MPI_Init], [],
 
 # Set MPI_IMPL
 # Use the preprocessor to extract tokens that identify MPICH or OpenMPI:
+HAVE_MPI_IMPL_OPENMPI=0
+HAVE_MPI_IMPL_MPICH=0
 MPI_OUTPUT=$( mktemp )
 $CC -E $CPPFLAGS $CFLAGS maint/mpi_identification.c 2>&1 > $MPI_OUTPUT
 
@@ -305,12 +294,6 @@ AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
 AC_SUBST(USE_LAUNCHER)
-AC_SUBST(USE_MPI_LIB_DIR)
-AC_SUBST(USE_MPI_LIB_NAME)
-AC_SUBST(USE_MPI_LIB_SPEC)
-AC_SUBST(USE_MPI_LIB_A)
-AC_SUBST(USE_MPI_LIB_EXTRA_A)
-AC_SUBST(MPI_LABEL)
 AC_SUBST(MPI_IMPL)
 AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
