@@ -6,6 +6,9 @@ set -eu
 # Sets up 2 Minicondas: one in which to build   the package
 #                   and one in which to install the package
 # May be run interactively, just set environment variable WORKSPACE
+#     and clone Swift/T in that location (which is what Jenkins does)
+
+setopt PUSHD_SILENT
 
 # Defaults:
 PYTHON_VERSION="39"
@@ -26,8 +29,6 @@ if [[ ${WORKSPACE:-0} == 0 ]] {
   log "anaconda.sh: Set WORKSPACE!"
   exit 1
 }
-
-export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
 help()
 {
@@ -50,7 +51,7 @@ if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
 renice --priority 19 --pid $$ >& /dev/null
 
-setopt PUSHD_SILENT
+export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
 SWIFT_T_VERSION=1.6.3
 log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
@@ -92,7 +93,6 @@ uninstall()
           log "  DELETE: $WORKSPACE/sfw/Miniconda-$LABEL ..."
           rm -fr $WORKSPACE/sfw/Miniconda-$LABEL
   end
-  rm -fr $WORKSPACE/downloads/swift-t
   # The Swift/T release export
   rm -fr $TMP/distro
   log "UNINSTALL OK."
