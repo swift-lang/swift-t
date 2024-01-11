@@ -31,6 +31,7 @@ export SWIFT_T_PREFIX=/tmp/swift-t-install
 
 # C compiler and flags, normally mpicc
 export CC=mpicc
+export CXX=mpicxx
 # DEPCC: the C compiler for dependency analysis
 # You may need to change this to gcc and check the CPPFLAGS for MPI
 export DEPCC=$CC
