@@ -181,7 +181,7 @@ if (( ! GIT_CHANGED && PRIOR_SUCCESS )) {
 }
 
 # New run: reset success.txt
-rm -v $WORKSPACE/success.txt || true
+if [[ -f $WORKSPACE/success.txt ]] rm -v $WORKSPACE/success.txt
 
 PATH=$SPACK_HOME/bin:$PATH
 (
