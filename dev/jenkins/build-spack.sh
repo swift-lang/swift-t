@@ -127,6 +127,7 @@ cd        $WORKSPACE
 # Make this publically-readable on GCE:
 NAME=${WORKSPACE:t}
 export TMP=/tmp/$USER/jenkins-$NAME/spack-stage
+log "TMP=$TMP"
 mkdir -pv $TMP
 
 SPACK_HOME=$WORKSPACE/spack
