@@ -131,10 +131,6 @@ export TMP=/tmp/$USER-swift-t/$NAME/spack-stage
 log "TMP=$TMP"
 mkdir -pv $TMP
 
-print umask
-umask
-exit
-
 SPACK_HOME=$WORKSPACE/spack
 SWIFT_HOME=$WORKSPACE/swift-t
 
@@ -230,11 +226,17 @@ source $SPACK_HOME/share/spack/setup-env.sh
 # Install all packages, dependencies first
 (
   set -x
+
+  find $TMP
+
   for p in $EXTERNAL_FINDS $EXTERNAL_SRC_JENKINS_FINDS
   do
     spack external find $p
     spack install       $p
   done
+  find $TMP
+  exit 1
+
   for p in $EXTERNAL_PASTES $EXTERNAL_SRC_JENKINS_PASTES
   do
     # These are in jenkins-packages.yaml
