@@ -67,7 +67,7 @@ packages:
   tcl:
     externals:
     - spec: tcl@8.6.12
-      prefix: /scratch/jenkins-slave/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
+      prefix: /scratch/jenkins-slave-gce/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
   zsh:
     externals:
     - spec: zsh@5.8
