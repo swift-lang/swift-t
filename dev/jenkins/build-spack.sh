@@ -131,6 +131,10 @@ export TMP=/tmp/$USER-swift-t/$NAME/spack-stage
 log "TMP=$TMP"
 mkdir -pv $TMP
 
+print umask
+umask
+exit
+
 SPACK_HOME=$WORKSPACE/spack
 SWIFT_HOME=$WORKSPACE/swift-t
 
@@ -221,6 +225,8 @@ print
 
 if (( ${#UNINSTALL} )) uninstall-all
 
+source $SPACK_HOME/share/spack/setup-env.sh
+
 # Install all packages, dependencies first
 (
   set -x
@@ -238,15 +244,15 @@ if (( ${#UNINSTALL} )) uninstall-all
   do
     spack install $p
   done
-which tclsh tclsh8.6
+
+  spack load tcl
+  which tclsh tclsh8.6
 
   for p in $PACKAGES
   do
     spack install $p
   done
 )
-
-source $SPACK_HOME/share/spack/setup-env.sh
 
 # Test the plain Swift/T installation (no Python):
 spack load 'stc@master^turbine@master -python'
