@@ -126,10 +126,13 @@ cd        $WORKSPACE
 # Setting TMP changes the spack-stage directory
 # Make this publically-readable on GCE:
 NAME=${WORKSPACE:t}
+umask 000
 whoami
-export TMP=/tmp/$USER-swift-t/$NAME/spack-stage
-log "TMP=$TMP"
-mkdir -pv $TMP
+# export TMP=/tmp/$USER-swift-t/$NAME/spack-stage
+# log "TMP=$TMP"
+SPACK_STAGE=/tmp/${USER}.swift-t
+mkdir -pv $SPACK_STAGE
+ls -ld $SPACK_STAGE
 
 SPACK_HOME=$WORKSPACE/spack
 SWIFT_HOME=$WORKSPACE/swift-t
@@ -145,9 +148,12 @@ if [[ -f $WORKSPACE/success.txt ]] {
 }
 
 # Install packages.yaml if really under Jenkins
-if (( ${#JENKINS_HOME} )) \
+if (( ${#JENKINS_HOME} )) {
   cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-gce.yaml \
          $WORKSPACE/spack/etc/spack/packages.yaml
+  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-cfg-gce.yaml \
+         $WORKSPACE/spack/etc/spack/config.yaml
+}
 
 section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
