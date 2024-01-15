@@ -148,12 +148,12 @@ if [[ -f $WORKSPACE/success.txt ]] {
 }
 
 # Install packages.yaml if really under Jenkins
-if (( ${#JENKINS_HOME} )) {
-  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-gce.yaml \
+# if (( ${#JENKINS_HOME} )) {
+  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-dunedin.yaml \
          $WORKSPACE/spack/etc/spack/packages.yaml
   cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-cfg-gce.yaml \
          $WORKSPACE/spack/etc/spack/config.yaml
-}
+# }
 
 section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
@@ -204,10 +204,16 @@ PATH=$SPACK_HOME/bin:$PATH
 # tclsh8.6 < /dev/null
 # set +x
 
+SPACK()
+{
+  log "SPACK:" ${*}
+  spack ${*}
+}
+
 uninstall()
 {
   # Ignore errors here - package may not yet be installed
-  spack uninstall --all --yes --dependents $1 || true
+  SPACK uninstall --all --yes --dependents $1 || true
 }
 uninstall-all()
 {
@@ -223,7 +229,7 @@ uninstall-all()
 }
 
 print
-@ spack find
+SPACK find
 
 if (( ${#UNINSTALL} )) uninstall-all
 
@@ -231,39 +237,33 @@ source $SPACK_HOME/share/spack/setup-env.sh
 
 # Install all packages, dependencies first
 (
-  set -x
-
-  find $TMP
-
   for p in $EXTERNAL_FINDS $EXTERNAL_SRC_JENKINS_FINDS
   do
-    spack external find $p
-    spack install       $p
+    SPACK external find $p
+    SPACK install       $p
   done
-  find $TMP
-  exit 1
 
   for p in $EXTERNAL_PASTES $EXTERNAL_SRC_JENKINS_PASTES
   do
     # These are in jenkins-packages.yaml
-    spack install $p
+    SPACK install $p
   done
   for p in $PREREQS
   do
-    spack install $p
+    SPACK install $p
   done
 
-  spack load tcl
+  SPACK load tcl
   which tclsh tclsh8.6
 
   for p in $PACKAGES
   do
-    spack install $p
+    SPACK install $p
   done
 )
 
 # Test the plain Swift/T installation (no Python):
-spack load 'stc@master^turbine@master -python'
+SPACK load 'stc@master^turbine@master -python'
 (
   set -x
   which swift-t
@@ -271,11 +271,11 @@ spack load 'stc@master^turbine@master -python'
   swift-t -E 'trace("HELLO WORLD");'
 )
 
-spack install 'turbine@master+python'
-spack install 'stc@master^turbine@master+python'
+SPACK install -j 1 'turbine@master+python'
+SPACK install -j 1 'stc@master^turbine@master+python'
 
 # Test the Swift/T+Python installation:
-spack load 'stc@master^turbine@master+python'
+SPACK load 'stc@master^turbine@master+python'
 (
   set -x
   which swift-t
