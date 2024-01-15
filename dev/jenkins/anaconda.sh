@@ -22,11 +22,11 @@ DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
 log()
 # General-purpose log line
 {
-  print ${(%)DATE_FMT_NICE} ${*}
+  print ${(%)DATE_FMT_NICE} "anaconda.sh:" ${*}
 }
 
 if [[ ${WORKSPACE:-0} == 0 ]] {
-  log "anaconda.sh: Set WORKSPACE!"
+  log "Set WORKSPACE!"
   exit 1
 }
 
@@ -45,7 +45,8 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
-zparseopts c:=CL p:=PV r=R u=UNINSTALL
+R=""  # May become "-r"
+zparseopts -D -E -F c:=CL p:=PV r=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
@@ -56,9 +57,17 @@ export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 SWIFT_T_VERSION=1.6.3
 log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 
+# Self-configure
+# The directory containing this script:
+THIS=${0:A:h}
+# The Swift/T clone:
+SWIFT_T=$THIS/../..
+SWIFT_T=${SWIFT_T:A}
+
 # The Miniconda we are working with:
 MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}-Linux-x86_64.sh
 log "MINICONDA: $MINICONDA"
+if (( ${#R} )) log "ENABLING R"
 
 # Force Conda packages to be cached here so they are separate
 #       among Minicondas and easy to delete:
@@ -129,15 +138,16 @@ conda update --yes conda
 # THE ACTUAL TESTS:
 # Create the Swift/T source release export in $TMP/distro
 print
-task swift-t/dev/release/make-release-pkg.zsh -T
+task $SWIFT_T/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
-task swift-t/dev/conda/setup-conda.sh
+task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task swift-t/dev/conda/linux-64/conda-platform.sh ${R}
+task $SWIFT_T/dev/conda/linux-64/conda-platform.sh ${R}
 
 log "CHECKING PACKAGE..."
-BZ2=swift-t-${SWIFT_T_VERSION}-py${PYTHON_VERSION}_1.tar.bz2
-PKG=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64/$BZ2
+BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
+BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $BLD_DIR/repodata.json )
+PKG=$BLD_DIR/$BZ2
 if ! ls -l $PKG
 then
   log "Could not find the PKG at: $PKG"
@@ -156,7 +166,7 @@ conda env list
 log "ACTIVATED ENVIRONMENT."
 print
 
-task swift-t/dev/conda/conda-install.sh $PKG
+task $SWIFT_T/dev/conda/conda-install.sh $PKG
 
 log "TRY SWIFT/T..."
 (
@@ -166,5 +176,7 @@ log "TRY SWIFT/T..."
   swift-t -v
   swift-t -E 'trace(42);'
 )
+print
 log "SWIFT/T OK."
+log "PKG=$PKG"
 print

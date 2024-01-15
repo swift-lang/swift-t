@@ -11,11 +11,11 @@ set -eu
 #       Thus this script installs dependencies using PLATFORM/deps.sh
 # NOTE: Keep LIST in sync with meta.yaml
 # USAGE: Provide PKG
-#        Provide -R to install R
+#        Provide -r to install R
 #        Provide -D to skip installing dependencies
 
 D="" R=""
-zparseopts -D -E D=D R=R
+zparseopts -D -E D=D r=R
 
 # Default behavior:
 INSTALL_DEPS=1

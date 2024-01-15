@@ -27,9 +27,9 @@ The users should be able to simply do:
 
 ----
 $ conda install -c conda-forge mamba
-$ mamba install -c conda-forge -c swift-t swift-t
+$ conda install -c conda-forge -c swift-t swift-t
 # or
-$ mamba install -c conda-forge -c swift-t swift-t-r
+$ conda install -c conda-forge -c swift-t swift-t-r
 ----
 
 == Supported platforms
@@ -77,12 +77,14 @@ Setup:
 
 * Run `setup-conda.sh` to setup a working Conda environment
 * Run the Swift/T `dev/release/make-release-pkg.zsh` script to
-  create the "exported" Swift/T source tree in `/tmp`.
+  create the "exported" Swift/T source tree in `$TMP/distro`,
+  where `$TMP` defaults to `/tmp`.
   This source code location is hard-coded into `meta.yaml`.
 
 Loop:
 
 * Run `conda-platform.sh`.  See notes there.
+** Provide `-r` to build with R
 * Check `conda-build.log` (`LOG`) for errors.
 * Add debug output to `build.sh` as needed to diagnose problems.
 * Run `conda-install.sh` to test the installation.  See notes there.

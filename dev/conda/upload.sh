@@ -5,6 +5,10 @@ set -eu
 THIS=${0:A:h}
 source $THIS/../../turbine/code/scripts/helpers.zsh
 
+FORCE=""
+zparseopts -D -E f=F
+if (( ${#F} )) FORCE="--force"
+
 if (( ${#*} != 1 )) abort "upload.sh: Provide PKG!"
 PKG=$1
 
@@ -25,7 +29,7 @@ read -t 3 _ || true
 renice --priority 19 $$ >& /dev/null
 
 START=$SECONDS
-@ anaconda upload --force $PKG
+@ anaconda upload $FORCE $PKG
 STOP=$SECONDS
 
 DURATION=$(( STOP - START ))

@@ -5,9 +5,15 @@ set -eu
 # Generic wrapper around `conda build'
 # Called by platform/conda-platform.sh
 # Generates meta.yaml and runs `conda build'
+# Many exported environment variables here
+#      are substituted into meta.yaml
 # This script runs in the PLATFORM subdirectory
 #      and should not change directories
 # A LOG is produced named platform/conda-build.log
+# You can only run 1 job concurrently
+#     because of the log and
+#     because of meta.yaml
+# The Swift/T source must have already been put in $TMP/distro
 
 help()
 {
@@ -20,30 +26,40 @@ Options:
 END
 }
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+# This has nothing to do with log file $LOG
+{
+  print ${(%)DATE_FMT_S} "conda-build.sh:" ${*}
+}
+
 if (( ${#PLATFORM:-} == 0 )) {
-  print "conda-build.sh: unset: PLATFORM"
-  print "                This script should be called by"
-  print "                a conda-platform.sh"
+  log "unset: PLATFORM"
+  log "       This script should be called by a conda-platform.sh"
   return 1
 }
 
 C="" R=""
-zparseopts -D -E -F h=HELP C=C R=R
+zparseopts -D -E -F h=HELP C=C r=R
 
 if (( ${#HELP} )) {
   help
   exit
 }
 
-print "PLATFORM: $PLATFORM $*"
+log "PLATFORM: $PLATFORM $*"
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
+TMP=${TMP:-/tmp}
 
-if [[ ! -d /tmp/distro ]] {
-  print "conda-build.sh: Swift/T source not found at: /tmp/distro"
+# This is passed into meta.yaml:
+export DISTRO=$TMP/distro
+if [[ ! -d $DISTRO ]] {
+  log "Swift/T source not found at: $DISTRO"
   return 1
 }
 
@@ -51,8 +67,8 @@ if [[ ! -d /tmp/distro ]] {
 #       selected Python installation
 if ! which conda-build >& /dev/null
 then
-  print "conda-build.sh: could not find tool: conda-build"
-  print "                run ./setup-conda.sh"
+  log "could not find tool: conda-build"
+  log "                     run ./setup-conda.sh"
   return 1
 fi
 # Look up executable:
@@ -64,9 +80,9 @@ PYTHON_EXE=( =python )
 # Get its directory:
 PYTHON_BIN=${PYTHON_EXE:h}
 if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
-  print "conda-build.sh: conda-build is not in your python directory!"
-  print "                this is probably wrong!"
-  print "                run ./setup-conda.sh"
+  log "conda-build is not in your python directory!"
+  log "            this is probably wrong!"
+  log "            run ./setup-conda.sh"
   return 1
 }
 
@@ -89,30 +105,29 @@ export USE_ZSH=1
 # Allow platform to modify dependencies
 source $DEV_CONDA/$PLATFORM/deps.sh
 
-DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
-
 export DATE=${(%)DATE_FMT_S}
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
 if (( ${#C} )) {
-  print "conda-build.sh: configure-only: exit."
+  log "configure-only: exit."
   exit
 }
 
 # Backup the old log
 LOG=conda-build.log
+log "LOG: $LOG"
 if [[ -f $LOG ]] {
   mv -v $LOG $LOG.bak
   print
 }
 
 {
-  print "CONDA BUILD: START: ${(%)DATE_FMT_S}"
+  log "CONDA BUILD: START: ${(%)DATE_FMT_S}"
   print
   (
-    print "using python: " $( which python )
-    print "using conda:  " $( which conda  )
+    log "using python: " $( which python )
+    log "using conda:  " $( which conda  )
     print
     conda env list
     print
@@ -127,14 +142,15 @@ if [[ -f $LOG ]] {
           --dirty \
           .
   )
-  print "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
+  log "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
 } |& tee $LOG
 print
-print "conda build succeeded."
+log "conda build succeeded."
 print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
+log "looking for upload line in $LOG ..."
 UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 PKG=${UPLOAD[-1]}
 
@@ -149,8 +165,7 @@ if [[ $PLATFORM =~ osx-* ]] {
   print
   zmodload zsh/stat
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-  print ${A[mtime]} ${A[size]} $PKG
-  printf "md5sum: "
-  $MD5 $PKG
+  log ${A[mtime]} ${A[size]} $PKG
+  log "md5sum:" $( $MD5 $PKG )
 ) | tee -a $LOG
 print

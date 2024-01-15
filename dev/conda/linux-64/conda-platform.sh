@@ -4,10 +4,10 @@ set -eu
 # linux-64 CONDA PLATFORM
 # Flags:
 #  -C configure-only- generate meta.yaml and settings.sed, then stop
-#  -R for the R version
+#  -r for the R version
 
 C="" R=""
-zparseopts -D -E h=HELP C=C R=R
+zparseopts -D -E h=HELP C=C r=R
 
 # Get this script path name (absolute):
 SCRIPT=${0:A}

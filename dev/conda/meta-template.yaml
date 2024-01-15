@@ -17,7 +17,7 @@ package:
   sha256: {{ sha256 }}
 
 source:
-  path: /tmp/distro/swift-t-{{ version }}/swift-t-{{ version }}
+  path: getenv(DISTRO)/swift-t-{{ version }}/swift-t-{{ version }}
 
 build:
   number: 1
@@ -27,6 +27,7 @@ build:
     - PLATFORM=getenv(PLATFORM)
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 
+# Remember to sync any dependency changes here with conda-install.sh
 requirements:
   build:
     - autoconf
