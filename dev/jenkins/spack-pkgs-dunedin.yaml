@@ -4,8 +4,10 @@
 packages:
   python:
     externals:
-    - spec: python@3.8.10+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
-      prefix: /usr
+      - spec: python@3.9.16+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+      prefix: /home/woz/sfw/Miniconda-PIP
+    # - spec: python@3.8.10+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+    #   prefix: /usr
   mpich:
     externals:
     - spec: mpich@3.3.2~hydra device=ch3

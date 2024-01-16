@@ -31,6 +31,13 @@ WORKSPACES=/scratch/jenkins-slave/workspace
 PY=$WORKSPACES/Swift-T-Python/sfw/Anaconda3
 if [[ -d $PY ]] PATH=$PY/bin:$PATH
 
+if [[ $( hostname ) == "dunedin" ]] {
+  SITE="dunedin"
+} else {
+  SITE="gce"
+}
+
+log "SITE:   $SITE"
 log "PYTHON: $( which python )"
 
 START=$SECONDS
@@ -57,8 +64,10 @@ PREREQS=(
 # Add to PATH, then do 'spack external find ; spack install'
 EXTERNAL_SRC_JENKINS_FINDS=(
   mpich
-  python
 )
+# Do not search for this on Dunedin
+if [[ $SITE == "gce" ]] EXTERNAL_SRC_JENKINS_FINDS+=( python )
+
 # Packages Spack cannot 'external find'
 # Add to packages.yaml, then do 'spack install'
 EXTERNAL_SRC_JENKINS_PASTES=(
@@ -148,12 +157,10 @@ if [[ -f $WORKSPACE/success.txt ]] {
 }
 
 # Install packages.yaml if really under Jenkins
-# if (( ${#JENKINS_HOME} )) {
-  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-dunedin.yaml \
-         $WORKSPACE/spack/etc/spack/packages.yaml
-  cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-cfg-gce.yaml \
-         $WORKSPACE/spack/etc/spack/config.yaml
-# }
+cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-$SITE.yaml \
+       $WORKSPACE/spack/etc/spack/packages.yaml
+cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-cfg-gce.yaml \
+       $WORKSPACE/spack/etc/spack/config.yaml
 
 section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
