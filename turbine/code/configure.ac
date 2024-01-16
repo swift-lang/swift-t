@@ -787,6 +787,18 @@ TEA_PATH_TCLCONFIG()
 USE_TCLSH=$TCL_PREFIX/bin/tclsh$TCL_VERSION
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
 
+AC_ARG_ENABLE(tcl-config,
+  AS_HELP_STRING(
+    [--enable-tcl-config],
+    [automatically load compiler settings from tclConfig.sh]),
+    [
+      AC_MSG_RESULT(
+        [Auto-configuring Tcl settings from tclConfig.sh ...])
+      CPPFLAGS="$CPPFLAGS $TCL_INCLUDE_SPEC"
+      LDFLAGS="$LDFLAGS $TCL_LIB_SPEC"
+    ]
+)
+
 AC_SUBST(TCL_VERSION)
 AC_SUBST(USE_TCLSH)
 AC_SUBST(USE_TCLSH_LOCAL)
@@ -852,6 +864,7 @@ AC_ARG_ENABLE(dev,
 AC_SUBST(ENABLE_DEV)
 
 AC_SUBST(LD)
+AC_SUBST(CPPFLAGS)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
