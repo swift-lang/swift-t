@@ -224,6 +224,8 @@ uninstall()
 }
 uninstall-all()
 {
+  print
+  log "UNINSTALL START"
   # Uninstall packages in reverse order
   for p in ${(Oa)PACKAGES}
   do
@@ -233,6 +235,8 @@ uninstall-all()
   do
     uninstall $p
   done
+  log "UNINSTALL DONE."
+  print
 }
 
 print
