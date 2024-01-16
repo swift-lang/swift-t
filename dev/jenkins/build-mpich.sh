@@ -69,7 +69,7 @@ PATH=$MPICH/bin:$PATH
 cat > settings.sed <<EOF
 /SWIFT_T_PREFIX=/s@=.*@=$SWIFT_T_SFW@
 s/\\# TCL_INSTALL/TCL_INSTALL/
-/TCL_INSTALL=/s@=.*@=$TCL@
+/TCL_INSTALL=/s@=.*@=$TCL/lib@
 /ENABLE_PYTHON=/s@=.*@=1@
 /PYTHON_EXE=/s@=.*@=$PYTHON_EXE@
 EOF
