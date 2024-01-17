@@ -4,11 +4,19 @@ set -o pipefail
 
 # BUILD GENERIC SH
 # Generic builder for all platforms
+# RECIPE_DIR is the PLATFORM directory
 # Called internally by
-#   "conda build" -> PLATFORM/build.sh -> build-generic.sh
+#        "conda build" -> PLATFORM/build.sh -> build-generic.sh
+# The Swift/T build output goes into PLATFORM/build-swift-t.log
+# Puts some metadata in PLATFORM/build-generic.log
+#      link to work directory is important,
+#      contains meta.yaml and Swift/T source
+# If PLATFORM-specific settings are needed, put them in
+#    PLATFORM/build.sh
 
 # Environment notes:
 # Generally, environment variables are not inherited into here.
+
 # PREFIX is provided by Conda
 # ENABLE_R may be set by meta.yaml
 
@@ -21,6 +29,11 @@ install -d $PREFIX/scripts
 install -d $PREFIX/swift-t
 
 build_dir=dev/build
+
+{
+  echo PWD $PWD
+  echo RECIPE_DIR $RECIPE_DIR
+} > $RECIPE_DIR/build-generic.log
 
 cd $build_dir
 rm -fv swift-t-settings.sh
@@ -62,7 +75,7 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 # Build it!
 # Merge output streams to try to prevent buffering
 #       problems with conda build
-./build-swift-t.sh 2>&1 | tee build-swift-t.out
+./build-swift-t.sh -vv 2>&1 | tee $RECIPE_DIR/build-swift-t.log
 
 # Setup symlinks for utilities
 ### BIN ###
