@@ -249,6 +249,12 @@ SPACK find
 
 if (( ${#UNINSTALL} )) uninstall-all
 
+log UNINSTALLXXX TCL    START
+uninstall tcl
+SPACK install tcl
+SPACK find
+log UNINSTALLXXX TCL  DONE
+
 source $SPACK_HOME/share/spack/setup-env.sh
 
 # Install all packages, dependencies first
