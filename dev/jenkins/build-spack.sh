@@ -249,13 +249,14 @@ SPACK find
 
 if (( ${#UNINSTALL} )) uninstall-all
 
+# Start up Spack shell wrapper
+source $SPACK_HOME/share/spack/setup-env.sh
+
 log UNINSTALLXXX TCL    START
 uninstall tcl
 SPACK install tcl
 SPACK find
 log UNINSTALLXXX TCL  DONE
-
-source $SPACK_HOME/share/spack/setup-env.sh
 
 # Install all packages, dependencies first
 (
@@ -275,6 +276,8 @@ source $SPACK_HOME/share/spack/setup-env.sh
     SPACK install $p
   done
 
+  # Do we need another Spack shell wrapper here?  2024-01-17
+  source $SPACK_HOME/share/spack/setup-env.sh
   SPACK load tcl
   which tclsh tclsh8.6
 
