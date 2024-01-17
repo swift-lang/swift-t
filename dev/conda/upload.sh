@@ -1,6 +1,9 @@
 #!/bin/zsh
 set -eu
 
+# UPLOAD SH
+# Upload the PKG to Anaconda
+
 # Get this directory
 THIS=${0:A:h}
 source $THIS/../../turbine/code/scripts/helpers.zsh
@@ -24,7 +27,9 @@ printf "SIZE: %.2f MB\n" $(( float(${A[size]}) / (1024*1024) ))
 HASH=( $( md5sum $PKG ) )
 print "HASH: ${HASH[1]}"
 
+printf "CONFIRM?"
 read -t 3 _ || true
+print
 
 renice --priority 19 $$ >& /dev/null
 
