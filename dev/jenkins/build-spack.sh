@@ -211,10 +211,13 @@ PATH=$SPACK_HOME/bin:$PATH
 # tclsh8.6 < /dev/null
 # set +x
 
+SPACK_COLOR=""
+if [[ $SITE == "gce" ]] SPACK_COLOR=( --color never )
+
 SPACK()
 {
   log "SPACK:" ${*}
-  spack ${*}
+  spack $SPACK_COLOR ${*}
 }
 
 uninstall()
