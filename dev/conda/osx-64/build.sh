@@ -9,6 +9,8 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
 (
   set -x
+  # This is needed for osx-64
+  export LDFLAGS="-ltcl8.6"
   $DEV_CONDA/build-generic.sh
 )
 

@@ -4,10 +4,10 @@ set -eu
 # osx-64 (Intel) CONDA PLATFORM
 # Flags:
 #  -C configure-only- generate meta.yaml and settings.sed, then stop
-#  -R for the R version
+#  -r for the R version
 
 HELP="" C="" R=""
-zparseopts -D -E -F h=HELP C=C R=R
+zparseopts -D -E -F h=HELP C=C r=R
 
 # Get this script path name (absolute):
 SCRIPT=${0:A}
@@ -17,6 +17,9 @@ THIS=${SCRIPT:h}
 export PLATFORM=${THIS:t}
 # The Swift/T Conda script directory:
 DEV_CONDA=${THIS:h}
+
+# Sets PYTHON_VERSION
+source $DEV_CONDA/get-python-version.sh
 
 cd $THIS
 $DEV_CONDA/conda-build.sh $HELP $C $R
