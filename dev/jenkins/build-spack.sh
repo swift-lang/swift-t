@@ -40,6 +40,8 @@ if [[ $( hostname ) == "dunedin" ]] {
 log "SITE:   $SITE"
 log "PYTHON: $( which python )"
 
+renice --priority 19 --pid $$ >& /dev/null
+
 START=$SECONDS
 
 # The packages we want to test in Spack:
