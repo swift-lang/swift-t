@@ -23,7 +23,7 @@ print "FILE: ${PKG:t}"
 zmodload zsh/mathfunc zsh/stat
 zstat -H A -F "%Y-%m-%d %H:%M:%S" $PKG
 print  "TIME: ${A[mtime]}"
-printf "SIZE: %.2f MB\n" $(( float(${A[size]}) / (1024*1024) ))
+printf "SIZE: %.1f MB\n" $(( float(${A[size]}) / (1024*1024) ))
 HASH=( $( md5sum $PKG ) )
 print "HASH: ${HASH[1]}"
 
