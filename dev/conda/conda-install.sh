@@ -35,9 +35,10 @@ PKG=$1
 DEV_CONDA=${0:A:h}
 
 # Report information about given PKG:
-zmodload zsh/stat
+zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-print ${A[mtime]} ${A[size]} $PKG
+printf "%s %.1f MB %s\n" \
+       ${A[mtime]} $(( float(${A[size]}) / (1024*1024) )) $PKG
 printf "md5sum: "
 md5sum $PKG
 
