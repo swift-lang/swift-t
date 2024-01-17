@@ -276,10 +276,10 @@ log UNINSTALLXXX TCL  DONE
     SPACK install $p
   done
 
-  # Do we need another Spack shell wrapper here?  2024-01-17
-  source $SPACK_HOME/share/spack/setup-env.sh
+
+  # source $SPACK_HOME/share/spack/setup-env.sh
   which spack
-  SPACK load tcl
+  spack load tcl
   which tclsh tclsh8.6
 
   for p in $PACKAGES
