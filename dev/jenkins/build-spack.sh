@@ -278,7 +278,7 @@ log UNINSTALLXXX TCL  DONE
   done
 
   log FIND
-  spack find
+  spack find --long --paths
   # source $SPACK_HOME/share/spack/setup-env.sh
   which spack
   log load
