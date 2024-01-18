@@ -277,10 +277,14 @@ log UNINSTALLXXX TCL  DONE
     SPACK install $p
   done
 
-
+  log FIND
+  spack find
   # source $SPACK_HOME/share/spack/setup-env.sh
   which spack
+  log load
   spack load tcl
+  print
+  log which
   which tclsh tclsh8.6
 
   for p in $PACKAGES
