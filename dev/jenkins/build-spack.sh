@@ -38,7 +38,9 @@ if [[ $( hostname ) == "dunedin" ]] {
 } else {
   SITE="gce"
   # Sync this with spack-pkgs-gce.yaml
-  TCL=/scratch/$USER/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
+  whoami
+  echo USER $USER
+  TCL=/scratch/jenkins-slave/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
 }
 
 log "SITE:   $SITE"
