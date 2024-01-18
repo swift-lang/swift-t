@@ -163,9 +163,11 @@ if [[ $PLATFORM =~ osx-* ]] {
 # Print metadata about the PKG
 (
   print
-  zmodload zsh/stat
+  zmodload zsh/mathfunc zsh/stat
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-  log ${A[mtime]} ${A[size]} $PKG
-  log "md5sum:" $( $MD5 $PKG )
+  log  "TIME: ${A[mtime]} ${A[size]}"
+  printf -v T "SIZE: %.1f MB" $(( float(${A[size]}) / (1024*1024) ))
+  log $T
+  log "HASH:" $( $MD5 $PKG )
 ) | tee -a $LOG
 print
