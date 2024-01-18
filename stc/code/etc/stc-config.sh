@@ -7,6 +7,8 @@
 # The @@ substitutions are performed by filters in build.xml
 #                      target "install"
 
+# TIMESTAMP: @TIMESTAMP@
+
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 

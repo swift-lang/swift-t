@@ -337,6 +337,7 @@
           todir="${dist.dir}/etc"
           verbose="${lf}"        >
       <filterset>
+        <filter token="TIMESTAMP"    value="${timestamp}"/>
         <filter token="STC_SRC"      value="${basedir}"/>
         <filter token="DEBIAN_BUILD" value="${debian_build}"/>
         <filter token="TURBINE_HOME" value="${turbine.home}"/>

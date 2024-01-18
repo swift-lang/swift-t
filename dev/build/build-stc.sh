@@ -48,10 +48,12 @@ then
   exit
 fi
 
+TIMESTAMP="$( date "+%Y-%m-%d %H:%M:%S" )"
 if (( ${#STC_INSTALL} > 0 ))
 then
-  $NICE_CMD $ANT -Ddist.dir="$STC_INSTALL" \
+  $NICE_CMD $ANT -Ddist.dir="$STC_INSTALL"         \
                  -Dturbine.home="$TURBINE_INSTALL" \
-                 -Duse.java="$USE_JAVA" \
+                 -Duse.java="$USE_JAVA"            \
+                 -Dtimestamp="$TIMESTAMP"          \
                  install
 fi
