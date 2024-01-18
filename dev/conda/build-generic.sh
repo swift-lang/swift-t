@@ -20,7 +20,8 @@ set -o pipefail
 # PREFIX is provided by Conda
 # ENABLE_R may be set by meta.yaml
 
-echo "BUILD-GENERIC.SH START $( date '+%Y-%m-%d %H:%M:%S' )"
+TIMESTAMP=$( date '+%Y-%m-%d %H:%M:%S' )
+echo "BUILD-GENERIC.SH START $TIMESTAMP"
 
 install -d $PREFIX/bin
 install -d $PREFIX/etc
@@ -31,9 +32,12 @@ install -d $PREFIX/swift-t
 build_dir=dev/build
 
 {
-  echo PWD $PWD
-  echo RECIPE_DIR $RECIPE_DIR
+  echo "TIMESTAMP:  $TIMESTAMP "
+  echo "BUILD_PWD:  $PWD"
+  echo "RECIPE_DIR: $RECIPE_DIR"
+  # printenv | sort | tr '\0' '\n'
 } > $RECIPE_DIR/build-generic.log
+exit
 
 cd $build_dir
 rm -fv swift-t-settings.sh
