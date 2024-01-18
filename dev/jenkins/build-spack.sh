@@ -24,16 +24,6 @@ log()
 print
 log "BUILD SPACK ..."
 
-find /scratch/jenkins-slave-gce/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
-
-log FIND DONE
-
-/scratch/jenkins-slave-gce/workspace/Swift-T-Tcl/sfw/tcl-8.6.12/bin/tclsh < /dev/null
-
-log OK
-exit
-
-
 UNINSTALL=""
 zparseopts u=UNINSTALL
 
@@ -43,12 +33,21 @@ if [[ -d $PY ]] PATH=$PY/bin:$PATH
 
 if [[ $( hostname ) == "dunedin" ]] {
   SITE="dunedin"
+  # Sync this with spack-pkgs-dunedin.yaml
+  TCL=/home/woz/Public/sfw/tcl-8.6.8
 } else {
   SITE="gce"
+  # Sync this with spack-pkgs-gce.yaml
+  TCL=/scratch/$USER/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
 }
 
 log "SITE:   $SITE"
 log "PYTHON: $( which python )"
+
+if [[ ! -d $TCL ]] {
+  log "Tcl not found at: $TCL"
+  exit 1
+}
 
 renice --priority 19 --pid $$ >& /dev/null
 
