@@ -24,6 +24,16 @@ log()
 print
 log "BUILD SPACK ..."
 
+find /scratch/jenkins-slave-gce/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
+
+log FIND DONE
+
+/scratch/jenkins-slave-gce/workspace/Swift-T-Tcl/sfw/tcl-8.6.12/bin/tclsh < /dev/null
+
+log OK
+exit
+
+
 UNINSTALL=""
 zparseopts u=UNINSTALL
 
