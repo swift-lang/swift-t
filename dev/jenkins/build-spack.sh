@@ -33,12 +33,23 @@ if [[ -d $PY ]] PATH=$PY/bin:$PATH
 
 if [[ $( hostname ) == "dunedin" ]] {
   SITE="dunedin"
+  # Sync this with spack-pkgs-dunedin.yaml
+  TCL=/home/woz/Public/sfw/tcl-8.6.8
 } else {
   SITE="gce"
+  # Sync this with spack-pkgs-gce.yaml
+  whoami
+  echo USER $USER
+  TCL=/scratch/jenkins-slave/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
 }
 
 log "SITE:   $SITE"
 log "PYTHON: $( which python )"
+
+if [[ ! -d $TCL ]] {
+  log "Tcl not found at: $TCL"
+  exit 1
+}
 
 renice --priority 19 --pid $$ >& /dev/null
 
@@ -277,10 +288,14 @@ log UNINSTALLXXX TCL  DONE
     SPACK install $p
   done
 
-
+  log FIND
+  spack find --long --paths
   # source $SPACK_HOME/share/spack/setup-env.sh
   which spack
+  log load
   spack load tcl
+  print
+  log which
   which tclsh tclsh8.6
 
   for p in $PACKAGES

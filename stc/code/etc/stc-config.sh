@@ -7,6 +7,8 @@
 # The @@ substitutions are performed by filters in build.xml
 #                      target "install"
 
+# TIMESTAMP: @TIMESTAMP@
+
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 
@@ -16,6 +18,11 @@ STC_SRC=@STC_SRC@
 DEBIAN_BUILD=@DEBIAN_BUILD@
 USE_JAVA=@USE_JAVA@
 # End build.xml variables
+
+if (( ${#USE_JAVA} > 0 ))
+then
+  JVM=${USE_JAVA}
+fi
 
 # Find Turbine (for include path).  The order of priority is:
 # 1. User-set TURBINE_HOME environment variable
@@ -34,9 +41,4 @@ then
   print "STC: Invalid Turbine installation: ${TURBINE_HOME}"
   print "STC: Turbine is not executable: ${TURBINE_HOME}/bin/turbine"
   exit ${EXIT_ERROR_SCRIPT}
-fi
-
-if (( ${#USE_JAVA} > 0 ))
-then
-  JVM=${USE_JAVA}
 fi

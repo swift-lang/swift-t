@@ -11,8 +11,8 @@ set -eu
 
 # Run "stc -h" for full options list
 
-# Use this JVM (e.g., /usr/bin/java):
-JVM=unset
+# Use this JVM (e.g., /usr/bin/java).  0 means unset
+JVM=0
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
 
@@ -289,14 +289,14 @@ verbose()
 
 lookup_java()
 {
-  if [[ ${JVM} == "unset" ]]
+  if [[ ${JVM} == 0 ]]
   then
     # Set Java from PATH
     JVM=$( which java || true )
     if [[ ${JVM} == *"not found" ]]
     then
       # We didn't find it
-      JVM="unset"
+      JVM=0
     fi
   fi
 
@@ -432,7 +432,7 @@ then
 fi
 
 lookup_java
-if [[ ${JVM} == "unset" ]]
+if [[ ${JVM} == 0 ]]
 then
   print "stc: could not find java!"
   print "Put java in your PATH or use stc -j /path/to/java"
