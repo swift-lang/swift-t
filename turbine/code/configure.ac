@@ -775,7 +775,16 @@ fi
 
 # Find tclConfig.sh from the local tclsh as a default:
 # We modified tcl.m4 to refer to TCL_FOUND if needed
+if [[ ! -x $USE_TCLSH_LOCAL ]]
+then
+  AC_MSG_ERROR([Not executable: USE_TCLSH_LOCAL=$USE_TCLSH_LOCAL])
+fi
+
 TCL_FOUND=$( $USE_TCLSH_LOCAL maint/find-tclConfig.tcl )
+if [[ x$TCL_FOUND == x ]]
+then
+    AC_MSG_ERROR([Could not find tclConfig.tcl !])
+fi
 AC_MSG_RESULT([Found local tclConfig.sh at ${TCL_FOUND}])
 
 # This sets $TCL_BIN_DIR to the directory containing tclConfig.sh

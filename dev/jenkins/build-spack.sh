@@ -311,9 +311,15 @@ SPACK load 'stc@master^turbine@master -python'
   swift-t -E 'trace("HELLO WORLD");'
 )
 
+log "INSTALL Turbine ..."
 SPACK install -j 1 'turbine@master+python'
+log "INSTALL STC..."
 SPACK install -j 1 'stc@master^turbine@master+python'
+log "INSTALLATION OK."
 
+echo
+
+log "TEST INSTALLATION ..."
 echo source $SPACK_HOME/share/spack/setup-env.sh
 source $SPACK_HOME/share/spack/setup-env.sh
 
