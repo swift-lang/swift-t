@@ -38,9 +38,7 @@ if [[ $( hostname ) == "dunedin" ]] {
 } else {
   SITE="gce"
   # Sync this with spack-pkgs-gce.yaml
-  whoami
-  echo USER $USER
-  TCL=/scratch/jenkins-slave/workspace/Swift-T-Tcl/sfw/tcl-8.6.12
+  TCL=$WORKSPACES/Swift-T-Tcl/sfw/tcl-8.6.12
 }
 
 log "SITE:   $SITE"
@@ -316,8 +314,13 @@ SPACK load 'stc@master^turbine@master -python'
 SPACK install -j 1 'turbine@master+python'
 SPACK install -j 1 'stc@master^turbine@master+python'
 
+echo source $SPACK_HOME/share/spack/setup-env.sh
+source $SPACK_HOME/share/spack/setup-env.sh
+
+which spack
+
 # Test the Swift/T+Python installation:
-SPACK load 'stc@master^turbine@master+python'
+spack load 'stc@master^turbine@master+python'
 (
   set -x
   which swift-t
