@@ -37,7 +37,6 @@ build_dir=dev/build
   echo "RECIPE_DIR: $RECIPE_DIR"
   # printenv | sort | tr '\0' '\n'
 } > $RECIPE_DIR/build-generic.log
-exit
 
 cd $build_dir
 rm -fv swift-t-settings.sh
