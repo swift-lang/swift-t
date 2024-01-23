@@ -1,5 +1,4 @@
 #!/bin/bash
-# Run as bash - /bin/bash may not exist
 set -eu
 set -o pipefail
 
