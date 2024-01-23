@@ -29,7 +29,13 @@ then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
 fi
 
-echo ${PWD} > source.txt
+: ${CONDA_BUILD:=0}
+if (( CONDA_BUILD ))
+then
+  echo "Anaconda-$CONDA_PY" > source.txt
+else
+  echo ${PWD} > source.txt
+fi
 
 # Check OS
 USE_MAC="no"
