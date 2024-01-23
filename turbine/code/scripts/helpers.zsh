@@ -29,6 +29,14 @@ GB=$(( 1024*MB ))
   ${*}
 }
 
+DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+# This has nothing to do with log file $LOG
+{
+  print ${(%)DATE_FMT_S} "conda-build.sh:" ${*}
+}
+
 abort()
 {
   local MSG="${*}"

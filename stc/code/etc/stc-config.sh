@@ -17,13 +17,29 @@ TURBINE_DEFAULT_HOME=@TURBINE_HOME@
 STC_SRC=@STC_SRC@
 DEBIAN_BUILD=@DEBIAN_BUILD@
 USE_JAVA=@USE_JAVA@
+CONDA_BUILD=@CONDA_BUILD@ # 1
 # End build.xml variables
 
 if (( ${#USE_JAVA} > 0 ))
 then
   JVM=${USE_JAVA}
 fi
-
+if (( CONDA_BUILD ))
+then
+  if [[ ! -f ${JVM} ]]
+  then
+    if [[ -x ${CONDA_PREFIX}/bin/java ]]
+    then
+      JVM=${CONDA_PREFIX}/bin/java
+    else
+      JDKS=( ${CONDA_PREFIX}/pkgs/openjdk-* )
+      if (( ${#JDKS} ))
+      then
+        JVM=${JDKS[1]}/bin/java
+      fi
+    fi
+  fi
+fi
 # Find Turbine (for include path).  The order of priority is:
 # 1. User-set TURBINE_HOME environment variable
 # 2. TURBINE_DEFAULT_HOME - the build-time setting

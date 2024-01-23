@@ -5,6 +5,7 @@ set -eu
 # Generic wrapper around `conda build'
 # Called by platform/conda-platform.sh
 # Generates meta.yaml and runs `conda build'
+# Generates settings.sed for the Swift/T build
 # Many exported environment variables here
 #      are substituted into meta.yaml
 # This script runs in the PLATFORM subdirectory
@@ -26,20 +27,6 @@ Options:
 END
 }
 
-DATE_FMT_S="%D{%Y-%m-%d} %D{%H:%M:%S}"
-log()
-# General-purpose log line
-# This has nothing to do with log file $LOG
-{
-  print ${(%)DATE_FMT_S} "conda-build.sh:" ${*}
-}
-
-if (( ${#PLATFORM:-} == 0 )) {
-  log "unset: PLATFORM"
-  log "       This script should be called by a conda-platform.sh"
-  return 1
-}
-
 C="" R=""
 zparseopts -D -E -F h=HELP C=C r=R
 
@@ -48,13 +35,23 @@ if (( ${#HELP} )) {
   exit
 }
 
-log "PLATFORM: $PLATFORM $*"
-
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
+
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
 TMP=${TMP:-/tmp}
+
+source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+source $DEV_CONDA/helpers.zsh
+
+if (( ${#PLATFORM:-} == 0 )) {
+  log "unset: PLATFORM"
+  log "       This script should be called by a conda-platform.sh"
+  return 1
+}
+
+log "PLATFORM: $PLATFORM $*"
 
 # This is passed into meta.yaml:
 export DISTRO=$TMP/distro
@@ -154,20 +151,15 @@ log "looking for upload line in $LOG ..."
 UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 PKG=${UPLOAD[-1]}
 
-if [[ $PLATFORM =~ osx-* ]] {
-  MD5=( md5 -r )
-} else {
-  MD5=( md5sum )
-}
-
 # Print metadata about the PKG
 (
   print
   zmodload zsh/mathfunc zsh/stat
+  print PKG=$PKG
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
   log  "TIME: ${A[mtime]} ${A[size]}"
   printf -v T "SIZE: %.1f MB" $(( float(${A[size]}) / (1024*1024) ))
   log $T
-  log "HASH:" $( $MD5 $PKG )
+  log "HASH:" $( checksum $PKG )
 ) | tee -a $LOG
 print

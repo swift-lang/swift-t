@@ -1,413 +1,1 @@
-
-<project name="stc"
-         default="build.all"
-         xmlns:jacoco="antlib:org.jacoco.ant">
-
-  <!-- STC build file
-
-       Note:
-       Eclipse generates class files in build/
-       This Ant script puts them in classes/
-       The ones in classes/ are the ones used in the output jar file
-
-       Use -Dlf=true to get per-file output (list-files)
-  -->
-
-  <!-- Locations of jars and ANTLR grammar file -->
-  <property name="antlr.jar"
-            value="lib/antlr-3.5-complete-no-st3.jar"/>
-  <property name="stc.jar"
-            value="lib/stc.jar"/>
-  <property name="stc.test.jar"
-            value="lib/stc-tests.jar"/>
-  <property name="log4j.jar"
-            value="lib/log4j-1.2-api-2.17.2.jar"/>
-  <property name="commons-cli.jar"
-            value="lib/commons-cli-1.2.jar"/>
-  <property name="commons-io.jar"
-            value="lib/commons-io-2.4.jar"/>
-  <property name="commons-lang.jar"
-            value="lib/commons-lang3-3.3.2.jar"/>
-  <property name="guava.jar"
-            value="lib/guava-18.0.jar"/>
-  <property name="junit4.jar"
-            value="lib/junit-4.12.jar"/>
-  <!-- Needed for JUnit -->
-  <property name="hamcrest.jar"
-            value="lib/hamcrest-core-1.3.jar"/>
-  <property name="jacocoant.jar"
-            value="lib/jacocoant-0.7.2.jar"/>
-
-  <property name="stc.env.template"
-            value="conf/stc-env.sh.template"/>
-  <property name="stc.env"
-            value="conf/stc-env.sh"/>
-
-  <property name="src.dir" value="src"/>
-  <property name="grammar"
-            value="${src.dir}/exm/stc/ast/ExM.g"/>
-  <property name="classpath"
-            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${guava.jar}:${junit4.jar}:${hamcrest.jar}"/>
-  <property name="build.dir" value="classes"/>
-  <target name="build.all" depends="jar" />
-
-  <property name="test.src.dir" value="test-src"/>
-  <property name="test.build.dir" value="test-classes"/>
-  <property name="test.out.dir"
-            value="test-output"/>
-  <property name="test.classpath"
-            value="${classpath}:${stc.jar}"/>
-
-  <!-- Code coverage -->
-  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml"
-           classpath="${jacocoant.jar}" />
-  <!-- Allow coverage to be disabled if needed -->
-  <property name="coverage.enabled"
-            value="true"/>
-  <property name="test.coverage.output"
-            value="${test.out.dir}/jacoco.exec"/>
-  <!-- Output directory for system tests -->
-  <property name="system.test.out.dir"
-            value="../tests"/>
-
-  <target name="jar"
-          depends="compile">
-    <jar destfile="${stc.jar}"
-         basedir="${build.dir}"
-         includes="**/*.class"
-         manifest="META-INF/MANIFEST.MF"/>
-  </target>
-
-  <target name="test.jar"
-          depends="compile.tests">
-    <jar destfile="${stc.test.jar}"
-         basedir="${test.build.dir}"
-         includes="**/*.class"
-         manifest="META-INF/MANIFEST.MF"/>
-  </target>
-
-  <!-- We compile STC java and antlr-generated code separately
-       This is so we can get all warnings on our code but suppress
-       warnings on ANTLR-generated code that is outside our control
-  -->
-  <target name="compile" depends="compile.antlr">
-    <mkdir dir="${build.dir}"/>
-    <javac srcdir="${src.dir}"
-           destdir="${build.dir}"
-           excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${classpath}"
-           target="1.8"
-           source="1.8">
-      <compilerarg value="-Xlint"/>
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-  <target name="compile.tests" depends="jar">
-    <mkdir dir="${test.build.dir}"/>
-    <javac srcdir="${test.src.dir}"
-           destdir="${test.build.dir}"
-           listfiles="${lf}"
-           debug="true"
-           debuglevel="source,lines,vars"
-           includeantruntime="false"
-           classpath="${test.classpath}">
-      <compilerarg value="-Xlint"/>
-      <compilerarg value="-Xlint:-cast"/>
-    </javac>
-  </target>
-
-  <!-- Check if the ANTLR code is up-to-date -->
- <uptodate srcfile="${grammar}"
-            targetfile="${stc.jar}"
-            property="antlr.uptodate"/>
-
-  <!-- ANTLR output directory -->
-  <property name="antlr.pkg"
-            value="exm/stc/ast/antlr" />
-  <property name="antlr.out"
-            value="${src.dir}/${antlr.pkg}" />
-
-  <!-- Compile the ANTLR-generated parser code -->
-  <target name="compile.antlr"
-          depends="antlr.generate">
-   <mkdir dir="${build.dir}" />
-   <javac srcdir="${src.dir}"
-          destdir="${build.dir}"
-          includes="${antlr.pkg}/*.java"
-          listfiles="${lf}"
-          debug="true"
-          debuglevel="source,lines,vars"
-          includeantruntime="false"
-          classpath=".:${antlr.jar}"
-          target="1.8"
-          source="1.8">
-     <compilerarg value="-Xlint"/>
-     <compilerarg value="-Xlint:-cast"/>
-   </javac>
-  </target>
-
-  <!-- Call ANTLR to generate the parser code -->
-  <target name="antlr.generate"
-          unless="antlr.uptodate" >
-    <java classname="org.antlr.Tool"
-          fork="true"
-          failonerror="true">
-      <arg value="-fo"/>
-      <arg value="${antlr.out}"/>
-      <arg value="${grammar}"/>
-      <classpath>
-         <pathelement location="${antlr.jar}"/>
-      </classpath>
-    </java>
-
-    <echo message="ANTLR OK: output in: ${antlr.out}"/>
-    <!-- Delete all compiled java classes to avoid mismatch with token number
-         constants in compiled .class files-->
-    <antcall target="clean.java" />
-  </target>
-
-  <target name="javadoc">
-    <javadoc packagenames="exm.*"
-           excludepackagenames="exm.stc.ast.antlr.*"
-           sourcepath="${src.dir}"
-           defaultexcludes="yes"
-           destdir="javadoc"
-           author="true"
-           version="true"
-           use="true"
-           access="package"
-           windowtitle="STC Compiler">
-    <doctitle><![CDATA[<h1>STC Compiler</h1>]]></doctitle>
-    <link href="http://download.oracle.com/javase/6/docs/api/" />
-    </javadoc>
-  </target>
-
-  <available property="source.txt.exists" file="source.txt"/>
-
-  <target name="source.txt"
-          unless="source.txt.exists">
-    <!-- Record source directory -->
-    <echo message="Source directory is: ${user.dir}${line.separator}"/>
-    <echo message="${user.dir}${line.separator}" file="source.txt"/>
-  </target>
-
-
-  <!-- Config: setup config -->
-  <!--
-  <target name="config">
-    <- Empty turbine home unless already provided ->
-    <property name="turbine.home"
-              value=""/>
-    <copy file="${stc.env.template}" toFile="${stc.env}"
-          overwrite="true">
-      <filterset>
-        <filter token="TURBINE_HOME" value="${turbine.home}"/>
-      </filterset>
-    </copy>
-    </target>
-    -->
-
-  <target name="test" depends="test.jar">
-    <mkdir dir="${test.out.dir}"/>
-    <jacoco:coverage enabled="${coverage.enabled}"
-                     destfile="${test.coverage.output}">
-      <junit fork="true" printsummary="yes" haltonfailure="yes">
-        <classpath>
-          <pathelement location="${stc.test.jar}"/>
-          <pathelement path="${test.classpath}"/>
-        </classpath>
-
-        <batchtest todir="${test.out.dir}" fork="true">
-          <resources>
-            <fileset dir="${test.build.dir}" includes="**/*.class"
-                                             excludes="**/*$*.class"/>
-          </resources>
-
-          <formatter type="plain"/>
-          <formatter type="xml"/>
-
-        </batchtest>
-
-      </junit>
-    </jacoco:coverage>
-  </target>
-
-  <target name="junit.coverage.report" depends="test">
-    <fail>
-      <condition><not>
-        <equals arg1="${coverage.enabled}" arg2="true"/>
-      </not></condition>
-    </fail>
-
-    <jacoco:report>
-      <executiondata>
-        <file file="${test.coverage.output}"/>
-      </executiondata>
-
-      <structure name="STC JUnit Test Coverage">
-          <classfiles>
-            <fileset dir="${build.dir}" includes="exm/stc/**/*.class"/>
-          </classfiles>
-          <sourcefiles encoding="UTF-8">
-              <fileset dir="${src.dir}"/>
-          </sourcefiles>
-      </structure>
-
-      <html destdir="${test.out.dir}/junit-coverage"/>
-    </jacoco:report>
-  </target>
-
-  <!-- Generate full coverage report based on all tests.  Assumes
-       that Junit tests and run-tests.zsh have been run - report
-       is generated based on whatever execution files we can find. -->
-  <target name="full.coverage.report">
-    <jacoco:report>
-      <executiondata>
-        <fileset dir="." includes="${test.coverage.output}"/>
-        <fileset dir="${system.test.out.dir}" includes="*.jacoco.exec"/>
-      </executiondata>
-
-      <structure name="STC Full Test Coverage">
-          <classfiles>
-            <fileset dir="${build.dir}" includes="exm/stc/**/*.class"/>
-          </classfiles>
-          <sourcefiles encoding="UTF-8">
-              <fileset dir="${src.dir}"/>
-          </sourcefiles>
-      </structure>
-
-      <html destdir="${test.out.dir}/full-coverage"/>
-    </jacoco:report>
-  </target>
-
-
-  <!-- Determine if this is a Debian build or a source build
-       The token DEBIAN_BUILD is also used as a sanity
-       to detect if the user is running a properly-installed
-       STC or a plain copy of the source scripts.
-       DEBIAN_BUILD==1 if this is a Debian package, else 0.
-  -->
-  <condition property="debian_build"
-             value="1"
-             else="0">
-    <isset property="debian"/>
-  </condition>
-  <condition property="dist.bin"
-             value="${dist.dir}/../../bin"
-             else="${dist.dir}/bin">
-    <equals arg1="${debian_build}" arg2="1"/>
-  </condition>
-  <condition property="use_java_value"
-             value="${use.java}"
-             else="">
-    <isset property="use.java"/>
-  </condition>
-
-  <!-- Install: User must have set dist.dir, turbine.home -->
-  <target name="install"
-          depends="jar,source.txt">
-
-    <fail unless="dist.dir"
-          message="Target install requires -Ddist.dir=..."/>
-    <fail unless="turbine.home"
-          message="Target install requires -Dturbine.home=..."/>
-
-    <echo message="INSTALL: dist.dir=${dist.dir}"/>
-    <echo message="INSTALL: turbine.home=${turbine.home}"/>
-
-    <mkdir dir="${dist.dir}/bin"/>
-    <mkdir dir="${dist.dir}/etc"/>
-    <mkdir dir="${dist.dir}/lib"/>
-    <copy todir="${dist.bin}"
-          verbose="${lf}">
-      <filelist
-          id="binfiles"
-          dir="bin"
-          files="stc,swift-t,helpers.zsh"/>
-      <filterset>
-        <filter token="DEBIAN_BUILD" value="${debian_build}"/>
-      </filterset>
-    </copy>
-    <copy file="etc/stc-config.sh"
-          todir="${dist.dir}/etc"
-          verbose="${lf}"        >
-      <filterset>
-        <filter token="TIMESTAMP"    value="${timestamp}"/>
-        <filter token="STC_SRC"      value="${basedir}"/>
-        <filter token="DEBIAN_BUILD" value="${debian_build}"/>
-        <filter token="TURBINE_HOME" value="${turbine.home}"/>
-        <filter token="USE_JAVA"     value="${use_java_value}"/>
-      </filterset>
-    </copy>
-
-    <copy todir="${dist.dir}/etc"
-          verbose="${lf}">
-      <fileset dir="etc"
-               includes="help/*.txt"/>
-    </copy>
-    <copy file="etc/version.txt"
-          todir="${dist.dir}/etc"
-          verbose="${lf}"/>
-    <copy file="source.txt"
-          todir="${dist.dir}/etc"
-          verbose="${lf}"/>
-    <copy file="etc/turbine-version.txt"
-          todir="${dist.dir}/etc"
-          verbose="${lf}"/>
-
-    <copy todir="${dist.dir}/lib"
-          verbose="${lf}">
-      <fileset dir="lib"
-               includes="*.jar"
-               excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>
-    </copy>
-    <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>
-    <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>
-  </target>
-
-  <available property="build.dir.exists" file="${build.dir}"/>
-  <available property="test.build.dir.exists" file="${test.build.dir}"/>
-  <available property="test.out.dir.exists" file="${test.out.dir}"/>
-
-  <target name="clean"
-          depends="clean.java,clean.tests,clean.test.out">
-    <delete file="${stc.jar}"/>
-    <delete file="${stc.test.jar}"/>
-    <delete file="${stc.env}"/>
-    <!-- Delete all ANTLR-generated stuff -->
-    <delete dir="${antlr.out}"/>
-    <delete file="source.txt"/>
-  </target>
-
-  <target name="clean.java" if="build.dir.exists">
-    <delete includeemptydirs="true">
-      <fileset dir="${build.dir}"/>
-    </delete>
-  </target>
-
-  <target name="clean.tests" if="test.build.dir.exists">
-    <delete includeemptydirs="true">
-      <fileset dir="${test.build.dir}"/>
-    </delete>
-  </target>
-
-  <target name="clean.test.out" if="test.out.dir.exists">
-    <delete includeemptydirs="true">
-      <fileset dir="${test.out.dir}"/>
-    </delete>
-  </target>
-
-  <!-- Use this when you get UnsupportedClassVersionError:
-       It means you are not using the Java you think you are using.
-  -->
-  <target name="java-version">
-    <echo>ant.java.version: ${ant.java.version}</echo>
-    <echo>java.version: ${java.version}</echo>
-  </target>
-
-</project>
+<project name="stc"         default="build.all"         xmlns:jacoco="antlib:org.jacoco.ant">  <!-- STC build file       Note:       Eclipse generates class files in build/       This Ant script puts them in classes/       The ones in classes/ are the ones used in the output jar file       Use -Dlf=true to get per-file output (list-files)  -->  <!-- Locations of jars and ANTLR grammar file -->  <property name="antlr.jar"            value="lib/antlr-3.5-complete-no-st3.jar"/>  <property name="stc.jar"            value="lib/stc.jar"/>  <property name="stc.test.jar"            value="lib/stc-tests.jar"/>  <property name="log4j.jar"            value="lib/log4j-1.2-api-2.17.2.jar"/>  <property name="commons-cli.jar"            value="lib/commons-cli-1.2.jar"/>  <property name="commons-io.jar"            value="lib/commons-io-2.4.jar"/>  <property name="commons-lang.jar"            value="lib/commons-lang3-3.3.2.jar"/>  <property name="guava.jar"            value="lib/guava-18.0.jar"/>  <property name="junit4.jar"            value="lib/junit-4.12.jar"/>  <!-- Needed for JUnit -->  <property name="hamcrest.jar"            value="lib/hamcrest-core-1.3.jar"/>  <property name="jacocoant.jar"            value="lib/jacocoant-0.7.2.jar"/>  <property name="stc.env.template"            value="conf/stc-env.sh.template"/>  <property name="stc.env"            value="conf/stc-env.sh"/>  <property name="src.dir" value="src"/>  <property name="grammar"            value="${src.dir}/exm/stc/ast/ExM.g"/>  <property name="classpath"            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${guava.jar}:${junit4.jar}:${hamcrest.jar}"/>  <property name="build.dir" value="classes"/>  <target name="build.all" depends="jar" />  <property name="test.src.dir" value="test-src"/>  <property name="test.build.dir" value="test-classes"/>  <property name="test.out.dir"            value="test-output"/>  <property name="test.classpath"            value="${classpath}:${stc.jar}"/>  <!-- Code coverage -->  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml"           classpath="${jacocoant.jar}" />  <!-- Allow coverage to be disabled if needed -->  <property name="coverage.enabled"            value="true"/>  <property name="test.coverage.output"            value="${test.out.dir}/jacoco.exec"/>  <!-- Output directory for system tests -->  <property name="system.test.out.dir"            value="../tests"/>  <target name="jar"          depends="compile">    <jar destfile="${stc.jar}"         basedir="${build.dir}"         includes="**/*.class"         manifest="META-INF/MANIFEST.MF"/>  </target>  <target name="test.jar"          depends="compile.tests">    <jar destfile="${stc.test.jar}"         basedir="${test.build.dir}"         includes="**/*.class"         manifest="META-INF/MANIFEST.MF"/>  </target>  <!-- We compile STC java and antlr-generated code separately       This is so we can get all warnings on our code but suppress       warnings on ANTLR-generated code that is outside our control  -->  <target name="compile" depends="compile.antlr">    <mkdir dir="${build.dir}"/>    <javac srcdir="${src.dir}"           destdir="${build.dir}"           excludes="exm/stc/ast/**,exm/stc/jvm/runtime/**"           listfiles="${lf}"           debug="true"           debuglevel="source,lines,vars"           includeantruntime="false"           classpath="${classpath}"           target="1.8"           source="1.8">      <compilerarg value="-Xlint"/>      <compilerarg value="-Xlint:-cast"/>    </javac>  </target>  <target name="compile.tests" depends="jar">    <mkdir dir="${test.build.dir}"/>    <javac srcdir="${test.src.dir}"           destdir="${test.build.dir}"           listfiles="${lf}"           debug="true"           debuglevel="source,lines,vars"           includeantruntime="false"           classpath="${test.classpath}">      <compilerarg value="-Xlint"/>      <compilerarg value="-Xlint:-cast"/>    </javac>  </target>  <!-- Check if the ANTLR code is up-to-date --> <uptodate srcfile="${grammar}"            targetfile="${stc.jar}"            property="antlr.uptodate"/>  <!-- ANTLR output directory -->  <property name="antlr.pkg"            value="exm/stc/ast/antlr" />  <property name="antlr.out"            value="${src.dir}/${antlr.pkg}" />  <!-- Compile the ANTLR-generated parser code -->  <target name="compile.antlr"          depends="antlr.generate">   <mkdir dir="${build.dir}" />   <javac srcdir="${src.dir}"          destdir="${build.dir}"          includes="${antlr.pkg}/*.java"          listfiles="${lf}"          debug="true"          debuglevel="source,lines,vars"          includeantruntime="false"          classpath=".:${antlr.jar}"          target="1.8"          source="1.8">     <compilerarg value="-Xlint"/>     <compilerarg value="-Xlint:-cast"/>   </javac>  </target>  <!-- Call ANTLR to generate the parser code -->  <target name="antlr.generate"          unless="antlr.uptodate" >    <java classname="org.antlr.Tool"          fork="true"          failonerror="true">      <arg value="-fo"/>      <arg value="${antlr.out}"/>      <arg value="${grammar}"/>      <classpath>         <pathelement location="${antlr.jar}"/>      </classpath>    </java>    <echo message="ANTLR OK: output in: ${antlr.out}"/>    <!-- Delete all compiled java classes to avoid mismatch with token number         constants in compiled .class files-->    <antcall target="clean.java" />  </target>  <target name="javadoc">    <javadoc packagenames="exm.*"           excludepackagenames="exm.stc.ast.antlr.*"           sourcepath="${src.dir}"           defaultexcludes="yes"           destdir="javadoc"           author="true"           version="true"           use="true"           access="package"           windowtitle="STC Compiler">    <doctitle><![CDATA[<h1>STC Compiler</h1>]]></doctitle>    <link href="http://download.oracle.com/javase/6/docs/api/" />    </javadoc>  </target>  <available property="source.txt.exists" file="source.txt"/>  <target name="source.txt"          unless="source.txt.exists">    <!-- Record source directory -->    <echo message="Source directory is: ${user.dir}${line.separator}"/>    <echo message="${user.dir}${line.separator}" file="source.txt"/>  </target>  <!-- Config: setup config -->  <!--  <target name="config">    <- Empty turbine home unless already provided ->    <property name="turbine.home"              value=""/>    <copy file="${stc.env.template}" toFile="${stc.env}"          overwrite="true">      <filterset>        <filter token="TURBINE_HOME" value="${turbine.home}"/>      </filterset>    </copy>    </target>    -->  <target name="test" depends="test.jar">    <mkdir dir="${test.out.dir}"/>    <jacoco:coverage enabled="${coverage.enabled}"                     destfile="${test.coverage.output}">      <junit fork="true" printsummary="yes" haltonfailure="yes">        <classpath>          <pathelement location="${stc.test.jar}"/>          <pathelement path="${test.classpath}"/>        </classpath>        <batchtest todir="${test.out.dir}" fork="true">          <resources>            <fileset dir="${test.build.dir}" includes="**/*.class"                                             excludes="**/*$*.class"/>          </resources>          <formatter type="plain"/>          <formatter type="xml"/>        </batchtest>      </junit>    </jacoco:coverage>  </target>  <target name="junit.coverage.report" depends="test">    <fail>      <condition><not>        <equals arg1="${coverage.enabled}" arg2="true"/>      </not></condition>    </fail>    <jacoco:report>      <executiondata>        <file file="${test.coverage.output}"/>      </executiondata>      <structure name="STC JUnit Test Coverage">          <classfiles>            <fileset dir="${build.dir}" includes="exm/stc/**/*.class"/>          </classfiles>          <sourcefiles encoding="UTF-8">              <fileset dir="${src.dir}"/>          </sourcefiles>      </structure>      <html destdir="${test.out.dir}/junit-coverage"/>    </jacoco:report>  </target>  <!-- Generate full coverage report based on all tests.  Assumes       that Junit tests and run-tests.zsh have been run - report       is generated based on whatever execution files we can find. -->  <target name="full.coverage.report">    <jacoco:report>      <executiondata>        <fileset dir="." includes="${test.coverage.output}"/>        <fileset dir="${system.test.out.dir}" includes="*.jacoco.exec"/>      </executiondata>      <structure name="STC Full Test Coverage">          <classfiles>            <fileset dir="${build.dir}" includes="exm/stc/**/*.class"/>          </classfiles>          <sourcefiles encoding="UTF-8">              <fileset dir="${src.dir}"/>          </sourcefiles>      </structure>      <html destdir="${test.out.dir}/full-coverage"/>    </jacoco:report>  </target>  <!-- Determine if this is a Debian build or a source build       The token DEBIAN_BUILD is also used as a sanity       to detect if the user is running a properly-installed       STC or a plain copy of the source scripts.       DEBIAN_BUILD==1 if this is a Debian package, else 0.  -->  <condition property="debian_build"             value="1"             else="0">    <isset property="debian"/>  </condition>  <condition property="dist.bin"             value="${dist.dir}/../../bin"             else="${dist.dir}/bin">    <equals arg1="${debian_build}" arg2="1"/>  </condition>  <condition property="use_java_value"             value="${use.java}"             else="">    <isset property="use.java"/>  </condition>  <condition property="conda_build"             value="1"             else="0">    <isset property="conda"/>  </condition>  <!-- Install: User must have set dist.dir, turbine.home -->  <target name="install"          depends="jar,source.txt">    <fail unless="dist.dir"          message="Target install requires -Ddist.dir=..."/>    <fail unless="turbine.home"          message="Target install requires -Dturbine.home=..."/>    <echo message="INSTALL: dist.dir=${dist.dir}"/>    <echo message="INSTALL: turbine.home=${turbine.home}"/>    <mkdir dir="${dist.dir}/bin"/>    <mkdir dir="${dist.dir}/etc"/>    <mkdir dir="${dist.dir}/lib"/>    <copy todir="${dist.bin}"          verbose="${lf}">      <filelist          id="binfiles"          dir="bin"          files="stc,swift-t,helpers.zsh"/>      <filterset>        <filter token="DEBIAN_BUILD" value="${debian_build}"/>      </filterset>    </copy>    <copy file="etc/stc-config.sh"          todir="${dist.dir}/etc"          verbose="${lf}"        >      <filterset>        <filter token="TIMESTAMP"    value="${timestamp}"/>        <filter token="STC_SRC"      value="${basedir}"/>        <filter token="DEBIAN_BUILD" value="${debian_build}"/>        <filter token="TURBINE_HOME" value="${turbine.home}"/>        <filter token="USE_JAVA"     value="${use_java_value}"/>        <filter token="CONDA_BUILD"  value="${conda_build}"/>      </filterset>    </copy>    <copy todir="${dist.dir}/etc"          verbose="${lf}">      <fileset dir="etc"               includes="help/*.txt"/>    </copy>    <copy file="etc/version.txt"          todir="${dist.dir}/etc"          verbose="${lf}"/>    <copy file="source.txt"          todir="${dist.dir}/etc"          verbose="${lf}"/>    <copy file="etc/turbine-version.txt"          todir="${dist.dir}/etc"          verbose="${lf}"/>    <copy todir="${dist.dir}/lib"          verbose="${lf}">      <fileset dir="lib"               includes="*.jar"               excludes="jacoco*.jar,junit*.jar,hamcrest*.jar"/>    </copy>    <chmod file="${dist.dir}/bin/stc"     perm="ugo+x"/>    <chmod file="${dist.dir}/bin/swift-t" perm="ugo+x"/>  </target>  <available property="build.dir.exists" file="${build.dir}"/>  <available property="test.build.dir.exists" file="${test.build.dir}"/>  <available property="test.out.dir.exists" file="${test.out.dir}"/>  <target name="clean"          depends="clean.java,clean.tests,clean.test.out">    <delete file="${stc.jar}"/>    <delete file="${stc.test.jar}"/>    <delete file="${stc.env}"/>    <!-- Delete all ANTLR-generated stuff -->    <delete dir="${antlr.out}"/>    <delete file="source.txt"/>  </target>  <target name="clean.java" if="build.dir.exists">    <delete includeemptydirs="true">      <fileset dir="${build.dir}"/>    </delete>  </target>  <target name="clean.tests" if="test.build.dir.exists">    <delete includeemptydirs="true">      <fileset dir="${test.build.dir}"/>    </delete>  </target>  <target name="clean.test.out" if="test.out.dir.exists">    <delete includeemptydirs="true">      <fileset dir="${test.out.dir}"/>    </delete>  </target>  <!-- Use this when you get UnsupportedClassVersionError:       It means you are not using the Java you think you are using.  -->  <target name="java-version">    <echo>ant.java.version: ${ant.java.version}</echo>    <echo>java.version: ${java.version}</echo>  </target></project>

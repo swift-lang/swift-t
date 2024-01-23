@@ -1,4 +1,5 @@
 #!/bin/bash
+# Run as bash - /bin/bash may not exist
 set -eu
 set -o pipefail
 
@@ -23,22 +24,48 @@ set -o pipefail
 TIMESTAMP=$( date '+%Y-%m-%d %H:%M:%S' )
 echo "BUILD-GENERIC.SH START $TIMESTAMP"
 
+DEV_BUILD=dev/build
+
+{
+  echo "TIMESTAMP:  $TIMESTAMP "
+  echo "BUILD_PWD:  $PWD"
+  echo "RECIPE_DIR: $RECIPE_DIR"
+  echo "SRC_DIR:    $SRC_DIR"
+  echo "PREFIX:     $PREFIX"
+} > $RECIPE_DIR/build-generic.log
+
+# Cf. helpers.zsh
+if [[ $PLATFORM =~ osx-* ]]
+then
+  NULL=""
+  ZT=""
+else
+  NULL="--null" ZT="--zero-terminated"
+fi
+printenv ${NULL} | sort ${ZT} | tr '\0' '\n' > \
+                                   $RECIPE_DIR/build-env.log
+
+date >> $RECIPE_DIR/build-generic.log
+
+if [[ ! -d $DEV_BUILD ]]
+then
+  # This directory disappears under certain error conditions
+  # The user must clean up the work directory
+  echo "Cannot find DEV_BUILD=$DEV_BUILD under $PWD"
+  echo "Delete this directory and the corresponding work_moved"
+  echo $PWD
+  echo "See build-generic.log for SRC_DIR"
+  exit 1
+fi
+
 install -d $PREFIX/bin
 install -d $PREFIX/etc
 install -d $PREFIX/lib
 install -d $PREFIX/scripts
 install -d $PREFIX/swift-t
 
-build_dir=dev/build
-
-{
-  echo "TIMESTAMP:  $TIMESTAMP "
-  echo "BUILD_PWD:  $PWD"
-  echo "RECIPE_DIR: $RECIPE_DIR"
-  # printenv | sort | tr '\0' '\n'
-} > $RECIPE_DIR/build-generic.log
-
-cd $build_dir
+# Start build!
+cd $DEV_BUILD
 rm -fv swift-t-settings.sh
 bash init-settings.sh
 
@@ -49,7 +76,7 @@ if (( ${ENABLE_R:-0} == 1 ))
 then
   if ! which R > /dev/null
   then
-    echo "build.sh: Could not find R!"
+    echo "build-generic.sh: Could not find R!"
     exit 1
   fi
   export R_HOME=$( R RHOME )
@@ -78,9 +105,14 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 # Build it!
 # Merge output streams to try to prevent buffering
 #       problems with conda build
-./build-swift-t.sh -vv 2>&1 | tee $RECIPE_DIR/build-swift-t.log
+{
+  echo "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
+  ./build-swift-t.sh -vv 2>&1
+  echo "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"
+} | tee $RECIPE_DIR/build-swift-t.log
 
 # Setup symlinks for utilities
+
 ### BIN ###
 cd $PREFIX/bin
 for file in stc swift-t helpers.zsh; do

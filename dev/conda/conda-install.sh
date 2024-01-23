@@ -33,14 +33,25 @@ PKG=$1
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
+# The Swift/T Git clone:
+SWIFT_T_TOP=${DEV_CONDA:h:h}
+
+source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+source $DEV_CONDA/helpers.zsh
 
 # Report information about given PKG:
+print "PKG=$PKG"
+# PKG is of form
+# ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
+# Pull out PLATFORM (head then tail):
+PLATFORM=${PKG:h:t}
+print "PLATFORM=$PLATFORM"
 zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-printf "%s %.1f MB %s\n" \
-       ${A[mtime]} $(( float(${A[size]}) / (1024*1024) )) $PKG
+printf "PKG: timestamp: %s size: %.1f MB\n" \
+       ${A[mtime]} $(( float(${A[size]}) / (1024*1024) ))
 printf "md5sum: "
-md5sum $PKG
+checksum $PKG
 
 # Report information about active Python/Conda:
 if ! which conda >& /dev/null
@@ -56,13 +67,6 @@ print
 
 conda env list
 
-# PKG is of form
-# ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
-# Pull out PLATFORM (head then tail):
-PLATFORM=${PKG:h:t}
-print "platform: $PLATFORM"
-
-set -x
 # Defaults:
 USE_ANT=1
 USE_GCC=1
