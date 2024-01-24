@@ -28,7 +28,7 @@ HASH=( $( md5sum $PKG ) )
 print "HASH: ${HASH[1]}"
 
 printf "CONFIRM? "
-read -t 10 _ || true
+read -t 100 _ || true
 print
 
 renice --priority 19 $$ >& /dev/null
