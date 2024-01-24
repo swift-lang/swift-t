@@ -41,3 +41,7 @@ DURATION=$(( STOP - START ))
 printf "TOOK: %5.2f s\n" $DURATION
 printf "RATE: %5.2f MB/s\n" \
        $(( float(${A[size]}) / DURATION / (1024*1024) ))
+
+# Local Variables:
+# buffer-file-coding-system:utf-8-unix
+# End:
