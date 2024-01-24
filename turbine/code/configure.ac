@@ -11,6 +11,8 @@
 # For a path name value,
 # 0 means NOT SET
 # NOTFOUND means FILE NOT FOUND
+# Autotools prefers values "yes" and "no" because they are
+#           also used in AC_MSG output
 
 define([turbine_version],
        regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
@@ -122,24 +124,27 @@ AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
 
 # We prefer to use cp -u for installation
-AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_HAVE_CP_U],
-            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_U], [cp],
-              [[cp_u_out=`cp -u /dev/null cp_u.token 2>&1 > /dev/null`
-                test "$?" = 0 \
-                && ac_cv_path_HAVE_CP_U=yes ac_path_HAVE_CP_U_found=: ]],
-              [ac_cv_path_HAVE_CP_U=no])])
+AC_CACHE_CHECK([for cp that supports -u],
+  [ac_cv_path_HAVE_CP_U],
+  [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_U], [cp],
+     [[ac_cv_path_HAVE_CP_U=no
+       cp -u version.txt v.tmp 2>&1 > /dev/null && \
+         ac_cv_path_HAVE_CP_U=yes
+     ]])])
+# If cp -u succeeded, we have a file to remove
+[[ -f v.tmp ]] && rm v.tmp
 AC_SUBST([HAVE_CP_U], [$ac_cv_path_HAVE_CP_U])
-[[ -w cp_u.token ]] && rm cp_u.token
 
 # We prefer to use cp --parents for installation
-AC_CACHE_CHECK([for cp that supports --parents], [ac_cv_path_cp_parents],
-            [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_PARENTS], [cp],
-              [[cp_parents_out=`cp --parents /dev/null . > /dev/null 2>&1`
-                test "$?" = 0 \
-                && ac_cv_path_cp_parents=yes || ac_cv_path_cp_parents=no ]],
-              [])])
-# If cp --parents succeeded, we have a directory to remove
-[[ -d dev ]] && rm -r dev
+AC_CACHE_CHECK([for cp that supports --parents],
+  [ac_cv_path_cp_parents],
+  [AC_PATH_PROGS_FEATURE_CHECK([HAVE_CP_PARENTS], [cp],
+     [[ac_cv_path_cp_parents=no
+       cp --parents version.txt tests 2>&1 > /dev/null && \
+         ac_cv_path_cp_parents=yes
+     ]])])
+# If cp --parents succeeded, we have a file to remove
+[[ -f tests/version.txt ]] && rm tests/version.txt
 AC_SUBST([HAVE_CP_PARENTS], [$ac_cv_path_cp_parents])
 
 # Checks for headers
