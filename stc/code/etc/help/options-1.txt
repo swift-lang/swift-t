@@ -41,6 +41,8 @@
        imported or included *.swift source code, but can be anything.
        Implies -u .  Use -V to trace the up-to-date checks.
     -v
-       Output version and exit
+       Output version and configuration settings,
+       including Java and Turbine locations,
+       then exit
     -V
        Increase verbosity.  May be given twice for extreme verbosity.
