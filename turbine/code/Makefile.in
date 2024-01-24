@@ -190,8 +190,8 @@ ifeq ($(V),)
   E=@
 else
 ifeq ($(V),1)
-  # Echoes the entire command
-  Q=@echo >/dev/null
+  # Echoes just the shell command
+  Q=@ : # Shell noop command
   E=
 else # V=2
   # Echoes the description and the command
