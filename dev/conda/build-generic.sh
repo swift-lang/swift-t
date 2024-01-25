@@ -26,7 +26,7 @@ echo "BUILD-GENERIC.SH START $TIMESTAMP"
 DEV_BUILD=dev/build
 
 {
-  echo "TIMESTAMP:  $TIMESTAMP "
+  echo "TIMESTAMP:  $TIMESTAMP"
   echo "BUILD_PWD:  $PWD"
   echo "RECIPE_DIR: $RECIPE_DIR"
   echo "SRC_DIR:    $SRC_DIR"
@@ -69,9 +69,10 @@ rm -fv swift-t-settings.sh
 bash init-settings.sh
 
 SETTINGS_SED=$RECIPE_DIR/settings.sed
-echo ENABLE_R=${ENABLE_R:-0}
 
-if (( ${ENABLE_R:-0} == 1 ))
+: ${ENABLE_R:=0}
+echo ENABLE_R=$ENABLE_R
+if (( ENABLE_R == 1 ))
 then
   if ! which R > /dev/null
   then
@@ -79,8 +80,25 @@ then
     exit 1
   fi
   export R_HOME=$( R RHOME )
-  R --vanilla --no-echo \
-    -e 'install.packages("RInside", repos="http://cran.us.r-project.org")'
+
+  cat > $RECIPE_DIR/install.R <<EOF
+      # $( date )
+    install.packages("RInside",
+    repos="http://cran.us.r-project.org")
+    if (! library("RInside",
+        character.only=TRUE, logical.return=TRUE)) {
+      quit(status=1)
+    }
+    print("Swift-RInside-SUCCESS")
+EOF
+
+  echo "build-generic.sh: Installing RInside ..."
+  Rscript $RECIPE_DIR/install.R 2>&1 | tee $RECIPE_DIR/build-r.log
+  if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/build-r.log
+  then
+    echo "build-generic.sh: Installing RInside failed."
+  fi
+  echo "build-generic.sh: Installing RInside done."
 
   # Copy the [de]activate scripts to $PREFIX/etc/conda/[de]activate.d.
   # This will allow them to be run on environment activation.
