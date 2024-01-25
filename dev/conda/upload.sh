@@ -36,7 +36,7 @@ fi
 renice $PRIORITY 19 $$ >& /dev/null
 
 printf "CONFIRM? "
-read -t 30 _ || true
+read -t 30 _ && print "YES" || print "TIMEOUT"
 print
 
 START=$SECONDS
