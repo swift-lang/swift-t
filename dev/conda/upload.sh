@@ -31,7 +31,13 @@ printf "CONFIRM? "
 read -t 100 _ || true
 print
 
-renice --priority 19 $$ >& /dev/null
+# Mac renice does not respect --version
+PRIORITY="--priority"
+if ! renice --version >& /dev/null
+then
+  PRIORITY=""
+fi
+renice $PRIORITY 19 $$ >& /dev/null
 
 START=$SECONDS
 @ anaconda upload $FORCE $PKG
