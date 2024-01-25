@@ -168,3 +168,14 @@ Example:
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
 ----
 means: if `$ENABLE_R == 1`, include file `pkgs-R.yaml` here.
+
+== Mac tricks
+
+To build Rcpp/RInside, put this in ~/.R/Makevars
+
+----
+SDK = $(shell xcrun --show-sdk-path)
+$(warning SDK $(SDK))
+CPPFLAGS = -I$(SDK)/usr/include/c++/v1 -I$(SDK)/usr/include
+LDFLAGS = -L$(SDK)/usr/lib -lSystem -F$(SDK)/System/Library/Frameworks
+----
