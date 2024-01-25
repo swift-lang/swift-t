@@ -34,13 +34,17 @@ print
 
 CONDA_PREFIX=${CONDA_EXE:h:h}
 
+integer SECONDS
+START=$SECONDS
 if conda uninstall --yes swift-t
 then
   : OK
 else
   log "proceeding..."
 fi
-
+STOP=$SECONDS
+log "conda uninstall:" $((STOP-START)) "seconds."
+print
 
 SWIFTS=( $CONDA_PREFIX/pkgs/swift-t-*(/) )
 log "found ${#SWIFTS} Swift/T directories"
