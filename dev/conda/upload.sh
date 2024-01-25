@@ -27,10 +27,6 @@ printf "SIZE: %.1f MB\n" $(( float(${A[size]}) / (1024*1024) ))
 HASH=( $( md5sum $PKG ) )
 print "HASH: ${HASH[1]}"
 
-printf "CONFIRM? "
-read -t 100 _ || true
-print
-
 # Mac renice does not respect --version
 PRIORITY="--priority"
 if ! renice --version >& /dev/null
@@ -38,6 +34,10 @@ then
   PRIORITY=""
 fi
 renice $PRIORITY 19 $$ >& /dev/null
+
+printf "CONFIRM? "
+read -t 30 _ || true
+print
 
 START=$SECONDS
 @ anaconda upload $FORCE $PKG
