@@ -19,7 +19,7 @@ set turbine_version $env(TURBINE_VERSION)
 set use_mpe         $env(USE_MPE)
 set use_mac         $env(USE_MAC)
 
-if { [ string equal $use_mac "yes" ] } {
+if { $use_mac eq 1 } {
     set libtclturbine libtclturbine.dylib
 } else {
     set libtclturbine libtclturbine.so

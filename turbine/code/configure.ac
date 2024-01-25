@@ -67,11 +67,11 @@ else
 fi
 
 # Check OS
-USE_MAC="no"
+USE_MAC=0
 if [[ $( uname ) == "Darwin" ]]
 then
         AC_MSG_RESULT([detected Mac.])
-        USE_MAC="yes"
+        USE_MAC=1
 fi
 AC_SUBST(USE_MAC)
 
@@ -473,7 +473,11 @@ AC_ARG_ENABLE(r,
                    [Enable calling R language]),
     [
       HAVE_R=1
-      AC_CHECK_PROG(RSCRIPT, Rscript, Rscript)
+      AC_CHECK_PROG(RSCRIPT, Rscript, yes, no)
+      if [[ $RSCRIPT == "no" ]]
+      then
+        AC_MSG_ERROR([Cannot find Rscript in PATH!])
+      fi
       USE_R=$( Rscript -e "cat(R.home())" )
       AC_MSG_RESULT([Found R at: $USE_R])
       AC_MSG_RESULT([Using Rscript: $( which Rscript ) ])
@@ -583,7 +587,7 @@ then
   # C++ is only required if we enable R
   AC_PROG_CXX
   LD=${CXX}
-fi # if HAVE_R
+fi  # HAVE_R
 AC_DEFINE_UNQUOTED([HAVE_R],$HAVE_R,[Enables R])
 AC_SUBST(HAVE_R)
 AC_SUBST(USE_R)

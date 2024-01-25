@@ -94,7 +94,7 @@ endif
 # GCC shared library creation argument
 # Linux: -shared; Mac: -dynamiclib
 # Use -flat_namespace on the Mac
-ifeq ($(USE_MAC),no)
+ifeq ($(USE_MAC),0)
 	USE_XLC = @USE_XLC@
 	ifeq ($(USE_XLC),0)
 #       	Not XLC: GCC/Linux
@@ -285,7 +285,7 @@ ifeq ($(HAVE_PYTHON),1)
 	INCLUDES += $(PYTHON_INCLUDE_FLAGS)
 endif
 ifeq  ($(HAVE_R),1)
-ifneq ($(USE_R),)
+ifneq ($(USE_R),0)
   INCLUDES += -I $(R_INCLUDE)
   R_LIBRARY = $(USE_R)/library
   ifneq ($(RINSIDE_PATH),)
@@ -298,8 +298,8 @@ ifneq ($(USE_R),)
   else
    INCLUDES += -I $(R_LIBRARY)/Rcpp/include
   endif
-endif
-endif
+endif  # USE_R
+endif  # HAVE_R
 ifeq ($(HAVE_JULIA),1)
 	INCLUDES += -I $(USE_JULIA)/src
 	INCLUDES += -I $(USE_JULIA)/usr/include
@@ -339,7 +339,7 @@ ifeq ($(HAVE_PYTHON),1)
   RPATH_PYTHON = yes
 endif
 ifeq ($(HAVE_R),1)
-ifneq ($(USE_R),)
+ifneq ($(USE_R),0)
   R_LIB = $(USE_R)/lib
   LIBS += -L$(R_LIB)
   RPATH_R = yes
@@ -349,10 +349,10 @@ ifneq ($(USE_R),)
     RINSIDE_LIB = $(USE_R)/library/RInside/lib
   endif
   LIBS += -L$(RINSIDE_LIB)
-endif
+endif  # USE_R
 LIBS += -lRInside -lR
 
-ifeq ($(USE_MAC),yes)
+ifeq ($(USE_MAC),1)
 # if mac, the RInside library and python install name can be incorrect
 # when installed locally. This will fix that in tclturbine
   RINSIDE_INSTALL_NAME=$(shell otool -D $(RINSIDE_PATH)/lib/libRInside.dylib | sed -n 2p)
