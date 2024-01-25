@@ -29,7 +29,7 @@ log $C
 print
 
 printf "CONFIRM? "
-read -t 10 _ || true
+read -t 10 _ && print "YES" || print "TIMEOUT"
 print
 
 CONDA_PREFIX=${CONDA_EXE:h:h}
