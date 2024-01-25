@@ -29,8 +29,17 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
   PATH=${OPENJDK[0]}/lib/jvm/bin:$PATH
   which java javac
 
+  if (( ${ENABLE_R:-0} ))
+  then
+    SDK=$( xcrun --show-sdk-path )
+    LDFLAGS="-L$SDK/usr/lib -lSystem "
+    LDFLAGS+="-F$SDK/System/Library/Frameworks"
+    # -L/tmp/celsloaner/Miniconda-310-R/pkgs/tk-8.6.12-h5d9f67b_0/lib
+  fi
+
   # This is needed for osx-64
-  export LDFLAGS="-ltcl8.6"
+  LDFLAGS+=" -ltcl8.6"
+  export LDFLAGS
 
   echo "build.sh: calling build-generic.sh ..."
   $DEV_CONDA/build-generic.sh
