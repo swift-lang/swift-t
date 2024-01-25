@@ -38,6 +38,7 @@ requirements:
     - swig
 m4_ifelse(getenv(USE_ANT),`1',m4_include(pkgs-ant.yaml))
 m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_TK), `1',m4_include(pkgs-tk.yaml))
 m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
   run:
@@ -46,6 +47,7 @@ m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
     - python==getenv(PYTHON_VERSION)
     - swig
 m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
+m4_ifelse(getenv(USE_TK), `1',m4_include(pkgs-tk.yaml))
 m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
 

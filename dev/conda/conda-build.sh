@@ -97,6 +97,7 @@ if (( ! ${#R} )) {
 # Default dependencies:
 export USE_ANT=1
 export USE_GCC=1
+export USE_TK=0
 export USE_ZSH=1
 
 # Allow platform to modify dependencies
