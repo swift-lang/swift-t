@@ -28,7 +28,12 @@ log "using conda in:"
 log $C
 print
 
-printf "CONFIRM? "
+R=""
+zparseopts -D -E r=R
+
+NAME="swift-t$R"
+
+printf "CONFIRM ($NAME) ? "
 read -t 10 _ && print "YES" || print "TIMEOUT"
 print
 
@@ -36,7 +41,7 @@ CONDA_PREFIX=${CONDA_EXE:h:h}
 
 integer SECONDS
 START=$SECONDS
-if conda uninstall --yes swift-t
+if conda uninstall --yes $NAME
 then
   : OK
 else
