@@ -23,7 +23,10 @@ set -o pipefail
 TIMESTAMP=$( date '+%Y-%m-%d %H:%M:%S' )
 echo "BUILD-GENERIC.SH START $TIMESTAMP"
 
+# This is in the exported Swift/T source tree
 DEV_BUILD=dev/build
+# This is in the builder RECIPE_DIR source tree
+DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
 {
   echo "TIMESTAMP:  $TIMESTAMP"
@@ -81,22 +84,13 @@ then
   fi
   export R_HOME=$( R RHOME )
 
-  cat > $RECIPE_DIR/install.R <<EOF
-      # $( date )
-    install.packages("RInside",
-    repos="http://cran.us.r-project.org")
-    if (! library("RInside",
-        character.only=TRUE, logical.return=TRUE)) {
-      quit(status=1)
-    }
-    print("Swift-RInside-SUCCESS")
-EOF
-
   echo "build-generic.sh: Installing RInside ..."
-  Rscript $RECIPE_DIR/install.R 2>&1 | tee $RECIPE_DIR/build-r.log
-  if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/build-r.log
+  Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
+    tee $RECIPE_DIR/install-RInside.log
+  if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log
   then
     echo "build-generic.sh: Installing RInside failed."
+    exit 1
   fi
   echo "build-generic.sh: Installing RInside done."
 
