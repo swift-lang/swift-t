@@ -740,8 +740,10 @@ ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
   int rc;
   Tcl_WideInt comm_int;
-  rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %s", Tcl_GetString(objv[1]));
+  Tcl_Obj* comm_int_obj = objv[1];
+  rc = Tcl_GetWideIntFromObj(interp, comm_int_obj, &comm_int);
+  TCL_CHECK_MSG(rc, "barrier: not an integer: '%s'",
+                Tcl_GetString(comm_int_obj));
   MPI_Comm comm = (MPI_Comm) comm_int;
 
   rc = MPI_Barrier(comm);
@@ -783,8 +785,10 @@ ADLB_CommRank_Cmd(ClientData cdata, Tcl_Interp *interp,
   else if (objc == 2)
   {
     Tcl_WideInt comm_int;
-    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+    Tcl_Obj* comm_int_obj = objv[1];
+    int rc = Tcl_GetWideIntFromObj(interp, comm_int_obj, &comm_int);
+    TCL_CHECK_MSG(rc, "comm_rank: not an integer: '%s'",
+                  Tcl_GetString(comm_int_obj));
     MPI_Comm comm = (MPI_Comm) comm_int;
     MPI_Comm_rank(comm, &rank);
     /* printf("ADLB_CommRank_Cmd(): comm_int: %lli\n", comm_int); */
@@ -811,8 +815,10 @@ ADLB_CommSize_Cmd(ClientData cdata, Tcl_Interp *interp,
   else if (objc == 2)
   {
     Tcl_WideInt comm_int;
-    int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-    TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+    Tcl_Obj* comm_int_obj = objv[1];
+    int rc = Tcl_GetWideIntFromObj(interp, comm_int_obj, &comm_int);
+    TCL_CHECK_MSG(rc, "comm_size: not an integer: '%s'",
+                  Tcl_GetString(comm_int_obj));
     MPI_Comm comm = (MPI_Comm) comm_int;
     MPI_Comm_size(comm, &size);
   }
@@ -830,8 +836,10 @@ ADLB_CommDup_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2)
   Tcl_WideInt comm_int;
-  int rc = Tcl_GetWideIntFromObj(interp, objv[1], &comm_int);
-  TCL_CHECK_MSG(rc, "Not an integer: %lli", comm_int);
+  Tcl_Obj* comm_int_obj = objv[1];
+  int rc = Tcl_GetWideIntFromObj(interp, comm_int_obj, &comm_int);
+  TCL_CHECK_MSG(rc, "comm_dup: not an integer: '%s'",
+                Tcl_GetString(comm_int_obj));
   MPI_Comm comm = (MPI_Comm) comm_int;
 
   MPI_Comm newcomm;
