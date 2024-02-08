@@ -122,18 +122,31 @@ fi
 
 # module load cpe/23.05
 # export LD_LIBRARY_PATH+=:/opt/cray/pe/mpich/8.1.26/ofi/gnu/9.1/lib
+
+# Delay needed on Frontier:
+# export PMI_MMAP_SYNC_WAIT_TIME=1800
+
+SLURM_OPENMPI=getenv(SLURM_OPENMPI)
+
 if (
-  export PMI_MMAP_SYNC_WAIT_TIME=1800
 
   turbine_log_start | tee -a turbine.log
   turbine_report_env > turbine-env.txt
 
-  LAUNCH_OPTIONS=(
-    --nodes=getenv(NODES)
-    --ntasks=getenv(PROCS)
-    --ntasks-per-node=getenv(PPN)
-    getenv(TURBINE_LAUNCH_OPTIONS)
-  )
+  if (( ${SLURM_OPENMPI:-0} == 0 ))
+  then
+    LAUNCH_OPTIONS=(
+      --nodes=getenv(NODES)
+      --ntasks=getenv(PROCS)
+      --ntasks-per-node=getenv(PPN)
+      getenv(TURBINE_LAUNCH_OPTIONS)
+    )
+  else
+    # Case for OpenMPI launcher:
+    LAUNCH_OPTIONS=(
+      -n getenv(NODES)
+      --map-by node:PE=PPN
+  fi
 
   # Report modules to output.txt for debugging:
   module list
