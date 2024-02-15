@@ -28,12 +28,16 @@ DEV_BUILD=dev/build
 # This is in the builder RECIPE_DIR source tree
 DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
+: ${ENABLE_R:=0}
+echo ENABLE_R=$ENABLE_R
+
 {
   echo "TIMESTAMP:  $TIMESTAMP"
   echo "BUILD_PWD:  $PWD"
   echo "RECIPE_DIR: $RECIPE_DIR"
   echo "SRC_DIR:    $SRC_DIR"
   echo "PREFIX:     $PREFIX"
+  echo "ENABLE_R:   $ENABLE_R"
 } > $RECIPE_DIR/build-generic.log
 
 # Cf. helpers.zsh
@@ -41,13 +45,16 @@ if [[ $PLATFORM =~ osx-* ]]
 then
   NULL=""
   ZT=""
+  if [[ $PLATFORM =~ osx-arm64 ]]
+  then
+     export MPICH_CC=clang
+     export MPICH_CXX=clang++
+  fi
 else
   NULL="--null" ZT="--zero-terminated"
 fi
 printenv ${NULL} | sort ${ZT} | tr '\0' '\n' > \
                                    $RECIPE_DIR/build-env.log
-
-date >> $RECIPE_DIR/build-generic.log
 
 if [[ ! -d $DEV_BUILD ]]
 then
@@ -73,11 +80,11 @@ bash init-settings.sh
 
 SETTINGS_SED=$RECIPE_DIR/settings.sed
 
-: ${ENABLE_R:=0}
-echo ENABLE_R=$ENABLE_R
-if (( ENABLE_R == 1 ))
+if (( ENABLE_R == 1 )) && [[ $PLATFORM != "osx-arm64" ]]
 then
-  if ! which R > /dev/null
+  echo
+  echo "build-generic.sh: Checking R ..."
+  if ! which R
   then
     echo "build-generic.sh: Could not find R!"
     exit 1

@@ -87,10 +87,19 @@ LIST+=(
   python
   swig
 )
-if (( USE_R )) LIST+=r
+
+# R switch
+
+if (( USE_R )) {
+  if [[ $PLATFORM == "osx-arm64" ]] {
+    LIST+="swift-t::emews-rinside"
+  } else {
+    LIST+="r-base==4.3"
+  }
+}
 
 # Run conda install!
 
 set -x
 if (( INSTALL_DEPS )) conda install --yes -c conda-forge $LIST
-conda install --yes $PKG
+conda install --yes --solver classic  $PKG

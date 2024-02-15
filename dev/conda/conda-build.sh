@@ -137,6 +137,7 @@ if [[ -f $LOG ]] {
     # Build the package!
     conda build \
           -c conda-forge \
+          -c swift-t \
           --dirty \
           .
   )
