@@ -11,11 +11,15 @@ set -eu
 #       Thus this script installs dependencies using PLATFORM/deps.sh
 # NOTE: Keep LIST in sync with meta.yaml
 # USAGE: Provide PKG
-#        Provide -r to install R
 #        Provide -D to skip installing dependencies
+#        Provide -P PLATFORM to change the PLATFORM
+#                (else auto-detected from PKG directory)
+#                This is used when e.g. installing a PKG
+#                from a failed conda-build that is left in conda-bld/broken/
+#        Provide -r to install R
 
 D="" R=""
-zparseopts -D -E D=D r=R
+zparseopts -D -E D=D P:=P r=R
 
 # Default behavior:
 INSTALL_DEPS=1
@@ -43,8 +47,12 @@ source $DEV_CONDA/helpers.zsh
 print "PKG=$PKG"
 # PKG is of form
 # ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
-# Pull out PLATFORM (head then tail):
-PLATFORM=${PKG:h:t}
+if (( ${#P} )) {
+  PLATFORM=${P[2]}
+} else {
+  # Pull out PLATFORM directory (head then tail):
+  PLATFORM=${PKG:h:t}
+}
 print "PLATFORM=$PLATFORM"
 zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
@@ -52,6 +60,7 @@ printf "PKG: timestamp: %s size: %.1f MB\n" \
        ${A[mtime]} $(( float(${A[size]}) / (1024*1024) ))
 printf "md5sum: "
 checksum $PKG
+print
 
 # Report information about active Python/Conda:
 if ! which conda >& /dev/null
@@ -60,7 +69,6 @@ then
   return 1
 fi
 
-print
 print "using python:" $( which python )
 print "using conda: " $( which conda )
 print
