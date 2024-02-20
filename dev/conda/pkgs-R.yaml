@@ -1,5 +1,9 @@
 # pkgs-R.yaml: START
-# Extra packages for R
-    - r
-#    - r-rinside
+COMMENT(Extra packages for R)m4_dnl
+COMMENT(Platform osx-arm64 uses our custom-built emews-rinside)m4_dnl
+COMMENT(Retain indentation)m4_dnl
+m4_ifelse(getenv(PLATFORM),`osx-arm64',
+`    - swift-t::emews-rinside',
+`    - r-rinside'
+)
 # pkgs-R.yaml: STOP
