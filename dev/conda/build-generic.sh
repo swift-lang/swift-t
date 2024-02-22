@@ -152,7 +152,7 @@ ln -sv ../swift-t/turbine/etc/version.txt .
 cd $PREFIX/lib
 ln -sv ../swift-t/stc/lib/*.jar .
 # A workaround for a missing library
-ln -sv libmpi.so libmpi.so.20
+# ln -sv libmpi.so libmpi.so.20
 
 ### SCRIPTS ###
 cd $PREFIX/scripts
