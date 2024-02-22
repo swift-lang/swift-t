@@ -1,8 +1,8 @@
 
 # STC CONFIG
 
-# Bash and ZSH compatible script that loads STC configuration settings into
-# shell variables.
+# Bash and ZSH compatible script that loads STC configuration settings
+# into shell variables.
 # Can be sourced by other scripts.
 # The @@ substitutions are performed by filters in build.xml
 #                      target "install"
@@ -15,9 +15,11 @@ EXIT_ERROR_SCRIPT=6
 # These values are filtered in by build.xml
 TURBINE_DEFAULT_HOME=@TURBINE_HOME@
 STC_SRC=@STC_SRC@
-DEBIAN_BUILD=@DEBIAN_BUILD@
+DEBIAN_BUILD=@DEBIAN_BUILD@  # 0 or 1
+# Build-time JVM.  This may change at run time under Anaconda
+#                  This may be overridden by 'stc -j'
 USE_JAVA=@USE_JAVA@
-CONDA_BUILD=@CONDA_BUILD@ # 1
+CONDA_BUILD=@CONDA_BUILD@  # 0 or 1
 # End build.xml variables
 
 if (( ${#USE_JAVA} > 0 ))
@@ -26,8 +28,15 @@ then
 fi
 if (( CONDA_BUILD ))
 then
-  if [[ ! -f ${JVM} ]]
+  if [[ ! -f ${JVM:-0} ]]
   then
+    # Get CONDA_PREFIX from parent-parent of CONDA_EXE
+    if (( ${#CONDA_EXE:-} == 0 )) {
+      echo "stc: CONDA_EXE is not set"
+      echo "stc: The conda environment is broken!"
+      exit ${EXIT_ERROR_SCRIPT}
+    }
+    CONDA_PREFIX=${CONDA_EXE:h:h}
     if [[ -x ${CONDA_PREFIX}/bin/java ]]
     then
       JVM=${CONDA_PREFIX}/bin/java
@@ -40,6 +49,7 @@ then
     fi
   fi
 fi
+
 # Find Turbine (for include path).  The order of priority is:
 # 1. User-set TURBINE_HOME environment variable
 # 2. TURBINE_DEFAULT_HOME - the build-time setting
