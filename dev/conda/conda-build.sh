@@ -160,7 +160,7 @@ print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
-log "looking for upload line in $LOG ..."
+log "looking for upload line in ${LOG:a} ..."
 UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 PKG=${UPLOAD[-1]}
 
