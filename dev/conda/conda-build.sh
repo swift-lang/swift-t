@@ -83,6 +83,10 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
   return 1
 }
 
+# We must set CONDA_PREFIX:
+# https://github.com/ContinuumIO/anaconda-issues/issues/10156
+export CONDA_PREFIX=${PYTHON_BIN:h}
+
 COMMON_M4=common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
