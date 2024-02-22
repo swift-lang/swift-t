@@ -10,16 +10,23 @@ set -eu
 #       Cf. https://docs.anaconda.com/free/anaconda/packages/install-packages
 #       Thus this script installs dependencies using PLATFORM/deps.sh
 # NOTE: Keep LIST in sync with meta.yaml
-# USAGE: Provide PKG
-#        Provide -D to skip installing dependencies
-#        Provide -P PLATFORM to change the PLATFORM
-#                (else auto-detected from PKG directory)
-#                This is used when e.g. installing a PKG
-#                from a failed conda-build that is left in conda-bld/broken/
-#        Provide -r to install R
 
+help()
+{
+  cat <<EOF
+USAGE: Provide PKG
+       Provide -D to skip installing dependencies
+       Provide -P PLATFORM to change the PLATFORM
+               (else auto-detected from PKG directory)
+               This is used when e.g. installing a PKG
+               from a failed conda-build that is left in conda-bld/broken/
+       Provide -r to install R
+EOF
+}
 D="" R=""
-zparseopts -D -E D=D P:=P r=R
+zparseopts -D -E h=H D=D P:=P r=R
+
+if (( ${#H} )) { help ; return }
 
 # Default behavior:
 INSTALL_DEPS=1
@@ -102,12 +109,19 @@ if (( USE_R )) {
   if [[ $PLATFORM == "osx-arm64" ]] {
     LIST+="swift-t::emews-rinside"
   } else {
-    LIST+="r-base==4.3"
+    # Use plain r on all other platforms:
+    LIST+=r
   }
 }
 
 # Run conda install!
 
+if [[ $PLATFORM == "osx-arm64" ]] {
+  SOLVER=( --solver classic )
+} else {
+  SOLVER=()
+}
+
 set -x
-if (( INSTALL_DEPS )) conda install --yes -c conda-forge $LIST
-conda install --yes --solver classic  $PKG
+if (( INSTALL_DEPS )) conda install --yes $SOLVER -c conda-forge $LIST
+conda install --yes $SOLVER $PKG
