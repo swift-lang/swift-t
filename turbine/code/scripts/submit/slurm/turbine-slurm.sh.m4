@@ -144,7 +144,7 @@ if (
   else
     # Case for OpenMPI launcher:
     LAUNCH_OPTIONS=(
-      -n getenv(NODES)
+      -n getenv(PROCS)
       --map-by node:PE=PPN
     )
   fi
