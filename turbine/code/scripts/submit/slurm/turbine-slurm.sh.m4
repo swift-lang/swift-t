@@ -146,6 +146,7 @@ if (
     LAUNCH_OPTIONS=(
       -n getenv(NODES)
       --map-by node:PE=PPN
+    )
   fi
 
   # Report modules to output.txt for debugging:
