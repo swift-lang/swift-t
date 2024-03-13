@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 10.1.2" />
+<meta name="generator" content="AsciiDoc 10.2.0" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.3,</span>
-<span id="revdate">December 2023</span>
+<span id="revdate">March 2024</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2012,11 +2012,11 @@ Simply set the MPI, Tcl (and optionally Python and R) locations in
 is a Cray/AMD/NVIDIA system with PBS at ALCF.</p></div>
 <div class="sect3">
 <h4 id="_public_installation_7">Public installation</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2024-03-13</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:<br /></p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>/grand/CSC249ADOA01/public/sfw/polaris/swift-t/2022-11-28/stc/bin</code></pre>
+<pre><code>/eagle/Candle_ECP/sfw/swift-t/2024-03-13/stc/bin</code></pre>
 </div></div>
 <div class="paragraph"><p>Run with:<br /></p></div>
 <div class="listingblock">
@@ -2029,15 +2029,14 @@ $ export WALLTIME=00:10:00
 # Turn on Polaris-specific PBS settings
 $ export TURBINE_POLARIS=1
 # Turn on the ALCF filesystems
-$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand:eagle'
 # Run Swift/T!
 $ swift-t -m pbs workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2022-11-30</p></div>
-<div class="paragraph"><p>Use Swift/T from Git after <code>ede90591</code> (2022-11-28).</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2024-03-13</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2062,7 +2061,8 @@ Compile with module <code>PrgEnv-nvhpc</code> and <code>cc</code>, then modify t
 <div class="content">
 <pre><code>CC=cc
 COMPILER=NVC
-export MPI_IMPL="MPICH"</code></pre>
+export MPI_IMPL="MPICH"
+DEPCC="gcc -I /opt/cray/pe/mpich/default/ofi/gnu/9.1/include"</code></pre>
 </div></div>
 <div class="paragraph"><p>You can use any Python.</p></div>
 <div class="paragraph"><p>Use module <code>PrgEnv-nvhpc</code> and build as usual with <code>build-swift-t.sh</code>.</p></div>
@@ -4346,7 +4346,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.3<br />
 Last updated
- 2023-12-21 16:09:36 CST
+ 2024-03-13 15:34:46 CDT
 </div>
 </div>
 </body>
