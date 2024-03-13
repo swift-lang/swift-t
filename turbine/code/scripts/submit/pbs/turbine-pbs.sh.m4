@@ -44,6 +44,10 @@ getenv(TURBINE_DIRECTIVE)
 
 set -eu
 
+TURBINE_HOME=getenv(TURBINE_HOME)
+
+source ${TURBINE_HOME}/scripts/helpers.sh
+
 VERBOSE=getenv(VERBOSE)
 if (( ${VERBOSE} ))
 then
@@ -64,7 +68,6 @@ TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS)
                          -n ${PROCS} --ppn ${PPN:-1} )
 )
 
-TURBINE_HOME=getenv(TURBINE_HOME)
 TURBINE_LAUNCHER=getenv(TURBINE_LAUNCHER)
 COMMAND=( getenv(COMMAND) )
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
