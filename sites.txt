@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.3, December 2023
+v1.6.3, March 2024
 
 
 == How to use this guide
@@ -857,11 +857,11 @@ is a Cray/AMD/NVIDIA system with PBS at ALCF.
 
 ==== Public installation
 
-*As of:* 2022-11-30
+*As of:* 2024-03-13
 
 Add to +PATH+: +
 ----
-/grand/CSC249ADOA01/public/sfw/polaris/swift-t/2022-11-28/stc/bin
+/eagle/Candle_ECP/sfw/swift-t/2024-03-13/stc/bin
 ----
 
 Run with: +
@@ -874,16 +874,14 @@ $ export WALLTIME=00:10:00
 # Turn on Polaris-specific PBS settings
 $ export TURBINE_POLARIS=1
 # Turn on the ALCF filesystems
-$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand'
+$ export TURBINE_DIRECTIVE='#PBS -l filesystems=home:grand:eagle'
 # Run Swift/T!
 $ swift-t -m pbs workflow.swift ...
 ----
 
 ==== Build instructions
 
-*As of:* 2022-11-30
-
-Use Swift/T from Git after +ede90591+ (2022-11-28).
+*As of:* 2024-03-13
 
 Building Tcl:
 
@@ -901,6 +899,7 @@ In +swift-t-settings.sh+, set: +
 CC=cc
 COMPILER=NVC
 export MPI_IMPL="MPICH"
+DEPCC="gcc -I /opt/cray/pe/mpich/default/ofi/gnu/9.1/include"
 ----
 You can use any Python.
 
