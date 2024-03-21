@@ -102,7 +102,7 @@ then
 else
   CODE=$?
   echo
-  echo "TURBINE-PBS: jsrun returned an error code!"
+  echo "TURBINE-PBS: launcher returned an error code!"
   echo
 fi
 
