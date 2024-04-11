@@ -72,6 +72,15 @@ $ conda install -c swift-t swift-t
 
 This version includes <<leaf_python,Python support>>.
 
+For R support, use:
+
+----
+$ conda install -c swift-t swift-t-r
+----
+
+As listed on the site, packages are provided for Anaconda architecures
++linux-64+ (x86), +linux-aarch64+ (ARM), +osx-64+ (x86), and +osx-arm64+.
+
 === For Debian-based systems (including Ubuntu)
 
 1. Obtain the Swift/T Debian packages from the
@@ -3818,7 +3827,7 @@ To build Swift/T with R, either:
  +swift-t-settings.sh+ ; or
 
 * When doing a <<build_manual,manual build>> provide the +--with-r+
- argument to +configure+.  See +./configure&nbsp;--help+ for further
+ argument to +configure+ for Turbine.  See +./configure&nbsp;--help+ for further
  options.
 
 Other notes:
@@ -3835,6 +3844,83 @@ Other notes:
 * When running, you may need to set the environment variable +LD_LIBRARY_PATH+
  to include the directory containing the R shared library.  For a
  source R build on Linux, this is +R_HOME/lib/R/lib+.
+
+==== R on `osx-arm64`
+
+This new OS combination with Anaconda does not seem to support R with the RInside library for C++ integration.  You must install R from source.
+
+. Install R dependencies bzip2, XZ, and PCRE2 and set the `-I` and `-L` flags via `CPPFLAGS` and `LDFLAGS` (details below)
+. Download and unpack R:
++
+----
+$ wget https://cran.r-project.org/src/base/R-4/R-4.3.2.tar.gz
+$ tar xfz R-4.3.2.tar.gz
+$ cd R-4.3.2
+----
+. Configure and build R:
++
+----
+$ ./configure --config-cache           \
+              --prefix=/home/path/to/R \
+              --enable-R-shlib         \
+              --disable-java           \
+              --without-tcltk          \
+              --without-cairo          \
+              --without-jpeglib        \
+              --without-libtiff        \
+              --without-ICU            \
+              --without-x
+$ make
+$ make install
+----
+. Install RInside via `install.packages()`
+. Proceed with the installation using this R in `swift-t-settings.sh`
+
+===== Installing R dependencies on osx-arm64
+
+Your options here are:
+
+* Anaconda
+* Source builds
+* Possibly Homebrew, etc.
+
+NOTE: When performing builds from source, make sure that your compilers are compatible among the Anaconda/Python, R, Fortran, and MPI components.  Use `mpicc -show` to check the MPI compiler.
+
+You may need to tell `mpicc` and `mpicxx` to set the compiler locations via:
+
+----
+$ export MPICH_CC=clang
+$ export MPICH_CXX=clang++
+----
+
+For Anaconda, simply:
+
+----
+$ conda install bzip2 pcre2 xz gfortran
+----
+
+Make sure `xcrun` is installed via:
+
+----
+$ xcode-select --install
+----
+
+Then set the compiler paths for R `configure` to look in Anaconda and the SDK locations:
+----
+export CC=clang
+export CXX=clang++
+
+PY=/path/to/Anaconda
+PATH=$PY/bin:$PATH
+
+SDK=$( xcrun --show-sdk-path )
+
+export CPPFLAGS="-I$PY/include -I$SDK/usr/include"
+export LDFLAGS="-L$PY/lib -Wl,-rpath -Wl,$PY/lib "
+       LDFLAGS+="-L$SDK/usr/lib -F$SDK/System/Library/Frameworks"
+----
+
+You can use `clang` / `clang++` from the system default location.
 
 [[build_julia]]
 ==== Julia
