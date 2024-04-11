@@ -1519,9 +1519,19 @@ $ xcode-select --install
 # Get system information:
 $ SDK=$( xcrun --show-sdk-path )
 $ export CPPFLAGS="-I$SDK/usr/include"
-$ export LDFLAGS="-L$SDK/usr/lib"
+$ export LDFLAGS="-L$SDK/usr/lib -lSystem -F$SDK/System/Library/Frameworks"
 # Build Swift/T!
 $ dev/build/swift-t-settings.sh
+----
+
+Depending on how your system is configured, you may also need to set
+locations for Tcl and other dependencies.  For example, the following
+additional settings are needed for a Tcl from Homebrew:
+
+----
+TCL=/usr/local/Cellar/tcl-tk/8.6.13_4
+export CPPFLAGS="... -I$TCL/include/tcl-tk"
+export LDFLAGS="... -L$TCL/lib -ltcl8.6"
 ----
 
 These settings can also be stored in +swift-t-settings.sh+
