@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.6.1, June 2023
+v1.6.3, April 2024
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
