@@ -13,5 +13,3 @@ then
   echo "Use init-settings.sh or see the manual."
   exit 1
 fi
-
-exit
