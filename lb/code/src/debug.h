@@ -86,7 +86,7 @@ adlb_code xlb_debug_check_environment(void);
 #define DEBUG_ENABLED 1
 #define DEBUG(format, args...)              \
   { if (xlb_debug_enabled) {                            \
-         printf("%.8f ADLB: " format "\n", xlb_wtime(), ## args); \
+         printf("%8.4f ADLB:  " format "\n", xlb_wtime(), ## args); \
          fflush(stdout);                    \
        } }
 #else
@@ -97,7 +97,7 @@ adlb_code xlb_debug_check_environment(void);
 #if ENABLE_LOG_TRACE && !defined(NDEBUG)
 #define TRACE(format, args...)                    \
   { if (xlb_trace_enabled && xlb_debug_enabled) { \
-      printf("%8.4f ADLB_TRACE: " format "\n", xlb_wtime(), ## args);  \
+      printf("%8.4f TRACE: " format "\n", xlb_wtime(), ## args);  \
   fflush(stdout);                                 \
   } }
 #else
@@ -107,7 +107,7 @@ adlb_code xlb_debug_check_environment(void);
 #if ENABLE_LOG_TRACE_MPI && !defined(NDEBUG)
 #define TRACE_MPI(format, args...)             \
   { if (xlb_debug_enabled) {                           \
-  printf("%8.4f MPI:  " format "\n", xlb_wtime(), ## args);  \
+  printf("%8.4f MPI:   " format "\n", xlb_wtime(), ## args);  \
   fflush(stdout);                          \
   } }
 #else
