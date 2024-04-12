@@ -22,8 +22,7 @@
  *      Author: wozniak
  */
 
-#ifndef MPI_TOOLS_H
-#define MPI_TOOLS_H
+#pragma once
 
 #include <mpi.h>
 
@@ -31,8 +30,6 @@
 void xlb_mpi_recv_sanity(MPI_Status* status, MPI_Datatype type,
                      int expected);
 #else
-// User may make this a noop
+// NDEBUG makes this a noop
 #define xlb_mpi_recv_sanity(s,t,e) (void) 0;
-#endif
-
 #endif
