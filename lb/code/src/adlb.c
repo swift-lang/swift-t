@@ -459,7 +459,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
     inline_data_len = 0;
   }
 
-  struct packed_dput *p = (struct packed_dput*)xlb_xfer;
+  struct packed_dput* p = (struct packed_dput*) xlb_xfer;
   p->type = type;
   p->putter = xlb_s.layout.rank;
   p->answer = answer;
@@ -531,8 +531,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
     WAIT(&request, &status);
     ADLB_CHECK((adlb_code)response);
   }
-  TRACE("ADLB_Dput: DONE");
-
+  DEBUG("ADLB_Dput: DONE");
   return ADLB_SUCCESS;
 }
 
@@ -611,6 +610,7 @@ ADLBP_Get(int type_requested, void** payload,
   *answer     = g.answer_rank;
   *type_recvd = g.type;
 
+  TRACE_END;
   return ADLB_SUCCESS;
 }
 
