@@ -140,6 +140,12 @@ namespace eval turbine {
 
         adlb::init $servers $types
 
+        # Set CUDA_VISIBLE_DEVICES before Python starts up
+        global env
+        if { ! [ info exists env(CUDA_VISIBLE_DEVICES) ] } {
+          set env(CUDA_VISIBLE_DEVICES) $env(ADLB_RANK_OFFSET)
+        }
+
         assert_sufficient_procs
 
         c::init [ adlb::amserver ] \
@@ -202,7 +208,6 @@ namespace eval turbine {
         variable addtl_work_types
         set other_work_types [ concat $addtl_work_types ]
 
-        global env
         foreach work_type $other_work_types {
           set env_var "TURBINE_[ string toupper ${work_type} ]_WORKERS"
           set worker_count 0
