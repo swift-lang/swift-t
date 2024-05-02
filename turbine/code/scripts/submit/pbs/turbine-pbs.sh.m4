@@ -87,6 +87,10 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
 
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
+
 log_path LD_LIBRARY_PATH
 echo
 
