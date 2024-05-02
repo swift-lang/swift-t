@@ -62,10 +62,12 @@ echo
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
-# On Polaris, provide PROCS/PPN to mpiexec:
+# On Polaris, provide PROCS/PPN to mpiexec,
+#             and turn off MPICH GPU support
 m4_ifelse(getenv(TURBINE_POLARIS),1,
 TURBINE_LAUNCH_OPTIONS=( getenv(TURBINE_LAUNCH_OPTIONS)
                          -n ${PROCS} --ppn ${PPN:-1} )
+export MPICH_GPU_SUPPORT_ENABLED=0
 )
 
 TURBINE_LAUNCHER=getenv(TURBINE_LAUNCHER)
