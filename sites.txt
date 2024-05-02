@@ -881,7 +881,7 @@ $ swift-t -m pbs workflow.swift ...
 
 ==== Build instructions
 
-*As of:* 2024-03-13
+*As of:* 2024-05-02
 
 Building Tcl:
 
@@ -897,13 +897,19 @@ For Java, add to +PATH+: +
 In +swift-t-settings.sh+, set: +
 ----
 CC=cc
-COMPILER=NVC
-export MPI_IMPL="MPICH"
-DEPCC="gcc -I /opt/cray/pe/mpich/default/ofi/gnu/9.1/include"
+COMPILER=GCC
+MPI=/opt/cray/pe/mpich/8.1.28/ofi/gnu/12.3
+export CPPFLAGS="-I$MPI/include"
+export DEPCC="gcc $CPPFLAGS"
+module load PrgEnv-gnu
+# This is critical for workloads that use the GPU:
+module unload craype-accel-nvidia80
 ----
-You can use any Python.
 
-Use module +PrgEnv-nvhpc+ and build as usual with +build-swift-t.sh+.
+You can use any Python, including virtualenv installations as
+described here: https://docs.alcf.anl.gov/polaris/data-science-workflows/python
+
+Build as usual with +build-swift-t.sh+.
 
 === Crusher
 
