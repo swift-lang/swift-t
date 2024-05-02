@@ -36,12 +36,12 @@ xlb_debug_check_environment()
   // Note that getenv_boolean() prints a warning message on
   //      invalid input
 
-  // Use above values if not specified by environment variable
-  rc = getenv_boolean("ADLB_TRACE",  xlb_debug_enabled,
+  // Use default values above if not specified by environment variable
+  rc = getenv_boolean("ADLB_TRACE",  xlb_trace_enabled,
                       &xlb_trace_enabled);
   if (!rc) return ADLB_ERROR;
 
-  rc = getenv_boolean("ADLB_DEBUG", xlb_trace_enabled,
+  rc = getenv_boolean("ADLB_DEBUG", xlb_debug_enabled,
                       &xlb_debug_enabled);
   if (!rc) return ADLB_ERROR;
 
