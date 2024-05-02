@@ -993,14 +993,14 @@ send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
   assert(!xlb_server_shutting_down); // Shouldn't shutdown if have work
 
   DEBUG("send_work() to: %i wuid: %"PRId64"...", worker, wuid);
-  TRACE("work_unit: %s\n", (char*) payload);
+  TRACE("work_unit: %s", (char*) payload);
   struct packed_get_response g;
-  g.answer_rank = answer;
   g.code = ADLB_SUCCESS;
   g.length = length;
+  g.answer_rank = answer;
+  g.type = type;
   g.payload_source = mpi_rank;
   TRACE("payload_source: %i", g.payload_source);
-  g.type = type;
   g.parallelism = parallelism;
 
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
