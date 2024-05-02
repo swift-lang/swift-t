@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 10.2.0" />
+<meta name="generator" content="AsciiDoc 10.1.2" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.3,</span>
-<span id="revdate">March 2024</span>
+<span id="revdate">April 2024</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2036,7 +2036,7 @@ $ swift-t -m pbs workflow.swift ...</code></pre>
 </div>
 <div class="sect3">
 <h4 id="_build_instructions_5">Build instructions</h4>
-<div class="paragraph"><p><strong>As of:</strong> 2024-03-13</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2024-05-02</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2060,12 +2060,17 @@ Compile with module <code>PrgEnv-nvhpc</code> and <code>cc</code>, then modify t
 <div class="listingblock">
 <div class="content">
 <pre><code>CC=cc
-COMPILER=NVC
-export MPI_IMPL="MPICH"
-DEPCC="gcc -I /opt/cray/pe/mpich/default/ofi/gnu/9.1/include"</code></pre>
+COMPILER=GCC
+MPI=/opt/cray/pe/mpich/8.1.28/ofi/gnu/12.3
+export CPPFLAGS="-I$MPI/include"
+export DEPCC="gcc $CPPFLAGS"
+module load PrgEnv-gnu
+# This is critical for workloads that use the GPU:
+module unload craype-accel-nvidia80</code></pre>
 </div></div>
-<div class="paragraph"><p>You can use any Python.</p></div>
-<div class="paragraph"><p>Use module <code>PrgEnv-nvhpc</code> and build as usual with <code>build-swift-t.sh</code>.</p></div>
+<div class="paragraph"><p>You can use any Python, including virtualenv installations as
+described here: <a href="https://docs.alcf.anl.gov/polaris/data-science-workflows/python">https://docs.alcf.anl.gov/polaris/data-science-workflows/python</a></p></div>
+<div class="paragraph"><p>Build as usual with <code>build-swift-t.sh</code>.</p></div>
 </div>
 </div>
 <div class="sect2">
@@ -2917,9 +2922,18 @@ $ xcode-select --install
 # Get system information:
 $ SDK=$( xcrun --show-sdk-path )
 $ export CPPFLAGS="-I$SDK/usr/include"
-$ export LDFLAGS="-L$SDK/usr/lib"
+$ export LDFLAGS="-L$SDK/usr/lib -lSystem -F$SDK/System/Library/Frameworks"
 # Build Swift/T!
 $ dev/build/swift-t-settings.sh</code></pre>
+</div></div>
+<div class="paragraph"><p>Depending on how your system is configured, you may also need to set
+locations for Tcl and other dependencies.  For example, the following
+additional settings are needed for a Tcl from Homebrew:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>TCL=/usr/local/Cellar/tcl-tk/8.6.13_4
+export CPPFLAGS="... -I$TCL/include/tcl-tk"
+export LDFLAGS="... -L$TCL/lib -ltcl8.6"</code></pre>
 </div></div>
 <div class="paragraph"><p>These settings can also be stored in <code>swift-t-settings.sh</code></p></div>
 </div>
@@ -4346,7 +4360,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.3<br />
 Last updated
- 2024-03-13 15:34:46 CDT
+ 2024-05-02 11:31:19 CDT
 </div>
 </div>
 </body>
