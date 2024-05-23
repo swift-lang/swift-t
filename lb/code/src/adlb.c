@@ -2285,27 +2285,6 @@ print_proc_self_status()
   }
 }
 
-
-
-//static int get_server_idx(int);
-//static int get_server_rank(int);
-
-/*
-static int
-get_server_idx(int server_rank)
-{
-  return server_rank - master_server_rank;
-}
-*/
-
-/*
-static int
-get_server_rank(int server_idx)
-{
-  return master_server_rank + server_idx;
-}
-*/
-
 void
 adlb_exit_handler()
 {
