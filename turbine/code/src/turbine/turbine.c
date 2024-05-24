@@ -131,7 +131,7 @@ gdb_check(int rank)
 
 static bool setup_cache(void);
 
-static bool set_stdout(int rank, int size);
+static bool set_stdout(int rank, int size, bool amserver);
 
 static int log_setup(int rank);
 
@@ -154,7 +154,7 @@ turbine_init(int amserver, int rank, int size)
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 
-  if (! set_stdout(rank, size))
+  if (! set_stdout(rank, size, amserver))
     return TURBINE_ERROR_IO;
 
   turbine_code tc = turbine_async_exec_initialize();
@@ -250,7 +250,7 @@ get_pad(int max)
 }
 
 static bool
-set_stdout(int rank, int size)
+set_stdout(int rank, int size, bool amserver)
 {
   char tmpfname[PATH_MAX];
   char filename[PATH_MAX];
@@ -288,6 +288,10 @@ set_stdout(int rank, int size)
     perror("turbine");
     return false;
   }
+
+  if (amserver)
+    printf("ADLB Server: rank: %i size: %i\n", rank, size);
+
   return true;
 }
 
