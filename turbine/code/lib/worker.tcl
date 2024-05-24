@@ -42,6 +42,7 @@ namespace eval turbine {
         }
 
         global WORK_TYPE
+        worker_hook_startup
         leader_hook_startup
 
         set success true
@@ -132,47 +133,71 @@ namespace eval turbine {
         }
     }
 
-    proc leader_hook_startup { } {
+    proc worker_hook_startup { } {
         global env
-        if [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] {
-            if { [ adlb::comm_get leaders ] != [ adlb::comm_get null ] } {
-                # I am a leader - eval the hook
-                puts "TURBINE_LEADER_HOOK_STARTUP: "
-                # $env(TURBINE_LEADER_HOOK_STARTUP)
-                try {
-                    eval $env(TURBINE_LEADER_HOOK_STARTUP)
-                } on error e {
-                    puts ""
-                    puts "Error in TURBINE_LEADER_HOOK_STARTUP: $e"
-                    puts ""
-                    exit 1
-                }
-            }
-            # Whether or not a leader, we still need to
-            # wait for the leaders to finish the hook
-            adlb::worker_barrier
+
+        if { ! [ info exists env(TURBINE_WORKER_HOOK_STARTUP) ] } \
+            return
+
+        try {
+            puts "TURBINE_WORKER_HOOK_STARTUP..."
+            eval $env(TURBINE_WORKER_HOOK_STARTUP)
+        } on error e {
+            puts ""
+            puts "Error in TURBINE_WORKER_HOOK_STARTUP: $e"
+            puts ""
+            exit 1
         }
+        adlb::worker_barrier
     }
 
-    proc leader_hook_shutdown { } {
-        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
-            # I am not a leader
-            return
-        }
+    proc leader_hook_startup { } {
         global env
-        if [ info exists env(TURBINE_LEADER_HOOK_SHUTDOWN) ] {
-            puts "TURBINE_LEADER_HOOK_SHUTDOWN: $env(TURBINE_LEADER_HOOK_SHUTDOWN)"
+
+        if { ! [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] } \
+            return
+
+        if { [ adlb::comm_get leaders ] != [ adlb::comm_get null ] } {
+            # I am a leader - eval the hook
+            puts "TURBINE_LEADER_HOOK_STARTUP: "
+            # $env(TURBINE_LEADER_HOOK_STARTUP)
             try {
-                eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
+                eval $env(TURBINE_LEADER_HOOK_STARTUP)
             } on error e {
                 puts ""
-                puts "Error in TURBINE_LEADER_HOOK_SHUTDOWN: $e"
+                puts "Error in TURBINE_LEADER_HOOK_STARTUP: $e"
                 puts ""
                 exit 1
             }
         }
+        # Whether or not a leader, we still need to
+        # wait for the leaders to finish the hook
+        adlb::worker_barrier
+    }
+
+    proc leader_hook_shutdown { } {
+        global env
+
+        if { ! [ info exists env(TURBINE_LEADER_HOOK_SHUTDOWN) ] } \
+            return
+
+        if { [ adlb::comm_get leaders ] == [ adlb::comm_get null ] } {
+            # I am not a leader
+            return
+        }
+
+        puts "TURBINE_LEADER_HOOK_SHUTDOWN:"
+        try {
+            eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
+        } on error e {
+            puts ""
+            puts "Error in TURBINE_LEADER_HOOK_SHUTDOWN: $e"
+            puts ""
+            exit 1
+        }
     }
 }
+
 
 # Local Variables:
 # mode: tcl
