@@ -23,10 +23,10 @@ struct xlb_hostnames {
   size_t name_length;
 
   /** All names as big array */
-  char *all_names; 
+  char* all_names;
 
   /** This rank's host name */
-  char *my_name;
+  char* my_name;
 };
 
 /*
@@ -41,7 +41,7 @@ typedef enum
   HOSTMAP_ENABLED
 } xlb_hostmap_mode;
 
-/** 
+/**
   Get configured hostmap mode from environment
  */
 adlb_code
