@@ -140,12 +140,6 @@ namespace eval turbine {
 
         adlb::init $servers $types
 
-        # Set CUDA_VISIBLE_DEVICES before Python starts up
-        global env
-        if { ! [ info exists env(CUDA_VISIBLE_DEVICES) ] } {
-          set env(CUDA_VISIBLE_DEVICES) $env(ADLB_RANK_OFFSET)
-        }
-
         assert_sufficient_procs
 
         c::init [ adlb::amserver ] \
