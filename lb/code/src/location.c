@@ -261,17 +261,17 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
     int leader_rank = list_item->data;
 
     leader_ranks[leader_rank_count++] = leader_rank;
-    printf("leader: %i\n", leader_rank);
+    // printf("leader: %i\n", leader_rank);
     if (leader_rank == layout->rank)
     {
       layout->am_leader = true;
-      printf("am leader\n");
+      // printf("am leader\n");
     }
 
-    printf("ADLB_NAME: '%s' '%s'\n", xlb_s.my_name, name);
+    // printf("ADLB_NAME: '%s' '%s'\n", xlb_s.my_name, name);
     if (setenvs && strcmp(xlb_s.my_name, name) == 0)
     {
-      printf("call set envs\n");
+      // printf("call set envs\n");
       set_rank_envs(layout, list_item, leader_rank);
     }
   }
