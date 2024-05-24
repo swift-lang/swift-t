@@ -233,10 +233,7 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
   int* leader_ranks = malloc((size_t)(max_leaders) * sizeof(int));
   int leader_rank_count = 0;
 
-  sleep(layout->rank);
-  printf("call get_leader_ranks() ...\n");
   xlb_get_leader_ranks(layout, hosts, true, leader_ranks, &leader_rank_count);
-  printf("call get_leader_ranks() done.\n");
 
   create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
   free(leader_ranks);
@@ -245,8 +242,10 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
 }
 
 /**
-
- */
+   This function:
+        1) Returns the array leader_ranks containing all leader ranks
+        2) Sets the ADLB_RANK_* environment variables for this host
+*/
 void
 xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
                      bool setenvs, int* leader_ranks, int* count)
@@ -261,21 +260,12 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
     int leader_rank = list_item->data;
 
     leader_ranks[leader_rank_count++] = leader_rank;
-    // printf("leader: %i\n", leader_rank);
     if (leader_rank == layout->rank)
-    {
       layout->am_leader = true;
-      // printf("am leader\n");
-    }
 
-    // printf("ADLB_NAME: '%s' '%s'\n", xlb_s.my_name, name);
     if (setenvs && strcmp(xlb_s.my_name, name) == 0)
-    {
-      // printf("call set envs\n");
       set_rank_envs(layout, list_item, leader_rank);
-    }
   }
-  fflush(stdout);
   *count = leader_rank_count;
 }
 
@@ -283,25 +273,17 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
    Set environment variables for user code
    list_item: pointer into sorted rank list for my host
               points to my leader
-              continue through here to calculate offset
+              continues through this list to calculate the rank offset
 */
 static inline void
 set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
               int leader_rank)
 {
-  printf("set_rank_envs() ...\n");
-  int offset = 0;
-  assert(list_item != NULL);
+  int offset;
 
   // Count offset between leader and myself
-  while (true)
-  {
-    assert(list_item != NULL);
-    if (list_item->data == layout->rank) break;
-    if (! xlb_is_server(layout, list_item->data))
-      offset++;
+  for (offset = 0; list_item->data != layout->rank; offset++)
     list_item = list_item->next;
-  }
 
   // Set the environment variables!
   char t[64];
@@ -311,9 +293,6 @@ set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
   setenv("ADLB_RANK_LEADER", t, 1);
   sprintf(t, "%i", offset);
   setenv("ADLB_RANK_OFFSET", t, 1);
-  printf("ADLB_RANK_OFFSET: %i %s\n", layout->rank, t);
-  // fflush(stdout);
-  printf("set_rank_envs() done.\n");
 }
 
 /** Use MPI groups to create the leader communicator */
