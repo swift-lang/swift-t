@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 
 #include <list_i.h>
 #include <table.h>
@@ -23,8 +24,8 @@
 #include "location.h"
 
 /**
-   Maps string hostname to list of int ranks which are running on
-   that host
+   Maps string hostname to sorted list of int ranks
+        that are running on that host
  */
 struct xlb_hostmap
 {
@@ -144,9 +145,9 @@ xlb_hostnames_free(struct xlb_hostnames *hostnames)
 }
 
 adlb_code
-xlb_hostmap_init(const xlb_layout *layout,
-                 const struct xlb_hostnames *hostnames,
-                 struct xlb_hostmap **hostmap)
+xlb_hostmap_init(const xlb_layout* layout,
+                 const struct xlb_hostnames* hostnames,
+                 struct xlb_hostmap** hostmap)
 {
   *hostmap = malloc(sizeof(**hostmap));
   ADLB_CHECK_MALLOC(*hostmap);
@@ -232,7 +233,10 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
   int* leader_ranks = malloc((size_t)(max_leaders) * sizeof(int));
   int leader_rank_count = 0;
 
+  sleep(layout->rank);
+  printf("call get_leader_ranks() ...\n");
   xlb_get_leader_ranks(layout, hosts, true, leader_ranks, &leader_rank_count);
+  printf("call get_leader_ranks() done.\n");
 
   create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
   free(leader_ranks);
@@ -251,44 +255,45 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
   TABLE_FOREACH(&hosts->map, table_item)
   {
     char* name = table_item->key;
-    struct list_i* rank_list = table_item->data;
-    assert(rank_list->size > 0);
 
+    struct list_i*      rank_list = table_item->data;
     struct list_i_item* list_item = rank_list->head;
+    int leader_rank = list_item->data;
 
-    // Find lowest non-server
-    while (list_item != NULL &&
-           xlb_is_server(layout, list_item->data))
-      list_item = list_item->next;
-
-    if (list_item != NULL)
+    leader_ranks[leader_rank_count++] = leader_rank;
+    printf("leader: %i\n", leader_rank);
+    if (leader_rank == layout->rank)
     {
-      // This rank is the leader on my node:
-      int leader_rank = list_item->data;
-
-      leader_ranks[leader_rank_count++] = leader_rank;
-      TRACE("leader: %i\n", leader_rank);
-      if (leader_rank == layout->rank)
-      {
-        layout->am_leader = true;
-        DEBUG("am leader");
-      }
-
-      if (setenvs && strcmp(xlb_s.my_name, name) == 0)
-        set_rank_envs(layout, list_item, leader_rank);
+      layout->am_leader = true;
+      printf("am leader\n");
     }
-    // else the node has only servers!
+
+    printf("ADLB_NAME: '%s' '%s'\n", xlb_s.my_name, name);
+    if (setenvs && strcmp(xlb_s.my_name, name) == 0)
+    {
+      printf("call set envs\n");
+      set_rank_envs(layout, list_item, leader_rank);
+    }
   }
+  fflush(stdout);
   *count = leader_rank_count;
 }
 
-/** Set environment variables for user code */
+/**
+   Set environment variables for user code
+   list_item: pointer into sorted rank list for my host
+              points to my leader
+              continue through here to calculate offset
+*/
 static inline void
 set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
               int leader_rank)
 {
-  // Count offset between leader and myself
+  printf("set_rank_envs() ...\n");
   int offset = 0;
+  assert(list_item != NULL);
+
+  // Count offset between leader and myself
   while (true)
   {
     assert(list_item != NULL);
@@ -298,6 +303,7 @@ set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
     list_item = list_item->next;
   }
 
+  // Set the environment variables!
   char t[64];
   sprintf(t, "%i", layout->rank);
   setenv("ADLB_RANK_SELF", t, 1);
@@ -305,6 +311,9 @@ set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
   setenv("ADLB_RANK_LEADER", t, 1);
   sprintf(t, "%i", offset);
   setenv("ADLB_RANK_OFFSET", t, 1);
+  printf("ADLB_RANK_OFFSET: %i %s\n", layout->rank, t);
+  // fflush(stdout);
+  printf("set_rank_envs() done.\n");
 }
 
 /** Use MPI groups to create the leader communicator */
