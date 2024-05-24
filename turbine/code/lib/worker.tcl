@@ -56,6 +56,7 @@ namespace eval turbine {
         }
 
         leader_hook_shutdown
+        worker_hook_shutdown
 
         if { ! $success } {
             puts "worker throwing error: "
@@ -151,6 +152,23 @@ namespace eval turbine {
         adlb::worker_barrier
     }
 
+    proc worker_hook_shutdown { } {
+        global env
+
+        if { ! [ info exists env(TURBINE_WORKER_HOOK_SHUTDOWN) ] } \
+            return
+
+        puts "TURBINE_WORKER_HOOK_SHUTDOWN..."
+        try {
+            eval $env(TURBINE_WORKER_HOOK_SHUTDOWN)
+        } on error e {
+            puts ""
+            puts "Error in TURBINE_WORKER_HOOK_SHUTDOWN: $e"
+            puts ""
+            exit 1
+        }
+    }
+
     proc leader_hook_startup { } {
         global env
 
@@ -159,8 +177,7 @@ namespace eval turbine {
 
         if { [ adlb::comm_get leaders ] != [ adlb::comm_get null ] } {
             # I am a leader - eval the hook
-            puts "TURBINE_LEADER_HOOK_STARTUP: "
-            # $env(TURBINE_LEADER_HOOK_STARTUP)
+            puts "TURBINE_LEADER_HOOK_STARTUP..."
             try {
                 eval $env(TURBINE_LEADER_HOOK_STARTUP)
             } on error e {
@@ -186,7 +203,7 @@ namespace eval turbine {
             return
         }
 
-        puts "TURBINE_LEADER_HOOK_SHUTDOWN:"
+        puts "TURBINE_LEADER_HOOK_SHUTDOWN..."
         try {
             eval $env(TURBINE_LEADER_HOOK_SHUTDOWN)
         } on error e {
