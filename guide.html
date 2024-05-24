@@ -5630,7 +5630,8 @@ functions while using threads.
 </div>
 <div class="sect3">
 <h4 id="turbine_env2">17.3.2. Environment variables set by Swift/T</h4>
-<div class="paragraph"><p>These variables may be accessed by code called from Swift/T.</p></div>
+<div class="paragraph"><p>These variables may be accessed by code called from Swift/T.  They may
+also be accessed by <a href="#hooks">hooks</a>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>ADLB_RANK_SELF</code>
@@ -6124,20 +6125,63 @@ code, or C/C++ code on each node at startup and shutdown.</p></div>
 <h4 id="_shell_or_tcl_hooks">17.8.1. Shell or Tcl hooks</h4>
 <div class="paragraph"><p>By simply setting environment variables, you can trigger fragments of
 Tcl or shell code to execute on each node of the Swift/T run at
-startup and/or shutdown.  In this example:</p></div>
+startup and/or shutdown.  The variables and their execution order are:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+<code>TURBINE_WORKER_HOOK_STARTUP</code>
+</p>
+</li>
+<li>
+<p>
+<code>TURBINE_LEADER_HOOK_STARTUP</code>
+</p>
+</li>
+<li>
+<p>
+(main Swift/T workflow)
+</p>
+</li>
+<li>
+<p>
+<code>TURBINE_LEADER_HOOK_SHUTDOWN</code>
+</p>
+</li>
+<li>
+<p>
+<code>TURBINE_WORKER_HOOK_SHUTDOWN</code>
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>In the following case, the Tcl fragments simply <code>exec</code> the given
+shell scripts, which is a convenient way to copy data or perform other
+setup operations:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>$ export TURBINE_LEADER_HOOK_STARTUP=" puts [ exec $PWD/hook-startup.sh ]"
-$ export TURBINE_LEADER_HOOK_SHUTDOWN="puts [ exec $PWD/hook-shutdown.sh ]"
+<pre><code>$ export TURBINE_LEADER_HOOK_STARTUP="
+  puts [ exec $PWD/hook-startup.sh ]
+"
+$ export TURBINE_LEADER_HOOK_SHUTDOWN="
+  puts [ exec $PWD/hook-shutdown.sh ]
+"
 $ swift-t workflow.swift</code></pre>
 </div></div>
-<div class="paragraph"><p>the Tcl fragments in double quotes will be run at startup and shutdown
-respectively.  In this case, the Tcl fragments simply <code>exec</code> the given
-shell scripts.</p></div>
-<div class="paragraph"><p>These fragments are run on the <em>leader</em> ranks of each node.  These are
-the lowest ranks on the node.</p></div>
-<div class="paragraph"><p>A typical use of this feature is to copy data into node-local storage
-before workflow execution, and remove it on workflow completion.</p></div>
+<div class="paragraph"><p>The <code>TURBINE_LEADER</code> fragments are run on the <em>leader</em> ranks of each
+node.  These are the lowest ranks on the node.  A typical use of this
+feature is to copy data into node-local storage before workflow
+execution, and remove it on workflow completion.</p></div>
+<div class="paragraph"><p>The <code>TURBINE_WORKER</code> fragments are run on all of the <em>worker</em> ranks.
+The follwing example sets the environment variable <code>CUDA_VISIBLE_DEVICES</code> for
+use by CUDA (and/or deep learning libraries).  See the documentation for
+<code>ADLB_RANK_OFFSET</code> <a href="#turbine_env2">here</a>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_WORKER_HOOK_STARTUP='
+puts "TURBINE WORKER HOOK"
+set env(CUDA_VISIBLE_DEVICES) $env(ADLB_RANK_OFFSET)
+puts CUDA_VISIBLE_DEVICES=$env(CUDA_VISIBLE_DEVICES)
+'</code></pre>
+</div></div>
 </div>
 <div class="sect3">
 <h4 id="_c_c_hooks">17.8.2. C/C++ hooks</h4>
@@ -6812,7 +6856,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-04-11 14:40:09 CDT
+ 2024-05-24 15:08:09 CDT
 </div>
 </div>
 
