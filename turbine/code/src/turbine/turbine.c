@@ -260,14 +260,18 @@ set_stdout(int rank, int size, bool amserver)
 
   strcpy(filename, s);
 
-  // Substitute rank (as zero-padded string r) for %r into filename
+  // Substitute rank (as zero-padded string r) for @r into filename
   char* p;
-  while ((p = strstr(filename, "%r")))
+  while ((p = strstr(filename, "@r")))
   {
     ptrdiff_t c = p - &filename[0];
     strcpy(tmpfname, filename);
-    char* q = &tmpfname[0] + c + 1;
+    // Replace @r with %s
+    char* q = &tmpfname[0] + c;
+    *q = '%';
+    q++;
     *q = 's';
+    // Replace %s with zero-padded rank
     char r[64];
     int pad = get_pad(size);
     sprintf(r, "%0*i", pad, rank);
