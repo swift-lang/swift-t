@@ -3129,12 +3129,17 @@ goes to standard output by default.  Default: disabled.
 +TURBINE_STDOUT+::
 If unset, all Turbine processes write to the same +stdout+ stream.  If
 set, processes will redirect their +stdout+/+stderr+ streams to the
-given file name (via +freopen()+).  A specifier +%r+ may be used in
+given file name (via +freopen()+).  A specifier +@r+ may be used in
 this file name.  The specifier will be replaced with the rank of the
 process, thus, the processes will write to different files.  This
-eases debugging in many cases.  Note that when running on scheduled
-system, you must provide +%%r+ due to an implementation complexity
-with environment variables.
+eases debugging in many cases.  For example, set:
++
+----
+export TURBINE_STDOUT="out-@r.txt"
+----
++
+This will create output files in the +TURBINE_OUTPUT+ directory named +
++out-0.txt+, +out-1.txt+, etc.
 
 ++++
 <a name="swift_path"></a>
