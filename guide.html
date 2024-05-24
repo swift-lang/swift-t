@@ -5354,13 +5354,17 @@ goes to standard output by default.  Default: disabled.
 <p>
 If unset, all Turbine processes write to the same <code>stdout</code> stream.  If
 set, processes will redirect their <code>stdout</code>/<code>stderr</code> streams to the
-given file name (via <code>freopen()</code>).  A specifier <code>%r</code> may be used in
+given file name (via <code>freopen()</code>).  A specifier <code>@r</code> may be used in
 this file name.  The specifier will be replaced with the rank of the
 process, thus, the processes will write to different files.  This
-eases debugging in many cases.  Note that when running on scheduled
-system, you must provide <code>%%r</code> due to an implementation complexity
-with environment variables.
+eases debugging in many cases.  For example, set:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_STDOUT="out-@r.txt"</code></pre>
+</div></div>
+<div class="paragraph"><p>This will create output files in the <code>TURBINE_OUTPUT</code> directory named<br />
+<code>out-0.txt</code>, <code>out-1.txt</code>, etc.</p></div>
 </dd>
 </dl></div>
 <a name="swift_path"></a>
@@ -5656,7 +5660,7 @@ number of MPI processes on that node.
 <dd>
 <p>
 The rank of the leader process on this node (cf. <a href="#hooks">hooks</a>).
-This is the <code>ADLB_RANK_SELF</code> of some process on this node.
+This is the <code>ADLB_RANK_SELF</code> of the lowest-ranked process on this node.
 </p>
 </dd>
 </dl></div>
@@ -6856,7 +6860,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-05-24 15:08:09 CDT
+ 2024-05-24 15:17:31 CDT
 </div>
 </div>
 
