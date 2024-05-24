@@ -3271,7 +3271,8 @@ functions while using threads.
 [[turbine_env2]]
 ==== Environment variables set by Swift/T
 
-These variables may be accessed by code called from Swift/T.
+These variables may be accessed by code called from Swift/T.  They may
+also be accessed by <<hooks,hooks>>.
 
 +ADLB_RANK_SELF+::
 The current MPI rank, unique across all ranks in the run.
@@ -3282,7 +3283,7 @@ number of MPI processes on that node.
 
 +ADLB_RANK_LEADER+::
 The rank of the leader process on this node (cf. <<hooks,hooks>>).
-This is the +ADLB_RANK_SELF+ of some process on this node.
+This is the +ADLB_RANK_SELF+ of the lowest-ranked process on this node.
 
 [[mpi_impl]]
 ==== MPI implementation-specific details
@@ -3614,23 +3615,45 @@ code, or C/C++ code on each node at startup and shutdown.
 
 By simply setting environment variables, you can trigger fragments of
 Tcl or shell code to execute on each node of the Swift/T run at
-startup and/or shutdown.  In this example:
+startup and/or shutdown.  The variables and their execution order are:
+
+. +TURBINE_WORKER_HOOK_STARTUP+
+. +TURBINE_LEADER_HOOK_STARTUP+
+. (main Swift/T workflow)
+. +TURBINE_LEADER_HOOK_SHUTDOWN+
+. +TURBINE_WORKER_HOOK_SHUTDOWN+
+
+In the following case, the Tcl fragments simply +exec+ the given
+shell scripts, which is a convenient way to copy data or perform other
+setup operations:
 
 ----
-$ export TURBINE_LEADER_HOOK_STARTUP=" puts [ exec $PWD/hook-startup.sh ]"
-$ export TURBINE_LEADER_HOOK_SHUTDOWN="puts [ exec $PWD/hook-shutdown.sh ]"
+$ export TURBINE_LEADER_HOOK_STARTUP="
+  puts [ exec $PWD/hook-startup.sh ]
+"
+$ export TURBINE_LEADER_HOOK_SHUTDOWN="
+  puts [ exec $PWD/hook-shutdown.sh ]
+"
 $ swift-t workflow.swift
 ----
 
-the Tcl fragments in double quotes will be run at startup and shutdown
-respectively.  In this case, the Tcl fragments simply +exec+ the given
-shell scripts.
+The +TURBINE_LEADER+ fragments are run on the _leader_ ranks of each
+node.  These are the lowest ranks on the node.  A typical use of this
+feature is to copy data into node-local storage before workflow
+execution, and remove it on workflow completion.
 
-These fragments are run on the _leader_ ranks of each node.  These are
-the lowest ranks on the node.
+The +TURBINE_WORKER+ fragments are run on all of the _worker_ ranks.
+The follwing example sets the environment variable +CUDA_VISIBLE_DEVICES+ for
+use by CUDA (and/or deep learning libraries).  See the documentation for
++ADLB_RANK_OFFSET+ <<turbine_env2,here>>.
 
-A typical use of this feature is to copy data into node-local storage
-before workflow execution, and remove it on workflow completion.
+----
+export TURBINE_WORKER_HOOK_STARTUP='
+puts "TURBINE WORKER HOOK"
+set env(CUDA_VISIBLE_DEVICES) $env(ADLB_RANK_OFFSET)
+puts CUDA_VISIBLE_DEVICES=$env(CUDA_VISIBLE_DEVICES)
+'
+----
 
 ==== C/C++ hooks
 
