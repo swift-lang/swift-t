@@ -439,9 +439,9 @@ then
         AC_MSG_ERROR([Unable to find given python executable in PATH])
     fi
     TURBINE_CODEDIR=`pwd`
-    PYTHON_INCLUDE_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --include-flags) || AC_MSG_ERROR([Failed to execute python-config.py --include-flags])
-    PYTHON_LIB_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-flags) || AC_MSG_ERROR([Failed to execute python-config.py --lib-flags])
-    PYTHON_LIBDIR=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-dir) || AC_MSG_ERROR([Failed to execute python-config --lib-dir])
+    PYTHON_INCLUDE_FLAGS=-I$(${PYTHON_EXE} -m sysconfig | grep platinclude | perl -lne 'print $1 if /"(.+?)"/' ) || AC_MSG_ERROR([Failed to get Python Include directory])
+    PYTHON_LIB_FLAGS=-l$(${PYTHON_EXE} -c "import distutils.sysconfig; print distutils.sysconfig.get_config_vars().get('LDLIBRARY')"  | perl -lne  'print $1 if /lib(.+)\.so/' ) || AC_MSG_ERROR([Failed to get Python linker flags ])
+    PYTHON_LIBDIR=$(${PYTHON_EXE} -c "import distutils.sysconfig; print distutils.sysconfig.get_config_vars().get('LDSHARED')" | perl -lne  'print $1 if /-L(.+)/' ) || AC_MSG_ERROR([Failed to get Python shared library directory])
     PYTHON_NAME=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-name) || AC_MSG_ERROR([Failed to execute python-config --lib-name])
     AC_MSG_RESULT([Python enabled])
     AC_MSG_RESULT([Using Python include flags: ${PYTHON_INCLUDE_FLAGS}])
