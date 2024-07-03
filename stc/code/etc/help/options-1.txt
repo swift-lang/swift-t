@@ -20,9 +20,6 @@
        TURBINE_HOME/export is always included to get standard library
     -j </path/to/java>
        Set JVM location.  Defaults to PATH entry for java
-    -L <LOG>
-       Log stc progress to given LOG.  Set STC_LOG_TRACE environment
-       variable to "true" for trace-level logging
     -O <Optimization level>
        Set compiler optimization level:
          0 - no optimizations

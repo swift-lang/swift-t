@@ -20,8 +20,12 @@
             value="lib/stc.jar"/>
   <property name="stc.test.jar"
             value="lib/stc-tests.jar"/>
-  <property name="log4j.jar"
-            value="lib/log4j-1.2-api-2.17.2.jar"/>
+  <property name="log4j_compat.jar"
+            value="lib/log4j-1.2-api-2.23.1.jar" />
+  <property name="log4j_api.jar"
+            value="lib/log4j-api-2.23.1.jar" />
+  <property name="log4j_core.jar"
+            value="lib/log4j-core-2.23.1.jar" />
   <property name="commons-cli.jar"
             value="lib/commons-cli-1.2.jar"/>
   <property name="commons-io.jar"
@@ -47,7 +51,7 @@
   <property name="grammar"
             value="${src.dir}/exm/stc/ast/ExM.g"/>
   <property name="classpath"
-            value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${guava.jar}:${junit4.jar}:${hamcrest.jar}"/>
+            value="${antlr.jar}:${log4j_compat.jar}:${log4j_api.jar}:${log4j_core.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}:${guava.jar}:${junit4.jar}:${hamcrest.jar}"/>
   <property name="build.dir" value="classes"/>
   <target name="build.all" depends="jar" />
 
@@ -350,6 +354,11 @@
         <filter token="CONDA_BUILD"  value="${conda_build}"/>
       </filterset>
     </copy>
+
+    <!-- Install Log4J settings -->
+    <copy file="etc/log4j2.xml"
+          todir="${dist.dir}/etc"
+          verbose="${lf}"/>
 
     <copy todir="${dist.dir}/etc"
           verbose="${lf}">

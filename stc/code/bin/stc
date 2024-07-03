@@ -324,7 +324,7 @@ report_version()
     print "stc: could not find Java!"
   fi
   print "Using Turbine in: ${TURBINE_HOME}"
-  exit 0
+  exit
 }
 
 # Set default options before processing args
@@ -359,9 +359,6 @@ do
     i) IMPORT_STRINGS+="import ${OPTARG};"
        ;;
     j) JVM=${OPTARG}
-      ;;
-    L) LOGFILE=${OPTARG}
-      verbose "LOGFILE: ${LOGFILE}"
       ;;
     p) PREPROCESS=false
       ;;
@@ -439,24 +436,31 @@ then
   exit 1
 fi
 
-STC=${STC_HOME}/lib/stc.jar
-CLASSPATH="${STC}"
-for lib in stc antlr-3.5-complete-no-st3 log4j-1.2.16 \
-           commons-cli-1.2 commons-io-2.4 commons-lang3-3.3.2 \
-           guava-18.0
+# Link environment variable CLASSPATH to array classpath
+typeset -xT CLASSPATH classpath
+LOG4J_VERSION=2.23.1
+JARS=( stc
+       antlr-3.5-complete-no-st3
+       commons-cli-1.2
+       commons-io-2.4
+       commons-lang3-3.3.2
+       guava-18.0
+       log4j-1.2-api-${LOG4J_VERSION}
+       log4j-api-${LOG4J_VERSION}
+       log4j-core-${LOG4J_VERSION}
+     )
+for JAR in ${JARS}
 do
-  CLASSPATH+=":${STC_HOME}/lib/${lib}.jar"
+  classpath+=${STC_HOME}/lib/${JAR}.jar
 done
+# For log4j2.xml:
+classpath+=${STC_HOME}/etc
 
 TURBINE_VERSION=$( < ${STC_HOME}/etc/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
-if [[ ${LOGFILE:-} != "" ]]
-then
-  FLAGS+="-Dstc.log.file=${LOGFILE}"
-fi
 
-if [[ ${STC_LOG_TRACE:-} = true ]]
+if [[ ${STC_LOG_TRACE:-} == true ]]
 then
   FLAGS+="-Dstc.log.trace=true"
 fi
@@ -467,6 +471,7 @@ if [[ ${RPATH} != "" ]]
 fi
 
 # Check stc is compiled
+STC=${STC_HOME}/lib/stc.jar
 if [[ ! -f ${STC} ]]
 then
     print "Compiled STC jar not found at path ${STC}."
