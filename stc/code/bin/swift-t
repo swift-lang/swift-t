@@ -6,13 +6,16 @@ set -eu
 
 DEBIAN_BUILD=@DEBIAN_BUILD@ # Filled in by build.xml
 
-if [[ ${DEBIAN_BUILD} == "@DEBIAN\_BUILD@" ]]
+if [[ ${DEBIAN_BUILD} =~ "@DEBIAN".*"BUILD@" ]]
 then
   # DEBIAN_BUILD should be 0 or 1.
-  # This is the first @@ substitution in the script
+  # This is the first @@ substitution in the script.
   # If it not filtered, we know the user is trying to run
-  # this script directly out of the source tree
-  print "swift-t: ERROR. You must compile this software."
+  # this script directly out of the source tree.
+  # The regex is needed because there seems to be
+  # ZSH-version-specific handling of the underscore as of 2024-07-09
+  print "swift-t: ERROR. You must compile this software"
+  print "                and run it from the installation directory."
   print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
   return 1
 fi
