@@ -41,15 +41,6 @@ DEBIAN_BUILD=@DEBIAN_BUILD@ # Let configure-time substitution tell us
                             # if this is a Debian installation
 export TURBINE_PREALLOCATION=0
 
-if [[ ${DEBIAN_BUILD} =~ "@DEBIAN".*"BUILD@" ]]
-then
-  # See the notes under DEBIAN_BUILD in ./swift-t
-  print "turbine: ERROR. You must compile this software"
-  print "                and run it from the installation directory."
-  print "See http://swift-lang.github.io/swift-t/guide.html#install_source"
-  return 1
-fi
-
 # Scheduler script options (for PBS, Cobalt, etc.)
 SCHED_OPTS=()
 
