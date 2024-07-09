@@ -15,8 +15,8 @@
 # limitations under the License
 
 # Turbine wrapper script
-
 # Sets Turbine location, obtains configuration, launches
+# Can be run from the source or installation directories!
 
 # For usage: turbine -h
 
