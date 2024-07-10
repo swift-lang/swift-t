@@ -315,7 +315,14 @@ lookup_java()
 report_version()
 {
   printf "STC: Swift-Turbine Compiler "
-  cat ${STC_HOME}/etc/version.txt
+  if [[ -f ${STC_HOME}/etc/stc-version.txt ]]
+  then
+    # Anaconda installation
+    cat ${STC_HOME}/etc/stc-version.txt
+  else
+    # Other installations
+    cat ${STC_HOME}/etc/version.txt
+  fi
   printf "\t for Turbine: "
   cat ${STC_HOME}/etc/turbine-version.txt
   if lookup_java
