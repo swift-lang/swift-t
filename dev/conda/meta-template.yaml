@@ -7,7 +7,7 @@ COMMENT(
 # DATE: getenv(DATE)
 
 {% set name = "getenv(PKG_NAME)" %}
-{% set version = "1.6.3" %}
+{% set version = "1.6.4" %}
 {% set major = version.rpartition('.')[0] %}
 {% set sha256 = 'f5b26bb1ac427c271e19dff2146101f7c4da03652d66426a291e96638ba15c03' %}
 
