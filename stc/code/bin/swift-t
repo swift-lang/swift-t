@@ -148,8 +148,11 @@ do
 done
 shift $(( OPTIND - 1 ))
 
-(( VERBOSE >= 1 )) && STC_OPTS+="-V"
-(( VERBOSE >= 2 )) && TURBINE_OPTS+="-V"
+case ${VERBOSE} {
+  1) STC_OPTS+="-V"     ;;
+  2) STC_OPTS+="-VV"
+     TURBINE_OPTS+="-V" ;;
+}
 
 # Print a message when we are verbose.
 verbose()
