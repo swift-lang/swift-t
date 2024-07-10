@@ -21,34 +21,26 @@ USAGE: Provide PKG
                This is used when e.g. installing a PKG
                from a failed conda-build that is left in conda-bld/broken/
        Provide -r to install R
+       Provide -s SOLVER to change the conda solver [classic,mamba]
 EOF
 }
-D="" R=""
-zparseopts -D -E h=H D=D P:=P r=R
 
-if (( ${#H} )) { help ; return }
+# Parse the user options!
+zparseopts -D -E h=H D=D P:=P r=R s:=S
 
 # Default behavior:
 INSTALL_DEPS=1
 USE_R=0
+SOLVER=()
 
 # Handle user flags:
+if (( ${#H} )) { help ; return }
 if (( ${#D} )) INSTALL_DEPS=0
 if (( ${#R} )) USE_R=1
+if (( ${#S} )) SOLVER=( --solver ${S[2]} )
 
-if (( ${#*} != 1 )) {
-  print "Provide PKG!"
-  return 1
-}
+if (( ${#*} != 1 )) abort "conda-install.sh: Provide PKG!"
 PKG=$1
-
-# Get this directory (absolute):
-DEV_CONDA=${0:A:h}
-# The Swift/T Git clone:
-SWIFT_T_TOP=${DEV_CONDA:h:h}
-
-source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
-source $DEV_CONDA/helpers.zsh
 
 # Report information about given PKG:
 print "PKG=$PKG"
@@ -60,12 +52,26 @@ if (( ${#P} )) {
   # Pull out PLATFORM directory (head then tail):
   PLATFORM=${PKG:h:t}
 }
+
+# Force solver=classic on osx-arm64
+if [[ $PLATFORM == "osx-arm64" ]] SOLVER=( --solver classic )
+
+# Bring in utilities
+# Get this directory (absolute):
+DEV_CONDA=${0:A:h}
+# The Swift/T Git clone:
+SWIFT_T_TOP=${DEV_CONDA:h:h}
+source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+source $DEV_CONDA/helpers.zsh
+
+# Echo back platform and package statistics to the user
 print "PLATFORM=$PLATFORM"
 zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
 printf "PKG: timestamp: %s size: %.1f MB\n" \
        ${A[mtime]} $(( float(${A[size]}) / (1024*1024) ))
 printf "md5sum: "
+# In DEV_CONDA/helpers.zsh:
 checksum $PKG
 print
 
@@ -104,7 +110,6 @@ LIST+=(
 )
 
 # R switch
-
 if (( USE_R )) {
   if [[ $PLATFORM == "osx-arm64" ]] {
     LIST+="swift-t::emews-rinside"
@@ -115,13 +120,6 @@ if (( USE_R )) {
 }
 
 # Run conda install!
-
-if [[ $PLATFORM == "osx-arm64" ]] {
-  SOLVER=( --solver classic )
-} else {
-  SOLVER=()
-}
-
 set -x
 if (( INSTALL_DEPS )) conda install --yes $SOLVER -c conda-forge $LIST
 conda install --yes $SOLVER $PKG

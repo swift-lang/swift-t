@@ -92,6 +92,7 @@ META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
 
 if (( ! ${#R} )) {
+  export ENABLE_R=0
   export PKG_NAME="swift-t"
 } else {
   export ENABLE_R=1
