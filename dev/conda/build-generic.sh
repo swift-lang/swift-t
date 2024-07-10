@@ -145,14 +145,13 @@ cd $PREFIX/etc
 for file in stc-config.sh turbine-version.txt; do
   ln -sv ../swift-t/stc/etc/$file .
 done
+ln -sv ../swift-t/stc/etc/version.txt stc-version.txt
 ln -sv ../swift-t/stc/etc/help .
 ln -sv ../swift-t/turbine/etc/version.txt .
 
 ### LIB ###
 cd $PREFIX/lib
 ln -sv ../swift-t/stc/lib/*.jar .
-# A workaround for a missing library
-# ln -sv libmpi.so libmpi.so.20
 
 ### SCRIPTS ###
 cd $PREFIX/scripts
