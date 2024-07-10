@@ -12,7 +12,7 @@ print build.xml configure{,.ac} Makefile.in
 print maint/{{debian,version}.mkf,file-list.zsh}
 print etc/help/*.txt etc/{version.txt,turbine-version.txt}
 print src/exm/stc/ast/ExM.g
-print bin/* etc/stc-config.sh
+print bin/* etc/{stc-config.sh,log4j2.xml}
 print **/*.java
 print lib/*.jar
 print META-INF/MANIFEST.MF
