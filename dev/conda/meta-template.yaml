@@ -32,7 +32,7 @@ requirements:
   build:
     - autoconf
     - make
-    - openjdk
+    - openjdk>=17  # Security issue in Java < 11.72.19
     - mpich-mpicc
     - python==getenv(PYTHON_VERSION)
     - swig
@@ -43,7 +43,7 @@ m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
 m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
   run:
     - mpich-mpicc
-    - openjdk
+    - openjdk>=17  # Security issue in Java < 11.72.19
     - python==getenv(PYTHON_VERSION)
     - swig
 m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
