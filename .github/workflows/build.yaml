@@ -72,10 +72,16 @@ jobs:
         run: dev/build/init-settings.sh
 
       # TODO set swift-t install, R, python, and ??
+      # sed -i 's/original/new/g' file.txt
+      - run: sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
+
+      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
         run: dev/build/build-swift-t.sh
 
       # TODO check swift-t install
+      - name: Check swift-t version info
+        run: /tmp/swift-t-install/stc/bin/swift-t -v
 
         
