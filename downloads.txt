@@ -28,6 +28,30 @@ link:guide.html[installation instructions].
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.4
+
+* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.4.tar.gz[swift-t-1.6.4.tar.gz] (11 MB)
+
+* 2024-07-12
+* ExM c-utils 0.6.3
+* ADLB/X 1.0.2
+* Turbine 1.4.2
+* STC 1.0.2
+
+*Changes:*
+
+* Update to Log4J 2
+* Better MPI auto-detection and flags
+* Move to +worker_hook_startup+ / +worker_hook_shutdown+
+* Move to +@r+ in +TURBINE_STDOUT+
+* PBS improvements for Frontier
+* LSF improvements for Summit
+* Restore error behavior when running STC from source directory
+
+=== 1.6.3
+
+Changes to Anaconda packages.
+
 === 1.6.2
 
 * http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.2.tar.gz[swift-t-1.6.2.tar.gz] (8.6 MB)
