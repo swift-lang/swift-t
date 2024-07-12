@@ -38,6 +38,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install deps
+        run: sudo apt-get install -y zsh tcl8.6 tcl8.6-dev default-jdk autoconf make
+
       - name: Setup MPI (${{ matrix.mpi }})
         uses: mpi4py/setup-mpi@v1
         with:
@@ -49,6 +52,11 @@ jobs:
       # TODO RInside
 #      - name: Install R requirements
 #        run: Rscript install/R-requirements.R
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::RInside
+
 
       - name: Setup Python
         uses: actions/setup-python@v5
