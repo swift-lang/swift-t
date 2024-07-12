@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build_swift-t:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build swift-t on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -54,7 +54,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
+#          cache: pip
 
       - name: Upgrade pip
         run:  python -m pip install -U pip
