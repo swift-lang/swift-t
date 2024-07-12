@@ -10,6 +10,8 @@
 B=""
 zparseopts -D -E B=B
 
-export TURBINE_HOME=${HOME}/swift-t/turbine/code
+export TURBINE_HOME=${HOME}/proj/swift-t/turbine/code
+# Force system python3 for Asciidoc
+PATH=/usr/bin:$PATH
 
 make ${B} -f build.mk ${*}
