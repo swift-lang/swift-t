@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.6.3, May 2024
+v1.6.4, July 2024
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -162,7 +162,7 @@ the <<build_manual,manual build process>>).
   e.g., +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu (APT) systems.
 * Source distributions are available at the http://www.tcl.tk[Tcl web
   site]
-* Swift/T currently requires Tcl 8.6 (not 8.5).
+* Swift/T currently requires Tcl 8.6 or 8.7 (not 8.5).
 +
 3. Ensure you have these third-party software development tools (APT
    packages are denoted in parentheses):
@@ -183,14 +183,14 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.1.tar.gz
+$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.4.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-$ tar xfz swift-t-1.6.1.tar.gz
-$ cd swift-t-1.6.1
+$ tar xfz swift-t-1.6.4.tar.gz
+$ cd swift-t-1.6.4
 ----
 +
 3. Create a settings file by running:
