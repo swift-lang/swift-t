@@ -66,7 +66,7 @@ static turbine_exec_code
 noop_max_slots(turbine_context tcx, void *context, int *max);
 
 static void
-init_noop_executor(turbine_executor *exec)
+init_noop_executor(turbine_executor* exec)
 {
   exec->name = NOOP_EXECUTOR_NAME;
 
@@ -77,7 +77,7 @@ init_noop_executor(turbine_executor *exec)
   exec->configure = noop_configure;
   exec->start = noop_start;
   exec->stop = noop_stop;
-  exec->free = noop_free;
+  exec->do_free = noop_free;
   exec->wait = noop_wait;
   exec->poll = noop_poll;
   exec->slots = noop_slots;
@@ -100,7 +100,7 @@ static turbine_exec_code
 noop_configure(turbine_context tcx, void **context,
     const char *config, size_t config_len)
 {
-  *context = NOOP_CONTEXT; 
+  *context = NOOP_CONTEXT;
   return TURBINE_EXEC_SUCCESS;
 }
 
@@ -108,7 +108,7 @@ static turbine_exec_code
 noop_start(turbine_context tcx, void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
-  noop_state *s = malloc(sizeof(noop_state)); 
+  noop_state *s = malloc(sizeof(noop_state));
   assert(s != NULL);
   s->slots.used = 0;
   s->slots.total = NOOP_EXEC_SLOTS;
@@ -191,12 +191,12 @@ noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
   {
     Tcl_IncrRefCount(callbacks.success.code);
   }
-  
+
   if (callbacks.failure.code != NULL)
   {
     Tcl_IncrRefCount(callbacks.failure.code);
   }
-  
+
   return TURBINE_SUCCESS;
 }
 

@@ -167,7 +167,7 @@ struct turbine_executor
   turbine_exec_configure configure;
   turbine_exec_start start;
   turbine_exec_stop stop;
-  turbine_exec_free free;
+  turbine_exec_free do_free;
   turbine_exec_wait wait;
   turbine_exec_poll poll;
   turbine_exec_slots slots;
