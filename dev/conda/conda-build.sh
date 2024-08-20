@@ -43,7 +43,13 @@ SWIFT_T_TOP=${DEV_CONDA:h:h}
 TMP=${TMP:-/tmp}
 
 source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+# Sets SWIFT_T_VERSION:
+source $SWIFT_T_TOP/dev/get-versions.sh
 source $DEV_CONDA/helpers.zsh
+# Sets PYTHON_VERSION:
+source $DEV_CONDA/get-python-version.sh
+
+export SWIFT_T_VERSION
 
 if (( ${#PLATFORM:-} == 0 )) {
   log "unset: PLATFORM"
@@ -51,6 +57,7 @@ if (( ${#PLATFORM:-} == 0 )) {
   return 1
 }
 
+log "VERSION:  $SWIFT_T_VERSION"
 log "PLATFORM: $PLATFORM $*"
 
 # This is passed into meta.yaml:
@@ -114,7 +121,7 @@ m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
 if (( ${#C} )) {
   log "configure-only: exit."
-  exit
+  return
 }
 
 # Backup the old log
