@@ -138,6 +138,8 @@ $ anaconda login
 $ anaconda upload $PKG
 ----
 
+Use `dev/conda/upload.sh` to automate this.
+
 == Dependencies
 
 `r-rinside`::
