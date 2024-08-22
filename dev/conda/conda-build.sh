@@ -27,8 +27,8 @@ Options:
 END
 }
 
-C="" R=""
-zparseopts -D -E -F h=HELP C=C r=R
+C="" R="" R_VERSION=""
+zparseopts -D -E -F h=HELP C=C r:=R
 
 if (( ${#HELP} )) {
   help
@@ -37,6 +37,7 @@ if (( ${#HELP} )) {
 
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
+source $DEV_CONDA/helpers.zsh
 
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
@@ -45,11 +46,11 @@ TMP=${TMP:-/tmp}
 source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
 # Sets SWIFT_T_VERSION:
 source $SWIFT_T_TOP/dev/get-versions.sh
-source $DEV_CONDA/helpers.zsh
+export SWIFT_T_VERSION
 # Sets PYTHON_VERSION:
 source $DEV_CONDA/get-python-version.sh
-
-export SWIFT_T_VERSION
+# Optionally set R_VERSION from user argument:
+if (( ${#R} )) export R_VERSION=${R[2]}
 
 if (( ${#PLATFORM:-} == 0 )) {
   log "unset: PLATFORM"

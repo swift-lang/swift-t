@@ -7,6 +7,6 @@ COMMENT(      inside build-generic.sh                       )m4_dnl
 COMMENT( Retain indentation                                 )m4_dnl
 m4_ifelse(getenv(PLATFORM),`osx-arm64',
 `    - swift-t::emews-rinside',
-`    - r'
+`    - r=getenv(R_VERSION)'
 )m4_dnl
 # pkgs-R.yaml: STOP
