@@ -28,6 +28,20 @@ link:guide.html[installation instructions].
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.5
+
+* Bug fix in Anaconda package regarding scheduler scripts and helpers.sh
+* Anaconda packages only updated for platform +linux-64+
+* Better JSON error handling
+
+* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.5.tar.gz[swift-t-1.6.5.tar.gz] (11 MB)
+
+* 2024-08-20
+* ExM c-utils 0.6.3
+* ADLB/X 1.0.3
+* Turbine 1.4.3
+* STC 1.0.4
+
 === 1.6.4
 
 * http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.4.tar.gz[swift-t-1.6.4.tar.gz] (11 MB)
@@ -36,7 +50,7 @@ link:guide.html[installation instructions].
 * ExM c-utils 0.6.3
 * ADLB/X 1.0.2
 * Turbine 1.4.2
-* STC 1.0.2
+* STC 1.0.4
 
 *Changes:*
 

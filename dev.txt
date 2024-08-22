@@ -1694,9 +1694,10 @@ The Swift/T maintainer does this for each Swift/T release.
 ** Use +dev/debian/make-debs.zsh -b+ to make the Debian package installer
 ** Use +dev/build-spacks.sh+ to make the Spack releases
 ** Update the Spack +package.py+ files and issue a pull request to Spack
+** Use +dev/conda/*/build-platform.sh+ to make the Anaconda packages
 * Copy the package to the +swift-t-downloads+ repo, +gh-pages+ branch
 * Test package on Linux and Mac
-* +git push+ tag and downloads to GitHub
+* +git push+ tags and downloads to GitHub
 * Update installation instructions in guide.txt with version numbers
 
 ==== Release tester
