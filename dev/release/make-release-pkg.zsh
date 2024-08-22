@@ -95,8 +95,6 @@ do
   esac
 done
 
-source ${THIS}/../get-versions.sh
-
 # Define tokens (location in SVN or Git):
 # If using release paths, use "release/version" or git branch/tag name
 # If using master (USE_MASTER), use "master"
