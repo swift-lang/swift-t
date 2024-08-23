@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install deps
-        run: homebrew install
+        run: brew install
 #        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
       - name: Setup MPI (${{ matrix.mpi }})
