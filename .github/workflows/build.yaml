@@ -40,21 +40,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install deps
-        run: brew install
+        run: |
+          brew update
+          brew install tcl-tk java autoconf make mpich
 #        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
-      - name: Setup MPI (${{ matrix.mpi }})
-        uses: mpi4py/setup-mpi@v1
-        with:
-          mpi: ${{ matrix.mpi }}
+#       - name: Set up R
+#         uses: r-lib/actions/setup-r@v2
 
-      - name: Set up R
-        uses: r-lib/actions/setup-r@v2
-
-      # TODO RInside
-      - name: Install R requirements
-        run: R -e "install.packages('RInside')"
-#        run: Rscript install/R-requirements.R
+#       # TODO RInside
+#       - name: Install R requirements
+#         run: R -e "install.packages('RInside')"
+# #        run: Rscript install/R-requirements.R
 
       # - uses: r-lib/actions/setup-r-dependencies@v2
       #   with:
@@ -70,14 +67,14 @@ jobs:
       - name: Upgrade pip
         run:  python -m pip install -U pip
 
-      - name: configure swift-t
+      - name: Initialize swift-t settings
         run: dev/build/init-settings.sh
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
-      - run: sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
+#      - run: sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
 
-      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
+#      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
         run: dev/build/build-swift-t.sh
@@ -85,5 +82,3 @@ jobs:
       # TODO check swift-t install
       - name: Check swift-t version info
         run: /tmp/swift-t-install/stc/bin/swift-t -v
-
-        
