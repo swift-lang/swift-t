@@ -43,6 +43,7 @@ jobs:
         run: |
           brew update
           brew install tcl-tk java autoconf automake make mpich swig
+          which make gmake
 #        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
 #       - name: Set up R
@@ -77,7 +78,7 @@ jobs:
 #      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
-        run: dev/build/build-swift-t.sh -v
+        run: dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
       - name: Check swift-t version info
