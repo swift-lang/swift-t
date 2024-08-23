@@ -58,14 +58,14 @@ jobs:
       #     extra-packages: any::RInside
 
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-#          cache: pip
+#       - name: Setup Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: ${{ matrix.python-version }}
+# #          cache: pip
 
-      - name: Upgrade pip
-        run:  python -m pip install -U pip
+#       - name: Upgrade pip
+#         run:  python -m pip install -U pip
 
       - name: Initialize swift-t settings
         run: dev/build/init-settings.sh
@@ -77,7 +77,7 @@ jobs:
 #      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
-        run: dev/build/build-swift-t.sh
+        run: dev/build/build-swift-t.sh -v
 
       # TODO check swift-t install
       - name: Check swift-t version info
