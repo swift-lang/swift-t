@@ -24,7 +24,7 @@ PKGS=(
 if (
   set -eux
   sudo apt-get install -y $PKGS
-) >& apt.log
+) > apt.log
 then
   T=$(( SECONDS - START ))
   log "Installed Ubuntu packages in $T seconds."
