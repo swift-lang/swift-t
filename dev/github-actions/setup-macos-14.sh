@@ -11,10 +11,20 @@ log()
 
 log "Installing Homebrew packages..."
 
+PKGS=(
+  autoconf
+  automake
+  java
+  make
+  mpich
+  swig
+  tcl-tk
+)
+
 if (
-  set -ex
+  set -eux
   brew update
-  brew install autoconf automake java make mpich swig tcl-tk
+  brew install $PKGS
 ) >& brew.log
 then
   log "Installed Homebrew packages in %i seconds."

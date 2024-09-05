@@ -26,10 +26,10 @@ jobs:
     strategy:
       matrix:
         os:
-#          - ubuntu-latest
+          - ubuntu-latest
           - macos-14
 
-        # Comman separated list of python versions to test
+        # Comma separated list of python versions to test
         python-version: ["3.11"]
 
         mpi:
@@ -42,7 +42,6 @@ jobs:
       - name: Install deps
         run: |
           dev/github-actions/setup-${{ matrix.os }}.sh
-#        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
 #       - name: Set up R
 #         uses: r-lib/actions/setup-r@v2
