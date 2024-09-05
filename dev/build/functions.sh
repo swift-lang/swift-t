@@ -126,10 +126,10 @@ check_make()
     MAKE_QUIET="--quiet"
   fi
 
-  if (( VERBOSITY <= $LOG_DEBUG ))
-  then
+  # if (( VERBOSITY <= $LOG_DEBUG ))
+  # then
     echo "using make: " $( which make )
-  fi
+  # fi
 
   MAKE_V=""
   if (( VERBOSITY == $LOG_TRACE ))
