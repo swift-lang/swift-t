@@ -82,9 +82,9 @@ jobs:
           # For GNU Make:
           echo GITHUB_PATH $GITHUB_PATH
           cat $GITHUB_PATH
-          echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
+          echo /opt/homebrew/bin >> $GITHUB_PATH
           cat $GITHUB_PATH
-          ls /opt/homebrew/opt/make/libexec/gnubin
+          ls /opt/homebrew/bin
           dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
