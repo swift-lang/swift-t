@@ -42,8 +42,8 @@ jobs:
       - name: Install deps
         run: |
           brew update
-          brew install tcl-tk java autoconf automake make mpich swig
-          which make gmake
+          brew install autoconf automake java make mpich swig tcl-tk
+
 #        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
 #       - name: Set up R
