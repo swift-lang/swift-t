@@ -128,6 +128,7 @@ check_make()
 
   # if (( VERBOSITY <= $LOG_DEBUG ))
   # then
+  echo "VERBOSITY: $VERBOSITY"
     echo "using make: " $( which make )
   # fi
 
