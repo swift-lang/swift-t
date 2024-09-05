@@ -78,7 +78,10 @@ jobs:
 #      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
-        run: dev/build/build-swift-t.sh -vv
+        run: |
+          # For GNU Make:
+          echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
+          dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
       - name: Check swift-t version info
