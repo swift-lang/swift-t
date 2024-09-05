@@ -87,7 +87,7 @@ jobs:
           echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
           ls -l /opt/homebrew/opt/make/libexec/gnubin
           which make gmake
-          # dev/build/build-swift-t.sh -vv
+          dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
       - name: Check swift-t version info
