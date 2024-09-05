@@ -41,9 +41,7 @@ jobs:
 
       - name: Install deps
         run: |
-          brew update
-          brew install autoconf automake java make mpich swig tcl-tk
-
+          dev/github-actions/setup-${{ matrix.os }}.sh
 #        run: sudo apt-get install -y zsh tcl tcl-dev default-jdk autoconf make libcurl4-openssl-dev
 
 #       - name: Set up R
