@@ -72,7 +72,6 @@ jobs:
         run: |
           dev/build/init-settings.sh
           echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
-          tail dev/build/swift-t-settings.sh
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
@@ -82,11 +81,6 @@ jobs:
 
       - name: build swift-t
         run: |
-          # For GNU Make:
-          which make gmake
-          echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
-          ls -l /opt/homebrew/opt/make/libexec/gnubin
-          which make gmake
           dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
