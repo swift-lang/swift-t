@@ -30,7 +30,7 @@ jobs:
           - macos-14
 
         # Comma separated list of python versions to test
-        python-version: ["3.11"]
+        python-version: ["3.9", "3.11"]
 
         mpi:
           - mpich
@@ -56,11 +56,11 @@ jobs:
       #     extra-packages: any::RInside
 
 
-#       - name: Setup Python
-#         uses: actions/setup-python@v5
-#         with:
-#           python-version: ${{ matrix.python-version }}
-# #          cache: pip
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
 #       - name: Upgrade pip
 #         run:  python -m pip install -U pip
@@ -68,12 +68,12 @@ jobs:
       - name: Initialize swift-t settings
         run: |
           dev/build/init-settings.sh
+          sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
           echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
-#      - run: sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
-
+#      - run:
 #      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
 
       - name: build swift-t
