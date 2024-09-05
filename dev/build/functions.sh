@@ -131,6 +131,8 @@ check_make()
     echo "using make: " $( which make )
   fi
 
+  echo "$PATH"
+
   MAKE_V=""
   if (( VERBOSITY == $LOG_TRACE ))
   then
