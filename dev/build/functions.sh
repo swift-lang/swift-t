@@ -26,6 +26,7 @@ assert()
 }
 
 LOG()
+# Usage: LOG $LVL MESSAGE...
 {
   if (( ${#} == 0 ))
   then
@@ -125,6 +126,11 @@ check_make()
     MAKE_QUIET="--quiet"
   fi
 
+  if (( VERBOSITY <= $LOG_DEBUG ))
+  then
+    echo "using make: " $( which make )
+  fi
+
   MAKE_V=""
   if (( VERBOSITY == $LOG_TRACE ))
   then
@@ -136,9 +142,12 @@ make_clean()
 {
   if (( RUN_MAKE_CLEAN ))
   then
-    if [ -f Makefile ]
+    if [[ -f Makefile ]]
     then
+      LOG $LOG_DEBUG "make_clean() ..."
       make clean
+    else
+      LOG $LOG_DEBUG "make_clean(): No Makefile."
     fi
   fi
 }
