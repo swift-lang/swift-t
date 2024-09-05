@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   build_swift-t:
-    name: Build swift-t on ${{ matrix.os }}
+    name: Swift/T OS=${{ matrix.os }} PY=${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
