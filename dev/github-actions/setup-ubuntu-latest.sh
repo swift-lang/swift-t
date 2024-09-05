@@ -16,7 +16,9 @@ PKGS=(
   default-jdk
   libcurl4-openssl-dev
   make
+  mpich
   tcl-dev
+  zsh
 )
 
 if (
