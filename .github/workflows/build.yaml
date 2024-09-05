@@ -69,7 +69,9 @@ jobs:
 #         run:  python -m pip install -U pip
 
       - name: Initialize swift-t settings
-        run: dev/build/init-settings.sh
+        run: |
+          dev/build/init-settings.sh
+          echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
