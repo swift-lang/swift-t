@@ -164,7 +164,8 @@ AC_ARG_WITH(c-utils,
   AS_HELP_STRING(
     [--with-c-utils], [location of ExM c-utils]),
   [
-    AC_CHECK_FILE(${withval}/include/c-utils.h,
+    CPPFLAGS+=" -I${withval}/include"
+    AC_CHECK_HEADER(tools.h,
                   [USE_C_UTILS=1], [])
     if [[ ${USE_C_UTILS} == 0 ]]
     then

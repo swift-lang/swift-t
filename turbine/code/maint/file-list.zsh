@@ -18,7 +18,7 @@ print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in
 print src/**/*.manifest
 print py/*.py
-print scripts/*-config.sh.in scripts/helpers.zsh
+print scripts/*-config.sh.in scripts/helpers.{z,}sh
 print scripts/{data-log.sh,leak-find.py,rank.zsh,common.m4}
 print scripts/main-wrap/genleaf
 print scripts/main-wrap/settings/*.sh

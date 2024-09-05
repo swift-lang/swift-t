@@ -19,6 +19,7 @@
 ### JSON STUFF
 
 import json
+import sys
 
 # Type classes for comparison:
 _zero  = 0
@@ -38,6 +39,9 @@ def set_key_type(k):
         result = k
     return result
 
+class JSON_Exception(Exception):
+    pass
+
 def json_path(J, path):
     """ Reusable function to search a JSON tree """
     J = json.loads(J)
@@ -45,6 +49,11 @@ def json_path(J, path):
     for p in P:
         if len(p) > 0:
             k = set_key_type(p)
+            if k not in J:
+                msg = "key '%s' not found" % k
+                print("turbine: json_path(): " + msg)
+                sys.stdout.flush()
+                raise JSON_Exception(msg)
             J = J[k]
     return J
 
@@ -83,7 +92,12 @@ def json_array_size(J, path):
 
 def json_get(J, path):
     """ Return whatever is at the given path (usually scalar) """
-    J = json_path(J, path)
+    try:
+        J = json_path(J, path)
+    except JSON_Exception as e:
+        print("turbine: json_get(): " + str(e))
+        sys.stdout.flush()
+        raise Exception("json_get(): failed for '%s'" % path)
     if J is None:
         return "null"
     return str(J)

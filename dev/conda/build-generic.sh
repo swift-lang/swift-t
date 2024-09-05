@@ -40,18 +40,19 @@ echo ENABLE_R=$ENABLE_R
   echo "ENABLE_R:   $ENABLE_R"
 } > $RECIPE_DIR/build-generic.log
 
-# Cf. helpers.zsh
 if [[ $PLATFORM =~ osx-* ]]
 then
   NULL=""
   ZT=""
   if [[ $PLATFORM =~ osx-arm64 ]]
   then
-     export MPICH_CC=clang
-     export MPICH_CXX=clang++
+    # These variables affect the mpicc/mpicxx wrappers
+    export MPICH_CC=clang
+    export MPICH_CXX=clang++
   fi
 else
-  NULL="--null" ZT="--zero-terminated"
+  NULL="--null"
+  ZT="--zero-terminated"
 fi
 printenv ${NULL} | sort ${ZT} | tr '\0' '\n' > \
                                    $RECIPE_DIR/build-env.log

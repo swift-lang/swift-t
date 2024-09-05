@@ -82,6 +82,8 @@ Setup:
   create the "exported" Swift/T source tree in `$TMP/distro`,
   where `$TMP` defaults to `/tmp`.
   This source code location is hard-coded into `meta.yaml`.
+** Thus, the working Swift/T clone and the copy in `$TMP/distro` must be
+   identical!  Version numbers are pulled from the working clone.
 
 Loop:
 
@@ -137,6 +139,8 @@ $ PKG=CONDA/conda-bld/linux-64/swift-t-*.tar.bz2
 $ anaconda login
 $ anaconda upload $PKG
 ----
+
+Use `dev/conda/upload.sh` to automate this.
 
 == Dependencies
 

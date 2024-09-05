@@ -73,6 +73,8 @@ static char python_parallel_error_string[4096];
 static char* mpi_impl = "MPICH";
 #elif HAVE_MPI_IMPL_OPENMPI
 static char* mpi_impl = "OpenMPI";
+#elif HAVE_MPI_IMPL_SMPI
+static char* mpi_impl = "SMPI";
 #else
 #error "Must specify MPI_IMPL!"
 #endif

@@ -21,3 +21,8 @@ FOUND_OpenMPI();
 MAJOR-VERSION OMPI_MAJOR_VERSION
 MINOR-VERSION OMPI_MINOR_VERSION
 #endif
+
+#ifdef SMPI_H
+// If this text makes it through the preprocessor, this is SMPI:
+FOUND_SMPI();
+#endif

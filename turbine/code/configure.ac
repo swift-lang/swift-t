@@ -237,10 +237,13 @@ AC_ARG_WITH(launcher,
     [USE_LAUNCHER=${withval}],
     [USE_LAUNCHER=$(which mpiexec)]
 )
+
+if ! [[ $cross_compiling == "yes" ]]
+then
 AC_CHECK_FILE($USE_LAUNCHER,
     [AC_MSG_RESULT([Using Turbine MPI launcher: $USE_LAUNCHER])],
     [AC_MSG_ERROR([Launcher not found: '$USE_LAUNCHER'])])
-
+fi
 AC_CHECK_HEADER([mpi.h], [], [AC_MSG_ERROR([Could not find mpi.h!])])
 AC_CHECK_LIB([mpi], [MPI_Init], [],
              [AC_MSG_ERROR([Could not find MPI library!])])
@@ -249,6 +252,7 @@ AC_CHECK_LIB([mpi], [MPI_Init], [],
 # Use the preprocessor to extract tokens that identify MPICH or OpenMPI:
 HAVE_MPI_IMPL_OPENMPI=0
 HAVE_MPI_IMPL_MPICH=0
+HAVE_MPI_IMPL_SMPI=0
 MPI_OUTPUT=$( mktemp )
 $CC -E $CPPFLAGS $CFLAGS maint/mpi_identification.c 2>&1 > $MPI_OUTPUT
 
@@ -258,6 +262,9 @@ then
 elif grep -q FOUND_OpenMPI $MPI_OUTPUT
 then
   MPI_IMPL="OpenMPI"
+elif grep -q FOUND_SMPI $MPI_OUTPUT
+then
+  MPI_IMPL="SMPI"
 else
   MPI_IMPL="UNKNOWN"
 fi
@@ -286,6 +293,10 @@ elif [[ $MPI_IMPL == "MPICH" ]]
 then
   HAVE_MPI_IMPL_MPICH=1
   MPI_LINE_OUTPUT_FLAG="-l"
+elif [[ $MPI_IMPL == "SMPI" ]]
+then
+  HAVE_MPI_IMPL_SMPI=1
+  MPI_LINE_OUTPUT_FLAG="-l"
 else
   AC_MSG_WARN([No MPI implementation tokens found in mpi.h !])
 fi
@@ -297,6 +308,8 @@ AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_OPENMPI,
                    ${HAVE_MPI_IMPL_OPENMPI},[True if using OpenMPI])
 AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_MPICH,
                    ${HAVE_MPI_IMPL_MPICH},[True if using MPICH])
+AC_DEFINE_UNQUOTED(HAVE_MPI_IMPL_SMPI,
+                   ${HAVE_MPI_IMPL_SMPI},[True if using SMPI])
 
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)

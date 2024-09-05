@@ -652,9 +652,9 @@ turbine_async_exec_finalize(Tcl_Interp *interp)
     // Free all executors
     TABLE_FOREACH(&executors, item)
     {
-      turbine_executor *executor = item->data;
-      assert(executor->free != NULL);
-      executor->free(tcx, executor->context);
+      turbine_executor* executor = item->data;
+      assert(executor->do_free != NULL);
+      executor->do_free(tcx, executor->context);
       // Can safely cast since we allocated memory
       free((char*)executor->name);
       free(executor);
