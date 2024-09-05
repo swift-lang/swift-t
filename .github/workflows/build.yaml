@@ -80,12 +80,11 @@ jobs:
       - name: build swift-t
         run: |
           # For GNU Make:
-          echo GITHUB_PATH $GITHUB_PATH
-          cat $GITHUB_PATH
-          echo /opt/homebrew/bin >> $GITHUB_PATH
-          cat $GITHUB_PATH
-          ls /opt/homebrew/bin
-          dev/build/build-swift-t.sh -vv
+          which make gmake
+          echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
+          ls -l /opt/homebrew/opt/make/libexec/gnubin
+          which make gmake
+          # dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
       - name: Check swift-t version info
