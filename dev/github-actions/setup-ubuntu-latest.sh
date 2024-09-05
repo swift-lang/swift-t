@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # SETUP for matrix.os == ubuntu-latest
 
@@ -17,7 +17,6 @@ PKGS=(
   libcurl4-openssl-dev
   make
   tcl-dev
-  zsh
 )
 
 if (
@@ -25,10 +24,11 @@ if (
   sudo apt-get install -y $PKGS
 ) >& apt.log
 then
-  log "Installed Ubuntu packages in %i seconds."
+  T=$(( SECONDS - START ))
+  log "Installed Ubuntu packages in $T seconds."
 else
   log "FAILED to install Ubuntu packages!"
   log "apt.log:"
   cat apt.log
-  return 1
+  exit 1
 fi

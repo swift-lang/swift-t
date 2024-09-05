@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # SETUP for matrix.os == macos-14
 
@@ -27,10 +27,11 @@ if (
   brew install $PKGS
 ) >& brew.log
 then
-  log "Installed Homebrew packages in %i seconds."
+  T=$(( SECONDS - START ))
+  log "Installed Homebrew packages in $T seconds."
 else
   log "FAILED to install Homebrew packages!"
   log "brew.log:"
   cat brew.log
-  return 1
+  exit 1
 fi
