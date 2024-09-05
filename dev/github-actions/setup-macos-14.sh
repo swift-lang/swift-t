@@ -24,7 +24,7 @@ PKGS=(
 if (
   set -eux
   brew update
-  brew install $PKGS
+  brew install ${PKGS[@]}
 ) >& brew.log
 then
   T=$(( SECONDS - START ))
