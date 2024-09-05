@@ -322,8 +322,8 @@ endif
 HDF5_CPPFLAGS = @HDF5_CPPFLAGS@
 CFLAGS += $(DEFINES) $(INCLUDES) $(HDF5_CPPFLAGS)
 
-# LIBS: links to ADLB, c-utils, MPE, and MPI
-LIBS :=
+# LIBS: links to Tcl, ADLB, c-utils, MPE, and MPI
+LIBS := @TCL_LIB_SPEC@
 LIBS += -L$(ADLB)/lib -ladlb
 LIBS += -L$(C_UTILS)/lib -lexmcutils
 ifeq ($(ENABLE_MPE),1)
