@@ -10,6 +10,8 @@ import sysconfig
 import os.path
 
 
+debug = False
+
 CONFIG_NAMES = [
     'include-dir', 'include-flags',
     'lib-dir', 'lib-name', 'lib-flags',
@@ -21,9 +23,20 @@ def print_usage(prog_name):
           + ' | '.join('--' + name for name in CONFIG_NAMES))
 
 
+def align_kv(k, v):
+    indent = "  " if debug else ""
+    print("%s%-14s %s" % (indent, k, v))
+
+
+def debug_kv(k, v):
+    if not debug: return
+    sys.stderr.write("  %-14s %s\n" % (k, v))
+
+
 def get_lib_name():
     # LDLIBRARY has format libpythonX.Yz.so
     lib_file = sysconfig.get_config_var('LDLIBRARY')
+    debug_kv("LDLIBRARY", lib_file)
     lib_name = os.path.splitext(lib_file)[0]
     if lib_name.startswith('lib'):
         lib_name = lib_name[3:]
@@ -61,14 +74,26 @@ def get_config_value(name):
     return value
 
 
+def show_debug(names):
+    global debug
+    debug = True
+    for name in names:
+        align_kv(name, get_config_value(name))
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print_usage(sys.argv[0])
         sys.exit(1)
-    if sys.argv[1] == '--help':
+    elif sys.argv[1] == '--help':
         print_usage(sys.argv[0])
         sys.exit(0)
-    if sys.argv[1] == '--all':
+    elif sys.argv[1] == '--debug':
+        show_name = True
+        names = CONFIG_NAMES
+        show_debug(names)
+        sys.exit(0)
+    elif sys.argv[1] == '--all':
         show_name = True
         names = CONFIG_NAMES
     else:
@@ -83,7 +108,7 @@ if __name__ == '__main__':
     for name in names:
         try:
             if show_name:
-                print("%-14s" % name, get_config_value(name))
+                print(name, get_config_value(name))
             else:
                 print(get_config_value(name))
         except ValueError:
