@@ -746,8 +746,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.6.3,</span>
-<span id="revdate">May 2024</span>
+<span id="revnumber">version 1.6.5,</span>
+<span id="revdate">September 2024</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2922,7 +2922,8 @@ $ xcode-select --install
 # Get system information:
 $ SDK=$( xcrun --show-sdk-path )
 $ export CPPFLAGS="-I$SDK/usr/include"
-$ export LDFLAGS="-L$SDK/usr/lib -lSystem -F$SDK/System/Library/Frameworks"
+$ export LDFLAGS="-L$SDK/usr/lib -lSystem "
+$ LDFLAGS+="-F$SDK/System/Library/Frameworks"
 # Build Swift/T!
 $ dev/build/swift-t-settings.sh</code></pre>
 </div></div>
@@ -4358,9 +4359,9 @@ Run with:
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.6.3<br />
+Version 1.6.5<br />
 Last updated
- 2024-05-02 11:41:26 CDT
+ 2024-09-06 15:29:53 CDT
 </div>
 </div>
 </body>

@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.6.4, July 2024</span><br />
+<span id="author">v1.6.5, September 2024</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -877,71 +877,61 @@ On maintained compute clusters, an MPI implementation
 </li>
 <li>
 <p>
-Many operating systems provide packages with MPI implementations
-   that are usable, but often outdated.
-   E.g. the <code>mpich</code> package on Debian/Ubuntu.
-</p>
-</li>
-<li>
-<p>
-See <a href="http://www.mpich.org">MPICH Guides</a> for information on installing the
-   latest version of MPICH.
-</p>
-</li>
-<li>
-<p>
-Installing MPICH from source is not difficult.
+When running locally, you can build your MPI from source or use a package manager.
 </p>
 </li>
 <li>
 <p>
 Other MPI implementations are <a href="#Build_configuration">supported</a> as well.
 </p>
-<div class="paragraph"><p>Swift/T attempts to use MPI 3.0 functionality by default.  If you
-are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set <code>MPI_VERSION=2</code> (if using the <code>build-swift-t.sh</code> build process),
-or provide the <code>--enable-mpi-2</code> configure option (if using
-the <a href="#build_manual">manual build process</a>).</p></div>
 </li>
 </ul></div>
 </li>
 <li>
 <p>
-Install or locate Tcl 8.6.
+Ensure you have these software development tools:
+   SWIG, ZSH, Apache Ant, a Java Development Kit, Autotools/Make, and GCC for C.
+   You can use your system package manager, or even put them in a user
+   Anaconda installation.
 </p>
-<div class="ulist"><ul>
+<div class="olist loweralpha"><ol class="loweralpha">
 <li>
 <p>
-You may need to install an additional Tcl development package
-  in addition to the standard Tcl package,
-  e.g., <code>tcl8.6</code> plus <code>tcl8.6-dev</code> on Debian/Ubuntu (APT) systems.
+On Ubuntu/Debian, install these with:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ sudo apt-get install ant default-jdk gcc make swig tcl-dev zsh</code></pre>
+</div></div>
 </li>
 <li>
 <p>
-Source distributions are available at the <a href="http://www.tcl.tk">Tcl web
-  site</a>
+On Mac, install these with:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ brew install autoconf automake java make mpich swig tcl-tk</code></pre>
+</div></div>
 </li>
 <li>
 <p>
-Swift/T currently requires Tcl 8.6 or 8.7 (not 8.5).
+If you are not a superuser, you generally can mix package manager tools
+with Anaconda tools.  Install any needed tools with:
 </p>
-</li>
-</ul></div>
-</li>
-<li>
-<p>
-Ensure you have these third-party software development tools (APT
-   packages are denoted in parentheses):
-   SWIG (<code>swig</code>), ZSH (<code>zsh</code>), Apache Ant (<code>ant</code>), a Java Development
-   Kit (<code>default-jdk</code>), Make (<code>make</code>), and GCC for C (<code>gcc</code>).
-</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ conda install ant autoconf make mpich-mpicc \
+                openjdk swig tk zsh</code></pre>
+</div></div>
 </li>
 </ol></div>
-<div class="paragraph"><p>STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
-Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.
-If you have difficulties with compiler compatibility,
+</li>
+</ol></div>
+<div class="paragraph"><p>STC is compatible with OpenJDK and IBM Java, requiring Java 1.6.
+Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.</p></div>
+<div class="paragraph"><p>Mac systems may require flags for the Xcode tool chain,
+<a href="sites.html#_mac_os_x">see here</a>.</p></div>
+<div class="paragraph"><p>If you have difficulties with compiler compatibility,
 please <a href="#support">contact us</a>.</p></div>
 </div>
 <div class="sect3">
@@ -6860,7 +6850,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-07-12 13:32:35 CDT
+ 2024-09-06 15:38:52 CDT
 </div>
 </div>
 
