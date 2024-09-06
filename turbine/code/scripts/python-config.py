@@ -81,6 +81,12 @@ def show_debug(names):
         align_kv(name, get_config_value(name))
 
 
+def show_list():
+    global debug
+    debug = True
+    for k, v in sysconfig.get_config_vars().items():
+        align_kv(k, v)
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print_usage(sys.argv[0])
@@ -92,6 +98,9 @@ if __name__ == '__main__':
         show_name = True
         names = CONFIG_NAMES
         show_debug(names)
+        sys.exit(0)
+    elif sys.argv[1] == '--list':
+        show_list()
         sys.exit(0)
     elif sys.argv[1] == '--all':
         show_name = True
