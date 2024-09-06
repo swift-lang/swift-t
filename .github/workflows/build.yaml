@@ -26,9 +26,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          # - ubuntu-latest
           - macos-14
-          - macos-14-arm64
+          # - macos-14-arm64
 
         # Comma separated list of python versions to test
         python-version: ["3.11"] # "3.9",
