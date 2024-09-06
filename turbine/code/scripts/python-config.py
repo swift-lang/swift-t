@@ -83,7 +83,7 @@ if __name__ == '__main__':
     for name in names:
         try:
             if show_name:
-                print(name, get_config_value(name))
+                print("%-14s" % name, get_config_value(name))
             else:
                 print(get_config_value(name))
         except ValueError:
