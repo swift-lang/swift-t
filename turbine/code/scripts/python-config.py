@@ -10,9 +10,10 @@ import sysconfig
 import os.path
 
 
-CONFIG_NAMES = ['include-dir', 'include-flags',
-                'lib-dir', 'lib-name', 'lib-flags',
-                'version', 'version-major', 'version-minor', 'version-suffix']
+CONFIG_NAMES = [
+    'include-dir', 'include-flags',
+    'lib-dir', 'lib-name', 'lib-flags',
+    'version', 'version-major', 'version-minor', 'version-suffix']
 
 
 def print_usage(prog_name):
@@ -82,7 +83,7 @@ if __name__ == '__main__':
     for name in names:
         try:
             if show_name:
-                print(name, get_config_value(name))
+                print("%-14s" % name, get_config_value(name))
             else:
                 print(get_config_value(name))
         except ValueError:
