@@ -420,7 +420,8 @@ AC_SUBST(USE_LIBADLB_A)
 # Python is optional
 AC_ARG_ENABLE(python,
    AS_HELP_STRING([--enable-python],
-                  [Enable calling Python language (searches PATH for python executable)]),
+                  [Enable calling Python language
+                   (searches PATH for python)]),
   [
       HAVE_PYTHON=1
       PYTHON_EXE=""
@@ -430,14 +431,17 @@ AC_ARG_WITH(python-exe,
    AS_HELP_STRING([--with-python-exe],
                   [Specify complete path to python executable]),
   [
-      if test "x${withval}" == "xyes"; then
+      if test "x${withval}" == "xyes"
+      then
           # Look for exe in PATH below
           PYTHON_EXE=""
       else
           PYTHON_EXE=${withval}
-          if test "x$PYTHON_EXE" != "x"; then
+          if test "x$PYTHON_EXE" != "x"
+          then
               AC_CHECK_FILE(${PYTHON_EXE}, [],
-                [AC_MSG_ERROR([Specified python exe not found!  Tried: $PYTHON_EXE])])
+                [AC_MSG_ERROR([Specified python exe not found!
+                               Tried: $PYTHON_EXE])])
           fi
       fi
       HAVE_PYTHON=1
@@ -445,30 +449,48 @@ AC_ARG_WITH(python-exe,
 
 if (( HAVE_PYTHON ))
 then
-    if test "x$PYTHON_EXE" == "x"; then
+    if [[[ "$PYTHON_EXE" == "" ]]]
+    then
         AC_PATH_PROG([PYTHON_EXE], [python], [NOT_FOUND])
     fi
-    if test "x$PYTHON_EXE" == "xNOT_FOUND"; then
+    if [[[ "$PYTHON_EXE" == NOT_FOUND ]]]
+    then
         AC_MSG_ERROR([Unable to find given python executable in PATH])
     fi
-    TURBINE_CODEDIR=`pwd`
-    PYTHON_INCLUDE_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --include-flags) || AC_MSG_ERROR([Failed to execute python-config.py --include-flags])
-    PYTHON_LIB_FLAGS=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-flags) || AC_MSG_ERROR([Failed to execute python-config.py --lib-flags])
-    PYTHON_LIBDIR=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-dir) || AC_MSG_ERROR([Failed to execute python-config --lib-dir])
-    PYTHON_NAME=$(${PYTHON_EXE} ${TURBINE_CODEDIR}/scripts/python-config.py --lib-name) || AC_MSG_ERROR([Failed to execute python-config --lib-name])
-    AC_MSG_RESULT([Python enabled])
-    AC_MSG_RESULT([Using Python include flags: ${PYTHON_INCLUDE_FLAGS}])
-    AC_MSG_RESULT([Using Python lib flags:     ${PYTHON_LIB_FLAGS}])
-    AC_MSG_RESULT([Using Python lib dir:       ${PYTHON_LIBDIR}])
+    # Short form of call to our Python configuration reporting tool:
+    PY_CFG="${PYTHON_EXE} scripts/python-config.py"
+    AC_MSG_RESULT([Displaying $PY_CFG --all])
+    $PY_CFG --all
+    if ! PYTHON_INCLUDE_FLAGS=$( $PY_CFG --include-flags )
+    then
+      AC_MSG_ERROR([Failed to execute $PY_CFG --include-flags])
+    fi
+    if ! PYTHON_LIB_FLAGS=$( $PY_CFG --lib-flags)
+    then
+      AC_MSG_ERROR([Failed to execute $PY_CFG --lib-flags])
+    fi
+    if ! PYTHON_LIBDIR=$( $PY_CFG --lib-dir)
+    then
+      AC_MSG_ERROR([Failed to execute $PY_CFG --lib-dir])
+    fi
+    if ! PYTHON_NAME=$( $PY_CFG --lib-name)
+    then
+      AC_MSG_ERROR([Failed to execute $PY_CFG --lib-name])
+    fi
+    AC_MSG_RESULT([Python enabled.  The compiler flags are:])
+    AC_MSG_RESULT([  Python include flags: ${PYTHON_INCLUDE_FLAGS}])
+    AC_MSG_RESULT([  Python lib flags:     ${PYTHON_LIB_FLAGS}])
+    AC_MSG_RESULT([  Python lib dir:       ${PYTHON_LIBDIR}])
     AC_DEFINE_UNQUOTED([HAVE_PYTHON],$HAVE_PYTHON,[Enables Python])
     AC_SUBST(HAVE_PYTHON)
     AC_SUBST(PYTHON_INCLUDE_FLAGS)
     AC_SUBST(PYTHON_LIB_FLAGS)
     AC_SUBST(PYTHON_LIBDIR)
     AC_SUBST(PYTHON_NAME)
-    AC_DEFINE_UNQUOTED([PYTHON_NAME],"$PYTHON_NAME",[Provides Python Name])
+    AC_DEFINE_UNQUOTED([PYTHON_NAME],"$PYTHON_NAME",
+                       [Provides Python name])
 else
-    AC_MSG_RESULT([Python disabled])
+    AC_MSG_RESULT([Python disabled.])
 fi
 
 # R is optional
