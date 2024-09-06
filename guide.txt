@@ -20,7 +20,7 @@ Reasons: Swift/T release versions (what else?)
 ////
 
 = Swift/T Guide
-v1.6.4, July 2024
+v1.6.5, September 2024
 
 Swift/T is a hierarchical, parallel programming system that allows you
 to rapidly develop many-task workflows that call into sequential code
@@ -141,36 +141,37 @@ package manager for your system.
 +
 ** On maintained compute clusters, an MPI implementation
    will almost certainly be pre-installed.
-** Many operating systems provide packages with MPI implementations
-   that are usable, but often outdated.
-   E.g. the +mpich+ package on Debian/Ubuntu.
-** See http://www.mpich.org[MPICH Guides] for information on installing the
-   latest version of MPICH.
-** Installing MPICH from source is not difficult.
+** When running locally, you can build your MPI from source or use a package manager.
 ** Other MPI implementations are <<Build_configuration, supported>> as well.
 +
-Swift/T attempts to use MPI 3.0 functionality by default.  If you
-are using an MPI implementation that does not support the MPI 3.0 standard,
-you must set +MPI_VERSION=2+ (if using the +build-swift-t.sh+ build process),
-or provide the +--enable-mpi-2+ configure option (if using
-the <<build_manual,manual build process>>).
+2. Ensure you have these software development tools:
+   SWIG, ZSH, Apache Ant, a Java Development Kit, Autotools/Make, and GCC for C.
+   You can use your system package manager, or even put them in a user
+   Anaconda installation.
+.. On Ubuntu/Debian, install these with:
 +
-2. Install or locate Tcl 8.6.
+----
+$ sudo apt-get install ant default-jdk gcc make swig tcl-dev zsh
+----
+.. On Mac, install these with:
 +
-* You may need to install an additional Tcl development package
-  in addition to the standard Tcl package,
-  e.g., +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu (APT) systems.
-* Source distributions are available at the http://www.tcl.tk[Tcl web
-  site]
-* Swift/T currently requires Tcl 8.6 or 8.7 (not 8.5).
+----
+$ brew install autoconf automake java make mpich swig tcl-tk
+----
+.. If you are not a superuser, you generally can mix package manager tools
+with Anaconda tools.  Install any needed tools with:
 +
-3. Ensure you have these third-party software development tools (APT
-   packages are denoted in parentheses):
-   SWIG (+swig+), ZSH (+zsh+), Apache Ant (+ant+), a Java Development
-   Kit (+default-jdk+), Make (+make+), and GCC for C (+gcc+).
+----
+$ conda install ant autoconf make mpich-mpicc \
+                openjdk swig tk zsh
+----
 
-STC is compatible OpenJDK and IBM Java, requiring Java 1.6.
+STC is compatible with OpenJDK and IBM Java, requiring Java 1.6.
 Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.
+
+Mac systems may require flags for the Xcode tool chain,
+link:sites.html#_mac_os_x[see here].
+
 If you have difficulties with compiler compatibility,
 please <<support,contact us>>.
 

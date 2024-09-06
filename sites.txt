@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.3, May 2024
+v1.6.5, September 2024
 
 
 == How to use this guide
@@ -1525,7 +1525,8 @@ $ xcode-select --install
 # Get system information:
 $ SDK=$( xcrun --show-sdk-path )
 $ export CPPFLAGS="-I$SDK/usr/include"
-$ export LDFLAGS="-L$SDK/usr/lib -lSystem -F$SDK/System/Library/Frameworks"
+$ export LDFLAGS="-L$SDK/usr/lib -lSystem "
+$ LDFLAGS+="-F$SDK/System/Library/Frameworks"
 # Build Swift/T!
 $ dev/build/swift-t-settings.sh
 ----
