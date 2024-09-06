@@ -14,7 +14,7 @@ log "Installing Homebrew packages..."
 PKGS=(
   autoconf
   automake
-  java
+  # java
   make
   mpich
   swig
