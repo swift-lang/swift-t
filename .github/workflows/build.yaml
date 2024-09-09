@@ -95,4 +95,6 @@ jobs:
 
       # TODO check swift-t install
       - name: Check swift-t version info
-        run: /tmp/swift-t-install/stc/bin/swift-t -v
+        run: |
+          /tmp/swift-t-install/stc/bin/swift-t -v
+          /tmp/swift-t-install/stc/bin/swift-t -E 'trace(42);'
