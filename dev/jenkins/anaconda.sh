@@ -142,7 +142,7 @@ task $SWIFT_T/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/linux-64/conda-platform.sh ${R}
+task $SWIFT_T/dev/conda/conda-platform.sh ${R} linux-64
 
 log "CHECKING PACKAGE..."
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
