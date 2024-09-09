@@ -40,7 +40,7 @@ then
     swig
     tcl-tk
   )
-  brew update
+  brew update >& tool.log
 elif [[ $MATRIX_OS == "macos-14-arm64" ]]
 then
   TOOL=( brew install )
@@ -54,7 +54,7 @@ then
     swig
     tcl-tk
   )
-  brew update
+  brew update >& tool.log
 else
   log "unknown OS: $MATRIX_OS"
   exit 1
@@ -63,7 +63,7 @@ fi
 if (
   set -eux
   ${TOOL[@]} ${PKGS[@]}
-) # >& tool.log
+) >>& tool.log
 then
   COUNT=${#PKGS[@]}
   T=$(( SECONDS - START ))
