@@ -80,8 +80,7 @@ jobs:
           # Only effective on MacOS/Homebrew systems:
           # echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
           # ls /opt/homebrew/opt/make/libexec/gnubin
-          which make gmake
-          which make gmake sed
+          which make gmake sed java
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
