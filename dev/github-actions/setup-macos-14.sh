@@ -38,5 +38,10 @@ else
   exit 1
 fi
 
-echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
-echo /opt/homebrew/opt/bin                 >> $GITHUB_PATH
+# Add these tools to PATH via GITHUB_PATH, one per line
+BINS=(
+  /opt/homebrew/opt/gnu-sed/libexec/gnubin
+  /opt/homebrew/opt/make/libexec/gnubin
+  /opt/homebrew/opt/bin
+)
+echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
