@@ -65,22 +65,10 @@ jobs:
 #       - name: Upgrade pip
 #         run:  python -m pip install -U pip
 
-      - name: Initialize swift-t settings (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Initialize swift-t settings
         run: |
           dev/build/init-settings.sh
-          sed -i 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
-
-      - name: Initialize swift-t settings (Mac)
-        if: startsWith(matrix.os, 'macos-14')
-        run: |
-          dev/build/init-settings.sh
-          # Add GNU tools to PATH [HERE]
-          sed -i '' 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
-          # Only effective on MacOS/Homebrew systems:
-          # echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
-          # ls /opt/homebrew/opt/make/libexec/gnubin
-          which make gmake sed java
+          dev/github-actions/edit-settings.sh
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
