@@ -16,7 +16,6 @@ PKGS=(
   automake
   # To resolve the sed -i problem on Mac
   gnu-sed
-  # java
   make
   mpich
   swig
