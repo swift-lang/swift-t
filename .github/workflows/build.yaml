@@ -42,7 +42,7 @@ jobs:
 
       - name: Install deps
         run: |
-          dev/github-actions/setup-${{ matrix.os }}.sh
+          dev/github-actions/setup-deps.sh ${{ matrix.os }}
 
 #       - name: Set up R
 #         uses: r-lib/actions/setup-r@v2
