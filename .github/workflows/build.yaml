@@ -91,6 +91,7 @@ jobs:
 
       - name: build swift-t
         run: |
+          which make gmake
           dev/build/build-swift-t.sh -vv
 
       # TODO check swift-t install
