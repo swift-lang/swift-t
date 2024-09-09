@@ -35,3 +35,6 @@ else
   cat brew.log
   exit 1
 fi
+
+echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
+echo /opt/homebrew/opt/bin                 >> $GITHUB_PATH
