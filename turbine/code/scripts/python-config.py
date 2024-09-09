@@ -49,8 +49,10 @@ def debug_kv(k, v):
 
 def get_lib_name():
     # LDLIBRARY has format libpythonX.Yz.so
-    lib_file = sysconfig.get_config_var('LDLIBRARY')
-    debug_kv("LDLIBRARY", lib_file)
+    # Bryce used LDLIBRARY c. 2017
+    # Seems that we should now use LIBRARY as of 2024-09-09
+    lib_file = sysconfig.get_config_var('LIBRARY')
+    debug_kv("LIBRARY", lib_file)
     lib_name = os.path.splitext(lib_file)[0]
     if lib_name.startswith('lib'):
         lib_name = lib_name[3:]
