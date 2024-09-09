@@ -25,7 +25,7 @@ if (
   set -eux
   brew update
   brew install ${PKGS[@]}
-) >& brew.log
+) # >& brew.log
 then
   T=$(( SECONDS - START ))
   log "Installed Homebrew packages in $T seconds."
