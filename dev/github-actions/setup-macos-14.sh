@@ -17,6 +17,8 @@ PKGS=(
   # java
   make
   mpich
+  # To resolve the sed -i problem on Mac
+  sed
   swig
   tcl-tk
 )
