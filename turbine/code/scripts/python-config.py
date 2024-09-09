@@ -1,7 +1,21 @@
+
 """
-Script to generate python build config paths needed to build turbine with
-embedded python interpreter support. Requires python 2.6+.
+PYTHON CONFIG PY
+
+Generates Python build config paths needed to build Turbine with
+embedded Python interpreter support using Python sysconfig .
+
+Requires Python 2.6+
+
+Usage:
+  --list    Show all configuration variables available from sysconfig
+  --all     Show all configuration variables relevant to Turbine
+  --debug   Like --all but pretty-print and include some debug info
+            on stderr
+  --help    Show individual configuration variable selection flags
+  --flag*   Show one or more individual configuration variables
 """
+
 from __future__ import print_function
 
 import sys
