@@ -79,6 +79,10 @@ jobs:
           sed -i '' 's/ENABLE_PYTHON=0/ENABLE_PYTHON=1/g' dev/build/swift-t-settings.sh
           # Only effective on MacOS/Homebrew systems:
           echo 'PATH=/opt/homebrew/opt/make/libexec/gnubin:$PATH' >> dev/build/swift-t-settings.sh
+          ls /opt/homebrew/opt/make/libexec/gnubin
+          which make gmake
+          echo /opt/homebrew/opt/make/libexec/gnubin >> $GITHUB_PATH
+          which make gmake
 
       # TODO set swift-t install, R, python, and ??
       # sed -i 's/original/new/g' file.txt
