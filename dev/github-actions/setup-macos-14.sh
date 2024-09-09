@@ -14,11 +14,11 @@ log "Installing Homebrew packages..."
 PKGS=(
   autoconf
   automake
+  # To resolve the sed -i problem on Mac
+  gnu-sed
   # java
   make
   mpich
-  # To resolve the sed -i problem on Mac
-  sed
   swig
   tcl-tk
 )
