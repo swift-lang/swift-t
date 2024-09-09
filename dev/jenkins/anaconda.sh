@@ -33,9 +33,9 @@ if [[ ${WORKSPACE:-0} == 0 ]] {
 help()
 {
   cat <<EOF
--p PYTHON_VERSION  default "$PYTHON_VERSION"
 -c CONDA_LABEL     default "$CONDA_LABEL"
--r                 install R, default does not
+-p PYTHON_VERSION  default "$PYTHON_VERSION"
+-r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
 EOF
 }
@@ -46,7 +46,7 @@ if (( ${#HELP} )) help
 
 # Main argument processing
 R=""  # May become "-r"
-zparseopts -D -E -F c:=CL p:=PV r=R u=UNINSTALL
+zparseopts -D -E -F c:=CL p:=PV r:=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
