@@ -42,7 +42,7 @@ jobs:
         run: |
           dev/github-actions/setup-conda.sh ${{ matrix.os }}
 
-      - name: Build Anaconda package:
+      - name: Build Anaconda package
       - run: |
           dev/jenkins/anaconda.sh
 
