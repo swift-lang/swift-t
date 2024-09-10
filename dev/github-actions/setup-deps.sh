@@ -2,6 +2,7 @@
 set -eu
 
 # SETUP DEPS
+# For a full Swift/T build
 # For any matrix.os
 
 MATRIX_OS=$1
