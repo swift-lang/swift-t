@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - github_action_mac
-#      - github_action_build   # The name of our test branch
 #      - master
   release:
     types:
@@ -17,18 +16,17 @@ on:
 
 permissions:
   contents: read    # To read the project source code (git)
-#  packages: read    # To read the docker image from package registry
 
 jobs:
   build_swift-t:
-    name: Swift/T OS=${{ matrix.os }} PY=${{ matrix.python-version }}
+    name: OS=${{ matrix.os }} PY=${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os:
           - ubuntu-latest
           - macos-14
-          - macos-14-arm64
+          # - macos-14-arm64
 
         # Comma separated list of python versions to test
         python-version: ["3.11"] # "3.9",
@@ -40,44 +38,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install deps
+      - name: Setup dependencies
         run: |
-          dev/github-actions/setup-deps.sh ${{ matrix.os }}
+          dev/github-actions/setup-conda.sh ${{ matrix.os }}
 
-#       - name: Set up R
-#         uses: r-lib/actions/setup-r@v2
-
-#       # TODO RInside
-#       - name: Install R requirements
-#         run: R -e "install.packages('RInside')"
-# #        run: Rscript install/R-requirements.R
-
-      # - uses: r-lib/actions/setup-r-dependencies@v2
-      #   with:
-      #     extra-packages: any::RInside
-
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-#       - name: Upgrade pip
-#         run:  python -m pip install -U pip
-
-      - name: Initialize swift-t settings
-        run: |
-          dev/build/init-settings.sh
-          dev/github-actions/edit-settings.sh
-
-      # TODO set swift-t install, R, python, and ??
-      # sed -i 's/original/new/g' file.txt
-#      - run:
-#      - run: sed -i 's/ENABLE_R=0/ENABLE_R=1/g' dev/build/swift-t-settings.sh
-
-      - name: build swift-t
-        run: |
-          dev/build/build-swift-t.sh -vv
+      - name: Build Anaconda package:
+      - run: |
+          dev/jenkins/anaconda.sh
 
       - name: Report Swift/T version info
         run:  /tmp/swift-t-install/stc/bin/swift-t -v
