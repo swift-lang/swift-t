@@ -82,11 +82,18 @@ if [[ ${RUNNER_OS:-0} == "macOS" ]] {
 }
 
 # Set CONDA_ARCH, the name for our chip in the Miniconda download:
+# Set CONDA_PLATFORM, the name for our platform
+#                     in our Anaconda builder
 if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
   # On GitHub, we may be on ARM:
   CONDA_ARCH="arm64"
+  CONDA_PLATFORM="osx-arm64"
 } else {
   CONDA_ARCH="x86_64"
+  case $CONDA_OS {
+    MacOSX) CONDA_PLATFORM="osx-64"   ;;
+    Linux)  CONDA_PLATFORM="linux-64" ;;
+  }
 }
 
 # The Miniconda we are working with:
@@ -171,7 +178,7 @@ task $SWIFT_T/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/linux-64/conda-platform.sh ${R}
+task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
 log "CHECKING PACKAGE..."
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
