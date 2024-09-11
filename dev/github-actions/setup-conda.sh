@@ -91,6 +91,7 @@ case $MATRIX_OS in
       /usr/local/opt/coreutils/libexec/gnubin
       /usr/local/opt/gnu-sed/libexec/gnubin
       /usr/local/opt/gnu-time/libexec/gnubin
+    )
     ;;
   macos-14*)
     BINS=(
