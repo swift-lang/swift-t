@@ -26,6 +26,9 @@ elif [[ $MATRIX_OS == "macos-14" ]]
 then
   TOOL=( brew install )
   PKGS=(
+    autoconf
+    automake
+
     # To resolve the sed -i problem on Mac
     gnu-sed
     # For consistent timing messages:
@@ -36,6 +39,9 @@ elif [[ $MATRIX_OS == "macos-14-arm64" ]]
 then
   TOOL=( brew install )
   PKGS=(
+    autoconf
+    automake
+
     # To resolve the sed -i problem on Mac
     gnu-sed
     # For consistent timing messages:
