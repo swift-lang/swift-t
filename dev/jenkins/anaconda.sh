@@ -83,6 +83,8 @@ if (( ${#R} )) log "ENABLING R"
 #       among Minicondas and easy to delete:
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 
+source $SWIFT_T/dev/conda/helpers.zsh
+
 task()
 # Run a command line verbosely and report the time in simple format:
 {
@@ -164,7 +166,7 @@ then
   log "Could not find the PKG at: $PKG"
   return 1
 fi
-md5sum $PKG
+checksum $PKG
 print
 
 # Enable the install environment
