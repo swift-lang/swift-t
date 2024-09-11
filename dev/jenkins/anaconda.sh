@@ -87,7 +87,8 @@ task()
 # Run a command line verbosely and report the time in simple format:
 {
   log "TASK START:" ${*}
-  if /bin/time --format "TASK TIME: %E" ${*}
+  # Force use of GNU time program:
+  if =time --format "TASK TIME: %E" ${*}
   then
     log "TASK DONE:" ${*}
     CODE=0

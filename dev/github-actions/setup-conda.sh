@@ -36,6 +36,8 @@ then
   PKGS=(
     # To resolve the sed -i problem on Mac
     gnu-sed
+    # For consistent timing messages:
+    gnu-time
   )
   brew update >& tool.log
 else
@@ -64,6 +66,7 @@ if [[ $MATRIX_OS == macos-* ]]
 then
   BINS=(
     /opt/homebrew/opt/gnu-sed/libexec/gnubin
+    /opt/homebrew/opt/gnu-time/libexec/gnubin
     /opt/homebrew/opt/bin
   )
   echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
