@@ -9,6 +9,11 @@ set -eux
 #     and clone Swift/T in that location (which is what Jenkins does)
 # Also runs as GitHub action via /.github/workflows/conda.yaml
 
+# Environment:
+# WORKSPACE:     A working directory set by Jenkins
+# JENKINS_HOME:  Set by Jenkins, else unset
+# GITHUB_ACTION: Set by GitHub,  else unset
+
 setopt PUSHD_SILENT
 
 # Defaults:
