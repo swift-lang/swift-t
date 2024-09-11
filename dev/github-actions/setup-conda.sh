@@ -16,44 +16,49 @@ log()
 
 log "Installing dependencies for OS=$MATRIX_OS ..."
 
-if [[ $MATRIX_OS == "ubuntu-latest" ]]
-then
-  TOOL=( sudo apt-get install --yes )
-  PKGS=(
-    zsh
-  )
-elif [[ $MATRIX_OS == "macos-14" ]]
-then
-  TOOL=( brew install )
-  PKGS=(
-    autoconf
-    automake
+# Set up tools:
+case $MATRIX_OS in
+  "ubuntu-latest")
+    TOOL=( sudo apt-get install --yes )
+    ;;
+  macos-*)
+    TOOL=( brew install )
+    brew update >& tool.log
+    ;;
+  *)
+    log "unknown OS: $MATRIX_OS"
+    exit 1
+esac
 
-    coreutils
-    # To resolve the sed -i problem on Mac
-    gnu-sed
-    # For consistent timing messages:
-    gnu-time
-  )
-  # brew update >& tool.log
-elif [[ $MATRIX_OS == "macos-14-arm64" ]]
-then
-  TOOL=( brew install )
-  PKGS=(
-    autoconf
-    automake
+# Basic Mac packages:
+PKGS_MAC=(
+  autoconf
+  automake
+  coreutils
+  # To resolve the sed -i problem on Mac
+  gnu-sed
+  # For consistent timing messages:
+  gnu-time
+)
 
-    coreutils
-    # To resolve the sed -i problem on Mac
-    gnu-sed
-    # For consistent timing messages:
-    gnu-time
-  )
-  brew update >& tool.log
-else
-  log "unknown OS: $MATRIX_OS"
-  exit 1
-fi
+# Select package lists:
+case $MATRIX_OS in
+  "ubuntu-latest")
+    PKGS=( zsh )
+    ;;
+  "macos-13")
+    PKGS=( ${PKGS_MAC[@]} )
+    ;;
+  "macos-14")
+    PKGS=( ${PKGS_MAC[@]} )
+    ;;
+  "macos-14-arm64")
+    PKGS=( ${PKGS_MAC[@]} )
+    ;;
+  *)
+    log "unknown OS: $MATRIX_OS"
+    exit 1
+esac
 
 if (
   set -eux
@@ -82,3 +87,5 @@ then
   )
   echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 fi
+
+log SUCCESS >> tool.log
