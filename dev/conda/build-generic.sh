@@ -112,7 +112,7 @@ then
 fi
 
 set -x
-if [[ $PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
+if [[ $PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} != 0 ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed
