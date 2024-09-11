@@ -59,7 +59,8 @@ zparseopts -D -E -F c:=CL p:=PV r=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CL} )) CONDA_LABEL=${CL[2]}
 
-renice --priority 19 --pid $$ >& /dev/null
+if [[ ${JENKINS_HOME:-0} != 0 ]] \
+  renice --priority 19 --pid $$ >& /dev/null
 
 export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
