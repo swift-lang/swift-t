@@ -29,6 +29,7 @@ then
     autoconf
     automake
 
+    coreutils
     # To resolve the sed -i problem on Mac
     gnu-sed
     # For consistent timing messages:
@@ -42,6 +43,7 @@ then
     autoconf
     automake
 
+    coreutils
     # To resolve the sed -i problem on Mac
     gnu-sed
     # For consistent timing messages:
@@ -73,6 +75,7 @@ fi
 if [[ $MATRIX_OS == macos-* ]]
 then
   BINS=(
+    /opt/homebrew/opt/coreutils/libexec/gnubin
     /opt/homebrew/opt/gnu-sed/libexec/gnubin
     /opt/homebrew/opt/gnu-time/libexec/gnubin
     /opt/homebrew/opt/bin
