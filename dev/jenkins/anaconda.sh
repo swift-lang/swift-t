@@ -15,7 +15,9 @@ set -eux
 # GITHUB_ACTION: Set by GitHub,  else unset
 
 
+if [[ -d /opt/homebrew/opt/gnu-time/libexec/gnubin ]] {
 ls /opt/homebrew/opt/gnu-time/libexec/gnubin
+}
 which time
 
 exit
