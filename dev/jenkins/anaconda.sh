@@ -85,6 +85,7 @@ if [[ ${RUNNER_OS:-0} == "macOS" ]] {
 # Set CONDA_PLATFORM, the name for our platform
 #                     in our Anaconda builder
    set -x
+   uname -a
 if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
   # On GitHub, we may be on ARM:
   CONDA_ARCH="arm64"
