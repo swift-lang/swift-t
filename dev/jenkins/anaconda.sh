@@ -7,6 +7,7 @@ set -eu
 #                   and one in which to install the package
 # May be run interactively, just set environment variable WORKSPACE
 #     and clone Swift/T in that location (which is what Jenkins does)
+# Also runs as GitHub action via /.github/workflows/conda.yaml
 
 setopt PUSHD_SILENT
 
@@ -24,6 +25,9 @@ log()
 {
   print ${(%)DATE_FMT_NICE} "anaconda.sh:" ${*}
 }
+
+# If on GitHub, pretend we are in Jenkins:
+if [[ ${GITHUB_ACTION:-0} != 0 ]] WORKSPACE=$RUNNER_TEMP
 
 if [[ ${WORKSPACE:-0} == 0 ]] {
   log "Set WORKSPACE!"
