@@ -18,7 +18,7 @@ set -eux
 if [[ -d /opt/homebrew/opt/gnu-time/libexec/gnubin ]] {
 ls /opt/homebrew/opt/gnu-time/libexec/gnubin
 }
-which time
+command which time
 
 exit
 
