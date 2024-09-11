@@ -18,7 +18,7 @@ setopt PUSHD_SILENT
 
 # Defaults:
 PYTHON_VERSION="39"
-CONDA_LABEL="23.11.0-1"
+CONDA_TIMESTAMP="23.11.0-1"
 # Examples:
 # py39_23.11.0-1
 # py310_23.11.0-1
@@ -33,7 +33,6 @@ log()
 
 # If on GitHub, pretend we are in Jenkins:
 if [[ ${GITHUB_ACTION:-0} != 0 ]] WORKSPACE=$RUNNER_TEMP
-
 if [[ ${WORKSPACE:-0} == 0 ]] {
   log "Set WORKSPACE!"
   exit 1
@@ -43,7 +42,7 @@ help()
 {
   cat <<EOF
 -p PYTHON_VERSION  default "$PYTHON_VERSION"
--c CONDA_LABEL     default "$CONDA_LABEL"
+-c CONDA_TIMESTAMP default "$CONDA_TIMESTAMP"
 -r                 install R, default does not
 -u                 delete prior artifacts, default does not
 EOF
@@ -55,9 +54,9 @@ if (( ${#HELP} )) help
 
 # Main argument processing
 R=""  # May become "-r"
-zparseopts -D -E -F c:=CL p:=PV r=R u=UNINSTALL
+zparseopts -D -E -F c:=CT p:=PV r=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
-if (( ${#CL} )) CONDA_LABEL=${CL[2]}
+if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 
 if [[ ${JENKINS_HOME:-0} != 0 ]] \
   renice --priority 19 --pid $$ >& /dev/null
@@ -74,8 +73,25 @@ THIS=${0:A:h}
 SWIFT_T=$THIS/../..
 SWIFT_T=${SWIFT_T:A}
 
+# Set CONDA_OS, the name for our OS in the Miniconda download:
+if [[ ${RUNNER_OS:-0} == "macOS" ]] {
+  # On GitHub, we may be on Mac:
+  CONDA_OS="MacOSX"
+} else {
+  CONDA_OS="Linux"
+}
+
+# Set CONDA_ARCH, the name for our chip in the Miniconda download:
+if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
+  # On GitHub, we may be on ARM:
+  CONDA_ARCH="arm64"
+} else {
+  CONDA_ARCH="x86_64"
+}
+
 # The Miniconda we are working with:
-MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}-Linux-x86_64.sh
+CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
+MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
 if (( ${#R} )) log "ENABLING R"
 
