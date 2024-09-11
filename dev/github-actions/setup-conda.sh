@@ -17,7 +17,7 @@ log()
 
 log "Installing dependencies for OS=$MATRIX_OS ..."
 # Create initial timestamp:
-log > tool.log
+log "Start..." >> tool.log
 
 # Set up tools:
 case $MATRIX_OS in
