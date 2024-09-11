@@ -4,6 +4,7 @@ set -eu
 # SETUP CONDA
 # Sets up system tools for an Anaconda Swift/T build
 # For any matrix.os
+# Produces artifact tool.log, which is checked by subsequent steps
 
 MATRIX_OS=$1
 
@@ -32,8 +33,6 @@ esac
 
 # Basic Mac packages:
 PKGS_MAC=(
-  autoconf
-  automake
   coreutils
   # To resolve the sed -i problem on Mac
   gnu-sed
@@ -47,13 +46,20 @@ case $MATRIX_OS in
     PKGS=( zsh )
     ;;
   "macos-13")
+    # macos-13 already has autoconf, automake
     PKGS=( ${PKGS_MAC[@]} )
     ;;
   "macos-14")
-    PKGS=( ${PKGS_MAC[@]} )
+    PKGS=( ${PKGS_MAC[@]}
+           autoconf
+           automake
+         )
     ;;
   "macos-14-arm64")
-    PKGS=( ${PKGS_MAC[@]} )
+    PKGS=( ${PKGS_MAC[@]}
+           autoconf
+           automake
+         )
     ;;
   *)
     log "unknown OS: $MATRIX_OS"
@@ -77,15 +83,27 @@ fi
 
 # Setup Mac PATH
 # Add these tools to PATH via GITHUB_PATH, one per line
-if [[ $MATRIX_OS == macos-* ]]
-then
-  BINS=(
-    /opt/homebrew/opt/coreutils/libexec/gnubin
-    /opt/homebrew/opt/gnu-sed/libexec/gnubin
-    /opt/homebrew/opt/gnu-time/libexec/gnubin
-    /opt/homebrew/opt/bin
-  )
-  echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
-fi
+case $MATRIX_OS in
+  macos-13)
+    BINS=(
+      /usr/local/opt/coreutils/libexec/gnubin
+      /usr/local/opt/gnu-sed/libexec/gnubin
+      /usr/local/opt/gnu-time/libexec/gnubin
+    ;;
+  macos-14*)
+    BINS=(
+      /opt/homebrew/opt/coreutils/libexec/gnubin
+      /opt/homebrew/opt/gnu-sed/libexec/gnubin
+      /opt/homebrew/opt/gnu-time/libexec/gnubin
+      /opt/homebrew/opt/bin
+    )
+    ;;
+esac
 
-log SUCCESS >> tool.log
+echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
+{
+  echo PATHS:
+  echo ${BINS[@]} | fmt -w 1
+} >> tool.log
+
+log "SUCCESS" >> tool.log
