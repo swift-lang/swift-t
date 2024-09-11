@@ -36,6 +36,7 @@ esac
 # Basic Mac packages:
 PKGS_MAC=(
   automake
+  make
   coreutils
   # To resolve the sed -i problem on Mac
   gnu-sed
@@ -50,8 +51,6 @@ case $MATRIX_OS in
     ;;
   "macos-13")
     # macos-13 already has autoconf
-    set -x
-    ls /usr/local/opt/
     PKGS=( ${PKGS_MAC[@]} )
     ;;
   "macos-14")
@@ -89,15 +88,19 @@ fi
 case $MATRIX_OS in
   macos-13)
     BINS=(
-      /usr/local/opt/autoconf/bin
-      /usr/local/opt/automake/bin
+      /usr/local/opt/make/bin
       /usr/local/opt/coreutils/libexec/gnubin
       /usr/local/opt/gnu-sed/libexec/gnubin
       /usr/local/opt/gnu-time/libexec/gnubin
+      /usr/local/opt/bin
     )
     ;;
   macos-14*)
     BINS=(
+      # Should be in main bin:
+      # /opt/homebrew/opt/autoconf/libexec/gnubin
+      # /opt/homebrew/opt/automake/libexec/gnubin
+      /opt/homebrew/opt/make/libexec/gnubin
       /opt/homebrew/opt/coreutils/libexec/gnubin
       /opt/homebrew/opt/gnu-sed/libexec/gnubin
       /opt/homebrew/opt/gnu-time/libexec/gnubin
@@ -105,6 +108,15 @@ case $MATRIX_OS in
     )
     ;;
 esac
+
+for BIN in ${BINS[@]}
+do
+  if [[ ! -d ${BIN} ]]
+  then
+    echo "BIN does not exist: $BIN"
+    exit 1
+  fi
+done
 
 echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 {
