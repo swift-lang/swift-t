@@ -1,5 +1,5 @@
 #!/bin/zsh
-set -eu
+set -eux
 
 # JENKINS ANACONDA SH
 # Test the Swift/T Anaconda packages
