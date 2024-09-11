@@ -35,6 +35,8 @@ esac
 
 # Basic Mac packages:
 PKGS_MAC=(
+  autoconf
+  automake
   coreutils
   # To resolve the sed -i problem on Mac
   gnu-sed
