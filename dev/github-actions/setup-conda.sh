@@ -51,6 +51,8 @@ case $MATRIX_OS in
     ;;
   "macos-13")
     # macos-13 already has autoconf, automake
+    set -x
+    ls /usr/local/opt/
     PKGS=( ${PKGS_MAC[@]} )
     ;;
   "macos-14")
