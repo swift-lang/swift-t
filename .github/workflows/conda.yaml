@@ -43,7 +43,7 @@ jobs:
           dev/github-actions/setup-conda.sh ${{ matrix.os }}
 
       - name: Build Anaconda package
-      - run: |
+        run: |
           dev/jenkins/anaconda.sh
 
       - name: Report Swift/T version info
