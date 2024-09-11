@@ -42,9 +42,16 @@ jobs:
       - name: Setup dependencies
         run: |
           dev/github-actions/setup-conda.sh ${{ matrix.os }}
+
+      - name: Save tool.log
+        uses: actions/upload-artifact@v4
         with:
           name: tool-log
           path: tool.log
+
+      - name: Check tool.log
+        run: |
+          grep "SUCCESS" tool.log
 
       - name: Build Anaconda package
         run: |
