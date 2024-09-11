@@ -28,6 +28,8 @@ then
   PKGS=(
     # To resolve the sed -i problem on Mac
     gnu-sed
+    # For consistent timing messages:
+    gnu-time
   )
   brew update >& tool.log
 elif [[ $MATRIX_OS == "macos-14-arm64" ]]
