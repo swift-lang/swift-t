@@ -35,7 +35,6 @@ esac
 
 # Basic Mac packages:
 PKGS_MAC=(
-  autoconf
   automake
   coreutils
   # To resolve the sed -i problem on Mac
@@ -50,7 +49,7 @@ case $MATRIX_OS in
     PKGS=( zsh )
     ;;
   "macos-13")
-    # macos-13 already has autoconf, automake
+    # macos-13 already has autoconf
     set -x
     ls /usr/local/opt/
     PKGS=( ${PKGS_MAC[@]} )
@@ -58,13 +57,11 @@ case $MATRIX_OS in
   "macos-14")
     PKGS=( ${PKGS_MAC[@]}
            autoconf
-           automake
          )
     ;;
   "macos-14-arm64")
     PKGS=( ${PKGS_MAC[@]}
            autoconf
-           automake
          )
     ;;
   *)
@@ -92,6 +89,8 @@ fi
 case $MATRIX_OS in
   macos-13)
     BINS=(
+      /usr/local/opt/autoconf/bin
+      /usr/local/opt/automake/bin
       /usr/local/opt/coreutils/libexec/gnubin
       /usr/local/opt/gnu-sed/libexec/gnubin
       /usr/local/opt/gnu-time/libexec/gnubin
@@ -102,7 +101,7 @@ case $MATRIX_OS in
       /opt/homebrew/opt/coreutils/libexec/gnubin
       /opt/homebrew/opt/gnu-sed/libexec/gnubin
       /opt/homebrew/opt/gnu-time/libexec/gnubin
-      /opt/homebrew/opt/bin
+      /opt/homebrew/bin
     )
     ;;
 esac
