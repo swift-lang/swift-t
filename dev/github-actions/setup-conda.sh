@@ -31,7 +31,7 @@ then
     # For consistent timing messages:
     gnu-time
   )
-  brew update >& tool.log
+  # brew update >& tool.log
 elif [[ $MATRIX_OS == "macos-14-arm64" ]]
 then
   TOOL=( brew install )
