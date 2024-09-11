@@ -51,7 +51,7 @@ jobs:
 
       - name: Check tool.log
         run: |
-          grep "SUCCESS" tool.log
+          grep "setup-conda: SUCCESS" tool.log
 
       - name: Build Anaconda package
         run: |
