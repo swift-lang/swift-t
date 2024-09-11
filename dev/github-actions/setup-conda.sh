@@ -58,7 +58,7 @@ fi
 if (
   set -eux
   ${TOOL[@]} ${PKGS[@]}
-) # 2>&1 >> tool.log
+) 2>&1 >> tool.log
 then
   COUNT=${#PKGS[@]}
   T=$(( SECONDS - START ))
