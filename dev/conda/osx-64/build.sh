@@ -14,6 +14,10 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
   echo CONDA_EXE=$CONDA_EXE
   CONDA=$( dirname $( dirname $CONDA_EXE ) )
   # OpenJDK home should be under MINICONDA/pkgs/openjdk-*
+  echo FIND JAVA
+  conda list
+  set -x
+  find $CONDA -name java
   OPENJDK=( $( find $CONDA/pkgs -type d -name "openjdk-*" ) )
   if (( ${#OPENJDK} == 0 ))
   then
