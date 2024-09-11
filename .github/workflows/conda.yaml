@@ -41,7 +41,7 @@ jobs:
 
       - name: Setup dependencies
         run: |
-          dev/github-actions/setup-conda.sh ${{ matrix.os }}
+          dev/github-actions/check setup-conda.sh ${{ matrix.os }}
 
       - name: Save tool.log
         uses: actions/upload-artifact@v4
