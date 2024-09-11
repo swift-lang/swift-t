@@ -14,14 +14,6 @@ set -eux
 # JENKINS_HOME:  Set by Jenkins, else unset
 # GITHUB_ACTION: Set by GitHub,  else unset
 
-
-if [[ -d /opt/homebrew/opt/gnu-time/libexec/gnubin ]] {
-ls /opt/homebrew/opt/gnu-time/libexec/gnubin
-}
-command which time
-
-exit
-
 setopt PUSHD_SILENT
 
 # Defaults:
