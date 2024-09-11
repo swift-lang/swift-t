@@ -86,6 +86,8 @@ if [[ ${RUNNER_OS:-0} == "macOS" ]] {
 #                     in our Anaconda builder
    set -x
    uname -a
+   which automake autoconf make
+   make -v
 if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
   # On GitHub, we may be on ARM:
   CONDA_ARCH="arm64"
