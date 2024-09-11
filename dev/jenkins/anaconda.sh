@@ -8,6 +8,7 @@ set -eu
 # May be run interactively, just set environment variable WORKSPACE
 #     and clone Swift/T in that location (which is what Jenkins does)
 # Also runs as GitHub action via /.github/workflows/conda.yaml
+#      in which case we create artifact anaconda.log
 
 # Environment:
 # WORKSPACE:     A working directory set by Jenkins
@@ -32,7 +33,10 @@ log()
 }
 
 # If on GitHub, pretend we are in Jenkins:
-if [[ ${GITHUB_ACTION:-0} != 0 ]] WORKSPACE=$RUNNER_TEMP
+if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+  log "Start..." >> anaconda.log
+  WORKSPACE=$RUNNER_TEMP
+}
 if [[ ${WORKSPACE:-0} == 0 ]] {
   log "Set WORKSPACE!"
   exit 1
