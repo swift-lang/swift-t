@@ -221,3 +221,11 @@ print
 log "SWIFT/T OK."
 log "PKG=$PKG"
 print
+
+if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+  # Record success if on GitHub:
+  {
+    log "SUCCESS"
+    log "PKG=$PKG"
+  } >> anaconda.log
+}
