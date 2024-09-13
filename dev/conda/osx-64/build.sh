@@ -65,6 +65,6 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
   echo "build.sh: calling build-generic.sh ..."
   $DEV_CONDA/build-generic.sh
-)
+) 2>&1 | dd
 
 echo "build.sh: STOP"
