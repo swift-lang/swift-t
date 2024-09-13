@@ -1,5 +1,11 @@
 name: Conda Build 🐍
 
+# Build the Swift/T Anaconda package
+
+env:
+  # For Chicago time on log messages:
+  TZ: CST6CDT
+
 on:
   # Schedule and workflow_dispatch (manual) only work on default branch
   schedule:
