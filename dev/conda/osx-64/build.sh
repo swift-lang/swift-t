@@ -14,7 +14,9 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
   echo CONDA_EXE=$CONDA_EXE
   CONDA=$( dirname $( dirname $CONDA_EXE ) )
   # OpenJDK home should be under MINICONDA/pkgs/openjdk-*
-  # Should be in MINICONDA/bin
+  # Should be in MINICONDA/bin but is not on any system
+  # On Linux it is under           $CONDA/pkgs/openjdk-*/lib/jvm/bin
+  # On GitHub macos-13 it is under $CONDA/lib/jvm/bin
   echo FIND JAVA
   which java javac || true
   conda list
@@ -22,20 +24,31 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
   which java javac || true
   echo $PATH
   set -x
+  FOUND_JDK=0
   find $CONDA -name java
-  OPENJDK=( $( find $CONDA/pkgs -type d -name "openjdk-*" ) )
-  if (( ${#OPENJDK} == 0 ))
+  JDKS=( $( find $CONDA/pkgs -type d -name "openjdk-*" ) )
+  if (( ${#JDKS} > 0 ))
+  then
+    JDK_BIN=${JDKS[0]}/lib/jvm/bin
+    if ! [[ -d $JDK_BIN ]]
+    then
+      echo "build.sh: Broken JVM directory structure in $CONDA"
+      exit 1
+    fi
+    FOUND_JDK=1
+  fi
+  if [[ -d $CONDA/lib/jvm/bin ]]
+  then
+    JDK_BIN=$CONDA/lib/jvm/bin
+    FOUND_JDK=1
+  fi
+  if (( ! FOUND_JDK ))
   then
     echo "build.sh: Could not find OpenJDK in $CONDA"
     exit 1
   fi
-  if ! [[ -d ${OPENJDK[0]}/lib/jvm/bin ]]
-  then
-    echo "build.sh: Could not find OpenJDK binaries in $CONDA"
-    exit 1
-  fi
-  echo "build.sh: Found OpenJDK: $OPENJDK"
-  PATH=${OPENJDK[0]}/lib/jvm/bin:$PATH
+  echo "build.sh: Found OpenJDK bin directory: $JDK_BIN"
+  PATH=$JDK_BIN:$PATH
   which java javac
 
   if (( ${ENABLE_R:-0} ))
