@@ -15,6 +15,7 @@ fi
 
 PATH=dev/github-actions:$PATH
 
+# Run the arguments here!
 if ! ${*}
 then
   echo "CHECK FAILED: ${*}"
