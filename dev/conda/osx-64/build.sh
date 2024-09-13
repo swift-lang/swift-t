@@ -20,7 +20,10 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
   echo FIND JAVA PREFIX $PREFIX
   which java javac || true
   conda list
-  source $PREFIX/etc/profile.d/conda.sh
+  # Does not exist:
+  # source $PREFIX/etc/profile.d/conda.sh
+  set -x
+  find $PREFIX
   which java javac || true
   echo $PATH
   set -x
