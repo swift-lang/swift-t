@@ -10,36 +10,36 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 (
   set -eu
 
-  # Find Java bin directory
-  echo CONDA_EXE=$CONDA_EXE
-  CONDA=$( dirname $( dirname $CONDA_EXE ) )
-  # OpenJDK home should be under MINICONDA/pkgs/openjdk-*
-  # Should be in MINICONDA/bin but is not on any system
-  # On Linux it is under           $CONDA/pkgs/openjdk-*/lib/jvm/bin
-  # On GitHub macos-13 it is under $CONDA/lib/jvm/bin
-  echo FIND JAVA
+  # Find Java bin directory in Conda PREFIX sandbox
+  # echo CONDA_EXE=$CONDA_EXE
+  # CONDA=$( dirname $( dirname $CONDA_EXE ) )
+  # OpenJDK home should be under PREFIX/pkgs/openjdk-*
+  # Should be in PREFIX/bin but is not on any system
+  # On Linux it is under           $PREFIX/pkgs/openjdk-*/lib/jvm/bin
+  # On GitHub macos-13 it is under $PREFIX/lib/jvm/bin
+  echo FIND JAVA PREFIX $PREFIX
   which java javac || true
   conda list
-  source $CONDA/etc/profile.d/conda.sh
+  source $PREFIX/etc/profile.d/conda.sh
   which java javac || true
   echo $PATH
   set -x
   FOUND_JDK=0
-  find $CONDA -name java
-  JDKS=( $( find $CONDA/pkgs -type d -name "openjdk-*" ) )
+  find $PREFIX -name java
+  JDKS=( $( find $PREFIX/pkgs -type d -name "openjdk-*" ) )
   if (( ${#JDKS} > 0 ))
   then
     JDK_BIN=${JDKS[0]}/lib/jvm/bin
     if ! [[ -d $JDK_BIN ]]
     then
-      echo "build.sh: Broken JVM directory structure in $CONDA"
+      echo "build.sh: Broken JVM directory structure in $PREFIX"
       exit 1
     fi
     FOUND_JDK=1
   fi
-  if [[ -d $CONDA/lib/jvm/bin ]]
+  if [[ -d $PREFIX/lib/jvm/bin ]]
   then
-    JDK_BIN=$CONDA/lib/jvm/bin
+    JDK_BIN=$PREFIX/lib/jvm/bin
     FOUND_JDK=1
   fi
   if (( ! FOUND_JDK ))
