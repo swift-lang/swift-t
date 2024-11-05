@@ -20,4 +20,11 @@ rm -fr $WORKSPACE/sfw/Miniconda
   bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda
 )
 
-$WORKSPACE/sfw/Miniconda/bin/python -c 'print("Python works.")'
+PATH=$WORKSPACE/sfw/Miniconda/bin:$PATH
+
+set -x
+which python
+python -c 'print("Python works.")'
+
+# Needed for javac
+conda install openjdk
