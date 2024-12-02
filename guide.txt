@@ -175,7 +175,7 @@ link:sites.html#_mac_os_x[see here].
 If you have difficulties with compiler compatibility,
 please <<support,contact us>>.
 
-==== Installation of Swift/T from Source
+==== Installation of Swift/T from source
 
 Once you have found all prerequisites, we can continue with building
 Swift/T from source.
