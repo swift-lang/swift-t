@@ -184,14 +184,14 @@ Swift/T from source.
 link:downloads.html[Downloads page] or via +wget+:
 +
 ----
-$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.4.tar.gz
+$ wget http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.5.tar.gz
 ----
 +
 2. Unpack and enter package directory
 +
 ----
-$ tar xfz swift-t-1.6.4.tar.gz
-$ cd swift-t-1.6.4
+$ tar xfz swift-t-1.6.5.tar.gz
+$ cd swift-t-1.6.5
 ----
 +
 3. Create a settings file by running:
