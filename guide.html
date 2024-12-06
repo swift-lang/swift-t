@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.6.5, September 2024</span><br />
+<span id="author">v1.6.5, December 2024</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1690,6 +1690,11 @@ paths or relative paths are specified, with relative paths interpreted
 relative to the path in which <code>turbine</code> was run.
 File variables can also be written by assiging a pre-existing
 file using the <a href="#library_files"><code>input()</code></a> function.</p></div>
+<div class="paragraph"><p>The rational for mappers is that the string variable for the filename
+is usually set early in the workflow, but the file does not yet exist,
+so <a href="#dataflow">[dataflow]</a> evaluation should block on the existence of the file,
+not the existence of the string.  Mappers establish the relationship
+between these string filenames and the files they name.</p></div>
 <div class="paragraph"><p>For example, if <code>/home/user/in.txt</code> is a file with some data in it,
 the following Swift program will copy the file to <code>/home/user/out.txt</code>.</p></div>
 <div class="listingblock">
@@ -6850,7 +6855,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-12-02 15:51:35 CST
+ 2024-12-06 11:06:24 CDT
 </div>
 </div>
 
