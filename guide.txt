@@ -649,6 +649,12 @@ relative to the path in which +turbine+ was run.
 File variables can also be written by assiging a pre-existing
 file using the <<library_files,+input()+>> function.
 
+The rational for mappers is that the string variable for the filename
+is usually set early in the workflow, but the file does not yet exist,
+so <<dataflow,dataflow>> evaluation should block on the existence of the file,
+not the existence of the string.  Mappers establish the relationship
+between these string filenames and the files they name.
+
 For example, if +/home/user/in.txt+ is a file with some data in it,
 the following Swift program will copy the file to +/home/user/out.txt+.
 ----
