@@ -52,7 +52,7 @@ jobs:
       - name: Save setup-conda.log
         uses: actions/upload-artifact@v4
         with:
-          name: setup-conda-log
+          name: setup-conda-log-${{ matrix.os }}-py${{ matrix.python-version }}
           path: setup-conda.log
 
       - name: Check setup-conda.log
@@ -66,7 +66,7 @@ jobs:
       - name: Save anaconda.log
         uses: actions/upload-artifact@v4
         with:
-          name: anaconda-log
+          name: anaconda-log-${{ matrix.os }}-py${{ matrix.python-version }}
           path: anaconda.log
 
       - name: Check anaconda.log
