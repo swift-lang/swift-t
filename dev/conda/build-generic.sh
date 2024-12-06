@@ -94,7 +94,7 @@ then
   fi
   export R_HOME=$( R RHOME )
 
-  echo "build-generic.sh: Installing RInside ..."
+  echo "build-generic.sh: Installing RInside into $R_HOME ..."
   Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
     tee $RECIPE_DIR/install-RInside.log
   if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log
