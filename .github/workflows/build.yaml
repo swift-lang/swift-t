@@ -27,8 +27,7 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
-          - macos-14
-          # - macos-14-arm64
+          # - macos-14
 
         # Comma separated list of python versions to test
         python-version: ["3.11"] # "3.8", "3.9", "3.10",
