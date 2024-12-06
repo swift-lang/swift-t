@@ -32,11 +32,11 @@ jobs:
         os:
           - ubuntu-latest
           # - macos-13
-          # - macos-14  # This is ARM64
+          - macos-14  # This is ARM64
           # - macos-14-arm64
 
         # Comma separated list of python versions to test
-        python-version: ["3.11"] # "3.9",
+        python-version: ["3.11", "3.12"] # "3.9",
 
         mpi:
           - mpich
