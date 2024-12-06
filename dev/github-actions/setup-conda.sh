@@ -10,6 +10,10 @@ MATRIX_OS=$1
 
 START=$SECONDS
 
+echo "dev/github-actions/setup-conda.sh: START" \
+     $(date "+%Y-%m-%d %H:%M")                  \
+     >> tool.log
+
 log()
 {
   printf "setup-conda: %s\n" "$*"
@@ -22,11 +26,13 @@ log "Start..." >> tool.log
 # Set up tools:
 case $MATRIX_OS in
   "ubuntu-latest")
+    log "apt install..." >> tool.log
     TOOL=( sudo apt-get install --yes )
     ;;
   macos-*)
     TOOL=( brew install )
-    brew update >& tool.log
+    log "brew update..." >> tool.log
+    brew update 2>&1     >> tool.log
     ;;
   *)
     log "unknown OS: $MATRIX_OS"
