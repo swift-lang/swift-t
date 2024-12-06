@@ -16,7 +16,7 @@ help()
   cat <<EOF
 USAGE: Provide PKG
        Provide -D to skip installing dependencies
-       Provide -P PLATFORM to change the PLATFORM
+       Provide -P PLATFORM to change the CONDA_PLATFORM
                (else auto-detected from PKG directory)
                This is used when e.g. installing a PKG
                from a failed conda-build that is left in conda-bld/broken/
@@ -47,14 +47,14 @@ print "PKG=$PKG"
 # PKG is of form
 # ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
 if (( ${#P} )) {
-  PLATFORM=${P[2]}
+  CONDA_PLATFORM=${P[2]}
 } else {
-  # Pull out PLATFORM directory (head then tail):
-  PLATFORM=${PKG:h:t}
+  # Pull out CONDA_PLATFORM directory (head then tail):
+  CONDA_PLATFORM=${PKG:h:t}
 }
 
 # Force solver=classic on osx-arm64
-if [[ $PLATFORM == "osx-arm64" ]] SOLVER=( --solver classic )
+if [[ $CONDA_PLATFORM == "osx-arm64" ]] SOLVER=( --solver classic )
 
 # Bring in utilities
 # Get this directory (absolute):
@@ -65,7 +65,7 @@ source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
 source $DEV_CONDA/helpers.zsh
 
 # Echo back platform and package statistics to the user
-print "PLATFORM=$PLATFORM"
+print "CONDA_PLATFORM=$CONDA_PLATFORM"
 zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
 printf "PKG: timestamp: %s size: %.1f MB\n" \
@@ -93,7 +93,7 @@ USE_ANT=1
 USE_GCC=1
 USE_ZSH=1
 
-source $DEV_CONDA/$PLATFORM/deps.sh
+source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 # Build dependency list:
 LIST=()
@@ -111,7 +111,7 @@ LIST+=(
 
 # R switch
 if (( USE_R )) {
-  if [[ $PLATFORM == "osx-arm64" ]] {
+  if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     LIST+="swift-t::emews-rinside"
   } else {
     # Use plain r on all other platforms:
