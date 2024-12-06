@@ -4,7 +4,7 @@ set -eu
 # SETUP CONDA
 # Sets up system tools for an Anaconda Swift/T build
 # For any matrix.os
-# Produces artifact tool.log, which is checked by subsequent steps
+# Produces artifact setup-conda.log, which is checked by subsequent steps
 
 MATRIX_OS=$1
 
@@ -12,7 +12,7 @@ START=$SECONDS
 
 echo "dev/github-actions/setup-conda.sh: START" \
      $(date "+%Y-%m-%d %H:%M")                  \
-     >> tool.log
+     >> setup-conda.log
 
 log()
 {
@@ -21,18 +21,18 @@ log()
 
 log "Installing dependencies for OS=$MATRIX_OS ..."
 # Create initial timestamp:
-log "Start..." >> tool.log
+log "Start..." >> setup-conda.log
 
 # Set up tools:
 case $MATRIX_OS in
   "ubuntu-latest")
-    log "apt install..." >> tool.log
+    log "apt install..." >> setup-conda.log
     TOOL=( sudo apt-get install --yes )
     ;;
   macos-*)
     TOOL=( brew install )
-    log "brew update..." >> tool.log
-    brew update 2>&1     >> tool.log
+    log "brew update..." >> setup-conda.log
+    brew update 2>&1     >> setup-conda.log
     ;;
   *)
     log "unknown OS: $MATRIX_OS"
@@ -77,15 +77,15 @@ esac
 if (
   set -eux
   ${TOOL[@]} ${PKGS[@]}
-) 2>&1 >> tool.log
+) 2>&1 >> setup-conda.log
 then
   COUNT=${#PKGS[@]}
   T=$(( SECONDS - START ))
   log "Installed $COUNT packages in $T seconds."
 else
   log "FAILED to install packages!"
-  log "tool.log:"
-  cat  tool.log
+  log "setup-conda.log:"
+  cat  setup-conda.log
   exit 1
 fi
 
@@ -128,6 +128,6 @@ echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 {
   echo PATHS:
   echo ${BINS[@]} | fmt -w 1
-} >> tool.log
+} >> setup-conda.log
 
-log "SUCCESS" >> tool.log
+log "SUCCESS" >> setup-conda.log
