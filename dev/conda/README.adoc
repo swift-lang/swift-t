@@ -18,8 +18,11 @@ toc::[]
 We are Anaconda project `swift-t`: +
 https://anaconda.org/swift-t
 
-`swift-t`:: Swift/T
-`swift-t-r`:: Swift/T and R
+`swift-t`::
+Swift/T
+
+`swift-t-r`::
+Swift/T and R
 
 == End user interface
 
@@ -39,7 +42,6 @@ These are standard directory names:
 * `linux-64`:  "Linux on PC":  Works
 * `osx-64`:    "Mac on PC":    Works
 * `osx-arm64`: "Mac on ARM":   Works
-+
 This plaform skips Ant, the C compiler, and ZSH, and assumes they are on the user system:
 * `aarch64`:   "Linux on ARM": Works
 
@@ -145,7 +147,7 @@ Use `dev/conda/upload.sh` to automate this.
 == Dependencies
 
 `r-rinside`::
-This package does not exist for `linux-aarch-64` +
+This package does not exist for `linux-aarch-64`
 
 == M4 usage
 

@@ -322,8 +322,8 @@ endif
 HDF5_CPPFLAGS = @HDF5_CPPFLAGS@
 CFLAGS += $(DEFINES) $(INCLUDES) $(HDF5_CPPFLAGS)
 
-# LIBS: links to ADLB, c-utils, MPE, and MPI
-LIBS :=
+# LIBS: links to Tcl, ADLB, c-utils, MPE, and MPI
+LIBS := @TCL_LIB_SPEC@
 LIBS += -L$(ADLB)/lib -ladlb
 LIBS += -L$(C_UTILS)/lib -lexmcutils
 ifeq ($(ENABLE_MPE),1)
@@ -335,6 +335,7 @@ ifeq ($(ENABLE_MPE),1)
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
+  $(warning PYTHON_LIB_FLAGS $(PYTHON_LIB_FLAGS))
   LIBS += -L$(PYTHON_LIBDIR) $(PYTHON_LIB_FLAGS)
   RPATH_PYTHON = yes
 endif
@@ -367,8 +368,8 @@ else
    FIX_RINSIDE_INSTALL_NAME =
    FIX_PYTHON_INSTALL_NAME =
 endif
-
 endif
+
 ifeq ($(HAVE_JVM_SCRIPT),1)
   SWIFTTJVM_LIB = $(USE_JVM_SCRIPT_HOME)/src
   LIBS += -L$(SWIFTTJVM_LIB)/.libs -lswifttjvm

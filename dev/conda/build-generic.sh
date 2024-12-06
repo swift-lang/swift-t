@@ -113,8 +113,11 @@ then
   done
 fi
 
-if [[ $PLATFORM =~ osx-* ]]
+set -x
+if [[ $PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} != 0 ]]
 then
+  # Use this syntax on Mac, unless in GitHub,
+  #     where we install Homebrew gnu-sed
   SED_I=( sed -i "''" )
 else
   SED_I=( sed -i )
@@ -161,5 +164,8 @@ cd $PREFIX/scripts
 for file in turbine-config.sh; do
   ln -sv ../swift-t/turbine/scripts/$file .
 done
+
+set -x
+ls $PREFIX/bin
 
 echo "BUILD-GENERIC.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"

@@ -7,12 +7,19 @@ set -eu
 #                   and one in which to install the package
 # May be run interactively, just set environment variable WORKSPACE
 #     and clone Swift/T in that location (which is what Jenkins does)
+# Also runs as GitHub action via /.github/workflows/conda.yaml
+#      in which case we create artifact anaconda.log
+
+# Environment:
+# WORKSPACE:     A working directory set by Jenkins
+# JENKINS_HOME:  Set by Jenkins, else unset
+# GITHUB_ACTION: Set by GitHub,  else unset
 
 setopt PUSHD_SILENT
 
 # Defaults:
 PYTHON_VERSION="39"
-CONDA_LABEL="23.11.0-1"
+CONDA_TIMESTAMP="23.11.0-1"
 # Examples:
 # py39_23.11.0-1
 # py310_23.11.0-1
@@ -25,6 +32,11 @@ log()
   print ${(%)DATE_FMT_NICE} "anaconda.sh:" ${*}
 }
 
+# If on GitHub, pretend we are in Jenkins:
+if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+  log "Start..." >> anaconda.log
+  WORKSPACE=$RUNNER_TEMP
+}
 if [[ ${WORKSPACE:-0} == 0 ]] {
   log "Set WORKSPACE!"
   exit 1
@@ -33,8 +45,8 @@ if [[ ${WORKSPACE:-0} == 0 ]] {
 help()
 {
   cat <<EOF
--c CONDA_LABEL     default "$CONDA_LABEL"
 -p PYTHON_VERSION  default "$PYTHON_VERSION"
+-c CONDA_TIMESTAMP default "$CONDA_TIMESTAMP"
 -r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
 EOF
@@ -48,9 +60,10 @@ if (( ${#HELP} )) help
 R=""  # May become "-r"
 zparseopts -D -E -F c:=CL p:=PV r:=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
-if (( ${#CL} )) CONDA_LABEL=${CL[2]}
+if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 
-renice --priority 19 --pid $$ >& /dev/null
+if [[ ${JENKINS_HOME:-0} != 0 ]] \
+  renice --priority 19 --pid $$ >& /dev/null
 
 export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
@@ -64,8 +77,37 @@ THIS=${0:A:h}
 SWIFT_T=$THIS/../..
 SWIFT_T=${SWIFT_T:A}
 
+# Set CONDA_OS, the name for our OS in the Miniconda download:
+if [[ ${RUNNER_OS:-0} == "macOS" ]] {
+  # On GitHub, we may be on Mac:
+  CONDA_OS="MacOSX"
+} else {
+  CONDA_OS="Linux"
+}
+
+# Set CONDA_ARCH, the name for our chip in the Miniconda download:
+# Set CONDA_PLATFORM, the name for our platform
+#                     in our Anaconda builder
+   set -x
+   uname -a
+   which automake autoconf make
+   make -v
+if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
+  # On GitHub, we may be on ARM:
+  CONDA_ARCH="arm64"
+  CONDA_PLATFORM="osx-arm64"
+} else {
+  CONDA_ARCH="x86_64"
+  case $CONDA_OS {
+    MacOSX) CONDA_PLATFORM="osx-64"   ;;
+    Linux)  CONDA_PLATFORM="linux-64" ;;
+  }
+}
+set +x
+
 # The Miniconda we are working with:
-MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}-Linux-x86_64.sh
+CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
+MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
 if (( ${#R} )) log "ENABLING R"
 
@@ -73,11 +115,14 @@ if (( ${#R} )) log "ENABLING R"
 #       among Minicondas and easy to delete:
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 
+source $SWIFT_T/dev/conda/helpers.zsh
+
 task()
 # Run a command line verbosely and report the time in simple format:
 {
   log "TASK START:" ${*}
-  if /bin/time --format "TASK TIME: %E" ${*}
+  # Force use of GNU time program:
+  if =time --format "TASK TIME: %E" ${*}
   then
     log "TASK DONE:" ${*}
     CODE=0
@@ -142,7 +187,7 @@ task $SWIFT_T/dev/release/make-release-pkg.zsh -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/conda-platform.sh ${R} linux-64
+task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
 log "CHECKING PACKAGE..."
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
@@ -153,7 +198,7 @@ then
   log "Could not find the PKG at: $PKG"
   return 1
 fi
-md5sum $PKG
+checksum $PKG
 print
 
 # Enable the install environment
@@ -180,3 +225,11 @@ print
 log "SWIFT/T OK."
 log "PKG=$PKG"
 print
+
+if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+  # Record success if on GitHub:
+  {
+    log "SUCCESS"
+    log "PKG=$PKG"
+  } >> anaconda.log
+}

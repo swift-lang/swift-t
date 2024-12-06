@@ -1,7 +1,21 @@
+
 """
-Script to generate python build config paths needed to build turbine with
-embedded python interpreter support. Requires python 2.6+.
+PYTHON CONFIG PY
+
+Generates Python build config paths needed to build Turbine with
+embedded Python interpreter support using Python sysconfig .
+
+Requires Python 2.6+
+
+Usage:
+  --list    Show all configuration variables available from sysconfig
+  --all     Show all configuration variables relevant to Turbine
+  --debug   Like --all but pretty-print and include some debug info
+            on stderr
+  --help    Show individual configuration variable selection flags
+  --flag*   Show one or more individual configuration variables
 """
+
 from __future__ import print_function
 
 import sys
@@ -9,6 +23,8 @@ import optparse
 import sysconfig
 import os.path
 
+
+debug = False
 
 CONFIG_NAMES = [
     'include-dir', 'include-flags',
@@ -21,9 +37,22 @@ def print_usage(prog_name):
           + ' | '.join('--' + name for name in CONFIG_NAMES))
 
 
+def align_kv(k, v):
+    indent = "  " if debug else ""
+    print("%s%-14s %s" % (indent, k, v))
+
+
+def debug_kv(k, v):
+    if not debug: return
+    sys.stderr.write("  %-14s %s\n" % (k, v))
+
+
 def get_lib_name():
     # LDLIBRARY has format libpythonX.Yz.so
-    lib_file = sysconfig.get_config_var('LDLIBRARY')
+    # Bryce used LDLIBRARY c. 2017
+    # Seems that we should now use LIBRARY as of 2024-09-09
+    lib_file = sysconfig.get_config_var('LIBRARY')
+    debug_kv("LIBRARY", lib_file)
     lib_name = os.path.splitext(lib_file)[0]
     if lib_name.startswith('lib'):
         lib_name = lib_name[3:]
@@ -61,14 +90,35 @@ def get_config_value(name):
     return value
 
 
+def show_debug(names):
+    global debug
+    debug = True
+    for name in names:
+        align_kv(name, get_config_value(name))
+
+
+def show_list():
+    global debug
+    debug = True
+    for k, v in sysconfig.get_config_vars().items():
+        align_kv(k, v)
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print_usage(sys.argv[0])
         sys.exit(1)
-    if sys.argv[1] == '--help':
+    elif sys.argv[1] == '--help':
         print_usage(sys.argv[0])
         sys.exit(0)
-    if sys.argv[1] == '--all':
+    elif sys.argv[1] == '--debug':
+        show_name = True
+        names = CONFIG_NAMES
+        show_debug(names)
+        sys.exit(0)
+    elif sys.argv[1] == '--list':
+        show_list()
+        sys.exit(0)
+    elif sys.argv[1] == '--all':
         show_name = True
         names = CONFIG_NAMES
     else:
@@ -83,7 +133,7 @@ if __name__ == '__main__':
     for name in names:
         try:
             if show_name:
-                print("%-14s" % name, get_config_value(name))
+                print(name, get_config_value(name))
             else:
                 print(get_config_value(name))
         except ValueError:

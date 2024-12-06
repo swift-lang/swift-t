@@ -2,6 +2,7 @@
 set -eu
 
 # CONDA PLATFORM
+# Build conda for a given PLATFORM
 # Dependency files are in the PLATFORM directory
 # Generated scripts and log files are put in the PLATFORM directory
 # Arguments:

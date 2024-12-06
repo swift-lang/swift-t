@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# CHECK
+# Run job, always return success for GitHub action
+# Allows us to capture artifacts and test for success later
+# Adds dev/github-actions to PATH to shorten commands
+
+echo "CHECK: ${*}"
+
+if [ ! -d dev/github-actions ]
+then
+  echo "CHECK: MISCONFIGURATION!"
+  exit 1
+fi
+
+PATH=dev/github-actions:$PATH
+
+# Run the arguments here!
+if ! ${*}
+then
+  echo "CHECK FAILED: ${*}"
+fi
+
+# Always succeeds.
