@@ -81,8 +81,10 @@ bash init-settings.sh
 
 SETTINGS_SED=$RECIPE_DIR/settings.sed
 
-if (( ENABLE_R == 1 )) && [[ $PLATFORM != "osx-arm64" ]]
+if (( ENABLE_R == 1 ))
 then
+  # For the R-enabled installer, we build/install RInside into our
+  #     Anaconda R installation, and install [de]activate scripts.
   echo
   echo "build-generic.sh: Checking R ..."
   if ! which R
