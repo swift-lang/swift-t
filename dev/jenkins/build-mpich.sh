@@ -69,7 +69,7 @@ dev/build/init-settings.sh
 
 # Pre-installed tools:
 PATH=/home/woz/Public/sfw/ant-1.9.4/bin:$PATH
-PATH=/home/woz/Public/sfw/x86_64/jdk-1.8.0_91/bin:$PATH
+PATH=/nfs/gce/projects/Swift-T/sfw/x86_64/jdk-20.0.1/bin:$PATH
 
 # Products from other Jenkins projects:
 MPICH=$WORKSPACE_ROOT/Swift-T-MPICH/sfw/mpich-4.0.3
