@@ -79,6 +79,11 @@ PYTHON_EXE=$PYTHON/bin/python
 PATH=$PYTHON/bin:$PATH
 PATH=$MPICH/bin:$PATH
 
+(
+  set -x
+  which javac ant mpicc python
+)
+
 # Create a sed file and apply to swift-t-settings:
 cat > settings.sed <<EOF
 /SWIFT_T_PREFIX=/s@=.*@=$SWIFT_T_SFW@
