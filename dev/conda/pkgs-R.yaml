@@ -1,7 +1,5 @@
 # pkgs-R.yaml: START
 COMMENT( Extra packages for R.                              )m4_dnl
 COMMENT( Retain indentation                                 )m4_dnl
-m4_ifelse(getenv(PLATFORM),`osx-arm64',
 `    - r=getenv(R_VERSION)'
-)
 # pkgs-R.yaml: STOP
