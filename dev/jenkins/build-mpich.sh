@@ -31,10 +31,17 @@ renice --priority 19 --pid $$ >& /dev/null
 
 source dev/helpers.sh
 
+DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
+log()
+# General-purpose log line
+{
+  print ${(%)DATE_FMT_NICE} "build-mpich.sh:" ${*}
+}
+
 # Assume failure in prior runs and this run until proven otherwise
 if [[ -f status-old.txt ]] {
   read STATUS_OLD < status-old.txt
-  print "prior STATUS_OLD=$STATUS_OLD"
+  log "prior STATUS_OLD=$STATUS_OLD"
 } else {
   STATUS_OLD=-1
 }
@@ -43,20 +50,20 @@ if (( $STATUS_OLD != 1 )) echo 1 > status-old.txt
 
 # Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
-print "New timestamp:"
+log "New timestamp:"
 git-log | tee timestamp-new.txt
 if [[ -r timestamp-old.txt ]] {
-  print "Old timestamp:"
+  log "Old timestamp:"
   cat timestamp-old.txt
   if diff -q timestamp-{old,new}.txt
   then
     GIT_CHANGED=0
   fi
 }
-print "GIT_CHANGED=$GIT_CHANGED"
+log "GIT_CHANGED=$GIT_CHANGED"
 if (( ! GIT_CHANGED )) {
   print
-  print "SKIP: Git did not change - exit STATUS_OLD=$STATUS_OLD"
+  log   "SKIP: Git did not change - exit STATUS_OLD=$STATUS_OLD"
   print
   exit $STATUS_OLD
 }
@@ -99,20 +106,29 @@ EOF
 sed -i -f settings.sed $SETTINGS
 
 print
-print "Running build-swift-t.sh ..."
+log   "Running build-swift-t.sh ..."
 # Run the build!
 dev/build/build-swift-t.sh ${B} |& tee build.out
 # Produce build.out for shell inspection later.
 
 # See if it worked:
 PATH=$SWIFT_T_SFW/stc/bin:$PATH
-set -x
-swift-t -v
-swift-t -E 'trace(42);'
+(
+  set -x
+  swift-t -v
+  swift-t -E 'trace(42);'
+)
 
 # SUCCESS: Store success exit code for future SKIP cases
-echo 0 > status-old.txt
+print
+log   "Writing success to status-old.txt ..."
+print 0 > status-old.txt
 
 # Prevent future rebuild until Git changes
 #         or someone deletes timestamp-old.txt
+log "Storing timestamp-old.txt ..."
 cp -v --backup=numbered timestamp-{new,old}.txt
+
+print
+log   "build-mpich.sh: DONE"
+print
