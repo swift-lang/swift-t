@@ -7,6 +7,8 @@ set -eu
 #     if on the correct compute server!
 #     just set environment variable WORKSPACE
 #     -> Uses hard-coded dependencies from other Jenkins projects
+# May SKIP running if git hash does not change,
+#     which re-returns prior exit code.
 
 setopt PUSHD_SILENT
 setopt PIPE_FAIL
@@ -29,6 +31,16 @@ renice --priority 19 --pid $$ >& /dev/null
 
 source dev/helpers.sh
 
+# Assume failure in prior runs and this run until proven otherwise
+if [[ -f status-old.txt ]] {
+  read STATUS_OLD < status-old.txt
+  print "prior STATUS_OLD=$STATUS_OLD"
+} else {
+  STATUS_OLD=-1
+}
+
+if (( $STATUS_OLD != 1 )) echo 1 > status-old.txt
+
 # Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
 print "New timestamp:"
@@ -41,10 +53,12 @@ if [[ -r timestamp-old.txt ]] {
     GIT_CHANGED=0
   fi
 }
-print GIT_CHANGED=$GIT_CHANGED
+print "GIT_CHANGED=$GIT_CHANGED"
 if (( ! GIT_CHANGED )) {
-  print "Git did not change - exit."
-  exit
+  print
+  print "SKIP: Git did not change - exit STATUS_OLD=$STATUS_OLD"
+  print
+  exit $STATUS_OLD
 }
 print
 
@@ -91,6 +105,9 @@ set -x
 swift-t -v
 swift-t -E 'trace(42);'
 
+# SUCCESS: Store success exit code for future SKIP cases
+echo 0 > status-old.txt
+
 # Prevent future rebuild until Git changes
 #         or someone deletes timestamp-old.txt
-cp -v timestamp-{new,old}.txt
+cp -v --backup=numbered timestamp-{new,old}.txt
