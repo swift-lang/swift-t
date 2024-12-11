@@ -1,4 +1,7 @@
 # pkgs-gcc.yaml: START
 # Extra packages for gcc
     - gcc
+m4_ifelse(getenv(USE_ZLIB),1,
+`    - zlib'
+)
 # pkgs-gcc.yaml: STOP
