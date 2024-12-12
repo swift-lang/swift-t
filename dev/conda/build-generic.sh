@@ -76,6 +76,13 @@ install -d $PREFIX/swift-t
 
 # Start build!
 cd $DEV_BUILD
+if [[ ! -f init-settings.sh ]]
+then
+  # OS may have cleaned up the /tmp directories
+  echo "build-generic.sh: Cannot find init-settings.sh!"
+  echo "build-generic.sh: PWD=$PWD"
+  exit 1
+fi
 rm -fv swift-t-settings.sh
 bash init-settings.sh
 
