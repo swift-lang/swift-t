@@ -4,15 +4,15 @@ set -o pipefail
 
 # BUILD GENERIC SH
 # Generic builder for all platforms
-# RECIPE_DIR is the PLATFORM directory
+# RECIPE_DIR is the CONDA_PLATFORM directory
 # Called internally by
-#        "conda build" -> PLATFORM/build.sh -> build-generic.sh
-# The Swift/T build output goes into PLATFORM/build-swift-t.log
-# Puts some metadata in PLATFORM/build-generic.log
+#        "conda build" -> CONDA_PLATFORM/build.sh -> build-generic.sh
+# The Swift/T build output goes into CONDA_PLATFORM/build-swift-t.log
+# Puts some metadata in CONDA_PLATFORM/build-generic.log
 #      link to work directory is important,
 #      contains meta.yaml and Swift/T source
-# If PLATFORM-specific settings are needed, put them in
-#    PLATFORM/build.sh
+# If CONDA_PLATFORM-specific settings are needed, put them in
+#    CONDA_PLATFORM/deps.sh
 
 # Environment notes:
 # Generally, environment variables are not inherited into here.
@@ -40,11 +40,11 @@ echo ENABLE_R=$ENABLE_R
   echo "ENABLE_R:   $ENABLE_R"
 } > $RECIPE_DIR/build-generic.log
 
-if [[ $PLATFORM =~ osx-* ]]
+if [[ $CONDA_PLATFORM =~ osx-* ]]
 then
   NULL=""
   ZT=""
-  if [[ $PLATFORM =~ osx-arm64 ]]
+  if [[ $CONDA_PLATFORM =~ osx-arm64 ]]
   then
     # These variables affect the mpicc/mpicxx wrappers
     export MPICH_CC=clang
@@ -121,7 +121,7 @@ then
 fi
 
 set -x
-if [[ $PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
+if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed

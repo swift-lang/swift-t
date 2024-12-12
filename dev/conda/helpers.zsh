@@ -6,7 +6,6 @@ checksum()
 {
   # Use redirection to suppress filename in program output
   local PKG=$1
-  print "checksum(CONDA_PLATFORM=$CONDA_PLATFORM)" $PKG
   if [[ $CONDA_PLATFORM =~ osx-* ]] {
     md5 -r < $PKG
   } else {

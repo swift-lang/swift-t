@@ -26,6 +26,7 @@ print  "TIME: ${A[mtime]}"
 printf "SIZE: %.1f MB\n" $(( float(${A[size]}) / (1024*1024) ))
 HASH=( $( md5sum $PKG ) )
 print "HASH: ${HASH[1]}"
+if (( ${#FORCE} )) print "FORCING!"
 
 print
 printf "CONFIRM? "

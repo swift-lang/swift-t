@@ -8,10 +8,10 @@ set -eu
 # Generates settings.sed for the Swift/T build
 # Many exported environment variables here
 #      are substituted into meta.yaml
-# This script runs in the PLATFORM subdirectory
+# This script runs in the CONDA_PLATFORM subdirectory
 #      and should not change directories
 # A LOG is produced named platform/conda-build.log
-# You can only run 1 job concurrently
+# You can only run 1 job concurrently per Anaconda installation
 #     because of the log and
 #     because of meta.yaml
 # The Swift/T source must have already been put in $TMP/distro
@@ -52,14 +52,14 @@ source $DEV_CONDA/get-python-version.sh
 # Optionally set R_VERSION from user argument:
 if (( ${#R} )) export R_VERSION=${R[2]}
 
-if (( ${#PLATFORM:-} == 0 )) {
-  log "unset: PLATFORM"
+if (( ${#CONDA_PLATFORM:-} == 0 )) {
+  log "unset: CONDA_PLATFORM"
   log "       This script should be called by a conda-platform.sh"
   return 1
 }
 
-log "VERSION:  $SWIFT_T_VERSION"
-log "PLATFORM: $PLATFORM $*"
+log "SWIFT/T VERSION: $SWIFT_T_VERSION"
+log "CONDA_PLATFORM:  $CONDA_PLATFORM $*"
 
 # This is passed into meta.yaml:
 export DISTRO=$TMP/distro
@@ -115,7 +115,7 @@ export USE_ZLIB=0
 export USE_ZSH=1
 
 # Allow platform to modify dependencies
-source $DEV_CONDA/$PLATFORM/deps.sh
+source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 export DATE=${(%)DATE_FMT_S}
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
@@ -134,7 +134,7 @@ if [[ -f $LOG ]] {
   print
 }
 
-if (( ENABLE_R )) && [[ $PLATFORM == "osx-arm64" ]] {
+if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   # This is just for our emews-rinside:
   CHANNEL_SWIFT=( -c swift-t )
 } else {
