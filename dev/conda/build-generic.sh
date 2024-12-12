@@ -120,7 +120,6 @@ then
   done
 fi
 
-set -x
 if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
 then
   # Use this syntax on Mac, unless in GitHub,
