@@ -38,15 +38,13 @@ log()
   print ${(%)DATE_FMT_NICE} "build-mpich.sh:" ${*}
 }
 
-# Assume failure in prior runs and this run until proven otherwise
+# Load any prior exit status codes
 if [[ -f status-old.txt ]] {
   read STATUS_OLD < status-old.txt
   log "prior STATUS_OLD=$STATUS_OLD"
 } else {
   STATUS_OLD=-1
 }
-
-if (( $STATUS_OLD != 1 )) echo 1 > status-old.txt
 
 # Look at timestamps left by previous runs and see if git has changed
 GIT_CHANGED=1
@@ -68,6 +66,9 @@ if (( ! GIT_CHANGED )) {
   exit $STATUS_OLD
 }
 print
+
+# Assume this run will fail:
+if (( $STATUS_OLD != 1 )) echo 1 > status-old.txt
 
 # Define and reset the settings file:
 SETTINGS=dev/build/swift-t-settings.sh
