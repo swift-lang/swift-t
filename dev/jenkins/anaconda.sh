@@ -191,9 +191,12 @@ task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
 log "CHECKING PACKAGE in $BLD_DIR ..."
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
-if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $BLD_DIR/repodata.json )
+if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py -v \
+                   $BLD_DIR/repodata.json )
 then
+  print
   log "CHECKING PACKAGE FAILED!"
+  print
   return 1
 fi
 PKG=$BLD_DIR/$BZ2
