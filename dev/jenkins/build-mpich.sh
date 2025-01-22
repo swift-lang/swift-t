@@ -53,6 +53,7 @@ git-log | tee timestamp-new.txt
 if [[ -r timestamp-old.txt ]] {
   log "Old timestamp:"
   cat timestamp-old.txt
+  log "Running diff:"
   if diff -q timestamp-{old,new}.txt
   then
     GIT_CHANGED=0
