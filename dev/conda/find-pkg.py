@@ -10,6 +10,8 @@ import argparse, json, os, sys
 
 parser = argparse.ArgumentParser(description="Show the package name")
 parser.add_argument("filename", help="The repodata.json file")
+parser.add_argument("-v", action="store_true",
+                    help="Make verbose")
 args = parser.parse_args()
 
 def fail(msg):
@@ -22,8 +24,9 @@ if not os.path.exists(args.filename):
 with open(args.filename, "r") as fp:
     J = json.load(fp)
 
-# print(str(J))
-# print(str(J["packages"]))
+if args["v"]:
+    print(str(J))
+    print(str(J["packages"]))
 
 P = J["packages"]
 if len(P) != 1:
