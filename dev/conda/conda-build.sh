@@ -180,7 +180,7 @@ PKG=${UPLOAD[-1]}
   zmodload zsh/mathfunc zsh/stat
   print PKG=$PKG
   zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-  log  "TIME: ${A[mtime]} ${A[size]}"
+  log  "TIME: ${A[mtime]}"
   printf -v T "SIZE: %.1f MB" $(( float(${A[size]}) / (1024*1024) ))
   log $T
   log "HASH:" $( checksum $PKG )
