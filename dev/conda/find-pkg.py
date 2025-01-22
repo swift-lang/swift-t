@@ -27,7 +27,8 @@ with open(args.filename, "r") as fp:
 
 P = J["packages"]
 if len(P) != 1:
-    fail("find-pkg.py: package count not 1!")
+    print("find-pkg.py: found packages: " + str(P))
+    fail("package count is %i not 1!" % len(P))
 
 pkg = list(P.keys())[0]
 print(pkg)
