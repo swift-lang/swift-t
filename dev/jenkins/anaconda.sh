@@ -189,9 +189,13 @@ task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
 task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
-log "CHECKING PACKAGE..."
+log "CHECKING PACKAGE in $BLD_DIR ..."
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
-BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $BLD_DIR/repodata.json )
+if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $BLD_DIR/repodata.json )
+then
+  log "CHECKING PACKAGE FAILED!"
+  return 1
+fi
 PKG=$BLD_DIR/$BZ2
 if ! ls -l $PKG
 then
