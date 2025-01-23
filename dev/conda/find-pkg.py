@@ -5,8 +5,10 @@
 #      and reported to the user in repodata.json
 # We can also find the pkg name from the message
 #      from 'conda build' saying "anaconda upload"
+# NOTE: Logging output must go on stderr,
+#       stdout is captured by the shell script!
 
-import argparse, json, os, sys
+import argparse, json, os
 
 parser = argparse.ArgumentParser(description="Show the package name")
 parser.add_argument("filename", help="The repodata.json file")
@@ -14,8 +16,12 @@ parser.add_argument("-v", action="store_true",
                     help="Make verbose")
 args = parser.parse_args()
 
+def say(msg):
+    import sys
+    sys.stderr.write("find-pkg.py: " + str(msg) + "\n")
+
 def fail(msg):
-    sys.stderr.write("find-pkg.py: " + msg + "\n")
+    say(msg)
     exit(1)
 
 if not os.path.exists(args.filename):
@@ -24,14 +30,24 @@ if not os.path.exists(args.filename):
 with open(args.filename, "r") as fp:
     J = json.load(fp)
 
-if args.v:
-    print(str(J))
-    print(str(J["packages"]))
+# This was "packages" in older versions:
+pkg_key = "packages.conda"
 
-P = J["packages"]
+def show_repodata(J):
+    say("full JSON:")
+    say(J)
+    say("key: '%s'" % pkg_key)
+    say(J[pkg_key])
+
+if args.v:
+    show_repodata(J)
+
+P = J[pkg_key]
 if len(P) != 1:
-    print("find-pkg.py: found packages: " + str(P))
-    fail("package count is %i not 1!" % len(P))
+    say("found packages: " + str(P))
+    say("package count is %i not 1!" % len(P))
+    show_repodata(J)
+    fail("FAIL.")
 
 pkg = list(P.keys())[0]
 print(pkg)
