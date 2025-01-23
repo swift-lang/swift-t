@@ -24,7 +24,7 @@ if not os.path.exists(args.filename):
 with open(args.filename, "r") as fp:
     J = json.load(fp)
 
-if args["v"]:
+if args.v:
     print(str(J))
     print(str(J["packages"]))
 
