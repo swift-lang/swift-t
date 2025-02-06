@@ -57,7 +57,7 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
-R=""  # May become "-r"
+R=""  # May become ( -r R_VERSION )
 zparseopts -D -E -F c:=CL p:=PV r:=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
