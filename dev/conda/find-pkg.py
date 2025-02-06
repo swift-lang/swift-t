@@ -8,7 +8,7 @@
 # NOTE: Logging output must go on stderr,
 #       stdout is captured by the shell script!
 
-import argparse, json, os
+import argparse, json, os, sys
 
 parser = argparse.ArgumentParser(description="Show the package name")
 parser.add_argument("filename", help="The repodata.json file")
@@ -30,8 +30,12 @@ if not os.path.exists(args.filename):
 with open(args.filename, "r") as fp:
     J = json.load(fp)
 
-# This was "packages" in older versions:
-pkg_key = "packages.conda"
+# This key seems to change by version:
+if sys.version_info.minor == 8:
+    # Python 3.8.18 2025-02-06:
+    pkg_key = "packages"
+else:
+    pkg_key = "packages.conda"
 
 def show_repodata(J):
     say("full JSON:")
