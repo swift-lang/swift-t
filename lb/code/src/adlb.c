@@ -224,6 +224,8 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
   rc = MPI_Comm_rank(comm, &comm_rank);
   MPI_CHECK(rc);
 
+  DEBUG("ADLB: RANK: %i/%i", comm_rank, comm_size);
+
   struct xlb_hostnames hostnames;
   code = xlb_hostnames_gather(comm, &hostnames);
   ADLB_CHECK(code);
