@@ -24,10 +24,14 @@
 
 #include <table_lp.h>
 
-static const adlb_dsym_data NULL_DATA = { .name = NULL,
-                                                  .context = NULL };
+static const adlb_dsym_data NULL_DATA =
+{
+  .name = NULL,
+  .context = NULL
+};
 
-typedef struct {
+typedef struct
+{
   char *name;
   char *context;
 } symbol_table_entry;
@@ -40,7 +44,7 @@ static bool dsyms_init = false;
  */
 static struct table_lp dsyms;
 
-static void dsym_free_cb(int64_t key, void *data)
+static void dsym_free_cb(unused int64_t key, void *data)
 {
   symbol_table_entry *entry = data;
   free(entry->name);
@@ -61,9 +65,9 @@ adlb_code xlb_dsyms_init(void)
 
 void xlb_dsyms_finalize(void)
 {
-  assert(dsyms_init);
+  valgrind_assert(dsyms_init);
   table_lp_free_callback(&dsyms, false, dsym_free_cb);
-  
+
   dsyms_init = false;
 }
 
@@ -76,7 +80,7 @@ adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
       data.name, data.context);
   ADLB_CHECK_MSG(data.name != NULL, "name for debug symbol was NULL");
   ADLB_CHECK_MSG(data.context != NULL, "context for debug symbol was NULL");
-  
+
   // free existing entry if needed
   symbol_table_entry *prev_entry;
   if (table_lp_remove(&dsyms, symbol, (void **)&prev_entry))
@@ -93,10 +97,10 @@ adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
 
   e->name = strdup(data.name);
   ADLB_CHECK_MALLOC(e->name);
-  
+
   e->context = strdup(data.context);
   ADLB_CHECK_MALLOC(e->context);
-  
+
   bool ok = table_lp_add(&dsyms, symbol, e);
   ADLB_CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
 
