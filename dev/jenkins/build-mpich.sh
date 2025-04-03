@@ -3,6 +3,7 @@ set -eu
 
 # JENKINS BUILD MPICH SH
 # Install Swift/T from Git under with MPICH on CELS Jenkins
+# NOTE: WORKSPACE is set by Jenkins
 # Can also be run interactively on GCE,
 #     if on the correct compute server!
 #     just set environment variable WORKSPACE
