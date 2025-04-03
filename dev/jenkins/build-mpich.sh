@@ -89,6 +89,9 @@ PATH=$PYTHON/bin:$PATH
 PATH=$MPICH/bin:$PATH
 
 echo PATH1 $PATH
+
+which ant
+
 (
   echo PATH2 $PATH
   set -x
