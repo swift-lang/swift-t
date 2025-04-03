@@ -88,8 +88,10 @@ PYTHON_EXE=$PYTHON/bin/python
 PATH=$PYTHON/bin:$PATH
 PATH=$MPICH/bin:$PATH
 
+set -x
 echo PATH1 $PATH
 
+ls /home/woz/Public/sfw/ant-1.9.4/bin
 which ant
 
 (
