@@ -91,6 +91,13 @@ PATH=$MPICH/bin:$PATH
 set -x
 echo PATH1 $PATH
 
+groups
+
+ls /home
+ls /home/woz
+ls /home/woz/Public
+ls /home/woz/Public/sfw
+ls /home/woz/Public/sfw/ant-1.9.4
 ls /home/woz/Public/sfw/ant-1.9.4/bin
 which ant
 
