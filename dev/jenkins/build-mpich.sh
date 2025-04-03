@@ -69,7 +69,7 @@ if (( ! GIT_CHANGED )) {
 print
 
 # Assume this run will fail:
-if (( $STATUS_OLD != 1 )) echo 1 > status-old.txt
+if (( $STATUS_OLD != 1 )) print 1 > status-old.txt
 
 # Define and reset the settings file:
 SETTINGS=dev/build/swift-t-settings.sh
