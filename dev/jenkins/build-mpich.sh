@@ -61,7 +61,6 @@ if [[ -r timestamp-old.txt ]] {
   fi
 } else {
   log "No old timestamp."
-  ls -l
 }
 log "GIT_CHANGED=$GIT_CHANGED"
 if (( ! GIT_CHANGED )) {
