@@ -77,8 +77,7 @@ SETTINGS=dev/build/swift-t-settings.sh
 rm -fv $SETTINGS
 dev/build/init-settings.sh
 
-# Pre-installed tools:
-echo PROJECT ${PROJECT:project}
+# Pre-installed tools: Ant and JDK
 PROJECT_SFW=/nfs/gce/projects/Swift-T/sfw
 PATH=$PROJECT_SFW/ant-1.9.4/bin:$PATH
 PATH=$PROJECT_SFW/x86_64/jdk-20.0.1/bin:$PATH
