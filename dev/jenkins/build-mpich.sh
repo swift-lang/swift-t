@@ -88,7 +88,9 @@ PYTHON_EXE=$PYTHON/bin/python
 PATH=$PYTHON/bin:$PATH
 PATH=$MPICH/bin:$PATH
 
+echo PATH1 $PATH
 (
+  echo PATH2 $PATH
   set -x
   which javac ant mpicc python
 )
