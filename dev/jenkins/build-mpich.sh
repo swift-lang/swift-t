@@ -77,8 +77,10 @@ rm -fv $SETTINGS
 dev/build/init-settings.sh
 
 # Pre-installed tools:
-PATH=/home/woz/Public/sfw/ant-1.9.4/bin:$PATH
-PATH=/nfs/gce/projects/Swift-T/sfw/x86_64/jdk-20.0.1/bin:$PATH
+echo PROJECT ${PROJECT:project}
+PROJECT_SFW=/nfs/gce/projects/Swift-T/sfw
+PATH=$PROJECT_SFW/ant-1.9.4/bin:$PATH
+PATH=$PROJECT_SFW/x86_64/jdk-20.0.1/bin:$PATH
 
 # Products from other Jenkins projects:
 MPICH=$WORKSPACE_ROOT/Swift-T-MPICH/sfw/mpich-4.0.3
