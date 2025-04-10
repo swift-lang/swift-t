@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # DEPEND.SH
-# Creates a Makefile dependency statement for include into the Makefile
+# Creates a Makefile dependency statement
+#         for include into the Makefile
 
 # For C file in directory DIR, creates a .d file
 # Uses a standard GCC feature to obtain the dependencies
