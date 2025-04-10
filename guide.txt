@@ -3962,12 +3962,16 @@ You can use `clang` / `clang++` from the system default location.
 
 To build Swift/T with Julia, either:
 
-* When using +build-swift-t.sh+: set +ENABLE_JULIA=1+ in
- +swift-t-settings.sh+.
+* When using +build-swift-t.sh+: set +ENABLE_JULIA=1+ and
+ +JULIA_INSTALL=/path/to/julia+ in +swift-t-settings.sh+.
 
 * When doing a <<build_manual,manual build>> provide the
- +--enable-julia+ argument to +configure+.  See +./configure --help+
- for further options.
+ +--enable-julia=/path/to/julia+ argument to +configure+.
+ See +./configure --help+ for further options.
+
+* The +/path/to/julia+ is the same directory used
+ when installing Julia from source, i.e., the +prefix+ used when
+ running the Julia build: +prefix=/path/to/julia make install+ .
 
 [[build_jvm]]
 ==== JVM languages module
