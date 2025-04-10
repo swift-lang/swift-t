@@ -6627,15 +6627,22 @@ export LDFLAGS="-L$PY/lib -Wl,-rpath -Wl,$PY/lib "
 <div class="ulist"><ul>
 <li>
 <p>
-When using <code>build-swift-t.sh</code>: set <code>ENABLE_JULIA=1</code> in
- <code>swift-t-settings.sh</code>.
+When using <code>build-swift-t.sh</code>: set <code>ENABLE_JULIA=1</code> and
+ <code>JULIA_INSTALL=/path/to/julia</code> in <code>swift-t-settings.sh</code>.
 </p>
 </li>
 <li>
 <p>
 When doing a <a href="#build_manual">manual build</a> provide the
- <code>--enable-julia</code> argument to <code>configure</code>.  See <code>./configure --help</code>
- for further options.
+ <code>--enable-julia=/path/to/julia</code> argument to <code>configure</code>.
+ See <code>./configure --help</code> for further options.
+</p>
+</li>
+<li>
+<p>
+The <code>/path/to/julia</code> is the same directory used
+ when installing Julia from source, i.e., the <code>prefix</code> used when
+ running the Julia build: <code>prefix=/path/to/julia make install</code> .
 </p>
 </li>
 </ul></div>
@@ -6855,7 +6862,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-12-06 11:07:10 CDT
+ 2025-04-10 16:14:06 CDT
 </div>
 </div>
 
