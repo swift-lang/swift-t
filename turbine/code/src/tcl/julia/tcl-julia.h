@@ -6,9 +6,6 @@
  *      Author: wozniak
  */
 
-#ifndef TCL_JULIA_H
-#define TCL_JULIA_H
+#pragma once
 
 void tcl_julia_init(Tcl_Interp* interp);
-
-#endif

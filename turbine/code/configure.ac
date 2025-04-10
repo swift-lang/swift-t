@@ -684,7 +684,7 @@ AC_ARG_WITH(julia,
   [
       HAVE_JULIA=1
       USE_JULIA=${withval}
-      AC_CHECK_FILE(${USE_JULIA}/src/julia.h, [],
+      AC_CHECK_FILE(${USE_JULIA}/include/julia/julia.h, [],
                     [AC_MSG_ERROR([Could not find julia header!])])
   ])
 AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])

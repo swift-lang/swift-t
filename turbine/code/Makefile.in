@@ -301,9 +301,9 @@ ifneq ($(USE_R),0)
 endif  # USE_R
 endif  # HAVE_R
 ifeq ($(HAVE_JULIA),1)
-	INCLUDES += -I $(USE_JULIA)/src
-	INCLUDES += -I $(USE_JULIA)/usr/include
-	INCLUDES += -I $(USE_JULIA)/src/support
+  INCLUDES += -I $(USE_JULIA)/include
+  # For julia.h -> julia_version.h
+  INCLUDES += -I $(USE_JULIA)/include/julia
 endif
 ifeq ($(HAVE_COASTER),1)
 	INCLUDES += -I $(USE_COASTER)/include
@@ -374,7 +374,7 @@ ifeq ($(HAVE_JVM_SCRIPT),1)
   LIBS += -L$(SWIFTTJVM_LIB)/.libs -lswifttjvm
 endif
 ifeq ($(HAVE_JULIA),1)
-  JULIA_LIB = $(USE_JULIA)/usr/lib
+  JULIA_LIB = $(USE_JULIA)/lib
   ifeq ($(filter $(JULIA_LIB),$(SYSTEM_LIBS)),)
     LIBS += -L$(JULIA_LIB)
     RPATH_JULIA = yes

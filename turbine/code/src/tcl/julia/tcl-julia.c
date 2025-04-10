@@ -25,15 +25,15 @@
 
 #if HAVE_JULIA == 1
 
-#include <julia.h>
+#include <julia/julia.h>
 
 static bool initialized = false;
 
 static void inline
 julia_initialize(void)
 {
-  jl_init(NULL);
-  JL_SET_STACK_BASE;
+  jl_init();
+  // JL_SET_STACK_BASE;
   initialized = true;
 }
 
