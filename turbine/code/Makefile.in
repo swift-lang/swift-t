@@ -335,7 +335,6 @@ ifeq ($(ENABLE_MPE),1)
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
-  $(warning PYTHON_LIB_FLAGS $(PYTHON_LIB_FLAGS))
   LIBS += -L$(PYTHON_LIBDIR) $(PYTHON_LIB_FLAGS)
   RPATH_PYTHON = yes
 endif
