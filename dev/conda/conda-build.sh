@@ -134,12 +134,12 @@ if [[ -f $LOG ]] {
   print
 }
 
-if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
-  # This is just for our emews-rinside:
-  CHANNEL_SWIFT=( -c swift-t )
-} else {
-  CHANNEL_SWIFT=()
-}
+# if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
+#   # This is just for our emews-rinside:
+#   CHANNEL_SWIFT=( -c swift-t )
+# } else {
+#   CHANNEL_SWIFT=()
+# }
 
 {
   log "CONDA BUILD: START: ${(%)DATE_FMT_S}"
@@ -158,9 +158,10 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     # Build the package!
     conda build \
           -c conda-forge \
-          $CHANNEL_SWIFT \
           --dirty \
           .
+    #           $CHANNEL_SWIFT 
+
   )
   log "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
 } |& tee $LOG
