@@ -147,7 +147,7 @@ STC_ANT_ARGS=""
 MAKE_PARALLELISM=1
 
 # Enable an Anaconda setting on Linux
-ENABLE_CONDA=0
+ENABLE_CONDA_LINUX=0
 
 #+================================+
 #| Configure-time customizations  |

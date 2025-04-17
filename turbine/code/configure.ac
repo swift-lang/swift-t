@@ -925,7 +925,7 @@ AC_ARG_ENABLE(conda,
               [enable if building for Anaconda, defaults to disabled.]),
               [ENABLE_CONDA_LINUX=$enableval],[ENABLE_CONDA_LINUX=no])
 AC_MSG_RESULT([Using Anaconda: $ENABLE_CONDA_LINUX])
-AC_SUBST(ENABLE_CONDA)
+AC_SUBST(ENABLE_CONDA_LINUX)
 
 AC_SUBST(LD)
 AC_SUBST(CPPFLAGS)

@@ -157,6 +157,10 @@ then
   fi
 fi
 
+if (( ENABLE_CONDA_LINUX )); then
+   EXTRA_ARGS+=" --enable-conda-linux"
+fi
+
 common_args
 
 if (( RUN_CONFIGURE )) || [[ ! -f Makefile ]]
