@@ -921,7 +921,8 @@ AC_ARG_ENABLE(dev,
 AC_SUBST(ENABLE_DEV)
 
 AC_ARG_ENABLE(conda,
-              AS_HELP_STRING([--enable-conda          enable if building for Anaconda, defaults to disabled.]),
+              AS_HELP_STRING([--enable-conda],
+              [enable if building for Anaconda, defaults to disabled.]),
               [ENABLE_CONDA=$enableval],[ENABLE_CONDA=no])
 AC_MSG_RESULT([Using Anaconda: $ENABLE_CONDA])
 AC_SUBST(ENABLE_CONDA)
