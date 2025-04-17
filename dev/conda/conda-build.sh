@@ -22,7 +22,7 @@ help()
 
 Options:
    -C configure-only- generate meta.yaml and settings.sed, then stop
-   -R for the R version
+   -r for the R version
 
 END
 }
