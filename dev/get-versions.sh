@@ -3,7 +3,8 @@
 # from all Swift/T components
 
 # This has to be manually edited:
-SWIFT_T_VERSION=1.6.5
+# 1.6.6 for conda R=4.4
+SWIFT_T_VERSION=1.6.6
 
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 SWIFT_TOP=$( cd $THIS/.. ; /bin/pwd )
