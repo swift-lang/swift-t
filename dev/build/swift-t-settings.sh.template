@@ -146,6 +146,9 @@ STC_ANT_ARGS=""
 # Make build parallelism: increase to speed up builds
 MAKE_PARALLELISM=1
 
+# Enable an Anaconda setting on Linux
+ENABLE_CONDA=0
+
 #+================================+
 #| Configure-time customizations  |
 #+================================+

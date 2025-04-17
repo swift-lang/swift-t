@@ -19,10 +19,14 @@ ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
 ENABLE_STATIC_PKG = @ENABLE_STATIC_PKG@
 
+ifeq ($(ENABLE_CONDA),yes)
+  CONDA_LIB = -Wl,-rpath -Wl,${CONDA_PREFIX}/x86_64-conda-linux-gnu/lib
+endif
+
 CC = @CC@
 CPPFLAGS := @CPPFLAGS@
 CFLAGS := @CFLAGS@
-LDFLAGS := @LDFLAGS@
+LDFLAGS := @LDFLAGS@ $(CONDA_LIB)
 
 # C++ is only used if R is enabled
 CXX = @CXX@
