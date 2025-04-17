@@ -50,9 +50,11 @@ then
     export MPICH_CC=clang
     export MPICH_CXX=clang++
   fi
+  export ENABLE_CONDA_LINUX=0
 else
   NULL="--null"
   ZT="--zero-terminated"
+  export ENABLE_CONDA_LINUX=1
 fi
 printenv ${NULL} | sort ${ZT} | tr '\0' '\n' > \
                                    $RECIPE_DIR/build-env.log
