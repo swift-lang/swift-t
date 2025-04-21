@@ -5,5 +5,7 @@ COMMENT(          custom-built emews-rinside NOT ANYMORE    )m4_dnl
 COMMENT( Other platforms simply install r and build RInside )m4_dnl
 COMMENT(      inside build-generic.sh                       )m4_dnl
 COMMENT( Retain indentation                                 )m4_dnl
-    - r=getenv(R_VERSION)
+m4_ifelse(getenv(CONDA_PLATFORM),`osx-arm64',
+`    - swift-t::emews-r',
+`    - r=getenv(R_VERSION)')
 # pkgs-R.yaml: STOP
