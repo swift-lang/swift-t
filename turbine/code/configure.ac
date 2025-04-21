@@ -61,7 +61,8 @@ fi
 : ${CONDA_BUILD:=0}
 if (( CONDA_BUILD ))
 then
-  echo "Anaconda-$CONDA_PY" > source.txt
+  DATE=$( date "+%Y-%m-%d_%H-%M" )
+  echo "Anaconda-${CONDA_PY}_$DATE" > source.txt
 else
   echo ${PWD} > source.txt
 fi
