@@ -118,7 +118,10 @@ export USE_ZSH=1
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 export DATE=${(%)DATE_FMT_S}
+# Report with relative directories:
+log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
+log "writing ${PWD#${SWIFT_T_TOP}/}/settings.sed"
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
 if (( ${#C} )) {
@@ -134,6 +137,13 @@ if [[ -f $LOG ]] {
   print
 }
 
+if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
+  # This is just for our emews-rinside:
+  CHANNEL_SWIFT=( -c swift-t )
+} else {
+  CHANNEL_SWIFT=()
+}
+
 {
   log "CONDA BUILD: START: ${(%)DATE_FMT_S}"
   print
@@ -144,15 +154,18 @@ if [[ -f $LOG ]] {
     conda env list
     print
 
+    BUILD_ARGS=( -c conda-forge
+                 --dirty
+                 $CHANNEL_SWIFT
+                 .
+               )
+
     set -x
     # This purge-all is extremely important:
     conda build purge-all
 
     # Build the package!
-    conda build \
-          -c conda-forge \
-          --dirty \
-          .
+    conda build $BUILD_ARGS
   )
   log "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
 } |& tee $LOG
