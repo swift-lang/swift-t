@@ -123,10 +123,11 @@ then
 fi
 
 set -x
-if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-UNSET} == UNSET ]]
+if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTIONS:-UNSET} == UNSET ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed
+  #     in dev/github-actions/setup-conda
   echo "using Mac sed."
   SED_I=( sed -i "''" )
 else
