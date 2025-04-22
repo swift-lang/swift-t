@@ -88,6 +88,10 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
   log "conda-build is not in your python directory!"
   log "            this is probably wrong!"
   log "            run ./setup-conda.sh"
+  print
+  log "found:"
+  log "conda-build in $TOOLDIR"
+  log "python      in $PYTHON_BIN"
   return 1
 }
 
