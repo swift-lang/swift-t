@@ -15,6 +15,7 @@ set -eu
 #     because of the log and
 #     because of meta.yaml
 # The Swift/T source must have already been put in $TMP/distro
+#     via Swift/T dev/release/make-release-pkg.zsh
 
 help()
 {
@@ -22,7 +23,7 @@ help()
 
 Options:
    -C configure-only- generate meta.yaml and settings.sed, then stop
-   -R for the R version
+   -r for the R version
 
 END
 }
@@ -88,6 +89,10 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
   log "conda-build is not in your python directory!"
   log "            this is probably wrong!"
   log "            run ./setup-conda.sh"
+  print
+  log "found:"
+  log "conda-build in $TOOLDIR"
+  log "python      in $PYTHON_BIN"
   return 1
 }
 
@@ -118,7 +123,10 @@ export USE_ZSH=1
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 export DATE=${(%)DATE_FMT_S}
+# Report with relative directories:
+log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
+log "writing ${PWD#${SWIFT_T_TOP}/}/settings.sed"
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
 if (( ${#C} )) {
@@ -151,16 +159,18 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     conda env list
     print
 
+    BUILD_ARGS=( -c conda-forge
+                 --dirty
+                 $CHANNEL_SWIFT
+                 .
+               )
+
     set -x
     # This purge-all is extremely important:
     conda build purge-all
 
     # Build the package!
-    conda build \
-          -c conda-forge \
-          $CHANNEL_SWIFT \
-          --dirty \
-          .
+    conda build $BUILD_ARGS
   )
   log "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
 } |& tee $LOG
