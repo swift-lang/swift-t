@@ -143,7 +143,7 @@ if [[ -f $LOG ]] {
 }
 
 if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
-  # This is just for our emews-rinside:
+  # This is just for our emews-r:
   CHANNEL_SWIFT=( -c swift-t )
 } else {
   CHANNEL_SWIFT=()
