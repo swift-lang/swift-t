@@ -126,8 +126,10 @@ if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed
+  echo "using Mac sed."
   SED_I=( sed -i "''" )
 else
+  echo "using Linux sed."
   SED_I=( sed -i )
 fi
 
