@@ -15,6 +15,7 @@ set -eu
 #     because of the log and
 #     because of meta.yaml
 # The Swift/T source must have already been put in $TMP/distro
+#     via Swift/T dev/release/make-release-pkg.zsh
 
 help()
 {
