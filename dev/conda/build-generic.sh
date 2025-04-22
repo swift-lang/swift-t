@@ -122,6 +122,7 @@ then
   done
 fi
 
+set -x
 if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTION:-0} == 0 ]]
 then
   # Use this syntax on Mac, unless in GitHub,
@@ -132,6 +133,7 @@ else
   echo "using Linux sed."
   SED_I=( sed -i )
 fi
+set +x
 
 # Edit swift-t-settings
 ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
