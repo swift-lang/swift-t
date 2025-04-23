@@ -29,7 +29,7 @@ log()
 # General-purpose log line
 {
   local LOG_PFX  #  Log prefix
-  if [[ ${GITHUB_ACTIONS:-false} == true ]] {
+  if [[ ${GITHUB_ACTIONS:-false} == false ]] {
     LOG_PFX=${(%)DATE_FMT_NICE}
   } else {
     # GitHub already includes timestamps:
