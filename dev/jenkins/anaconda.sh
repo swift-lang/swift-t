@@ -28,7 +28,14 @@ DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
 log()
 # General-purpose log line
 {
-  print ${(%)DATE_FMT_NICE} "anaconda.sh:" ${*}
+  local LOG_PFX  #  Log prefix
+  if [[ ${GITHUB_ACTIONS:-false} == true ]] {
+    LOG_PFX=${(%)DATE_FMT_NICE}
+  } else {
+    # GitHub already includes timestamps:
+    LOG_PFX=""
+  }
+  print $LOG_PFX "anaconda.sh:" ${*}
 }
 
 # If on GitHub, pretend we are in Jenkins by setting the
