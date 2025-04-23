@@ -11,9 +11,9 @@ set -eu
 #      in which case we create artifact anaconda.log
 
 # Environment:
-# WORKSPACE:     A working directory set by Jenkins
-# JENKINS_HOME:  Set by Jenkins, else unset
-# GITHUB_ACTION: Set by GitHub,  else unset
+# WORKSPACE:      A working directory set by Jenkins
+# JENKINS_HOME:   Set by Jenkins,           else unset
+# GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
 setopt PUSHD_SILENT
 
@@ -32,11 +32,13 @@ log()
   print ${(%)DATE_FMT_NICE} "anaconda.sh:" ${*}
 }
 
-# If on GitHub, pretend we are in Jenkins:
-if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+# If on GitHub, pretend we are in Jenkins by setting the
+# WORKSPACE directory to the GitHub equivalent RUNNER_TEMP
+if [[ ${GITHUB_ACTIONS:-false} == true ]] {
   log "Start..." >> anaconda.log
   WORKSPACE=$RUNNER_TEMP
 }
+
 if [[ ${WORKSPACE:-0} == 0 ]] {
   log "Set WORKSPACE!"
   exit 1
@@ -50,9 +52,11 @@ help()
 -r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
 EOF
+  exit
 }
 
-# Run plain help as needed before possibly affecting settings:
+# Run plain help as needed before possibly affecting settings
+# shown by help as defaults:
 zparseopts h=HELP
 if (( ${#HELP} )) help
 
@@ -240,7 +244,7 @@ log "SWIFT/T OK."
 log "PKG=$PKG"
 print
 
-if [[ ${GITHUB_ACTION:-0} != 0 ]] {
+if [[ ${GITHUB_ACTIONS:-false} == true ]] {
   # Record success if on GitHub:
   {
     log "SUCCESS"

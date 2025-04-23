@@ -123,7 +123,8 @@ then
 fi
 
 set -x
-if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ ${GITHUB_ACTIONS:-UNSET} == UNSET ]]
+printenv
+if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ $GITHUB_ACTIONS != true  ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed

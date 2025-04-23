@@ -122,6 +122,10 @@ export USE_ZSH=1
 # Allow platform to modify dependencies
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
+# This is just for automated testing
+# Provide a default value for ease of debugging:
+export GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
+
 export DATE=${(%)DATE_FMT_S}
 # Report with relative directories:
 log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
