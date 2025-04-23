@@ -73,6 +73,8 @@ export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
 SWIFT_T_VERSION=1.6.3
 log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
+# Remove any dot from PYTHON_VERSION, e.g., 3.11 -> 311
+PYTHON_VERSION=${PYTHON_VERSION/\./}
 
 # Self-configure
 # The directory containing this script:
