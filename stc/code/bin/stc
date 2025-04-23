@@ -436,6 +436,12 @@ then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
 
+if (( CONDA_BUILD ))
+then
+  STC_ARGS+="-I${CONDA_PREFIX}/lib"
+  add_rpath ${CONDA_PREFIX}/lib
+fi
+
 lookup_java
 if [[ ${JVM} == 0 ]]
 then
@@ -474,7 +480,7 @@ then
 fi
 
 if [[ ${RPATH} != "" ]]
-  then
+then
   FLAGS+="-Dstc.rpath=${RPATH}"
 fi
 

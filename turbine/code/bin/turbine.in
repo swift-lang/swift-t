@@ -160,7 +160,7 @@ report_version()
 if (( REPORT_VERSION ))
 then
   report_version
-  exit 0
+  exit
 fi
 
 print_help()
