@@ -26,14 +26,18 @@ Options:
    -r for the R version
 
 END
+  exit
 }
 
 C="" R="" R_VERSION=""
 zparseopts -D -E -F h=HELP C=C r:=R
 
-if (( ${#HELP} )) {
-  help
-  exit
+if (( ${#HELP} )) help
+
+if (( ${#CONDA_PLATFORM:-} == 0 )) {
+  log "unset: CONDA_PLATFORM"
+  log "       This script should be called by a conda-platform.sh"
+  return 1
 }
 
 # Get this directory (absolute):
@@ -52,12 +56,6 @@ export SWIFT_T_VERSION
 source $DEV_CONDA/get-python-version.sh
 # Optionally set R_VERSION from user argument:
 if (( ${#R} )) export R_VERSION=${R[2]}
-
-if (( ${#CONDA_PLATFORM:-} == 0 )) {
-  log "unset: CONDA_PLATFORM"
-  log "       This script should be called by a conda-platform.sh"
-  return 1
-}
 
 log "SWIFT/T VERSION: $SWIFT_T_VERSION"
 log "CONDA_PLATFORM:  $CONDA_PLATFORM $*"
@@ -99,6 +97,7 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
 # We must set CONDA_PREFIX:
 # https://github.com/ContinuumIO/anaconda-issues/issues/10156
 export CONDA_PREFIX=${PYTHON_BIN:h}
+log "CONDA_PREFIX: $CONDA_PREFIX"
 
 COMMON_M4=common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
@@ -186,11 +185,13 @@ print
 #      this will give us the PKG file name
 if (
   log "looking for upload line in ${LOG:a} ..."
+  tail $LOG
   UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
+  log "UPLOAD: ${UPLOAD:-EMPTY}"
   PKG=${UPLOAD[-1]}
 )
 then
-  log "found PKG=$PKG"
+  log "found PKG=${PKG:-NOT_FOUND}"
 else
   log "did not find PKG!"
   log "LOG CONTENTS:"
