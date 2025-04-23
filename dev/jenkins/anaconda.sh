@@ -19,7 +19,6 @@ setopt PUSHD_SILENT
 
 # Defaults:
 PYTHON_VERSION="39"
-CONDA_TIMESTAMP="23.11.0-1"
 # Examples:
 # py39_23.11.0-1
 # py310_23.11.0-1
@@ -75,6 +74,18 @@ SWIFT_T_VERSION=1.6.3
 log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 # Remove any dot from PYTHON_VERSION, e.g., 3.11 -> 311
 PYTHON_VERSION=${PYTHON_VERSION/\./}
+
+# Find a plausible CONDA_TIMESTAMP for the download
+case $PYTHON_VERSION {
+  38)  CONDA_TIMESTAMP="23.11.0-2" ;;
+  39)  CONDA_TIMESTAMP="23.11.0-2" ;;
+  310) CONDA_TIMESTAMP="23.11.0-2" ;;
+  311) CONDA_TIMESTAMP="23.11.0-2" ;;
+  312) CONDA_TIMESTAMP="24.09.2-0" ;;
+  *)   log "Unknown PYTHON_VERSION=$PYTHON_VERSION"
+       exit 1
+       ;;
+}
 
 # Self-configure
 # The directory containing this script:
