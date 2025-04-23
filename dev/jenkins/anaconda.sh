@@ -110,13 +110,16 @@ if [[ ${RUNNER_OS:-0} == "macOS" ]] {
   CONDA_OS="Linux"
 }
 
+# Debug Homebrew-installed tools:
+# (
+#    set -x
+#    which automake autoconf make
+#    make -v
+# )
+
 # Set CONDA_ARCH, the name for our chip in the Miniconda download:
 # Set CONDA_PLATFORM, the name for our platform
 #                     in our Anaconda builder
-   set -x
-   uname -a
-   which automake autoconf make
-   make -v
 if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
   # On GitHub, we may be on ARM:
   CONDA_ARCH="arm64"
@@ -128,7 +131,8 @@ if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
     Linux)  CONDA_PLATFORM="linux-64" ;;
   }
 }
-set +x
+
+log CONDA_PLATFORM=$CONDA_PLATFORM
 
 # The Miniconda we are working with:
 CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
