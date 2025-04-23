@@ -113,6 +113,7 @@ if [[ ${RUNNER_OS:-0} == "macOS" ]] {
 # Set CONDA_ARCH, the name for our chip in the Miniconda download:
 # Set CONDA_PLATFORM, the name for our platform
 #                     in our Anaconda builder
+exec 2>&1
    set -x
    uname -a
    which automake autoconf make
