@@ -83,10 +83,11 @@ log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 PYTHON_VERSION=${PYTHON_VERSION/\./}
 
 # Find a plausible CONDA_TIMESTAMP for the download
+# Note that ;& means fall-through
 case $PYTHON_VERSION {
-  38)  CONDA_TIMESTAMP="23.11.0-2" ;;
-  39)  CONDA_TIMESTAMP="23.11.0-2" ;;
-  310) CONDA_TIMESTAMP="23.11.0-2" ;;
+  38)                              ;&
+  39)                              ;&
+  310)                             ;&
   311) CONDA_TIMESTAMP="23.11.0-2" ;;
   312) CONDA_TIMESTAMP="24.11.1-0" ;;
   *)   log "Unknown PYTHON_VERSION=$PYTHON_VERSION"
