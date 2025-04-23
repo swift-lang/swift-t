@@ -214,7 +214,7 @@ task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
 task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
-BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/linux-64
+BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/$CONDA_PLATFORM
 REPODATA=$BLD_DIR/repodata.json
 log "CHECKING PACKAGE in $BLD_DIR ..."
 # Show JSON for debugging:
