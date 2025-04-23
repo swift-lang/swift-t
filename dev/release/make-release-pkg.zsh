@@ -63,6 +63,9 @@ MAKE_TAR=1
 # Use Linux tools by default; may be set to "Mac"
 OS="Linux"
 
+# Verbose: blank, or '-v' for verbose operations
+V=""
+
 # Make pushd silent:
 setopt PUSHD_SILENT
 # Allow for additional glob patterns:
@@ -78,7 +81,7 @@ help()
   print " -T : do not make a tar.gz"
 }
 
-while getopts "bchmtT" opt
+while getopts "bchmtTv" opt
 do
   case ${opt} in
     b) BOOTSTRAP=0      ;;
@@ -87,6 +90,7 @@ do
     m) OS="Mac"         ;;
     t) USE_MASTER=1     ;;
     T) MAKE_TAR=0       ;;
+    v) V="-v"           ;;
     \?)
       print "make-release-package.zsh: unknown option: ${OPTARG}"
       help
@@ -137,12 +141,12 @@ then
 # Copy into export directory
 export_copy()
 {
-  cp -uv --parents ${*} ${TARGET}
+  cp -u ${V}  --parents ${*} ${TARGET}
 }
 
 export_copy_dir()
 {
-  cp -uvr --parents ${*} ${TARGET}
+  cp -ur ${V} --parents ${*} ${TARGET}
 }
 
 else  # Mac does not have 'cp --parents'
@@ -156,7 +160,7 @@ export_copy()
     # ZSH dirname:
     D=${F:h}
     mkdir -p ${TARGET}/${D}
-    cp -v ${F} ${TARGET}/${D}
+    cp ${V} ${F} ${TARGET}/${D}
   done
 }
 
@@ -167,8 +171,8 @@ export_copy_dir()
   do
     # ZSH dirname:
     D=${F:h}
-    mkdir -p ${TARGET}/${D}
-    cp -vr ${F} ${TARGET}/${D}
+    mkdir -p           ${TARGET}/${D}
+    cp    -r ${V} ${F} ${TARGET}/${D}
   done
 }
 
@@ -335,7 +339,7 @@ then
 
   TARGET=${EXPORT}/swift-k
   rm -rf ${TARGET}
-  cp -uvr swift-k/dist/swift-svn ${TARGET}
+  cp -ur ${V} swift-k/dist/swift-svn ${TARGET}
   echo "This is a compiled Swift/K distribution." > ${TARGET}/README
   echo "Source is available at ${SWIFT_K}\
         (branch ${SWIFT_K_RELEASE}." >> ${TARGET}/README
