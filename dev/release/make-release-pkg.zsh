@@ -10,7 +10,8 @@ set -eu
 # End-user should not need: autotools, patch
 
 # usage:
-# ./make-release-pkg.zsh
+# ./make-release-pkg.zsh [-h]
+# Provide -h for help
 
 # Environment:
 # TMP: Fast working directory. Default /tmp.  Works in TMP/distro
@@ -79,6 +80,7 @@ help()
   print " -m : use Mac tools"
   print " -t : call this 'master' instead of a release number"
   print " -T : do not make a tar.gz"
+  print " -v : make verbose"
 }
 
 while getopts "bchmtTv" opt
