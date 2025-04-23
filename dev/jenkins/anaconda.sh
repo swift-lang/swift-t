@@ -197,13 +197,15 @@ downloads()
 if (( ${#UNINSTALL} )) uninstall
 downloads
 
+log "ACTIVATING MINICONDA-BUILD"
 # Enable the build environment in Miniconda-build
 PY=$WORKSPACE/sfw/Miniconda-build
 PATH=$PY/bin:$PATH
 source $PY/etc/profile.d/conda.sh
 conda activate base
 conda env list
-conda update --yes conda
+log "UPDATING CONDA: MINICONDA-BUILD"
+conda update --quiet --yes conda
 
 # THE ACTUAL TESTS:
 # Create the Swift/T source release export in $TMP/distro
