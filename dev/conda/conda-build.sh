@@ -183,17 +183,14 @@ print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
-if (
-  log "looking for upload line in ${LOG:a} ..."
-  tail $LOG
-  UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
+log "looking for upload line in ${LOG:a} ..."
+if UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
+then
   log "UPLOAD: ${UPLOAD:-EMPTY}"
   PKG=${UPLOAD[-1]}
-)
-then
   log "found PKG=${PKG:-NOT_FOUND}"
 else
-  log "did not find PKG!"
+  log "ERROR: did not find PKG!"
   log "LOG CONTENTS:"
   cat $LOG
 fi
