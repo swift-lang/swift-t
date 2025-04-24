@@ -5,14 +5,19 @@
 # into shell variables.
 # Can be sourced by other scripts.
 # The @@ substitutions are performed by filters in build.xml
-#                      target "install"
+#     target "install" when the files are copied into the installation
+
+# JAVA_HOME: In a Conda-based installation on OSX, conda activate
+#            sets JAVA_HOME, which makes the /usr/bin/java
+#            stub work.  So you must activate the environment
+#            to get STC to work, or you will get
+#            "Unable to locate a Java Runtime."
 
 # TIMESTAMP: @TIMESTAMP@
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
 
-# These values are filtered in by build.xml
 TURBINE_DEFAULT_HOME=@TURBINE_HOME@
 STC_SRC=@STC_SRC@
 DEBIAN_BUILD=@DEBIAN_BUILD@  # 0 or 1
