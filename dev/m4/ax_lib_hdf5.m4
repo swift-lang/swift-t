@@ -267,8 +267,8 @@ HDF5 support is being disabled (equivalent to --with-hdf5=no).
         HDF5_LDFLAGS="$_HDF5_LDFLAGS"
         HDF5_LIBS="$_HDF5_LIBS"
         dnl Look for HDF5's high level library
-        AC_HAVE_LIBRARY([hdf5_hl], [HDF5_LIBS="$HDF5_LIBS -lhdf5_hl"], [], [])
-
+        dnl AC_HAVE_LIBRARY([hdf5_hl], [HDF5_LIBS="$HDF5_LIBS -lhdf5_hl"], [], [])
+        AC_CHECK_LIB([hdf5_hl], [main], [HDF5_LIBS="$HDF5_LIBS -lhdf5_hl"], [], [])
         AC_MSG_CHECKING([for matching HDF5 Fortran wrapper])
         dnl Presume HDF5 Fortran wrapper is just a name variant from H5CC
         H5FC=$(eval echo -n $H5CC | $SED -n 's/cc$/fc/p')
