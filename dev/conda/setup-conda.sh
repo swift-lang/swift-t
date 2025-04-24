@@ -11,7 +11,7 @@ echo
 conda env list
 
 set -x
-conda install --yes conda-build anaconda-client
+conda install --yes --quiet conda-build anaconda-client
 
 # Suppress this behavior from Conda on "conda build" errors:
 # Would you like conda to send this report to the core maintainers? [y/N]:

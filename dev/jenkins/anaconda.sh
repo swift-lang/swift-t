@@ -223,13 +223,13 @@ task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/$CONDA_PLATFORM
 REPODATA=$BLD_DIR/repodata.json
 log "CHECKING PACKAGE in $BLD_DIR ..."
-# Show JSON for debugging:
-if which json_pp >& /dev/null
-then
-  json_pp < $REPODATA
-else
-  cat $REPODATA
-fi
+# # Show JSON for debugging:
+# if which json_pp >& /dev/null
+# then
+#   json_pp < $REPODATA
+# else
+#   cat $REPODATA
+# fi
 if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py -v $REPODATA )
 then
   print
@@ -238,6 +238,7 @@ then
   return 1
 fi
 PKG=$BLD_DIR/$BZ2
+log "CHECKING PACKAGE at $PKG ..."
 if ! ls -l $PKG
 then
   log "Could not find the PKG at: $PKG"

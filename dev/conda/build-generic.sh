@@ -179,7 +179,7 @@ for file in turbine-config.sh; do
   ln -sv ../swift-t/turbine/scripts/$file .
 done
 
-set -x
-ls $PREFIX/bin
+# set -x
+# ls $PREFIX/bin
 
 echo "BUILD-GENERIC.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"

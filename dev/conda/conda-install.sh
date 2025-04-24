@@ -122,4 +122,4 @@ if (( USE_R )) {
 # Run conda install!
 set -x
 if (( INSTALL_DEPS )) conda install --yes $SOLVER -c conda-forge $LIST
-conda install --yes $SOLVER $PKG
+conda install --yes --quiet $SOLVER $PKG
