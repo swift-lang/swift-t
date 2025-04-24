@@ -28,6 +28,7 @@ echo "JAVA_HOME: '${JAVA_HOME:-}'"
 echo "ANT_HOME:  '${ANT_HOME:-}'"
 echo
 
+# Defaults:
 USE_JAVA=$( which java )
 : ${CONDA_BUILD:=0}
 ENABLE_CONDA=""
