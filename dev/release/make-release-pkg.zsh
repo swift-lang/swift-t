@@ -243,7 +243,7 @@ fi
 # SECTION III
 
 print
-command mkdir -pv ${EXPORT}
+command mkdir -p ${V} ${EXPORT}
 pushd ${TOP}
 
 # c-utils
@@ -254,7 +254,7 @@ pushd ${TOP}/c-utils/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
-printf "OK\n\n"
+if (( ${#V} )) printf "OK\n\n"
 
 # LB
 print "Copying ADLB/X..."
@@ -264,7 +264,7 @@ pushd ${TOP}/lb/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
-printf "OK\n\n"
+if (( ${#V} )) printf "OK\n\n"
 
 # Turbine
 print "Copying Turbine..."
@@ -274,7 +274,7 @@ pushd ${TOP}/turbine/code
 FILE_LIST=( $( maint/file-list.zsh ) )
 export_copy ${FILE_LIST}
 popd
-printf "OK\n\n"
+if (( ${#V} )) printf "OK\n\n"
 
 # STC
 print "Copying STC..."
@@ -293,7 +293,7 @@ export_copy {make-package.tcl,valgrind-patterns.grep}
 export_copy **/*.swift
 popd
 popd
-printf "OK\n\n"
+if (( ${#V} )) printf "OK\n\n"
 
 # Build scripts
 print "Copying build scripts..."
@@ -307,7 +307,7 @@ mkdir -p ${TARGET}
 pushd ${TOP}/dev/m4
 export_copy *.m4
 popd
-printf "OK\n\n"
+if (( ${#V} )) printf "OK\n\n"
 
 # Make timestamp
 P="%~"
