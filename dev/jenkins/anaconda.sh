@@ -23,8 +23,6 @@ set -eu
 # JENKINS_HOME:   Set by Jenkins,           else unset
 # GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
-setopt PUSHD_SILENT
-
 # Defaults:
 PYTHON_VERSION="39"
 # Examples:
@@ -64,8 +62,9 @@ if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
 help()
 {
   cat <<EOF
--p PYTHON_VERSION  default "$PYTHON_VERSION"
+-b                 disable bootstrapping during make-release-pkg
 -c CONDA_TIMESTAMP default "$CONDA_TIMESTAMP"
+-p PYTHON_VERSION  default "$PYTHON_VERSION"
 -r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
 EOF
@@ -78,9 +77,10 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
+B=""     # May become "-b"
 R=""     # May become ( -r R_VERSION )
 USE_R="" # May become "-r"
-zparseopts -D -E -F c:=CT p:=PV r:=R u=UNINSTALL
+zparseopts -D -E -F b=B c:=CT p:=PV r:=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 if (( ${#R}  )) USE_R="-r"
@@ -88,6 +88,7 @@ if (( ${#R}  )) USE_R="-r"
 if [[ ${JENKINS_HOME:-0} != 0 ]] \
   renice --priority 19 --pid $$ >& /dev/null
 
+# For make-release-pkg
 export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
 # SWIFT_T_VERSION=1.6.3
@@ -240,8 +241,13 @@ log "ACTIVATING ENVIRONMENT: BUILD ..."
 # Enable the build environment in Miniconda-build
 PY=$WORKSPACE/sfw/Miniconda-build
 PATH=$PY/bin:$PATH
+# Allow unset variables for:
+# CONDA_BACKUP_CONDA_TOOLCHAIN_HOST: parameter not set
+# Python 3.12 2025-04-25
+set +u
 source $PY/etc/profile.d/conda.sh
 conda activate base
+set -u
 conda env list
 log "ACTIVATED ENVIRONMENT: BUILD."
 # Suppress a warning about default channel:
@@ -259,7 +265,7 @@ conda update --quiet --yes conda
 # THE ACTUAL TESTS:
 # Create the Swift/T source release export in $TMP/distro
 print
-task $SWIFT_T/dev/release/make-release-pkg.zsh -vT
+task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
