@@ -5,10 +5,18 @@ set -eu
 # Test the Swift/T Anaconda packages
 # Sets up 2 Minicondas: one in which to build   the package
 #                   and one in which to install the package
-# May be run interactively, just set environment variable WORKSPACE
+
+# May be run interactively, just:
+#     set environment variable WORKSPACE
 #     and clone Swift/T in that location (which is what Jenkins does)
+#     set environment variable CONDA_OS={Linux, MacOSX}
+#     set environment variable CONDA_PLATFORM={linux-64, osx-arm64}
+
 # Also runs as GitHub action via /.github/workflows/conda.yaml
 #      in which case we create artifact anaconda.log
+
+# This script reuses downloads and sfw/Miniconda installations:
+#      provide -u to uninstall first
 
 # Environment:
 # WORKSPACE:      A working directory set by Jenkins
@@ -38,6 +46,12 @@ log()
   print $LOG_PFX "anaconda.sh:" ${*}
 }
 
+abort()
+{
+  log "ABORT" ${*}
+  exit 1
+}
+
 # If on GitHub, pretend we are in Jenkins by setting the
 # WORKSPACE directory to the GitHub equivalent RUNNER_TEMP
 if [[ ${GITHUB_ACTIONS:-false} == true ]] {
@@ -45,10 +59,7 @@ if [[ ${GITHUB_ACTIONS:-false} == true ]] {
   WORKSPACE=$RUNNER_TEMP
 }
 
-if [[ ${WORKSPACE:-0} == 0 ]] {
-  log "Set WORKSPACE!"
-  exit 1
-}
+if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
 
 help()
 {
@@ -67,10 +78,12 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
-R=""  # May become ( -r R_VERSION )
+R=""     # May become ( -r R_VERSION )
+USE_R="" # May become "-r"
 zparseopts -D -E -F c:=CT p:=PV r:=R u=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
+if (( ${#R}  )) USE_R="-r"
 
 if [[ ${JENKINS_HOME:-0} != 0 ]] \
   renice --priority 19 --pid $$ >& /dev/null
@@ -91,9 +104,7 @@ case $PYTHON_VERSION {
   310)                             ;&
   311) CONDA_TIMESTAMP="23.11.0-2" ;;
   312) CONDA_TIMESTAMP="24.11.1-0" ;;
-  *)   log "Unknown PYTHON_VERSION=$PYTHON_VERSION"
-       exit 1
-       ;;
+  *)   abort "Unknown PYTHON_VERSION=$PYTHON_VERSION" ;;
 }
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 
@@ -104,34 +115,37 @@ THIS=${0:A:h}
 SWIFT_T=$THIS/../..
 SWIFT_T=${SWIFT_T:A}
 
-# Set CONDA_OS, the name for our OS in the Miniconda download:
-if [[ ${RUNNER_OS:-0} == "macOS" ]] {
-  # On GitHub, we may be on Mac:
-  CONDA_OS="MacOSX"
-} else {
-  CONDA_OS="Linux"
+if [[ ${CONDA_OS:-0} == 0 ]] {
+  # Set CONDA_OS, the name for our OS in the Miniconda download:
+  if [[ ${RUNNER_OS:-0} == "macOS" ]] {
+    # On GitHub, we may be on Mac:
+    CONDA_OS="MacOSX"
+  } else {
+    CONDA_OS="Linux"
+  }
 }
 
-# Debug Homebrew-installed tools:
-# (
-#    set -x
-#    which automake autoconf make
-#    make -v
-# )
-
-# Set CONDA_ARCH, the name for our chip in the Miniconda download:
-# Set CONDA_PLATFORM, the name for our platform
-#                     in our Anaconda builder
-if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
-  # On GitHub, we may be on ARM:
-  CONDA_ARCH="arm64"
-  CONDA_PLATFORM="osx-arm64"
-} else {
-  CONDA_ARCH="x86_64"
-  case $CONDA_OS {
-    MacOSX) CONDA_PLATFORM="osx-64"   ;;
-    Linux)  CONDA_PLATFORM="linux-64" ;;
+if [[ ${CONDA_PLATFORM:-0} == 0 ]] {
+  # Set CONDA_ARCH, the name for our chip in the Miniconda download:
+  # Set CONDA_PLATFORM, the name for our platform
+  #                     in our Anaconda builder
+  if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
+    # On GitHub, we may be on ARM:
+    CONDA_PLATFORM="osx-arm64"
+  } else {
+    CONDA_ARCH="x86_64"
+    case $CONDA_OS {
+      "MacOSX") CONDA_PLATFORM="osx-64"   ;;
+      "Linux")  CONDA_PLATFORM="linux-64" ;;
+      *)        abort "Unknown CONDA_OS=$CONDA_OS" ;;
+    }
   }
+}
+
+case $CONDA_PLATFORM {
+  "linux-64")  CONDA_ARCH="x86_64" ;;
+  "osx-arm64") CONDA_ARCH="arm64"  ;;
+  *)           abort "Unknown CONDA_PLATFORM=$CONDA_PLATFORM" ;;
 }
 
 log CONDA_PLATFORM=$CONDA_PLATFORM
@@ -148,12 +162,31 @@ export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 
 source $SWIFT_T/dev/conda/helpers.zsh
 
+# Detect GNU time program
+GNU_TIME=0
+if =time -v true >& /dev/null
+then
+  GNU_TIME=1
+fi
+
+# Two possible time commands:
+if (( GNU_TIME )) {
+  tm()
+  {
+    =time --format "TASK TIME: %E" ${*}
+  }
+} else {
+  tm()
+  {
+    =time -h ${*}
+  }
+}
+
 task()
 # Run a command line verbosely and report the time in simple format:
 {
   log "TASK START:" ${*}
-  # Force use of GNU time program:
-  if =time --format "TASK TIME: %E" ${*}
+  if tm ${*}
   then
     log "TASK DONE:" ${*}
     CODE=0
@@ -203,20 +236,30 @@ downloads()
 if (( ${#UNINSTALL} )) uninstall
 downloads
 
-log "ACTIVATING MINICONDA-BUILD"
+log "ACTIVATING ENVIRONMENT: BUILD ..."
 # Enable the build environment in Miniconda-build
 PY=$WORKSPACE/sfw/Miniconda-build
 PATH=$PY/bin:$PATH
 source $PY/etc/profile.d/conda.sh
 conda activate base
 conda env list
+log "ACTIVATED ENVIRONMENT: BUILD."
+# Suppress a warning about default channel:
+conda config --add channels defaults
 log "UPDATING CONDA: MINICONDA-BUILD"
 conda update --quiet --yes conda
+
+# Debug Homebrew-installed tools:
+# (
+#    set -x
+#    which automake autoconf make
+#    make -v
+# )
 
 # THE ACTUAL TESTS:
 # Create the Swift/T source release export in $TMP/distro
 print
-task $SWIFT_T/dev/release/make-release-pkg.zsh -T
+task $SWIFT_T/dev/release/make-release-pkg.zsh -vT
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
@@ -225,14 +268,8 @@ task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/$CONDA_PLATFORM
 REPODATA=$BLD_DIR/repodata.json
 log "CHECKING PACKAGE in $BLD_DIR ..."
-# # Show JSON for debugging:
-# if which json_pp >& /dev/null
-# then
-#   json_pp < $REPODATA
-# else
-#   cat $REPODATA
-# fi
-if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py -v $REPODATA )
+
+if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
 then
   print
   log "CHECKING PACKAGE FAILED!"
@@ -250,20 +287,22 @@ checksum $PKG
 print
 
 # Enable the install environment
-log "ACTIVATING ENVIRONMENT..."
+log "ACTIVATING ENVIRONMENT: INSTALL ..."
 PY=$WORKSPACE/sfw/Miniconda-install
 PATH=$PY/bin:$PATH
+# Allow unset variables for:
+# activate_clang:16: CMAKE_PREFIX_PATH: parameter not set
+# Python 3.11 2025-04-25
+set +u
 source $PY/etc/profile.d/conda.sh
 conda activate base
+set -u
 conda env list
-log "ACTIVATED ENVIRONMENT."
+log "ACTIVATED ENVIRONMENT: INSTALL."
 print
 
-task $SWIFT_T/dev/conda/conda-install.sh $PKG
-
-echo LLP1: ${LD_LIBRARY_PATH:-}
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:$CONDA_PREFIX/lib
-echo LLP2: $LD_LIBRARY_PATH
+# Install the new package into the install environment!
+task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG
 
 log "TRY SWIFT/T..."
 (
