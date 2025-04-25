@@ -20,8 +20,19 @@ set -o pipefail
 # PREFIX is provided by Conda
 # ENABLE_R may be set by meta.yaml
 
+log()
+{
+  echo "build-generic.sh:" ${*}
+}
+
+abort()
+{
+  log "ABORT:" ${*}
+  exit 1
+}
+
 TIMESTAMP=$( date '+%Y-%m-%d %H:%M:%S' )
-echo "BUILD-GENERIC.SH START $TIMESTAMP"
+echo "START $TIMESTAMP"
 
 # This is in the exported Swift/T source tree
 DEV_BUILD=dev/build
@@ -32,12 +43,12 @@ DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 echo ENABLE_R=$ENABLE_R
 
 {
-  echo "TIMESTAMP:  $TIMESTAMP"
-  echo "BUILD_PWD:  $PWD"
-  echo "RECIPE_DIR: $RECIPE_DIR"
-  echo "SRC_DIR:    $SRC_DIR"
-  echo "PREFIX:     $PREFIX"
-  echo "ENABLE_R:   $ENABLE_R"
+  log "TIMESTAMP:  $TIMESTAMP"
+  log "BUILD_PWD:  $PWD"
+  log "RECIPE_DIR: $RECIPE_DIR"
+  log "SRC_DIR:    $SRC_DIR"
+  log "PREFIX:     $PREFIX"
+  log "ENABLE_R:   $ENABLE_R"
 } > $RECIPE_DIR/build-generic.log
 
 if [[ $CONDA_PLATFORM =~ osx-* ]]
@@ -81,8 +92,8 @@ cd $DEV_BUILD
 if [[ ! -f init-settings.sh ]]
 then
   # OS may have cleaned up the /tmp directories
-  echo "build-generic.sh: Cannot find init-settings.sh!"
-  echo "build-generic.sh: PWD=$PWD"
+  log "Cannot find init-settings.sh!"
+  log "PWD=$PWD"
   exit 1
 fi
 rm -fv swift-t-settings.sh
@@ -95,10 +106,10 @@ then
   # For the R-enabled installer, we build/install RInside into our
   #     Anaconda R installation, and install [de]activate scripts.
   echo
-  echo "build-generic.sh: Checking R ..."
+  log "Checking R ..."
   if ! which R
   then
-    echo "build-generic.sh: Could not find R!"
+    log "Could not find R!"
     exit 1
   fi
   export R_HOME=$( R RHOME )
@@ -108,10 +119,9 @@ then
     tee $RECIPE_DIR/install-RInside.log
   if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log
   then
-    echo "build-generic.sh: Installing RInside failed."
-    exit 1
+    abort "Installing RInside failed."
   fi
-  echo "build-generic.sh: Installing RInside done."
+  log "Installing RInside done."
 
   # Copy the [de]activate scripts to $PREFIX/etc/conda/[de]activate.d.
   # This will allow them to be run on environment activation.
@@ -122,20 +132,17 @@ then
   done
 fi
 
-set -x
-printenv
 if [[ $CONDA_PLATFORM =~ osx-* ]] && [[ $GITHUB_ACTIONS != true  ]]
 then
   # Use this syntax on Mac, unless in GitHub,
   #     where we install Homebrew gnu-sed
   #     in dev/github-actions/setup-conda
-  echo "using Mac sed."
+  log "using Mac sed."
   SED_I=( sed -i "''" )
 else
-  echo "using Linux sed."
+  log "using Linux sed."
   SED_I=( sed -i )
 fi
-set +x
 
 # Edit swift-t-settings
 ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
@@ -144,9 +151,9 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 # Merge output streams to try to prevent buffering
 #       problems with conda build
 {
-  echo "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
+  log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
-  echo "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"
+  log "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"
 } | tee $RECIPE_DIR/build-swift-t.log
 
 # Setup symlinks for utilities
@@ -182,4 +189,4 @@ done
 # set -x
 # ls $PREFIX/bin
 
-echo "BUILD-GENERIC.SH STOP $( date '+%Y-%m-%d %H:%M:%S' )"
+log "STOP $( date '+%Y-%m-%d %H:%M:%S' )"
