@@ -109,10 +109,13 @@ LIST+=(
   swig
 )
 
+# Needed for _strstr issue:
+if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( libglib )
+
 # R switch
 if (( USE_R )) {
   if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
-    LIST+="swift-t::emews-rinside"
+    LIST+="swift-t::emews-r"
   } else {
     # Use plain r on all other platforms:
     LIST+=r
@@ -120,6 +123,7 @@ if (( USE_R )) {
 }
 
 # Run conda install!
+CONDA_FLAGS=( --yes --quiet $SOLVER )
 set -x
-if (( INSTALL_DEPS )) conda install --yes $SOLVER -c conda-forge $LIST
-conda install --yes --quiet $SOLVER $PKG
+if (( INSTALL_DEPS )) conda install $CONDA_FLAGS -c conda-forge $LIST
+conda install $CONDA_FLAGS $PKG
