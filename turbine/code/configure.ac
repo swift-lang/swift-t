@@ -460,10 +460,10 @@ then
     fi
     # Short form of call to our Python configuration reporting tool:
     PY_CFG="${PYTHON_EXE} scripts/python-config.py"
-    AC_MSG_RESULT([Displaying $PY_CFG --debug])
-    $PY_CFG --debug
-    AC_MSG_RESULT([Displaying $PY_CFG --list])
-    $PY_CFG --list
+    # AC_MSG_RESULT([Displaying $PY_CFG --debug])
+    # $PY_CFG --debug
+    # AC_MSG_RESULT([Displaying $PY_CFG --list])
+    # $PY_CFG --list
     if ! PYTHON_INCLUDE_FLAGS=$( $PY_CFG --include-flags )
     then
       AC_MSG_ERROR([Failed to execute $PY_CFG --include-flags])
