@@ -254,6 +254,7 @@ log "ACTIVATED ENVIRONMENT: BUILD."
 conda config --add channels defaults
 log "UPDATING CONDA: MINICONDA-BUILD"
 conda update --quiet --yes conda
+print
 
 # Debug Homebrew-installed tools:
 # (
@@ -264,7 +265,6 @@ conda update --quiet --yes conda
 
 # THE ACTUAL TESTS:
 # Create the Swift/T source release export in $TMP/distro
-print
 task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
