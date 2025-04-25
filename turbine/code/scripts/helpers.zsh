@@ -34,7 +34,7 @@ log()
 # General-purpose log line
 # You may set global LOG_LABEL to get a message prefix
 {
-  print ${(%)DATE_FMT_S} ${LOG_LABEL:-} ${*}
+  print ${(%)DATE_FMT_S} ${LOG_LABEL:-} -- ${*}
 }
 
 abort()
