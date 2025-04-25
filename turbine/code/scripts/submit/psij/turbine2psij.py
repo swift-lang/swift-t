@@ -271,7 +271,7 @@ spec = psij.JobSpec(
 
 job.spec = spec
 
-# Submit Job
+# Submit Job!
 jex.submit(job)
 
 print("turbine2psij: job submitted: ID: " + job.native_id)
