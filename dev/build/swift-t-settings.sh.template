@@ -82,8 +82,8 @@ ENABLE_PYTHON=0
 # Specify the Python interpreter executable below;
 # if empty, looks for python in PATH
 # PYTHON_EXE=$HOME/sfw/Python-2.7.10/bin/python
-# For Anaconda, use the given setting:
-# PYTHON_EXE="$PYTHON"
+# For Anaconda, use the given setting (set by 'conda.sh'):
+# PYTHON_EXE="$CONDA_PYTHON_EXE"
 
 # Enable R integration
 ENABLE_R=0
