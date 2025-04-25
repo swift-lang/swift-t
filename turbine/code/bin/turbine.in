@@ -274,6 +274,7 @@ check_machine()
 # Confirm that we have a script for this machine type
 {
   local M
+  ls ${TURBINE_HOME}/scripts/submit
   for M in $( ls ${TURBINE_HOME}/scripts/submit )
   do
     [[ ${MACHINE_MODE} == ${M} ]] && return
