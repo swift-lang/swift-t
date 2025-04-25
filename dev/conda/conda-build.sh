@@ -34,12 +34,6 @@ zparseopts -D -E -F h=HELP C=C r:=R
 
 if (( ${#HELP} )) help
 
-if (( ${#CONDA_PLATFORM:-} == 0 )) {
-  log "unset: CONDA_PLATFORM"
-  log "       This script should be called by a conda-platform.sh"
-  return 1
-}
-
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
 source $DEV_CONDA/helpers.zsh
@@ -49,6 +43,7 @@ SWIFT_T_TOP=${DEV_CONDA:h:h}
 TMP=${TMP:-/tmp}
 
 source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+LOG_LABEL="conda-build.sh:"
 # Sets SWIFT_T_VERSION:
 source $SWIFT_T_TOP/dev/get-versions.sh
 export SWIFT_T_VERSION
@@ -58,6 +53,12 @@ source $DEV_CONDA/get-python-version.sh
 if (( ${#R} )) export R_VERSION=${R[2]}
 
 log "SWIFT/T VERSION: $SWIFT_T_VERSION"
+
+if (( ${#CONDA_PLATFORM:-} == 0 )) {
+  log "unset: CONDA_PLATFORM"
+  log "       This script should be called by a conda-platform.sh"
+  return 1
+}
 log "CONDA_PLATFORM:  $CONDA_PLATFORM $*"
 
 # This is passed into meta.yaml:
@@ -168,10 +169,11 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
                  .
                )
 
-    set -x
+    log "conda build: purge-all ..."
     # This purge-all is extremely important:
     conda build purge-all
 
+    log "conda build: $BUILD_ARGS ..."
     # Build the package!
     conda build $BUILD_ARGS
   )
