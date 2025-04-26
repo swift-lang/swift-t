@@ -249,7 +249,7 @@ do-activate()
   # Allow unset variables for:
   # activate_clang:16: CMAKE_PREFIX_PATH: parameter not set
   # Python 3.11 2025-04-25
-  set +u
+  set +eu
   source $PY/etc/profile.d/conda.sh
   conda activate base
   # conda env list
@@ -259,7 +259,7 @@ do-activate()
   log "CONDA UPDATING: $PY ..."
   conda update --quiet --yes --solver classic conda
   log "CONDA UPDATE: OK: $PY"
-  set -u
+  set -eu
   print
 }
 
@@ -292,8 +292,9 @@ try-swift-t()
   log "TRY SWIFT/T..."
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
   () {
-    # For set -x:
-    PS4="+ "
+    # For set -x (includes newline):
+    PS4="
++ "
     set -x
     which swift-t
     swift-t -v
