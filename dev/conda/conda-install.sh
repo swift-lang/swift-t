@@ -110,7 +110,7 @@ LIST+=(
 )
 
 # Needed for _strstr issue:
-if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( libglib )
+if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( "clang-18==18.1.8" )
 
 # R switch
 if (( USE_R )) {
