@@ -226,11 +226,15 @@ downloads()
     # Download and install both Minicondas:
     mkdir -pv $WORKSPACE/downloads
     cd $WORKSPACE/downloads
-    if [[ ! -f $MINICONDA ]] \
-         wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
+    if [[ ! -f $MINICONDA ]] {
+      log "download: $MINICONDA"
+      wget --no-verbose https://repo.anaconda.com/miniconda/$MINICONDA
+    }
     foreach LABEL ( build install ) \
-            if [[ ! -d $WORKSPACE/sfw/Miniconda-$LABEL ]] \
+            if [[ ! -d $WORKSPACE/sfw/Miniconda-$LABEL ]] {
+               log "install:  $WORKSPACE/sfw/Miniconda-$LABEL"
                bash $MINICONDA -b -p $WORKSPACE/sfw/Miniconda-$LABEL
+            }
     end
   )
   log "DOWNLOADS OK."
@@ -317,13 +321,15 @@ print
 task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG
 
 log "TRY SWIFT/T..."
-(
-  set -x
+() {
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+  # For set -x:
+  PS4="%1N"
+  set -x
   which swift-t
   swift-t -v
   swift-t -E 'trace(42);'
-)
+}
 print
 log "SWIFT/T OK."
 log "PKG=$PKG"

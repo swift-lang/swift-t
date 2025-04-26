@@ -124,6 +124,8 @@ if (( USE_R )) {
 
 # Run conda install!
 CONDA_FLAGS=( --yes --quiet $SOLVER )
+# For set -x:
+PS4="%1N"
 set -x
 if (( INSTALL_DEPS )) conda install $CONDA_FLAGS -c conda-forge $LIST
 conda install $CONDA_FLAGS $PKG
