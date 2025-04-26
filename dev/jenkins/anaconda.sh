@@ -67,6 +67,7 @@ help()
 -p PYTHON_VERSION  default "$PYTHON_VERSION"
 -r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
+-uu                delete conda cache, default does not
 EOF
   exit
 }
@@ -80,7 +81,7 @@ if (( ${#HELP} )) help
 B=""     # May become "-b"
 R=""     # May become ( -r R_VERSION )
 USE_R="" # May become "-r"
-zparseopts -D -E -F b=B c:=CT p:=PV r:=R u=UNINSTALL
+zparseopts -D -E -F b=B c:=CT p:=PV r:=R u+=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 if (( ${#R}  )) USE_R="-r"
@@ -203,8 +204,9 @@ task()
 uninstall()
 {
   log "UNINSTALL ..."
-  if [[ -d $CONDA_PKGS_DIRS ]] {
-    du -sh $CONDA_PKGS_DIRS
+  du -sh $CONDA_PKGS_DIRS
+  if (( ${#UNINSTALL} > 1 )) && [[ -d $CONDA_PKGS_DIRS ]] {
+    log "  DELETE: $CONDA_PKGS_DIRS ..."
     rm -fr $CONDA_PKGS_DIRS
   }
   rm -fv $WORKSPACE/downloads/$MINICONDA
