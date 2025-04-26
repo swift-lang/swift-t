@@ -291,12 +291,14 @@ try-swift-t()
 {
   log "TRY SWIFT/T..."
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
-  # For set -x:
-  PS4="%1N: "
-  set -x
-  which swift-t
-  swift-t -v
-  swift-t -E 'trace(42);'
+  () {
+    # For set -x:
+    PS4="%1N: "
+    set -x
+    which swift-t
+    swift-t -v
+    swift-t -E 'trace(42);'
+  }
   print
   log "SWIFT/T OK."
   print
