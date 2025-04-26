@@ -98,7 +98,11 @@ source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 PV=""
 if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   SOLVER=( --solver classic )
-  if [[ $( python -V ) =~ 3.12  ]] PV="==3.12"
+  # Pin Python version for these versions:
+  PV=$( python -V )
+  foreach V ( 3.11 3.12 ) \
+    if [[ $PV =~ $V  ]] PV_PIN="==$V"
+  end
 }
 
 # Build dependency list:
@@ -112,7 +116,7 @@ LIST+=(
   mpich-mpicc
   openjdk
   # May need to pin version:
-  "python$PV"
+  "python$PV_PIN"
   swig
 )
 
