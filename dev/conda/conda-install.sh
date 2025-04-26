@@ -95,7 +95,7 @@ USE_ZSH=1
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 # Auto-configuration
-PV=""
+PV_PIN=""
 if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   SOLVER=( --solver classic )
   # Pin Python version for these versions:
