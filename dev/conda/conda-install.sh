@@ -138,7 +138,6 @@ CONDA_FLAGS=( --yes --quiet $SOLVER )
 # For set -x (includes newline):
 PS4="
 + "
-set -x
 if (( INSTALL_DEPS )) {
      () {
        set -x
