@@ -307,6 +307,10 @@ conda activate base
 set -u
 conda env list
 log "ACTIVATED ENVIRONMENT: INSTALL."
+# Suppress a warning about default channel:
+conda config --add channels defaults
+log "UPDATING CONDA: MINICONDA-BUILD"
+conda update --quiet --yes conda
 print
 
 # Install the new package into the install environment!
