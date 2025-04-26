@@ -160,8 +160,8 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     log "using python: " $( which python )
     log "using conda:  " $( which conda  )
     print
-    conda env list
-    print
+    # conda env list
+    # print
 
     BUILD_ARGS=( -c conda-forge
                  --dirty
