@@ -240,36 +240,91 @@ downloads()
   log "DOWNLOADS OK."
 }
 
+# Enable the install environment
+do-activate()
+{
+  PY=$1
+  log "ACTIVATING ENVIRONMENT: $PY ..."
+  PATH=$PY/bin:$PATH
+  # Allow unset variables for:
+  # activate_clang:16: CMAKE_PREFIX_PATH: parameter not set
+  # Python 3.11 2025-04-25
+  set +u
+  source $PY/etc/profile.d/conda.sh
+  conda activate base
+  # conda env list
+  log "ACTIVATED ENVIRONMENT:  $PY"
+  # Suppress a warning about default channel:
+  conda config --add channels defaults
+  log "CONDA UPDATING: $PY ..."
+  conda update --quiet --yes conda
+  log "CONDA UPDATE: OK: $PY"
+  set -u
+  print
+}
+
+check-pkg()
+{
+  BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/$CONDA_PLATFORM
+  REPODATA=$BLD_DIR/repodata.json
+  log "CHECKING PACKAGE in $BLD_DIR ..."
+
+  if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
+  then
+    print
+    log "CHECKING PACKAGE FAILED!"
+    print
+    return 1
+  fi
+  PKG=$BLD_DIR/$BZ2
+  log "CHECKING PACKAGE at $PKG ..."
+  if ! ls -l $PKG
+  then
+    log "Could not find the PKG at: $PKG"
+    return 1
+  fi
+  checksum $PKG
+  print
+}
+
+try-swift-t()
+{
+  log "TRY SWIFT/T..."
+  PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+  # For set -x:
+  PS4="%1N: "
+  set -x
+  which swift-t
+  swift-t -v
+  swift-t -E 'trace(42);'
+  print
+  log "SWIFT/T OK."
+  print
+}
+
+log-success()
+{
+  if [[ ${GITHUB_ACTIONS:-false} == true ]] {
+    # Record success if on GitHub:
+    {
+      log "SUCCESS"
+      log "PKG=$PKG"
+    } | tee -a anaconda.log
+  }
+}
+
+# Disable
+# "UserWarning: The environment variable 'X' is being passed through"
+export PYTHONWARNINGS="ignore::UserWarning"
+
+# The main test logic follows:
+
 if (( ${#UNINSTALL} )) uninstall
 downloads
 
-log "ACTIVATING ENVIRONMENT: BUILD ..."
-# Enable the build environment in Miniconda-build
-PY=$WORKSPACE/sfw/Miniconda-build
-PATH=$PY/bin:$PATH
-# Allow unset variables for:
-# CONDA_BACKUP_CONDA_TOOLCHAIN_HOST: parameter not set
-# Python 3.12 2025-04-25
-set +u
-source $PY/etc/profile.d/conda.sh
-conda activate base
-set -u
-conda env list
-log "ACTIVATED ENVIRONMENT: BUILD."
-# Suppress a warning about default channel:
-conda config --add channels defaults
-log "UPDATING CONDA: MINICONDA-BUILD"
-conda update --quiet --yes conda
-print
+do-activate $WORKSPACE/sfw/Miniconda-build
 
-# Debug Homebrew-installed tools:
-# (
-#    set -x
-#    which automake autoconf make
-#    make -v
-# )
-
-# THE ACTUAL TESTS:
+# Build the PKG!
 # Create the Swift/T source release export in $TMP/distro
 task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
@@ -277,68 +332,15 @@ task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
 task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
 
-BLD_DIR=$WORKSPACE/sfw/Miniconda-build/conda-bld/$CONDA_PLATFORM
-REPODATA=$BLD_DIR/repodata.json
-log "CHECKING PACKAGE in $BLD_DIR ..."
+# Check that the PKG was built
+check-pkg
 
-if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
-then
-  print
-  log "CHECKING PACKAGE FAILED!"
-  print
-  return 1
-fi
-PKG=$BLD_DIR/$BZ2
-log "CHECKING PACKAGE at $PKG ..."
-if ! ls -l $PKG
-then
-  log "Could not find the PKG at: $PKG"
-  return 1
-fi
-checksum $PKG
-print
-
-# Enable the install environment
-log "ACTIVATING ENVIRONMENT: INSTALL ..."
-PY=$WORKSPACE/sfw/Miniconda-install
-PATH=$PY/bin:$PATH
-# Allow unset variables for:
-# activate_clang:16: CMAKE_PREFIX_PATH: parameter not set
-# Python 3.11 2025-04-25
-set +u
-source $PY/etc/profile.d/conda.sh
-conda activate base
-set -u
-conda env list
-log "ACTIVATED ENVIRONMENT: INSTALL."
-# Suppress a warning about default channel:
-conda config --add channels defaults
-log "UPDATING CONDA: MINICONDA-BUILD"
-conda update --quiet --yes conda
-print
+# Activate the install environment
+do-activate $WORKSPACE/sfw/Miniconda-install
 
 # Install the new package into the install environment!
 task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG
 
-log "TRY SWIFT/T..."
-() {
-  PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
-  # For set -x:
-  PS4="%1N"
-  set -x
-  which swift-t
-  swift-t -v
-  swift-t -E 'trace(42);'
-}
-print
-log "SWIFT/T OK."
-log "PKG=$PKG"
-print
+try-swift-t
 
-if [[ ${GITHUB_ACTIONS:-false} == true ]] {
-  # Record success if on GitHub:
-  {
-    log "SUCCESS"
-    log "PKG=$PKG"
-  } >> anaconda.log
-}
+log-success
