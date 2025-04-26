@@ -293,7 +293,7 @@ try-swift-t()
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
   () {
     # For set -x:
-    PS4="%1N: "
+    PS4="+ "
     set -x
     which swift-t
     swift-t -v
