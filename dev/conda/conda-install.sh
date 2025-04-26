@@ -124,8 +124,9 @@ if (( USE_R )) {
 
 # Run conda install!
 CONDA_FLAGS=( --yes --quiet $SOLVER )
-# For set -x:
-PS4="+ "
+# For set -x (includes newline):
+PS4="
++ "
 set -x
 if (( INSTALL_DEPS )) {
      () {
