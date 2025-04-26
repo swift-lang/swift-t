@@ -8,12 +8,13 @@ set -eu
 # Provide the PKG on the command line.
 # NOTE: conda install from file does not install dependencies!
 #       Cf. https://docs.anaconda.com/free/anaconda/packages/install-packages
-#       Thus this script installs dependencies using PLATFORM/deps.sh
+#       Thus this script installs dependencies explicitly.
 # NOTE: Keep LIST in sync with meta.yaml
 
 help()
 {
   cat <<EOF
+NOTE:  This does some auto-configuration: check behavior
 USAGE: Provide PKG
        Provide -D to skip installing dependencies
        Provide -P PLATFORM to change the CONDA_PLATFORM
@@ -53,9 +54,6 @@ if (( ${#P} )) {
   CONDA_PLATFORM=${PKG:h:t}
 }
 
-# Force solver=classic on osx-arm64
-if [[ $CONDA_PLATFORM == "osx-arm64" ]] SOLVER=( --solver classic )
-
 # Bring in utilities
 # Get this directory (absolute):
 DEV_CONDA=${0:A:h}
@@ -86,14 +84,22 @@ print "using python:" $( which python )
 print "using conda: " $( which conda )
 print
 
-conda env list
+# conda env list
 
 # Defaults:
 USE_ANT=1
 USE_GCC=1
 USE_ZSH=1
 
+# Load platform-specific settings:
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
+
+# Auto-configuration
+PV=""
+if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
+  SOLVER=( --solver classic )
+  if [[ $( python -V ) =~ 3.12  ]] PV="==3.12"
+}
 
 # Build dependency list:
 LIST=()
@@ -105,7 +111,8 @@ LIST+=(
   make
   mpich-mpicc
   openjdk
-  python
+  # May need to pin version:
+  "python$PV"
   swig
 )
 
