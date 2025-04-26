@@ -257,7 +257,7 @@ do-activate()
   # Suppress a warning about default channel:
   conda config --add channels defaults
   log "CONDA UPDATING: $PY ..."
-  conda update --quiet --yes conda
+  conda update --quiet --yes --solver classic conda
   log "CONDA UPDATE: OK: $PY"
   set -u
   print
