@@ -1,6 +1,9 @@
 #!/bin/zsh
 set -eu
 
+print CONDA PLATFORM: DEPRECATED
+exit 1
+
 # CONDA PLATFORM
 # Build conda for a given CONDA_PLATFORM
 # Dependency files are in the CONDA_PLATFORM directory

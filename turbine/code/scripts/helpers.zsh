@@ -44,6 +44,13 @@ abort()
   exit 1
 }
 
+abortf()
+{
+  local MSG=( ${*} )
+  printf ${MSG}
+  exit 1
+}
+
 assert()
 {
   local ERR=$1

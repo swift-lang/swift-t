@@ -333,7 +333,7 @@ task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/conda-platform.sh $R $CONDA_PLATFORM
+task $SWIFT_T/dev/conda/conda-build.sh $R $CONDA_PLATFORM
 
 # Check that the PKG was built
 check-pkg

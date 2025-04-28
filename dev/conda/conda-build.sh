@@ -22,6 +22,7 @@ help()
   cat <<END
 
 Options:
+   conda-build.sh [-Cr] PLATFORM
    -C configure-only- generate meta.yaml and settings.sed, then stop
    -r for the R version
 
@@ -33,40 +34,43 @@ C="" R="" R_VERSION=""
 zparseopts -D -E -F h=HELP C=C r:=R
 
 if (( ${#HELP} )) help
+if (( ${#*} != 1 )) abort "conda-build.sh: Provide CONDA_PLATFORM!"
 
-# Get this directory (absolute):
+# The PLATFORM under Anaconda naming conventions:
+export CONDA_PLATFORM=$1
+
+# The Swift/T Conda script directory (absolute):
 DEV_CONDA=${0:A:h}
-source $DEV_CONDA/helpers.zsh
 
 # The Swift/T Git clone:
 SWIFT_T_TOP=${DEV_CONDA:h:h}
 TMP=${TMP:-/tmp}
 
+source $DEV_CONDA/helpers.zsh
 source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+
+# For log():
 LOG_LABEL="conda-build.sh:"
+
+log "CONDA_PLATFORM:  $CONDA_PLATFORM ${*}"
+
 # Sets SWIFT_T_VERSION:
 source $SWIFT_T_TOP/dev/get-versions.sh
 export SWIFT_T_VERSION
+log "SWIFT/T VERSION: $SWIFT_T_VERSION"
 # Sets PYTHON_VERSION:
 source $DEV_CONDA/get-python-version.sh
 # Optionally set R_VERSION from user argument:
 if (( ${#R} )) export R_VERSION=${R[2]}
 
-log "SWIFT/T VERSION: $SWIFT_T_VERSION"
+if [[ ! -d $DEV_CONDA/$CONDA_PLATFORM ]] \
+  abortf "conda-build.sh: No such platform: '%s'\n" $CONDA_PLATFORM
 
-if (( ${#CONDA_PLATFORM:-} == 0 )) {
-  log "unset: CONDA_PLATFORM"
-  log "       This script should be called by a conda-platform.sh"
-  return 1
-}
-log "CONDA_PLATFORM:  $CONDA_PLATFORM $*"
+cd $DEV_CONDA/$CONDA_PLATFORM
 
 # This is passed into meta.yaml:
 export DISTRO=$TMP/distro
-if [[ ! -d $DISTRO ]] {
-  log "Swift/T source not found at: $DISTRO"
-  return 1
-}
+if [[ ! -d $DISTRO ]] abort "Swift/T source not found at: $DISTRO"
 
 # Check that the conda-build tool in use is in the
 #       selected Python installation
@@ -160,8 +164,6 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     log "using python: " $( which python )
     log "using conda:  " $( which conda  )
     print
-    # conda env list
-    # print
 
     BUILD_ARGS=( -c conda-forge
                  --dirty
