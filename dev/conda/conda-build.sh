@@ -157,8 +157,12 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   CHANNEL_SWIFT=()
 }
 
+# Disable
+# "UserWarning: The environment variable 'X' is being passed through"
+export PYTHONWARNINGS="ignore::UserWarning"
+
 {
-  log "CONDA BUILD: START: ${(%)DATE_FMT_S}"
+  log "BUILD: START"
   print
   (
     log "using python: " $( which python )
@@ -179,15 +183,12 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     # Build the package!
     conda build $BUILD_ARGS
   )
-  log "CONDA BUILD: STOP: ${(%)DATE_FMT_S}"
+  log "BUILD: STOP"
 } |& tee $LOG
-print
-log "conda build succeeded."
 print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
-log "looking for upload line in ${LOG:a} ..."
 if UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 then
   log "UPLOAD: ${UPLOAD:-EMPTY}"

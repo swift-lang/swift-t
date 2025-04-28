@@ -316,10 +316,6 @@ log-success()
   }
 }
 
-# Disable
-# "UserWarning: The environment variable 'X' is being passed through"
-export PYTHONWARNINGS="ignore::UserWarning"
-
 # The main test logic follows:
 
 if (( ${#UNINSTALL} )) uninstall
