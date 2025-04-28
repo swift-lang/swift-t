@@ -123,6 +123,9 @@ LIST+=(
 # Needed for _strstr issue:
 if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( "clang-18==18.1.8" )
 
+# Needed for libstdc++ GLIBCXX version issue on GCE Jenkins:
+if [[ ${JENKINS_HOME:-} != "" ]] LIST+=( "gcc=14" )
+
 # R switch
 if (( USE_R )) {
   if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
