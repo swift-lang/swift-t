@@ -36,7 +36,7 @@ jobs:
           # - macos-14-arm64
 
         # Comma separated list of python versions to test
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
         mpi:
           - mpich
