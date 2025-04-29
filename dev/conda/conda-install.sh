@@ -117,7 +117,7 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   # Pin Clang for everything but Python 3.9
   PIN_CLANG="-18==18.1.8"
   if [[ $PV =~ 3.9 ]] {
-       PIN_CLANG=""
+       PIN_CLANG="-18"
    #     SOLVER=()
   }
 }
