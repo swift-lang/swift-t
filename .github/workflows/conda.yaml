@@ -4,12 +4,12 @@ name: Conda Build 🐍
 
 env:
   # For Chicago time on log messages:
-  TZ: CST6CDT
+  TZ: America/Chicago
 
 on:
   # Schedule and workflow_dispatch (manual) only work on default branch
   schedule:
-    - cron: "0 6 * * *"   # Fire at 06:00 AM every day
+    - cron: "0 5 * * *"   # Fire at 05:00 AM every day
   workflow_dispatch:
   pull_request:
   push:
@@ -36,7 +36,11 @@ jobs:
           # - macos-14-arm64
 
         # Comma separated list of python versions to test
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
 
         mpi:
           - mpich
