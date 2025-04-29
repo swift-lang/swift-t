@@ -106,9 +106,10 @@ PIN_PV=""
 if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   SOLVER=( --solver classic )
   # Pin Python version for these versions:
+  # On GitHub, Conda will try to change them!
   case $PV {
     3.9*)  PIN_PV="==3.9.7" ;;
-    3.10*) PIN_PV=""        ;;
+    3.10*)                  ;& # Fall-through
     3.11*)                  ;& # Fall-through
     3.12*) PIN_PV="==$PV"   ;;
     *)     print "conda-install.sh: unsupported Python version: '$PV'"
