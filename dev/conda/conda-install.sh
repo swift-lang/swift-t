@@ -108,6 +108,7 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   # Pin Python version for these versions:
   case $PV {
     3.9*)  PIN_PV="==3.9.7" ;;
+    3.10*) PIN_PV=""        ;;
     3.11*)                  ;& # Fall-through
     3.12*) PIN_PV="==$PV"   ;;
     *)     print "unsupported Python version: '$PV'"
