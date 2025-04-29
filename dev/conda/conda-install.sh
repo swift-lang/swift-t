@@ -111,7 +111,7 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
     3.10*) PIN_PV=""        ;;
     3.11*)                  ;& # Fall-through
     3.12*) PIN_PV="==$PV"   ;;
-    *)     print "unsupported Python version: '$PV'"
+    *)     print "conda-install.sh: unsupported Python version: '$PV'"
            exit 1 ;;
   }
   # Pin Clang for everything but Python 3.9
