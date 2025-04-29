@@ -44,7 +44,10 @@ jobs:
 
         mpi:
           - mpich
-
+        exclude:
+          #  Some package spec difference exists on GH for this:
+          - os: macos-14
+            python-version: "3.9"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
