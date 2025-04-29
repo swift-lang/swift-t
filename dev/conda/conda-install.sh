@@ -115,11 +115,12 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
            exit 1 ;;
   }
   # Pin Clang for everything but Python 3.9
+       # In Py 3.9, 18 => 18.1.7
   PIN_CLANG="-18==18.1.8"
-  if [[ $PV =~ 3.9 ]] {
-       PIN_CLANG="-18"
-   #     SOLVER=()
-  }
+  # if [[ $PV =~ 3.9 ]] {
+  #      PIN_CLANG="-18"
+  #  #     SOLVER=()
+  # }
 }
 
 # Build dependency list:
