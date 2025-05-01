@@ -230,7 +230,7 @@ if (( ${ADLB_MPI_VERSION} >= 3 ))
 then
 AC_MSG_CHECKING([MPI version])
 ${CC} ${CFLAGS} -o maint/mpi_version3_test maint/mpi_version3_test.c ${LDFLAGS}
-[[ ${?} != 0 ]] && AC_MSG_ERROR(
+(( ${?} != 0 )) && AC_MSG_ERROR(
       [MPI_VERSION >= 3 is required for parallel tasks!
                    You must 1) re-configure with --enable-mpi-2
                                which disables parallel tasks; or
