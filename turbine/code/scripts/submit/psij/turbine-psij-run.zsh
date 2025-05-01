@@ -37,7 +37,6 @@ export    PROGRAM NODES PPN
 for kv in ${=USER_ENV_CODE}
 do
   eval export ${kv}
-  echo ENV KV: ${kv}
 done
 
 cd $TURBINE_OUTPUT
@@ -50,6 +49,5 @@ printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
 which python
 set -x
-python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py 2>&1 # > psij.log # $TCLSH $PROGRAM
-
-# wait for job completion?
+python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py 2>&1
+# Return exit code from python

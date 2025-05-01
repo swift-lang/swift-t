@@ -20,8 +20,16 @@ import sys
 import os
 import time
 
-import psij
-from psij.executors.batch.batch_scheduler_executor import BatchSchedulerExecutorConfig
+def msg(t):
+    print("turbine2psij: " + t)
+
+try:
+    import psij
+    from psij.executors.batch.batch_scheduler_executor import BatchSchedulerExecutorConfig
+except:
+    msg("PSI/J could not be imported!")
+    msg("Install PSI/J into the Python used by Swift/T")
+    exit(1)
 
 # PSI/J polling interval in seconds:
 polling_interval = 10
@@ -159,9 +167,11 @@ parser.add_argument("--debug", action="store_true",
 
 args = parser.parse_args()
 
-
 if args.debug:
-    print("turbine2psij: args: " + str(args))
+    msg("args: start...")
+    for key, value in vars(args).items():
+        print("%-22s %s" % (key+":", value))
+    msg("args: stop.")
 
 if args.executable is None:
     print(os.environ.get("SCRIPT"))
@@ -170,9 +180,13 @@ if args.executable is None:
     print("Missing command to be executed. Aborting.")
     sys.exit()
 
+
 # Construct a Job:
-cfg = BatchSchedulerExecutorConfig(launcher_log_file=
-                                   args.TURBINE_OUTPUT / "psij-logs",
+logfile = args.TURBINE_OUTPUT / "psij.log"
+if args.debug:
+    msg("log: " + str(logfile))
+cfg = BatchSchedulerExecutorConfig(launcher_log_file=logfile,
+                                   work_directory=args.TURBINE_OUTPUT,
                                    queue_polling_interval=polling_interval)
 jex = psij.JobExecutor.get_instance(args.executor, config=cfg)
 job = psij.Job()
@@ -223,10 +237,12 @@ duration = timedelta(
 attributes = psij.JobAttributes(
     duration = duration,
     queue_name = args.QUEUE,
-    project_name = args.PROJECT,
+    account = args.PROJECT,
     reservation_id = None,
     custom_attributes = {},
 )
+
+msg(str(attributes))
 
 # duration (timedelta) - Specifies the duration (walltime) of the
 # job. A job whose execution exceeds its walltime can be terminated
@@ -254,7 +270,7 @@ attributes = psij.JobAttributes(
 # Create job specification
 spec = psij.JobSpec(
     name = args.TURBINE_JOBNAME,
-    executable = args.executable,
+    executable = os.environ.get("TURBINE_HOME") + "/bin/turbine-pilot",
     arguments = args.arguments,
     directory = args.TURBINE_OUTPUT,
     inherit_environment = True,
@@ -263,18 +279,21 @@ spec = psij.JobSpec(
     stdout_path = args.TURBINE_OUTPUT / "output.txt",
     stderr_path = args.TURBINE_OUTPUT / "stderr.txt",
     resources = resource,
-    attributes = None,
+    attributes = attributes,
     pre_launch = None,
     post_launch = None,
     launcher = "mpirun"
 )
+
+if args.debug:
+    msg(str(spec))
 
 job.spec = spec
 
 # Submit Job!
 jex.submit(job)
 
-print("turbine2psij: job submitted: ID: " + job.native_id)
+msg("job submitted: ID: " + job.native_id)
 
 # Check if we are waiting for job completion:
 w = os.environ.get("WAIT_FOR_JOB", "0")
@@ -283,21 +302,21 @@ if int(w) == 0:
     exit()
 
 # Wait for job completion
-print("turbine2psij: waiting for job completion...")
+msg("waiting for job completion...")
 # Give PSI/J time to make its first poll:
 # https://github.com/ExaWorks/psij-python/issues/358
 time.sleep(polling_interval * 2)
 while True:
     status = job.wait(timedelta(seconds=polling_interval))
     if status is not None:
-        print("PSI/J job status: " + str(status.state))
+        msg("PSI/J job status: " + str(status.state))
         if status.final:
             break
     else:
-        print("PSI/J job status: None")
+        msg("PSI/J job status: None")
 
 if status.exit_code != 0:
-    print("turbine2psij: PSI/J job failed with exit code %i" % status)
+    msg("PSI/J job failed with exit code: %i" % status)
     exit(status.exit_code)
 
-print("turbine2psij: OK.")
+msg("OK.")
