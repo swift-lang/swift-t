@@ -14,6 +14,7 @@
  * limitations under the License
  */
 
+#include <stdio.h>
 
 #include <adlb.h>
 
@@ -23,6 +24,12 @@ main()
   int mpi_argc = 0;
   char** mpi_argv = NULL;
   MPI_Init(&mpi_argc, &mpi_argv);
+
+  int rank_world, size_world;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank_world);
+  MPI_Comm_size(MPI_COMM_WORLD, &size_world);
+  printf("rank:   %i/%i\n", rank_world, size_world);
+
   int types = 0;
   int am_server;
   MPI_Comm adlb_comm;
@@ -30,5 +37,8 @@ main()
 
   ADLB_Finalize();
   MPI_Finalize();
+
+  if (rank_world == 0)
+    printf("init.x: OK\n");
   return 0;
 }
