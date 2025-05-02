@@ -3644,7 +3644,7 @@ Increment <code>version.txt</code>
 </li>
 <li>
 <p>
-Edit <code>adlb-version.h.in</code>: update required c-utils version
+Edit <code>src/adlb-version.h.in</code>: update required c-utils version
 </p>
 </li>
 </ul></div>
@@ -3661,7 +3661,7 @@ Increment <code>version.txt</code>
 </li>
 <li>
 <p>
-Edit <code>turbine-version.h.in</code>: update required c-utils, ADLB versions
+Edit <code>src/turbine/turbine-version.h.in</code>: update required c-utils, ADLB versions
 </p>
 </li>
 </ul></div>
@@ -3678,7 +3678,7 @@ Increment <code>etc/version.txt</code>
 </li>
 <li>
 <p>
-Edit <code>turbine-version.txt</code>: update required Turbine version
+Edit <code>etc/turbine-version.txt</code>: update required Turbine version
 </p>
 </li>
 <li>
@@ -3695,6 +3695,11 @@ Edit <code>guide.txt</code>: update version number for download and date
 <li>
 <p>
 Apply <code>git tag release-x.y.z</code>
+</p>
+</li>
+<li>
+<p>
+<code>$ git push --tags</code>
 </p>
 </li>
 <li>
@@ -3727,6 +3732,11 @@ Use <code>dev/build-spacks.sh</code> to make the Spack releases
 Update the Spack <code>package.py</code> files and issue a pull request to Spack
 </p>
 </li>
+<li>
+<p>
+Use <code>dev/conda/*/build-platform.sh</code> to make the Anaconda packages
+</p>
+</li>
 </ul></div>
 </li>
 <li>
@@ -3741,7 +3751,7 @@ Test package on Linux and Mac
 </li>
 <li>
 <p>
-<code>git push</code> tag and downloads to GitHub
+<code>git push</code> tags and downloads to GitHub
 </p>
 </li>
 <li>
@@ -3850,7 +3860,7 @@ trace: 42</code></pre>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2023-03-29 11:13:38 CEST
+ 2024-08-22 15:46:44 CDT
 </div>
 </div>
 </body>
