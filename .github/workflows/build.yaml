@@ -54,7 +54,7 @@ jobs:
 
       - name: Setup R
         run: |
-          dev/github-actions/install-R.sh
+          dev/github-actions/install-R.sh ${{ matrix.os }}
 
       - name: Initialize swift-t settings
         run: |
