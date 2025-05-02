@@ -43,23 +43,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # # R may need to run before installing sed:
-      # - name: Set up R
-      #   uses: r-lib/actions/setup-r@v2
+      # R may need to run before installing sed:
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
 
-      - name: Install deps
-        run: |
-          dev/github-actions/setup-deps.sh ${{ matrix.os }}
+      # - name: Install deps
+      #   run: |
+      #     dev/github-actions/setup-deps.sh ${{ matrix.os }}
 
-# #       # TODO RInside
-#       - name: Install R requirements
-#         run: R -e "install.packages('RInside')"
-# # #        run: Rscript install/R-requirements.R
+#       # TODO RInside
+      # - name: Install R requirements
+      #   run: |
+      #     R -e "install.packages('RInside')"
+# #        run: Rscript install/R-requirements.R
 
-      # - uses: r-lib/actions/setup-r-dependencies@v2
-      #   with:
-      #     extra-packages: any::RInside
-
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::RInside
 
       - name: Setup Python
         uses: actions/setup-python@v5
