@@ -46,10 +46,10 @@ jobs:
         run: |
           dev/github-actions/setup-deps.sh ${{ matrix.os }}
 
-#       # TODO RInside
-      - name: Install R requirements
-        run: R -e "install.packages('RInside')"
-# #        run: Rscript install/R-requirements.R
+# #       # TODO RInside
+#       - name: Install R requirements
+#         run: R -e "install.packages('RInside')"
+# # #        run: Rscript install/R-requirements.R
 
       # - uses: r-lib/actions/setup-r-dependencies@v2
       #   with:
