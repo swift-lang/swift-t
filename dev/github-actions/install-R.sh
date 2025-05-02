@@ -27,6 +27,9 @@ PS4="
 () {
   set -x
   conda install --yes --quiet -c conda-forge -c swift-t $PKG
+  rehash
+  echo $PATH
+  which python
   which Rscript
   Rscript dev/conda/install-RInside.R
 }
