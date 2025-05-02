@@ -8,9 +8,9 @@ on:
   pull_request:
   push:
     branches:
-      - github_action_mac
+      # - github_action_mac
 #      - github_action_build   # The name of our test branch
-#      - master
+      - master
   release:
     types:
       - published
