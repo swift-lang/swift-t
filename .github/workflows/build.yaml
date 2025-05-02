@@ -29,7 +29,12 @@ jobs:
           # - macos-14
 
         # Comma separated list of python versions to test
-        python-version: ["3.11"] # "3.8", "3.9", "3.10",
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
 
         mpi:
           - mpich
@@ -76,10 +81,12 @@ jobs:
 
       - name: build swift-t
         run: |
-          dev/build/build-swift-t.sh -vv
+          dev/build/build-swift-t.sh
 
       - name: Report Swift/T version info
         run:  /tmp/swift-t-install/stc/bin/swift-t -v
 
       - name: Check that Swift/T runs
-        run:  /tmp/swift-t-install/stc/bin/swift-t -VV -E 'trace(42);'
+        run:  |
+          /tmp/swift-t-install/stc/bin/swift-t -E 'trace(42);'
+          /tmp/swift-t-install/stc/bin/swift-t -i python -E 'trace(python("","repr(42)"));'
