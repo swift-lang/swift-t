@@ -14,8 +14,6 @@ log()
   printf "setup-deps: %s\n" "$*"
 }
 
-apt list --installed
-
 log "Installing dependencies for OS=$MATRIX_OS ..."
 
 if [[ $MATRIX_OS == "ubuntu-latest" ]]
@@ -26,7 +24,12 @@ then
     default-jdk
     libcurl4-openssl-dev
     make
-    mpich
+    # MPICH is broken: 2025-05-02
+    # https://forums.linuxmint.com/viewtopic.php?t=427785
+    # mpich
+    openmpi-bin
+    openmpi-common
+    libopenmpi-dev
     tcl-dev
     zsh
   )
@@ -65,6 +68,7 @@ fi
 
 if (
   set -eux
+  # Install!
   ${TOOL[@]} ${PKGS[@]}
 ) 2>&1 >> tool.log
 then
@@ -89,5 +93,3 @@ then
   )
   echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 fi
-
-apt list --installed
