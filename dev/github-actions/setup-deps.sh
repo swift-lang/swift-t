@@ -14,6 +14,8 @@ log()
   printf "setup-deps: %s\n" "$*"
 }
 
+apt list --installed
+
 log "Installing dependencies for OS=$MATRIX_OS ..."
 
 if [[ $MATRIX_OS == "ubuntu-latest" ]]
@@ -87,3 +89,5 @@ then
   )
   echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 fi
+
+apt list --installed
