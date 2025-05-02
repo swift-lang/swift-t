@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -eu
+exec 2>&1
 
 # INSTALL R SH
 # and RInside
@@ -24,12 +25,23 @@ case $MATRIX_OS {
 PS4="
 + "
 
+set -x
+echo CONDA_EXE $CONDA_EXE
+CONDA_HOME=$(dirname $(dirname $CONDA_EXE))
+CONDA_BIN_DIR=$CONDA_HOME/bin
+set +x
+echo source $CONDA_BIN_DIR/activate
+source $CONDA_BIN_DIR/activate
+set -x
+
+which python conda
+
 () {
   set -x
   conda install --yes --quiet -c conda-forge -c swift-t $PKG
   rehash
   echo $PATH
-  which python
+
   which Rscript
   Rscript dev/conda/install-RInside.R
 }
