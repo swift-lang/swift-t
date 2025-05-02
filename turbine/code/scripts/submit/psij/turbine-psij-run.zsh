@@ -41,13 +41,14 @@ done
 
 cd $TURBINE_OUTPUT
 
-# Set debugging for PSIJ
-export PSIJ_DEBUG=1
-
 # Report the environment to a sorted file for debugging:
 printenv -0 | sort -z | tr '\0' '\n' > turbine-env.txt
 
-which python
+if (( ${TURBINE_DEBUG:-0} || ${PSIJ_DEBUG:-0} ))
+then
+  printf "using python: "
+  which python
+fi
 set -x
 python ${TURBINE_HOME}/scripts/submit/psij/turbine2psij.py 2>&1
 # Return exit code from python
