@@ -83,4 +83,4 @@ jobs:
         run:  /tmp/swift-t-install/stc/bin/swift-t -v
 
       - name: Check that Swift/T runs
-        run:  /tmp/swift-t-install/stc/bin/swift-t -E 'trace(42);'
+        run:  /tmp/swift-t-install/stc/bin/swift-t -VV -E 'trace(42);'
