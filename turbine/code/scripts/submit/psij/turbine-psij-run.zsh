@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# TURBINE SLURM RUN
-# Creates a SLURM run file and runs it on the given program
+# TURBINE PSI/J RUN
+# Sets up a PSI/J run via environment variables and ./turbine2psij.py
 
 print "TURBINE-PSIJ SCRIPT"
 
