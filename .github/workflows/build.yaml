@@ -3,13 +3,13 @@ name: Build and Test 🧪
 on:
   # Schedule and workflow_dispatch (manual) only work on default branch
   schedule:
-    - cron: "0 6 * * *"   # Fire at 06:00 AM every day
+    - cron: "30 4 * * *"   # Fire at 04:30 AM every day
   workflow_dispatch:
   pull_request:
   push:
     branches:
       # - github_action_mac
-#      - github_action_build   # The name of our test branch
+      # - github_action_build   # The name of our test branch
       - master
   release:
     types:
@@ -17,11 +17,10 @@ on:
 
 permissions:
   contents: read    # To read the project source code (git)
-#  packages: read    # To read the docker image from package registry
 
 jobs:
   build_swift-t:
-    name: Swift/T OS=${{ matrix.os }} PY=${{ matrix.python-version }}
+    name: OS=${{ matrix.os }} PY=${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
