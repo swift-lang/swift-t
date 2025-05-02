@@ -154,6 +154,7 @@ mpiexec tclsh program.tic
 On more complex, scheduled systems, users do not invoke +mpiexec+
 directly; Turbine run scripts are provided by Swift/T.
 
+[[turbine-pilot]]
 === Turbine Pilot
 
 The +turbine-pilot+ program can be used to run Swift/T interactively
@@ -202,11 +203,12 @@ SLURM:: +turbine-slurm-run.zsh+
 Theta:: +turbine-theta-run.zsh+ (Cobalt with Cray's +aprun+)
 ThetaGPU:: +turbine-theta-run.zsh+ (Cobalt with +mpirun+)
 LSF:: +turbine-lsf-run.zsh+
+PSI/J:: +turbine-psij-run.zsh+ (See the <<psij,PSI/J notes>>.)
 
 Each script accepts input via environment variables and command-line options.
 
 The +swift-t+ and +turbine+ programs have a +-m+ (machine) option that accepts
-+pbs+, +cobalt+, +cray+, +lsf+, +theta+, or +slurm+.
++pbs+, +cobalt+, +cray+, +slurm+, +lsf+, or +psij+.
 
 A typical invocation is (one step compile-and-run):
 ----
@@ -260,7 +262,8 @@ Number of processes to use
 Number of processes per node
 
 +PROJECT+::
-The project name to use with the system scheduler
+The project name to use with the system scheduler.  Some systems call
+this the "account" to charge
 
 +QUEUE+::
 Name of queue in which to run
@@ -440,19 +443,23 @@ shell code in this script.  This script is run before the
 initialization script (+turbine -i+).  This is an alternative to
 placing the environment variables in a wrapper script.
 
-+-t <time>+:: Set scheduler walltime.  The argument format is passed
++-t <time>+::
+Set scheduler walltime.  The argument format is passed
 through to the scheduler
 
-+-V+:: Make script verbose.  This typically just applies +set -x+,
++-V+::
+Make script verbose.  This typically just applies +set -x+,
 allowing you to inspect variables and arguments as passed to the
 system scheduler (e.g., +qsub+).
 
-+-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
-       (reduces number of files that must be read from file system).
++-x+::
+Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
+(reduces number of files that must be read from file system).
 
-+-X+:: Run standalone Turbine executable
-        (created by link:guide.html#mkstatic[+mkstatic.tcl+]) instead of
-        +program.tic+.
++-X+::
+Run standalone Turbine executable
+(created by link:guide.html#mkstatic[+mkstatic.tcl+])
+instead of +program.tic+.
 
 ++++
 <a name="dry_run"></a>
@@ -847,6 +854,40 @@ module load openmpi/4.1.1-gcc
 ----
 
 Simply use the +dev/build/build-swift-t.sh+ method.
+
+[[psij]]
+== PSI/J
+
+https://exaworks.org/psij-python[PSI/J] is a Python abstraction layer
+over cluster schedulers.  If you are already familiar with PSI/J, it
+may be a convenient way to get Swift/T running on your system.
+
+Simply run:
+
+----
+$ swift-t -m psij workflow.swift
+----
+
+The normal Turbine settings are passed into a small Python program
+bundled with Swift/T called +turbine2psij.py+, which loads up PSI/J
+and submits the job.  This uses the PSI/J
+https://exaworks.org/psij-python/docs/v/0.9.10/.generated/tree.html#mpirun[MPI launcher],
+which launches <<turbine-pilot,turbine-pilot>>.
+
+=== Environment Settings
+
+These may be set in the shell or in a <<settings_file,settings file>>.
+The are recognized by +turbine2psij+ and passed into the PSI/J API.
+
++PSIJ_EXECUTOR+::
+The name of the PSI/J executor to use.  See the
+https://exaworks.org/psij-python/docs/v/0.9.10/user_guide.html#executors-and-launchers[PSI/J
+executor list].
+
++PSIJ_DEBUG+::
+Enable additional debug messages to view what is happening.
+
+Other <<variables,Turbine scheduler variables>> are recognized automatically.
 
 == Cray
 
