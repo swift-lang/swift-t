@@ -208,7 +208,7 @@ endif
 
 %.d: %.c Makefile
 	$(Q) "  DEP		$(@)"
-	$(E) CC="$(DEPCC)" maint/depend.sh \
+	$(E) DEPCC="$(DEPCC)" maint/depend.sh \
              $(dir $(<)) $(CPPFLAGS) $(<) > $(@)
 
 deps.txt: $(DEPS) $(TEST_DEPS)
