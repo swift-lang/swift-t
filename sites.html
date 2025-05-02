@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 10.1.2" />
+<meta name="generator" content="AsciiDoc 10.2.0" />
 <title>Swift/T Sites Guide</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -746,8 +746,8 @@ asciidoc.install(2);
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
-<span id="revnumber">version 1.6.5,</span>
-<span id="revdate">September 2024</span>
+<span id="revnumber">version 1.6.6,</span>
+<span id="revdate">May 2025</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -909,7 +909,7 @@ script wrapper that configures Turbine and essentially runs:</p></div>
 <div class="paragraph"><p>On more complex, scheduled systems, users do not invoke <code>mpiexec</code>
 directly; Turbine run scripts are provided by Swift/T.</p></div>
 <div class="sect2">
-<h3 id="_turbine_pilot">Turbine Pilot</h3>
+<h3 id="turbine-pilot">Turbine Pilot</h3>
 <div class="paragraph"><p>The <code>turbine-pilot</code> program can be used to run Swift/T interactively
 on the compute nodes of a scheduled system in an interactive
 allocation.  This mode of operation does not attempt to submit a job
@@ -1007,10 +1007,18 @@ LSF
 <code>turbine-lsf-run.zsh</code>
 </p>
 </dd>
+<dt class="hdlist1">
+PSI/J
+</dt>
+<dd>
+<p>
+<code>turbine-psij-run.zsh</code> (See the <a href="#psij">PSI/J notes</a>.)
+</p>
+</dd>
 </dl></div>
 <div class="paragraph"><p>Each script accepts input via environment variables and command-line options.</p></div>
 <div class="paragraph"><p>The <code>swift-t</code> and <code>turbine</code> programs have a <code>-m</code> (machine) option that accepts
-<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, <code>lsf</code>, <code>theta</code>, or <code>slurm</code>.</p></div>
+<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, <code>slurm</code>, <code>lsf</code>, or <code>psij</code>.</p></div>
 <div class="paragraph"><p>A typical invocation is (one step compile-and-run):</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1085,7 +1093,8 @@ Number of processes per node
 </dt>
 <dd>
 <p>
-The project name to use with the system scheduler
+The project name to use with the system scheduler.  Some systems call
+this the "account" to charge
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1449,7 +1458,7 @@ system scheduler (e.g., <code>qsub</code>).
 <dd>
 <p>
 Use <code>turbine_sh</code> launcher with compiled-in libraries instead of <code>tclsh</code>
-       (reduces number of files that must be read from file system).
+(reduces number of files that must be read from file system).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1458,8 +1467,8 @@ Use <code>turbine_sh</code> launcher with compiled-in libraries instead of <code
 <dd>
 <p>
 Run standalone Turbine executable
-        (created by <a href="guide.html#mkstatic"><code>mkstatic.tcl</code></a>) instead of
-        <code>program.tic</code>.
+(created by <a href="guide.html#mkstatic"><code>mkstatic.tcl</code></a>)
+instead of <code>program.tic</code>.
 </p>
 </dd>
 </dl></div>
@@ -2000,6 +2009,50 @@ Simply set the MPI, Tcl (and optionally Python and R) locations in
 </div></div>
 <div class="paragraph"><p>Simply use the <code>dev/build/build-swift-t.sh</code> method.</p></div>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="psij">PSI/J</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="https://exaworks.org/psij-python">PSI/J</a> is a Python abstraction layer
+over cluster schedulers.  If you are already familiar with PSI/J, it
+may be a convenient way to get Swift/T running on your system.</p></div>
+<div class="paragraph"><p>Simply run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -m psij workflow.swift</code></pre>
+</div></div>
+<div class="paragraph"><p>The normal Turbine settings are passed into a small Python program
+bundled with Swift/T called <code>turbine2psij.py</code>, which loads up PSI/J
+and submits the job.  This uses the PSI/J
+<a href="https://exaworks.org/psij-python/docs/v/0.9.10/.generated/tree.html#mpirun">MPI launcher</a>,
+which launches <a href="#turbine-pilot">turbine-pilot</a>.</p></div>
+<div class="sect2">
+<h3 id="_environment_settings">Environment Settings</h3>
+<div class="paragraph"><p>These may be set in the shell or in a <a href="#settings_file">settings file</a>.
+The are recognized by <code>turbine2psij</code> and passed into the PSI/J API.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>PSIJ_EXECUTOR</code>
+</dt>
+<dd>
+<p>
+The name of the PSI/J executor to use.  See the
+<a href="https://exaworks.org/psij-python/docs/v/0.9.10/user_guide.html#executors-and-launchers">PSI/J
+executor list</a>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>PSIJ_DEBUG</code>
+</dt>
+<dd>
+<p>
+Enable additional debug messages to view what is happening.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Other <a href="#variables">Turbine scheduler variables</a> are recognized automatically.</p></div>
 </div>
 </div>
 </div>
@@ -4359,9 +4412,9 @@ Run with:
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.6.5<br />
+Version 1.6.6<br />
 Last updated
- 2024-09-06 15:29:53 CDT
+ 2025-05-01 19:39:28 CDT
 </div>
 </div>
 </body>
