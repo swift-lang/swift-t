@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.6.5, December 2024</span><br />
+<span id="author">v1.6.6, May 2025</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -4912,6 +4912,76 @@ and an unmodified environment.</p></div>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="_parallel_python">14.9. Parallel Python</h3>
+<div class="paragraph"><p>This feature combines parallel tasks with the <a href="#leaf_python">Swift/T Python features</a> via <code>mpi4py</code> for an expressive way to run workflows
+of parallel functions under <code>mpi4py</code>.</p></div>
+<div class="sect3">
+<h4 id="_usage_2">14.9.1. Usage</h4>
+<div class="paragraph"><p>In your Swift/T script:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Import the Python module via
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>import python;</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Call into Python code via
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>@par=N python_parallel_persist(code, expression)</code></pre>
+</div></div>
+<div class="paragraph"><p>where the <em>code</em> and <em>expression</em> are used as in the other Swift/T
+Python features, and <em>N</em> is the number of ranks to run on.</p></div>
+</li>
+</ol></div>
+<div class="paragraph"><p>In the called Python code:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Import the provided module:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>import turbine_helpers</code></pre>
+</div></div>
+<div class="paragraph"><p>This is automatically in <code>PYTHONPATH</code> .</p></div>
+</li>
+<li>
+<p>
+Use <code>turbine_helpers</code> to get the MPI communicator constructed for this
+task:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>comm = turbine_helpers.get_task_comm()
+rank = comm.Get_rank()
+size = comm.Get_size()</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Operate as usual with the provided communicator.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="_installation_2">14.9.2. Installation</h4>
+<div class="paragraph"><p>To use this functionality, simply ensure that <code>mpi4py</code> is available in
+the Python that you used to install Swift/T.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_examples_2">14.9.3. Examples</h4>
+<div class="paragraph"><p><a href="https://github.com/swift-lang/swift-work/tree/master/python-parallel">A complete example is here.</a></p></div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -6862,7 +6932,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2025-04-10 16:14:06 CDT
+ 2025-05-07 16:52:12 CDT
 </div>
 </div>
 
