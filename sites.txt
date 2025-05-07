@@ -874,6 +874,13 @@ and submits the job.  This uses the PSI/J
 https://exaworks.org/psij-python/docs/v/0.9.10/.generated/tree.html#mpirun[MPI launcher],
 which launches <<turbine-pilot,turbine-pilot>>.
 
+This feature was added in Swift/T release 1.6.6 .
+
+=== Installation
+
+Simply install PSI/J into the Python environment used at runtime.  Due
+to API updates and bug fixes, use PSI/J from branch +main+ later than 2025-05-02.
+
 === Environment Settings
 
 These may be set in the shell or in a <<settings_file,settings file>>.
