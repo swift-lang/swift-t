@@ -1686,10 +1686,10 @@ The Swift/T maintainer does this for each Swift/T release.
 **** Increment +etc/version.txt+
 **** Edit +etc/turbine-version.txt+: update required Turbine version
 **** Edit +guide.txt+: update version number for download and date
+*** Edit +dev/get-versions.sh+ to set the Swift/T version
 * Apply +git tag release-x.y.z+
 * +$ git push --tags+
 * Build release packages
-** Edit +dev/get-versions.sh+ to set the Swift/T version
 ** Use +dev/release/make-release-pkg.zsh+ to make the release package
 ** Use +dev/debian/make-debs.zsh -b+ to make the Debian package installer
 ** Use +dev/build-spacks.sh+ to make the Spack releases
