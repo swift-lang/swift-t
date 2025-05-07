@@ -2831,7 +2831,61 @@ and an unmodified environment.
 
 The return value of +launch_multi()+ is the sum of the exit codes.
 
+=== Parallel Python
+
+This feature combines parallel tasks with the <<leaf_python,Swift/T
+Python features>> via +mpi4py+ for an expressive way to run workflows
+of parallel functions under +mpi4py+.
+
+==== Usage
+
+In your Swift/T script:
+
+. Import the Python module via
++
+----
+import python;
+----
+. Call into Python code via
++
+----
+@par=N python_parallel_persist(code, expression)
+----
++
+where the _code_ and _expression_ are used as in the other Swift/T
+Python features, and _N_ is the number of ranks to run on.
+
+In the called Python code:
+
+. Import the provided module:
++
+----
+import turbine_helpers
+----
++
+This is automatically in +PYTHONPATH+ .
++
+. Use +turbine_helpers+ to get the MPI communicator constructed for this
+task:
++
+----
+comm = turbine_helpers.get_task_comm()
+rank = comm.Get_rank()
+size = comm.Get_size()
+----
+. Operate as usual with the provided communicator.
+
+==== Installation
+
+To use this functionality, simply ensure that +mpi4py+ is available in
+the Python that you used to install Swift/T.
+
+==== Examples
+
+https://github.com/swift-lang/swift-work/tree/master/python-parallel[A complete example is here.]
+
 == More about functions
+
 In this section we discuss more advanced features for defining and
 calling functions.
 
