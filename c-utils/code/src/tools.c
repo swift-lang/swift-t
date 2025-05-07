@@ -44,6 +44,9 @@
 
 #include "src/tools.h"
 
+/* The following block produces a false autoscan report about
+   AC FUNC ERROR AT LINE
+*/
 #ifndef HAVE_ERROR
 void
 error(int status, int errnum, const char* format, ...)
