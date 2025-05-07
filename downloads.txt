@@ -28,6 +28,24 @@ link:guide.html[installation instructions].
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.6
+
+* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.6.tar.gz[swift-t-1.6.6.tar.gz] (11 MB)
+
+* 2025-05-07
+
+* ExM c-utils 0.6.4
+* ADLB/X 1.0.5
+* Turbine 1.4.4
+* STC 1.0.5
+
+*Changes:*
+
+* Updated support for PSI/J
+* Anaconda packages updated for all platforms
+* Test support for GitHub Actions
+* STC auto-appends +$CONDA_PREFIX/lib+ to the search paths for Swift/T modules.  This is helpful for installing Swift/T libraries in an Anaconda environment.
+
 === 1.6.5
 
 * http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.5.tar.gz[swift-t-1.6.5.tar.gz] (11 MB)
