@@ -30,6 +30,7 @@ print scripts/submit/cobalt/*turbine*.*sh*
 print scripts/submit/ec2/turbine-setup-ec2.zsh
 print scripts/submit/lsf/{turbine-lsf-run.zsh,turbine-lsf.sh.m4}
 print scripts/submit/pbs/{turbine-pbs-run.zsh,turbine-pbs.sh.m4}
+print scripts/submit/psij/{turbine-psij-run.zsh,turbine2psij.py}
 print scripts/submit/slurm/*turbine*.*sh*
 print scripts/submit/sge/turbine{-sge-run.zsh,-sge.sh.m4}
 print scripts/submit/theta/{turbine-theta-run.zsh,turbine-theta.sh.m4}
@@ -37,7 +38,7 @@ print scripts/python-config.py
 print src/turbine/turbine-version.h.in
 print etc/help/*.txt etc/turbine.supp
 
-if [[ ${PKG_TYPE} == "deb-bin" ]]
+if [[ ${PKG_TYPE:-} == "deb-bin" ]]
 then
   ln -sfT maint/debian debian
   print debian/*[^~]
