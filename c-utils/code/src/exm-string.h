@@ -21,8 +21,7 @@
  *      Author: wozniak
  */
 
-#ifndef EXM_STRING_H
-#define EXM_STRING_H
+#pragma once
 
 #include <stdbool.h>
 
@@ -59,7 +58,5 @@ strnlen(char* text, size_t maxlen)
   const char* last = memchr(text, '\0', maxlen);
   return last ? (size_t) (last - text) : maxlen;
 }
-
-#endif
 
 #endif
