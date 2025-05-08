@@ -21,6 +21,8 @@ case $MATRIX_OS {
      exit 1 ;;
 }
 
+CONDA_EXE=$(which conda)
+
 # For 'set -x' , including newline
 PS4="
 + "
