@@ -37,8 +37,10 @@ echo CONDA_EXE $CONDA_EXE
 CONDA_HOME=$(dirname $(dirname $CONDA_EXE))
 CONDA_BIN_DIR=$CONDA_HOME/bin
 set +x
-echo source $CONDA_BIN_DIR/activate
-source $CONDA_BIN_DIR/activate
+# Cannot leave env name blank on GitHub?
+ACTIVATE=( source $CONDA_BIN_DIR/activate base )
+log $ACTIVATE
+$ACTIVATE
 set -x
 
 which python conda
