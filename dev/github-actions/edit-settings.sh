@@ -20,7 +20,7 @@ cp -v $SETTINGS_SH $SETTINGS_ORIG
 
 ACTIVATE=( source $CONDA/bin/activate base )
 log ${ACTIVATE[@]}
-$ACTIVATE
+${ACTIVATE[@]}
 
 log $SETTINGS_SH ...
 sed -i -f github-actions/settings.sed $SETTINGS_SH
