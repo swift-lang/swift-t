@@ -47,9 +47,9 @@ jobs:
         run: |
           dev/github-actions/setup-deps.sh ${{ matrix.os }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: conda-incubator/setup-miniconda@v3
         with:
+          # auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
       - name: Setup R
