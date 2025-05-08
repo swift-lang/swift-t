@@ -36,4 +36,8 @@ then
 fi
 
 log "settings changed:"
+# There will be changes, so the diff exit code will be 1:
+set +e
+set -x
 diff $SETTINGS_ORIG $SETTINGS_SH
+log "SUCCESS"
