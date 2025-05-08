@@ -165,6 +165,12 @@ export PYTHONWARNINGS="ignore::UserWarning"
   log "BUILD: START"
   print
   (
+    if [[ -o e ]] {
+      print  e on
+    } else {
+      print  e off
+    }
+       exit 1
     log "using python: " $( which python )
     log "using conda:  " $( which conda  )
     print
@@ -189,16 +195,16 @@ print
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
+PKG=""
 if UPLOAD=( $( grep -A 1 "anaconda upload" $LOG ) )
 then
   log "UPLOAD: ${UPLOAD:-EMPTY}"
   PKG=${UPLOAD[-1]}
   log "found PKG=${PKG:-NOT_FOUND}"
-else
-  log "ERROR: did not find PKG!"
-  log "LOG CONTENTS:"
-  cat $LOG
 fi
+
+if [[ $PKG == "" ]] \
+  abort "could not find 'anaconda upload' in the log!"
 
 # Print metadata about the PKG
 (
