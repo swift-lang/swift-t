@@ -31,7 +31,7 @@ if [[ "$1" == "-r" ]]
 then
   RHOME=$( R RHOME )
   log "RHOME=$RHOME"
-  sed -i 's/ENABLE_R=0/ENABLE_R=1/'       $SETTINGS_SH
+  sed -i 's/ENABLE_R=0/ENABLE_R=1/'           $SETTINGS_SH
   sed -i "s@# R_INSTALL=.*@R_INSTALL=$RHOME@" $SETTINGS_SH
 fi
 
