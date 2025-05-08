@@ -176,9 +176,6 @@ if (( GNU_TIME )) {
   tm()
   {
     =time --format "TASK TIME: %E" ${*}
-    local CODE=${?}
-    echo "tm(): CODE=$CODE"
-    return $CODE
   }
 } else {
   tm()

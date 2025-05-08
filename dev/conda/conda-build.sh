@@ -1,5 +1,6 @@
 #!/bin/zsh
 set -eu
+setopt PIPE_FAIL
 
 # CONDA BUILD
 # Generic wrapper around `conda build'
@@ -165,12 +166,6 @@ export PYTHONWARNINGS="ignore::UserWarning"
   log "BUILD: START"
   print
   (
-    if [[ -o e ]] {
-      print  e on
-    } else {
-      print  e off
-    }
-       exit 1
     log "using python: " $( which python )
     log "using conda:  " $( which conda  )
     print
