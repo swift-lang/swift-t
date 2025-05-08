@@ -47,7 +47,8 @@ which python conda
 
 () {
   set -x
-  conda install --yes --quiet -c conda-forge -c swift-t $PKG
+  # Use =conda to prevent conda() and 'set -eux'
+  =conda install --yes --quiet -c conda-forge -c swift-t $PKG
   rehash
   echo $PATH
 
