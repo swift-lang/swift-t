@@ -21,11 +21,16 @@ case $MATRIX_OS {
      exit 1 ;;
 }
 
-CONDA_EXE=$(which conda)
-
 # For 'set -x' , including newline
 PS4="
 + "
+
+# The locations from the GitHub builtin setup-miniconda
+# The installation is a bit different on GitHub
+# conda    is in $CONDA_HOME/condabin
+# activate is in $CONDA_HOME/bin
+
+CONDA_EXE=$(which conda)
 
 set -x
 echo CONDA_EXE $CONDA_EXE
