@@ -18,6 +18,9 @@ log "Installing dependencies for OS=$MATRIX_OS ..."
 
 if [[ $MATRIX_OS == "ubuntu-latest" ]]
 then
+  log "APT update ..."
+  sudo apt-get update
+  log "APT update OK."
   TOOL=( sudo apt-get install --yes )
   PKGS=(
     autoconf
@@ -70,7 +73,7 @@ if (
   set -eux
   # Install!
   ${TOOL[@]} ${PKGS[@]}
-) 2>&1 >> tool.log
+) 2>&1 | tee tool.log
 then
   COUNT=${#PKGS[@]}
   T=$(( SECONDS - START ))
