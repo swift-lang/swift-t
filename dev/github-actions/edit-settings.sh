@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eu
+# We 'set -eu' after 'conda activate'
 
 # SETTINGS SH
 # Edit swift-t-settings.sh via settings.sed
@@ -12,15 +12,17 @@ log()
   echo "edit-settings.sh:" ${*}
 }
 
+ACTIVATE=( source $CONDA/bin/activate base )
+log ${ACTIVATE[@]}
+${ACTIVATE[@]}
+
+set -eu
+
 cd dev
 SETTINGS_SH=build/swift-t-settings.sh
 SETTINGS_ORIG=build/swift-t-settings.orig
 
 cp -v $SETTINGS_SH $SETTINGS_ORIG
-
-ACTIVATE=( source $CONDA/bin/activate base )
-log ${ACTIVATE[@]}
-${ACTIVATE[@]}
 
 log $SETTINGS_SH ...
 sed -i -f github-actions/settings.sed $SETTINGS_SH
