@@ -153,6 +153,7 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 {
   echo
   which autoreconf aclocal autom4te m4
+  m4 --version
   log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
   log "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"
