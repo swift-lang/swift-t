@@ -151,6 +151,8 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 # Merge output streams to try to prevent buffering
 #       problems with conda build
 {
+  echo
+  which autoreconf aclocal autom4te m4
   log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
   log "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"
