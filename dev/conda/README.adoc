@@ -149,6 +149,10 @@ Use `dev/conda/upload.sh` to automate this.
 `r-rinside`::
 This package does not exist for `linux-aarch-64`
 
+`ncurses`::
+This fixes the libtinfow warning from ZSH on:
+. Linux Python 3.8
+
 == M4 usage
 
 We use M4 to preprocess `meta.yaml` and `settings.sed`.
