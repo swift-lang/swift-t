@@ -152,8 +152,11 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 #       problems with conda build
 {
   echo
+  # Anaconda Autoconf 2.72 is buggy
+  echo "Build tools:"
   which autoreconf aclocal autom4te m4
   m4 --version
+  echo
   log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
   log "BUILD SWIFT-T STOP:  $( date '+%Y-%m-%d %H:%M:%S' )"

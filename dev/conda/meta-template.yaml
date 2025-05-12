@@ -29,7 +29,8 @@ m4_ifelse(getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 # Remember to sync any dependency changes here with conda-install.sh
 requirements:
   build:
-    - autoconf
+    # Anaconda Autoconf 2.72 is buggy 2025-05-12
+    - autoconf==2.71
     - make
     - openjdk>=17  # Security issue in Java < 11.72.19
     - mpich-mpicc
