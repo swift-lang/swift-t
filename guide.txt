@@ -1407,7 +1407,8 @@ respectively
 
 *Import:* +random+
 
-+random() -> float+:: Obtain random number
++random() -> float+::
+Obtain random number in (0.0, 1.0) , both exclusive
 
 +randint(int start, int end)+::
 Obtain random integer from +start+, inclusive, to +end+, exclusive
