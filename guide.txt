@@ -1821,6 +1821,10 @@ Get the JSON value at the given path, convert to int.
 +json_get_float(string json, string path) -> float+::
 Get the JSON value at the given path, convert to float.
 
++json_join(string json1, string json2) -> string+::
+Join the JSON objects using the Python +|+ operation,
+e.g., +json1|json2+.
+
 ==== JSON encoding
 
 ===== Simple wrappers
