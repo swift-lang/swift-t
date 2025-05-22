@@ -105,7 +105,7 @@ def json_get(J, path):
 def json_join(J1, J2):
     J1 = json.loads(J1)
     J2 = json.loads(J2)
-    return str(J1 | J2)
+    return json.dumps(J1 | J2)
 
 
 ### MPI4PY STUFF
