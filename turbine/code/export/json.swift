@@ -71,6 +71,12 @@ import python;
                      (J, path));
 }
 
+(string t) json_join(string J1, string J2)
+{
+  t = python_persist("from turbine_helpers import *",
+                     "json_join('''%s''','''%s''')" % (J1, J2));
+}
+
 // Encoders
 
 (string o) json_arrayify(string text)
