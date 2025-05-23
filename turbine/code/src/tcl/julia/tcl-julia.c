@@ -93,7 +93,7 @@ Tcljulia_Init(Tcl_Interp* interp)
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
 
-  if (Tcl_PkgProvide(interp, "python", "0.1") == TCL_ERROR)
+  if (Tcl_PkgProvide(interp, "julia", "0.1") == TCL_ERROR)
     return TCL_ERROR;
 
   return TCL_OK;
