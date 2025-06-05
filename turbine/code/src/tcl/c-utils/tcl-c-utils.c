@@ -48,14 +48,14 @@ c_utils_heapsize_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(1);
 
-  long count = -1;
+  size_t count = -1;
 
   #if defined(HAVE_MALLINFO) && defined(HAVE_MALLOC_H)
-  struct mallinfo s = mallinfo();
+  struct mallinfo2 s = mallinfo2();
   count = s.uordblks;
   #endif
 
-  Tcl_Obj* result = Tcl_NewLongObj(count);
+  Tcl_Obj* result = Tcl_NewWideIntObj(count);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
