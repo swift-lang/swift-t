@@ -208,7 +208,10 @@ PSI/J:: +turbine-psij-run.zsh+ (See the <<psij,PSI/J notes>>.)
 Each script accepts input via environment variables and command-line options.
 
 The +swift-t+ and +turbine+ programs have a +-m+ (machine) option that accepts
-+pbs+, +cobalt+, +cray+, +slurm+, +lsf+, or +psij+.
++local+, +pbs+, +cobalt+, +cray+, +slurm+, +lsf+, or +psij+.
+
++local+ simply means to run using the local +mpiexec+ or other
+launcher as specified at build time.
 
 A typical invocation is (one step compile-and-run):
 ----
