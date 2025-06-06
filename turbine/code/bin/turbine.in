@@ -296,7 +296,7 @@ then
   # Set up PYTHONPATH for turbine_helpers
   if (( ${#TURBINE_USE_PYTHON} ))
   then
-      export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
+    export PYTHONPATH=${TURBINE_HOME}/py${PYTHONPATH:+:}${PYTHONPATH:-}
   fi
   # Construct the scheduler script name
   RUN_SCRIPT_NAME=${MACHINE_MODE}/turbine-${MACHINE_MODE}-run.zsh
