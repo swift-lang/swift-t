@@ -732,7 +732,10 @@ PROVENANCE = version.txt source.txt config.log
 
 # Maintaining the install.txt file is a simple way to
 # create a dependency on the installation
-install: install.txt
+install: $(INSTALL_TOP)/install.txt
+
+$(INSTALL_TOP)/install.txt: install.txt
+	$(E) cp $(CP_ARGS) $(<) $(INSTALL_TOP)
 
 # Installed files:
 DIRECTORIES := $(INSTALL_TOP) $(INSTALL_BIN) $(INSTALL_ETC)     \
@@ -798,7 +801,6 @@ endif
 	$(Q) "  CREATE  	$(@)"
 #       Make the install.txt file
 	$(E) maint/create-install.sh $(@) $(INSTALL_PREFIX) $(ENABLE_DEB)
-	$(E) cp $(CP_ARGS) $(@) $(INSTALL_TOP)
 
 ### Autoconf sanity:
 
