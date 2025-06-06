@@ -1199,7 +1199,9 @@ If a function is described below an *Import:* label, be sure to
 Exclusive logical or
 
 +propagate(int|float|string|boolean|void|file...) -> void+::
-Create a void value. +
+Create a void value.  Useful for propagating dataflow control in cases
+where there is no natural dataflow progress.
++
 (+make_void()+ and +makeVoid()+ are deprecated
 aliases for this function.)
 
