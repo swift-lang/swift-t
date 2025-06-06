@@ -283,7 +283,7 @@ check_machine()
   exit 1
 }
 
-if (( ${#MACHINE_MODE} != 0 ))
+if (( ${#MACHINE_MODE} != 0 )) && [[ ${MACHINE_MODE} != "local" ]]
 then
   # Use a scheduler script...
   check_machine

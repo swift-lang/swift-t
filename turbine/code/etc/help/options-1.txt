@@ -5,7 +5,7 @@
    -l
           enable MPI line numbering
    -m <machine>
-          Set scheduler type: cobalt, cray, pbs, etc.
+          Set scheduler type: local, cobalt, cray, pbs, slurm, etc.
    -n <procs>
           Set total number of processes
    -s <settings.sh>
