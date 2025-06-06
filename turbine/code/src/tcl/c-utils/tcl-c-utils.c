@@ -43,16 +43,23 @@
 #include "tcl-c-utils.h"
 
 static int
-c_utils_heapsize_Cmd(ClientData cdata, Tcl_Interp *interp,
+c_utils_mallinfo_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
 
   size_t count = -1;
 
-  #if defined(HAVE_MALLINFO) && defined(HAVE_MALLOC_H)
+  #if defined(HAVE_MALLOC_H)
+  #if defined(HAVE_MALLINFO2)
   struct mallinfo2 s = mallinfo2();
   count = s.uordblks;
+  #elif defined(HAVE_MALLINFO)
+  struct mallinfo s = mallinfo();
+  count = s.uordblks;
+  #else
+  // No mallinfo(): no problem: return -1
+  #endif
   #endif
 
   Tcl_Obj* result = Tcl_NewWideIntObj(count);
@@ -98,7 +105,7 @@ Hostname_Cmd(ClientData cdata, Tcl_Interp *interp,
 void
 tcl_c_utils_init(Tcl_Interp* interp)
 {
-  COMMAND("heapsize", c_utils_heapsize_Cmd);
+  COMMAND("mallinfo", c_utils_mallinfo_Cmd);
   COMMAND("hash",     c_utils_hash_Cmd);
   COMMAND("hostname", Hostname_Cmd);
 }
