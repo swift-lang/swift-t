@@ -1463,6 +1463,24 @@ are used as arguments.
 This function does not allow for arguments with white space-
 use +system()+ for more complex cases.
 
++mallinfo(void) -> int+::
+Return the amount of heap memory used as reported by +mallinfo()+.
+This is not available on Mac and reports -1 there.  The +void+
+argument may be used to more easily capture the state at which you
+want to capture the memory usage.  For example:
++
+----
+size1  = mallinfo(propagate()) =>
+result = compute(data);
+size2  = mallinfo(propagate(result));
+----
++
+This example will ensure that the +size1+ and +size2+ values reflect
+the state before and after the call to +compute()+.  Note that
++mallinfo()+ may run on any worker.  It is best used for debugging in
+single-worker cases or along with the <<location,location>>
+functionality.
+
 [[argv]]
 ==== Command line
 
