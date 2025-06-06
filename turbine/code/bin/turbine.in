@@ -155,6 +155,10 @@ report_version()
   then
     print " using R:      ${TURBINE_USE_R}"
   fi
+  if [[ ${TURBINE_USE_JULIA} != 0 ]]
+  then
+    print " using Julia:  ${TURBINE_USE_JULIA}"
+  fi
 }
 
 if (( REPORT_VERSION ))
