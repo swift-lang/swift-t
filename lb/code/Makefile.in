@@ -268,7 +268,7 @@ install: $(INSTALL_TOKEN)
 $(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
 	$(Q)
 	$(Q) "  INSTALL	$(INSTALL_PREFIX)"
-	test ! -f $(INSTALL_PREFIX)/lock
+	$(E) test ! -f $(INSTALL_PREFIX)/lock
 	$(E) mkdir -pv $(INSTALL_ETC)
 	$(E) mkdir -pv $(INSTALL_INCLUDE)
 	$(E) mkdir -pv $(INSTALL_LIB)
