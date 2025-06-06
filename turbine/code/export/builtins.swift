@@ -207,8 +207,8 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future"
     [ "set <<n>> [ turbine::adlb_servers ]" ];
 
-(int n) heap(void v) "turbine" "1.4.4" "heap"
-    [ "set <<n>> [ c_utils::heapsize ]" ];
+(int n) mallinfo(void v) "turbine" "1.4.4" "mallinfo"
+    [ "set <<n>> [ c_utils::mallinfo ]" ];
 
 // Do not optimize this- it is for synchronization tests
 (int o) zero(void v) "turbine" "0.0.4" "zero";
