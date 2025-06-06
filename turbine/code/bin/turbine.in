@@ -186,16 +186,6 @@ then
   exit 0
 fi
 
-if [[ ${MACHINE_FILE} != 0 ]]
-then
-  if [[ ${MPI_IMPL} == "OpenMPI" ]]
-  then
-    TURBINE_LAUNCH_OPTIONS+=( --hostfile ${MACHINE_FILE} )
-  else # MPICH
-    TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
-  fi
-fi
-
 shift $(( OPTIND-1 ))
 
 if (( ${#*} < 1 ))
@@ -225,6 +215,16 @@ if (( EXECUTABLE_PROGRAM ))
 then
   # Don't use TCLSH
   TCLSH=""
+fi
+
+if [[ ${MACHINE_FILE} != 0 ]]
+then
+  if [[ ${MPI_IMPL} == "OpenMPI" ]]
+  then
+    TURBINE_LAUNCH_OPTIONS+=( --hostfile ${MACHINE_FILE} )
+  else # MPICH
+    TURBINE_LAUNCH_OPTIONS+=( -f ${MACHINE_FILE} )
+  fi
 fi
 
 if (( ${LINE_PREFIX_ENABLED} ))
