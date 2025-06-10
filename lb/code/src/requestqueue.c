@@ -395,10 +395,12 @@ static inline void extract_worker_ranks(struct list2* L, int* result);
 
 static inline bool find_contig(int* A, int n, int k, int m, int* result);
 
+#if 0
+// UNUSED: 2025-06-10
 static inline request* find_request(struct list2* L, int rank);
+#endif
 
 static void update_parallel_requests(struct list2* L, int* ranks, int count);
-
 
 /**
    ranks: output array of ranks
@@ -522,6 +524,8 @@ find_contig(int* A, int n, int k, int m, int* result)
   return false;
 }
 
+#if 0
+// UNUSED: 2025-06-10
 static inline request*
 find_request(struct list2* L, int rank)
 {
@@ -540,6 +544,7 @@ find_request(struct list2* L, int rank)
   assert(result != NULL);
   return result;
 }
+#endif
 
 static void
 update_parallel_requests(struct list2* L, int* ranks, int count)
