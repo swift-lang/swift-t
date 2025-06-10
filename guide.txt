@@ -2449,9 +2449,9 @@ The arguments are:
 ==== Calling Python
 
 You can evaluate arbitrary Python code from within Swift/T.  For
-example, you can perform processing with a Python library.
-Once you have that working, you can use Swift/T to coordinate
-concurrent calls to that library.
+example, you can import and perform computation with a Python library,
+using Swift/T to coordinate concurrent calls to that library and/or
+other components.
 
 Consider the following Swift script:
 
@@ -2475,7 +2475,7 @@ python works
 i: 4
 ----
 
-Swift multi-line strings may be used to enter more complex Python code
+Swift multi-line strings may be used to enter longer Python code
 without the explicit use of +\n+.
 
 Additionally, you can call Python libraries such as
