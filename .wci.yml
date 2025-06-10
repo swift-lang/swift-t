@@ -1,0 +1,37 @@
+name: Swift/T
+
+headline: An MPI-based workflow system
+
+description: Swift/T is an implicitly parallel programming language for composing external functions and command-line executables into massively parallel applications. The external functions may be calls to external programs, libraries, or scripting languages (via embedded interpreters) Thus, it is a workflow language for extreme-scale computing, capable of executing very large numbers (trillions) of tasks at high rates across the largest supercomputers.
+
+language: Built with C; programmed with the Swift/T language
+
+release:
+  version: 1.6.6
+  date: 2025-05-07
+  url: https://swift-lang.github.io/swift-t/downloads.html
+
+documentation:
+  general: https://swift-lang.github.io/swift-t/guide.html
+  installation: https://swift-lang.github.io/swift-t/guide.html#_installation
+  tutorial: https://swift-lang.github.io/swift-t/gallery.html
+
+execution_environment:
+  interfaces:
+    - C
+    - C++
+    - Python
+    - R
+    - Julia
+    - Tcl
+    - Shell
+    - mpi4py
+    - MPI
+  resource_managers:
+    - PSI/J
+    - PBS
+    - SLURM
+    - LSF
+    - Cobalt
+  transfer_protocols:
+    - MPI
