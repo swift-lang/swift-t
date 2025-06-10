@@ -30,6 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// From c-utils for chomp()
+#include <exm-string.h>
+
 #include "adlb.h"
 
 // Work unit type
@@ -48,12 +51,14 @@ put_commands(int argc, char** argv)
     ADLB_Fail(-1);
   }
 
-  printf("command file is %s\n", argv[1]);
+  printf("command file is '%s'\n", argv[1]);
+  fflush(stdout);
 
   FILE* fp = fopen(argv[1], "r");
   if (fp == NULL)
   {
     printf("could not open command file\n");
+    fflush(stdout);
     ADLB_Fail(-1);
   }
 
@@ -67,10 +72,11 @@ put_commands(int argc, char** argv)
       /* put command into adlb here */
       int rc = ADLB_Put(cmdbuffer, strlen(cmdbuffer)+1, ADLB_RANK_ANY,
                     -1, CMDLINE, ADLB_DEFAULT_PUT_OPTS);
-      printf("put cmd, rc = %d\n", rc);
+      // printf("put cmd, rc = %d\n", rc);
     }
   }
   printf("\nall commands submitted\n");
+  fflush(stdout);
   fclose(fp);
 }
 
@@ -89,7 +95,7 @@ worker_loop(void)
     void* payload = buffer;
     work_len = short_buffer_length;
 
-    printf("Getting a command\n");
+    // printf("Getting a command\n");
     int rc = ADLB_Get(work_type,
                       &payload, &work_len, GET_LENGTH,
                       &answer_rank, &work_type,
@@ -98,16 +104,17 @@ worker_loop(void)
     if (rc == ADLB_ERROR)
     {
       printf("ERROR!\n");
-      exit(0);
+      exit(1);
     }
 
     if (rc == ADLB_SHUTDOWN)
     {
-      printf("All jobs done\n");
       break;
     }
 
-    printf("executing command line :%s:\n", (char*) payload);
+    chomp(payload);
+    printf("executing command line '%s'\n", (char*) payload);
+    fflush(stdout);
     rc = system(payload);
     if (payload != buffer)
       free(payload);
@@ -127,9 +134,6 @@ main(int argc, char *argv[])
 
   int num_types = 1;
   int type_vect[2] = { CMDLINE };
-
-
-  printf("batcher...\n");
 
   rc = MPI_Init( &argc, &argv );
   assert(rc == MPI_SUCCESS);
@@ -152,7 +156,9 @@ main(int argc, char *argv[])
   if (am_server)
   {
     // server rank
+    printf("batcher server...\n");
     ADLB_Server(3000000);
+    printf("batcher server done.\n");
   }
   else
   {
@@ -168,7 +174,7 @@ main(int argc, char *argv[])
     if (worker_rank == 0)
     {
       double end_time = MPI_Wtime();
-      printf("TOOK: %.3f\n", end_time-start_time);
+      printf("worker time: %.3f\n", end_time-start_time);
     }
   }
 
