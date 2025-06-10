@@ -69,11 +69,13 @@ all: $(ADLB_LIBS)
 # Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
 ifeq ($(DESTDIR),)
   INSTALL_PREFIX  = @prefix@
+  INSTALL_BIN     = $(INSTALL_PREFIX)/bin
   INSTALL_ETC     = $(INSTALL_PREFIX)/etc
   INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
   INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 else
   INSTALL_PREFIX  = $(DESTDIR)
+  INSTALL_BIN     = $(DESTDIR)/bin
   INSTALL_ETC     = $(DESTDIR)/etc$(SUBDIR)
   INSTALL_INCLUDE = $(DESTDIR)/include$(SUBDIR)
   INSTALL_LIB     = $(DESTDIR)/lib$(SUBDIR)
@@ -286,7 +288,7 @@ endif
 	$(Q)
 
 # This gives a false autoscan warning for token 'install'
-.PHONY: install
+.PHONY: install tags clean distclean
 
 ### TAGS
 
@@ -307,3 +309,7 @@ clean::
 distclean: clean
 	@rm -fv Makefile **/*.mk
 	@rm -fv src/adlb-version.h
+
+### APPS
+
+include apps/module.mk
