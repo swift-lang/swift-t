@@ -98,7 +98,7 @@ worker_loop(void)
     if (rc == ADLB_ERROR)
     {
       printf("ERROR!\n");
-      exit(0);
+      exit(1);
     }
 
     if (rc == ADLB_SHUTDOWN)
