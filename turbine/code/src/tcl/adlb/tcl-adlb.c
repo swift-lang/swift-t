@@ -5280,7 +5280,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
   int argpos = 1;
-  int field = 0;
+  unused int field = 0;
   while (argpos < objc)
   {
     // We might need to pack compound types
