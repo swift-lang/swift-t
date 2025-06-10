@@ -102,7 +102,7 @@ endif
 ### FLAGS
 
 CC  = @CC@
-# Always link with gcc, even when using XLC
+# May link with gcc, even when using XLC
 LINKER = @CC@
 
 AR      = @AR@
