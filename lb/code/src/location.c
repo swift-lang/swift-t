@@ -26,7 +26,7 @@
 /**
    Maps string hostname to sorted list of int ranks
         that are running on that host
- */
+*/
 struct xlb_hostmap
 {
   struct table map;
@@ -78,9 +78,7 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
   return ADLB_SUCCESS;
 }
 
-/*
- * Helper to allocate right size of buffers for name lenght
- */
+/** Helper to allocate right size of buffers for name length */
 static adlb_code
 hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
                 size_t name_length)
