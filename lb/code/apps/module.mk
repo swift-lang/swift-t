@@ -9,7 +9,8 @@ $(BATCHER): apps/batcher.x
 	mkdir -pv $(INSTALL_BIN)
 	cp -uv $(<) $(@)
 
-LINK = -L $(INSTALL_LIB) -l adlb -Wl,-rpath,$(INSTALL_LIB)
+LINK = -L $(INSTALL_LIB) -l adlb -Wl,-rpath,$(INSTALL_LIB) \
+       $(LIBS) $(RPATH)
 
 apps/batcher.x: install apps/batcher.o
 	$(CC) -o $(@) apps/batcher.o $(LINK)

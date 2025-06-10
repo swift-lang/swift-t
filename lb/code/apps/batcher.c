@@ -30,6 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// From c-utils for chomp()
+#include <exm-string.h>
+
 #include "adlb.h"
 
 // Work unit type
@@ -89,7 +92,7 @@ worker_loop(void)
     void* payload = buffer;
     work_len = short_buffer_length;
 
-    printf("Getting a command\n");
+    // printf("Getting a command\n");
     int rc = ADLB_Get(work_type,
                       &payload, &work_len, GET_LENGTH,
                       &answer_rank, &work_type,
@@ -107,7 +110,8 @@ worker_loop(void)
       break;
     }
 
-    printf("executing command line :%s:\n", (char*) payload);
+    chomp(payload);
+    printf("executing command line '%s'\n", (char*) payload);
     rc = system(payload);
     if (payload != buffer)
       free(payload);
