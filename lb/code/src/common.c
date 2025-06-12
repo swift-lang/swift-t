@@ -99,10 +99,8 @@ ADLB_string_to_placement(const char *string,
   strncpy(buf, string, MAX_PLACEMENT_LEN);
   buf[MAX_PLACEMENT_LEN] = '\0';
 
-  for (char *p = buf; *p != '\0'; p++)
-  {
-    *p = (char)tolower(*p);
-  }
+  for (char* p = buf; *p != '\0'; p++)
+    *p = (char) tolower(*p);
 
   if (strcmp(buf, "random") == 0)
   {
