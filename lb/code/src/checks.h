@@ -31,8 +31,7 @@
  *  thus, they may be disabled by NDEBUG for performance.
  * */
 
-#ifndef CHECKS_H
-#define CHECKS_H
+#pragma once
 
 #include <stdio.h>
 
@@ -49,8 +48,9 @@
       ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
       ERR_PRINTF(args);                                        \
       ERR_PRINTF("\n");                                        \
-      return ADLB_ERROR; }}
-
+      return ADLB_ERROR;                                       \
+    }                                                          \
+  }
 
 #define verbose_error(code, format, args...)                \
   {                                                         \
@@ -163,4 +163,3 @@
 #define ADLB_DATA_ASSERT(rc)    { (void) (rc); }
 #endif
 
-#endif
