@@ -175,6 +175,10 @@ namespace eval turbine {
         if { ! [ info exists env(TURBINE_LEADER_HOOK_STARTUP) ] } \
             return
 
+        if { [ env -r ADLB_DISABLE_HOSTMAP 0 ] eq 1 } {
+            puts "leader_hook_startup: hostmap is disabled!"
+        }
+
         if { [ adlb::comm_get leaders ] != [ adlb::comm_get null ] } {
             # I am a leader - eval the hook
             puts "TURBINE_LEADER_HOOK_STARTUP..."
