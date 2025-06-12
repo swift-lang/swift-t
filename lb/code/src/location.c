@@ -32,10 +32,6 @@ struct xlb_hostmap
   struct table map;
 };
 
-static adlb_code hostnames_alloc(struct xlb_hostnames *hostnames,
-				 int comm_size,
-				 size_t name_length);
-
 static void
 report_ranks(MPI_Comm comm)
 {
@@ -50,8 +46,12 @@ report_ranks(MPI_Comm comm)
          rank, xlb_s.my_name);
 }
 
+static adlb_code hostnames_alloc(struct xlb_hostnames *hostnames,
+				 MPI_Comm comm,
+				 size_t name_length);
+
 adlb_code
-xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
+xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames* hostnames)
 {
   int rc;
   struct utsname u;
@@ -60,11 +60,7 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 
   report_ranks(comm);
 
-  int comm_size;
-  rc = MPI_Comm_size(comm, &comm_size);
-  MPI_CHECK(rc);
-
-  adlb_code ac = hostnames_alloc(hostnames, comm_size, 1024);
+  adlb_code ac = hostnames_alloc(hostnames, comm, 1024);
 
   ADLB_CHECK(ac);
 
@@ -80,9 +76,13 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames)
 
 /** Helper to allocate right size of buffers for name length */
 static adlb_code
-hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
+hostnames_alloc(struct xlb_hostnames* hostnames, MPI_Comm comm,
                 size_t name_length)
 {
+  int comm_rank, comm_size;
+  MPI_Comm_rank(comm, &comm_rank);
+  MPI_Comm_size(comm, &comm_size);
+
   // Length of nodenames
   hostnames->name_length = name_length;
 
@@ -92,8 +92,10 @@ hostnames_alloc(struct xlb_hostnames *hostnames, int comm_size,
   // This prevents valgrind errors:
   memset(hostnames->my_name, 0, name_length);
 
-  hostnames->all_names = malloc((size_t)comm_size *
-                      name_length * sizeof(char));
+  size_t bytes = (size_t)comm_size * name_length * sizeof(char);
+  if (comm_rank == 0) DEBUG("hostmap bytes: %zi", bytes);
+
+  hostnames->all_names = malloc(bytes);
   ADLB_CHECK_MALLOC(hostnames->all_names);
 
   return ADLB_SUCCESS;
@@ -178,14 +180,14 @@ xlb_hostmap_init(const xlb_layout* layout,
 
 
 adlb_code
-xlb_get_hostmap_mode(xlb_hostmap_mode *mode)
+xlb_get_hostmap_mode(xlb_hostmap_mode* mode)
 {
   // Deprecated feature:
   int disable_hostmap;
   bool b = getenv_integer("ADLB_DISABLE_HOSTMAP", 0, &disable_hostmap);
   if (!b)
   {
-    printf("Bad integer in ADLB_DISABLE_HOSTMAP!\n");
+    ERR_PRINTF("Bad integer in ADLB_DISABLE_HOSTMAP!\n");
     return ADLB_ERROR;
   }
   if (disable_hostmap == 1)
@@ -206,7 +208,7 @@ xlb_get_hostmap_mode(xlb_hostmap_mode *mode)
     *mode = HOSTMAP_DISABLED;
   else
   {
-    printf("Unknown setting: ADLB_HOSTMAP_MODE=%s\n", m);
+    ERR_PRINTF("Unknown setting: ADLB_HOSTMAP_MODE=%s\n", m);
     return ADLB_ERROR;
   }
 
