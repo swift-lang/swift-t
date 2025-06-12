@@ -151,6 +151,8 @@ xlb_server_init(const struct xlb_state *state)
   TRACE_START;
   adlb_code code;
 
+  DEBUG("server_init()...");
+  
   xlb_server_shutting_down = false;
 
   list_i_init(&workers_shutdown);
