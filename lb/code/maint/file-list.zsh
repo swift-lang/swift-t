@@ -13,7 +13,7 @@ print maint/{debian,version}.mkf
 print m4/*.m4
 print src/*.[ch]
 print src/{adlb-version.h.in,mpe-settings.h.in}
-print {src,tests}/module.mk.in
+print {src,tests}/module.mk.in apps/module.mk
 print version.txt NOTICE
 
 if [[ ${PKG_TYPE} == deb-* ]]
