@@ -226,9 +226,13 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
 
   DEBUG("ADLB: RANK: %i/%i", comm_rank, comm_size);
 
+  double unused t0 = MPI_Wtime();
   struct xlb_hostnames hostnames;
   code = xlb_hostnames_gather(comm, &hostnames);
   ADLB_CHECK(code);
+  double unused t1 = MPI_Wtime();
+  if (xlb_s.layout.am_server)
+    DEBUG("hostnames_gather: %i %8.5f", comm_rank, t1 - t0);
 
   code = xlb_layout_init(comm_size, comm_rank, nservers, &hostnames,
                          &xlb_s.layout);
