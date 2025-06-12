@@ -258,6 +258,123 @@ proc ternary { condition a b } {
     }
 }
 
+# usage:   env [-f] -r key [dflt] (return)
+# returns: value if key found else dflt, which defaults to {}
+# usage:   env [-f] key value_name [dflt]
+# returns: true if key found else false
+# crashes if -f and key not found (force)
+proc env { args  } {
+
+  global env
+
+  getopts A P "fr" $args
+
+  set key $P(0)
+  if [ info exists A(r) ] {
+    if { [ array size P ] == 2 } {
+      set dflt $P(1)
+    } else {
+      set dflt {}
+    }
+  } else {
+    set value_name $P(1)
+    upvar $value_name value
+    set has_dflt [ expr [ array size P ] == 3 ]
+    if $has_dflt { set dflt $P(2) }
+  }
+
+  if { ! [ info exists env($key) ] } {
+    if [ info exists A(f) ] {
+      puts "Set $key"
+      exit 1
+    } else {
+      if [ info exists A(r) ] {
+        return $dflt
+      } else {
+        if $has_dflt {
+          set value $dflt
+        }
+        return false
+      }
+    }
+  }
+
+  # Key exists
+  if [ info exists A(r) ] {
+    return $env($key)
+  } else {
+    set value $env($key)
+    return true
+  }
+}
+
+# Assign argv to given names
+# A: Associative-array: map option to value
+# P: Positional parameters: indexed from 0
+# opts: Options string e.g., "hc:p"
+# V: e.g., $argv
+proc getopts { A_name P_name opts V } {
+    upvar $A_name A
+    upvar $P_name P
+    upvar optind count
+    # Colons
+    array set C {}
+    _getopts_parse_opt_string C $opts
+    set i 0
+    set count 0
+    set q 0
+    set N [ llength $V ]
+    set dash_found false
+    while { $i < $N } {
+        set t [ lindex $V $i ]
+        set c [ string range $t 0 0 ]
+        if { $c eq "-" && ! $dash_found} {
+            set c [ string range $t 1 1 ]
+        } else {
+            set P($q) $t
+            incr q
+            incr i
+            continue
+        }
+        if { $c eq "-" } { # Found --
+            set dash_found true
+            incr i
+            incr count
+            continue
+        }
+        if { ! [ info exists C($c) ] } {
+            error "getopts: invalid flag: $c"
+        }
+        if { [ string equal $C($c) ":" ] } {
+            incr i
+            incr count
+            set t [ lindex $V $i ]
+            lappend A($c) $t
+        } else {
+            lappend A($c) {}
+        }
+        incr i
+        incr count
+    }
+}
+
+proc _getopts_parse_opt_string { C_name opts } {
+    upvar $C_name C
+    set i 0
+    set N [ string length $opts ]
+    while { $i < $N } {
+        set c     [ string range $opts $i $i ]
+        incr i
+        set colon [ string range $opts $i $i ]
+        if { [ string equal $colon ":" ] } {
+            set C($c) ":"
+            incr i
+        } else {
+            set C($c) "_"
+        }
+    }
+}
+
 # Local Variables:
 # mode: tcl
 # tcl-indent-level: 2
