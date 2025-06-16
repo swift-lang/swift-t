@@ -97,7 +97,7 @@ echo
 if (
   turbine_log_start | tee -a turbine.log
   turbine_report_env > turbine-env.txt
-
+  echo
   set -x
   # Run Turbine!
   ${TURBINE_LAUNCHER} \
