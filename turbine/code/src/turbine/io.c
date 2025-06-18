@@ -25,7 +25,7 @@
 #include "src/util/mpi-tools.h"
 #include "src/turbine/io.h"
 
-#define TURBINE_IO_FILE_CHUNK_SIZE 40*1024*1024
+#define TURBINE_IO_FILE_CHUNK_SIZE 32*1024*1024
 
 bool
 turbine_io_bcast(MPI_Comm comm, char** s, int* length)
