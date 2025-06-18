@@ -186,7 +186,8 @@ turbine_io_copy_to(MPI_Comm comm, const char* name_in,
 
   double stop = log_time();
   double duration = stop - start;
-  log_printf("turbine_io_copy_to: wrote %"PRId64" bytes in %0.2f seconds.\n",
+  log_printf("turbine_io_copy_to: "
+             "wrote %"PRId64" bytes in %0.2f seconds.\n",
              total, duration);
 
   return true;
