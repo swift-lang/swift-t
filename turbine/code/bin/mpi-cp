@@ -1,0 +1,52 @@
+#!/usr/bin/env tclsh
+
+# MPI CP
+
+# Substituted at configure time:
+set TURBINE_HOME /nfs/gce/projects/Swift-T/sfw/swift-t/mpi-io/turbine
+lappend auto_path $TURBINE_HOME/lib
+
+# Configure ADLB for raw mode: no servers, no checks:
+set env(ADLB_SERVERS) 0
+set env(ADLB_MPI_RAW) 1
+# set env(ADLB_DEBUG_HOSTMAP) 1
+
+set srcs [ lrange $argv 0 end-1 ]
+set dest [ lrange $argv end end ]
+puts "$srcs -> $dest"
+
+file mkdir $dest
+
+package require turbine
+
+turbine::defaults
+turbine::declare_custom_work_types COASTER
+turbine::init $servers "MPI-CP"
+
+# Get the main ADLB communicator
+set comm [ adlb::comm_get adlb ]
+# puts "comm $comm"
+set rank [ adlb::comm_rank $comm ]
+
+if { $rank == 0 } {
+  set start [ clock seconds ]
+}
+
+# puts bcast
+# # Broadcast the file list to all leaders
+# turbine::c::bcast $comm 0 $srcs
+
+# Copy each file to the node-local directory
+foreach f $srcs {
+  if { $rank == 0 } {
+    puts "copying: $f"
+  }
+  turbine::c::copy_to $comm $f $dest
+}
+
+if { $rank == 0 } {
+  set stop [ clock seconds ]
+  puts "mpi-cp: time: [ expr $stop - $start ]"
+}
+
+turbine::finalize

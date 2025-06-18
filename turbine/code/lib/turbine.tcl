@@ -158,7 +158,10 @@ namespace eval turbine {
 
     proc assert_control_sanity { n_adlb_servers } {
         if { $n_adlb_servers <= 0 } {
-            error "ERROR: SERVERS==0"
+            env ADLB_MPI_RAW raw 0
+            if { ! $raw } {
+                error "ERROR: SERVERS==0"
+            }
         }
     }
 
@@ -186,11 +189,14 @@ namespace eval turbine {
         set n_workers [ expr { $adlb_size - $n_servers } ]
 
         if { $n_workers <= 0 } {
-            turbine_fail "You have $n_workers workers!\n"     \
-                "Check your MPI configuration, "              \
-                "there may be a mix of MPICH and OpenMPI.\n"  \
-                "Also note that: ADLB_SERVERS=$n_servers\n"   \
-                "                world size:  $adlb_size\n\n"
+            env ADLB_MPI_RAW raw 0
+            if { ! $raw } {
+                turbine_fail "You have $n_workers workers!\n"     \
+                    "Check your MPI configuration, "              \
+                    "there may be a mix of MPICH and OpenMPI.\n"  \
+                    "Also note that: ADLB_SERVERS=$n_servers\n"   \
+                    "                world size:  $adlb_size\n\n"
+            }
         }
 
         if { $n_workers < $n_servers } {
@@ -329,8 +335,11 @@ namespace eval turbine {
 
     proc assert_sufficient_procs { } {
         if { [ adlb::comm_size ] < 2 } {
-            error "Too few processes specified by user:\
-                    [adlb::comm_size], must be at least 2"
+            env ADLB_MPI_RAW raw 0
+            if { ! $raw } {
+                error "Too few processes specified by user:\
+                       [adlb::comm_size], must be at least 2"
+            }
         }
     }
 

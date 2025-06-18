@@ -60,6 +60,8 @@ __attribute__((always_inline))
 static inline int
 xlb_map_to_server(const xlb_layout* layout, int rank)
 {
+  // Only allowed if ADLB_MPI_RAW==1:
+  if (layout->servers == 0) return -1;
   if (xlb_is_server(layout, rank))
     return rank;
   assert(rank >= 0 && rank < layout->workers);

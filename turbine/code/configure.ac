@@ -943,6 +943,7 @@ AC_CONFIG_FILES(
         Makefile
         bin/turbine
         bin/turbine-pilot
+        bin/mpi-cp
         scripts/turbine-config.sh
         scripts/turbine-build-config.sh
         src/turbine/turbine-version.h

@@ -759,7 +759,8 @@ endif
 BINS := $(shell ls bin/turbine               \
                    bin/turbine-pilot         \
                    bin/turbine-write-doubles \
-                   bin/turbine-read-doubles )
+                   bin/turbine-read-doubles  \
+                   bin/mpi-cp                )
 ifeq ($(ENABLE_STATIC_PKG),1)
 	BINS += $(TURBINE_EXECUTABLES)
 endif
@@ -779,7 +780,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) \
 	$(E) test ! -f $(INSTALL_PREFIX)/lock
 	$(E) rm -f $(@)
 # 	Configure-generated files
-	$(E) chmod u+x bin/turbine bin/turbine-pilot
+	$(E) chmod u+x bin/turbine bin/turbine-pilot bin/mpi-cp
 #       Set up directories
 	$(E) mkdir -pv $(DIRECTORIES)
 #       Copy in build provenance files
