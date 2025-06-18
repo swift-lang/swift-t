@@ -23,20 +23,22 @@
 #include "debug.h"
 #include "location.h"
 
-static int
-my_workers_count(const xlb_layout* layout);
-static adlb_code
-build_worker2host(const struct xlb_hostnames *hostnames,
-      const xlb_layout *layout, int my_workers,
-      int **worker2host, int *host_count);
-static adlb_code
-build_host2workers(const xlb_layout *layout, int worker_count,
-      int host_count, const int *worker2host,
-      struct dyn_array_i **host2workers);
+static int my_workers_count(const xlb_layout* layout);
+
+static adlb_code build_worker2host(const struct xlb_hostnames* hostnames,
+                                   const xlb_layout* layout,
+                                   int my_workers,
+                                   int** worker2host,
+                                   int* host_count);
+
+static adlb_code build_host2workers(const xlb_layout *layout,
+                                    int worker_count,
+                                    int host_count,
+                                    const int* worker2host,
+                                    struct dyn_array_i** host2workers);
 
 
-adlb_code
-xlb_layout_init(int comm_size, int comm_rank, int nservers,
+adlb_code xlb_layout_init(int comm_size, int comm_rank, int nservers,
 		const struct xlb_hostnames *hostnames,
 		xlb_layout *layout)
 {
