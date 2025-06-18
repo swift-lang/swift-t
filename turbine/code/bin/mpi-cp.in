@@ -13,7 +13,7 @@ set env(ADLB_MPI_RAW) 1
 
 set srcs [ lrange $argv 0 end-1 ]
 set dest [ lrange $argv end end ]
-puts "$srcs -> $dest"
+puts "mpi-cp: $srcs -> $dest"
 
 file mkdir $dest
 
