@@ -29,7 +29,7 @@
 
 @pure
 (file t[]) glob(string s)
-"turbine" "0.0.2" "glob";
+"turbine" "0.0.2" "do_glob";
 
 @pure
 @dispatch=WORKER
