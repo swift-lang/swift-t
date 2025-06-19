@@ -10,7 +10,7 @@ print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf,file-list.zsh}
 print maint/*.sh
-print bin/turbine.in bin/turbine-pilot.in
+print bin/{turbine.in,turbine-pilot.in,mpi-cp.in}
 print bin/turbine-{read,write}-doubles
 print **/*.[cChi] **/*.{tcl,swift}
 print tests/{runbin.zsh.in,run-mpi.zsh}
