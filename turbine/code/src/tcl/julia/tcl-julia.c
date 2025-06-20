@@ -17,6 +17,7 @@
 #endif
 
 #include <exm-string.h>
+#include <tools.h>
 
 #include "src/util/debug.h"
 #include "src/tcl/util.h"
@@ -29,9 +30,23 @@
 
 static bool initialized = false;
 
+/**
+   User may force interpreter restart on every call
+   by setting environment variable TURBINE_JL_RESTART=1
+*/
 static void inline
 julia_initialize(void)
 {
+  bool restart;
+  bool b = getenv_boolean("TURBINE_JL_RESTART", false, &restart);
+  valgrind_assert(b);
+  if (initialized && !restart) return;
+  if (initialized)
+  {
+    DEBUG_TCL_TURBINE("julia atexit_hook ...");
+    jl_atexit_hook(0);
+  }
+  DEBUG_TCL_TURBINE("julia init ...");
   jl_init();
   // JL_SET_STACK_BASE;
   initialized = true;
@@ -40,7 +55,7 @@ julia_initialize(void)
 static int
 julia_eval(const char* code, Tcl_Obj** result)
 {
-  if (!initialized) julia_initialize();
+  julia_initialize();
   int length = strlen(code);
   char assignment[length + 32];
   DEBUG_TCL_TURBINE("julia evaluation:\n%s", code);
