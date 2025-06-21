@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# The file debug-tokens.tcl is expected to be regularly edited
+# This file debug-tokens.tcl.in is expected to be regularly edited
 # to control debugging output.  It is sourced by debug-auto.tcl
 # The variable INPUT is converted to an array by debug-auto.tcl
 # Each token maps to ON or OFF to indicate debugging
