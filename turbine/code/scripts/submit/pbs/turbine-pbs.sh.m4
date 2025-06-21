@@ -59,6 +59,7 @@ echo "TURBINE-PBS"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo
 
+NODES=getenv(NODES)
 PROCS=getenv(PROCS)
 PPN=getenv(PPN)
 
