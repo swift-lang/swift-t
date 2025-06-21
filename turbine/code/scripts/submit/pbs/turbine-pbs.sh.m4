@@ -80,6 +80,10 @@ cd ${TURBINE_OUTPUT}
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
 
+# BEGIN TURBINE_PRELAUNCH
+getenv(TURBINE_PRELAUNCH)
+# END TURBINE_PRELAUNCH
+
 export LD_LIBRARY_PATH=getenv(LD_LIBRARY_PATH):getenv(TURBINE_LD_LIBRARY_PATH)
 source ${TURBINE_HOME}/scripts/helpers.sh
 source ${TURBINE_HOME}/scripts/turbine-config.sh
@@ -87,10 +91,6 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # PBS exports all environment variables to the job under #PBS -V
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
-
-# BEGIN TURBINE_PRELAUNCH
-getenv(TURBINE_PRELAUNCH)
-# END TURBINE_PRELAUNCH
 
 log_path LD_LIBRARY_PATH
 echo
