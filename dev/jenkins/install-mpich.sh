@@ -6,7 +6,6 @@ set -eu
 
 renice --priority 19 --pid $$
 
-rm -rfv mpich-4.0.3.tar.gz mpich-4.0.3/  # Delete this in 2023-03
 mkdir -pv src
 cd src
 rm -rfv mpich-4.0.3.tar.gz mpich-4.0.3/
