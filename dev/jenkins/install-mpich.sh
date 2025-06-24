@@ -21,9 +21,9 @@ TARGET=$WORKSPACE/sfw/mpich-4.0.3
 echo "Looking for $TARGET"
 if [[ -d $TARGET ]]
 then
-  echo "\t exists."
+  printf "\t exists.\n"
 else
-  echo "\t does not exist."
+  printf "\t does not exist.\n"
 fi
 
 wget --no-verbose https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
