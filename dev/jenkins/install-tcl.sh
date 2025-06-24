@@ -1,7 +1,7 @@
 #!/bin/zsh
-set -eux
+set -eu
 
-# JENKINS TCL
+# JENKINS INSTALL TCL
 
 renice --priority 19 --pid $$ >& /dev/null
 
@@ -9,12 +9,9 @@ pwd
 ls -l
 
 # Clean up old stuff
-(
-  set -x
-  rm -fv tcl8.6.12/README.md
-  rm -fr tcl8.6.12
-  rm -fv tcl8.6.12-src.tar.gz
-)
+rm -fv tcl8.6.12/README.md
+rm -fr tcl8.6.12
+rm -fv tcl8.6.12-src.tar.gz
 
 # Download and extract
 wget --no-verbose https://prdownloads.sourceforge.net/tcl/tcl8.6.12-src.tar.gz
