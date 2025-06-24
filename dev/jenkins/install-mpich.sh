@@ -1,6 +1,8 @@
 
 # JENKINS MPICH SH
 # Build MPICH for GCE Jenkins
+# Installs to:
+# TARGET=/scratch/jenkins-slave/workspace/Swift-T-MPICH/sfw/mpich-4.0.3
 
 set -eu
 
