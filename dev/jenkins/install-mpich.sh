@@ -11,7 +11,7 @@ cd src
 rm -rfv mpich-4.0.3.tar.gz mpich-4.0.3/
 
 wget --no-verbose https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
-tar xfz mpich-4.0.3.tar.gz
+tar xmf mpich-4.0.3.tar.gz
 cd mpich-4.0.3
 CFG=( --prefix=$WORKSPACE/sfw/mpich-4.0.3
       --with-pm=hydra
