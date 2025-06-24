@@ -2,7 +2,7 @@
 set -eu
 
 # JENKINS BUILD MPICH SH
-# Install Swift/T from Git under with MPICH on CELS Jenkins
+# Install Swift/T from Git with MPICH on CELS Jenkins
 # NOTE: WORKSPACE is set by Jenkins
 # Can also be run interactively on GCE,
 #     if on the correct compute server!
@@ -94,6 +94,7 @@ PATH=$MPICH/bin:$PATH
 
 (
   set -x
+  ls $MPICH
   which javac ant mpicc python
 )
 
