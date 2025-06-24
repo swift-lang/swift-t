@@ -10,12 +10,26 @@ renice --priority 19 --pid $$
 
 mkdir -pv src
 cd src
-rm -rfv mpich-4.0.3.tar.gz mpich-4.0.3/
+(
+  set -x
+  rm -fv mpich-4.0.3.tar.gz
+  rm -fv mpich-4.0.3/configure
+  rm -fr mpich-4.0.3/
+)
+
+TARGET=$WORKSPACE/sfw/mpich-4.0.3
+echo "Looking for $TARGET"
+if [[ -d $TARGET ]]
+then
+  echo "\t exists."
+else
+  echo "\t does not exist."
+fi
 
 wget --no-verbose https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
 tar xmf mpich-4.0.3.tar.gz
 cd mpich-4.0.3
-CFG=( --prefix=$WORKSPACE/sfw/mpich-4.0.3
+CFG=( --prefix=$TARGET
       --with-pm=hydra
       --enable-shared
       --with-enable-g=dbg,meminit
