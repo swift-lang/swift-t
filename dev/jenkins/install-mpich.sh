@@ -27,7 +27,7 @@ else
 fi
 
 wget --no-verbose https://www.mpich.org/static/downloads/4.0.3/mpich-4.0.3.tar.gz
-tar xmf mpich-4.0.3.tar.gz
+tar xf mpich-4.0.3.tar.gz
 cd mpich-4.0.3
 CFG=( --prefix=$TARGET
       --with-pm=hydra
