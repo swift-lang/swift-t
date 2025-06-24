@@ -10,8 +10,12 @@ renice --priority 19 --pid $$
 MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
 
 # Clean up prior runs
-rm -fv $MINICONDA
-rm -fr $WORKSPACE/sfw/Miniconda
+(
+  set -x
+  rm -fv $MINICONDA
+  rm -fv $WORKSPACE/sfw/Miniconda/LICENSE.txt
+  rm -fr $WORKSPACE/sfw/Miniconda
+)
 
 (
   # Download and install Miniconda:
