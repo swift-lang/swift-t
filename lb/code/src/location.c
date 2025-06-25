@@ -259,7 +259,14 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
     struct list_i_item* list_item = rank_list->head;
     int leader_rank = list_item->data;
 
-    leader_ranks[leader_rank_count++] = leader_rank;
+    if (leader_rank >= layout->size - layout->servers)
+    {
+      DEBUG("leader_rank is a server: %i", leader_rank);
+    }
+    else
+    {
+      leader_ranks[leader_rank_count++] = leader_rank;
+    }
     if (leader_rank == layout->rank)
       layout->am_leader = true;
 
