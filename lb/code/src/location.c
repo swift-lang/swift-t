@@ -23,15 +23,6 @@
 #include "debug.h"
 #include "location.h"
 
-/**
-   Maps string hostname to sorted list of int ranks
-        that are running on that host
-*/
-struct xlb_hostmap
-{
-  struct table map;
-};
-
 static void
 report_ranks(MPI_Comm comm)
 {
@@ -145,33 +136,28 @@ xlb_hostnames_free(struct xlb_hostnames *hostnames)
 }
 
 adlb_code
-xlb_hostmap_init(const xlb_layout* layout,
-                 const struct xlb_hostnames* hostnames,
-                 struct xlb_hostmap** hostmap)
+xlb_hostmap_init(const struct xlb_hostnames* hostnames)
 {
-  *hostmap = malloc(sizeof(**hostmap));
-  ADLB_CHECK_MALLOC(*hostmap);
-
   bool debug_hostmap;
   bool rc = getenv_boolean("ADLB_DEBUG_HOSTMAP", false,
                            &debug_hostmap);
   check_msg(rc, "ADLB: Bad value for ADLB_DEBUG_HOSTMAP");
 
-  table_init(&(*hostmap)->map, 1024);
-  for (int rank = 0; rank < layout->size; rank++)
+  table_init(&xlb_s.hostmap.map, 1024);
+  for (int rank = 0; rank < xlb_s.layout.size; rank++)
   {
     const char* name = xlb_hostnames_lookup(hostnames, rank);
 
-    if (layout->rank == 0 && debug_hostmap)
+    if (xlb_s.layout.rank == 0 && debug_hostmap)
       printf("HOSTMAP: %s -> %i\n", name, rank);
 
-    if (!table_contains(&(*hostmap)->map, name))
+    if (!table_contains(&xlb_s.hostmap.map, name))
     {
       struct list_i* L = list_i_create();
-      table_add(&(*hostmap)->map, name, L);
+      table_add(&xlb_s.hostmap.map, name, L);
     }
     struct list_i* L;
-    table_search(&(*hostmap)->map, name, (void*) &L);
+    table_search(&xlb_s.hostmap.map, name, (void*) &L);
     list_i_add(L, rank);
   }
 
@@ -180,7 +166,7 @@ xlb_hostmap_init(const xlb_layout* layout,
 
 
 adlb_code
-xlb_get_hostmap_mode(xlb_hostmap_mode* mode)
+xlb_get_hostmap_mode()
 {
   // Deprecated feature:
   int disable_hostmap;
@@ -192,20 +178,21 @@ xlb_get_hostmap_mode(xlb_hostmap_mode* mode)
   }
   if (disable_hostmap == 1)
   {
-    *mode = HOSTMAP_DISABLED;
+    xlb_s.hostmap.mode = HOSTMAP_DISABLED;
     return ADLB_SUCCESS;
   }
 
   char* m = getenv("ADLB_HOSTMAP_MODE");
   if (m == NULL || strlen(m) == 0)
     m = "ENABLED";
-  DEBUG("ADLB_HOSTMAP_MODE: %s\n", m);
+  if (xlb_s.layout.rank == 0)
+    DEBUG("ADLB_HOSTMAP_MODE: %s", m);
   if (strcmp(m, "ENABLED") == 0)
-    *mode = HOSTMAP_ENABLED;
+    xlb_s.hostmap.mode = HOSTMAP_ENABLED;
   else if (strcmp(m, "LEADERS") == 0)
-    *mode = HOSTMAP_LEADERS;
+    xlb_s.hostmap.mode = HOSTMAP_LEADERS;
   else if (strcmp(m, "DISABLED") == 0)
-    *mode = HOSTMAP_DISABLED;
+    xlb_s.hostmap.mode = HOSTMAP_DISABLED;
   else
   {
     ERR_PRINTF("Unknown setting: ADLB_HOSTMAP_MODE=%s\n", m);
@@ -224,16 +211,17 @@ static inline void set_rank_envs(xlb_layout* layout,
                                  int leader_rank);
 
 adlb_code
-xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
+xlb_setup_leaders(// xlb_layout* layout, struct xlb_hostmap* hosts,
                   MPI_Comm comm, MPI_Comm* leader_comm)
 {
   // Cannot be more leaders than hosts
-  int max_leaders = hosts->map.size;
+  int max_leaders = xlb_s.hostmap.map.size;
 
   int* leader_ranks = malloc((size_t)(max_leaders) * sizeof(int));
   int leader_rank_count = 0;
 
-  xlb_get_leader_ranks(layout, hosts, true, leader_ranks, &leader_rank_count);
+  // layout, hosts,
+  xlb_get_leader_ranks(true, leader_ranks, &leader_rank_count);
 
   create_leader_comm(comm, leader_rank_count, leader_ranks, leader_comm);
   free(leader_ranks);
@@ -244,14 +232,14 @@ xlb_setup_leaders(xlb_layout* layout, struct xlb_hostmap* hosts,
 /**
    This function:
         1) Returns the array leader_ranks containing all leader ranks
-        2) Sets the ADLB_RANK_* environment variables for this host
+        2) Sets the ADLB_RANK_* environment variables for this process
 */
 void
-xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+xlb_get_leader_ranks(// xlb_layout* layout, struct xlb_hostmap* hosts,
                      bool setenvs, int* leader_ranks, int* count)
 {
   int leader_rank_count = 0;
-  TABLE_FOREACH(&hosts->map, table_item)
+  TABLE_FOREACH(&xlb_s.hostmap.map, table_item)
   {
     char* name = table_item->key;
 
@@ -302,7 +290,8 @@ create_leader_comm(MPI_Comm comm, int leader_rank_count,
 {
   MPI_Group group_all, group_leaders;
   MPI_Comm_group(comm, &group_all);
-
+  printf("create_leader_comm\n");
+  print_ints(leader_ranks, leader_rank_count);
   MPI_Group_incl(group_all, leader_rank_count, leader_ranks,
                  &group_leaders);
   MPI_Comm_create(comm, group_leaders, leader_comm);
@@ -313,10 +302,10 @@ create_leader_comm(MPI_Comm comm, int leader_rank_count,
 adlb_code
 ADLB_Hostmap_stats(unsigned int* count, unsigned int* name_max)
 {
-  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
-            "ADLB_Hostmap_stats: hostmap is disabled!");
+  ADLB_CHECK_MSG(xlb_s.hostmap.mode != HOSTMAP_DISABLED,
+                 "ADLB_Hostmap_stats: hostmap is disabled!");
   struct utsname u;
-  *count = (uint)xlb_s.hostmap->map.size;
+  *count = (uint) xlb_s.hostmap.map.size;
   *name_max = sizeof(u.nodename);
   return ADLB_SUCCESS;
 }
@@ -325,10 +314,10 @@ adlb_code
 ADLB_Hostmap_lookup(const char* name, int max,
                     int* output, int* actual)
 {
-  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
+  ADLB_CHECK_MSG(xlb_s.hostmap.mode != HOSTMAP_DISABLED,
             "ADLB_Hostmap_lookup: hostmap is disabled!");
   struct list_i* L;
-  bool b = table_search(&xlb_s.hostmap->map, name, (void*) &L);
+  bool b = table_search(&xlb_s.hostmap.map, name, (void*) &L);
   if (!b)
     return ADLB_NOTHING;
   int i = 0;
@@ -346,7 +335,7 @@ adlb_code
 ADLB_Hostmap_list(char* output, unsigned int max,
                   unsigned int offset, int* actual)
 {
-  ADLB_CHECK_MSG(xlb_s.hostmap_mode != HOSTMAP_DISABLED,
+  ADLB_CHECK_MSG(xlb_s.hostmap.mode != HOSTMAP_DISABLED,
                  "ADLB_Hostmap_list: hostmap is disabled!");
   // Number of chars written
   int count = 0;
@@ -357,7 +346,7 @@ ADLB_Hostmap_list(char* output, unsigned int max,
   // Counter for offset
   int j = 0;
 
-  TABLE_FOREACH(&xlb_s.hostmap->map, item)
+  TABLE_FOREACH(&xlb_s.hostmap.map, item)
   {
     if (j++ >= offset)
     {
@@ -378,13 +367,13 @@ ADLB_Hostmap_list(char* output, unsigned int max,
 }
 
 void
-xlb_hostmap_free(struct xlb_hostmap *hostmap)
+xlb_hostmap_free()
 {
-  if (hostmap == NULL) return;
+  if (xlb_s.hostmap.map == NULL) return;
 
-  for (int i = 0; i < hostmap->map.capacity; i++)
+  for (int i = 0; i < xlb_s.hostmap.map.capacity; i++)
   {
-    table_entry *head = &hostmap->map.array[i];
+    table_entry *head = &xlb_s.hostmap.map.array[i];
     if (table_entry_valid(head))
     {
       table_entry *e, *next;
@@ -408,7 +397,8 @@ xlb_hostmap_free(struct xlb_hostmap *hostmap)
       }
     }
   }
-  table_release(&hostmap->map);
+  table_release(&xlb_s.hostmap.map);
 
-  free(hostmap);
+  // free(&xlb_s.hostmap);
+  xlb_s.hostmap.map = NULL;
 }

@@ -8,11 +8,11 @@
  *      Author: wozniak
  */
 
-#ifndef HOSTMAP_H
-#define HOSTMAP_H
+#pragma once
 
 #include <stdbool.h>
 
+#include "common.h"
 #include "layout-defs.h"
 
 /*
@@ -34,18 +34,12 @@ struct xlb_hostnames {
  */
 struct xlb_hostmap;
 
-typedef enum
-{
-  HOSTMAP_DISABLED,
-  HOSTMAP_LEADERS,
-  HOSTMAP_ENABLED
-} xlb_hostmap_mode;
-
 /**
   Get configured hostmap mode from environment
  */
 adlb_code
-xlb_get_hostmap_mode(xlb_hostmap_mode *mode);
+xlb_get_hostmap_mode(void);
+// struct xlb_state* xlb_s
 
 /**
   Build rank to hostname map.
@@ -70,18 +64,16 @@ xlb_hostnames_lookup(const struct xlb_hostnames *hostnames, int rank);
 void
 xlb_hostnames_free(struct xlb_hostnames *hostnames);
 
-adlb_code
-xlb_hostmap_init(const xlb_layout *layout,
-                 const struct xlb_hostnames *hostnames,
-                 struct xlb_hostmap **hostmap);
+adlb_code xlb_hostmap_init(const struct xlb_hostnames* hostnames);
 
-void xlb_hostmap_free(struct xlb_hostmap *hostmap);
+void xlb_hostmap_free(void);
+// struct xlb_hostmap *hostmap
 
 /**
   Setup leader per node
  */
 adlb_code
-xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
+xlb_setup_leaders(// xlb_layout *layout, struct xlb_hostmap *hosts,
                   MPI_Comm comm, MPI_Comm *leader_comm);
 
 /**
@@ -91,7 +83,5 @@ xlb_setup_leaders(xlb_layout *layout, struct xlb_hostmap *hosts,
    @return results in leader_ranks, which should be preallocated to hold ints
                    for all of the ADLB comm.  The leader rank count will go in count
  */
-void xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
+void xlb_get_leader_ranks(// xlb_layout* layout, struct xlb_hostmap* hosts,
                           bool setenvs, int* leader_ranks, int* count);
-
-#endif

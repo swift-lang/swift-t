@@ -231,6 +231,7 @@ void
 table_release(struct table* target)
 {
   free(target->array);
+  target->array = NULL;
 }
 
 /**

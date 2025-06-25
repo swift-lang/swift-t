@@ -64,15 +64,7 @@ adlb_code xlb_layout_init(int comm_size, int comm_rank, int nservers,
   {
     // Don't have a server: I am one
     layout->my_server = ADLB_RANK_NULL;
-  }
-  else
-  {
-    layout->my_server = xlb_map_to_server(layout, layout->rank);
-  }
-  DEBUG("my_server_rank: %i", layout->my_server);
 
-  if (layout->am_server)
-  {
     layout->my_workers = my_workers_count(layout);
 
     ac = build_worker2host(hostnames, layout, layout->my_workers,
@@ -86,6 +78,7 @@ adlb_code xlb_layout_init(int comm_size, int comm_rank, int nservers,
   }
   else
   {
+    layout->my_server = xlb_map_to_server(layout, layout->rank);
     layout->my_workers = 0;
     layout->my_worker_hosts = 0;
     layout->my_worker2host = NULL;
@@ -145,8 +138,9 @@ build_worker2host(const struct xlb_hostnames *hostnames,
   {
     int rank = xlb_rank_from_worker_idx(layout, i);
     const char *host_name = xlb_hostnames_lookup(hostnames, rank);
-    ADLB_CHECK_MSG(host_name != NULL, "Unexpected error looking up host for "
-              "rank %i", rank);
+    ADLB_CHECK_MSG(host_name != NULL,
+                   "Unexpected error looking up host for rank %i",
+                   rank);
 
     unsigned long host_idx;
     if (!table_search(&host_name_idx_map, host_name, (void**)&host_idx))
@@ -156,9 +150,9 @@ build_worker2host(const struct xlb_hostnames *hostnames,
       ADLB_CHECK_MSG(ok, "Table add failed");
     }
     (*worker2host)[i] = (int)host_idx;
-    DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)",
-          i, xlb_rank_from_worker_idx(layout, i), (int)host_idx,
-          host_name);
+    /* DEBUG("host_name_idx_map: my worker %i (rank %i) -> host %i (%s)", */
+    /*       i, xlb_rank_from_worker_idx(layout, i), (int)host_idx, */
+    /*       host_name); */
   }
 
   table_free_callback(&host_name_idx_map, false, NULL);

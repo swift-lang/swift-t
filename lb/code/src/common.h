@@ -22,8 +22,7 @@
  *      Author: wozniak
  */
 
-#ifndef COMMON_H
-#define COMMON_H
+#pragma once
 
 #include <mpi.h>
 
@@ -31,7 +30,7 @@
 
 #include "adlb-defs.h"
 #include "adlb_types.h"
-#include "layout.h"
+#include "layout-defs.h"
 
 /**
    Struct that encapsulates xlb system state.
@@ -55,19 +54,15 @@ struct xlb_state
   double start_time;
 
   /**
-    General layout info
+     General layout info
    */
   xlb_layout layout;
 
   /**
-    Map host to rank-list.  Ranks in the list are ordered lowest->highest
+     Map host to rank-list.
+     Ranks in the list are ordered lowest->highest
    */
-  struct xlb_hostmap *hostmap;
-
-  /**
-    Mode for host map
-   */
-  xlb_hostmap_mode hostmap_mode;
+  struct xlb_hostmap hostmap;
 
   /** Number of work unit types */
   int types_size;
@@ -114,4 +109,3 @@ adlb_code xlb_env_long(const char *env_var, long *val);
     Get placement policy setting from environment.
  */
 adlb_code xlb_env_placement(adlb_placement *placement);
-#endif

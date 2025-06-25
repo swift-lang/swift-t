@@ -18,6 +18,25 @@
 
 #include <stdbool.h>
 
+#include <table.h>
+
+typedef enum
+{
+  HOSTMAP_DISABLED,
+  HOSTMAP_LEADERS,
+  HOSTMAP_ENABLED
+} xlb_hostmap_mode;
+
+/**
+   Maps string hostname to sorted list of int ranks
+        that are running on that host
+*/
+struct xlb_hostmap
+{
+  struct table map;
+  xlb_hostmap_mode mode;
+};
+
 /**
    Struct that encapsulates MPI rank layout info
 */

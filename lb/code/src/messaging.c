@@ -111,7 +111,7 @@ add_tags()
   add_tag(ADLB_TAG_SYNC_SUB);
   add_tag(ADLB_TAG_WORKUNIT);
   add_tag(ADLB_TAG_FAIL);
-  
+
   /// tags that may be to/from server/worker
   add_tag(ADLB_TAG_WORK);
 }
@@ -133,8 +133,8 @@ xlb_add_tag_name(int tag, char* name)
     exit(1);
   }
   tag_names[tag] = t;
-  if (xlb_s.layout.rank == 0)
-    DEBUG("TAG: %i => %s", tag, name);
+  /* if (xlb_s.layout.rank == 0) */
+  /*   DEBUG("TAG: %i => %s", tag, name); */
 }
 
 const char*

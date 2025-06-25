@@ -238,35 +238,35 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
                          &xlb_s.layout);
   ADLB_CHECK(code);
 
-  DEBUG("my_server: rank=%i -> server=%i\n",
+  DEBUG("my_server: rank=%i -> server=%i",
 	xlb_s.layout.rank, xlb_s.layout.my_server);
 
-  code = xlb_get_hostmap_mode(&xlb_s.hostmap_mode);
+  code = xlb_get_hostmap_mode();
   ADLB_CHECK(code);
 
-  xlb_s.hostmap = NULL;
-
-  if (xlb_s.hostmap_mode != HOSTMAP_DISABLED)
+  if (xlb_s.hostmap.mode != HOSTMAP_DISABLED)
   {
-    struct xlb_hostmap* hostmap;
-
     // Need hostmap for server init
-    code = xlb_hostmap_init(&xlb_s.layout, &hostnames, &hostmap);
+    code = xlb_hostmap_init(&hostnames);
     ADLB_CHECK(code);
 
-    code = xlb_setup_leaders(&xlb_s.layout, hostmap,
+    code = xlb_setup_leaders(&xlb_s.layout, xlb_s.hostmap,
                              comm, &xlb_s.leader_comm);
     ADLB_CHECK(code);
 
-    if (xlb_s.hostmap_mode == HOSTMAP_ENABLED)
-    {
-      xlb_s.hostmap = hostmap;
-    }
-    else
+    if (xlb_s.hostmap->mode != HOSTMAP_ENABLED)
+    /* { */
+    /*   xlb_s.hostmap = hostmap; */
+    /* } */
+    /* else */
     {
       // We created this table just to set up leaders
-      xlb_hostmap_free(hostmap);
+      xlb_hostmap_free();
     }
+  }
+  else
+  {
+    xlb_s.hostmap.map = NULL;
   }
 
   if (xlb_s.layout.am_server)
@@ -319,8 +319,8 @@ ADLB_GetComm_leaders()
 void
 ADLB_Leaders(int* leaders, int* count)
 {
-  xlb_get_leader_ranks(&xlb_s.layout,  xlb_s.hostmap,
-                       false, leaders, count);
+  xlb_get_leader_ranks(false, leaders, count);
+  // &xlb_s.layout,  xlb_s.hostmap,
 }
 
 // Server to target with work
@@ -2206,8 +2206,8 @@ ADLBP_Finalize()
     ADLB_CHECK(rc);
   }
 
-  if (xlb_s.hostmap != NULL)
-    xlb_hostmap_free(xlb_s.hostmap);
+  // if (xlb_s.hostmap != NULL)
+  xlb_hostmap_free(); // xlb_s.hostmap
 
   xlb_dsyms_finalize();
 
