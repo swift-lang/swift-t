@@ -265,6 +265,7 @@ xlb_get_leader_ranks(xlb_layout* layout, struct xlb_hostmap* hosts,
     }
     else
     {
+      DEBUG("leader_rank is a worker: %i", leader_rank);
       leader_ranks[leader_rank_count++] = leader_rank;
     }
     if (leader_rank == layout->rank)
