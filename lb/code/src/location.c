@@ -199,7 +199,7 @@ xlb_get_hostmap_mode(xlb_hostmap_mode* mode)
   char* m = getenv("ADLB_HOSTMAP_MODE");
   if (m == NULL || strlen(m) == 0)
     m = "ENABLED";
-  DEBUG("ADLB_HOSTMAP_MODE: %s\n", m);
+  DEBUG("ADLB_HOSTMAP_MODE: %s", m);
   if (strcmp(m, "ENABLED") == 0)
     *mode = HOSTMAP_ENABLED;
   else if (strcmp(m, "LEADERS") == 0)
@@ -295,12 +295,18 @@ set_rank_envs(xlb_layout* layout, struct list_i_item* list_item,
 
   // Set the environment variables!
   char t[64];
+
   sprintf(t, "%i", layout->rank);
   setenv("ADLB_RANK_SELF", t, 1);
+  DEBUG ("ADLB_RANK_SELF=%s", t);
+
   sprintf(t, "%i", leader_rank);
   setenv("ADLB_RANK_LEADER", t, 1);
+  DEBUG ("ADLB_RANK_LEADER=%s", t);
+
   sprintf(t, "%i", offset);
   setenv("ADLB_RANK_OFFSET", t, 1);
+  DEBUG ("ADLB_RANK_OFFSET=%s", t);
 }
 
 /** Use MPI groups to create the leader communicator */
