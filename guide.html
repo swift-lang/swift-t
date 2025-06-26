@@ -4481,9 +4481,9 @@ Tcl code that is executed on success or failure.
 <div class="sect3">
 <h4 id="leaf_python">14.6.1. Calling Python</h4>
 <div class="paragraph"><p>You can evaluate arbitrary Python code from within Swift/T.  For
-example, you can perform processing with a Python library.
-Once you have that working, you can use Swift/T to coordinate
-concurrent calls to that library.</p></div>
+example, you can import and perform computation with a Python library,
+using Swift/T to coordinate concurrent calls to that library and/or
+other components.</p></div>
 <div class="paragraph"><p>Consider the following Swift script:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4504,7 +4504,7 @@ output is shown below:</p></div>
 <pre><code>python works
 i: 4</code></pre>
 </div></div>
-<div class="paragraph"><p>Swift multi-line strings may be used to enter more complex Python code
+<div class="paragraph"><p>Swift multi-line strings may be used to enter longer Python code
 without the explicit use of <code>\n</code>.</p></div>
 <div class="paragraph"><p>Additionally, you can call Python libraries such as
 <a href="http://www.numpy.org">Numpy</a> if available on your system.  The
@@ -6964,7 +6964,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2025-06-06 14:41:54 CDT
+ 2025-06-10 16:31:16 CDT
 </div>
 </div>
 
