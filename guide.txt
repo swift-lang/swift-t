@@ -1670,6 +1670,12 @@ Returns the filename extension part of the given string path.
 
 Returns the filename extension part of the given file path.
 
++realpath_string(string) -> string+::
+Returns the absolute path for the given string.
+
++realpath(file) -> file+::
+Returns the absolute path for the given file as a file.
+
 [[mktemp]]
 ==== Temporary files
 
