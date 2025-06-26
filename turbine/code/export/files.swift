@@ -123,4 +123,17 @@ mktemp()
   o = input(mktemp_string());
 }
 
+@pure
+(string f)
+realpath_string(string p)
+"turbine" "1.0"
+[ "set <<f>> [ file normalize <<p>> ]" ];
+
+@pure
+(file f)
+realpath(file p)
+{
+  f = input(realpath_string(filename(p)));
+}
+
 #endif // FILES_SWIFT
