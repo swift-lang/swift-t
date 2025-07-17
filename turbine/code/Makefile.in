@@ -104,7 +104,7 @@ ifeq ($(USE_MAC),0)
 #       	Not XLC: GCC/Linux
 # CFLAGS += -mcmodel=medium # Now apparently required.
 		PIC = -fPIC
-		STD = -std=gnu99
+		STD_C = -std=gnu99
 		SHARED = -shared
 		WARNS = -Wall $(WARN_CONVERSION)
 #               LD flags for executables:
@@ -115,7 +115,7 @@ ifeq ($(USE_MAC),0)
 	else
 #       	Using XLC
 		PIC = -qpic
-		STD =
+		STD_C =
 		SHARED = -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
 		WARNS =
 # TODO: from manifest, should be applied here if anywhere
@@ -128,7 +128,8 @@ ifeq ($(USE_MAC),0)
 	MAC_NAME =
 else
 #	Mac
-	STD = -std=c++11 -stdlib=libc++
+	STD_C   = -gnu99
+	STD_CXX = -std=c++11 -stdlib=libc++
 	SO_SUFFIX = dylib
         # OS X linker does not support export-dynamic
 	LD_EXEC_SYMBOL_EXPORT =
@@ -272,12 +273,13 @@ USE_COASTER  = @USE_COASTER@
 ENABLE_ZLIB = @ENABLE_ZLIB@
 ZLIB = @ZLIB_HOME@
 
-CFLAGS += $(STD)
+CFLAGS += $(STD_C)
 CFLAGS += -g
 CFLAGS += $(WARNS)
 ifeq ($(ENABLE_SHARED),1)
   CFLAGS += $(PIC)
 endif
+CXXFLAGS += $(STD_CXX)
 # This is referenced in lookup3.c - may want to drop this for speed
 DEFINES += -D VALGRIND
 INCLUDES += -I $(C_UTILS)/include
