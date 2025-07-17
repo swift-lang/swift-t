@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: anaconda-pkg-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: PKG.conda
+          path: PKG.conda.tar
 
       - name: Check anaconda.log
         run: |

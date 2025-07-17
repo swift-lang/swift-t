@@ -30,6 +30,10 @@ PYTHON_VERSION="39"
 # py310_23.11.0-1
 # py311_23.11.0-1
 
+# For set -x (includes newline):
+PS4="
++ "
+
 DATE_FMT_NICE="%D{%Y-%m-%d} %D{%H:%M:%S}"
 log()
 # General-purpose log line
@@ -62,8 +66,11 @@ if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
 help()
 {
   cat <<EOF
--a                 Artifact- copy package back to ./PKG.conda
+-a                 Artifact- bundle package into ./PKG.conda.tar
                    used to make an artifact in GitHub Actions
+                   (artifact names are fixed; the tar contents have
+                    the original *.conda file name, which must
+                    be retained)
 -b                 disable bootstrapping during make-release-pkg
                    runs faster if after a successful bootstrap
 -c CONDA_TIMESTAMP default "$CONDA_TIMESTAMP"
@@ -297,9 +304,6 @@ try-swift-t()
   log "TRY SWIFT/T..."
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
   () {
-    # For set -x (includes newline):
-    PS4="
-+ "
     set -x
     which swift-t
     swift-t -v
@@ -347,6 +351,9 @@ task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG_PATH
 
 try-swift-t
 
-if (( ${#A} )) cp -v $PKG_PATH PKG.conda
+if (( ${#A} )) {
+  log "CREATING ARTIFACT ..."
+  task tar cfv PKG.conda.tar -c $PKG_PATH $PKG_FILE
+}
 
 log-success
