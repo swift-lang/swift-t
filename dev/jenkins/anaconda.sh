@@ -353,7 +353,7 @@ try-swift-t
 
 if (( ${#A} )) {
   log "CREATING ARTIFACT ..."
-  task tar cfv PKG.conda.tar $PKG_FILE -c $BLD_DIR
+  task tar -cv -f PKG.conda.tar -C $BLD_DIR $PKG_FILE
 }
 
 log-success
