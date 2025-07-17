@@ -106,6 +106,7 @@ case $PYTHON_VERSION {
   310)                             ;&
   311) CONDA_TIMESTAMP="23.11.0-2" ;;
   312) CONDA_TIMESTAMP="24.11.1-0" ;;
+  313) CONDA_TIMESTAMP="25.5.1-0"  ;;
   *)   abort "Unknown PYTHON_VERSION=$PYTHON_VERSION" ;;
 }
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
