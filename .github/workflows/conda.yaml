@@ -70,13 +70,19 @@ jobs:
 
       - name: Build Anaconda package
         run: |
-          dev/github-actions/check dev/jenkins/anaconda.sh -p ${{ matrix.python-version }}
+          dev/github-actions/check dev/jenkins/anaconda.sh -a -p ${{ matrix.python-version }}
 
       - name: Save anaconda.log
         uses: actions/upload-artifact@v4
         with:
           name: anaconda-log-${{ matrix.os }}-py${{ matrix.python-version }}
           path: anaconda.log
+
+      - name: Save Anaconda package
+        uses: actions/upload-artifact@v4
+        with:
+          name: anaconda-pkg-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: PKG.conda
 
       - name: Check anaconda.log
         run: |

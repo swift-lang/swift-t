@@ -62,7 +62,10 @@ if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
 help()
 {
   cat <<EOF
+-a                 Artifact- copy package back to ./PKG.conda
+                   used to make an artifact in GitHub Actions
 -b                 disable bootstrapping during make-release-pkg
+                   runs faster if after a successful bootstrap
 -c CONDA_TIMESTAMP default "$CONDA_TIMESTAMP"
 -p PYTHON_VERSION  default "$PYTHON_VERSION"
 -r R_VERSION       install R, default does not
@@ -78,10 +81,11 @@ zparseopts h=HELP
 if (( ${#HELP} )) help
 
 # Main argument processing
+A=""     # May become "-a"
 B=""     # May become "-b"
 R=""     # May become ( -r R_VERSION )
 USE_R="" # May become "-r"
-zparseopts -D -E -F b=B c:=CT p:=PV r:=R u+=UNINSTALL
+zparseopts -D -E -F a=A b=B c:=CT p:=PV r:=R u+=UNINSTALL
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 if (( ${#R}  )) USE_R="-r"
@@ -270,21 +274,21 @@ check-pkg()
   REPODATA=$BLD_DIR/repodata.json
   log "CHECKING PACKAGE in $BLD_DIR ..."
 
-  if ! BZ2=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
+  if ! PKG_FILE=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
   then
     print
     log "CHECKING PACKAGE FAILED!"
     print
     return 1
   fi
-  PKG=$BLD_DIR/$BZ2
-  log "CHECKING PACKAGE at $PKG ..."
-  if ! ls -l $PKG
+  PKG_PATH=$BLD_DIR/$PKG_FILE
+  log "CHECKING PKG at $PKG_PATH ..."
+  if ! ls -l $PKG_PATH
   then
-    log "Could not find the PKG at: $PKG"
+    log "Could not find the PKG at: $PKG_PATH"
     return 1
   fi
-  checksum $PKG
+  checksum $PKG_PATH
   print
 }
 
@@ -312,7 +316,7 @@ log-success()
     # Record success if on GitHub:
     {
       log "SUCCESS"
-      log "PKG=$PKG"
+      log "PKG=$PKG_PATH"
     } | tee -a anaconda.log
   }
 }
@@ -339,8 +343,10 @@ check-pkg
 do-activate $WORKSPACE/sfw/Miniconda-install
 
 # Install the new package into the install environment!
-task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG
+task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG_PATH
 
 try-swift-t
+
+if (( ${#A} )) cp -v $PKG_PATH PKG.conda
 
 log-success
