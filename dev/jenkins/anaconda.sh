@@ -216,7 +216,13 @@ task()
 uninstall()
 {
   log "UNINSTALL ..."
-  du -sh $CONDA_PKGS_DIRS
+  if [[ -d $CONDA_PKGS_DIRS ]] {
+    log "  CONDA CACHE:"
+    du -sh $CONDA_PKGS_DIRS
+  } else {
+    log "  CONDA CACHE: does not exist"
+    mkdir -pv $CONDA_PKGS_DIRS
+  }
   if (( ${#UNINSTALL} > 1 )) && [[ -d $CONDA_PKGS_DIRS ]] {
     log "  DELETE: $CONDA_PKGS_DIRS ..."
     rm -fr $CONDA_PKGS_DIRS
