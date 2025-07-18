@@ -1,10 +1,8 @@
 #!/bin/zsh
 set -eu
 
-# JENKINS ANACONDA SH
-# Test the Swift/T Anaconda packages
-# Sets up 2 Minicondas: one in which to build   the package
-#                   and one in which to install the package
+# AUTO-TEST ANACONDA SH
+# Test the Swift/T Anaconda packages under Jenkins or GitHub Actions
 
 # May be run interactively, just:
 #     set environment variable WORKSPACE
@@ -14,6 +12,9 @@ set -eu
 
 # Also runs as GitHub action via /.github/workflows/conda.yaml
 #      in which case we create artifact anaconda.log
+
+# Sets up 2 Minicondas: one in which to build   the package
+#                   and one in which to install the package
 
 # This script reuses downloads and sfw/Miniconda installations:
 #      provide -u to uninstall first
