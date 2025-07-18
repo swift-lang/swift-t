@@ -70,7 +70,7 @@ jobs:
 
       - name: Build Anaconda package
         run: |
-          dev/github-actions/check dev/jenkins/anaconda.sh -a -p ${{ matrix.python-version }}
+          dev/github-actions/check dev/auto-test/anaconda.sh -a -p ${{ matrix.python-version }}
 
       - name: Save anaconda.log
         uses: actions/upload-artifact@v4
