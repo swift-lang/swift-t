@@ -5,6 +5,6 @@ set -eu
 
 rm -rf autom4te.cache
 
-echo "Running autoreconf..."
+echo "ADLB: bootstrap: running autoreconf..."
 autoreconf --force --install
 echo "ADLB: bootstrap: OK"
