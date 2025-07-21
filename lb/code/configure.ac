@@ -7,8 +7,6 @@
 define([adlb_version],
     regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
-m4_include([../../dev/m4/ifblank.m4])
-
 AC_INIT([XLB],[adlb_version()],[woz@anl.gov])
 AC_PREREQ([2.68])
 AC_CONFIG_MACRO_DIR([m4])
@@ -40,15 +38,25 @@ then
   AC_MSG_RESULT([CC not set: setting CC=mpicc])
   export CC=mpicc
 fi
-which ${CC} >& /dev/null
-if [[ ${?} != 0 ]]
+
+# Check for CC
+# USE_CC is an absolute path
+# CC is usually an executable name
+if ! [[ -x ${CC} ]]
 then
-  echo "CC=${CC}: not found in PATH!"
-  exit 1
+  which ${CC} >& /dev/null
+  if [[ ${?} != 0 ]]
+  then
+    echo "CC=${CC}: not an executable file and not found in PATH!"
+    exit 1
+  fi
+  USE_CC=$( which $CC )
+else
+  # CC is a path (Spack does this)
+  USE_CC=$CC
 fi
 
 # Report location of CC
-USE_CC=$( which $CC )
 AC_MSG_RESULT([using  CC=$USE_CC])
 
 AC_MSG_RESULT([PREFIX:   ${prefix}])  # Space to align path with above
@@ -91,7 +99,7 @@ AC_HEADER_STDBOOL
 AC_C_INLINE
 AC_C_RESTRICT
 
-m4_include([../../dev/m4/syslibs.m4])
+m4_include([m4/syslibs.m4])
 
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
@@ -262,7 +270,7 @@ then
   ENABLE_ZLIB=0
   ZLIB_HOME=
   AC_FUNC_FSEEKO
-  m4_include([../../dev/m4/ax_check_zlib.m4])
+  m4_include([m4/ax_check_zlib.m4])
   AX_CHECK_ZLIB([ENABLE_ZLIB=1],
                 AC_MSG_ERROR([Could not find zlib! (required for checkpoint)]))
 fi
