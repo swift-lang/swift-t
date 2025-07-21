@@ -48,7 +48,7 @@ fi
 mkdir -pv /tmp/$USER/mk-src
 D=$( mktemp -d /tmp/$USER/mk-src/$NAME-$DEB_TYPE-tgz-XXX )
 mkdir -v $D/$NAME-$VERSION
-cp -v --parents $FILES $D/$NAME-$VERSION || \
+cp --parents $FILES $D/$NAME-$VERSION || \
   {
     echo ""
     echo "mk-src-tgz.sh: " \
