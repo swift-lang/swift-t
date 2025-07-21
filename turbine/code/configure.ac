@@ -22,8 +22,7 @@ AC_INIT([Turbine], [turbine_version()], [woz@anl.gov])
 AC_CONFIG_SRCDIR([src/turbine/turbine.c])
 AC_CONFIG_HEADERS([config.h])
 
-m4_include([../../dev/m4/ifblank.m4])
-m4_include([../../dev/m4/tcl.m4])
+m4_include([m4/tcl.m4])
 
 TURBINE_VERSION=turbine_version()
 AC_MSG_RESULT([Turbine version: ${TURBINE_VERSION}])
@@ -112,7 +111,7 @@ AC_PATH_PROG([SWIG],[swig],[0])
 # broken location for --with-zlib, it will find a different one!
 # This is problematic on cross-compiled systems (like BG/Q).
 ENABLE_ZLIB=0
-m4_include([../../dev/m4/ax_check_zlib.m4])
+m4_include([m4/ax_check_zlib.m4])
 AX_CHECK_ZLIB([ENABLE_ZLIB=1],
    AC_MSG_ERROR([Could not find zlib: use --with-zlib or --without-zlib.
                  Note that Swift/Turbine checkpointing and HDF
@@ -896,7 +895,7 @@ AC_ARG_ENABLE(nvc,
               ])
 AC_SUBST(USE_NVC)
 
-m4_include([../../dev/m4/ax_lib_hdf5.m4])
+m4_include([m4/ax_lib_hdf5.m4])
 AX_LIB_HDF5()
 if [[ "${HAVE_HDF5}" == 1 ]]
 then
@@ -934,7 +933,7 @@ AC_SUBST(CPPFLAGS)
 AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
-m4_include([../../dev/m4/syslibs.m4])
+m4_include([m4/syslibs.m4])
 
 AC_MSG_RESULT([])
 AC_MSG_RESULT([Preparing config files: please wait...])
