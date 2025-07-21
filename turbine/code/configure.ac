@@ -94,7 +94,7 @@ fi
 
 # Check for CC
 AC_PROG_CC
-AC_MSG_RESULT([using CC='$CC'])
+AC_MSG_RESULT([CC is '$CC'])
 
 # Report location of CC
 USE_CC=$( which $CC )

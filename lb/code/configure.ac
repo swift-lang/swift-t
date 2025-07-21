@@ -39,6 +39,8 @@ then
   export CC=mpicc
 fi
 
+AC_MSG_RESULT([CC is '$CC'])
+
 # Check for CC
 # USE_CC is an absolute path
 # CC is usually an executable name
@@ -47,7 +49,7 @@ then
   which ${CC} >& /dev/null
   if [[ ${?} != 0 ]]
   then
-    echo "CC=${CC}: not an executable file and not found in PATH!"
+    echo "CC is ${CC}: not an executable file and not found in PATH!"
     exit 1
   fi
   USE_CC=$( which $CC )
