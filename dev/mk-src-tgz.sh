@@ -45,7 +45,8 @@ then
   ./bootstrap
 fi
 
-D=$( mktemp -d .$NAME-$DEB_TYPE-tgz-XXX )
+mkdir -pv /tmp/$USER/mk-src
+D=$( mktemp -d /tmp/$USER/mk-src/$NAME-$DEB_TYPE-tgz-XXX )
 mkdir -v $D/$NAME-$VERSION
 cp -v --parents $FILES $D/$NAME-$VERSION || \
   {
