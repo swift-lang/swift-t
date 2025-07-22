@@ -31,6 +31,18 @@ Links:
 * These example scripts may be link:downloads/gallery.tar.gz[downloaded
   here] (2KB).
 
+* You can get started with:
++
+----
+$ conda install -c swift-t swift-t
+----
++
+and simply run these examples with +swift-t+, for example:
++
+----
+$ swift-t hello-world/hello-world.swift
+----
+
 == Hello world
 
 EXAMPLE(hello-world/hello-world.swift)
