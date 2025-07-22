@@ -1601,6 +1601,67 @@ output array.  The +comment+ argument is optional and defaults to
 trimmed, and blank lines are omitted.  If +comment==""+, comments are
 disabled (that is, you will receive the whole file, nothing will be
 excised).
++
+For example, this file:
++
+----
+AAA
+BBB
+# CCC
+DDD
+----
++
+will result in array:
++
+----
+[0]="AAA"
+[1]="BBB"
+[2]="DDD"
+----
+
++file_chunks(file, delimiter="----", comment="#") -> string[]+::
+
+Reads the whole file, returning each +delimiter+-separated chunk
+as a separate entry in the output array.
+The +delimiter+ argument is optional and defaults to +"----"+.
+The +comment+ argument is optional and defaults to +"#"+ .
+Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.  If +comment==""+, comments are
+disabled (that is, you will receive the whole file, nothing will be
+excised).
++
+For example, this file:
++
+----
+{
+  "a": "text",
+  !! "b": 4",
+  "ccc": 32
+}
+%%%
+{
+  "moredata": 10000
+}
+----
++
+when parsed with +file_chunks(filename, "%%%", "!!")+
+will result in array:
++
+----
+[0]=
+"""
+{
+  "a": "text",
+  "ccc": 32
+}
+"""
+[1]=
+"""
+{
+  "moredata": 10000
+}
+"""
+----
 
 ==== Finding files
 
