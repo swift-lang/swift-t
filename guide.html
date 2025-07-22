@@ -3123,6 +3123,67 @@ trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
 disabled (that is, you will receive the whole file, nothing will be
 excised).
 </p>
+<div class="paragraph"><p>For example, this file:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>AAA
+BBB
+# CCC
+DDD</code></pre>
+</div></div>
+<div class="paragraph"><p>will result in array:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[0]="AAA"
+[1]="BBB"
+[2]="DDD"</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<code>file_chunks(file, delimiter="----", comment="#") &#8594; string[]</code>
+</dt>
+<dd>
+<p>
+Reads the whole file, returning each <code>delimiter</code>-separated chunk
+as a separate entry in the output array.
+The <code>delimiter</code> argument is optional and defaults to <code>"----"</code>.
+The <code>comment</code> argument is optional and defaults to <code>"#"</code> .
+Comments are excised, leading and trailing whitespace is
+trimmed, and blank lines are omitted.  If <code>comment==""</code>, comments are
+disabled (that is, you will receive the whole file, nothing will be
+excised).
+</p>
+<div class="paragraph"><p>For example, this file:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>{
+  "a": "text",
+  !! "b": 4",
+  "ccc": 32
+}
+%%%
+{
+  "moredata": 10000
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>when parsed with <code>file_chunks(filename, "%%%", "!!")</code>
+will result in array:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[0]=
+"""
+{
+  "a": "text",
+  "ccc": 32
+}
+"""
+[1]=
+"""
+{
+  "moredata": 10000
+}
+"""</code></pre>
+</div></div>
 </dd>
 </dl></div>
 </div>
@@ -6980,7 +7041,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2025-06-26 10:40:09 CDT
+ 2025-07-21 17:08:05 CDT
 </div>
 </div>
 
