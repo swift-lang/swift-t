@@ -66,6 +66,12 @@
   [ "set <<s>> [ turbine::file_lines_impl <<f>> <<comment>> ] " ];
 
 @pure
+(string s[]) file_chunks(file f, string delimiter="----",
+                         string comment="#")
+    "turbine" "0.1"
+  [ "set <<s>> [ turbine::file_chunks_impl <<f>> <<delimiter>> <<comment>> ] " ];
+
+@pure
 (string d) dirname_string(string p)
 "turbine" "0.0"
 [ "set <<d>> [ file dirname <<p>> ]" ];

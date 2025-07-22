@@ -692,19 +692,6 @@ namespace eval turbine {
         }
     }
 
-    proc file_lines { result input comment } {
-        set src [ lindex $input 0 ]
-        rule_file_helper "file_lines-$result-$src" [ list ] \
-            [ list $comment ] [ list $src ] \
-            $::turbine::WORK \
-            [ list file_lines_body $result $src ]
-    }
-    proc file_lines_body { result input } {
-        set input_val [ retrieve_decr_file $input ]
-        set comment_val [ retrive_decr $comment ]
-        set lines_val [ file_lines_impl $input_val $comment_val ]
-        array_kv_build $result $lines_val 1 integer string
-    }
     # input_file: local file representation
     proc file_lines_impl { input_file comment } {
         set input_name [ local_file_path $input_file ]
@@ -725,6 +712,40 @@ namespace eval turbine {
         }
         close $fp
         return $lines
+    }
+
+    # input_file: local file representation
+    proc file_chunks_impl { input_file delimiter comment } {
+        set input_name [ local_file_path $input_file ]
+        set fp [ ::open $input_name r ]
+        set chunk_number 0
+        set chunks [ dict create ]
+        # Comments are disabled if the comment string is empty
+        #                          or just whitespace
+        set comment [ string trim $comment ]
+        set comments_enabled [ string length $comment ]
+        while { ! [ eof $fp ] } {
+            set chunk ""
+            while { [ gets $fp line ] >= 0 } {
+                if $comments_enabled {
+                    regsub "${comment}.*" $line "" line
+                }
+
+                if { $line eq $delimiter } break
+
+                if { [ string length $line ] > 0 } {
+                    if { $chunk ne "" } {
+                        append chunk "\n"
+                    }
+                    append chunk $line
+                }
+            }
+            set chunk [ string trim $chunk ]
+            dict append chunks $chunk_number $chunk
+            incr chunk_number
+        }
+        close $fp
+        return $chunks
     }
 
     proc file_mtime_impl { filename } {
