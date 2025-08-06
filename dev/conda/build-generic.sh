@@ -155,7 +155,7 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
   # Anaconda Autoconf 2.72 is buggy
   log "build tools:"
   which m4 autoreconf aclocal autom4te mpicc
-  m4 --version
+  m4 --version         | head -1
   autoreconf --version | head -1
   log "mpicc show:"
   mpicc -show
