@@ -32,7 +32,7 @@ abort()
 }
 
 TIMESTAMP=$( date '+%Y-%m-%d %H:%M:%S' )
-echo "START $TIMESTAMP"
+log "START $TIMESTAMP"
 
 # This is in the exported Swift/T source tree
 DEV_BUILD=dev/build
@@ -40,7 +40,7 @@ DEV_BUILD=dev/build
 DEV_CONDA=$( cd $RECIPE_DIR/.. ; /bin/pwd -P )
 
 : ${ENABLE_R:=0}
-echo ENABLE_R=$ENABLE_R
+log ENABLE_R=$ENABLE_R
 
 {
   log "TIMESTAMP:  $TIMESTAMP"
@@ -74,10 +74,10 @@ if [[ ! -d $DEV_BUILD ]]
 then
   # This directory disappears under certain error conditions
   # The user must clean up the work directory
-  echo "Cannot find DEV_BUILD=$DEV_BUILD under $PWD"
-  echo "Delete this directory and the corresponding work_moved"
-  echo $PWD
-  echo "See build-generic.log for SRC_DIR"
+  log "Cannot find DEV_BUILD=$DEV_BUILD under $PWD"
+  log "Delete this directory and the corresponding work_moved"
+  log $PWD
+  log "See build-generic.log for SRC_DIR"
   exit 1
 fi
 
@@ -114,7 +114,7 @@ then
   fi
   export R_HOME=$( R RHOME )
 
-  echo "build-generic.sh: Installing RInside into $R_HOME ..."
+  log "Installing RInside into $R_HOME ..."
   Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
     tee $RECIPE_DIR/install-RInside.log
   if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log
@@ -153,9 +153,12 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 {
   echo
   # Anaconda Autoconf 2.72 is buggy
-  echo "Build tools:"
-  which autoreconf aclocal autom4te m4
+  log "build tools:"
+  which m4 autoreconf aclocal autom4te mpicc
   m4 --version
+  autoreconf --version | head -1
+  log "mpicc show:"
+  mpicc -show
   echo
   log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
