@@ -901,6 +901,44 @@ Other <<variables,Turbine scheduler variables>> are recognized automatically.
 
 == Cray
 
+=== Perlmutter
+
+https://docs.nersc.gov/systems/perlmutter/architecture[Perlmutter]
+is an HPE Cray supercomputer at NERSC.
+
+==== Public installation
+
+*As of:* 2025-08-14
+
+Add to +PATH+: +
+----
+~wozniak/Public/sfw/compute/swift-t/2025-08-14/stc
+----
+
+Run with: +
+----
+# Set PROJECT/QUEUE:
+$ export PROJECT=<your project>
+$ export QUEUE=debug
+# See https://docs.nersc.gov/systems/perlmutter/running-jobs :
+$ export TURBINE_DIRECTIVE="#SBATCH -C cpu"
+$ export WALLTIME=00:10:00
+# Run Swift/T!
+$ swift-t -m slurm workflow.swift ...
+----
+
+==== Build instructions
+
+*As of:* 2025-08-14
+
+. Use the +dev/build/build-swift-t.sh+ method as described in the
+link:./guide.html[Swift/T Guide].
+. Edit +swift-t-settings.sh+:
+.. Load module +PrgEnv-gnu+
+.. Set +CC=cc+
+.. Set +LAUNCHER=/usr/bin/srun+
+. Then build with +build-swift-t.sh+.
+
 === Polaris
 
 https://www.alcf.anl.gov/support/user-guides/polaris/getting-started[Polaris]
