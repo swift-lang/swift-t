@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.6,</span>
-<span id="revdate">May 2025</span>
+<span id="revdate">August 2025</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1018,7 +1018,9 @@ PSI/J
 </dl></div>
 <div class="paragraph"><p>Each script accepts input via environment variables and command-line options.</p></div>
 <div class="paragraph"><p>The <code>swift-t</code> and <code>turbine</code> programs have a <code>-m</code> (machine) option that accepts
-<code>pbs</code>, <code>cobalt</code>, <code>cray</code>, <code>slurm</code>, <code>lsf</code>, or <code>psij</code>.</p></div>
+<code>local</code>, <code>pbs</code>, <code>cobalt</code>, <code>cray</code>, <code>slurm</code>, <code>lsf</code>, or <code>psij</code>.</p></div>
+<div class="paragraph"><p><code>local</code> simply means to run using the local <code>mpiexec</code> or other
+launcher as specified at build time.</p></div>
 <div class="paragraph"><p>A typical invocation is (one step compile-and-run):</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2066,11 +2068,76 @@ Enable additional debug messages to view what is happening.
 <h2 id="_cray">Cray</h2>
 <div class="sectionbody">
 <div class="sect2">
+<h3 id="_perlmutter">Perlmutter</h3>
+<div class="paragraph"><p><a href="https://docs.nersc.gov/systems/perlmutter/architecture">Perlmutter</a>
+is an HPE Cray supercomputer at NERSC.</p></div>
+<div class="sect3">
+<h4 id="_public_installation_7">Public installation</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2025-08-14</p></div>
+<div class="paragraph"><p>Add to <code>PATH</code>:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>~wozniak/Public/sfw/compute/swift-t/2025-08-14/stc</code></pre>
+</div></div>
+<div class="paragraph"><p>Run with:<br /></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Set PROJECT/QUEUE:
+$ export PROJECT=&lt;your project&gt;
+$ export QUEUE=debug
+# See https://docs.nersc.gov/systems/perlmutter/running-jobs :
+$ export TURBINE_DIRECTIVE="#SBATCH -C cpu"
+$ export WALLTIME=00:10:00
+# Run Swift/T!
+$ swift-t -m slurm workflow.swift ...</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2025-08-14</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <code>dev/build/build-swift-t.sh</code> method as described in the
+<a href="./guide.html">Swift/T Guide</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Load module <code>PrgEnv-gnu</code>
+</p>
+</li>
+<li>
+<p>
+Set <code>CC=cc</code>
+</p>
+</li>
+<li>
+<p>
+Set <code>LAUNCHER=/usr/bin/srun</code>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Then build with <code>build-swift-t.sh</code> .
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_polaris">Polaris</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/support/user-guides/polaris/getting-started">Polaris</a>
 is a Cray/AMD/NVIDIA system with PBS at ALCF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_7">Public installation</h4>
+<h4 id="_public_installation_8">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2024-03-13</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:<br /></p></div>
 <div class="listingblock">
@@ -2094,7 +2161,7 @@ $ swift-t -m pbs workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2024-05-02</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2137,7 +2204,7 @@ described here: <a href="https://docs.alcf.anl.gov/polaris/data-science-workflow
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html">Crusher</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p>Thanks to John Gounley for prototyping these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2022-08-10</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2199,7 +2266,7 @@ Then build with <code>build-swift-t.sh</code>.
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2260,7 +2327,7 @@ Then build with <code>build-swift-t.sh</code>
 KNL-based system at TACC.</p></div>
 <div class="paragraph"><p>Some TACC-specific notes are <a href="https://github.com/swift-lang/swift-work/tree/master/tacc-tests">here</a>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_8">Public installation</h4>
+<h4 id="_public_installation_9">Public installation</h4>
 <div class="sect4">
 <h5 id="_compute_nodes">Compute nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
@@ -2274,7 +2341,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_8">Build instructions</h4>
+<h4 id="_build_instructions_9">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2312,7 +2379,7 @@ Run <code>build-swift-t.sh</code>
 <h3 id="_theta">Theta</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/theta">Theta</a> is a Cray at ALCF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_9">Public installation</h4>
+<h4 id="_public_installation_10">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes">Login nodes</h5>
 <div class="paragraph"><p>Add to <code>PATH</code>:<br />
@@ -2338,7 +2405,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_9">Build instructions</h4>
+<h4 id="_build_instructions_10">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2436,7 +2503,7 @@ export PMI_NO_PREINITIALIZE=1</code></pre>
 <h3 id="_thetagpu">ThetaGPU</h3>
 <div class="paragraph"><p><a href="https://www.alcf.anl.gov/theta">ThetaGPU</a> is a NVIDIA DGX at ALCF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_10">Public installation</h4>
+<h4 id="_public_installation_11">Public installation</h4>
 <div class="sect4">
 <h5 id="_compute_nodes_4">Compute nodes</h5>
 <div class="paragraph"><p><strong>No Python or R:</strong></p></div>
@@ -2444,7 +2511,7 @@ export PMI_NO_PREINITIALIZE=1</code></pre>
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_10">Build instructions</h5>
+<h5 id="_build_instructions_11">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2480,7 +2547,7 @@ is a Cray XC40 at NERSC.</p></div>
 /global/common/software/nstaff/swift-t/deps/tcl-8.6.6</code></pre>
 </div></div>
 <div class="sect3">
-<h4 id="_public_installation_11">Public installation</h4>
+<h4 id="_public_installation_12">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_3">Login nodes</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-12</p></div>
@@ -2518,7 +2585,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_11">Build instructions</h4>
+<h4 id="_build_instructions_12">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2572,7 +2639,7 @@ Then build as usual.
 <div class="paragraph"><p>Swan is a Cray XC40 at Cray.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 4/29/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_12">Public installation</h4>
+<h4 id="_public_installation_13">Public installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>~p01951/Public/sfw/swift-t/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -2731,7 +2798,7 @@ $ swift-t -m lsf -E 'trace(42);'</code></pre>
 <div class="paragraph"><p>Thanks to the OLCF staff for installing and maintaining this build.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_public_installation_13">Public installation</h4>
+<h4 id="_public_installation_14">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
@@ -2747,7 +2814,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_12">Build instructions</h4>
+<h4 id="_build_instructions_13">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2774,7 +2841,7 @@ build as on any other system.</p></div>
 is a 54-node IBM POWER8 x2 plus NVIDIA Tesla P100 x4 system at OLCF.
 It uses LSF.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_14">Public installation</h4>
+<h4 id="_public_installation_15">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2788,7 +2855,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_13">Build instructions</h4>
+<h4 id="_build_instructions_14">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -3123,7 +3190,7 @@ Open MPI developer):
 (ALCF).  Other existing Blue Gene/P systems may be configured in a
 similar way.</p></div>
 <div class="sect4">
-<h5 id="_public_installation_15">Public installation</h5>
+<h5 id="_public_installation_16">Public installation</h5>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3261,7 +3328,7 @@ cluster at the Argonne Leadership Computing Facility (ALCF).  It used
 the Cobalt scheduler.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Trunk, 4/9/2014</p></div>
 <div class="sect3">
-<h4 id="_public_installation_16">Public installation</h4>
+<h4 id="_public_installation_17">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3315,7 +3382,7 @@ Configure Turbine with <code>--with-launcher=/soft/libraries/mpi/mvapich2/gcc/bi
 <div class="paragraph"><p><a href="http://www.lcrc.anl.gov/about/fusion">Fusion</a> was a 320-node x86
 cluster at ANL.  It used PBS.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_17">Public installation</h4>
+<h4 id="_public_installation_18">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3350,7 +3417,7 @@ $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/software/gcc-4.7.2/lib64</code></pre>
 was a Cray XK7 at the Oak Ridge Leadership Computing Facility that
 used PBS+APRUN.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_18">Public installation</h4>
+<h4 id="_public_installation_19">Public installation</h4>
 <div class="sect4">
 <h5 id="_dependencies_2">Dependencies</h5>
 <div class="ulist"><ul>
@@ -3558,7 +3625,7 @@ export PPN=32</code></pre>
 install Turbine and its libraries in <code>/lustre</code>.  Also, your data must
 be in <code>/lustre</code>.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_19">Public installation</h4>
+<h4 id="_public_installation_20">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_6">Login nodes</h5>
 <div class="paragraph"><p><strong>As of: Swift/T 1.3.0, October 2017</strong></p></div>
@@ -3703,7 +3770,7 @@ export LDFLAGS="-L/path/to/mpe/lib -lmpe -Wl,-rpath -Wl,/path/to/mpe/lib"
 cluster at ANL.  It uses PBS.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> Master, 8/17/2015</p></div>
 <div class="sect3">
-<h4 id="_public_installation_20">Public installation</h4>
+<h4 id="_public_installation_21">Public installation</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3825,7 +3892,7 @@ done</code></pre>
 <h3 id="_edison">Edison</h3>
 <div class="paragraph"><p>Edison is a Cray XC30 system at NERSC.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_21">Public Installation</h4>
+<h4 id="_public_installation_22">Public Installation</h4>
 <div class="paragraph"><p>A public installation may be run at: <code>/scratch2/scratchdirs/ketan/exm-install/stc/bin/swift-t</code></p></div>
 <div class="paragraph"><p>Run with, e.g.:</p></div>
 <div class="listingblock">
@@ -4022,7 +4089,7 @@ JOB_ID=2835290.edique02</code></pre>
 <div class="paragraph"><p>Blue Waters is a Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_22">Public installation</h4>
+<h4 id="_public_installation_23">Public installation</h4>
 <div class="paragraph"><p><strong>As of:</strong>  2017/09</p></div>
 <div class="sect4">
 <h5 id="_login_nodes_7">Login nodes</h5>
@@ -4107,7 +4174,7 @@ it as follows (for a single node/32 processes per node):</p></div>
 <div class="paragraph"><p>JYC is a small Cray XE6/XK7 at the University of Illinois at
 Urbana-Champaign.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_23">Public installation</h4>
+<h4 id="_public_installation_24">Public installation</h4>
 <div class="sect4">
 <h5 id="_login_nodes_8">Login nodes</h5>
 <div class="paragraph"><p>Simply add to <code>PATH</code>: <code>~wozniak/Public/sfw/login/swift-t/stc/bin</code></p></div>
@@ -4201,7 +4268,7 @@ Configure Turbine with:
 architecture and MPI library are the same &#x1f632;.  The only potential
 gotcha is loading the Intel <code>compilervars.sh</code> script to set library paths.</p></div>
 <div class="sect3">
-<h4 id="_public_installation_24">Public installation</h4>
+<h4 id="_public_installation_25">Public installation</h4>
 <div class="paragraph"><p>Add to <code>PATH</code>: <code>~wozniakPublic/sfw/icc/swift-t/stc/bin</code></p></div>
 <div class="paragraph"><p>This version is linked to Python 2.7.12.</p></div>
 <div class="sect4">
@@ -4234,7 +4301,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_14">Build instructions</h4>
+<h4 id="_build_instructions_15">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4420,7 +4487,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2025-05-07 15:48:55 CDT
+ 2025-08-14 15:41:14 CDT
 </div>
 </div>
 </body>
