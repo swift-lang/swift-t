@@ -937,7 +937,7 @@ link:./guide.html[Swift/T Guide].
 .. Load module +PrgEnv-gnu+
 .. Set +CC=cc+
 .. Set +LAUNCHER=/usr/bin/srun+
-. Then build with +build-swift-t.sh+.
+. Then build with +build-swift-t.sh+ .
 
 === Polaris
 
