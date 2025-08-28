@@ -934,8 +934,8 @@ $ swift-t -m slurm workflow.swift ...
 . Use the +dev/build/build-swift-t.sh+ method as described in the
 link:./guide.html[Swift/T Guide].
 . Edit +swift-t-settings.sh+:
-.. Load module +PrgEnv-gnu+
-.. Set +CC=cc+
+.. Load modules +PrgEnv-gnu+, +cudatoolkit+, +craype-accel-nvidia80+
+.. Set +CC=cc+, +CXX=CC+, +CFLAGS=-target-accel=nvidia80+
 .. Set +LAUNCHER=/usr/bin/srun+
 . Then build with +build-swift-t.sh+ .
 
