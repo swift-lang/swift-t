@@ -536,15 +536,6 @@ body.manpage div.sectionbody {
 }
 
 
-
-/* Swift/T guide customizations */
-
-a:visited {
-  color: gray;
-}
-h5 {
-  font-size: 0.8em;
-}
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -741,7 +732,7 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article" style="max-width:875px">
+<body class="article">
 <div id="header">
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
@@ -2109,12 +2100,12 @@ Edit <code>swift-t-settings.sh</code>:
 <div class="olist loweralpha"><ol class="loweralpha">
 <li>
 <p>
-Load module <code>PrgEnv-gnu</code>
+Load modules <code>PrgEnv-gnu</code>, <code>cudatoolkit</code>, <code>craype-accel-nvidia80</code>
 </p>
 </li>
 <li>
 <p>
-Set <code>CC=cc</code>
+Set <code>CC=cc</code>, <code>CXX=CC</code>, <code>CFLAGS=-target-accel=nvidia80</code>
 </p>
 </li>
 <li>
@@ -4487,7 +4478,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2025-08-14 15:41:14 CDT
+ 2025-08-28 15:58:33 CDT
 </div>
 </div>
 </body>
