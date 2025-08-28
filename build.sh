@@ -7,6 +7,10 @@
 # Options: -B is forwarded to make
 # Targets: Passed to make
 
+# Installation:
+# On Ubuntu, install APT package asciidoc,
+# then make sure PYTHONPATH contains /usr/lib/python3/dist-packages
+
 B=""
 zparseopts -D -E B=B
 
