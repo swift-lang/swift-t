@@ -530,13 +530,13 @@ namespace eval turbine {
     }
 
     proc do_glob { result inputs } {
-        rule $inputs "glob_body $result $inputs" \
+        rule $inputs "do_glob_body $result $inputs" \
              name "glob-$result" type $::turbine::WORK
     }
     proc do_glob_body { result s } {
         set s_value [ retrieve_decr_string $s ]
         set r_value [ ::glob -nocomplain $s_value ]
-        log "glob: $s_value"
+        log "do_glob: $s_value"
 
         set i 0
         foreach v $r_value {

@@ -115,8 +115,13 @@ then
   export R_HOME=$( R RHOME )
 
   log "Installing RInside into $R_HOME ..."
-  Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
-    tee $RECIPE_DIR/install-RInside.log
+  (
+    # Allow pipe errors here:
+    #       we put token "Swift-RInside-SUCCESS" in the log:
+    set +o pipefail
+    Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
+      tee $RECIPE_DIR/install-RInside.log
+  )
   if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log
   then
     abort "Installing RInside failed."
