@@ -4,7 +4,7 @@ setopt PIPE_FAIL
 
 # CONDA BUILD
 # Generic wrapper around `conda build'
-# Called by platform/conda-platform.sh
+# Called by ./conda-platform.sh
 # Generates meta.yaml and runs `conda build'
 # Generates settings.sed for the Swift/T build
 # Many exported environment variables here
