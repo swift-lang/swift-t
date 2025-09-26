@@ -101,7 +101,8 @@ source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 
 # Auto-configuration
 # PINs are version pins applied to the package names
-CLANG_PIN=""
+PIN_CLANG=""
+PIN_MPICH=""
 PIN_PV=""
 if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   SOLVER=( --solver classic )
@@ -119,10 +120,7 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   # Pin Clang for everything but Python 3.9
        # In Py 3.9, 18 => 18.1.7
   PIN_CLANG="-18==18.1.8"
-  # if [[ $PV =~ 3.9 ]] {
-  #      PIN_CLANG="-18"
-  #  #     SOLVER=()
-  # }
+  PIN_MPICH="==4.3.0"
 }
 
 # Build dependency list:
@@ -133,7 +131,7 @@ if (( USE_ZSH )) LIST+=zsh
 LIST+=(
   autoconf
   make
-  mpich-mpicc
+  "mpich-mpicc$PIN_MPICH"
   openjdk
   # May need to pin version:
   "python$PIN_PV"
