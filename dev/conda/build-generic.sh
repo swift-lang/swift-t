@@ -164,6 +164,8 @@ ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
   autoreconf --version | head -1
   log "mpicc show:"
   mpicc -show
+  log "mpicc version:"
+  mpicc --version
   echo
   log "BUILD SWIFT-T START: $( date '+%Y-%m-%d %H:%M:%S' )"
   ./build-swift-t.sh -vv 2>&1
