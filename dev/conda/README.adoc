@@ -80,6 +80,7 @@ When testing an installation:
 Setup:
 
 * Run `setup-conda.sh` to setup a working Conda environment
+** If needed, `$ conda install autoconf automake ant`
 * Run the Swift/T `dev/release/make-release-pkg.zsh` script to
   create the "exported" Swift/T source tree in `$TMP/distro`,
   where `$TMP` defaults to `/tmp`.
@@ -89,7 +90,7 @@ Setup:
 
 Loop:
 
-* Run `conda-platform.sh`.  See notes there.
+* Run `conda-build.sh [PLATFORM]`.  See notes there.
 ** Provide `-r` to build with R
 * Check `conda-build.log` (`LOG`) for errors.
 * Add debug output to `build.sh` as needed to diagnose problems.
