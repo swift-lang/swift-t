@@ -1,13 +1,14 @@
 COMMENT(
 # META TEMPLATE YAML
 # Will be filtered into PLATFORM/meta.yaml by conda-build.sh:m4
+# Any m4_getenv() values are substituted when m4 runs!
 )
 
 # Date that this meta.yaml was filtered from meta-template.yaml:
-# DATE: getenv(DATE)
+# DATE: m4_getenv(DATE)
 
-{% set name    = "getenv(PKG_NAME)" %}
-{% set version = "getenv(SWIFT_T_VERSION)" %}
+{% set name    = "m4_getenv(PKG_NAME)" %}
+{% set version = "m4_getenv(SWIFT_T_VERSION)" %}
 {% set major   = version.rpartition('.')[0] %}
 
 package:
@@ -15,45 +16,52 @@ package:
   version: {{ version }}
 
 source:
-  path: getenv(DISTRO)/swift-t-{{ version }}/swift-t-{{ version }}
+  path: m4_getenv(DISTRO)/swift-t-{{ version }}/swift-t-{{ version }}
 
 build:
   number: 1
   # Environment variables for build.sh must be listed here,
   # normal environment inheritance does not happen!
   script_env:
-    - CONDA_PLATFORM=getenv(CONDA_PLATFORM)
-    - GITHUB_ACTIONS=getenv(GITHUB_ACTIONS)
-m4_ifelse(getenv(ENABLE_R),`1',m4_include(env-R.yaml))
+    - CONDA_PLATFORM=m4_getenv(CONDA_PLATFORM)
+    - GITHUB_ACTIONS=m4_getenv(GITHUB_ACTIONS)
+m4_ifelse(m4_getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 
 # Remember to sync any dependency changes here with conda-install.sh
 requirements:
   build:
+    - python==m4_getenv(PYTHON_VERSION)
     # Anaconda Autoconf 2.72 is buggy 2025-05-12
     - autoconf==2.71
+    # Automake is needed on osx-arm64: 2025-10-27
+    - automake
     - make
     - openjdk>=17  # Security issue in Java < 11.72.19
-    - mpich-mpicc
-    - python==getenv(PYTHON_VERSION)
+    - m4_getenv(SPEC_MPICH)
     - swig
-m4_ifelse(getenv(USE_ANT),`1',m4_include(pkgs-ant.yaml))
-m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
-m4_ifelse(getenv(USE_TK), `1',m4_include(pkgs-tk.yaml))
-m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
-m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+m4_ifelse(m4_getenv(USE_ANT),  `1',m4_include(pkgs-ant.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_CLANG),`1',m4_include(pkgs-clang.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_GCC),  `1',m4_include(pkgs-gcc.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_TK),   `1',m4_include(pkgs-tk.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_ZSH),  `1',m4_include(pkgs-zsh.yaml))m4_dnl
+m4_ifelse(m4_getenv(ENABLE_R), `1',m4_include(pkgs-R.yaml))m4_dnl
   run:
-    - mpich-mpicc
-    - openjdk>=17  # Security issue in Java < 11.72.19
-    - python==getenv(PYTHON_VERSION)
+    - python==m4_getenv(PYTHON_VERSION)
+    - openjdk>=17
+    - m4_getenv(SPEC_MPICH)
     - swig
-m4_ifelse(getenv(USE_GCC),`1',m4_include(pkgs-gcc.yaml))
-m4_ifelse(getenv(USE_TK), `1',m4_include(pkgs-tk.yaml))
-m4_ifelse(getenv(USE_ZSH),`1',m4_include(pkgs-zsh.yaml))
-m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+m4_ifelse(m4_getenv(USE_CLANG),`1',m4_include(pkgs-clang.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_GCC),  `1',m4_include(pkgs-gcc.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_TK),   `1',m4_include(pkgs-tk.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_ZSH),  `1',m4_include(pkgs-zsh.yaml))m4_dnl
+m4_ifelse(m4_getenv(ENABLE_R), `1',m4_include(pkgs-R.yaml))m4_dnl
 
 test:
   commands:
     - swift-t -v
+    - swift-t -E 'trace(42);'
+    - which swift-t
+    - cp $PREFIX/swift-t/turbine/lib/libtclturbine.dylib /Users/woz
 
 about:
   home: http://swift-lang.org/Swift-T

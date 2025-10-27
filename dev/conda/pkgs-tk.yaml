@@ -1,4 +1,4 @@
 # pkgs-tk.yaml: START
 # Extra packages for tk
-    - tk
+    - m4_getenv(SPEC_TK)
 # pkgs-tk.yaml: STOP

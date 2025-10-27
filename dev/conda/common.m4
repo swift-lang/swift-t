@@ -4,5 +4,5 @@ dnl This file must have a newline at the end for OSX.
 dnl Simply remove this text:
 m4_define(`COMMENT', `')dnl
 dnl This simply does environment variable substition when m4 runs:
-m4_define(`getenv',  `m4_esyscmd(printf -- "$`$1'")')dnl
+m4_define(`m4_getenv',  `m4_esyscmd(printf -- "$`$1'")')dnl
 m4_divert

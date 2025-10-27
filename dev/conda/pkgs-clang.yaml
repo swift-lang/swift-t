@@ -1,0 +1,4 @@
+# pkgs-clang.yaml: START
+# Extra packages for clang
+    - m4_getenv(SPEC_CLANG)
+# pkgs-clang.yaml: STOP

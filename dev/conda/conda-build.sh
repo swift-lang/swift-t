@@ -4,14 +4,13 @@ setopt PIPE_FAIL
 
 # CONDA BUILD
 # Generic wrapper around `conda build'
-# Called by ./conda-platform.sh
 # Generates meta.yaml and runs `conda build'
-# Generates settings.sed for the Swift/T build
+# Generates settings.sed to edit swift-t-settings.sh
 # Many exported environment variables here
 #      are substituted into meta.yaml
 # This script runs in the CONDA_PLATFORM subdirectory
 #      and should not change directories
-# A LOG is produced named platform/conda-build.log
+# A LOG is produced named CONDA_PLATFORM/conda-build.log
 # You can only run 1 job concurrently per Anaconda installation
 #     because of the log and
 #     because of meta.yaml
@@ -120,9 +119,12 @@ if (( ! ${#R} )) {
 # Default dependencies:
 export USE_ANT=1
 export USE_GCC=1
+export USE_CLANG=0
 export USE_TK=0
 export USE_ZLIB=0
 export USE_ZSH=1
+export SPEC_MPICH="mpich-mpicc"
+export SPEC_CLANG=""
 
 # Allow platform to modify dependencies
 source $DEV_CONDA/$CONDA_PLATFORM/deps.sh

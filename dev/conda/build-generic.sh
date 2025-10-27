@@ -20,6 +20,11 @@ set -o pipefail
 # PREFIX is provided by Conda
 # ENABLE_R may be set by meta.yaml
 
+# Try to force everything to stdout for correct ordering
+# Also do this in PLATFORM/build.sh
+# Works on Mac: 2025-10-27
+exec 2>&1
+
 log()
 {
   echo "build-generic.sh:" ${*}
@@ -152,15 +157,21 @@ fi
 # Edit swift-t-settings
 ${SED_I[@]} -f $SETTINGS_SED swift-t-settings.sh
 
+log "check aclocal"
+which  aclocal # 2>&1
+
+
 # Build it!
 # Merge output streams to try to prevent buffering
 #       problems with conda build
 {
   echo
-  # Anaconda Autoconf 2.72 is buggy
+  log "check aclocal"
+  which  aclocal
   log "build tools:"
   which m4 autoreconf aclocal autom4te mpicc
   m4 --version         | head -1
+  # Anaconda Autoconf 2.72 is buggy
   autoreconf --version | head -1
   log "mpicc show:"
   mpicc -show
