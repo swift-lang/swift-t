@@ -46,7 +46,7 @@ m4_ifelse(m4_getenv(USE_TK),   `1',m4_include(pkgs-tk.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_ZSH),  `1',m4_include(pkgs-zsh.yaml))m4_dnl
 m4_ifelse(m4_getenv(ENABLE_R), `1',m4_include(pkgs-R.yaml))m4_dnl
   run:
-    - python==m4_getenv(PYTHON_VERSION)
+    - python==m4_getenv(PYTHON_VERSION_MM)
     - openjdk>=17
     - m4_getenv(SPEC_MPICH)
     - swig
