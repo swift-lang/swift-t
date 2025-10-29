@@ -59,7 +59,7 @@ log "CONDA_PLATFORM:  $CONDA_PLATFORM ${*}"
 source $SWIFT_T_TOP/dev/get-versions.sh
 export SWIFT_T_VERSION
 log "SWIFT/T VERSION: $SWIFT_T_VERSION"
-# Sets PYTHON_VERSION:
+# Sets PYTHON_VERSION: passed into meta.yaml:
 source $DEV_CONDA/get-python-version.sh
 # Optionally set R_VERSION from user argument:
 if (( ${#R} )) export R_VERSION=${R[2]}
