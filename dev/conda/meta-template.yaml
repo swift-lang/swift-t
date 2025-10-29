@@ -58,10 +58,9 @@ m4_ifelse(m4_getenv(ENABLE_R), `1',m4_include(pkgs-R.yaml))m4_dnl
 
 test:
   commands:
+    - which swift-t
     - swift-t -v
     - swift-t -E 'trace(42);'
-    - which swift-t
-    - cp $PREFIX/swift-t/turbine/lib/libtclturbine.dylib /Users/woz
 
 about:
   home: http://swift-lang.org/Swift-T
