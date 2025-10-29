@@ -22,9 +22,10 @@ help()
   cat <<END
 
 Options:
-   conda-build.sh [-Cr] PLATFORM
-   -C configure-only- generate meta.yaml and settings.sed, then stop
-   -r for the R version
+   conda-build.sh [-C] [-r RV] PLATFORM
+   -C    : configure-only-
+           generate meta.yaml and settings.sed, then stop
+   -r RV : enable R version RV
 
 END
   exit
@@ -115,6 +116,7 @@ if (( ! ${#R} )) {
   export ENABLE_R=1
   export PKG_NAME="swift-t-r"
 }
+log "PKG_NAME: $PKG_NAME"
 
 # Default dependencies:
 export USE_ANT=1
