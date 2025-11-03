@@ -61,8 +61,7 @@ export SWIFT_T_VERSION
 log "SWIFT/T VERSION: $SWIFT_T_VERSION"
 # Setenvs PYTHON_VERSION: passed into meta.yaml: e.g. "3.12.11"
 source $DEV_CONDA/get-python-version.sh
-# Python version, just major.minor: e.g. "3.12"
-export PYTHON_VERSION_MM=${PYTHON_VERSION_MM%.*}
+log "PYTHON_VERSION: $PYTHON_VERSION   SERIES: $PYTHON_SERIES"
 # Optionally set R_VERSION from user argument:
 if (( ${#R} )) export R_VERSION=${R[2]}
 

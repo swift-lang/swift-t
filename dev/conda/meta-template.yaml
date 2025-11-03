@@ -30,7 +30,7 @@ m4_ifelse(m4_getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 # Remember to sync any dependency changes here with conda-install.sh
 requirements:
   build:
-    - python==m4_getenv(PYTHON_VERSION)
+    - python m4_getenv(PYTHON_SERIES)
     # Anaconda Autoconf 2.72 is buggy 2025-05-12
     - autoconf==2.71
     # Automake is needed on osx-arm64: 2025-10-27
@@ -46,7 +46,7 @@ m4_ifelse(m4_getenv(USE_TK),   `1',m4_include(pkgs-tk.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_ZSH),  `1',m4_include(pkgs-zsh.yaml))m4_dnl
 m4_ifelse(m4_getenv(ENABLE_R), `1',m4_include(pkgs-R.yaml))m4_dnl
   run:
-    - python==m4_getenv(PYTHON_VERSION_MM)
+    - python m4_getenv(PYTHON_SERIES)
     - openjdk>=17
     - m4_getenv(SPEC_MPICH)
     - swig
