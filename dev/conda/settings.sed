@@ -9,7 +9,7 @@ s@ENABLE_PYTHON=0@ENABLE_PYTHON=1@
 s@PYTHON_EXE=""@PYTHON_EXE="$PYTHON"@
 s@PARALLELISM=.*@PARALLELISM=4@
 s@ENABLE_CONDA_LINUX=.*@ENABLE_CONDA_LINUX="$ENABLE_CONDA_LINUX"@
-m4_ifelse(getenv(ENABLE_R),`1',m4_include(settings-R.sed))
+m4_ifelse(m4_getenv(ENABLE_R),`1',m4_include(settings-R.sed))
 
 # Local Variables:
 # mode: sh;

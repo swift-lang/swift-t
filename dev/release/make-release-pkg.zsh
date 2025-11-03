@@ -359,7 +359,7 @@ then
   tar cfz ${RELEASE_TGZ} ${SWIFT_T_RELEASE}
 
   print "Swift/T package created at $(pwd)/${RELEASE_TGZ}"
-  du -h  ${RELEASE_TGZ}
+  =du -h  ${RELEASE_TGZ}
   md5sum ${RELEASE_TGZ}
 else
   print "Swift/T exported to ${DISTRO}/${SWIFT_T_RELEASE}"

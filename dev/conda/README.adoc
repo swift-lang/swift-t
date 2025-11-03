@@ -80,6 +80,7 @@ When testing an installation:
 Setup:
 
 * Run `setup-conda.sh` to setup a working Conda environment
+** If needed, `$ conda install autoconf automake ant`
 * Run the Swift/T `dev/release/make-release-pkg.zsh` script to
   create the "exported" Swift/T source tree in `$TMP/distro`,
   where `$TMP` defaults to `/tmp`.
@@ -89,7 +90,7 @@ Setup:
 
 Loop:
 
-* Run `conda-platform.sh`.  See notes there.
+* Run `conda-build.sh [PLATFORM]`.  See notes there.
 ** Provide `-r` to build with R
 * Check `conda-build.log` (`LOG`) for errors.
 * Add debug output to `build.sh` as needed to diagnose problems.
@@ -171,13 +172,13 @@ We restrict our M4 usage to:
 * `m4_include()`: does simple file insertion
 * `m4_ifelse()`: does conditional substitution +
 Syntax: `m4_ifelse(VALUE1, VALUE2, TEXT1)` ⇒ _if (VALUE1 == VALUE2) then insert TEXT1_
-* `getenv()`: substitutes in an environment variable value
+* `m4_getenv()`: substitutes in an environment variable value
 
-See `dev/conda/common.m4` for `getenv()` - this is a different script from the `common.m4' for the Turbine submit scripts due to newline requirements.
+See `dev/conda/common.m4` for `m4_getenv()` - this is a different script from the `common.m4' for the Turbine submit scripts due to Spack packaging requirements.
 
 Example:
 ----
-m4_ifelse(getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
+m4_ifelse(m4_getenv(ENABLE_R),`1',m4_include(pkgs-R.yaml))
 ----
 means: if `$ENABLE_R == 1`, include file `pkgs-R.yaml` here.
 

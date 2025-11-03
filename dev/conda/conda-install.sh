@@ -82,48 +82,30 @@ then
   return 1
 fi
 
-# Get 2nd token from the version string:
-PV=( $( python --version ) )
-PV=${PV[2]}
+source $DEV_CONDA/get-python-version.sh
 
-print "using python:" $( which python ) "(v$PV)"
+print "using python:" $( which python ) $PYTHON_VERSION
 print "using conda: " $( which conda )
 
 # conda env list
 
 # Defaults:
+# A SPEC is a 'package==version' specifier.
+#        The version may be omitted if we are flexible.
 USE_ANT=1
 USE_GCC=1
 USE_ZSH=1
+SPEC_CLANG=""
+SPEC_MPICH="mpich"
+SPEC_PYTHON="python"
+TK="tk"
 
 # Load platform-specific settings:
-source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
-
-# Auto-configuration
-# PINs are version pins applied to the package names
-CLANG_PIN=""
-PIN_PV=""
-if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
-  SOLVER=( --solver classic )
-  # Pin Python version for these versions:
-  # On GitHub, Conda will try to change them!
-  case $PV {
-    3.9*)  PIN_PV="==3.9.7" ;;
-    3.10*)                  ;& # Fall-through
-    3.11*)                  ;& # Fall-through
-    3.12*)                  ;& # Fall-through
-    3.13*) PIN_PV="==$PV"   ;;
-    *)     print "conda-install.sh: unsupported Python version: '$PV'"
-           exit 1 ;;
-  }
-  # Pin Clang for everything but Python 3.9
-       # In Py 3.9, 18 => 18.1.7
-  PIN_CLANG="-18==18.1.8"
-  # if [[ $PV =~ 3.9 ]] {
-  #      PIN_CLANG="-18"
-  #  #     SOLVER=()
-  # }
-}
+if ! source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
+then
+  abortf "conda-install.sh: failed during source %s\n" \
+         $DEV_CONDA/$CONDA_PLATFORM/deps.sh
+fi
 
 # Build dependency list:
 LIST=()
@@ -132,16 +114,18 @@ if (( USE_GCC )) LIST+=gcc
 if (( USE_ZSH )) LIST+=zsh
 LIST+=(
   autoconf
+  $SPEC_CLANG
   make
-  mpich-mpicc
+  $SPEC_MPICH
   openjdk
   # May need to pin version:
-  "python$PIN_PV"
+  $SPEC_PYTHON
   swig
+  $SPEC_TK
 )
 
-# # Needed for _strstr issue:
-if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( "clang$PIN_CLANG" )
+# # # Needed for _strstr issue:
+# if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( "clang$PIN_CLANG" )
 
 # Needed for libstdc++ GLIBCXX version issue on GCE Jenkins:
 if [[ ${JENKINS_HOME:-} != "" ]] LIST+=( "gcc=14" )

@@ -152,7 +152,7 @@ xlb_server_init(const struct xlb_state *state)
   adlb_code code;
 
   DEBUG("server_init()...");
-  
+
   xlb_server_shutting_down = false;
 
   list_i_init(&workers_shutdown);
@@ -416,10 +416,10 @@ static adlb_code xlb_process_ready_work(void)
   adlb_code rc;
   bool ready = false;
 
-  unused double t0 = MPI_Wtime();
-
+  unused double t0, t1;
   if (xlb_server_ready_work.count > 0)
   {
+    t0 = MPI_Wtime();
     ready = true;
     DEBUG("xlb_process_ready_work(): count=%i",
           xlb_server_ready_work.count);
@@ -431,11 +431,10 @@ static adlb_code xlb_process_ready_work(void)
     ADLB_CHECK(rc);
   }
 
-  unused double t1 = MPI_Wtime();
-
   if (ready)
   {
-    INFO("xlb_process_ready_work(): %f", t1-t0);
+    t1 = MPI_Wtime();
+    DEBUG("xlb_process_ready_work(): %f", t1-t0);
   }
 
   if (xlb_server_ready_work.size > 1024)

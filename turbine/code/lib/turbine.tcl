@@ -226,9 +226,9 @@ namespace eval turbine {
 
         if { $workers_running_sum >= $n_workers } {
           turbine_fail "Too many workers allocated to custom work types! \n" \
-              "counts: " [ report_work_type_counts $n_workers_by_type ] "\n" \
-              "Total workers:  $n_workers \n" \
-              "Custom workers: $workers_running_sum \n" \
+              [ report_work_type_counts $n_workers_by_type ]            "\n" \
+              "Total workers:  $n_workers"                              "\n" \
+              "Custom workers: $workers_running_sum"                    "\n" \
               "Need at least one regular worker."
         }
 
@@ -237,13 +237,19 @@ namespace eval turbine {
         dict set n_workers_by_type WORK $n_regular_workers
 
         debug "WORKER TYPE COUNTS: $n_workers_by_type"
-
+        if { [ adlb::comm_rank ] == 0 } {
+            getenv_integer TURBINE_DEBUG_WORKTYPES 0 debug_worktypes
+            if $debug_worktypes {
+                puts [ report_work_type_counts $n_workers_by_type ]
+            }
+        }
+        
         return [ dict create servers $n_servers workers $n_workers \
                              workers_by_type $n_workers_by_type ]
     }
 
     proc report_work_type_counts { n_workers_by_type } {
-        set result [ list ]
+        set result [ list "worktypes:" ]
         dict for { k v } $n_workers_by_type {
             lappend result "${k}:${v}"
         }
@@ -404,8 +410,9 @@ namespace eval turbine {
 
     # Check that all executors in list have assigned workers and throw
     # error otherwise.  Run after turbine::init
-    proc check_can_execute { exec_names } {
+    proc check_can_execute { args } {
         variable n_workers_by_type
+        set exec_names $args
         foreach exec_name $exec_names {
             if { ( ! [ dict exists $n_workers_by_type $exec_name ] ) ||
                  [ dict get $n_workers_by_type $exec_name ] <= 0 } {
