@@ -98,7 +98,7 @@ USE_ZSH=1
 SPEC_CLANG=""
 SPEC_MPICH="mpich"
 SPEC_PYTHON="python"
-TK="tk"
+export SPEC_TK=""
 
 # Load platform-specific settings:
 if ! source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
