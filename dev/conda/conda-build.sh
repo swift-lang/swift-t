@@ -121,8 +121,9 @@ log "PKG_NAME: $PKG_NAME"
 
 # Default dependencies:
 export USE_ANT=1
-export USE_GCC=1
 export USE_CLANG=0
+export USE_GCC=1
+export USE_NCURSES=0
 export USE_TK=0
 export USE_ZLIB=0
 export USE_ZSH=1
@@ -136,6 +137,7 @@ source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 # Provide a default value for ease of debugging:
 export GITHUB_ACTIONS=${GITHUB_ACTIONS:-false}
 
+# Export a DATE for provenance in m4-filtered files:
 export DATE=${(%)DATE_FMT_S}
 # Report with relative directories:
 log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
@@ -186,6 +188,7 @@ export PYTHONWARNINGS="ignore::UserWarning"
     conda build purge-all
 
     log "conda build: $BUILD_ARGS ..."
+
     # Build the package!
     conda build $BUILD_ARGS
   )

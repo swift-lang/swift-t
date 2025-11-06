@@ -94,6 +94,7 @@ print "using conda: " $( which conda )
 #        The version may be omitted if we are flexible.
 USE_ANT=1
 USE_GCC=1
+USE_NCURSES=0
 USE_ZSH=1
 SPEC_CLANG=""
 SPEC_MPICH="mpich"
@@ -109,9 +110,10 @@ fi
 
 # Build dependency list:
 LIST=()
-if (( USE_ANT )) LIST+=ant
-if (( USE_GCC )) LIST+=gcc
-if (( USE_ZSH )) LIST+=zsh
+if (( USE_ANT     )) LIST+=ant
+if (( USE_GCC     )) LIST+=gcc
+if (( USE_NCURSES )) LIST+=ncurses
+if (( USE_ZSH     )) LIST+=zsh
 LIST+=(
   autoconf
   $SPEC_CLANG
@@ -123,9 +125,6 @@ LIST+=(
   swig
   $SPEC_TK
 )
-
-# # # Needed for _strstr issue:
-# if [[ $CONDA_PLATFORM == "osx-arm64" ]] LIST+=( "clang$PIN_CLANG" )
 
 # Needed for libstdc++ GLIBCXX version issue on GCE Jenkins:
 if [[ ${JENKINS_HOME:-} != "" ]] LIST+=( "gcc=14" )

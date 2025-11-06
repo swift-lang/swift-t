@@ -1,0 +1,4 @@
+# pkgs-ncurses.yaml: START
+# Extra packages for ncurses
+    - ncurses
+# pkgs-ncurses.yaml: STOP
