@@ -102,7 +102,6 @@ PATH=$MPICH/bin:$PATH
 
 (
   set -x
-  ls $MPICH
   which javac ant mpicc python
 )
 
