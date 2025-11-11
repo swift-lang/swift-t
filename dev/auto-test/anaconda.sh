@@ -25,7 +25,7 @@ set -eu
 # GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
 # Defaults:
-PYTHON_VERSION="39"
+PYTHON_VERSION="310"
 # Examples:
 # py39_23.11.0-1
 # py310_23.11.0-1
@@ -98,9 +98,6 @@ if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 if (( ${#R}  )) USE_R="-r"
 
-if [[ ${JENKINS_HOME:-0} != 0 ]] \
-  renice --priority 19 --pid $$ >& /dev/null
-
 # For make-release-pkg
 export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 
@@ -113,8 +110,6 @@ log "PYTHON_VERSION: $PYTHON_VERSION"
 # Find a plausible CONDA_TIMESTAMP for the download
 # Note that ;& means fall-through
 case $PYTHON_VERSION {
-  38)                              ;&
-  39)                              ;&
   310)                             ;&
   311) CONDA_TIMESTAMP="23.11.0-2" ;;
   312) CONDA_TIMESTAMP="24.11.1-0" ;;
@@ -170,6 +165,10 @@ CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
 MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
 if (( ${#R} )) log "ENABLING R"
+
+# If running in CELS Jenkins, reduce priority
+if [[ ${JENKINS_HOME:-0} != 0 ]] \
+   renice --priority 19 --pid ${$} >& /dev/null
 
 # Force Conda packages to be cached here so they are separate
 #       among Minicondas and easy to delete:
