@@ -39,6 +39,14 @@ log()
   print ${(%)DATE_FMT_NICE} "build-mpich.sh:" ${*}
 }
 
+# Detect concurrent builds. Jenkins puts an "@2" in the WORKSPACE.
+if [[ $WORKSPACE =~ "@" ]] {
+  # Do not run concurrently, there is no point
+  log "Detected concurrent build!"
+  print
+  return
+}
+
 # Load any prior exit status codes
 if [[ -f status-old.txt ]] {
   read STATUS_OLD < status-old.txt
