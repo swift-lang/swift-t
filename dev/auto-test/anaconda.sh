@@ -27,7 +27,6 @@ set -eu
 # Defaults:
 PYTHON_VERSION="310"
 # Examples:
-# py39_23.11.0-1
 # py310_23.11.0-1
 # py311_23.11.0-1
 
