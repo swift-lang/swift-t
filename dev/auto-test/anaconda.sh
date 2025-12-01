@@ -166,15 +166,19 @@ MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
 if (( ${#R} )) log "ENABLING R"
 
-# If running in CELS Jenkins, reduce priority
-if [[ ${JENKINS_HOME:-0} != 0 ]] \
-   renice --priority 19 --pid ${$} >& /dev/null
-
 # Force Conda packages to be cached here so they are separate
 #       among Minicondas and easy to delete:
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 
 source $SWIFT_T/dev/conda/helpers.zsh
+
+# If running in CELS Jenkins, reduce priority, clean Anaconda cache:
+if [[ ${JENKINS_HOME:-0} != 0 ]] {
+  renice --priority 19 --pid ${$} >& /dev/null
+  log "CLEANING ANACONDA CACHE:"
+  python $SWIFT_T/dev/jenkins/conda_delete_1.py \
+         --rate 0.2 $CONDA_PKGS_DIRS
+}
 
 # Detect GNU time program
 GNU_TIME=0
