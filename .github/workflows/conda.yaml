@@ -37,7 +37,6 @@ jobs:
 
         # List of python versions to test
         python-version:
-          - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
@@ -46,10 +45,6 @@ jobs:
         mpi:
           - mpich
 
-        exclude:
-          # Some package spec difference exists on GH for 3.9:
-          - os: macos-14
-            python-version: "3.9"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
