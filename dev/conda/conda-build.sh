@@ -22,17 +22,18 @@ help()
   cat <<END
 
 Options:
-   conda-build.sh [-C] [-r RV] PLATFORM
+   conda-build.sh [-Cv] [-r RV] PLATFORM
    -C    : configure-only-
            generate meta.yaml and settings.sed, then stop
    -r RV : enable R version RV
+   -v    : verbose (show meta.yaml and settings.sed)
 
 END
   exit
 }
 
 C="" R="" R_VERSION=""
-zparseopts -D -E -F h=HELP C=C r:=R
+zparseopts -D -E -F h=HELP C=C r:=R v=VERBOSE
 
 if (( ${#HELP} )) help
 if (( ${#*} != 1 )) abort "conda-build.sh: Provide CONDA_PLATFORM!"
@@ -144,6 +145,16 @@ log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 log "writing ${PWD#${SWIFT_T_TOP}/}/settings.sed"
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
+
+if (( ${#VERBOSE} )) {
+  echo
+  log "meta.yaml:"
+  cat meta.yaml
+  echo
+  log "settings.sed:"
+  cat settings.sed
+  echo
+}
 
 if (( ${#C} )) {
   log "configure-only: exit."

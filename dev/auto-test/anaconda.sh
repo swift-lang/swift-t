@@ -78,12 +78,13 @@ help()
 -r R_VERSION       install R, default does not
 -u                 delete prior artifacts, default does not
 -uu                delete conda cache, default does not
+-v                 verbose
 EOF
   exit
 }
 
 # Run plain help as needed before possibly affecting settings
-# shown by help as defaults:
+#                                 shown by help as defaults:
 zparseopts h=HELP
 if (( ${#HELP} )) help
 
@@ -92,7 +93,7 @@ A=""     # May become "-a"
 B=""     # May become "-b"
 R=""     # May become ( -r R_VERSION )
 USE_R="" # May become "-r"
-zparseopts -D -E -F a=A b=B c:=CT p:=PV r:=R u+=UNINSTALL
+zparseopts -D -E -F a=A b=B c:=CT p:=PV r:=R u+=UNINSTALL v=VERBOSE
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
 if (( ${#R}  )) USE_R="-r"
@@ -343,7 +344,7 @@ task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/conda-build.sh $R $CONDA_PLATFORM
+task $SWIFT_T/dev/conda/conda-build.sh $R $CONDA_PLATFORM $VERBOSE
 
 # Check that the PKG was built
 check-pkg
