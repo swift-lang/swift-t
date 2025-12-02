@@ -124,6 +124,8 @@ log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 #       among Minicondas and easy to delete:
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 log "CONDA_PKGS_DIRS: $CONDA_PKGS_DIRS"
+# Ensure directory exists for conda_delete_1:
+mkdir -pv $CONDA_PKGS_DIRS
 
 # Self-configure
 # The directory containing this script:
