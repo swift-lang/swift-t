@@ -32,25 +32,22 @@ PS4="
 
 CONDA_EXE=$(which conda)
 
-set -x
-echo CONDA_EXE $CONDA_EXE
-CONDA_HOME=$(dirname $(dirname $CONDA_EXE))
+echo "CONDA_EXE:   $CONDA_EXE"
+echo "CONDA_HOME:  $CONDA_HOME"
+CONDA_HOME=$( dirname $( dirname $CONDA_EXE ) )
 CONDA_BIN_DIR=$CONDA_HOME/bin
-set +x
 # Cannot leave env name blank on GitHub?
 ACTIVATE=( source $CONDA_BIN_DIR/activate base )
 log $ACTIVATE
 $ACTIVATE
-set -x
-
-which python conda
+log "activated."
+log "CONDA_PREFIX: $CONDA_PREFIX"
 
 () {
   set -x
   # Use =conda to prevent conda() and 'set -eux'
   =conda install --yes --quiet -c conda-forge -c swift-t $PKG
   rehash
-  echo $PATH
 
   which Rscript
   Rscript dev/conda/install-RInside.R
