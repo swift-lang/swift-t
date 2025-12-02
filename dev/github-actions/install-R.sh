@@ -33,8 +33,8 @@ PS4="
 CONDA_EXE=$(which conda)
 
 echo "CONDA_EXE:   $CONDA_EXE"
-echo "CONDA_HOME:  $CONDA_HOME"
 CONDA_HOME=$( dirname $( dirname $CONDA_EXE ) )
+echo "CONDA_HOME:  $CONDA_HOME"
 CONDA_BIN_DIR=$CONDA_HOME/bin
 # Cannot leave env name blank on GitHub?
 ACTIVATE=( source $CONDA_BIN_DIR/activate base )
