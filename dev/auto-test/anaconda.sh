@@ -24,11 +24,18 @@ set -eu
 # JENKINS_HOME:   Set by Jenkins,           else unset
 # GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
+# Conda timestamps for each supported Python version are updated regularly:
+typeset -A CONDA_TIMESTAMPS
+CONDA_TIMESTAMPS=(
+  310 25.9.1-3
+  311 23.11.0-2
+  312 24.11.1-0
+  313 25.5.1-0
+)
+
 # Defaults:
 PYTHON_VERSION="310"
-# Examples:
-# py310_23.11.0-1
-# py311_23.11.0-1
+CONDA_TIMESTAMP=${CONDA_TIMESTAMPS[$PYTHON_VERSION]}
 
 # For set -x (includes newline):
 PS4="
@@ -107,14 +114,6 @@ export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 PYTHON_VERSION=${PYTHON_VERSION/\./}
 log "PYTHON_VERSION:  $PYTHON_VERSION"
 
-# Conda timestamps for each Python version are updated regularly:
-typeset -A CONDA_TIMESTAMPS
-CONDA_TIMESTAMPS=(
-  310 25.9.1-3
-  311 23.11.0-2
-  312 24.11.1-0
-  313 25.5.1-0
-)
 if [[ ! -v CONDA_TIMESTAMPS[$PYTHON_VERSION] ]] \
   abort "Unknown PYTHON_VERSION=$PYTHON_VERSION"
 CONDA_TIMESTAMP=${CONDA_TIMESTAMPS[$PYTHON_VERSION]}
