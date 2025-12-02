@@ -3,7 +3,7 @@
 # CHECK
 # Run job, always return success for GitHub action
 # Allows us to capture artifacts and test for success later
-# Adds dev/github-actions to PATH to shorten commands
+# Adds to PATH to shorten commands
 
 echo "CHECK: ${*}"
 
@@ -13,7 +13,7 @@ then
   exit 1
 fi
 
-PATH=dev/github-actions:$PATH
+PATH=$PWD/dev/github-actions:$PWD/dev/auto-test:$PATH
 
 # Run the arguments here!
 if ! ${*}
