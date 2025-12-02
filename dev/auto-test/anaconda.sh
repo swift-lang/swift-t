@@ -125,7 +125,7 @@ log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 log "CONDA_PKGS_DIRS: $CONDA_PKGS_DIRS"
 # Ensure directory exists for conda_delete_1:
-mkdir -pv $CONDA_PKGS_DIRS
+mkdir -p $VERBOSE $CONDA_PKGS_DIRS
 
 # Self-configure
 # The directory containing this script:
@@ -230,7 +230,7 @@ uninstall()
     du -sh $CONDA_PKGS_DIRS
   } else {
     log "  CONDA CACHE: does not exist"
-    mkdir -pv $CONDA_PKGS_DIRS
+    mkdir -p $VERBOSE $CONDA_PKGS_DIRS
   }
   if (( ${#UNINSTALL} > 1 )) && [[ -d $CONDA_PKGS_DIRS ]] {
     log "  DELETE: $CONDA_PKGS_DIRS ..."
@@ -251,7 +251,7 @@ downloads()
   log "DOWNLOADING ..."
   (
     # Download and install both Minicondas:
-    mkdir -pv $WORKSPACE/downloads
+    mkdir -p $VERBOSE $WORKSPACE/downloads
     cd $WORKSPACE/downloads
     if [[ ! -f $MINICONDA ]] {
       log "download: $MINICONDA"
