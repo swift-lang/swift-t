@@ -70,6 +70,9 @@ if [[ ${GITHUB_ACTIONS:-false} == true ]] {
 
 if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
 
+# For make-release-pkg
+export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
+
 help()
 {
   cat <<EOF
@@ -102,14 +105,7 @@ R=""     # May become ( -r R_VERSION )
 USE_R="" # May become "-r"
 zparseopts -D -E -F a=A b=B c:=CT p:=PV r:=R u+=UNINSTALL v=VERBOSE
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
-if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
-if (( ${#R}  )) USE_R="-r"
 
-# For make-release-pkg
-export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
-
-# SWIFT_T_VERSION=1.6.3
-# log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 # Remove any dot from PYTHON_VERSION, e.g., 3.11 -> 311
 PYTHON_VERSION=${PYTHON_VERSION/\./}
 log "PYTHON_VERSION:  $PYTHON_VERSION"
@@ -117,6 +113,10 @@ log "PYTHON_VERSION:  $PYTHON_VERSION"
 if [[ ! -v CONDA_TIMESTAMPS[$PYTHON_VERSION] ]] \
   abort "Unknown PYTHON_VERSION=$PYTHON_VERSION"
 CONDA_TIMESTAMP=${CONDA_TIMESTAMPS[$PYTHON_VERSION]}
+
+if (( ${#CT} )) CONDA_TIMESTAMP=${CT[2]}
+if (( ${#R}  )) USE_R="-r"
+
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 
 # Force Conda packages to be cached here so they are separate
