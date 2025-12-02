@@ -82,9 +82,9 @@ def delete_one(args):
     # 6: Actually remove the oldest version of the selected package!
     print("removing:")
     oldest_file = times[0][1]
-    print("oldest file: " + oldest_file)
+    print("      oldest file: " + oldest_file)
     oldest_dir = oldest_file[0:-6]
-    print("oldest dir:  " + oldest_dir)
+    print("      oldest dir:  " + oldest_dir)
     import shutil
     shutil.rmtree(oldest_dir)
     os.remove(oldest_file)
