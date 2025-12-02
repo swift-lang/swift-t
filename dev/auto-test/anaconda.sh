@@ -105,18 +105,25 @@ export TMP=$WORKSPACE/tmp-$PYTHON_VERSION
 # log "SWIFT_T_VERSION: $SWIFT_T_VERSION"
 # Remove any dot from PYTHON_VERSION, e.g., 3.11 -> 311
 PYTHON_VERSION=${PYTHON_VERSION/\./}
-log "PYTHON_VERSION: $PYTHON_VERSION"
+log "PYTHON_VERSION:  $PYTHON_VERSION"
 
-# Find a plausible CONDA_TIMESTAMP for the download
-# Note that ;& means fall-through
-case $PYTHON_VERSION {
-  310)                             ;&
-  311) CONDA_TIMESTAMP="23.11.0-2" ;;
-  312) CONDA_TIMESTAMP="24.11.1-0" ;;
-  313) CONDA_TIMESTAMP="25.5.1-0"  ;;
-  *)   abort "Unknown PYTHON_VERSION=$PYTHON_VERSION" ;;
-}
+# Conda timestamps for each Python version are updated regularly:
+typeset -A CONDA_TIMESTAMPS
+CONDA_TIMESTAMPS=(
+  310 25.9.1-3
+  311 23.11.0-2
+  312 24.11.1-0
+  313 25.5.1-0
+)
+if [[ ! -v CONDA_TIMESTAMPS[$PYTHON_VERSION] ]] \
+  abort "Unknown PYTHON_VERSION=$PYTHON_VERSION"
+CONDA_TIMESTAMP=${CONDA_TIMESTAMPS[$PYTHON_VERSION]}
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
+
+# Force Conda packages to be cached here so they are separate
+#       among Minicondas and easy to delete:
+export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
+log "CONDA_PKGS_DIRS: $CONDA_PKGS_DIRS"
 
 # Self-configure
 # The directory containing this script:
@@ -165,10 +172,6 @@ CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
 MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
 if (( ${#R} )) log "ENABLING R"
-
-# Force Conda packages to be cached here so they are separate
-#       among Minicondas and easy to delete:
-export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 
 source $SWIFT_T/dev/conda/helpers.zsh
 
