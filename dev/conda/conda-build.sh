@@ -192,6 +192,8 @@ export PYTHONWARNINGS="ignore::UserWarning"
                  -c defaults
                  --dirty
                  $CHANNEL_SWIFT
+                 # Suppress NumPy warning:
+                  --numpy 1.26
                  .
                )
 
