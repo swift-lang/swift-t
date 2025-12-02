@@ -189,6 +189,7 @@ export PYTHONWARNINGS="ignore::UserWarning"
     print
 
     BUILD_ARGS=( -c conda-forge
+                 -c defaults
                  --dirty
                  $CHANNEL_SWIFT
                  .
