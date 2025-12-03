@@ -279,11 +279,11 @@ do-activate()
   source $PY/etc/profile.d/conda.sh
   conda activate base
   # conda env list
-  log "ACTIVATED ENVIRONMENT:  $PY"
   # Suppress a warning about default channel:
   conda config --add channels defaults
   log "CONDA UPDATING: $PY ..."
-  conda update --quiet --yes --solver classic conda
+  # conda update --quiet --yes --solver classic conda
+  log SKIP
   log "CONDA UPDATE: OK: $PY"
   set -eu
   print
