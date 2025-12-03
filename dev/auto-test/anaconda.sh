@@ -282,8 +282,10 @@ do-activate()
   # Suppress a warning about default channel:
   conda config --add channels defaults
   log "CONDA UPDATING: $PY ..."
+  # 2025-12-03: Do not update conda- breaks some dependencies
+  #             Note the dependencies in CONDA_TIMESTAMPS above
   # conda update --quiet --yes --solver classic conda
-  log SKIP
+  log "SKIPPED!"
   log "CONDA UPDATE: OK: $PY"
   set -eu
   print
