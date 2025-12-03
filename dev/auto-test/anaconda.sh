@@ -27,10 +27,10 @@ set -eu
 # Conda timestamps for each supported Python version are updated regularly:
 typeset -A CONDA_TIMESTAMPS
 CONDA_TIMESTAMPS=(
-  310 25.9.1-3
+  310 24.09.2-0
   311 23.11.0-2
   312 24.11.1-0
-  313 25.5.1-0
+  313 25.03.1-0
 )
 
 # Defaults:
