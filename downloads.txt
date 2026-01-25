@@ -28,6 +28,27 @@ link:guide.html[installation instructions].
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.7
+
+* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.7.tar.gz[swift-t-1.6.7.tar.gz] (11 MB)
+
+* 2026-01-24
+
+* ExM c-utils 0.6.4
+* ADLB/X      1.0.6
+* Turbine     1.5.0
+* STC         1.0.6
+
+*Changes:*
+
+* Improved ADLB +batcher+
+* New +mpi-cp+ program
+* Anaconda packages updated for all platforms
+* Bug fixes in Anaconda scripts and +swift-t+ wrapper scripts
+* New functions +file_chunks()+, +realpath()+, +mallinfo()+
+* Update Julia support
+* Bug fix in JSON support
+
 === 1.6.6
 
 * http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.6.tar.gz[swift-t-1.6.6.tar.gz] (11 MB)
