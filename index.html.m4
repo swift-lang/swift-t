@@ -177,6 +177,8 @@ for more information.
 
   </div>
 
+Last updated: m4_esyscmd(date "+%Y-%m-%d %H:%M")
+
 
 </body>
 </html>
