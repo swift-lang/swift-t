@@ -304,7 +304,7 @@ do-activate()
   #             Note the dependencies in CONDA_TIMESTAMPS above
   # 2026-03-03: Trying update again to fix 3.10
   # 2026-03-04: Didn't help
-  # conda update --quiet --yes --solver classic conda
+  # conda update --quiet --yes $USE_SOLVER conda
   log "SKIPPED!"
   log "CONDA UPDATE: OK: $PY"
   set -eu
@@ -380,7 +380,7 @@ check-pkg
 do-activate $WORKSPACE/sfw/Miniconda-install
 
 # Install the new package into the install environment!
-task $SWIFT_T/dev/conda/conda-install.sh $SOLVER $USE_R $PKG_PATH
+task $SWIFT_T/dev/conda/conda-install.sh $USE_SOLVER $USE_R $PKG_PATH
 
 try-swift-t
 
