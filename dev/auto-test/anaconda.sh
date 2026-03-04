@@ -285,7 +285,8 @@ do-activate()
   # 2025-12-03: Do not update conda- breaks some dependencies
   #             Note the dependencies in CONDA_TIMESTAMPS above
   # 2026-03-03: Trying update again to fix 3.10
-  conda update --quiet --yes --solver classic conda
+  # 2026-03-04: Didn't help
+  # conda update --quiet --yes --solver classic conda
   log "SKIPPED!"
   log "CONDA UPDATE: OK: $PY"
   set -eu
