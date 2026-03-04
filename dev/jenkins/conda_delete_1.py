@@ -21,6 +21,8 @@ def parse_args():
     import argparse
     description = "Delete an old Anaconda download"
     parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("-v", "--verbose", action="store_true",
+                        help="Be more verbose")
     parser.add_argument("--rate", default=0.5, type=float,
                         help="Fractional chance to delete, from 0-1")
     parser.add_argument("directory",
@@ -41,14 +43,19 @@ def delete_one(args):
     # 2: Count the Conda files by package
     # Map from filename to count of versions on disk
     counts = {}
+    # Map from filename to list of files on disk
+    files  = {}
     for f in L:
         name = get_name(f)
         if name not in counts:
             counts[name] = 1
+            files[name]  = [f]
         else:
             counts[name] += 1
-    # for name in counts.keys():
-    #     print(name + " " + str(counts[name]))
+            files[name].append(f)
+
+    if args.verbose: report_state(counts, files)
+
     most = sorted(counts.values())[-1]
     print("most versions:     %i" % most)
     if most == 1:
@@ -62,18 +69,17 @@ def delete_one(args):
     print("selected package:  " + selection)
 
     # 4: Sort the versions of the selected package and report
-    import fnmatch
-    V = fnmatch.filter(L, selection + "*.conda")
-    # List of pairs (timestamp, filename):
+    # List of tuples (timestamp, bytes, filename):
     times = []
-    for f in V:
+    for f in files[selection]:
         stats = os.stat(f)
-        times.append((stats.st_mtime, f))
+        times.append((stats.st_mtime, stats.st_size, f))
     times = sorted(times)
     for pair in times:
         dt = datetime.datetime.fromtimestamp(pair[0])
         timestamp = dt.strftime("%Y-%m-%d %H:%M")
-        print("  " + timestamp + " " + pair[1])
+        kb = int(pair[1] / 1024)
+        print(f"  {timestamp} {kb:6,} KB  " + pair[2])
 
     # 5: After reporting, see if we really want to delete:
     if random.random() > args.rate:
@@ -81,7 +87,7 @@ def delete_one(args):
 
     # 6: Actually remove the oldest version of the selected package!
     print("removing:")
-    oldest_file = times[0][1]
+    oldest_file = times[0][2]
     print("oldest file: " + oldest_file)
     oldest_dir = oldest_file[0:-6]
     print("oldest dir:  " + oldest_dir)
@@ -92,8 +98,28 @@ def delete_one(args):
 
 def get_name(s):
     tokens = s.split("-")
-    good = tokens[0:-2]
-    return "-".join(good)
+    if s[0:8] == "python-3":
+        versions = tokens[1].split(".")
+        result = "python-%s.%s.%s" % \
+                 (versions[0], versions[1], versions[2])
+    else:
+        good   = tokens[0:-2]
+        result = "-".join(good)
+    return result
+
+
+def report_state(counts, files):
+    total = 0
+    for name in counts.keys():
+        total += counts[name]
+    print("")
+    print("total: %i" % total)
+    print("")
+    for name in sorted(counts.keys()):
+        print("  [%i] %s" % (counts[name], name))
+        for f in files[name]:
+            print("      " + f)
+        print("")
 
 
 if __name__ == "__main__": main()
