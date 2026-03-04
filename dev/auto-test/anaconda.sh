@@ -20,11 +20,22 @@ set -eu
 #      provide -u to uninstall first
 
 # Environment:
-# WORKSPACE:      A working directory set by Jenkins
+# WORKSPACE:      A working directory set by Jenkins, or the user.
+#                 On GitHub this is unset so:
+#                           we set this to RUNNER_TEMP in this script.
 # JENKINS_HOME:   Set by Jenkins,           else unset
 # GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
-# Conda timestamps for each supported Python version are updated regularly:
+# Defaults:
+PYTHON_VERSION="310"
+# Disable R: May become "-r":
+USE_R=""
+# Use the default conda solver:
+USE_SOLVER=""
+
+# Default Conda timestamps for each supported Python version.
+#         These can change when the Anaconda people do a release.
+# The command line of this script can override this timestamp.
 typeset -A CONDA_TIMESTAMPS
 CONDA_TIMESTAMPS=(
   310 24.9.2-0
@@ -33,9 +44,14 @@ CONDA_TIMESTAMPS=(
   313 25.3.1-1
 )
 
-# Defaults:
-PYTHON_VERSION="310"
-CONDA_TIMESTAMP=${CONDA_TIMESTAMPS[$PYTHON_VERSION]}
+# Some Python versions require us to force the older solver "classic":
+# If default, we allow conda to select its default.
+typeset -A CONDA_SOLVER=(
+  310 classic
+  311 default
+  312 default
+  313 default
+)
 
 # For set -x (includes newline):
 PS4="
@@ -102,7 +118,6 @@ if (( ${#HELP} )) help
 A=""     # May become "-a"
 B=""     # May become "-b"
 R=""     # May become ( -r R_VERSION )
-USE_R="" # May become "-r"
 zparseopts -D -E -F a=A b=B c:=CT p:=PV r:=R u+=UNINSTALL v=VERBOSE
 if (( ${#PV} )) PYTHON_VERSION=${PV[2]}
 
@@ -119,6 +134,9 @@ if (( ${#R}  )) USE_R="-r"
 
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 
+if [[ ${CONDA_SOLVER[$PYTHON_VERSION]} != "default" ]] \
+  USE_SOLVER=( -s ${CONDA_SOLVER[$PYTHON_VERSION]} )
+
 # Force Conda packages to be cached here so they are separate
 #       among Minicondas and easy to delete:
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
@@ -133,8 +151,8 @@ THIS=${0:A:h}
 SWIFT_T=$THIS/../..
 SWIFT_T=${SWIFT_T:A}
 
+# Set CONDA_OS, the name for our OS in the Miniconda download:
 if [[ ${CONDA_OS:-0} == 0 ]] {
-  # Set CONDA_OS, the name for our OS in the Miniconda download:
   if [[ ${RUNNER_OS:-0} == "macOS" ]] {
     # On GitHub, we may be on Mac:
     CONDA_OS="MacOSX"
@@ -143,10 +161,10 @@ if [[ ${CONDA_OS:-0} == 0 ]] {
   }
 }
 
+# Set CONDA_ARCH, the name for our chip in the Miniconda download:
+# Set CONDA_PLATFORM, the name for our platform
+#                     in our Anaconda builder
 if [[ ${CONDA_PLATFORM:-0} == 0 ]] {
-  # Set CONDA_ARCH, the name for our chip in the Miniconda download:
-  # Set CONDA_PLATFORM, the name for our platform
-  #                     in our Anaconda builder
   if [[ ${RUNNER_ARCH:-0} == "ARM64" ]] {
     # On GitHub, we may be on ARM:
     CONDA_PLATFORM="osx-arm64"
@@ -168,7 +186,7 @@ case $CONDA_PLATFORM {
 
 log CONDA_PLATFORM=$CONDA_PLATFORM
 
-# The Miniconda we are working with:
+# Construct the Miniconda downloadable filename:
 CONDA_LABEL=${CONDA_TIMESTAMP}-${CONDA_OS}-${CONDA_ARCH}
 MINICONDA=Miniconda3-py${PYTHON_VERSION}_${CONDA_LABEL}.sh
 log "MINICONDA: $MINICONDA"
@@ -360,9 +378,6 @@ check-pkg
 
 # Activate the install environment
 do-activate $WORKSPACE/sfw/Miniconda-install
-
-# Temp addition to force solver=classic for 3.10
-SOLVER=( -s classic )
 
 # Install the new package into the install environment!
 task $SWIFT_T/dev/conda/conda-install.sh $SOLVER $USE_R $PKG_PATH
