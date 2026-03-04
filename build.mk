@@ -2,6 +2,8 @@
 # BUILD.MK
 # Use via build.sh
 
+.DELETE_ON_ERROR:
+
 ASCIIDOC = asciidoc --attribute stylesheet=$(PWD)/swift.css \
                     --attribute max-width=875px
 
@@ -12,6 +14,9 @@ define ASCIIDOC_CMDS
 	@ echo ASCIIDOC $(<)
 	@ $(ASCIIDOC) $(<)
 endef
+
+index.html: index.html.m4
+	m4 -P $(^) > $(@)
 
 %.html: %.txt build.mk
 	$(ASCIIDOC_CMDS)
