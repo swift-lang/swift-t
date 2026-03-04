@@ -15,8 +15,9 @@ define ASCIIDOC_CMDS
 	@ $(ASCIIDOC) $(<)
 endef
 
-index.html: index.html.m4
-	m4 -P $(^) > $(@)
+index.html: index.html.m4 common.html
+	@ echo M4        $(@)
+	@ m4 -P   $(<) > $(@)
 
 %.html: %.txt build.mk
 	$(ASCIIDOC_CMDS)
