@@ -301,10 +301,7 @@ check-pkg()
 
   if ! PKG_FILE=$( python $SWIFT_T/dev/conda/find-pkg.py $REPODATA )
   then
-    print
-    log "CHECKING PACKAGE FAILED!"
-    print
-    return 1
+    abort "CHECKING PACKAGE FAILED!"
   fi
   PKG_PATH=$BLD_DIR/$PKG_FILE
   log "CHECKING PKG at $PKG_PATH ..."
