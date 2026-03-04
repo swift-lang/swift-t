@@ -11,6 +11,14 @@ set -eu
 #       Thus this script installs dependencies explicitly.
 # NOTE: Keep LIST in sync with meta.yaml
 
+# Bring in utilities
+# Get this directory (absolute):
+DEV_CONDA=${0:A:h}
+# The Swift/T Git clone:
+SWIFT_T_TOP=${DEV_CONDA:h:h}
+source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
+source $DEV_CONDA/helpers.zsh
+
 help()
 {
   cat <<EOF
@@ -55,14 +63,6 @@ if (( ${#P} )) {
   # Pull out CONDA_PLATFORM directory (head then tail):
   CONDA_PLATFORM=${PKG:h:t}
 }
-
-# Bring in utilities
-# Get this directory (absolute):
-DEV_CONDA=${0:A:h}
-# The Swift/T Git clone:
-SWIFT_T_TOP=${DEV_CONDA:h:h}
-source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
-source $DEV_CONDA/helpers.zsh
 
 # Echo back platform and package statistics to the user
 print "CONDA_PLATFORM=$CONDA_PLATFORM"
