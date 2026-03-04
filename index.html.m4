@@ -177,8 +177,9 @@ for more information.
 
   </div>
 
+<p style="text-align:center;">
 Last updated: m4_esyscmd(date "+%Y-%m-%d %H:%M")
-
+</p>
 
 </body>
 </html>
