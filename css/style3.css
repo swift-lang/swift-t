@@ -1,0 +1,768 @@
+#header {
+	width: 100%;
+	background-position: center;
+}
+#header-bg {
+    background-color: #41568C;
+    left: 0px;
+    position: absolute;
+    width: 100%;
+    height: 64px;
+    z-index: -10;
+}
+#logo {
+    height: 64px;
+    width: auto;
+    float: left;
+}
+body {
+	margin: 0px auto;
+	font-family: 'Hind', sans-serif;
+	color: #333;
+	background: #fff no-repeat center top;
+	font-size: 13pt;
+	line-height: 135%;
+}
+
+#font-indicator {
+    display: none;
+    position: fixed;
+    padding-top: 12px;
+    left: 20px;
+    top: 200px;
+    font-family: "Arial", sans-serif;
+    font-size: 18pt;
+    line-height: 130%;
+    font-weight: bold;
+    width: 300px;
+    height: 160px;
+    border: thin solid #808080;
+    background-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    text-align: center;
+}
+
+#font-help {
+    padding-top: 12px;
+    font-size: 11pt;
+    font-weight: normal;
+    line-height: 100%;
+    bottom: 0px;
+    position: relative;
+}
+
+.top-spacer {
+    margin-top: 16pt;
+}
+
+body#home a.home,
+body#downloads a.downloads,
+body#about a.about,
+body#docs a.docs,
+body#papers a.papers,
+body#apps a.apps,
+body#support a.support{
+	background-color: #666;
+	color:#FFFFFF;
+}
+
+
+a:link {
+	font-weight:400;
+	font-style: normal;
+	font-weight: normal;
+	color: #3366cc;
+	text-decoration: none;
+}
+a:visited {
+	font-weight:400;
+	font-style: normal;
+	color: #3366cc;
+	text-decoration: none;
+}
+a:hover {
+	font-weight:400;
+	font-style: normal;
+	color: #0099cc;
+	text-decoration: none;
+}
+
+pre, pre *, div.dp-highlighter * {
+	font-family: 'Source Code Pro', monospaced;
+}
+
+/************* MENU ************/
+
+#nav {
+	width: 100%;
+	font-size: 20px;
+	margin: 0px auto;
+	padding: 32px 0px 0px 0px;
+	color: #fff;
+}
+
+#nav ul {
+	width: 100%s;
+	margin: 0px;
+	padding: 0px;
+	list-style: none;
+	text-align: center;
+}
+
+#nav li {
+	display: inline;
+}
+
+#nav .last {
+	border-right: 0px;
+}
+
+#nav a {
+	font-size: 15pt;
+	padding-right: 16px;
+	padding-left: 12px;
+	text-decoration: none;
+    color: #ffffff;
+	/*text-shadow: 0px 2px 3px #333;*/
+    transition: background-color 0.2s ease;
+    -webkit-transition: background-color 0.2s ease;
+}
+
+#nav a:hover {
+    background-color: #6377A6;
+    border-radius: 2pt;
+}
+
+.tagline {
+	font-weight: 300;
+	font-style: normal;
+	text-align: center;
+	font-size: 115%;
+	padding: 30px 0px 30px 0px;
+	color:#333;
+}
+
+.news-highlights {
+	margin-top: 8pt;
+	margin-bottom: 24pt;
+}
+
+.news-highlights h1 {
+	font-size: 14pt;
+	font-weight: bold;
+}
+
+.news-highlights li {
+	position: relative;
+	line-height: 180%;
+	margin-left: 20pt;
+}
+
+.news-highlights li:before {
+	content: "\21D2";
+	font-size: 170%;
+	margin: 0px 0 0 -26pt;
+    vertical-align: middle;
+	position: absolute;
+    top: 0px;
+}
+
+.feature ul {
+	margin-top: 4pt;
+	padding-left: 0px;
+}
+
+#content {
+	width: 100%;
+	margin: 0px 0px 40px 0px;
+	padding: 20px 0px 0px 0px;
+	border-top: thin #000 solid;
+	color: #333;
+}
+
+p {
+	padding: 0px 0px 15px 0px;
+}
+
+.image {
+  background-color: #eee;
+  margin: 3px auto;
+  padding: 3px;
+  border: 1px solid #ccc;
+  width: 525px;
+
+}
+
+.caption{
+    border: 1px #ccc solid;
+    padding:3px;
+    background-color: #FCFAFA;
+    font-size: 11px;
+  margin: 3px auto;
+    width: 525px;
+}
+
+
+.highlight {
+	border: 1px #ccc solid;
+	border-radius: 2pt;
+	padding: 5px;
+	background-color: #FCFAFA;
+	font-family: "Source Code Pro", monospace;
+	font-size: 10pt;
+	padding-left: 20px;
+	margin-left: 10px;
+	margin-top: 14pt;
+	margin-bottom: 24pt;
+	white-space: pre;
+	position: relative;
+	left: 28px;
+	width: 90%;
+}
+
+.code {
+	padding: 4pt;
+    padding-left: 16pt;
+    color: #897411;
+    font-family: 'Source Code Pro', monospace;
+    font-size: 90%;
+	margin-left: 10px;
+    margin: 4pt;
+	white-space: pre;
+	position: relative;
+	left: 8pt;
+	width: 60%;
+}
+
+.code .keyword {
+    font-weight: bold;
+    color: #894711;
+}
+
+.codetable {
+	border: 1px #ccc solid;
+	background-color: #FCFAFA;
+        font-family: monospace;
+	font-size: 0.9em;
+	white-space: pre;
+	padding: 10px;
+}
+
+pre.shell, pre.programlisting {
+	padding: 10pt;
+	background: #FCFAFA;
+	border: 1px #ccc solid;
+	white-space: normal;
+}
+
+div.dp-highlighter {
+	background: #FCFAFA;
+	border: 1px #ccc solid;
+	white-space: normal;
+	margin: 10px;
+}
+
+
+.mailinglists {
+	width: 90%;
+	margin: 0 0 0 35px;
+	margin-top: 8pt;
+	margin-bottom: 16pt;
+}
+
+
+.mailinglists td {
+	padding-left: 8pt;
+	line-height: 18pt;
+	font-size: 90%;
+	padding-top: 8pt;
+}
+
+.mailinglists th {
+	padding-left: 8pt;
+	font-size: 100%;
+	vertical-align: bottom;
+	font-weight: bold;
+	font-style: normal;
+	border-bottom: 1pt solid #b0b0b0;
+	margin-bottom: 8pt;
+}
+
+#left {
+	float: left;
+	width: 70%;
+	padding: 0px 10px 70px 5px;
+	border-right: 1px #ccc dashed;
+	margin-bottom: 20px;
+	margin-top: 10px;
+}
+
+#right {
+	float: left;
+	width: 185px;
+	color: #FFF;
+	margin: 30px 2px 70px 5px;
+/*	border: 1px #ddd solid;
+	background-color: #FCFAFA;*/
+	padding: 5px;
+
+}
+#right h3 {
+	margin: 0px;
+	font-size: 1.1em;
+	color: #333;
+	padding-top: 5px;
+	padding-right: 5px;
+	padding-bottom: 5px;
+	padding-left: 0px;
+	font-weight:600;
+	font-style: normal;
+
+}
+#right h4 {
+	margin: 0px;
+	font-size: 1.0em;
+	color: #333;
+	padding-top: 10px;
+	padding-right: 5px;
+	padding-bottom: 5px;
+	padding-left: 5px;
+	font-weight:600;
+	font-style: normal;
+
+}
+#right p{
+	font-size: 11px;
+	line-height: 15px;
+	color: #333333;
+	padding: 0px 5px 0px 5px;
+	margin: 0px;
+}
+#right a:link {
+	font-size: 11px;
+	font-weight: normal;
+	color: #3366cc;
+	text-decoration: none;
+}
+#right a:visited {
+	font-size: 11px;
+	font-weight: normal;
+	color: #3366cc;
+	text-decoration: none;
+}
+ #right a:hover {
+	font-size: 11px;
+	font-weight: normal;
+	color: #0099cc;
+	text-decoration: underline;
+}
+
+.featurebox_side {
+	background-color: #eee;
+	margin-left:5px;
+	margin-right:5px;
+	margin-bottom:5px;
+	padding:4px;
+	border: 1px dotted #4E8787;
+	font-size: 11px;
+	line-height: 16px;
+	color: #333333;
+}
+
+#left p{
+	font-size: 12px;
+	line-height: 17px;
+	color: #333333;
+	padding: 5px 30px 0px 30px;
+
+	margin: 0px 0px 8px 0px;
+}
+
+#left ul{
+	font-size: 12px;
+	line-height: 17px;
+}
+
+#left li{
+	font-size: 12px;
+	line-height: 17px;
+	list-style:circle;
+	margin: 10px 10px 10px 35px;
+}
+
+h1 {
+	margin: 0px;
+	font-size: 2.0em;
+	color: #333;
+	padding-top: 0px;
+	padding-bottom: 10px;
+	font-weight:400;
+	font-style: normal;
+}
+
+h1.pagetitle {
+	margin-top: 16pt;
+	margin-bottom: 8pt;
+}
+
+/* Make font a bit smaller to prevent it going on two lines */
+#swift-t h1.pagetitle {
+	font-size: 22pt;
+}
+
+
+/* The main page does not currently use h2 or h3 */
+h2 {
+	margin: 0px;
+	margin-top: 16pt;
+	font-size: 100%;
+	color: #333;
+	padding:15px 0px 10px 0px;
+	font-weight: bold;
+	font-style: normal;
+}
+
+h3 {
+	margin: 0px;
+	font-size: 1.3em;
+	color: #333;
+	padding-bottom: 10px;
+	font-weight:600;
+	font-style: normal;
+}
+h4 {
+	margin: 0px;
+	font-size: 1.2em;
+	color: #333;
+	padding-top: 5px;
+	padding-right: 5px;
+	padding-bottom: 5px;
+	padding-left: 20px;
+	font-weight:600;
+	font-style: normal;
+}
+
+h5 {
+	margin: 0px;
+	color: #666;
+	padding-top: 5px;
+	padding-bottom: 8px;
+	font-style: normal;
+    font-size: 95%;
+}
+
+.sc-u {
+    font-size: 100%;
+}
+
+.sc-l {
+    font-size: 90%;
+}
+
+#container {
+	background-color: #FFFFFF;
+	font-weight: normal;
+	border: 1px #ccc solid;
+	width: 850px;
+	background-repeat: no-repeat;
+	background-position: center;
+	margin-top: 3px;
+	margin-right: auto;
+	margin-bottom: 0px;
+	margin-left: auto;
+}
+/************* FOOTER ************/
+
+
+#footer {
+	background-color: #EFF1F6;
+	text-align: center;
+	padding: 12pt 20px 30px 20px;
+	margin-top: 32pt;
+	color: #999;
+}
+#footer .footer-blurb {
+	width: 550px;
+	font-size: 0.8em;
+	padding-top: 20px;
+}
+
+.footer-blurb {
+	text-align: center;
+	margin-left: auto;
+    margin-right: auto;
+	line-height: 1.2em;
+}
+#footer a {
+	font-size: 1.0em;
+	padding-right: 12px;
+	padding-left: 10px;
+	text-decoration: none;
+	color: #66ccff;
+}
+
+#footer a:hover {
+	color: #66ccff;
+	text-decoration:underline;
+}
+
+#footer a:link {
+	font-weight: normal;
+	color: #3366cc;
+	text-decoration: none;
+}
+#footer a:visited {
+	color: #3366cc;
+	text-decoration: none;
+}
+#footer a:hover {
+	color: #3366cc;
+	text-decoration: underline;
+}
+#footer ul {
+	width: 100%s;
+	margin: 0px;
+	padding: 0px;
+	list-style: none;
+	text-align: center;
+}
+
+#footer li {
+	display: inline;
+	border-right: 1px solid #999;
+}
+
+#footer .last {
+	border-right: 0px;
+}
+
+/* Syntax highlighting stuff */
+
+span.comment {
+	color: #505050;
+}
+
+span.keyword {
+	color: #202080;
+	font-weight: bold;
+}
+
+span.string {
+	color: #209020;
+}
+
+span.function {
+	color: #800040;
+}
+
+
+.feature {
+	padding: 12px 8px 40px 8px;
+    /*background-color: #EFF1F6;*/
+    border-top: thin solid #95A4C8;
+    height: 160pt;
+    border-radius: 2pt;
+}
+
+.trailingLink {
+	display:block;
+	padding: 0px 0px 26px 52px;
+	height:24px;
+	line-height: 1.3em;
+	background:url(../images/bullet.png) 30px 1px no-repeat ;
+	float: left;
+	font-size: 1.0em;
+}
+
+.trailingLinkPDF {
+	display:block;
+	padding: 0px 0px 26px 24px;
+	background:url(../images/bullet_pdf.png) 0px 1px no-repeat ;
+	float: left;
+	font-size: 1.0em;
+}
+
+
+ul {
+	list-style-type: none;
+	padding: 0px 0px 15px 10px;
+	margin-left: 0px;
+	line-height: 1.5em;
+}
+.swift-bullet li{
+	background: url(../images/bullet_swift.png) 0px 3px no-repeat;
+	padding-left:22px;
+}
+.indented {
+	padding-left: 20px;
+}
+.indented-half {
+	padding-left: 10px;
+}
+
+.right-col-top-space {
+    height: 14pt;
+}
+
+.box-prime {
+	text-align: left;
+	font-size: 90%;
+	padding: 15px;
+	-moz-border-radius: 6px;
+	border-radius: 6px;
+	margin-bottom: 4pt;
+}
+
+.button_175 {
+    text-align: center;
+	width: 180px;
+	font-weight: 600;
+	font-style: normal;
+	font-size: 110%;
+	padding: 6pt 6pt 4px 4pt;
+	margin-left: auto;
+    margin-right: auto;
+	margin-bottom: 8px;
+    background-color: #41568C;
+    border-radius: 2pt;
+    transition: background-color 0.2s ease;
+    -webkit-transition: background-color 0.2s ease;
+}
+
+.button_175:hover {
+    background-color: #6377A6;
+}
+
+.button_175 a {
+	color: #fff;
+    text-decoration:none;
+}
+
+.button_175 a:hover {
+	color: #fff;
+}
+
+.main-paragraph {
+    margin-top: 24pt;
+    padding-top: 12pt;
+}
+
+.main-paragraph b {
+    font-weight: bold;
+}
+
+.hl {
+    padding: 12px 40px 15px 52px;
+}
+
+.hl-icon {
+	float: left;
+	background-color: #6377A6;
+	border-radius: 3pt;
+	margin: 0px;
+	padding: 0px;
+	margin-right: 8pt;
+}
+
+#nav .current {
+	color: #fff;
+}
+#holder {
+	position:absolute;
+}
+
+#mover {
+	position:relative;
+	top: 64px;
+}
+.page-header {
+	padding:40px 0px 20px 0px;
+}
+#box-prime h2 {
+	text-align:left;
+	font-size: 1.5em;
+	padding: 0px 0px 10px 0px;
+}
+
+.paper-highlights .title {
+	font-weight: normal;
+	font-style: italic;
+}
+
+.authors {
+}
+.title{
+	font-weight:600;
+}
+.source{
+	font-style:italic;
+}
+.date{
+	color:#666;
+	font-size:0.8em;
+}
+.publication {
+	padding-bottom: 15px;
+	padding-left: 30px;
+}
+.quote {
+	padding: 20px 15px 20px 20px;
+	background: url(../images/bg_quotes.png) 0px 0px no-repeat;
+	font-style:italic;
+	font-size: 0.9em;
+}
+.quote-speaker {
+	padding-left: 30px;
+	font-size: 0.7em;
+	line-height: 1.2em;
+}
+
+
+/* The Google search box */
+.gsc-control-cse, .gsc-search-box, .gsc-control-wrapper-cse {
+	background-color: inherit !important;
+	border: none !important;
+	background: none !important;
+	box-shadow: none !important;
+}
+
+input.gsc-input {
+	border: thin solid #41568C !important;
+	border-radius: 2pt !important;
+	font-size: 100% !important;
+}
+
+td.gsc-search-button {
+	background-color: #41568C !important;
+	border-radius: 2pt !important;
+	padding-bottom: 1px !important;
+}
+
+input.gsc-search-button {
+	background: inherit !important;
+	border: none !important;
+	color: white !important;
+	font-family: "Hind", sans-serif;
+	font-size: 11pt !important;
+	font-weight: normal !important;
+}
+
+ol {
+	margin-left: 24pt;
+}
+
+h1#apply {
+	font-size: 18pt;
+	margin-top: 24pt;
+}
+
+#tracking-policy .content ul li:before {
+	content: "\21E8";
+	margin-right: 8pt;
+}
+
+#case-studies h2 a {
+	/* make the font bold since it's a more pale color than normal h2 headings */
+	font-weight: bold;
+}

@@ -16,7 +16,8 @@
             <div class="top-spacer"></div>
 
             <div class="grid_9">
-                <h1 class="pagetitle">Swift/T - High Performance Dataflow Computing</h1>
+
+<h1 class="pagetitle">Swift/T - High Performance Dataflow Computing</h1>
 
 <h2 class="sc">Introduction</h2>
 <p>
