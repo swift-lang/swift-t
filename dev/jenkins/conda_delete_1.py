@@ -5,9 +5,9 @@ CONDA DELETE 1
 Randomly delete one of the oldest downloads in your conda cache
 """
 
-import datetime
-import os
-import random
+import datetime, os, random
+
+# From this directory:
 import tools
 
 
@@ -22,7 +22,7 @@ def parse_args():
     description = "Delete an old Anaconda download"
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--rate", default=0.5, type=float,
-                        help="Fractional chance to delete")
+                        help="Fractional chance to delete, from 0-1")
     parser.add_argument("directory",
                         help="Conda cache directory")
     args = parser.parse_args()
@@ -82,9 +82,9 @@ def delete_one(args):
     # 6: Actually remove the oldest version of the selected package!
     print("removing:")
     oldest_file = times[0][1]
-    print("      oldest file: " + oldest_file)
+    print("oldest file: " + oldest_file)
     oldest_dir = oldest_file[0:-6]
-    print("      oldest dir:  " + oldest_dir)
+    print("oldest dir:  " + oldest_dir)
     import shutil
     shutil.rmtree(oldest_dir)
     os.remove(oldest_file)
