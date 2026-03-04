@@ -361,8 +361,11 @@ check-pkg
 # Activate the install environment
 do-activate $WORKSPACE/sfw/Miniconda-install
 
+# Temp addition to force solver=classic for 3.10
+SOLVER=( --solver classic )
+
 # Install the new package into the install environment!
-task $SWIFT_T/dev/conda/conda-install.sh $USE_R $PKG_PATH
+task $SWIFT_T/dev/conda/conda-install.sh $SOLVER $USE_R $PKG_PATH
 
 try-swift-t
 
