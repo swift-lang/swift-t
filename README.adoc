@@ -7,17 +7,11 @@ Swift/T runs as an MPI program, and is compatible with Cray and IBM supercompute
 
 Swift/T may be installed following one of these methods:
 
-* https://spack.io[Spack]
-+
-----
-$ spack install stc
-----
-* https://conda.io[Conda]
+* https://anaconda.org/swift-t[Conda]
 +
 ----
 $ conda install -c swift-t swift-t
 ----
-* Debian (Ubuntu) packages
 * A script (+build-swift-t.sh+) that automates the +configure+/+make+ process
 * A +configure+/+make+ source build (recommended for exotic systems)
 
@@ -25,7 +19,7 @@ Installation notes are here: http://swift-lang.github.io/swift-t/guide.html#_ins
 
 == Links
 
-* http://swift-lang.org/Swift-T[The Swift/T front page]
+* http://swift-lang.github.io/swift-t[The Swift/T front page]
 
 * http://swift-lang.github.io/swift-t/downloads.html[Swift/T Downloads]
 
