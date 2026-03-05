@@ -24,6 +24,23 @@ body {
 	line-height: 135%;
 }
 
+hr {
+  border: 1px;
+  height: 1px;
+  background-color: black;
+  /* padding: 15px 0px 15px 0px; */
+  align: center;
+  margin-top: 30px;
+  margin-right: auto;
+  margin-bottom: 10px;
+  margin-left: auto;
+}
+
+/* .grid_9 hr { */
+/*     margin-left: 10px; */
+/*     margin-right: 10px; */
+/* } */
+
 #font-indicator {
     display: none;
     position: fixed;
@@ -464,9 +481,11 @@ h5 {
 	background-color: #FFFFFF;
 	font-weight: normal;
 	border: 1px #ccc solid;
-	width: 850px;
+	width: 750px;
 	background-repeat: no-repeat;
 	background-position: center;
+        margin-left: auto;
+        margin-right: auto;
 	margin-top: 3px;
 	margin-right: auto;
 	margin-bottom: 0px;
@@ -642,6 +661,40 @@ ul {
 .button_175 a:hover {
 	color: #fff;
 }
+
+/* button_176: side-by-side buttons from ChatGPT */
+
+.button_176 {
+
+    display: inline-block;
+    margin: 0 5px;  /* small horizontal spacing */
+    width: 120px;   /* keeps fixed width */
+    text-align: center;
+
+    font-weight: 600;
+    font-style: normal;
+    font-size: 110%;
+    padding: 6pt 6pt 4px 4pt;
+    margin-bottom: 8px;
+    background-color: #41568C;
+    border-radius: 2pt;
+    transition: background-color 0.2s ease;
+    -webkit-transition: background-color 0.2s ease;
+}
+
+.button_176:hover {
+    background-color: #6377A6;
+}
+
+.button_176 a {
+	color: #fff;
+    text-decoration:none;
+}
+
+.button_176 a:hover {
+	color: #fff;
+}
+
 
 .main-paragraph {
     margin-top: 24pt;
