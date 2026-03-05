@@ -12,8 +12,8 @@ Swift/T may be installed following one of these methods:
 ----
 $ conda install -c swift-t swift-t
 ----
-* A script (+build-swift-t.sh+) that automates the +configure+/+make+ process
-* A +configure+/+make+ source build (recommended for exotic systems)
+* A script (`build-swift-t.sh`) that automates the `configure`/`make` process
+* A `configure`/`make` source build (recommended for exotic systems)
 
 Installation notes are here: http://swift-lang.github.io/swift-t/guide.html#_installation
 
