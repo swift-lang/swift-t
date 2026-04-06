@@ -4,7 +4,7 @@
 
 # This has to be manually edited:
 # 1.6.7 for conda R=4.4
-SWIFT_T_VERSION=1.6.7
+SWIFT_T_VERSION=1.6.8
 
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 SWIFT_TOP=$( cd $THIS/.. ; /bin/pwd )
