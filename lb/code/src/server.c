@@ -421,8 +421,8 @@ static adlb_code xlb_process_ready_work(void)
   {
     t0 = MPI_Wtime();
     ready = true;
-    DEBUG("xlb_process_ready_work(): count=%i",
-          xlb_server_ready_work.count);
+    /* DEBUG("xlb_process_ready_work(): count=%i", */
+    /*       xlb_server_ready_work.count); */
   }
 
   for (int i = 0; i < xlb_server_ready_work.count; i++)
@@ -434,7 +434,7 @@ static adlb_code xlb_process_ready_work(void)
   if (ready)
   {
     t1 = MPI_Wtime();
-    DEBUG("xlb_process_ready_work(): %f", t1-t0);
+    // DEBUG("xlb_process_ready_work(): %f", t1-t0);
   }
 
   if (xlb_server_ready_work.size > 1024)
