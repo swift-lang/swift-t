@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.6, August 2025
+v1.6.6, April 2026
 
 
 == How to use this guide
@@ -899,7 +899,25 @@ Enable additional debug messages to view what is happening.
 
 Other <<variables,Turbine scheduler variables>> are recognized automatically.
 
-== Cray
+== HPE Cray
+
+=== Frontier
+
+https://www.olcf.ornl.gov/frontier[Frontier]
+is an HPE Cray supercomputer at OLCF.
+
+==== Build instructions
+
+Thanks to Ketan Maheshwari for these instructions.
+
+*As of:* 2026-04-17
+
+. Use the +dev/build/build-swift-t.sh+ method as described in the
+link:./guide.html[Swift/T Guide].
+. Edit +swift-t-settings.sh+:
+.. Load modules +PrgEnv-gnu cray-mpich+
+. Then build with +build-swift-t.sh+ .
+
 
 === Perlmutter
 
@@ -1542,6 +1560,22 @@ module load lsf-tools/1.0
 and compile.
 +
 . Compile STC as usual.
+
+== Spack
+
+=== Spack builds
+
+Swift/T can be built by Spack package +stc+ .  This automatically
+brings in the Swift/T dependencies +turbine+, +adlbx+, and
++exmcutils+.
+
+=== Spack as a resource
+
+Alternatively, you can use a Spack installation for library
+dependencies (such as Python, R, Tcl...) and use the normal
++build-swift-t.sh+ approach.  In this case, you may have to edit
++swift-t-settings.sh+ to configure +CFLAGS+, +LDFLAGS+, or other
+settings so that all libraries are found.
 
 == Cloud
 
