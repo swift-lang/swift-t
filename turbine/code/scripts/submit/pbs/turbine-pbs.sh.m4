@@ -76,6 +76,7 @@ COMMAND=( getenv(COMMAND) )
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
 
 cd ${TURBINE_OUTPUT}
+echo "PWD:" $( pwd -P )
 
 # Restore user PYTHONPATH if the system overwrote it:
 export PYTHONPATH=getenv(PYTHONPATH)
@@ -107,7 +108,7 @@ if (
 then
   CODE=0
 else
-  CODE=$?
+  CODE=${?}
   echo
   echo "TURBINE-PBS: launcher returned an error code!"
   echo
