@@ -330,13 +330,8 @@ fi
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
-if (( ${MAIL_ENABLED:-0} == 1 ))
-then
-  if [[ ${MAIL_ADDRESS:-} == "" ]]
-  then
-    print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
-  fi
-fi
+if (( ${MAIL_ENABLED:-0} == 1 )) && [[ ${MAIL_ADDRESS:-} == "" ]] \
+  print "MAIL_ENABLED is on but MAIL_ADDRESS is not set!"
 
 # Anything in AUTO_VARS must have a default set above
 # Keep this in sync with AUTO_VARS in bin/turbine.in
@@ -346,9 +341,8 @@ AUTO_VARS=( PROJECT QUEUE WALLTIME TURBINE_OUTPUT TURBINE_JOBNAME
             TURBINE_LOG TURBINE_DEBUG ADLB_DEBUG ADLB_TRACE
             PATH
             )
-if (( ${#TURBINE_USE_PYTHON} )) {
-  AUTO_VARS+=PYTHONPATH
-}
+if (( ${#TURBINE_USE_PYTHON} )) AUTO_VARS+=PYTHONPATH
+
 # Omitted: MPI_LABEL due to quoting issues
 
 for NAME in ${AUTO_VARS}
