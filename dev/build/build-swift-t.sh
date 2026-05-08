@@ -22,7 +22,7 @@ source $THIS/setup.sh
 LOG $LOG_WARN "Installing Swift/T into: $SWIFT_T_PREFIX"
 if (( RUN_CONFIGURE ))
 then
-  LOG_WAIT 3
+  LOG_PAUSE 3
 fi
 
 check_lock $SWIFT_T_PREFIX

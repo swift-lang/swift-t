@@ -41,16 +41,16 @@ LOG()
   fi
 }
 
-LOG_WAIT()
+LOG_PAUSE()
 {
-  # User can skip waits with WAIT=0
-  if (( ${WAIT:-1} == 0 ))
+  # User can skip waits with PAUSE=0
+  if (( ${PAUSE:-1} == 0 ))
   then
     return
   fi
   if [ -t 1 ] # Is the output a terminal?
   then
-    echo "  waiting $* seconds: press enter to skip ..."
+    echo "  pausing $* seconds: press enter to skip ..."
     if read -t $*
     then
       echo "  skipped."
