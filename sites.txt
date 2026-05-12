@@ -345,9 +345,15 @@ launched via +mpiexec+, +aprun+, or equivalent.
 These recently developed features are not yet available for all
 schedulers, feel free to request implementation.
 
+////
+
+Undocumenting: 2026-05-12
+
 +TURBINE_SBATCH_ARGS+::
 Optional arguments passed to +sbatch+.  These arguments may include
 +--exclusive+ and +--constraint=...+, etc.  Supported systems: +slurm+.
+
+////
 
 *Mail*
 
