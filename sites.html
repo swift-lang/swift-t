@@ -536,6 +536,15 @@ body.manpage div.sectionbody {
 }
 
 
+
+/* Swift/T guide customizations */
+
+a:visited {
+  color: gray;
+}
+h5 {
+  font-size: 0.8em;
+}
 </style>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -732,13 +741,13 @@ asciidoc.install(2);
 /*]]>*/
 </script>
 </head>
-<body class="article">
+<body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Sites Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.6,</span>
-<span id="revdate">August 2025</span>
+<span id="revdate">May 2026</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1193,6 +1202,21 @@ Paste the given text into the submit script.
 Allows users to insert, e.g., <code>module&nbsp;load</code> statements
 into the script.
 These shell commands will be inserted just before the execution is
+launched via <code>mpiexec</code>, <code>aprun</code>, or equivalent.
+</p>
+</dd>
+</dl></div>
+<a name="turbine_postlaunch"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_POSTLAUNCH</code>
+</dt>
+<dd>
+<p>
+Paste the given text into the submit script.
+Allows users to insert, e.g., commands that shutdown services or
+free storage space into the script.
+These shell commands will be inserted just after the execution is
 launched via <code>mpiexec</code>, <code>aprun</code>, or equivalent.
 </p>
 </dd>
@@ -2056,8 +2080,43 @@ Enable additional debug messages to view what is happening.
 </div>
 </div>
 <div class="sect1">
-<h2 id="_cray">Cray</h2>
+<h2 id="_hpe_cray">HPE Cray</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_frontier">Frontier</h3>
+<div class="paragraph"><p><a href="https://www.olcf.ornl.gov/frontier">Frontier</a>
+is an HPE Cray supercomputer at OLCF.</p></div>
+<div class="sect3">
+<h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p>Thanks to Ketan Maheshwari for these instructions.</p></div>
+<div class="paragraph"><p><strong>As of:</strong> 2026-04-17</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <code>dev/build/build-swift-t.sh</code> method as described in the
+<a href="./guide.html">Swift/T Guide</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Load modules <code>PrgEnv-gnu cray-mpich</code>
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Then build with <code>build-swift-t.sh</code> .
+</p>
+</li>
+</ol></div>
+</div>
+</div>
 <div class="sect2">
 <h3 id="_perlmutter">Perlmutter</h3>
 <div class="paragraph"><p><a href="https://docs.nersc.gov/systems/perlmutter/architecture">Perlmutter</a>
@@ -2084,7 +2143,7 @@ $ swift-t -m slurm workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2025-08-14</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2152,7 +2211,7 @@ $ swift-t -m pbs workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2024-05-02</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2195,7 +2254,7 @@ described here: <a href="https://docs.alcf.anl.gov/polaris/data-science-workflow
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html">Crusher</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p>Thanks to John Gounley for prototyping these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2022-08-10</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2257,7 +2316,7 @@ Then build with <code>build-swift-t.sh</code>.
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_8">Build instructions</h4>
+<h4 id="_build_instructions_9">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2332,7 +2391,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_9">Build instructions</h4>
+<h4 id="_build_instructions_10">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2396,7 +2455,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_10">Build instructions</h4>
+<h4 id="_build_instructions_11">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2502,7 +2561,7 @@ export PMI_NO_PREINITIALIZE=1</code></pre>
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_11">Build instructions</h5>
+<h5 id="_build_instructions_12">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2576,7 +2635,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_12">Build instructions</h4>
+<h4 id="_build_instructions_13">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2805,7 +2864,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_13">Build instructions</h4>
+<h4 id="_build_instructions_14">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2846,7 +2905,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_14">Build instructions</h4>
+<h4 id="_build_instructions_15">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -2893,6 +2952,25 @@ Compile STC as usual.
 </li>
 </ol></div>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_spack">Spack</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_spack_builds">Spack builds</h3>
+<div class="paragraph"><p>Swift/T can be built by Spack package <code>stc</code> .  This automatically
+brings in the Swift/T dependencies <code>turbine</code>, <code>adlbx</code>, and
+<code>exmcutils</code>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_spack_as_a_resource">Spack as a resource</h3>
+<div class="paragraph"><p>Alternatively, you can use a Spack installation for library
+dependencies (such as Python, R, Tcl&#8230;) and use the normal
+<code>build-swift-t.sh</code> approach.  In this case, you may have to edit
+<code>swift-t-settings.sh</code> to configure <code>CFLAGS</code>, <code>LDFLAGS</code>, or other
+settings so that all libraries are found.</p></div>
 </div>
 </div>
 </div>
@@ -4292,7 +4370,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_15">Build instructions</h4>
+<h4 id="_build_instructions_16">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4478,7 +4556,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2025-08-28 15:58:33 CDT
+ 2026-05-12 10:25:39 CDT
 </div>
 </div>
 </body>
