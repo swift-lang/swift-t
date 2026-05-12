@@ -167,6 +167,10 @@ else
   echo
 fi
 
+# BEGIN TURBINE_POSTLAUNCH
+getenv(TURBINE_POSTLAUNCH)
+# END TURBINE_POSTLAUNCH
+
 echo
 STOP=$( nanos )
 DURATION=$( duration )
