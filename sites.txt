@@ -330,6 +330,16 @@ into the script.
 These shell commands will be inserted just before the execution is
 launched via +mpiexec+, +aprun+, or equivalent.
 
+++++
+<a name="turbine_postlaunch"></a>
+++++
++TURBINE_POSTLAUNCH+::
+Paste the given text into the submit script.
+Allows users to insert, e.g., commands that shutdown services or
+free storage space into the script.
+These shell commands will be inserted just after the execution is
+launched via +mpiexec+, +aprun+, or equivalent.
+
 ==== Limited support
 
 These recently developed features are not yet available for all
