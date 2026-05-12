@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.6, April 2026
+v1.6.6, May 2026
 
 
 == How to use this guide
