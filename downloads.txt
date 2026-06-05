@@ -28,6 +28,21 @@ link:guide.html[installation instructions].
 [[stable]]
 == Current/stable: Series 1.6
 
+=== 1.6.8
+
+* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.8.tar.gz[swift-t-1.6.8.tar.gz] (11 MB)
+
+* 2026-04-06
+
+* ExM c-utils 0.6.5
+* ADLB/X      1.0.7
+* Turbine     1.5.1
+* STC         1.0.7
+
+*Changes:*
+
+* Version bump for Slack
+
 === 1.6.7
 
 * http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.7.tar.gz[swift-t-1.6.7.tar.gz] (11 MB)
