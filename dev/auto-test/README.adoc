@@ -1,0 +1,6 @@
+
+= Auto Test
+
+== Troubleshooting
+
+See error list at bottom of anaconda.sh
