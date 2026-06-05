@@ -199,7 +199,7 @@ if [[ ${JENKINS_HOME:-0} != 0 ]] {
   renice --priority 19 --pid ${$} >& /dev/null
   log "CLEANING ANACONDA CACHE:"
   python $SWIFT_T/dev/jenkins/conda_delete_1.py \
-         --rate 0.2 $CONDA_PKGS_DIRS
+         --rate 0.1 $CONDA_PKGS_DIRS
 }
 
 # Detect GNU time program
