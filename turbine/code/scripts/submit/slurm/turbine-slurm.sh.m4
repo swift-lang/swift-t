@@ -44,6 +44,7 @@ m4_ifelse(getenv(MAIL_ENABLED),`1',
 #SBATCH --mail-type=ALL
 )
 
+# TURBINE_SBATCH_ARGS: Undocumenting: 2026-05-12
 # This block should be here, after other arguments to #SBATCH,
 # so that the user can overwrite automatically set values
 # such as --nodes (which is set in run-init.zsh using PROCS / PPN)
