@@ -4,6 +4,8 @@ set -eu
 # AUTO-TEST ANACONDA SH
 # Test the Swift/T Anaconda packages under Jenkins or GitHub Actions
 
+# See help() for usage.
+
 # May be run interactively, just:
 #     set environment variable WORKSPACE
 #     and clone Swift/T in that location (which is what Jenkins does)
