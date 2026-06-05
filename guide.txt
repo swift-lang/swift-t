@@ -34,7 +34,7 @@ programs capable of utilizing very large supercomputers.
 
 An overview of Swift/T may be found at the main Swift site:
 
-http://swift-lang.org/Swift-T
+https://swift-lang.github.io/swift-t
 
 You can contact our Google Group at this email address:
 
