@@ -151,9 +151,9 @@ if (( ${#VERBOSE} )) {
   log "meta.yaml:"
   cat meta.yaml
   echo
-  log "settings.sed:"
-  cat settings.sed
-  echo
+  # log "settings.sed:"
+  # cat settings.sed
+  # echo
 }
 
 if (( ${#C} )) {
