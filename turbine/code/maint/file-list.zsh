@@ -6,6 +6,7 @@ set -eu
 # Also makes a soft link to the Debian package files
 
 print bootstrap config.h.in configure configure.ac
+print config.guess config.sub
 print version.txt README.txt
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf,file-list.zsh}
