@@ -211,21 +211,24 @@ python_parallel_persist(MPI_Comm comm, char* code, char* expr)
   // Convert the MPI_Comm to a big integer (MPICH or OpenMPI)
   long long int task_comm_int = (long long int) comm;
 
-  // Run some Python code to setup the mpi4py communicator:
+  // Create and run some Python code to setup the mpi4py communicator
+  // via turbine_helpers.py:
   char setup[256];
   memset(setup, '\0', 256);
   sprintf(setup, "import turbine_helpers as TH");
   PyRun_String(setup, Py_file_input, main_dict, local_dict);
   if (PyErr_Occurred()) return handle_python_exception_parallel();
+  // Store the comm integer into a Python variable
   sprintf(setup, "TH.task_comm = %lli", task_comm_int);
-  // printf("setup: %s\n", setup); fflush(stdout);
   PyRun_String(setup, Py_file_input, main_dict, local_dict);
+  // This tells the Python level what MPI implementation is used:
   sprintf(setup, "TH.mpi_impl = \"%s\"", mpi_impl);
   PyRun_String(setup, Py_file_input, main_dict, local_dict);
 
   // Run the user Python code:
   char* output;
   rc = python_eval(true, true, code, expr, &output);
+
   // Set the error markers for later access:
   if (rc == TCL_OK)
   {
