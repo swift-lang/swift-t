@@ -167,11 +167,11 @@ if [[ -f $WORKSPACE/success.txt ]] {
   PRIOR_SUCCESS=1
 }
 
-# Install packages.yaml if really under Jenkins
-cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-pkgs-$SITE.yaml \
-       $WORKSPACE/spack/etc/spack/packages.yaml
-cp -uv $WORKSPACE/swift-t/dev/jenkins/spack-cfg-gce.yaml \
-       $WORKSPACE/spack/etc/spack/config.yaml
+# Install packages.yaml if running under Jenkins
+if (( ${#JENKINS_HOME:-} )) {
+  cp -uv $WORKSPACE/swift-t/dev/jenkins-packages.yaml \
+         $WORKSPACE/spack/etc/spack/packages.yaml
+}
 
 section "CHECK GIT"
 for DIR in $SPACK_HOME $SWIFT_HOME
@@ -210,6 +210,7 @@ if [[ -f $WORKSPACE/success.txt ]] rm -v $WORKSPACE/success.txt
 PATH=$SPACK_HOME/bin:$PATH
 (
   set -x
+  which python
   which spack
 )
 
