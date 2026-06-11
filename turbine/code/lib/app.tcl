@@ -25,6 +25,7 @@ namespace eval turbine {
     variable app_initialized
     variable app_retries_local
     variable app_retries_reput
+    variable app_debug
     variable app_backoff
     # Artificial random delay (seconds) just before launching each app
     variable app_delay_time
@@ -39,9 +40,15 @@ namespace eval turbine {
     getenv_integer TURBINE_APP_RETRIES_LOCAL 0 app_retries_local
     getenv_integer TURBINE_APP_RETRIES_REPUT 0 app_retries_reput
 
+    getenv_integer TURBINE_APP_DEBUG 0 app_debug
+    
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
     getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
+    if { $app_debug } {
+      puts "enabled: TURBINE_APP_DEBUG"
+    }
+    
     if { $app_delay_time > 0 } {
       if { [ adlb::comm_rank ] == 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
@@ -49,6 +56,14 @@ namespace eval turbine {
     }
   }
 
+  proc app_log { args } {
+    variable app_debug
+    log** {*}$args
+    if { $app_debug } {
+      puts $args
+    }
+  }
+  
   # Build up a log message with stdio information
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
     set result [ list ]
@@ -88,7 +103,7 @@ namespace eval turbine {
     }
 
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
-    log** "app:" "\[[c_utils::hostname]\]" io=$stdios ":" $cmd {*}$args
+    app_log "app:" "\[[c_utils::hostname]\]" io=$stdios ":" $cmd {*}$args
 
     # Begin local retry loop: break on success
     # On failure, throw an error
@@ -119,7 +134,7 @@ namespace eval turbine {
       # app success on this rank!
       set stop [ clock milliseconds ]
       set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
-      log "app: duration: $duration"
+      app_log "app: duration: $duration"
     }
 
     # If this was a reput, we need to reply and not report duration
@@ -128,7 +143,7 @@ namespace eval turbine {
 
   proc app_try { tries stdin stdout stderr cmd args } {
     try {
-      log** "app: exec:" $cmd {*}$args
+      app_log "app: exec:" $cmd {*}$args
       c::sync_exec $stdin $stdout $stderr $cmd {*}$args
       # Success: break out of local retry loop
       return -code break
@@ -159,10 +174,10 @@ namespace eval turbine {
     # Wait for response from the receiving worker
     set msg [ adlb::get $WORK_TYPE(REPUT) answer_rank ]
     if { $answer_rank == $adlb::RANK_NULL } {
-      log "app: received SHUTDOWN while waiting for reput reply"
+      app_log "app: received SHUTDOWN while waiting for reput reply"
       return
     }
-    log "app: received reput reply from rank $answer_rank"
+    app_log "app: received reput reply from rank $answer_rank"
   }
 
   proc retry_reply { reply } {
@@ -173,7 +188,7 @@ namespace eval turbine {
 
     global WORK_TYPE
     variable reput_reply
-    log "app: sending reput reply to rank $reply"
+    app_log "app: sending reput reply to rank $reply"
     adlb::put $reply $WORK_TYPE(REPUT) "SUCCESS" 0 1
   }
 
@@ -200,11 +215,11 @@ namespace eval turbine {
   # message: the last error message from trying to run cmd+args
   proc app_retry_check { type message tries max cmd args } {
     if { $tries < $max } {
-      log [ cat "$message: retries $type: $tries/$max " \
+      app_log [ cat "$message: retries $type: $tries/$max " \
                 "[ c_utils::hostname ] rank [ adlb::comm_rank ]" ]
     } else {
       if { $max > 0 } {
-        log "app: exhausted $type tries ($tries)"
+        app_log "app: exhausted $type tries ($tries)"
       }
       if { $args eq "{{{}}}" } { set args {} }
       if { $type eq "local" } {
