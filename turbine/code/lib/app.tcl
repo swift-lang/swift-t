@@ -45,12 +45,11 @@ namespace eval turbine {
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
     getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
-    if { $app_debug } {
-      puts "enabled: TURBINE_APP_DEBUG"
-    }
-    
-    if { $app_delay_time > 0 } {
-      if { [ adlb::comm_rank ] == 0 } {
+    if { [ adlb::comm_rank ] == 0 } {
+      if { $app_debug } {
+        puts "TURBINE_APP_DEBUG enabled"
+      }
+      if { $app_delay_time > 0 } {
         log "TURBINE_APP_DELAY: $app_delay_time"
       }
     }
@@ -60,22 +59,26 @@ namespace eval turbine {
     variable app_debug
     log** {*}$args
     if { $app_debug } {
-      puts $args
+      puts [ join $args ]
     }
   }
   
   # Build up a log message with stdio information
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
-    set result [ list ]
+    set L [ list ]
     if { [ string length $stdin_src  ] > 0 } {
-      lappend result "stdin $stdin_src"
+      lappend L "stdin $stdin_src"
     }
     if { [ string length $stdout_dst ] > 0 } {
-      lappend result "stdout $stdout_dst"
+      lappend L "stdout $stdout_dst"
     }
     if { [ string length $stderr_dst ] > 0 } {
-      lappend result "stderr $stderr_dst"
+      lappend L "stderr $stderr_dst"
     }
+    if { [ llength $L ] == 0 } {
+      lappend L "default"
+    }
+    set result [ join $L "," ]
     return $result
   }
 
