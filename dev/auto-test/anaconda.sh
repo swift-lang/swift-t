@@ -144,7 +144,7 @@ if [[ ${CONDA_SOLVER[$PYTHON_VERSION]} != "default" ]] \
 export CONDA_PKGS_DIRS=$WORKSPACE/conda-cache
 log "CONDA_PKGS_DIRS: $CONDA_PKGS_DIRS"
 # Ensure directory exists for conda_delete_1:
-mkdir -p $VERBOSE $CONDA_PKGS_DIRS
+mkdir -pv $CONDA_PKGS_DIRS
 
 # Self-configure
 # The directory containing this script:
@@ -201,7 +201,7 @@ if [[ ${JENKINS_HOME:-0} != 0 ]] {
   renice --priority 19 --pid ${$} >& /dev/null
   log "CLEANING ANACONDA CACHE:"
   python $SWIFT_T/dev/jenkins/conda_delete_1.py \
-         --rate 0.1 $CONDA_PKGS_DIRS
+         --rate 0.5 $CONDA_PKGS_DIRS
 }
 
 # Detect GNU time program
