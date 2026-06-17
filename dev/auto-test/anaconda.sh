@@ -199,9 +199,10 @@ source $SWIFT_T/dev/conda/helpers.zsh
 # If running in CELS Jenkins, reduce priority, clean Anaconda cache:
 if [[ ${JENKINS_HOME:-0} != 0 ]] {
   renice --priority 19 --pid ${$} >& /dev/null
-  log "CLEANING ANACONDA CACHE:"
+  CLEAN_RATE=0.5
+  log "CLEANING ANACONDA CACHE: RATE=$CLEAN_RATE"
   python $SWIFT_T/dev/jenkins/conda_delete_1.py \
-         --rate 0.5 $CONDA_PKGS_DIRS
+         --rate $CLEAN_RATE $CONDA_PKGS_DIRS
 }
 
 # Detect GNU time program
