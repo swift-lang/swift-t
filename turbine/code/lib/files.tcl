@@ -755,6 +755,20 @@ namespace eval turbine {
         return $result
     }
 
+    proc file_size_impl { filename } {
+        if [ catch { set result [ file size $filename ] } e ] {
+            turbine_error "file_size(): $e"
+        }
+        return $result
+    }
+
+    proc file_size0_impl { filename } {
+        if [ catch { set result [ file size $filename ] } e ] {
+            return 0
+        }
+        return $result
+    }
+
     proc write_array_string { outputs inputs } {
         rule $inputs "write_array_string_body $outputs $inputs"
     }

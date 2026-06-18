@@ -60,6 +60,12 @@
 (int o) file_mtime(string f)
 "turbine" "0.1" [ "set <<o>> [ turbine::file_mtime_impl <<f>> ]" ];
 
+(int o) file_size(string f)
+"turbine" "0.1" [ "set <<o>> [ turbine::file_size_impl <<f>> ]" ];
+
+(int o) file_size0(string f)
+"turbine" "0.1" [ "set <<o>> [ turbine::file_size0_impl <<f>> ]" ];
+
 @pure
 (string s[]) file_lines(file f, string comment="#")
     "turbine" "0.1"
