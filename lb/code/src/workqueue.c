@@ -125,8 +125,10 @@ static int targeted_work_size;  // Number of individual heaps
 static heap_iu32_t *host_targeted_work;
 static int host_targeted_work_size; // Number of heaps (hosts * types)
 
-/** We should free heaps that are empty but more than this number of
- * unused entries. */
+/**
+   We should free heaps that are empty but more than this number of
+   unused entries.
+*/
 #define HEAP_FREE_THRESHOLD_TARGETED 64
 #define HEAP_FREE_THRESHOLD_UNTARGETED 8192
 
@@ -306,11 +308,12 @@ static adlb_code add_untargeted(xlb_work_unit* wu, uint32_t wu_idx)
 {
   // Untargeted single-process task
   heap_iu32_t* H = &untargeted_work[wu->type];
-  TRACE("add_untargeted(): prior size=%ui", H->size);
+  DEBUG("add_untargeted(): prior size=%u  priority: %i",
+        H->size, wu->opts.priority);
   bool b = heap_iu32_add(H, -wu->opts.priority, wu_idx);
   ADLB_CHECK_MSG(b, "out of memory expanding heap");
 
-  TRACE("add_untargeted(): after size=%ui", H->size);
+  DEBUG("add_untargeted(): after size=%u", H->size);
 
   if (xlb_s.perfc_enabled)
   {
@@ -616,7 +619,8 @@ static xlb_work_unit* pop_untargeted(int type)
     xlb_work_unit* wu = wu_array_try_remove_untargeted(wu_idx, type,
                                                        priority);
     if (wu != NULL) {
-      DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
+      DEBUG("xlb_workq_get(): untargeted: %"PRId64" priority: %i",
+            wu->id, wu->opts.priority);
       return wu;
     }
   }
