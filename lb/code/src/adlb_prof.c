@@ -38,8 +38,6 @@ static int my_log_rank;
 
 // User work type events:
 
-/** Previous work type from Get.  -1 indicates nothing */
-// static int user_type_previous = -1;
 /** Currently running work type from Get.  -1 indicates nothing */
 static int user_type_current = -1;
 /** Array of user state start events, one for each type */
