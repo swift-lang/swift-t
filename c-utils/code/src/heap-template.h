@@ -352,7 +352,7 @@ HEAP_EXPAND(HEAP_T *heap, uint32_t needed_size)
  */
 #define HEAP_ADD_ENTRY HEAP_NAME(add_entry)
 static inline bool
-HEAP_ADD_ENTRY(HEAP_T *heap, HEAP_ENTRY_T entry) {
+HEAP_ADD_ENTRY(HEAP_T* heap, HEAP_ENTRY_T entry) {
   /* Make sure big enough */
   bool ok = HEAP_EXPAND(heap, heap->size + 1);
   if (!ok)
@@ -369,7 +369,7 @@ HEAP_ADD_ENTRY(HEAP_T *heap, HEAP_ENTRY_T entry) {
 
 #define HEAP_ADD HEAP_NAME(add)
 static inline bool
-HEAP_ADD(HEAP_T *heap, HEAP_KEY_T k, HEAP_VAL_T v)
+HEAP_ADD(HEAP_T* heap, HEAP_KEY_T k, HEAP_VAL_T v)
 {
   HEAP_ENTRY_T entry = {k, v};
   return HEAP_ADD_ENTRY(heap, entry);
