@@ -71,11 +71,11 @@ log_status()
 
   if (( VERBOSITY == $LOG_DEBUG ))
   then
-    echo "Logging at LOG_DEBUG"
+    echo "build: logging at LOG_DEBUG"
   fi
   if (( VERBOSITY == $LOG_TRACE ))
   then
-    echo "Logging at LOG_TRACE"
+    echo "build: logging at LOG_TRACE"
   fi
 }
 
