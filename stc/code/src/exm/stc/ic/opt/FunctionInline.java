@@ -35,9 +35,12 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.FnID;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
@@ -465,8 +468,24 @@ public class FunctionInline implements OptimizerPass {
                            RenameMode.REPLACE_VAR, true);
 
     if (!fnCall.execMode().isAsync()) {
-      insertBlock = block;
-      insertPos = it;
+      TaskProps callProps = fnCall.getTaskProps();
+      if (callProps != null && callProps.containsKey(TaskPropKey.PRIORITY)) {
+        // Preserve a priority annotation on a synchronous call: wrap the
+        // inlined body in a WAIT_ONLY wait carrying the priority, so any task
+        // dispatched inside the body inherits it.  Without this the priority
+        // would be silently dropped when the call instruction is removed.
+        WaitStatement wait = new WaitStatement(
+            contextFunction.id() + "-" + toInline.id() + "-prio",
+            WaitVar.NONE, PassedVar.NONE, Var.NONE,
+            WaitMode.WAIT_ONLY, false, ExecTarget.nonDispatchedAny(),
+            callProps.filter(TaskPropKey.PRIORITY));
+        block.addContinuation(wait);
+        insertBlock = wait.getBlock();
+        insertPos = insertBlock.statementIterator();
+      } else {
+        insertBlock = block;
+        insertPos = it;
+      }
     } else {
       // In some cases its beneficial to use TASK_DISPATCH to distribute work
       WaitMode waitMode = ProgressOpcodes.isCheap(inlineBlock) ?

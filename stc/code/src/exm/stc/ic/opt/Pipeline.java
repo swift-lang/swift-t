@@ -26,6 +26,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Location;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -113,6 +114,9 @@ public class Pipeline extends FunctionOptimizerPass {
         boolean compatible = true;
         if (!w.getWaitVars().isEmpty()) {
           // Can't merge if we have to wait before execution
+          compatible = false;
+        } else if (w.getProps().containsKey(TaskPropKey.PRIORITY)) {
+          // Merging up would drop the priority applied to this wait's body
           compatible = false;
         } else if (!waitChildContext.equals(cx) &&
                    !waitChildContext.isWildcardContext()) {

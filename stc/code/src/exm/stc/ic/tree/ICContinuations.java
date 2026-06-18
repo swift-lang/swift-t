@@ -1403,6 +1403,10 @@ public class ICContinuations {
       return mode;
     }
 
+    public TaskProps getProps() {
+      return props;
+    }
+
     public boolean isRecursive() {
       return recursive;
     }

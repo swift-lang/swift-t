@@ -40,6 +40,7 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Location;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
@@ -277,7 +278,11 @@ public class WaitCoalescer implements OptimizerPass {
       }
 
       if (wait.getWaitVars().isEmpty()) {
-        // Can remove wait
+        // Can remove wait, unless it carries a priority that must remain
+        // applied to its body
+        if (wait.getProps().containsKey(TaskPropKey.PRIORITY)) {
+          return false;
+        }
         return true;
       } else {
         // Still have to wait but maybe can reduce overhead
@@ -449,6 +454,21 @@ public class WaitCoalescer implements OptimizerPass {
                    innerWait.target() + " " + innerWait.getMode());
     }
     ExecContext innerContext = innerWait.childContext(waitContext);
+
+    // Don't squash across a priority boundary.  A priority annotation marks a
+    // distinct scheduling unit, so an inner wait whose priority differs from
+    // the outer wait's must stay a separate task: merging would drop the inner
+    // priority (and the value is typically only in scope inside the outer
+    // wait, so it can't be hoisted) and collapse two differently-prioritized
+    // tasks into one.  Equal priorities can safely merge.
+    if (innerWait.getProps().containsKey(TaskPropKey.PRIORITY)) {
+      Arg innerPrio = innerWait.getProps().get(TaskPropKey.PRIORITY);
+      Arg outerPrio = wait.getProps().get(TaskPropKey.PRIORITY);
+      if (outerPrio == null || !innerPrio.equals(outerPrio)) {
+        logger.trace("Not squashing: inner wait carries distinct priority");
+        return false;
+      }
+    }
 
     // Check that locations are compatible
     if (!compatibleLocPar(wait.targetLocation(), innerWait.targetLocation(),

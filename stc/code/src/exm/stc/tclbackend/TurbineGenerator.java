@@ -1391,11 +1391,18 @@ public class TurbineGenerator implements CompilerBackend {
       // Calling synchronously, can't guarantee anything blocks
       assert blockOn.size() == 0 : function + ": " + blockOn;
 
+      // Apply priority so that tasks spawned inside the sync wrapper
+      // (e.g. the wrapped builtin's rule) inherit the requested priority.
+      RuleProps ruleProps = buildRuleProps(props);
+      setPriority(ruleProps.priority);
+
       List<Expression> inVars = TclUtil.argsToExpr(inputs);
       List<Expression> outVars = TclUtil.varsToExpr(outputs);
 
       pointAdd(Turbine.callFunctionSync(
           swiftFuncName, outVars, inVars));
+
+      clearPriority(ruleProps.priority);
     }
   }
 
