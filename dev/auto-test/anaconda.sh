@@ -50,7 +50,7 @@ CONDA_TIMESTAMPS=(
 # If default, we allow conda to select its default.
 typeset -A CONDA_SOLVER=(
   310 classic
-  311 classic
+  311 default
   312 default
   313 default
 )
