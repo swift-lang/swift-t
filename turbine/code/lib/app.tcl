@@ -33,19 +33,26 @@ namespace eval turbine {
     # ADLB type code number
     variable reput_reply
 
+    # Count jobs for debugging/stats:
+    variable app_counter
+
+    variable app_rank
+
     if { [ info exists app_initialized ] } return
 
     set app_initialized 1
+    set app_counter 0
+    set app_rank [ adlb::comm_rank ]
 
     getenv_integer TURBINE_APP_RETRIES_LOCAL 0 app_retries_local
     getenv_integer TURBINE_APP_RETRIES_REPUT 0 app_retries_reput
 
     getenv_integer TURBINE_APP_DEBUG 0 app_debug
-    
+
     getenv_double  TURBINE_APP_DELAY   0 app_delay_time
     getenv_double  TURBINE_APP_BACKOFF 1 app_backoff
 
-    if { [ adlb::comm_rank ] == 0 } {
+    if { $app_rank == 0 } {
       if { $app_debug } {
         puts "TURBINE_APP_DEBUG enabled"
       }
@@ -56,13 +63,20 @@ namespace eval turbine {
   }
 
   proc app_log { args } {
+    # Message is prefixed with label "rank:counter"
     variable app_debug
-    log** {*}$args
+    variable app_rank
+    variable app_counter
+    variable app_label
+
+    set fmt "%Y-%m-%d %H:%M:%S"
+    set timestamp [ clock format [ clock seconds ] -f $fmt ]
+    log** $timestamp "app:" $app_label {*}$args
     if { $app_debug } {
-      puts [ join $args ]
+      puts "$timestamp app: $app_label [ join $args ]"
     }
   }
-  
+
   # Build up a log message with stdio information
   proc stdio_log { stdin_src stdout_dst stderr_dst } {
     set L [ list ]
@@ -100,13 +114,26 @@ namespace eval turbine {
   proc exec_local { tries_reput reply \
                         stdin_src stdout_dst stderr_dst \
                         cmd args } {
+    variable app_debug
+    variable app_counter
+    variable app_rank
+    variable app_label
+
+    incr     app_counter
+
+    set app_label [ format "%6i:%06i" $app_rank $app_counter ]
+
     set tries_local 0
     if { $args eq "{{}}" } {
       set args [ list ]
     }
 
+    if { $app_counter == 1 } {
+      app_log "hostname:" [ c_utils::hostname ]
+    }
+
     set stdios [ stdio_log $stdin_src $stdout_dst $stderr_dst ]
-    app_log "app:" "\[[c_utils::hostname]\]" io=$stdios ":" $cmd {*}$args
+    app_log "io=$stdios" ":" $cmd {*}$args
 
     # Begin local retry loop: break on success
     # On failure, throw an error
@@ -132,12 +159,14 @@ namespace eval turbine {
         }
       }
     }
+    # End retry loop.
 
     if { $success } {
       # app success on this rank!
       set stop [ clock milliseconds ]
       set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
-      app_log "app: duration: $duration"
+      app_log "duration: $duration"
+      if $app_debug { flush stdout }
     }
 
     # If this was a reput, we need to reply and not report duration
@@ -145,9 +174,10 @@ namespace eval turbine {
   }
 
   proc app_try { tries stdin stdout stderr cmd args } {
+    variable app_label
     try {
-      app_log "app: exec:" $cmd {*}$args
-      c::sync_exec $stdin $stdout $stderr $cmd {*}$args
+      app_log "exec:" $cmd {*}$args
+      c::sync_exec $app_label $stdin $stdout $stderr $cmd {*}$args
       # Success: break out of local retry loop
       return -code break
     } trap {TURBINE ERROR} { message } {
@@ -167,7 +197,7 @@ namespace eval turbine {
     app_retry_check "reput" $message $tries_reput $app_retries_reput \
         $cmd $args
 
-    log** "app: reput to ADLB:" $cmd $args
+    log** "reput to ADLB:" $cmd $args
     set payload [ list exec_local $tries_reput [adlb::comm_rank] ]
     lappend payload $stdin_src $stdout_dst $stderr_dst
     lappend payload $cmd {*}$args
@@ -177,10 +207,10 @@ namespace eval turbine {
     # Wait for response from the receiving worker
     set msg [ adlb::get $WORK_TYPE(REPUT) answer_rank ]
     if { $answer_rank == $adlb::RANK_NULL } {
-      app_log "app: received SHUTDOWN while waiting for reput reply"
+      app_log "received SHUTDOWN while waiting for reput reply"
       return
     }
-    app_log "app: received reput reply from rank $answer_rank"
+    app_log "received reput reply from rank $answer_rank"
   }
 
   proc retry_reply { reply } {
@@ -191,7 +221,7 @@ namespace eval turbine {
 
     global WORK_TYPE
     variable reput_reply
-    app_log "app: sending reput reply to rank $reply"
+    app_log "sending reput reply to rank $reply"
     adlb::put $reply $WORK_TYPE(REPUT) "SUCCESS" 0 1
   }
 
@@ -218,15 +248,14 @@ namespace eval turbine {
   # message: the last error message from trying to run cmd+args
   proc app_retry_check { type message tries max cmd args } {
     if { $tries < $max } {
-      app_log [ cat "$message: retries $type: $tries/$max " \
-                "[ c_utils::hostname ] rank [ adlb::comm_rank ]" ]
+      app_log [ cat "$message: retries $type: $tries/$max" ]
     } else {
       if { $max > 0 } {
-        app_log "app: exhausted $type tries ($tries)"
+        app_log "exhausted $type tries ($tries)"
       }
       if { $args eq "{{{}}}" } { set args {} }
       if { $type eq "local" } {
-        set    m "app: error: "
+        set    m "error: "
         append m "<" $message "> "
         append m "command: " $cmd " " {*}$args
         turbine_error $m

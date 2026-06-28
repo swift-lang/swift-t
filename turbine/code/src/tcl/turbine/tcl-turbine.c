@@ -85,6 +85,8 @@
 
 static double tcl_version;
 
+static bool app_debug;
+
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             Tcl_Obj* list, int max,
@@ -193,6 +195,8 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");
     return TCL_ERROR;
   }
+
+  // getenv_boolean("TURBINE_APP_DEBUG", false, &app_debug);
 
   return TCL_OK;
 }
@@ -1018,25 +1022,34 @@ close_error_exit(const char *purpose)
 static int pid_status(Tcl_Interp* interp, pid_t child);
 
 static int
-Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
-              int objc, Tcl_Obj *const objv[])
+Sync_Exec_Cmd(ClientData cdata, Tcl_Interp* interp,
+              int objc, Tcl_Obj* const objv[])
 {
   int rc;
-  TCL_CONDITION(objc >= 5, "Requires at least 4 arguments");
+  TCL_CONDITION(objc >= 6, "Requires at least 5 arguments");
 
-  const char *stdin_file = Tcl_GetString(objv[1]);
-  const char *stdout_file = Tcl_GetString(objv[2]);
-  const char *stderr_file = Tcl_GetString(objv[3]);
-
-  char *cmd = Tcl_GetString(objv[4]);
+  const char* app_label   = Tcl_GetString(objv[1]);
+  const char* stdin_file  = Tcl_GetString(objv[2]);
+  const char* stdout_file = Tcl_GetString(objv[3]);
+  const char* stderr_file = Tcl_GetString(objv[4]);
+        char* cmd         = Tcl_GetString(objv[5]);
 
   int cmd_offset = 4;
   int cmd_argc = objc - cmd_offset;
-  char *cmd_argv[cmd_argc + 1];
+  char* cmd_argv[cmd_argc + 1];
   cmd_argv[0] = cmd;
   for (int i = 1; i < cmd_argc; i++)
     cmd_argv[i] = Tcl_GetString(objv[i + cmd_offset]);
   cmd_argv[cmd_argc] = NULL; // Need to NULL-terminate for execvp()
+
+  if (strlen(app_label) > 0)
+    setenv("TURBINE_APP_LABEL", app_label, true);
+
+  if (app_debug)
+  {
+    printf("turbine: exec: start: %s '%s'\n", app_label, cmd);
+    fflush(stdout);
+  }
 
   pid_t child = fork();
   TCL_CONDITION(child >= 0, "Error forking: %s", strerror(errno));
@@ -1084,12 +1097,24 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp *interp,
                   strerror(errno));
   }
 
-  return pid_status(interp, child);
+  rc = pid_status(interp, child);
+
+  if (app_debug)
+  {
+    if (rc == TCL_OK)
+      printf("turbine: exec: done.\n");
+    else
+      printf("turbine: exec: error.\n");
+    fflush(stdout);
+  }
+
+  return rc;
 }
 
 static int child_error(Tcl_Interp* interp, const char* message);
 
-static int pid_status(Tcl_Interp* interp, pid_t child)
+static int
+pid_status(Tcl_Interp* interp, pid_t child)
 {
   int rc;
   int status;
@@ -1103,8 +1128,7 @@ static int pid_status(Tcl_Interp* interp, pid_t child)
 
     if (exitcode != 0)
     {
-      sprintf(message,
-              "Child exited with code: %i", exitcode);
+      sprintf(message, "Child exited with code: %i", exitcode);
       return child_error(interp, message);
     }
   }
