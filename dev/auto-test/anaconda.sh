@@ -361,6 +361,17 @@ log-success()
   }
 }
 
+report-disk-space()
+{
+  print
+  log "DISK SPACE:"
+  log "  CONDA CACHE:"
+  tm du -sh $CONDA_PKGS_DIRS
+  log "  WORKSPACE:"
+  tm du -sh $WORKSPACE
+  print
+}
+
 # The main test logic follows:
 
 if (( ${#UNINSTALL} )) uninstall
@@ -393,3 +404,4 @@ if (( ${#A} )) {
 }
 
 log-success
+report-disk-space
