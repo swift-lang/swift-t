@@ -108,6 +108,9 @@
            source="1.8">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
+      <compilerarg value="-Xlint:-options"/>
+      <compilerarg value="-Xlint:-this-escape"/>
+      <compilerarg value="-proc:none"/>
     </javac>
   </target>
 
@@ -122,6 +125,9 @@
            classpath="${test.classpath}">
       <compilerarg value="-Xlint"/>
       <compilerarg value="-Xlint:-cast"/>
+      <compilerarg value="-Xlint:-options"/>
+      <compilerarg value="-Xlint:-this-escape"/>
+      <compilerarg value="-proc:none"/>
     </javac>
   </target>
 
@@ -152,6 +158,9 @@
           source="1.8">
      <compilerarg value="-Xlint"/>
      <compilerarg value="-Xlint:-cast"/>
+     <compilerarg value="-Xlint:-options"/>
+     <compilerarg value="-Xlint:-this-escape"/>
+     <compilerarg value="-proc:none"/>
    </javac>
   </target>
 
