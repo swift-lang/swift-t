@@ -163,6 +163,11 @@ pragma appexecdef COASTER "turbine" "0.8.0"
 @pure @builtin_op=FLOATTOINT
 (int o) ftoi(float i) "turbine" "0.0.2" "float2int";
 
+@pure
+(int o) bool2int(boolean i)  "turbine" "1.5.1"
+  [ "set <<o>> <<i>>" ];
+
+
 // I/O
 @dispatch=WORKER
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"
