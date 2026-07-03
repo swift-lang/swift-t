@@ -1034,7 +1034,7 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp* interp,
   const char* stderr_file = Tcl_GetString(objv[4]);
         char* cmd         = Tcl_GetString(objv[5]);
 
-  int cmd_offset = 4;
+  int cmd_offset = 5;
   int cmd_argc = objc - cmd_offset;
   char* cmd_argv[cmd_argc + 1];
   cmd_argv[0] = cmd;
