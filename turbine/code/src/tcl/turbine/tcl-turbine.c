@@ -929,7 +929,7 @@ Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
                   Tcl_Obj *const objv[], Tcl_Obj *obj, int base)
 {
   int len;
-  const char *str = Tcl_GetStringFromObj(obj, &len);
+  const char* str = Tcl_GetStringFromObj(obj, &len);
 
   errno = 0; // Reset so we can detect errors
   char *end_str;
@@ -947,33 +947,39 @@ Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
   {
     int my_errno = errno;
     errno = 0; // reset errno
-    Tcl_Obj *msg = NULL;
+    Tcl_Obj* msg = NULL;
     if (my_errno == ERANGE)
     {
-      msg = Tcl_ObjPrintf("toint: Integer representation of '%s' "
+      msg = Tcl_ObjPrintf("Integer parse: representation of '%s' "
               "base %i is out of range of %zi bit integers", str,
               base, sizeof(Tcl_WideInt) * 8);
     }
     else if (my_errno == EINVAL)
     {
-      msg = Tcl_ObjPrintf("toint: '%s' cannot be interpreted as an "
-                            "base %i integer ", str, base);
+      msg = Tcl_ObjPrintf("Integer parse: "
+                          "'%s' cannot be interpreted as a "
+                          "base %i integer ", str, base);
     }
     else
     {
-      msg = Tcl_ObjPrintf("toint: Internal error: unexpected errno "
-                  "%d when converting '%s' to base %i integer",
+      msg = Tcl_ObjPrintf("Integer parse: "
+                          "Internal error: unexpected errno "
+                          "%d when converting '%s'"
+                          "to base %i integer",
                   my_errno, str, base);
     }
-    Tcl_Obj *msgs[1] = { msg };
+    Tcl_Obj* msgs[1] = { msg };
     return turbine_user_error(interp, 1, msgs);
   }
   long consumed = end_str - str;
   if (consumed == 0)
   {
     // Handle case where no input consumed
-    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("toint: '%s' cannot be "
-             "interpreted as a base %i integer ", str, base) };
+    Tcl_Obj* msgs[1] = {
+      Tcl_ObjPrintf("Integer parse: "
+                    "'%s' cannot be interpreted as a base %i integer",
+                    str, base)
+    };
     return turbine_user_error(interp, 1, msgs);
   }
 
