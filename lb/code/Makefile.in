@@ -8,6 +8,8 @@
 # Use 'make tests' to compile the tests
 # Use 'make test_results' to run the tests
 # Use 'make clean'
+# Set normal compiler variables like CC, CFLAGS, etc.
+# Set DEPCC to change the dependency compiler
 # Parallel builds are supported
 
 ifeq (@ENABLE_DEV@,1)
@@ -197,9 +199,12 @@ Makefile: configure Makefile.in
 
 ### DEPS
 
-# Allow the user to set DEPCC
+# Allow the user to set DEPCC from the environment
+#       or default to CC
+# DEPCC should normally be gcc even if using a special compiler,
+#       because we may use GCC-specific features
 ifeq (${DEPCC},)
-  DEPCC = $(CC)
+  DEPCC = gcc
 endif
 
 deps: $(DEPS) $(TEST_DEPS)
