@@ -32,3 +32,7 @@ python -c 'print("Python works.")'
 
 # Needed for javac
 conda install openjdk
+
+# Report status:
+which java
+java -version
