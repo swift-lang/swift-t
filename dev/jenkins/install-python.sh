@@ -32,7 +32,7 @@ PATH=$WORKSPACE/sfw/Miniconda/bin:$PATH
   python -c 'print("Python works.")'
 
   # Needed for javac
-  conda install openjdk
+  conda install --yes --quiet -c conda-forge openjdk
 
   # Report status:
   which java javac
