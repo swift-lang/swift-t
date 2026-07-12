@@ -7,7 +7,7 @@ set -eu
 renice --priority 19 --pid $$
 
 # The Miniconda we are working with:
-MINICONDA=Miniconda3-py39_23.3.1-0-Linux-x86_64.sh
+MINICONDA=Miniconda3-py313_26.5.3-1-Linux-x86_64.sh
 
 # Clean up prior runs
 (
