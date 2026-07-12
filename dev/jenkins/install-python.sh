@@ -26,13 +26,19 @@ MINICONDA=Miniconda3-py313_26.5.3-1-Linux-x86_64.sh
 
 PATH=$WORKSPACE/sfw/Miniconda/bin:$PATH
 
-set -x
-which python
-python -c 'print("Python works.")'
+(
+  set -x
+  which python
+  python -c 'print("Python works.")'
 
-# Needed for javac
-conda install openjdk
+  # Needed for javac
+  conda install openjdk
 
-# Report status:
-which java
-java -version
+  # Report status:
+  which java javac
+  java  -version
+  javac -version
+)
+
+echo
+echo install-python.sh: OK
