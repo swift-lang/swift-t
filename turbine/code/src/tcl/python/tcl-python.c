@@ -89,6 +89,7 @@ static int
 python_init(void)
 {
   if (initialized) return TCL_OK;
+  atexit(python_finalize);
 
   /* Load Python library symbols so that dynamic extensions
      don't throw symbol not found error.
@@ -163,6 +164,9 @@ python_eval(bool persist, bool exceptions_are_errors,
 static void
 python_finalize(void)
 {
+  if (! initialized) return;
+  DEBUG_TCL_TURBINE("python: finalize()...\n");
+  fflush(stdout);
   Py_Finalize();
   initialized = false;
 }
