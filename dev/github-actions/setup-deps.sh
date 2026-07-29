@@ -24,7 +24,8 @@ then
   TOOL=( sudo apt-get install --yes )
   PKGS=(
     autoconf
-    default-jdk
+    # Need Java 21 for -Xlint:-this-escape
+    openjdk-21-jdk
     libcurl4-openssl-dev
     make
     # MPICH is broken: 2025-05-02
