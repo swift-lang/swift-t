@@ -102,6 +102,7 @@ fi
   # Report versions
   set -x
   which java javac ant
+  echo JAVA_HOME ${JAVA_HOME:-unset}
   ant   -version
   java  -version
   javac -version
