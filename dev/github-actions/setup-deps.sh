@@ -96,3 +96,12 @@ then
   )
   echo ${BINS[@]} | fmt -w 1 >> $GITHUB_PATH
 fi
+
+(
+  # Report versions
+  set -x
+  which java javac ant
+  ant   -version
+  java  -version
+  javac -version
+)
