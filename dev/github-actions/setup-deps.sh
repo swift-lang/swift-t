@@ -24,8 +24,6 @@ then
   TOOL=( sudo apt-get install --yes )
   PKGS=(
     autoconf
-    # Need Java 21 for -Xlint:-this-escape
-    openjdk-21-jdk
     libcurl4-openssl-dev
     make
     # MPICH is broken: 2025-05-02
@@ -101,9 +99,10 @@ fi
 (
   # Report versions
   set -x
-  which java javac ant
+  which java javac ant python
   echo JAVA_HOME ${JAVA_HOME:-unset}
   ant   -version
   java  -version
   javac -version
+  python -V
 )
