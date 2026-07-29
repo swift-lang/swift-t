@@ -106,4 +106,4 @@ fi
   java   -version
   javac  -version
   python -V
-) |& cat
+) 2>&1 | cat
