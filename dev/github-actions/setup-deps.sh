@@ -98,11 +98,12 @@ fi
 
 (
   # Report versions
+  # Need pipe to merge stdout/stderr:
   set -x
   which java javac ant python
-  echo JAVA_HOME ${JAVA_HOME:-unset}
-  ant   -version
-  java  -version
-  javac -version
+  echo JAVA_HOME=${JAVA_HOME:-unset}
+  ant    -version
+  java   -version
+  javac  -version
   python -V
-)
+) |& cat
