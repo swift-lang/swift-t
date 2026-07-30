@@ -119,6 +119,7 @@ if (( ! ${#R} )) {
   export PKG_NAME="swift-t-r"
 }
 log "PKG_NAME: $PKG_NAME"
+if (( ${#R} )) log "WITH R:" $R_VERSION
 
 # Default dependencies:
 export USE_ANT=1
