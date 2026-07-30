@@ -40,14 +40,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install deps
-        run: |
-          dev/github-actions/setup-deps.sh ${{ matrix.os }}
-
       - uses: conda-incubator/setup-miniconda@v3
         with:
           # auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install deps
+        run: |
+          dev/github-actions/setup-deps.sh ${{ matrix.os }}
 
       - name: Setup R
         run: |
