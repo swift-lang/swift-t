@@ -1445,6 +1445,24 @@ Obtain time since the Unix epoch in seconds.
 +clock_seconds() -> int+::
 Obtain time since the Unix epoch in whole seconds.
 
++clock_format(string format, float t) -> string+::
+Format the given float +t+ (such as from +clock()+)
+as a human-readable string.  Formats are specified by the underlying
+https://www.tcl-lang.org/man/tcl8.6/TclCmd/clock.htm#M26[Tcl clock format specifiers].
+The commonly-used specifiers below are available in Swift/T.
++
+NOTE: Due to a limitations with Tcl, only whole seconds are supported.
++
+----
+# From the Swift/T sys header:
+CLOCK_FMT_ISO8601="%Y-%m-%dT%H:%M:%S";
+CLOCK_FMT_RFC3339="%Y-%m-%d %H:%M:%S";
+# Example:
+trace(clock_format("NOW! " + CLOCK_FMT_RFC3339, clock()));
+# formats the current time, something like:
+trace: NOW! 2026-08-05 11:32:07
+----
+
 +INT_MAX() -> int+::
 Obtain the largest integer representable on the current platform.
 
@@ -1686,6 +1704,16 @@ Attempt to find a file with the given name in the filesystem: return
 
 Attempt to find a file with the given name in the filesystem: return
 its POSIX modification time in seconds since the Unix epoch.
+
++file_size(string) -> int+::
+
+Attempt to find a file with the given name in the filesystem: return
+its size in bytes.  Results in an error if the file is not found.
+
++file_size0(string) -> int+::
+
+Attempt to find a file with the given name in the filesystem: return
+its size in bytes.  Returns 0 if the file is not found.
 
 +file_type(file) -> string+::
 
@@ -2360,6 +2388,9 @@ foreach time in [1:5] {
 As shown, +void+ variables may be added to the output list of any
 +app+ function.  They are set automatically when the +app+ completes.
 
++app+ function executions can be debugging by setting environment
+variable +TURBINE_APP_DEBUG=1+.
+
 ==== App retry
 
 ===== Retry local
@@ -2622,6 +2653,11 @@ Python coding mistakes may be badly mangled and refer to missing
 Python symbols- refer to the first error in the Python stack trace.
 Due to the Python C API, error reports may be slightly better for the
 code argument and worse in the expression argument.
+
+===== Python shutdown
+
+Use normal Python +@atexit.register+ functions to clean up when
+Swift/T shuts down.
 
 [[leaf_r]]
 ==== Calling R
