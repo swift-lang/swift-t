@@ -744,7 +744,7 @@ asciidoc.install(2);
 <body class="article" style="max-width:875px">
 <div id="header">
 <h1>Swift/T Guide</h1>
-<span id="author">v1.6.9, July 2026</span><br />
+<span id="author">v1.6.9, August 2026</span><br />
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -2845,23 +2845,16 @@ Obtain time since the Unix epoch in whole seconds.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>clock_format(string format, float t) &#8594; string</code>
+<code>clock_format(string format, int|float t) &#8594; string</code>
 </dt>
 <dd>
 <p>
-Format the given float <code>t</code> (such as from <code>clock()</code>)
+Format the given <code>int</code> or <code>float</code> <code>t</code> (such as from <code>clock()</code>)
 as a human-readable string.  Formats are specified by the underlying
 <a href="https://www.tcl-lang.org/man/tcl8.6/TclCmd/clock.htm#M26">Tcl clock format specifiers</a>.
-The commonly-used specifiers below are available in Swift/T.
+The commonly-used specifiers below are available in Swift/T.  Times
+are rounded to the nearest whole second.
 </p>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">Due to a limitations with Tcl, only whole seconds are supported.</td>
-</tr></table>
-</div>
 <div class="listingblock">
 <div class="content">
 <pre><code># From the Swift/T sys header:
@@ -7095,7 +7088,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-05 11:43:06 CDT
+ 2026-08-05 12:00:35 CDT
 </div>
 </div>
 
