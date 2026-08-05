@@ -71,8 +71,9 @@ argv_accept(string... keys)
 CLOCK_FMT_ISO8601="%Y-%m-%dT%H:%M:%S";
 CLOCK_FMT_RFC3339="%Y-%m-%d %H:%M:%S";
 
-(string s) clock_format(string format, int t) "turbine" "0.1"
-[ "set <<s>> [ clock format <<t>> -format <<format>> ]" ];
+// Tcl clock format requires an int!
+(string s) clock_format(string format, float t) "turbine" "0.1"
+[ "set <<s>> [ clock format [ expr round(<<t>>) ] -format <<format>> ]" ];
 
 // From: http://code.activestate.com/recipes/146035-largest-int-supported-by-a-platform-and-the-number
 (int i) INT_MAX() "turbine" "0.0"
