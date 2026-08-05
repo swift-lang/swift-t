@@ -1445,13 +1445,12 @@ Obtain time since the Unix epoch in seconds.
 +clock_seconds() -> int+::
 Obtain time since the Unix epoch in whole seconds.
 
-+clock_format(string format, float t) -> string+::
-Format the given float +t+ (such as from +clock()+)
++clock_format(string format, int|float t) -> string+::
+Format the given +int+ or +float+ +t+ (such as from +clock()+)
 as a human-readable string.  Formats are specified by the underlying
 https://www.tcl-lang.org/man/tcl8.6/TclCmd/clock.htm#M26[Tcl clock format specifiers].
-The commonly-used specifiers below are available in Swift/T.
-+
-NOTE: Due to a limitations with Tcl, only whole seconds are supported.
+The commonly-used specifiers below are available in Swift/T.  Times
+are rounded to the nearest whole second.
 +
 ----
 # From the Swift/T sys header:
