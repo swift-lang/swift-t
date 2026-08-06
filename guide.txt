@@ -2387,7 +2387,7 @@ foreach time in [1:5] {
 As shown, +void+ variables may be added to the output list of any
 +app+ function.  They are set automatically when the +app+ completes.
 
-+app+ function executions can be debugging by setting environment
++app+ function executions can be debugged by setting environment
 variable +TURBINE_APP_DEBUG=1+.
 
 ==== App retry
