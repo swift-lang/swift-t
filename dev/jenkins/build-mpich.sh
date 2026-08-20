@@ -103,6 +103,8 @@ PATH=$MPICH/bin:$PATH
 (
   set -x
   which javac ant mpicc python
+  java  -version
+  javac -version
 )
 
 # Create a sed file and apply to swift-t-settings:
