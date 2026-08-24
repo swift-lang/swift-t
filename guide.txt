@@ -2526,6 +2526,7 @@ For more information on configuring and using Coasters, please refer
 to the http://swift-lang.org/docs/[Swift/K documentation].
 
 === Custom App Executors (Advanced)
+
 It is possible to extend Swift/T with additional app executors.
 To implement an executor, you need to write C code implementing the
 +turbine_executor+ interface (defined in +turbine/executors/exec_interface.h+).
