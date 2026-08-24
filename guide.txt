@@ -1271,8 +1271,9 @@ DEPRECATED:
 +int2float(int)       -> float+::  Convert integer to float
 +float2int(float)     -> int+::    Convert float to integer +
 (Retains integer part, rounds toward 0.  Implemented with Tcl +int()+)
-+boolean2string(boolean) -> string+:: Convert boolean to string
-+string2boolean(string)  -> int+::    Convert string to boolean.  Case-insensitive.
++bool2string(boolean) -> string+:: Convert boolean to string
++bool2int(boolean)    -> int+::    Convert boolean to int
++string2bool(string)  -> int+::    Convert string to boolean.  Case-insensitive.
 Accepts for +true+: +"true"+, +"yes"+, +"y"+, any non-zero number as a string.
 Accepts for +false+: +"false"+, +"no"+, +"n"+, +"0"+.
 +repr(*)            -> string+:: Convert any type to internal
