@@ -1579,14 +1579,34 @@ If condition is false, report +message+ and exit immediately.
 [[library_files]]
 === Files
 
-+filename(file) -> string+::   Obtain the name of a file
-+input(string) -> file+:: Obtain a +file+.  At run time, the
-filesystem is checked for the given file name
-+input_file(string) -> file+:: Alias for +input()+
-+input_url(string) -> file+:: Obtain a +file+.  Some
-automatic operations and optimizations are disabled
-+urlname(file) -> string+::   Obtain the name of a file created with
-+input_url()+
++filename(file) -> string+::
+Obtain the name of a file.
+
++input(string) -> file+::
+Obtain a +file+.
+At run time, the filesystem is checked for the given file name.
+
++input_file(string) -> file+::
+Alias for +input()+.
+
++input_url(string) -> file+::
+Obtain a +file+.  Some automatic operations and optimizations are
+disabled
+
++urlname(file) -> string+::
+Obtain the name of a file created with +input_url()+.
+
++emit(int|float|string|boolean|void|file...) -> file+::
+Register that a +file+ was created so that dataflow on that file can
+proceed.  This is useful when using leaf functions (such as Python)
+that create files that are not visible to Swift/T.  Example:
++
+----
+string s = python("code that writes output.dat");
+file output<"output.dat"> = emit(s);
+# analyze() is blocked until the python code completes:
+analyze(output);
+----
 
 *Import:* +files+
 
