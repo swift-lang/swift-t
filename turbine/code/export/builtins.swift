@@ -38,6 +38,9 @@ type external void;
 @pure
 (void o) propagate(int|float|string|boolean|void|file... v)
 "turbine" "0.0.2" "make_void";
+@implements=emit
+(file o) emit(int|float|string|boolean|void|file... v)
+"turbine" "1.5.2" "emit";
 
 // Location values
 // TODO: naming? convert to enum?

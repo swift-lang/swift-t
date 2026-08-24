@@ -108,12 +108,16 @@ namespace eval turbine {
       return [ dict get $file_handle is_mapped ]
     }
 
-    proc store_file_from_local { file_handle local_f_varname } {
-       upvar 1 $local_f_varname local_f
-       # Increment refcount so not cleaned up locally
-       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
-       store_void [ get_file_status $file_handle ]
-    }
+    # Unused: no callers in Turbine or in STC-generated code.
+    # Also broken: get_file_status returns the file struct TD, so
+    # store_void would store an integer into a file-typed datum.
+    # A file is marked available with close_file (write_refcount_decr).
+    # proc store_file_from_local { file_handle local_f_varname } {
+    #    upvar 1 $local_f_varname local_f
+    #    # Increment refcount so not cleaned up locally
+    #    lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
+    #    store_void [ get_file_status $file_handle ]
+    # }
 
     # store file and update local file var refcounts
     # second argument must be var name so we can manipulate refcounts
@@ -126,7 +130,7 @@ namespace eval turbine {
 
       if { $set_filename } {
         set id [ get_file_td $file_handle ]
-        log "store: <$id>=$value"
+        log "store: <$id> = $value"
         adlb::store $id file $value
         c::cache_store $id file $value
       } else {
@@ -820,7 +824,58 @@ namespace eval turbine {
 	close $fp
 	close_file $output
     }
+
+    # Declare that an output file is complete:
+    # the bytes were written as a side effect of something else
+    # (e.g. a Python function that wrote to filename(o)),
+    # so all we have to do is mark the file closed once the
+    # given inputs are closed
+    # o: list containing the single output file handle
+    # i: list of input TDs; may be empty; may contain file handles
+    proc emit { o i } {
+        set output [ lindex $o 0 ]
+
+        set inputs [ list ]
+        foreach v $i {
+            if { [ string first "file" $v ] != -1 } {
+                # Wait on the file TD: the whole file must be closed
+                set v [ get_file_td $v ]
+            }
+            lappend inputs $v
+        }
+
+        set waitfor $inputs
+        if { [ is_file_mapped $output ] } {
+            # Cannot close the file until its filename has been set
+            lappend waitfor [ get_file_path $output ]
+        } else {
+            # Nobody mapped this: give it a temporary filename now
+            # NOTE: STC does not know that emit can initialize an output
+            #       mapping (cf. SpecialFunction.CAN_INIT_OUTPUT_MAPPING),
+            #       so at -O2 it may schedule the whole caller behind the
+            #       filename future and deadlock.  Map emit() outputs.
+            init_unmapped $output
+        }
+
+        rule $waitfor [ list emit_body $output $inputs ] \
+            name "emit-[ get_file_td $output ]"
+    }
+
+    proc emit_body { output inputs } {
+        # inputs: may be empty list
+        # Do this in reverse order for faster propagation
+        # (Pretend to read inputs AFTER setting output!)
+
+        # Marks the file as closed: its data is now available
+        # to any consumer waiting on the file TD
+        close_file $output
+        foreach v $inputs {
+            read_refcount_decr $v
+        }
+    }
 }
+
+
 
 # Local Variables:
 # mode: tcl

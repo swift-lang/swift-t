@@ -1475,8 +1475,9 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type = ADLB_DATA_TYPE_NULL ;
   adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
   adlb_create_props props;
-  extract_create_props(interp, true, 1, objc, objv,
-                       &id, &type, &type_extra, &props);
+  rc = extract_create_props(interp, true, 1, objc, objv,
+                            &id, &type, &type_extra, &props);
+  TCL_CHECK(rc);
 
   adlb_datum_id new_id = ADLB_DATA_ID_NULL;
 
@@ -2727,7 +2728,8 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
 
-  CHECK_ADLB_STORE(interp, objv, store_rc, handle.id, handle.sub.val);
+  rc = CHECK_ADLB_STORE(interp, objv, store_rc, handle.id, handle.sub.val);
+  TCL_CHECK(rc);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
@@ -3669,7 +3671,8 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   pointer, (size_t) length, decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  int tcl_rc = CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  TCL_CHECK(tcl_rc);
 
   return TCL_OK;
 }
@@ -3712,7 +3715,8 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
         xfer, (size_t)length*sizeof(double), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  int tcl_rc = CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  TCL_CHECK(tcl_rc);
 
   return TCL_OK;
 }
@@ -3755,7 +3759,8 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, (size_t)length*sizeof(int), decr, ADLB_NO_REFC);
-  CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  int tcl_rc = CHECK_ADLB_STORE(interp, objv, rc, id, ADLB_NO_SUB);
+  TCL_CHECK(tcl_rc);
 
   return TCL_OK;
 }
@@ -3932,7 +3937,9 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Store(handle.id, handle.sub.val, type,
                   member.data, member.length, decr, store_rc);
 
-  CHECK_ADLB_STORE(interp, objv, rc, handle.id, handle.sub.val);
+  int tcl_rc = CHECK_ADLB_STORE(interp, objv, rc, handle.id,
+                                handle.sub.val);
+  TCL_CHECK(tcl_rc);
 
   // Free if needed
   if (member.data != xfer_buf.data)
@@ -4563,8 +4570,10 @@ ADLB_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
             "only works on containers with values of type ref");
 
     Tcl_Obj* result = NULL;
-    adlb_datum2tclobj(interp, objv, handle.id, ADLB_DATA_TYPE_REF,
+    rc = adlb_datum2tclobj(interp, objv, handle.id, ADLB_DATA_TYPE_REF,
             ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
+    // Must check: on failure result is left NULL
+    TCL_CHECK_GOTO(rc, exit_err);
     Tcl_SetObjResult(interp, result);
   }
 

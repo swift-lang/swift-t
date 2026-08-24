@@ -368,6 +368,10 @@ do
        ;;
     j) JVM=${OPTARG}
       ;;
+    L) verbose "LOGFILE: ${OPTARG}"
+       # Picked up by etc/log4j2.xml
+       COMPILER_OPTS+="-Dstc.log.file=${OPTARG}"
+       ;;
     p) PREPROCESS=false
       ;;
     r)
@@ -477,6 +481,8 @@ FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
 if [[ ${STC_LOG_TRACE:-} == true ]]
 then
   FLAGS+="-Dstc.log.trace=true"
+  # Consumed by etc/log4j2.xml when stc -L is given
+  FLAGS+="-Dstc.log.level=TRACE"
 fi
 
 if [[ ${RPATH} != "" ]]

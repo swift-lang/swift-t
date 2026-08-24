@@ -42,13 +42,13 @@ public class ForeignFunctions {
    * can exploit the particular semantics of them.
    */
   public static enum SpecialFunction {
-    INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL,
+    INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL, EMIT,
     SIZE, CONTAINS, RANGE, RANGE_STEP, RANGE_FLOAT, RANGE_FLOAT_STEP, ARGV;
 
     /** List of functions that do not need initialized output mapping for
      * unmapped files (but will accept one if the file is mapped)*/
     public static final SpecialFunction CAN_INIT_OUTPUT_MAPPING[] = new
-        SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL};
+        SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL, EMIT};
   }
 
   private static enum Prop {

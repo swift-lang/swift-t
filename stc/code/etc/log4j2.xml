@@ -3,15 +3,24 @@
 <!--
     STC Log4J Configuration
     Edit this to change logging behavior.
-    The production default is a simple stream to stdout,
+    The production default is a simple stream to stderr,
     which is normally empty.
 -->
 
 <Configuration status="WARN">
   <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
+    <!-- Warnings go to stderr, as they did before the Log4J2 migration -->
+    <Console name="Console" target="SYSTEM_ERR">
       <PatternLayout pattern="%-5level %msg%n"/>
     </Console>
+    <!-- stc -L sets stc.log.file .  The arbiter defines this appender
+         only when that property is set, so the normal case is untouched.
+    -->
+    <SystemPropertyArbiter propertyName="stc.log.file">
+      <File name="LogFile" fileName="${sys:stc.log.file}" append="false">
+        <PatternLayout pattern="%-5level %msg%n"/>
+      </File>
+    </SystemPropertyArbiter>
   </Appenders>
   <Loggers>
     <!-- Set level to INFO or DEBUG or TRACE for more logging.
@@ -20,5 +29,15 @@
     <Root level="WARN">
       <AppenderRef ref="Console"/>
     </Root>
+    <!-- Under stc -L , log detail to the file but leave the console at
+         WARN.  STC_LOG_TRACE=true sets stc.log.level to TRACE.
+    -->
+    <SystemPropertyArbiter propertyName="stc.log.file">
+      <Logger name="exm.stc" additivity="false"
+              level="${sys:stc.log.level:-DEBUG}">
+        <AppenderRef ref="Console" level="WARN"/>
+        <AppenderRef ref="LogFile"/>
+      </Logger>
+    </SystemPropertyArbiter>
   </Loggers>
 </Configuration>

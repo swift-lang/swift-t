@@ -441,8 +441,9 @@ Turbine_RuleOpts_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   const char* action = "dummy action";
   // User gave us a list of optional args
-  rule_opts_from_list(interp, objv, &opts, objv + 1, objc - 1,
-                      t, name_buf_size, action);
+  int rc = rule_opts_from_list(interp, objv, &opts, objv + 1, objc - 1,
+                               t, name_buf_size, action);
+  TCL_CHECK(rc);
   return TCL_OK;
 }
 

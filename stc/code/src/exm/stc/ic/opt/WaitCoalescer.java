@@ -50,6 +50,7 @@ import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.StackLite;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
@@ -65,6 +66,7 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * This optimization pass aims to rearrange task dependencies to:
@@ -179,6 +181,8 @@ public class WaitCoalescer implements OptimizerPass {
   private final boolean doMerges;
   // If true, retain explicit waits even if removing them is valid
   private final boolean retainExplicit;
+  // Cached for the function currently being processed; see optimize()
+  private Set<Var> eagerInitFiles = null;
 
   public WaitCoalescer(boolean doMerges, boolean retainExplicit) {
     this.doMerges = doMerges;
@@ -199,8 +203,12 @@ public class WaitCoalescer implements OptimizerPass {
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.functions()) {
       logger.trace("Wait coalescer entering function " + f.id());
+      // Depends only on which filename ops the function contains, and this
+      // pass does not add or remove those, so it holds for the traversal
+      eagerInitFiles = findFilesNeedingEagerInit(f);
       rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.control());
     }
+    eagerInitFiles = null;
   }
 
   public boolean rearrangeWaits(Logger logger, Program prog, Function fn,
@@ -712,7 +720,11 @@ public class WaitCoalescer implements OptimizerPass {
    */
   private boolean pushDownWaits(Logger logger, Program prog, Function fn,
                                 Block block, ExecContext currContext) {
-    SetMultimap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
+    // Recompute if rearrangeWaits was entered directly rather than via optimize
+    Set<Var> eagerInit = eagerInitFiles != null ?
+                         eagerInitFiles : findFilesNeedingEagerInit(fn);
+    SetMultimap<Var, InstOrCont> waitMap =
+        buildWaiterMap(prog, block, eagerInit);
 
     if (logger.isTraceEnabled()) {
       logger.trace("waitMap keys: " + waitMap.keySet());
@@ -1078,6 +1090,137 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   /**
+   * Find unmapped files whose mapping is initialized as a side-effect of
+   * whatever call writes the file, rather than by an explicit
+   * SET_FILENAME_VAL in the generated code.
+   *
+   * For these, issuing the write is what assigns the filename: e.g.
+   * turbine::emit and turbine::copy_file choose a temporary name when the
+   * rule is created, before waiting on their inputs.  If the filename is
+   * also read (GET_FILENAME_ALIAS), pushing the write down below anything
+   * that depends on that filename deadlocks, because the wait can only be
+   * satisfied by the instruction placed underneath it.  Such writes must
+   * stay where they are and be issued eagerly, as they are at -O0.
+   *
+   * Files with an explicit SET_FILENAME_VAL are excluded: app functions and
+   * local builtin wrappers initialize the mapping up front, so their calls
+   * are free to move.
+   * @param fn
+   * @return files whose writers must not be relocated
+   */
+  private static Set<Var> findFilesNeedingEagerInit(Function fn) {
+    Set<Var> filenameRead = new HashSet<Var>();
+    Set<Var> mappingInit = new HashSet<Var>();
+    collectFilenameOps(fn.mainBlock(), filenameRead, mappingInit);
+    filenameRead.removeAll(mappingInit);
+    return filenameRead;
+  }
+
+  private static void collectFilenameOps(Block block, Set<Var> filenameRead,
+                                         Set<Var> mappingInit) {
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        Instruction inst = stmt.instruction();
+        if (inst.op == Opcode.GET_FILENAME_ALIAS) {
+          for (Arg in: inst.getInputs()) {
+            if (in.isVar() && mappingSetByWriter(in.getVar())) {
+              filenameRead.add(in.getVar());
+            }
+          }
+        } else if (inst.op == Opcode.SET_FILENAME_VAL) {
+          for (Var out: inst.getOutputs()) {
+            if (Types.isFile(out)) {
+              mappingInit.add(out);
+            }
+          }
+        }
+      } else {
+        assert(stmt.type() == StatementType.CONDITIONAL);
+        for (Block b: stmt.conditional().getBlocks()) {
+          collectFilenameOps(b, filenameRead, mappingInit);
+        }
+      }
+    }
+    for (Continuation c: block.getContinuations()) {
+      for (Block b: c.getBlocks()) {
+        collectFilenameOps(b, filenameRead, mappingInit);
+      }
+    }
+  }
+
+  /**
+   * Definitely-mapped files are safe: the filename comes from the mapping,
+   * not from whatever writes the file.
+   * @param var
+   * @return
+   */
+  private static boolean mappingSetByWriter(Var var) {
+    return Types.isFile(var) && var.isMapped() != Ternary.TRUE;
+  }
+
+  /**
+   * @param inst
+   * @param files
+   * @return true if inst writes any of files
+   */
+  private static boolean writesAny(Instruction inst, Set<Var> files) {
+    for (Var out: inst.getOutputs()) {
+      if (files.contains(out)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param block
+   * @param files
+   * @return true if anything in block or its descendants writes any of files
+   */
+  private static boolean writesAny(Block block, Set<Var> files) {
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.INSTRUCTION) {
+        if (writesAny(stmt.instruction(), files)) {
+          return true;
+        }
+      } else {
+        assert(stmt.type() == StatementType.CONDITIONAL);
+        for (Block b: stmt.conditional().getBlocks()) {
+          if (writesAny(b, files)) {
+            return true;
+          }
+        }
+      }
+    }
+    for (Continuation c: block.getContinuations()) {
+      for (Block b: c.getBlocks()) {
+        if (writesAny(b, files)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param cont
+   * @param files
+   * @return true if anything inside cont writes any of files
+   */
+  private static boolean writesAny(Continuation cont, Set<Var> files) {
+    if (files.isEmpty()) {
+      // Common case: skip the subtree walk entirely
+      return false;
+    }
+    for (Block b: cont.getBlocks()) {
+      if (writesAny(b, files)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Update waiter map by removing continuations and instructions
    * based on object identity
    * @param waitMap
@@ -1109,17 +1252,21 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static SetMultimap<Var, InstOrCont> buildWaiterMap(Program prog,
-                                                          Block block) {
+                                          Block block, Set<Var> eagerInit) {
     // Use linked list to support more efficient removal in middle of list
     SetMultimap<Var, InstOrCont> waitMap = HashMultimap.create();
-    findRelocatableBlockingInstructions(prog, block, waitMap);
-    findBlockingContinuations(block, waitMap);
+    findRelocatableBlockingInstructions(prog, block, eagerInit, waitMap);
+    findBlockingContinuations(block, eagerInit, waitMap);
     return waitMap;
   }
 
   private static void findBlockingContinuations(Block block,
-      SetMultimap<Var, InstOrCont> waitMap) {
+      Set<Var> eagerInit, SetMultimap<Var, InstOrCont> waitMap) {
     for (Continuation c: block.getContinuations()) {
+      if (writesAny(c, eagerInit)) {
+        // Initializes an output file mapping: must be issued eagerly
+        continue;
+      }
       List<BlockingVar> blockingVars = c.blockingVars(false);
       if (blockingVars != null) {
         for (BlockingVar v: blockingVars) {
@@ -1130,7 +1277,8 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static void findRelocatableBlockingInstructions(Program prog,
-          Block block, SetMultimap<Var, InstOrCont> waitMap) {
+          Block block, Set<Var> eagerInit,
+          SetMultimap<Var, InstOrCont> waitMap) {
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() != StatementType.INSTRUCTION) {
         continue; // Only interested in instructions
@@ -1144,6 +1292,11 @@ public class WaitCoalescer implements OptimizerPass {
           canMove = false;
           break;
         }
+      }
+
+      if (canMove && writesAny(inst, eagerInit)) {
+        // Initializes an output file mapping: must be issued eagerly
+        canMove = false;
       }
       if (canMove) {
         // Put in map based on which inputs will block execution of task
