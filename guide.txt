@@ -589,6 +589,9 @@ Swift has the conventional types:
 +float+:: A 64-bit (double-precision) floating point number.
 +boolean+:: A boolean (true/false).
 +file+:: A file (see <<section_files,Section Files>>).
++url+:: A file named by a URL rather than a filesystem path
+        (see <<section_urls,Section URLs>>).  A distinct type from +file+,
+        supporting far fewer operations.
 +blob+:: External byte data (see <<section_blobs,Section Blobs>>).
 +void+:: An empty data type that can be used for controlling workflow progress.
 
@@ -648,6 +651,9 @@ paths or relative paths are specified, with relative paths interpreted
 relative to the path in which +turbine+ was run.
 File variables can also be written by assiging a pre-existing
 file using the <<library_files,+input()+>> function.
+
+Files named by a URL rather than by a filesystem path use the separate
+<<section_urls,+url+>> type, which supports far fewer operations.
 
 The rational for mappers is that the string variable for the filename
 is usually set early in the workflow, but the file does not yet exist,
@@ -719,6 +725,101 @@ file f<"f.txt">=g();
 results in a parse error: the +>=+ sequence is tokenized as
 _greater-than-or-equal-to_.
 ======
+
+[[section_urls]]
+=== URLs
+
+A +url+ is a separate type from +file+.  It names a resource that Swift/T
+does not manage: the runtime knows the string, but never opens it, copies
+it, or checks that it exists.  A +url+ is created with
+<<library_files,+input_url()+>> and its string is recovered with
++urlname()+:
+
+----
+url g = input_url("http://example.com/data.txt");
+trace(urlname(g));
+----
+
+Unlike +input()+, +input_url()+ performs no filesystem check, so the
+program above runs whether or not the resource is reachable.
+
+The purpose of the type is to pass a remote name through a workflow and
+hand it to an <<app_functions,+app+ function>>, which receives it as its
+string, exactly as a +file+ argument is passed as its path:
+
+----
+app fetch(url u, file o)
+{
+  "curl" "-o" o u;
+}
+----
+
+==== Restrictions
+
+Because Swift/T cannot move the bytes behind a url, three things that work
+for +file+ are rejected for +url+, all at compile time.
+
+A +url+ cannot be read.  +read()+ takes a +file+, and there is no
+conversion in either direction:
+----
+string s = read(g);      // Expected argument f to have one of the
+                         // following types: file, but had type: url
+file f = g;              // Cannot assign to f: LVal has type file
+                         // but RVal has type url
+----
+
+A +url+ cannot be an unmapped output, because no temporary can stand in
+for it:
+----
+app (url o) fetch(url i) { "echo" i o; }
+url o = fetch(input_url("http://example.com/x"));
+   // Type url does not support creating temporary files.
+   // Unmapped var o cannot be used as function output variable.
+----
+
+A +url+ cannot be copied to a mapped +url+, since that would require a
+physical copy between two remote paths:
+----
+url m<"ftp://host/y">;
+m = g;   // Do not support physical copy to (possibly) mapped
+         // variable m with type url
+----
+Copying to an *unmapped* +url+ is allowed — only the name is copied:
+----
+main
+{
+  url tmp = g;   // Fine: tmp is provably unmapped
+  trace(urlname(tmp));
+}
+----
+Note that this depends on Swift/T being able to prove the target is
+unmapped.  The same assignment at program top level is rejected, because
+a top-level variable may carry a mapping.
+
+==== Reading the contents of a url
+
+Since +read()+ is unavailable, retrieve the resource with an +app+ that
+writes it to a +file+, then read that:
+
+----
+import files;
+import io;
+
+app (file o) fetch(url u)
+{
+  "curl" "-s" "-o" o u;
+}
+
+main
+{
+  url g = input_url("http://example.com/data.txt");
+  file local = fetch(g);
+  trace(read(local));
+}
+----
+
+Errors surface as the failure of the fetching app rather than as a Swift/T
+error, so the diagnostic is whatever the tool reports.
 
 [[section_blobs]]
 === Blobs
@@ -1589,12 +1690,13 @@ At run time, the filesystem is checked for the given file name.
 +input_file(string) -> file+::
 Alias for +input()+.
 
-+input_url(string) -> file+::
-Obtain a +file+.  Some automatic operations and optimizations are
-disabled
++input_url(string) -> url+::
+Obtain a <<section_urls,+url+>>.  Unlike +input()+, the filesystem is
+*not* checked.  A +url+ is a distinct type from +file+: it cannot be
+read, converted to a +file+, or used as an unmapped output.
 
-+urlname(file) -> string+::
-Obtain the name of a file created with +input_url()+.
++urlname(url) -> string+::
+Obtain the name of a +url+ created with +input_url()+.
 
 +emit(int|float|string|boolean|void|file...) -> file+::
 Register that a +file+ was created so that dataflow on that file can
