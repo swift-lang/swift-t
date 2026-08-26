@@ -48,7 +48,7 @@ print "wrote: ${TURBINE_PBS}"
 # Launch it!
 qsub ${TURBINE_PBS} | read JOB_ID
 
-[[ ${JOB_ID} != "" ]] || abort "qsub failed!"
+if [[ ${JOB_ID} == "" ]] abort "qsub failed!"
 
 declare JOB_ID
 
@@ -56,5 +56,3 @@ declare JOB_ID
 turbine_log >> ${LOG_FILE}
 # Fill in jobid.txt
 print ${JOB_ID} > ${JOB_ID_FILE}
-
-return 0
