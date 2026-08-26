@@ -89,7 +89,7 @@ source ${TURBINE_HOME}/scripts/helpers.sh
 # Only export a variable if it is not the default
 # The := syntax does a default assignment
 if (( ${ADLB_SERVERS:=1} != 1 )) export ADLB_SERVERS
-if (( ${ADLB_EXHAUST_TIME:=1} != 1 )) exportADLB_EXHAUST_TIME
+if (( ${ADLB_EXHAUST_TIME:=1} != 1 )) export ADLB_EXHAUST_TIME
 if (( ${ADLB_PRINT_TIME:=1} != 0 )) export ADLB_PRINT_TIME
 if [[ ${TURBINE_STDOUT:=} != "" ]] export TURBINE_STDOUT
 if (( ${TURBINE_LOG:=0} != 0 )) export TURBINE_LOG
@@ -248,7 +248,7 @@ turbine_output_format()
     do
       local D=${S/\%Q/${i}}
       local TRY=${TURBINE_OUTPUT_ROOT}/${D}
-      [[ ! -d ${TRY} ]] && break
+      if [[ ! -d ${TRY} ]] break
       (( i++ ))
     done
     print ${TRY}
@@ -268,7 +268,7 @@ declare TURBINE_OUTPUT
 mkdir -p ${TURBINE_OUTPUT}
 if [[ ${OUTPUT_SOFTLINK} != /dev/null ]]
 then
-  [[ -L ${OUTPUT_SOFTLINK} ]] && rm ${OUTPUT_SOFTLINK}
+  if [[ -L ${OUTPUT_SOFTLINK} ]] rm ${OUTPUT_SOFTLINK}
   ln -s ${TURBINE_OUTPUT} ${OUTPUT_SOFTLINK}
 fi
 if [[ ${OUTPUT_TOKEN_FILE} != /dev/null ]]
