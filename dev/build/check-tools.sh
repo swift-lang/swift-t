@@ -34,5 +34,45 @@ then
   exit 1
 fi
 
-# All tools must have been found- exit with success.
+# All tools must have been found
+echo
+
+java_version_error()
+{
+  local TOOL=$1
+  echo "ERROR: version 21 or later is required for $TOOL"
+  echo "       found version $JAVA_VERSION"
+  echo "       $TOOL:" $( which $TOOL )
+  exit 1
+}
+
+if [[ $SKIP != *S* ]]
+then
+  # Check Java version (21+)
+  source $THIS/java_version.sh
+  JAVA_VERSION=$(  get_java_major_version java  )
+  JAVAC_VERSION=$( get_java_major_version javac )
+  if [[ "$JAVA_VERSION" == "" ]]
+  then
+    echo "WARNING: Could not determine java version"
+  else
+    echo "java version: $JAVA_VERSION"
+    if (( JAVA_VERSION < 21 ))
+    then
+      java_version_error java
+    fi
+  fi
+  if [[ "$JAVAC_VERSION" == "" ]]
+  then
+    echo "WARNING: Could not determine javac version"
+  else
+    echo "javac version: $JAVAC_VERSION"
+    if (( JAVAC_VERSION < 21 ))
+    then
+      java_version_error javac
+    fi
+  fi
+fi
+
+# All checks passed - exit with success
 exit 0
