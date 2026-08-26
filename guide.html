@@ -1072,7 +1072,7 @@ receives the argument.  Use:</p></div>
 <p>
 Set a command-line argument at
 compile-time. This may be found at runtime using the Swift
-<a href="#argv">argument processing</a> library. This option enables these
+<a href="#cmd_line">argument processing</a> library. This option enables these
 arguments to be treated as compile-time constants for optimization.
 <a id="cpp_macro"></a> &nbsp;
 </p>
@@ -2481,7 +2481,9 @@ Convert float to string
 </dt>
 <dd>
 <p>
-Convert string to float (alias: <code>parseFloat()</code>)
+Convert string to float (alias: <code>parseFloat()</code>)<br />
+A string that is not a number, including the empty string, is a run-time
+error: <code>string2float(): could not convert string '' to float</code>
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2502,7 +2504,7 @@ Convert float to integer<br />
 </p>
 </dd>
 <dt class="hdlist1">
-<code>boolean2string(boolean) &#8594; string</code>
+<code>bool2string(boolean) &#8594; string</code>
 </dt>
 <dd>
 <p>
@@ -2510,7 +2512,15 @@ Convert boolean to string
 </p>
 </dd>
 <dt class="hdlist1">
-<code>string2boolean(string)  &#8594; int</code>
+<code>bool2int(boolean)    &#8594; int</code>
+</dt>
+<dd>
+<p>
+Convert boolean to int
+</p>
+</dd>
+<dt class="hdlist1">
+<code>string2bool(string)  &#8594; int</code>
 </dt>
 <dd>
 <p>
@@ -2737,7 +2747,218 @@ Concatenate arguments with <code>/</code> as separator.  Cf. <a href="#String op
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="dircat">13.5. Math</h3>
+<h3 id="cmd_line">13.5. Command line arguments</h3>
+<div class="paragraph"><p>A powerful pair of command line processing features are available: one
+that allows you to use a type signature-like approach to starting a
+Swift/T workflow, and one that allows you to handle arguments more
+manually.</p></div>
+<div class="sect3">
+<h4 id="cmd_signature">13.5.1. Type signature approach</h4>
+<div class="sect4">
+<h5 id="arguments">Positional argument signature</h5>
+<div class="paragraph"><p>The signature approach provides a highly readable, compact, typed
+approach to handling the workflow command line.  Many errors are
+automatically checked and reported.</p></div>
+<div class="paragraph"><p>In this approach, you use <code>arguments()</code> to handle fixed positional
+arguments, and <code>flags()</code> to handle key-value arguments that may appear
+in any order.</p></div>
+<div class="paragraph"><p><code>arguments()</code> is a language construct, not a library function: it needs
+no <code>import</code> and may appear only once, at the top level of the main
+program.  It binds the positional (unflagged) command line arguments,
+in order, to typed top-level variables.  For example if the following
+is <code>a1.swift</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>arguments(string username, int v);
+trace("hello " + username, " the value is ", v+1);</code></pre>
+</div></div>
+<div class="paragraph"><p>Run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t a1.swift justin 12</code></pre>
+</div></div>
+<div class="paragraph"><p>which reports:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>trace: hello justin, the value is ,13</code></pre>
+</div></div>
+<div class="paragraph"><p>The supported types are <code>string</code>, <code>int</code>, <code>float</code>, <code>boolean</code>, <code>file</code>
+and <code>url</code>, with <code>bool</code> accepted as a synonym for <code>boolean</code>.
+An argument may be given a default value, which must be a literal of
+the declared type:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>arguments(string datafile, int count = 10, float epsilon = 1e-6);</code></pre>
+</div></div>
+<div class="paragraph"><p>Here <code>count</code> and <code>epsilon</code> may be omitted from the command line.  A
+default does not make an argument optional in the positional sense:
+arguments are still matched by position, so omitting <code>count</code> while
+supplying <code>epsilon</code> is not possible.</p></div>
+<div class="paragraph"><p>Equivalently, the parameters may be declared on <code>main()</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>main(string username, int v)
+{
+  trace("hello " + username, " the value is ", v+1);
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>This means exactly the same thing: the parameters are stripped from
+<code>main()</code>, which becomes an ordinary no-argument <code>main()</code>, and the
+variables they name are declared at top level.  They are therefore
+visible throughout the program, not only inside <code>main()</code>.  The same
+types and the same literal defaults are accepted.  A program may use
+<code>arguments()</code> or <code>main()</code> parameters, but not both.</p></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="flags">13.5.2. Flagged argument signature</h4>
+<div class="paragraph"><p><code>flags()</code> is the companion construct to <a href="#arguments"><code>arguments()</code></a>.
+It too needs no <code>import</code> and may appear only once, at the top level of
+the main program, and it binds the <em>flagged</em> command line arguments to
+typed top-level variables, as in the following example <code>a2.swift</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>arguments(string username, int v);
+flags(boolean emphasize, int a = 0);
+
+trace("hello " + username, " the value is ", v+a);
+if (emphasize) {
+  trace("hurrah");
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>This can be run with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t a2.swift justin 12</code></pre>
+</div></div>
+<div class="paragraph"><p>which will default to <code>emphasize=false</code> and <code>a=0</code>, or:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>swift-t a2.swift justin 12 --emphasize -a=42</code></pre>
+</div></div>
+<div class="paragraph"><p>which will run with <code>emphasize=true</code> and <code>a=42</code> .
+Either flag may be set or omitted independently.
+The supported types are the same as for <code>arguments()</code>.</p></div>
+<div class="paragraph"><p>Flags and positional arguments may be interleaved in any order: a token
+beginning with <code>-</code> is a flag and everything else is positional, so the
+last two lines above give <code>v</code> the value <code>12</code> in both cases.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The flags must follow the workflow program (<code>*.swift</code>) name,
+so that <code>swift-t</code> does not try to interpret them as its own options.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>A flag is written <code>-name=value</code> or <code>--name=value</code> .</p></div>
+<div class="paragraph"><p>A <code>boolean</code> flag is written <code>-name</code> or <code>--name</code> and takes no value.
+A <code>boolean</code> flag is <code>true</code> when the flag is given and <code>false</code> when it
+is not, so it never takes a value and may not be given a default.</p></div>
+<div class="paragraph"><p>A flag of any type other than <code>boolean</code> is <em>required</em> unless
+it is given a literal default:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>flags(string mode = "fast", int count = 10, float epsilon = 1e-6);</code></pre>
+</div></div>
+<div class="paragraph"><p><code>flags()</code> may be combined with <code>arguments()</code> or with <code>main()</code>
+parameters.</p></div>
+<div class="paragraph"><p><code>arguments</code> and <code>flags</code> are not reserved words.  They are recognized
+only as a statement introducing one of these declarations, and remain
+ordinary identifiers everywhere else, so existing programs that use
+either as a variable, parameter or function name still compile.</p></div>
+</div>
+<div class="sect3">
+<h4 id="cmd_manual">13.5.3. Manual approach to command line</h4>
+<div class="paragraph"><p>Consider this command line: it is used in the following documentation:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t -n 3 program.swift -v -a=file1.txt file2.txt
+               --exec="prog thing1 thing2" --help file4.txt</code></pre>
+</div></div>
+<div class="paragraph"><p>The arguments to <code>program.tic</code> are just the tokens after <code>program.tic</code></p></div>
+<div class="paragraph"><p>This command line can be handled with the following library functions:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>args() &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain all arguments as single string
+</p>
+<div class="paragraph"><p>E.g., <code>"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"</code></p></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The remaining functions are convenience functions oriented around
+Swift conventions.  Under these conventions, the example command above
+has <em>flagged</em> arguments <code>v</code>, <code>a=file.txt</code>, <code>exec="prog thing1
+thing2"</code>, and <code>help</code>. The command has <em>unflagged</em> arguments
+<code>file2.txt</code> and <code>file4.txt</code></p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>argc()</code>
+</dt>
+<dd>
+<p>
+Get count of unflagged arguments
+</p>
+</dd>
+<dt class="hdlist1">
+<code>argv(string, [default])</code>
+</dt>
+<dd>
+<p>
+<em>(argument-value)</em>
+Given a string, returns the flagged argument with that key:
+</p>
+<div class="paragraph"><p><code>argv("a") &#8594; "file1.txt"</code></p></div>
+<div class="paragraph"><p>In addition to regular run-time arguments, the STC <em>compile-time
+arguments</em> feature allows <code>argv()</code> arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the <code>-A
+<em>name</em>=<em>value</em></code> <a href="#stc_arguments">argument</a> to <code>stc</code>.  Note that if the
+argument is re-specified at run-time, an error will occur.</p></div>
+<div class="paragraph"><p>If an argument is not provided, the <code>default</code> value is used.  So,
+since <code>b</code> is not in the command line above:</p></div>
+<div class="paragraph"><p><code>argv("b", "f0.txt") &#8594; "f0.txt"</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>argp(int)</code>
+</dt>
+<dd>
+<p>
+<em>(argument-positional)</em>
+Given an integer, returns the unflagged argument at that index:
+</p>
+<div class="paragraph"><p><code>argp(2) &#8594; "file4.txt"</code></p></div>
+<div class="paragraph"><p>Given 0, returns the program name,</p></div>
+<div class="paragraph"><p><code>argp(0) &#8594; "/path/to/program.tic"</code></p></div>
+</dd>
+<dt class="hdlist1">
+<code>argv_accept(string&#8230;)</code>
+</dt>
+<dd>
+<p>
+If program is given flagged command line arguments not contained in given
+list, abort.
+E.g., <code>argv_accept("x")</code> would cause program failure at run time
+if any flag other than <code>-x</code> were given.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>argv_contains(string) &#8594; boolean</code>
+</dt>
+<dd>
+<p>
+Test if the command line contains the given flagged argument:
+</p>
+<div class="paragraph"><p><code>argv_contains("v") &#8594; true</code></p></div>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_math">13.6. Math</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>max|min_integer(int,int) &#8594; int</code>
@@ -2913,7 +3134,7 @@ Standard deviation
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="stdlib_system">13.6. System</h3>
+<h3 id="stdlib_system">13.7. System</h3>
 <div class="paragraph"><p><strong>Import:</strong> <code>sys</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -3027,92 +3248,7 @@ functionality.</p></div>
 </dd>
 </dl></div>
 <div class="sect3">
-<h4 id="argv">13.6.1. Command line</h4>
-<div class="paragraph"><p>Consider this command line:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>turbine -l -n 3 program.tic -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt</code></pre>
-</div></div>
-<div class="paragraph"><p>The arguments to <code>program.tic</code> are just the tokens after <code>program.tic</code></p></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>args() &#8594; string</code>
-</dt>
-<dd>
-<p>
-Obtain all arguments as single string
-</p>
-<div class="paragraph"><p>E.g., <code>"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"</code></p></div>
-</dd>
-</dl></div>
-<div class="paragraph"><p>The remaining functions are convenience functions oriented around
-Swift conventions.  Under these conventions, the example command above
-has <em>flagged</em> arguments <code>v</code>, <code>a=file.txt</code>, <code>exec="prog thing1
-thing2"</code>, and <code>help</code>. The command has <em>unflagged</em> arguments
-<code>file2.txt</code> and <code>file4.txt</code></p></div>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>argc()</code>
-</dt>
-<dd>
-<p>
-Get count of unflagged arguments
-</p>
-</dd>
-<dt class="hdlist1">
-<code>argv(string, [default])</code>
-</dt>
-<dd>
-<p>
-<em>(argument-value)</em>
-Given a string, returns the flagged argument with that key:
-</p>
-<div class="paragraph"><p><code>argv("a") &#8594; "file1.txt"</code></p></div>
-<div class="paragraph"><p>In addition to regular run-time arguments, the STC <em>compile-time
-arguments</em> feature allows <code>argv()</code> arguments to be provided at compile
-time.  This allows a specialized, optimized version of code to be
-compiled for a particular set of arguments.  See the <code>-A
-<em>name</em>=<em>value</em></code> <a href="#stc_arguments">argument</a> to <code>stc</code>.  Note that if the
-argument is re-specified at run-time, an error will occur.</p></div>
-<div class="paragraph"><p>If an argument is not provided, the <code>default</code> value is used.  So,
-since <code>b</code> is not in the command line above:</p></div>
-<div class="paragraph"><p><code>argv("b", "f0.txt") &#8594; "f0.txt"</code></p></div>
-</dd>
-<dt class="hdlist1">
-<code>argp(int)</code>
-</dt>
-<dd>
-<p>
-<em>(argument-positional)</em>
-Given an integer, returns the unflagged argument at that index:
-</p>
-<div class="paragraph"><p><code>argp(2) &#8594; "file4.txt"</code></p></div>
-<div class="paragraph"><p>Given 0, returns the program name,</p></div>
-<div class="paragraph"><p><code>argp(0) &#8594; "/path/to/program.tic"</code></p></div>
-</dd>
-<dt class="hdlist1">
-<code>argv_accept(string&#8230;)</code>
-</dt>
-<dd>
-<p>
-If program is given flagged command line arguments not contained in given
-list, abort.
-E.g., <code>argv_accept("x")</code> would cause program failure at run time
-</p>
-</dd>
-<dt class="hdlist1">
-<code>argv_contains(string) &#8594; boolean</code>
-</dt>
-<dd>
-<p>
-Test if the command line contains the given flagged argument:
-</p>
-<div class="paragraph"><p><code>argv_contains("v") &#8594; true</code></p></div>
-</dd>
-</dl></div>
-</div>
-<div class="sect3">
-<h4 id="_debugging">13.6.2. Debugging</h4>
+<h4 id="_debugging">13.7.1. Debugging</h4>
 <div class="paragraph"><p><strong>Import:</strong> <code>assert</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -3126,7 +3262,7 @@ If condition is false, report <code>message</code> and exit immediately.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="Turbine_information">13.6.3. Turbine information</h4>
+<h4 id="Turbine_information">13.7.2. Turbine information</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>adlb_servers()    &#8594; int</code>
@@ -3148,14 +3284,14 @@ Number of Turbine workers
 </div>
 </div>
 <div class="sect2">
-<h3 id="library_files">13.7. Files</h3>
+<h3 id="library_files">13.8. Files</h3>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>filename(file) &#8594; string</code>
 </dt>
 <dd>
 <p>
-Obtain the name of a file
+Obtain the name of a file.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3163,8 +3299,8 @@ Obtain the name of a file
 </dt>
 <dd>
 <p>
-Obtain a <code>file</code>.  At run time, the
-filesystem is checked for the given file name
+Obtain a <code>file</code>.
+At run time, the filesystem is checked for the given file name.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3172,7 +3308,7 @@ filesystem is checked for the given file name
 </dt>
 <dd>
 <p>
-Alias for <code>input()</code>
+Alias for <code>input()</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3180,10 +3316,9 @@ Alias for <code>input()</code>
 </dt>
 <dd>
 <p>
-Obtain a <a href="#section_urls"><code>url</code></a>.  Unlike
-<code>input()</code>, the filesystem is <strong>not</strong> checked.  A <code>url</code> is a distinct type
-from <code>file</code>: it cannot be read, converted to a <code>file</code>, or used as an
-unmapped output
+Obtain a <a href="#section_urls"><code>url</code></a>.  Unlike <code>input()</code>, the filesystem is
+<strong>not</strong> checked.  A <code>url</code> is a distinct type from <code>file</code>: it cannot be
+read, converted to a <code>file</code>, or used as an unmapped output.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -3191,14 +3326,30 @@ unmapped output
 </dt>
 <dd>
 <p>
-Obtain the name of a <code>url</code> created with
-<code>input_url()</code>
+Obtain the name of a <code>url</code> created with <code>input_url()</code>.
 </p>
+</dd>
+<dt class="hdlist1">
+<code>emit(int|float|string|boolean|void|file&#8230;) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Register that a <code>file</code> was created so that dataflow on that file can
+proceed.  This is useful when using leaf functions (such as Python)
+that create files that are not visible to Swift/T.  Example:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>string s = python("code that writes output.dat");
+file output&lt;"output.dat"&gt; = emit(s);
+# analyze() is blocked until the python code completes:
+analyze(output);</code></pre>
+</div></div>
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Import:</strong> <code>files</code></p></div>
 <div class="sect3">
-<h4 id="_i_o_with_files">13.7.1. I/O with files</h4>
+<h4 id="_i_o_with_files">13.8.1. I/O with files</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>read(file) &#8594; string</code>
@@ -3316,7 +3467,7 @@ will result in array:</p></div>
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_finding_files">13.7.2. Finding files</h4>
+<h4 id="_finding_files">13.8.2. Finding files</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>glob(string) &#8594; file[]</code>
@@ -3366,7 +3517,7 @@ Attempt to find a file with the given name in the filesystem: return
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_file_metadata">13.7.3. File metadata</h4>
+<h4 id="_file_metadata">13.8.3. File metadata</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>file_mtime(string) &#8594; int</code>
@@ -3416,7 +3567,7 @@ As <code>file_type()</code> but accepts a <code>string</code>.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_file_name_manipulation">13.7.4. File name manipulation</h4>
+<h4 id="_file_name_manipulation">13.8.4. File name manipulation</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>dirname_string(string) &#8594; string</code>
@@ -3501,7 +3652,7 @@ Returns the absolute path for the given file as a file.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="mktemp">13.7.5. Temporary files</h4>
+<h4 id="mktemp">13.8.5. Temporary files</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>mktemp() &#8594; file</code>
@@ -3523,7 +3674,7 @@ Obtain new temporary file, return its name as a string.
 </div>
 </div>
 <div class="sect2">
-<h3 id="library_blobs">13.8. Blobs</h3>
+<h3 id="library_blobs">13.9. Blobs</h3>
 <div class="paragraph"><p><strong>Import:</strong> <code>blob</code></p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -3605,7 +3756,7 @@ Writes whole file with given blob.
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="library_location">13.9. Location</h3>
+<h3 id="library_location">13.10. Location</h3>
 <div class="paragraph"><p>See the section about <a href="#location">location</a>.</p></div>
 <div class="paragraph"><p><strong>Import:</strong> <code>location</code></p></div>
 <div class="dlist"><dl>
@@ -3673,7 +3824,7 @@ the run.  Can be used to send a task to each node.
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="library_unix">13.10. Unix tools</h3>
+<h3 id="library_unix">13.11. Unix tools</h3>
 <div class="paragraph"><p>Swift/T provides a small number of standardized <code>app</code> functions for
 common shell tools.  Here, "via <code>tool</code>" means that the program <code>tool</code>
 is simply used to perform the task.</p></div>
@@ -3757,13 +3908,13 @@ Make the given directory (via <code>mkdir</code>).
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="library_json">13.11. JSON</h3>
+<h3 id="library_json">13.12. JSON</h3>
 <div class="paragraph"><p>Swift/T workflow applications commonly pass data to and from
 applications via JSON, so a library of string processing functions for
 JSON data is provided.</p></div>
 <div class="paragraph"><p>To use the JSON parser functions, Swift/T must be compiled with Python support.</p></div>
 <div class="sect3">
-<h4 id="_json_path_concept">13.11.1. JSON path concept</h4>
+<h4 id="_json_path_concept">13.12.1. JSON path concept</h4>
 <div class="paragraph"><p>When parsing JSON, these functions have the concept of a JSON path,
 which is a simple comma-separated specification of the value.  For
 example, in JSON fragment:</p></div>
@@ -3775,7 +3926,7 @@ example, in JSON fragment:</p></div>
 Thus, object names and array indices may be used.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_json_parsing">13.11.2. JSON parsing</h4>
+<h4 id="_json_parsing">13.12.2. JSON parsing</h4>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <code>json_type(string json, string path) &#8594; string</code>
@@ -3840,7 +3991,7 @@ e.g., <code>json1|json2</code>.
 </dl></div>
 </div>
 <div class="sect3">
-<h4 id="_json_encoding">13.11.3. JSON encoding</h4>
+<h4 id="_json_encoding">13.12.3. JSON encoding</h4>
 <div class="sect4">
 <h5 id="_simple_wrappers">Simple wrappers</h5>
 <div class="dlist"><dl>
@@ -5543,7 +5694,8 @@ The number of servers available to control the Turbine run.
 <div class="content">
 <pre><code>turbine &lt;turbine arguments&gt; &lt;program.tic&gt; &lt;program arguments&gt;</code></pre>
 </div></div>
-<div class="paragraph"><p>The program arguments are available to Swift (<a href="#argv">[argv]</a>).</p></div>
+<div class="paragraph"><p>The program arguments are available to Swift
+(<a href="#cmd_line">see argument processing</a>).</p></div>
 <div class="paragraph"><p>Turbine accepts the following arguments:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -7194,7 +7346,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-24 15:56:32 CDT
+ 2026-08-26 16:43:28 CDT
 </div>
 </div>
 
