@@ -141,7 +141,7 @@ namespace eval turbine {
             return
 
         try {
-            puts "TURBINE_WORKER_HOOK_STARTUP..."
+            # puts "TURBINE_WORKER_HOOK_STARTUP..."
             eval $env(TURBINE_WORKER_HOOK_STARTUP)
         } on error e {
             puts ""
@@ -181,7 +181,7 @@ namespace eval turbine {
 
         if { [ adlb::comm_get leaders ] != [ adlb::comm_get null ] } {
             # I am a leader - eval the hook
-            puts "TURBINE_LEADER_HOOK_STARTUP..."
+            # puts "TURBINE_LEADER_HOOK_STARTUP..."
             try {
                 eval $env(TURBINE_LEADER_HOOK_STARTUP)
             } on error e {
