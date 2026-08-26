@@ -48,6 +48,10 @@ public class TopLevel {
       case ExMParser.WAIT_DEEP_STATEMENT:
       case ExMParser.UPDATE:
       case ExMParser.STATEMENT_CHAIN:
+      // Normally expanded away by Arguments before this is consulted; listed
+      // so that a stray node yields a user error rather than an internal one
+      case ExMParser.ARGUMENTS:
+      case ExMParser.FLAGS:
         return true;
       default:
         return false;

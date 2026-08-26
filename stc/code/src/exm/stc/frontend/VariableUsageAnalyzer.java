@@ -46,6 +46,7 @@ import exm.stc.common.util.StackLite;
 import exm.stc.frontend.LoadedModules.LocatedModule;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
+import exm.stc.frontend.tree.Arguments;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
@@ -281,6 +282,14 @@ class VariableUsageAnalyzer {
       case ExMParser.GLOBAL_CONST:
         throw new InvalidConstructException(context, "Global constant"
             + " definitions are only allowed at top level of program");
+
+      case ExMParser.ARGUMENTS:
+        throw new InvalidConstructException(context, Arguments.CONSTRUCT
+            + " declarations are only allowed at top level of program");
+
+      case ExMParser.FLAGS:
+        throw new InvalidConstructException(context, Arguments.FLAGS_CONSTRUCT
+            + " declarations are only allowed at top level of program");
 
       default:
         throw new STCRuntimeError

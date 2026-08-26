@@ -107,6 +107,8 @@ tokens {
     APP_FILENAME;
     APP_REDIRECTION;
     CALL_ANNOTATION;
+    ARGUMENTS;
+    FLAGS;
 }
 
 @parser::header {
@@ -192,6 +194,8 @@ real_stmt:
         (function_definition)
     |   (new_type_definition)
     |   (global_const_definition)
+    |   (arguments_definition)
+    |   (flags_definition)
     |   (import_statement)
     |   (pragma_stmt)
     |   (stmt_chain)
@@ -350,6 +354,56 @@ inline_tcl:
 global_const_definition:
         GLOBAL CONST v=declare_assign_single SEMICOLON
             -> ^( GLOBAL_CONST $v )
+    ;
+
+// Bind positional command-line arguments to typed variables, e.g.
+//   arguments(string username, int v = 10);
+// Expanded into ordinary declarations by
+// exm.stc.frontend.tree.Arguments before any semantic pass runs.
+// Note type_prefix, not multi_type_prefix: a union type makes no sense
+// for a command-line argument.
+// "arguments" is a contextual keyword, not a reserved word: the gated
+// predicate makes this alternative visible only where the declaration
+// may appear, so the word remains an ordinary identifier elsewhere.
+// unix.swift really does declare rm(string flags, string dirname).
+// ARGUMENTS[$kw] copies the line and column of the matched identifier
+// onto the imaginary root, so error positions still point at it.
+arguments_definition:
+        {input.LT(1).getText().equals("arguments")}?=>
+        kw=ID LPAREN arguments_decls? RPAREN SEMICOLON
+            -> ^( ARGUMENTS[$kw] arguments_decls? )
+    ;
+
+arguments_decls:
+        arguments_decl arguments_decls_rest*
+    ;
+
+arguments_decls_rest:
+        COMMA arguments_decl -> arguments_decl
+    ;
+
+// Match standard declaration AST, with any default value as a trailing child
+arguments_decl:
+        type=type_prefix v=var_name arguments_decl_val?
+            -> ^( DECLARATION $type
+                  ^( DECLARE_VARIABLE_REST $v ) arguments_decl_val? )
+    ;
+
+// Accept any expr so that a non-literal default gets a front-end error
+// message rather than a parse error
+arguments_decl_val:
+        ASSIGN e=expr -> $e
+    ;
+
+// Bind flagged command-line arguments to typed variables, e.g.
+//   flags(bool emphasize, int a = 0);
+// The individual declarations have the same shape as in arguments();
+// exm.stc.frontend.tree.Arguments expands both.  "flags" is likewise a
+// contextual keyword.
+flags_definition:
+        {input.LT(1).getText().equals("flags")}?=>
+        kw=ID LPAREN arguments_decls? RPAREN SEMICOLON
+            -> ^( FLAGS[$kw] arguments_decls? )
     ;
 
 formal_argument_list:

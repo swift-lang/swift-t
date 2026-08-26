@@ -171,6 +171,49 @@ pragma appexecdef COASTER "turbine" "0.8.0"
   [ "set <<o>> <<i>>" ];
 
 
+/// Command-line arguments
+// Defined here rather than in sys.swift so that they need no import,
+// and because the arguments() and flags() declarations expand into
+// calls to these.
+// Model arg functions as pure, since they will be deterministic
+// within the scope of a program.
+// argc - count of command line arguments, excluding the program name
+@pure
+(int c) argc()
+    "turbine" "0.0.2" "argc_get"
+    [ "set <<c>> [ turbine::argc_get_impl ]" ];
+// args - the whole command line, as one space-separated string
+@pure
+(string s) args()
+    "turbine" "0.0.2" "args_get"
+    [ "set <<s>> [ turbine::args_get_local ]" ];
+// argv - get flagged argument by name
+@pure @implements=argv
+(string s) argv(string key, string... default_val)
+    "turbine" "0.0.2" "argv_get"
+    [ "set <<s>> [ turbine::argv_get_impl <<key>> <<default_val>> ]" ];
+// argv_contains - test whether a flag was given
+@pure
+(boolean b) argv_contains(string key)
+    "turbine" "0.0.2" "argv_contains"
+    [ "set <<b>> [ turbine::argv_contains_impl <<key>> ]" ];
+// argv_accept - abort if any flag outside keys was given.
+// Emitted by flags(), and callable directly.
+argv_accept(string... keys)
+    "turbine" "0.0.2" "argv_accept"
+    [ "turbine::argv_accept_impl [ list <<keys>> ]" ];
+// argp - get unnamed argument by position.  argp(0) is the program name
+@pure
+(string s) argp(int pos, string... default_val)
+    "turbine" "0.0.2" "argp_get"
+    [ "set <<s>> [ turbine::argp_get_impl <<pos>> <<default_val>> ]" ];
+// argp_check - abort if more than max positional arguments were given.
+// Emitted by arguments().  Deliberately not @pure and with no output:
+// it exists for its side effect and must survive dead code elimination.
+argp_check(int max)
+    "turbine" "1.5.2" "argp_check"
+    [ "turbine::argp_check_impl <<max>>" ];
+
 // I/O
 @dispatch=WORKER
 (void o) trace (int|float|string|boolean... args) "turbine" "0.0.2" "trace"

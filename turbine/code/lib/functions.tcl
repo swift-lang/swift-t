@@ -358,7 +358,9 @@ namespace eval turbine {
     }
 
     proc string2float_impl { input } {
-      if { ! [ string is double $input ] } {
+      # -strict: without it "string is double" accepts the empty string
+      # and whitespace, which would silently store an empty float
+      if { ! [ string is double -strict $input ] } {
           turbine_error \
               "string2float():" \
               "could not convert string '${input}' to float"

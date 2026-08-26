@@ -88,6 +88,7 @@ import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.LValWalker.LRVals;
 import exm.stc.frontend.LoadedModules.LocatedModule;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
+import exm.stc.frontend.tree.Arguments;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
@@ -130,6 +131,9 @@ public class ASTWalker {
 
   /** Track which modules are loaded and compiled */
   private final LoadedModules modules;
+
+  /** Path of the main program, to tell it apart from imported modules */
+  private String mainFilePath = null;
   private static enum FrontendPass {
     DEFINITIONS, // Process top level defs
     COMPILE_TOPLEVEL, // Compile top-levelcode
@@ -158,6 +162,8 @@ public class ASTWalker {
    */
   public void walk(String mainFilePath, String originalMainFilePath,
                  boolean preprocessed) throws UserException {
+
+    this.mainFilePath = mainFilePath;
 
     GlobalContext context = new GlobalContext(mainFilePath,
                       Logging.getSTCLogger(), foreignFuncs);
@@ -253,6 +259,13 @@ public class ASTWalker {
     LogHelper.debug(context, "Entered module " + module.canonicalName
                + " on pass " + pass);
     modules.enterModule(module, parsed);
+    if (pass == FrontendPass.DEFINITIONS) {
+      // Rewrite arguments() into ordinary declarations.  This is the first
+      // pass to touch the tree, so no later pass sees an ARGUMENTS node.
+      Arguments.expandTopLevel(context, parsed.ast, module.canonicalName,
+                               lineMap(),
+                               module.filePath.equals(mainFilePath));
+    }
     walkTopLevel(context, topLevelContext, parsed, pass);
     modules.exitModule();
     LogHelper.debug(context, "Finishing module" + module.canonicalName
@@ -697,6 +710,15 @@ public class ASTWalker {
         case ExMParser.GLOBAL_CONST:
           throw new InvalidConstructException(context, "Global constant"
               + " definitions are only allowed at top level of program");
+
+        case ExMParser.ARGUMENTS:
+          throw new InvalidConstructException(context, Arguments.CONSTRUCT
+              + " declarations are only allowed at top level of program");
+
+        case ExMParser.FLAGS:
+          throw new InvalidConstructException(context,
+              Arguments.FLAGS_CONSTRUCT
+              + " declarations are only allowed at top level of program");
 
         case ExMParser.PRAGMA:
           throw new InvalidConstructException(context, "No pragmas"

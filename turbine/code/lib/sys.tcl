@@ -70,7 +70,10 @@ namespace eval turbine {
                 if { [ string index $key 0 ] == "-" } {
                     set key [ string range $key 1 end ]
                 }
-                set value [ lrange $tokens 1 end ]
+                # lindex, not lrange: lrange would re-wrap a value
+                # containing spaces in braces, and turn a flag given
+                # with no value at all into the string "{}"
+                set value [ lindex $tokens 1 ]
                 dict set turbine_argv $key $value
             } else {
                 lappend turbine_argp $arg
@@ -309,6 +312,27 @@ namespace eval turbine {
         return $result
     }
 
+    # argp_check(max)
+    # Abort if more than max positional arguments were given.
+    # Emitted by the Swift/T arguments() declaration.  The case of too
+    # few arguments is reported by argp_get_impl.
+    proc argp_check { args } {
+        set max [ lindex $args 1 ]
+        rule $max "argp_check_body $max" name "argp_check"
+    }
+
+    proc argp_check_body { max } {
+        argp_check_impl [ retrieve_decr_integer $max ]
+    }
+
+    proc argp_check_impl { max } {
+        variable turbine_argc
+        if { $turbine_argc > $max } {
+            turbine_error \
+                "expected at most $max arguments, received $turbine_argc"
+        }
+    }
+
     proc argv_accept { args } {
         set L [ lindex $args 1 ]
         rule $L "argv_accept_body $L"
@@ -330,7 +354,13 @@ namespace eval turbine {
         dict for { key value } $turbine_argv {
             if [ string is integer $key ] continue
             if { [ lsearch $accepted $key ] == -1 } {
-                error "argv_accept: not accepted: $key"
+                if { [ llength $accepted ] == 0 } {
+                    turbine_error \
+                        "unknown flag: -$key (no flags are accepted)"
+                }
+                turbine_error \
+                    "unknown flag: -$key" \
+                    "accepted flags are: -[ join $accepted { -} ]"
             }
         }
     }
