@@ -166,7 +166,7 @@ $ conda install ant autoconf make mpich-mpicc \
                 openjdk swig tk zsh
 ----
 
-STC is compatible with OpenJDK and IBM Java, requiring Java 1.6.
+STC is compatible with OpenJDK and IBM Java, requiring Java 21.
 Turbine is compatible with GCC, ICC, Clang, NVC, and XLC.
 
 Mac systems may require flags for the Xcode tool chain,
