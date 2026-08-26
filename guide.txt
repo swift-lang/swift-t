@@ -282,7 +282,7 @@ STC accepts the following arguments:
 
 +-A _name_=_value_+:: Set a command-line argument at
 compile-time. This may be found at runtime using the Swift
-<<argv,argument processing>> library. This option enables these
+<<cmd_line,argument processing>> library. This option enables these
 arguments to be treated as compile-time constants for optimization.
 [[cpp_macro]] &nbsp;
 +-D _macro_=_value_+:: Define a C preprocessor macro.
@@ -1368,7 +1368,9 @@ DEPRECATED:
 +int2string(int)      -> string+:: Convert integer to string
 +string2int(string)   -> int+::    Convert string to integer (alias: +parseInt()+)
 +float2string(float)  -> string+:: Convert float to string
-+string2float(string) -> float+::  Convert string to float (alias: +parseFloat()+)
++string2float(string) -> float+::  Convert string to float (alias: +parseFloat()+) +
+A string that is not a number, including the empty string, is a run-time
+error: +string2float(): could not convert string '' to float+
 +int2float(int)       -> float+::  Convert integer to float
 +float2int(float)     -> int+::    Convert float to integer +
 (Retains integer part, rounds toward 0.  Implemented with Tcl +int()+)
@@ -1486,6 +1488,213 @@ empty string.
 _directory-concatenate_.
 Concatenate arguments with +/+ as separator.  Cf. <<String operators>>.
 
+[[cmd_line]]
+=== Command line arguments
+
+A powerful pair of command line processing features are available: one
+that allows you to use a type signature-like approach to starting a
+Swift/T workflow, and one that allows you to handle arguments more
+manually.
+
+[[cmd_signature]]
+==== Type signature approach
+
+[[arguments]]
+===== Positional argument signature
+
+The signature approach provides a highly readable, compact, typed
+approach to handling the workflow command line.  Many errors are
+automatically checked and reported.
+
+In this approach, you use +arguments()+ to handle fixed positional
+arguments, and +flags()+ to handle key-value arguments that may appear
+in any order.
+
++arguments()+ is a language construct, not a library function: it needs
+no +import+ and may appear only once, at the top level of the main
+program.  It binds the positional (unflagged) command line arguments,
+in order, to typed top-level variables.  For example if the following
+is +a1.swift+:
+
+----
+arguments(string username, int v);
+trace("hello " + username, " the value is ", v+1);
+----
+
+Run with:
+
+----
+$ swift-t a1.swift justin 12
+----
+
+which reports:
+
+----
+trace: hello justin, the value is ,13
+----
+
+The supported types are +string+, +int+, +float+, +boolean+, +file+
+and +url+, with +bool+ accepted as a synonym for +boolean+.
+An argument may be given a default value, which must be a literal of
+the declared type:
+
+----
+arguments(string datafile, int count = 10, float epsilon = 1e-6);
+----
+
+Here +count+ and +epsilon+ may be omitted from the command line.  A
+default does not make an argument optional in the positional sense:
+arguments are still matched by position, so omitting +count+ while
+supplying +epsilon+ is not possible.
+
+Equivalently, the parameters may be declared on +main()+:
+
+----
+main(string username, int v)
+{
+  trace("hello " + username, " the value is ", v+1);
+}
+----
+
+This means exactly the same thing: the parameters are stripped from
++main()+, which becomes an ordinary no-argument +main()+, and the
+variables they name are declared at top level.  They are therefore
+visible throughout the program, not only inside +main()+.  The same
+types and the same literal defaults are accepted.  A program may use
++arguments()+ or +main()+ parameters, but not both.
+
+[[flags]]
+==== Flagged argument signature
+
++flags()+ is the companion construct to <<arguments,+arguments()+>>.
+It too needs no +import+ and may appear only once, at the top level of
+the main program, and it binds the _flagged_ command line arguments to
+typed top-level variables, as in the following example +a2.swift+:
+
+----
+arguments(string username, int v);
+flags(boolean emphasize, int a = 0);
+
+trace("hello " + username, " the value is ", v+a);
+if (emphasize) {
+  trace("hurrah");
+}
+----
+
+This can be run with:
+
+----
+swift-t a2.swift justin 12
+----
+
+which will default to +emphasize=false+ and +a=0+, or:
+
+----
+swift-t a2.swift justin 12 --emphasize -a=42
+----
+
+which will run with +emphasize=true+ and +a=42+ .
+Either flag may be set or omitted independently.
+The supported types are the same as for +arguments()+.
+
+Flags and positional arguments may be interleaved in any order: a token
+beginning with +-+ is a flag and everything else is positional, so the
+last two lines above give +v+ the value +12+ in both cases.
+
+NOTE: The flags must follow the workflow program (+*.swift+) name,
+so that +swift-t+ does not try to interpret them as its own options.
+
+A flag is written +-name=value+ or +--name=value+ .
+
+A +boolean+ flag is written +-name+ or +--name+ and takes no value.
+A +boolean+ flag is +true+ when the flag is given and +false+ when it
+is not, so it never takes a value and may not be given a default.
+
+A flag of any type other than +boolean+ is _required_ unless
+it is given a literal default:
+
+----
+flags(string mode = "fast", int count = 10, float epsilon = 1e-6);
+----
+
++flags()+ may be combined with +arguments()+ or with +main()+
+parameters.
+
++arguments+ and +flags+ are not reserved words.  They are recognized
+only as a statement introducing one of these declarations, and remain
+ordinary identifiers everywhere else, so existing programs that use
+either as a variable, parameter or function name still compile.
+
+[[cmd_manual]]
+==== Manual approach to command line
+
+Consider this command line: it is used in the following documentation:
+
+----
+$ swift-t -n 3 program.swift -v -a=file1.txt file2.txt
+               --exec="prog thing1 thing2" --help file4.txt
+----
+
+The arguments to +program.tic+ are just the tokens after +program.tic+
+
+This command line can be handled with the following library functions:
+
++args() -> string+::
+
+Obtain all arguments as single string
++
+E.g., +"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"+
+
+The remaining functions are convenience functions oriented around
+Swift conventions.  Under these conventions, the example command above
+has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
+thing2"+, and +help+. The command has _unflagged_ arguments
++file2.txt+ and +file4.txt+
+
++argc()+::
+Get count of unflagged arguments
+
++argv(string, [default])+::
+_(argument-value)_
+Given a string, returns the flagged argument with that key:
++
++argv("a") -> "file1.txt"+
++
+In addition to regular run-time arguments, the STC _compile-time
+arguments_ feature allows +argv()+ arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the +-A
+_name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
+argument is re-specified at run-time, an error will occur.
++
+If an argument is not provided, the +default+ value is used.  So,
+since +b+ is not in the command line above:
++
++argv("b", "f0.txt") -> "f0.txt"+
+
++argp(int)+::
+_(argument-positional)_
+Given an integer, returns the unflagged argument at that index:
++
++argp(2) -> "file4.txt"+
++
+Given 0, returns the program name,
++
++argp(0) -> "/path/to/program.tic"+
+
++argv_accept(string...)+::
+
+If program is given flagged command line arguments not contained in given
+list, abort.
+E.g., +argv_accept("x")+ would cause program failure at run time
+if any flag other than +-x+ were given.
+
++argv_contains(string) -> boolean+::
+
+Test if the command line contains the given flagged argument:
++
++argv_contains("v") -> true+
+
 === Math
 
 +max|min_integer(int,int) -> int+:: Obtain maximum or minimum integer,
@@ -1599,70 +1808,6 @@ the state before and after the call to +compute()+.  Note that
 +mallinfo()+ may run on any worker.  It is best used for debugging in
 single-worker cases or along with the <<location,location>>
 functionality.
-
-[[argv]]
-==== Command line
-
-Consider this command line:
-
- turbine -l -n 3 program.tic -v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt
-
-The arguments to +program.tic+ are just the tokens after +program.tic+
-
-+args() -> string+::
-
-Obtain all arguments as single string
-+
-E.g., +"-v -a=file1.txt file2.txt --exec="prog thing1 thing2" --help file4.txt"+
-
-The remaining functions are convenience functions oriented around
-Swift conventions.  Under these conventions, the example command above
-has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
-thing2"+, and +help+. The command has _unflagged_ arguments
-+file2.txt+ and +file4.txt+
-
-+argc()+::
-Get count of unflagged arguments
-
-+argv(string, [default])+::
-_(argument-value)_
-Given a string, returns the flagged argument with that key:
-+
-+argv("a") -> "file1.txt"+
-+
-In addition to regular run-time arguments, the STC _compile-time
-arguments_ feature allows +argv()+ arguments to be provided at compile
-time.  This allows a specialized, optimized version of code to be
-compiled for a particular set of arguments.  See the +-A
-_name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
-argument is re-specified at run-time, an error will occur.
-+
-If an argument is not provided, the +default+ value is used.  So,
-since +b+ is not in the command line above:
-+
-+argv("b", "f0.txt") -> "f0.txt"+
-
-+argp(int)+::
-_(argument-positional)_
-Given an integer, returns the unflagged argument at that index:
-+
-+argp(2) -> "file4.txt"+
-+
-Given 0, returns the program name,
-+
-+argp(0) -> "/path/to/program.tic"+
-
-+argv_accept(string...)+::
-
-If program is given flagged command line arguments not contained in given
-list, abort.
-E.g., +argv_accept("x")+ would cause program failure at run time
-
-+argv_contains(string) -> boolean+::
-
-Test if the command line contains the given flagged argument:
-+
-+argv_contains("v") -> true+
 
 ==== Debugging
 
@@ -3376,7 +3521,8 @@ The form of a Turbine invocation for STC-generated
 turbine <turbine arguments> <program.tic> <program arguments>
 ----
 
-The program arguments are available to Swift (<<argv>>).
+The program arguments are available to Swift
+(<<cmd_line,see argument processing>>).
 
 Turbine accepts the following arguments:
 
