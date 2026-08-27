@@ -1267,7 +1267,9 @@ The following unary operators are defined:
 
 * +==+ and +!=+ may also be used on strings.
 
-* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.  Cf. <<dircat,dircat()>>.
+* Operator +s1/s2+ is equivalent to +s1&#43;"/"&#43;s2+.
+  Cf. <<dircat,dircat()>>.   The first operand may be a +file+, which
+  operates on the filename.
 
 * The Python-style string format operator +format%(arg1,arg2,...)+ is
   equivalent to
