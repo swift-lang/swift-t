@@ -2307,7 +2307,9 @@ String concatenation is also performed with <code>&#43;</code> (plus).
 </li>
 <li>
 <p>
-Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.  Cf. <a href="#dircat">dircat()</a>.
+Operator <code>s1/s2</code> is equivalent to <code>s1&#43;"/"&#43;s2</code>.
+  Cf. <a href="#dircat">dircat()</a>.   The first operand may be a <code>file</code>, which
+  operates on the filename.
 </p>
 </li>
 <li>
@@ -4729,7 +4731,7 @@ variable <code>TURBINE_APP_DEBUG=1</code>.</p></div>
 <h5 id="_retry_local">Retry local</h5>
 <div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.
 To have Turbine automatically retry to run <code>app</code> functions <code>N</code> times,
-simply set environment variableTURBINE_APP_RETRIES_LOCAL to <code>N</code>.</p></div>
+simply set environment variable <code>TURBINE_APP_RETRIES_LOCAL</code> to <code>N</code>.</p></div>
 <div class="paragraph"><p>Consider this Swift script (<code>false.swift</code>):<br /></p></div>
 <div class="listingblock">
 <div class="content">
@@ -7455,11 +7457,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
-<<<<<<< Updated upstream
- 2026-08-27 11:44:18 CDT
-=======
- 2026-08-27 14:47:15 CDT
->>>>>>> Stashed changes
+ 2026-08-27 15:01:57 CDT
 </div>
 </div>
 
