@@ -48,7 +48,8 @@ java_version_error()
 
 if [[ $SKIP != *S* ]]
 then
-  # Check Java version (21+)
+  # Check Java versions
+  JAVA_VERSION_REQUIRED=21
   source $THIS/java_version.sh
   JAVA_VERSION=$(  get_java_major_version java  )
   JAVAC_VERSION=$( get_java_major_version javac )
@@ -56,8 +57,8 @@ then
   then
     echo "WARNING: Could not determine java version"
   else
-    echo "java version: $JAVA_VERSION"
-    if (( JAVA_VERSION < 21 ))
+    echo "java  version: $JAVA_VERSION"
+    if (( JAVA_VERSION < JAVA_VERSION_REQUIRED ))
     then
       java_version_error java
     fi
@@ -67,12 +68,11 @@ then
     echo "WARNING: Could not determine javac version"
   else
     echo "javac version: $JAVAC_VERSION"
-    if (( JAVAC_VERSION < 21 ))
+    if (( JAVAC_VERSION < JAVA_VERSION_REQUIRED ))
     then
       java_version_error javac
     fi
   fi
 fi
 
-# All checks passed - exit with success
-exit 0
+# All checks passed - return with success
