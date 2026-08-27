@@ -3292,7 +3292,40 @@ Number of Turbine workers
 <dd>
 <p>
 Obtain the name of a file.
+This reads only the name: it is available as soon as the file is
+mapped, and does <strong>not</strong> wait for the file to be produced.
 </p>
+</dd>
+<dt class="hdlist1">
+<code>ready(file) &#8594; string</code>
+</dt>
+<dd>
+<p>
+Obtain the name of a file, but only once that file has actually been
+produced.  Use this instead of <code>filename()</code> when the name is passed to
+a leaf function that will create the file, otherwise that function may
+run before the file exists.  Example:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>(file o) transform(file i)
+{
+  // ready(i) blocks until i is closed; filename(i) would not
+  o = emit(python("import my_module",
+                  "my_module.process('%s', '%s')" %
+                   (ready(i), filename(o))));
+}
+
+file fi = input("input.txt");
+file fo&lt;"output.txt"&gt; = transform(fi)</code></pre>
+</div></div>
+<div class="paragraph"><p><code>filename(o)</code> is correct for the <em>output</em> <code>o</code>, which is being named
+here rather than read.  Without <code>ready()</code>, Swift/T would not be able
+to determine what filenames (strings) are relevant for dataflow in the
+use of <code>python()</code>, because at that level, everything is simply a
+string.</p></div>
+<div class="paragraph"><p><code>ready()</code> is not needed for <code>app</code> functions, which are designed to
+handle <code>file</code>-based dataflow automatically.</p></div>
 </dd>
 <dt class="hdlist1">
 <code>input(string) &#8594; file</code>
@@ -3345,6 +3378,8 @@ file output&lt;"output.dat"&gt; = emit(s);
 # analyze() is blocked until the python code completes:
 analyze(output);</code></pre>
 </div></div>
+<div class="paragraph"><p>When chaining such steps, obtain the name of each input with
+<code>ready()</code>, not <code>filename()</code>.</p></div>
 </dd>
 </dl></div>
 <div class="paragraph"><p><strong>Import:</strong> <code>files</code></p></div>
@@ -4534,16 +4569,17 @@ Foo"</code> is reported on rank 0.</p></div>
 </div>
 <div class="sect2">
 <h3 id="app_functions">14.3. App functions</h3>
-<div class="paragraph"><p>App functions are functions that are implemented as command-line
+<div class="paragraph"><p><code>app</code> functions are functions that are implemented as command-line
 programs.  These command-line programs can be brought into a Swift
 program as functions with typed inputs and outputs.
-An app function definition comprises:</p></div>
+An <code>app</code> function definition comprises:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
 The standard components of a Swift function declaration: input and
     output arguments and the function name.  Note that the output
-    variable types are restricted to individual <code>file</code>s.
+    variable types are restricted to individual <code>file</code>s
+    and/or <code>void</code>.
 </p>
 </li>
 <li>
@@ -4580,36 +4616,44 @@ Arbitrary expressions surrounded by parentheses.
 </li>
 </ul></div>
 <div class="paragraph"><p>Standard input, output and error can be redirected to files via
-<code>@stdin=</code>, <code>@stdout=</code>, and <code>@stderr=</code> expressions.  If used, these should point
-to a <code>file</code>.</p></div>
-<div class="paragraph"><p>Here is an example of an app function that joins multiple files
+<code>@stdin=</code>, <code>@stdout=</code>, and <code>@stderr=</code> expressions.
+If used, these should point to a <code>file</code>.</p></div>
+<div class="paragraph"><p>Here is an example of an <code>app</code> function that joins multiple files
 with the <code>cat</code> utility:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>import files;
+<pre><code>import files; // for glob()
 
-app (file out) cat (file inputs[]) {
+app (file out) cat (file inputs[])
+{
   "/bin/cat" inputs @stdout=out
 }
 
 file joined &lt;"joined.txt"&gt; = cat(glob("*.txt"));</code></pre>
 </div></div>
-<div class="paragraph"><p>Here is an example of an app function that sleeps for an arbitrary
+<div class="paragraph"><p><code>app</code> functions automatically know about <code>file</code> creation and
+readiness, you do not need to use <code>ready()</code> when using <code>app</code> functions.</p></div>
+<div class="paragraph"><p>Here is an example of an <code>app</code> function that sleeps for an arbitrary
 amount of time:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>app (void signal) sleep (int secs) {
+<pre><code>app (void signal) sleep (int secs)
+{
   "/bin/sleep" secs
 }
 
-foreach time in [1:5] {
+foreach time in [1:5]
+{
   void signal = sleep(time);
   // Wait on output signal so that trace occurs after sleep
-  wait(signal) {
-    trace("Slept " + fromint(time));
+  wait(signal)
+  {
+    trace("Slept " + time);
   }
 }</code></pre>
 </div></div>
+<div class="paragraph"><p>Without the use of <code>void</code> and <code>wait</code>, the calls to <code>trace()</code> would not
+be blocked and would all run at the beginning of the workflow.</p></div>
 <div class="paragraph"><p>As shown, <code>void</code> variables may be added to the output list of any
 <code>app</code> function.  They are set automatically when the <code>app</code> completes.</p></div>
 <div class="paragraph"><p><code>app</code> function executions can be debugged by setting environment
@@ -4618,9 +4662,9 @@ variable <code>TURBINE_APP_DEBUG=1</code>.</p></div>
 <h4 id="_app_retry">14.3.1. App retry</h4>
 <div class="sect4">
 <h5 id="_retry_local">Retry local</h5>
-<div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.  To
-have Turbine automatically retry to run <code>app</code> functions <code>N</code> times, simply set
-environment variable <code>TURBINE_APP_RETRIES_LOCAL</code> to <code>N</code>.</p></div>
+<div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.
+To have Turbine automatically retry to run <code>app</code> functions <code>N</code> times,
+simply set environment variableTURBINE_APP_RETRIES_LOCAL to <code>N</code>.</p></div>
 <div class="paragraph"><p>Consider this Swift script (<code>false.swift</code>):<br /></p></div>
 <div class="listingblock">
 <div class="content">
@@ -7346,7 +7390,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-26 16:52:34 CDT
+ 2026-08-27 11:44:18 CDT
 </div>
 </div>
 
