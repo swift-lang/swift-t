@@ -159,6 +159,22 @@ public class Operators {
       }
     }
 
+    /*
+     * Allow the directory catenation operator (/) to take file operands as
+     * well as strings: a file contributes its filename.  The result is
+     * always a string.  The frontend replaces each file operand with its
+     * filename future, so the underlying DIRCAT op still sees only strings.
+     */
+    OpInputType dircatFile = new OpInputType(Types.F_FILE, false);
+    OpInputType dircatString = new OpInputType(Types.F_STRING, false);
+    for (List<OpInputType> dircatArgs:
+         Arrays.asList(Arrays.asList(dircatFile, dircatString),
+                       Arrays.asList(dircatString, dircatFile),
+                       Arrays.asList(dircatFile, dircatFile))) {
+      registerOverload(ExMParser.DIV, BuiltinOpcode.DIRCAT,
+                       new OpType(Types.F_STRING, dircatArgs));
+    }
+
     Type sprintfArg = UnionType.createUnionType(Types.F_STRING, Types.F_INT, Types.F_FLOAT, Types.F_BOOL);
     List<OpInputType> sprintfArgs = Arrays.asList(new OpInputType(Types.F_STRING, false),
                                                   new OpInputType(sprintfArg, true));
@@ -173,6 +189,15 @@ public class Operators {
   private static void registerOperator(int token, BuiltinOpcode opCode,
                                        OpType opType) {
     optypes.put(opCode, opType);
+    arithOps.put(token, new Op(opCode, opType));
+  }
+
+  /**
+   * Register an extra overload for an operator, leaving the canonical type
+   * recorded for the opcode alone.
+   */
+  private static void registerOverload(int token, BuiltinOpcode opCode,
+                                       OpType opType) {
     arithOps.put(token, new Op(opCode, opType));
   }
 

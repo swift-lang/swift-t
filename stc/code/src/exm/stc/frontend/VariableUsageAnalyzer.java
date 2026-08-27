@@ -715,8 +715,15 @@ class VariableUsageAnalyzer {
         case ExMParser.OPERATOR:
           // Walk argument expressions
           // skip the first child, which is the operator name
+          boolean dircat = node.child(0).getType() == ExMParser.DIV;
           for (int i = 1; i < node.getChildCount(); i++) {
-            exprNodes.push(node.child(i));
+            SwiftAST arg = node.child(i);
+            if (dircat && filenameOnlyUse(vu, arg)) {
+              // Directory catenation uses only a file's name, not its
+              // contents, so the file need not be written
+              continue;
+            }
+            exprNodes.push(arg);
           }
           break;
         case ExMParser.ARRAY_RANGE:
@@ -785,6 +792,22 @@ class VariableUsageAnalyzer {
     }
   }
 
+
+  /**
+   * Check whether an operand is a plain file variable.  The directory
+   * catenation operator (/) uses such an operand only for its filename, so
+   * it does not count as a read of the file's contents.
+   * @param vu variable usage info for the enclosing scope
+   * @param arg operand expression
+   */
+  private boolean filenameOnlyUse(VariableUsageInfo vu, SwiftAST arg) {
+    if (arg.getType() != ExMParser.VARIABLE) {
+      return false;
+    }
+    VariableUsageInfo.VInfo vi =
+        vu.lookupVariableInfo(arg.child(0).getText());
+    return vi != null && Types.isFile(vi.getType());
+  }
 
   private void walkTopLevelModule(Context fnContext, ParsedModule module,
       VariableUsageInfo topLevelVui, Set<ParsedModule> visited)
