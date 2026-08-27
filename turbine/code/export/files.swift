@@ -43,6 +43,21 @@
     "turbine" "0.0.2" "file_write"
     [ "turbine::file_write_local <<t>> <<s>>" ];
 
+/** ready(): the path of f, but only once f has actually been produced.
+
+    filename(f) reads the file handle's path component, which is
+    closed as soon as f is mapped - it carries no dependency on f
+    being written.  Passing f as a value input here makes STC insert
+    the usual arg-wait, so ready(f) returns the same string but not
+    before f is closed.  Use it in place of filename() when the path
+    is handed to a builtin (python_persist(), etc.) that will open the
+    file.
+ */
+@pure
+(string t) ready(file f)
+"turbine" "1.5.2"
+[ "set <<t>> [ turbine::local_file_path <<f>> ]" ];
+
 @pure
 (string t) file_type(file f)
 "turbine" "0.0.2"
