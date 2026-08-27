@@ -1,0 +1,7 @@
+workflow usage:
+swift-t 7183-usage-3.swift .-h. username
+greet the user
+positional arguments:
+username: your name here
+flagged arguments:
+h        help
