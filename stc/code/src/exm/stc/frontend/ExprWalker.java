@@ -599,10 +599,29 @@ public class ExprWalker {
       } else {
         // Store into temporary variables
         Var arg = eval(context, tree.child(i + 1), exprType, false, renames);
+        if (Types.isFile(arg)) {
+          // Operators work on strings: a file operand contributes its
+          // filename.  Used by the directory catenation operator (/).
+          arg = filenameOf(context, arg);
+        }
         iList.add(Arg.newVar(arg));
       }
     }
     asyncOp(op.code, out, iList);
+  }
+
+  /**
+   * Get a string future aliasing the filename of a file variable.
+   * @param context
+   * @param fileVar a file
+   * @return string future holding the filename
+   */
+  private Var filenameOf(Context context, Var fileVar)
+      throws UserException, UndefinedTypeException {
+    Var filename = varCreator.createFilenameAlias(context, fileVar);
+    backend.getFileNameAlias(VarRepr.backendVar(filename),
+                             VarRepr.backendVar(fileVar), false);
+    return filename;
   }
 
 
