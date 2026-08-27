@@ -315,6 +315,7 @@ class Turbine {
   // Misc
   private static final Token TURBINE_LOG = turbFn("c::log");
   private static final Token ARGV_ADD_CONSTANT = turbFn("argv_add_constant");
+  private static final Token ARGP_USAGE = turbFn("argp_usage");
   private static final Token ADLB_WORK_TYPE = turbFn("adlb_work_type");
   private static final Token DECLARE_CUSTOM_WORK_TYPES =
                                   turbFn("declare_custom_work_types");
@@ -340,6 +341,15 @@ class Turbine {
 
   public static Command addConstantArg(Expression argName, Expression argVal) {
     return new Command(ARGV_ADD_CONSTANT, argName, argVal);
+  }
+
+  /**
+   * Print the given usage message and exit if the program was run with -h.
+   * Emitted before turbine::start, since Swift/T is a dataflow language and
+   * an equivalent check written in Swift would race with argp().
+   */
+  public static Command programUsage(Expression text) {
+    return new Command(ARGP_USAGE, text);
   }
 
   public static TclTree allocatePermanent(String tclName, TypeName typePrefix,

@@ -109,6 +109,8 @@ tokens {
     CALL_ANNOTATION;
     ARGUMENTS;
     FLAGS;
+    ARG_DOC;
+    ARG_DESCRIPTION;
 }
 
 @parser::header {
@@ -382,17 +384,40 @@ arguments_decls_rest:
         COMMA arguments_decl -> arguments_decl
     ;
 
-// Match standard declaration AST, with any default value as a trailing child
+// Match standard declaration AST, with any default value and any
+// documentation string as trailing children.
+// The first alternative is the whole-program description, e.g.
+//   arguments(string username : "your name here",
+//             description      : "increment the value for the user");
+// "description" is a contextual keyword like "arguments" itself, and the
+// gate additionally requires the colon, so it is only special in the exact
+// position "description :".  arguments(string description) declares an
+// ordinary variable, and arguments(description d : "doc") declares one of
+// user-defined type "description".
 arguments_decl:
-        type=type_prefix v=var_name arguments_decl_val?
+        {input.LT(1).getText().equals("description") &&
+         input.LT(2).getType() == COLON}?=>
+        kw=ID d=arg_doc -> ^( ARG_DESCRIPTION[$kw] $d )
+    |   type=type_prefix v=var_name arguments_decl_val? arg_doc?
             -> ^( DECLARATION $type
-                  ^( DECLARE_VARIABLE_REST $v ) arguments_decl_val? )
+                  ^( DECLARE_VARIABLE_REST $v )
+                  arguments_decl_val? arg_doc? )
     ;
 
 // Accept any expr so that a non-literal default gets a front-end error
 // message rather than a parse error
 arguments_decl_val:
         ASSIGN e=expr -> $e
+    ;
+
+// Documentation for one command line argument, used to generate the usage
+// message printed by -h.  The colon is unambiguous here: after a variable
+// name in a declaration the only tokens otherwise possible are COMMA and
+// RPAREN, and every other COLON in this grammar is enclosed in [] or {}.
+arg_doc:
+        COLON s=STRING              -> ^( ARG_DOC ^( STRING_LITERAL $s ) )
+    |   COLON s=STRING_MULTI_LINE_1 -> ^( ARG_DOC ^( STRING_LITERAL $s ) )
+    |   COLON s=STRING_MULTI_LINE_2 -> ^( ARG_DOC ^( STRING_LITERAL $s ) )
     ;
 
 // Bind flagged command-line arguments to typed variables, e.g.
@@ -421,12 +446,17 @@ formal_arguments_rest:
         -> arg_decl
     ;
 
+// arg_doc is accepted here so that main(string username : "your name here")
+// works.  This rule is shared by every function definition, so a docstring
+// on any other function is rejected by exm.stc.frontend.tree.Arguments
+// rather than by the grammar.
 arg_decl:
     // Match standard declaration AST
-        type=multi_type_prefix VARARGS? v=var_name array_marker* arg_decl_val?
+        type=multi_type_prefix VARARGS? v=var_name array_marker*
+        arg_decl_val? arg_doc?
             -> ^( DECLARATION $type
                 ^( DECLARE_VARIABLE_REST $v array_marker* )
-                VARARGS? arg_decl_val? )
+                VARARGS? arg_decl_val? arg_doc? )
     ;
 
 arg_decl_val:

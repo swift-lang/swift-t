@@ -333,6 +333,31 @@ namespace eval turbine {
         }
     }
 
+    # argp_usage(text)
+    # Print the usage message and exit if this program was run with -h.
+    # Emitted by STC between turbine::init and turbine::start when the
+    # program declares command line arguments.  It has to run here rather
+    # than in Swift code: Swift/T is a dataflow language, so an in-language
+    # check would race with the argp() calls the same declaration expands
+    # into, and with -h alone there are no positional arguments for them to
+    # read.
+    proc argp_usage { text } {
+        # Scan ::argv rather than turbine_argv: every rank has to reach the
+        # same decision, and servers do not maintain turbine_argv.  The exit
+        # below is therefore collective, and finalize without a preceding
+        # turbine::start is a clean MPI shutdown.
+        foreach arg $::argv {
+            if { $arg eq "-h" || $arg eq "--help" } {
+                if { [ adlb::comm_rank ] == 0 } {
+                    puts -nonewline $text
+                    flush stdout
+                }
+                turbine::finalize
+                exit 0
+            }
+        }
+    }
+
     proc argv_accept { args } {
         set L [ lindex $args 1 ]
         rule $L "argv_accept_body $L"

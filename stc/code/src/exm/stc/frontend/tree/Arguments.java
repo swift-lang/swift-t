@@ -15,16 +15,22 @@
  */
 package exm.stc.frontend.tree;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.antlr.runtime.CommonToken;
 import org.antlr.runtime.Token;
 
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.ProgramUsage;
 import exm.stc.frontend.Context;
 
 /**
@@ -76,6 +82,19 @@ import exm.stc.frontend.Context;
  * so it takes neither a value nor a default.  argv() reports a required
  * flag that was not given; argv_accept() reports a flag that was given but
  * not declared.
+ *
+ * Each declaration may carry a documentation string, and arguments() may
+ * carry a description of the program as a whole:
+ *
+ * <pre>
+ *   arguments(string username : "your name here",
+ *             description     : "greet the user");
+ * </pre>
+ *
+ * From these the usage message printed by -h is assembled and handed to the
+ * code generator in ProgramUsage.  Documentation is optional: the usage
+ * message is generated whenever a program declares any arguments at all,
+ * since the declarations alone already give the shape of the command line.
  */
 public class Arguments {
 
@@ -106,6 +125,84 @@ public class Arguments {
   /** Child indices of a DEFINE_FUNCTION node, as read by ASTWalker */
   private static final int MAIN_OUTPUTS = 2;
   private static final int MAIN_INPUTS = 3;
+
+  /** The help flag, which every program with declared arguments accepts */
+  private static final String HELP_LABEL = "-h";
+  private static final String HELP_DOC = "help";
+
+  /** Program name used in the usage message if the input file is unknown */
+  private static final String UNKNOWN_PROGRAM = "program.swift";
+
+  /**
+   * One declared argument, as it appears in the usage message.
+   */
+  private static class ArgDoc {
+    /** Variable name, which for a flag is also the flag name */
+    final String name;
+    /** A flag rather than a positional argument */
+    final boolean flagged;
+    /** A boolean flag, which is given without a value */
+    final boolean bool;
+    /** Documentation string, empty if the user gave none */
+    final String doc;
+    /** Default value as text, null if the argument is required */
+    final String defaultVal;
+
+    ArgDoc(String name, boolean flagged, boolean bool, String doc,
+           String defaultVal) {
+      this.name = name;
+      this.flagged = flagged;
+      this.bool = bool;
+      this.doc = (doc == null) ? "" : doc;
+      this.defaultVal = defaultVal;
+    }
+
+    /** A boolean flag is never required: absent simply means false */
+    boolean required() {
+      return defaultVal == null && !bool;
+    }
+
+    /** How this argument is written on the command line */
+    String label() {
+      if (!flagged) {
+        return name;
+      }
+      return bool ? "--" + name : "-" + name + "=" + name.toUpperCase();
+    }
+
+    /** How this argument is named in the list below the synopsis */
+    String listLabel() {
+      return flagged ? label() : name + ":";
+    }
+
+    /** Documentation with the default value appended, as the list shows it */
+    String listText() {
+      String d = bool ? "false" : defaultVal;
+      if (d == null) {
+        return doc;
+      }
+      return doc.isEmpty() ? "default=" + d : doc + ": default=" + d;
+    }
+  }
+
+  /**
+   * The usage message under construction, filled in as the declarations are
+   * expanded.  Positional arguments and flags are kept apart because they
+   * are listed separately; within each list, expansion visits the
+   * declarations in the order they were written.
+   */
+  private static class Usage {
+    final List<ArgDoc> positional = new ArrayList<ArgDoc>();
+    final List<ArgDoc> flagged = new ArrayList<ArgDoc>();
+    /** Description of the program as a whole, null if not given */
+    String description = null;
+    /** Whether the program declared any command line arguments at all */
+    boolean any = false;
+
+    void add(ArgDoc arg) {
+      (arg.flagged ? flagged : positional).add(arg);
+    }
+  }
 
   /**
    * bool is accepted as a synonym for boolean within arguments() and
@@ -204,20 +301,53 @@ public class Arguments {
     }
 
     // Expand from the back, so that an expansion does not shift the index
-    // of one still to be done
+    // of one still to be done.  Each construct is nonetheless visited
+    // front-to-back internally, so the usage message lists the arguments in
+    // the order they were declared.
+    Usage usage = new Usage();
     int[] todo = sortDescending(argsIdx, flagsIdx, mainIdx);
     for (int idx: todo) {
       SwiftAST tree = (SwiftAST) programTree.getChild(idx);
       context.syncFilePos(tree, moduleName, lineMapping);
       SwiftAST expansion;
       if (idx == flagsIdx) {
-        expansion = expandFlags(context, tree);
+        expansion = expandFlags(context, tree, usage);
       } else if (idx == argsIdx) {
-        expansion = expandArguments(context, tree);
+        expansion = expandArguments(context, tree, usage);
       } else {
-        expansion = expandMain(context, tree);
+        expansion = expandMain(context, tree, usage);
       }
       programTree.replaceChildren(idx, idx, expansion);
+    }
+
+    // Guard against clobbering the main program's usage message from an
+    // imported module, which cannot declare arguments of its own
+    if (usage.any) {
+      ProgramUsage.set(render(usage));
+    }
+
+    // Every documentation string the grammar allows should have been
+    // consumed above; anything left is on a function that cannot use it
+    checkNoStrayDocs(context, programTree, moduleName, lineMapping);
+  }
+
+  /**
+   * Reject a documentation string anywhere it has no meaning.  The grammar
+   * accepts one on any formal parameter, because arg_decl is shared by every
+   * function definition, so the restriction to arguments(), flags() and
+   * main() is enforced here instead.
+   */
+  private static void checkNoStrayDocs(Context context, SwiftAST tree,
+      String moduleName, LineMapping lineMapping) throws UserException {
+    if (tree.getType() == ExMParser.ARG_DOC) {
+      context.syncFilePos(tree, moduleName, lineMapping);
+      throw new UserException(context, "Argument documentation (: \"...\")" +
+          " is only allowed in " + CONSTRUCT + ", " + FLAGS_CONSTRUCT +
+          " and " + MAIN_CONSTRUCT);
+    }
+    for (int i = 0; i < tree.getChildCount(); i++) {
+      checkNoStrayDocs(context, (SwiftAST) tree.getChild(i), moduleName,
+                       lineMapping);
     }
   }
 
@@ -249,10 +379,11 @@ public class Arguments {
   /**
    * @return a nil-rooted tree whose children replace the FLAGS node
    */
-  private static SwiftAST expandFlags(Context context, SwiftAST tree)
-      throws UserException {
+  private static SwiftAST expandFlags(Context context, SwiftAST tree,
+      Usage usage) throws UserException {
     assert(tree.getType() == ExMParser.FLAGS);
     Token pos = tree.getToken();
+    usage.any = true;
 
     SwiftAST result = nil();
     int count = tree.getChildCount();
@@ -260,7 +391,13 @@ public class Arguments {
 
     for (int i = 0; i < count; i++) {
       SwiftAST decl = (SwiftAST) tree.getChild(i);
-      result.addChild(expandOne(context, FLAGS_CONSTRUCT, decl, 0, true, pos));
+      if (decl.getType() == ExMParser.ARG_DESCRIPTION) {
+        throw new UserException(context, FLAGS_CONSTRUCT + ": the program" +
+            " description belongs in " + CONSTRUCT + ", which describes the" +
+            " program as a whole");
+      }
+      result.addChild(expandOne(context, FLAGS_CONSTRUCT, decl, 0, true, pos,
+                                usage));
       names[i] = stringLit(pos, decl.getChild(1).getChild(0).getText());
     }
 
@@ -292,17 +429,18 @@ public class Arguments {
    * Strip the parameters from a main() definition and return a nil-rooted
    * tree holding the declarations they stand for, followed by main() itself.
    */
-  private static SwiftAST expandMain(Context context, SwiftAST main)
-      throws UserException {
+  private static SwiftAST expandMain(Context context, SwiftAST main,
+      Usage usage) throws UserException {
     Token pos = ((SwiftAST) main.getChild(0)).getToken();
     SwiftAST inputs = (SwiftAST) main.getChild(MAIN_INPUTS);
+    usage.any = true;
 
     SwiftAST result = nil();
     int count = inputs.getChildCount();
     for (int i = 0; i < count; i++) {
       result.addChild(expandOne(context, MAIN_CONSTRUCT,
                                 (SwiftAST) inputs.getChild(i), i + 1, false,
-                                pos));
+                                pos, usage));
     }
     result.addChild(stmt(pos, call(pos, ARGP_CHECK, intLit(pos, count))));
 
@@ -318,25 +456,52 @@ public class Arguments {
   /**
    * @return a nil-rooted tree whose children replace the ARGUMENTS node
    */
-  private static SwiftAST expandArguments(Context context, SwiftAST tree)
-      throws UserException {
+  private static SwiftAST expandArguments(Context context, SwiftAST tree,
+      Usage usage) throws UserException {
     assert(tree.getType() == ExMParser.ARGUMENTS);
     Token pos = tree.getToken();
+    usage.any = true;
 
     SwiftAST result = nil();
     int count = tree.getChildCount();
+    // The description is not an argument, so it takes no position and is
+    // not counted towards the arity check
+    int position = 0;
 
     for (int i = 0; i < count; i++) {
       SwiftAST decl = (SwiftAST) tree.getChild(i);
+      if (decl.getType() == ExMParser.ARG_DESCRIPTION) {
+        if (usage.description != null) {
+          throw new UserException(context, CONSTRUCT + ": only one" +
+              " description is allowed per program");
+        }
+        usage.description = docText(context, (SwiftAST) decl.getChild(0));
+        continue;
+      }
       // Position 0 is the program name
-      result.addChild(expandOne(context, CONSTRUCT, decl, i + 1, false, pos));
+      result.addChild(expandOne(context, CONSTRUCT, decl, ++position, false,
+                                pos, usage));
     }
 
     // Reject surplus arguments.  Deliberately only the upper bound: too few
     // is already reported by argp() itself, and checking both would race.
-    result.addChild(stmt(pos, call(pos, ARGP_CHECK, intLit(pos, count))));
+    result.addChild(stmt(pos, call(pos, ARGP_CHECK, intLit(pos, position))));
 
     return result;
+  }
+
+  /**
+   * @param argDoc an ARG_DOC node
+   * @return the documentation string it holds
+   */
+  private static String docText(Context context, SwiftAST argDoc)
+      throws UserException {
+    assert(argDoc.getType() == ExMParser.ARG_DOC);
+    try {
+      return Literals.extractStringLit(context, (SwiftAST) argDoc.getChild(0));
+    } catch (InvalidSyntaxException e) {
+      throw new UserException(context, e.getMessage());
+    }
   }
 
   /**
@@ -350,10 +515,11 @@ public class Arguments {
    * @param position 1-based command-line position; ignored when flagged
    * @param flagged true for flags(), where the variable name is the flag
    *                name and the position is irrelevant
+   * @param usage collects what this argument contributes to the usage message
    * @return DECLARATION node with an initializer that reads the argument
    */
   private static SwiftAST expandOne(Context context, String construct,
-      SwiftAST decl, int position, boolean flagged, Token pos)
+      SwiftAST decl, int position, boolean flagged, Token pos, Usage usage)
           throws UserException {
     assert(decl.getType() == ExMParser.DECLARATION);
     assert(decl.getChildCount() >= 2);
@@ -387,35 +553,51 @@ public class Arguments {
     // Emit the canonical spelling, so that "bool" becomes "boolean"
     typeT = node(pos, ExMParser.ID, typeName);
 
-    // Any remaining child is either a VARARGS marker or a default value
+    // Any remaining child is a VARARGS marker, a documentation string, or
+    // a default value
     SwiftAST defaultT = null;
+    String doc = null;
     for (int i = 2; i < decl.getChildCount(); i++) {
       SwiftAST extra = (SwiftAST) decl.getChild(i);
       if (extra.getType() == ExMParser.VARARGS) {
         throw new UserException(context, construct + ": argument '" + varName +
             "' cannot be variable-length: each argument takes one position");
       }
+      if (extra.getType() == ExMParser.ARG_DOC) {
+        doc = docText(context, extra);
+        continue;
+      }
       defaultT = extra;
     }
 
+    if (flagged && (varName.equals("h") || varName.equals("help"))) {
+      throw new UserException(context, construct + ": flag '" + varName +
+          "' conflicts with the " + HELP_LABEL + "/--help flag, which every" +
+          " program that declares arguments accepts");
+    }
+
+    // A boolean flag is true when present and false when absent, so a
+    // default value would have nothing left to say
+    boolean boolFlag = flagged && typeName.equals("boolean");
+    if (boolFlag && defaultT != null) {
+      throw new UserException(context, construct + ": boolean flag '" +
+          varName + "' cannot have a default value: it is true when the" +
+          " flag is given and false when it is not");
+    }
+    String defaultVal = (defaultT == null) ? null :
+        renderDefault(context, construct, typeName, varName, defaultT);
+
+    usage.add(new ArgDoc(varName, flagged, boolFlag, doc, defaultVal));
+
     SwiftAST init;
-    if (flagged && typeName.equals("boolean")) {
-      // A boolean flag is true when present and false when absent, so a
-      // default value would have nothing left to say
-      if (defaultT != null) {
-        throw new UserException(context, construct + ": boolean flag '" +
-            varName + "' cannot have a default value: it is true when the" +
-            " flag is given and false when it is not");
-      }
+    if (boolFlag) {
       init = call(pos, ARGV_CONTAINS, stringLit(pos, varName));
     } else {
       // argp(position) / argv("name"), with the default as a second argument
       SwiftAST fetch;
       SwiftAST key = flagged ? stringLit(pos, varName) : intLit(pos, position);
       String getter = flagged ? ARGV : ARGP;
-      if (defaultT != null) {
-        String defaultVal = renderDefault(context, construct, typeName,
-                                          varName, defaultT);
+      if (defaultVal != null) {
         fetch = call(pos, getter, key, stringLit(pos, defaultVal));
       } else {
         fetch = call(pos, getter, key);
@@ -489,6 +671,111 @@ public class Arguments {
     } catch (InvalidSyntaxException e) {
       throw new UserException(context, bad + ": " + e.getMessage());
     }
+  }
+
+  /**
+   * Render the usage message that -h prints, for example
+   *
+   * <pre>
+   * workflow usage:
+   * swift-t a4.swift [-h] [--emphasize] [-a=A] username v
+   *
+   * increment the value for the user
+   *
+   * positional arguments:
+   *   username:   your name here
+   *   v:          the value to increment
+   *
+   * flagged arguments:
+   *   -h          help
+   *   --emphasize be enthusiastic: default=false
+   *   -a=A        the addend: default=0
+   * </pre>
+   *
+   * The synopsis names the flags before the positional arguments, since a
+   * flag may be written anywhere on the command line, and each list is in
+   * declaration order.  The two lists share one column width so that they
+   * line up with each other.
+   */
+  private static String render(Usage usage) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("workflow usage:\n");
+
+    sb.append("swift-t ").append(programName()).append(' ')
+      .append(optional(HELP_LABEL));
+    for (ArgDoc arg: usage.flagged) {
+      sb.append(' ').append(arg.required() ? arg.label()
+                                           : optional(arg.label()));
+    }
+    for (ArgDoc arg: usage.positional) {
+      sb.append(' ').append(arg.required() ? arg.label()
+                                           : optional(arg.label()));
+    }
+    sb.append('\n');
+
+    if (usage.description != null) {
+      sb.append('\n').append(usage.description).append('\n');
+    }
+
+    int width = labelWidth(usage);
+    if (!usage.positional.isEmpty()) {
+      sb.append("\npositional arguments:\n");
+      for (ArgDoc arg: usage.positional) {
+        entry(sb, arg.listLabel(), arg.listText(), width);
+      }
+    }
+
+    // Always present: every program with declared arguments accepts -h
+    sb.append("\nflagged arguments:\n");
+    entry(sb, HELP_LABEL, HELP_DOC, width);
+    for (ArgDoc arg: usage.flagged) {
+      entry(sb, arg.listLabel(), arg.listText(), width);
+    }
+
+    return sb.toString();
+  }
+
+  /**
+   * @return the name to show in the synopsis.  The basename, so that the
+   *         line reads the same whether the file was named by a relative or
+   *         an absolute path.
+   */
+  private static String programName() {
+    String path = Settings.get(Settings.INPUT_FILENAME);
+    if (path == null || path.isEmpty()) {
+      return UNKNOWN_PROGRAM;
+    }
+    return new File(path).getName();
+  }
+
+  private static String optional(String label) {
+    return "[" + label + "]";
+  }
+
+  /** Width of the label column, shared by both lists so that they align */
+  private static int labelWidth(Usage usage) {
+    int width = HELP_LABEL.length();
+    for (ArgDoc arg: usage.positional) {
+      width = Math.max(width, arg.listLabel().length());
+    }
+    for (ArgDoc arg: usage.flagged) {
+      width = Math.max(width, arg.listLabel().length());
+    }
+    // At least one space between the widest label and its documentation
+    return width + 1;
+  }
+
+  /** One line of a list, or a bare label if it has nothing to say */
+  private static void entry(StringBuilder sb, String label, String text,
+      int width) {
+    sb.append("  ").append(label);
+    if (!text.isEmpty()) {
+      for (int i = label.length(); i < width; i++) {
+        sb.append(' ');
+      }
+      sb.append(text);
+    }
+    sb.append('\n');
   }
 
   /*

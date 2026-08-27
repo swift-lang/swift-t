@@ -58,6 +58,7 @@ import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.ProgramUsage;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -374,6 +375,8 @@ public class TurbineGenerator implements CompilerBackend {
 
     tree.append(compileTimeArgs());
 
+    tree.append(programUsage());
+
     tree.add(initGlobalVars());
 
     // Global vars need to be allocated debug symbols
@@ -428,6 +431,21 @@ public class TurbineGenerator implements CompilerBackend {
         TclString argVal = new TclString(args.get(key), true);
         seq.add(Turbine.addConstantArg(argName, argVal));
       }
+    }
+    return seq;
+  }
+
+  /**
+   * Register the usage message generated from the program's arguments(),
+   * flags() or main() parameter declarations.  Emitted before
+   * turbine::start so that -h reports it and exits before any workflow code
+   * runs; see exm.stc.common.lang.ProgramUsage.
+   */
+  private Sequence programUsage() {
+    Sequence seq = new Sequence();
+    String usage = ProgramUsage.get();
+    if (usage != null) {
+      seq.add(Turbine.programUsage(new TclString(usage, true)));
     }
     return seq;
   }
