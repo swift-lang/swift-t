@@ -25,5 +25,5 @@ get_java_major_version()
   # The \K is key: it lets us match the "version" prefix
   #                without including it in the output.
 
-  $CMD -version 2>&1 | grep -oP 'version [\"\']?\K[0-9]+' | head -1
+  $CMD -version 2>&1 | grep -oP "version [\"\']?\K[0-9]+" | head -1
 }
