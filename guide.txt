@@ -1625,6 +1625,73 @@ only as a statement introducing one of these declarations, and remain
 ordinary identifiers everywhere else, so existing programs that use
 either as a variable, parameter or function name still compile.
 
+[[cmd_usage]]
+==== Automatic usage message
+
+Swift/T provides the following workflow auto-documentation feature.
+
+Any argument declared in <<arguments,+arguments()+>>,
+<<flags,+flags()+>> or on +main()+ may be followed by a colon and a
+documentation string, and the special entry +description+ inside
++arguments()+ documents the program as a whole.
+Consider the following +workflow.swift+:
+
+----
+arguments(string username : "your name here",
+          int v           : "the value to increment",
+          description     : "increment the value for the user");
+flags(bool emphasize      : "be enthusiastic",
+      int a=0             : "the addend");
+
+trace("hello " + username, " the value is ", v+a);
+if (emphasize) {
+   trace("hurrah");
+}
+----
+
+Every program that declares command line arguments accepts +-h+ and
++--help+, whether or not any documentation strings were given.  Running
+the program above with:
+
+----
+$ swift-t workflow.swift -h
+----
+
+reports:
+
+----
+workflow usage:
+swift-t workflow.swift [-h] [--emphasize] [-a=A] username v
+
+increment the value for the user
+
+positional arguments:
+  username:   your name here
+  v:          the value to increment
+
+flagged arguments:
+  -h          help
+  --emphasize be enthusiastic: default=false
+  -a=A        the addend: default=0
+----
+
+The synopsis lists positional arguments and the flags, both in
+declaration order.  An argument that may be omitted -- a positional
+argument with a default, a flag with a default, or a +boolean+ flag --
+is shown in brackets; one that is required is not.
+
+The documentation strings are optional.  With none at all the usage
+message still reports the shape of the command line and the default
+values, which is usually enough to run the program.
+
++description+ is not a reserved word: it introduces the program
+description only when it is written immediately before a colon inside
++arguments()+, so +arguments(string description)+ still declares an
+ordinary variable.
+
+NOTE: +-h+ is handled before any workflow code runs, and the program
+then exits.
+
 [[cmd_manual]]
 ==== Manual approach to command line
 
