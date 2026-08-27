@@ -2869,7 +2869,72 @@ ordinary identifiers everywhere else, so existing programs that use
 either as a variable, parameter or function name still compile.</p></div>
 </div>
 <div class="sect3">
-<h4 id="cmd_manual">13.5.3. Manual approach to command line</h4>
+<h4 id="cmd_usage">13.5.3. Automatic usage message</h4>
+<div class="paragraph"><p>Swift/T provides the following workflow auto-documentation feature.</p></div>
+<div class="paragraph"><p>Any argument declared in <a href="#arguments"><code>arguments()</code></a>,
+<a href="#flags"><code>flags()</code></a> or on <code>main()</code> may be followed by a colon and a
+documentation string, and the special entry <code>description</code> inside
+<code>arguments()</code> documents the program as a whole.
+Consider the following <code>workflow.swift</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>arguments(string username : "your name here",
+          int v           : "the value to increment",
+          description     : "increment the value for the user");
+flags(bool emphasize      : "be enthusiastic",
+      int a=0             : "the addend");
+
+trace("hello " + username, " the value is ", v+a);
+if (emphasize) {
+   trace("hurrah");
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Every program that declares command line arguments accepts <code>-h</code> and
+<code>--help</code>, whether or not any documentation strings were given.  Running
+the program above with:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ swift-t workflow.swift -h</code></pre>
+</div></div>
+<div class="paragraph"><p>reports:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>workflow usage:
+swift-t workflow.swift [-h] [--emphasize] [-a=A] username v
+
+increment the value for the user
+
+positional arguments:
+  username:   your name here
+  v:          the value to increment
+
+flagged arguments:
+  -h          help
+  --emphasize be enthusiastic: default=false
+  -a=A        the addend: default=0</code></pre>
+</div></div>
+<div class="paragraph"><p>The synopsis lists positional arguments and the flags, both in
+declaration order.  An argument that may be omitted&#8201;&#8212;&#8201;a positional
+argument with a default, a flag with a default, or a <code>boolean</code> flag&#8201;&#8212;&#8201;is shown in brackets; one that is required is not.</p></div>
+<div class="paragraph"><p>The documentation strings are optional.  With none at all the usage
+message still reports the shape of the command line and the default
+values, which is usually enough to run the program.</p></div>
+<div class="paragraph"><p><code>description</code> is not a reserved word: it introduces the program
+description only when it is written immediately before a colon inside
+<code>arguments()</code>, so <code>arguments(string description)</code> still declares an
+ordinary variable.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content"><code>-h</code> is handled before any workflow code runs, and the program
+then exits.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="cmd_manual">13.5.4. Manual approach to command line</h4>
 <div class="paragraph"><p>Consider this command line: it is used in the following documentation:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -7390,7 +7455,11 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
+<<<<<<< Updated upstream
  2026-08-27 11:44:18 CDT
+=======
+ 2026-08-27 14:47:15 CDT
+>>>>>>> Stashed changes
 </div>
 </div>
 
