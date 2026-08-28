@@ -61,11 +61,11 @@ def get_lib_name():
 
 def get_config_value(name):
     if name == 'include-dir':
-        value = sysconfig.get_config_var('INCLUDEPY')
+        value = sysconfig.get_paths()['include']
     elif name == 'include-flags':
-        value = '-I' + sysconfig.get_config_var('INCLUDEPY')
+        value = '-I' + sysconfig.get_paths()['include']
     elif name == 'lib-dir':
-        value = sysconfig.get_config_var('LIBDIR')
+        value = os.path.join(sysconfig.get_config_var('base'), 'lib')
     elif name == 'lib-name':
         value = get_lib_name()
     elif name == 'lib-flags':
