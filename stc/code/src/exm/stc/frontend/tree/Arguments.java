@@ -171,6 +171,8 @@ public class Arguments {
   private static class ArgDoc {
     /** Variable name, which for a flag is also the flag name */
     final String name;
+    /** The type as the user declared it, shown in the positional list */
+    final String type;
     /** A flag rather than a positional argument */
     final boolean flagged;
     /** A boolean flag, which is given without a value */
@@ -180,9 +182,10 @@ public class Arguments {
     /** Default value as text, null if the argument is required */
     final String defaultVal;
 
-    ArgDoc(String name, boolean flagged, boolean bool, String doc,
-           String defaultVal) {
+    ArgDoc(String name, String type, boolean flagged, boolean bool,
+           String doc, String defaultVal) {
       this.name = name;
+      this.type = type;
       this.flagged = flagged;
       this.bool = bool;
       this.doc = (doc == null) ? "" : doc;
@@ -202,9 +205,14 @@ public class Arguments {
       return bool ? "--" + name : "-" + name + "=" + name.toUpperCase();
     }
 
-    /** How this argument is named in the list below the synopsis */
-    String listLabel() {
-      return flagged ? label() : name + ":";
+    /**
+     * How this argument is named in the list below the synopsis: its
+     * declared type, padded out to typeWidth, and then the way it is written
+     * on the command line -- bare for a positional argument, as the flag
+     * itself for a flag.
+     */
+    String listLabel(int typeWidth) {
+      return pad(type, typeWidth) + (flagged ? label() : name + ":");
     }
 
     /** Documentation with the default value appended, as the list shows it */
@@ -635,7 +643,8 @@ public class Arguments {
     String defaultVal = (defaultT == null) ? null :
         renderDefault(context, construct, typeName, varName, defaultT);
 
-    usage.add(new ArgDoc(varName, flagged, boolFlag, doc, defaultVal));
+    usage.add(new ArgDoc(varName, typeName, flagged, boolFlag, doc,
+                         defaultVal));
 
     // argp(position) / argv("name"), with the default as a second argument.
     // A boolean flag has no such call: it is read by its presence alone
@@ -743,19 +752,21 @@ public class Arguments {
    * increment the value for the user
    *
    * positional arguments:
-   *   username:   your name here
-   *   v:          the value to increment
+   *   string  username:   your name here
+   *   int     v:          the value to increment
    *
    * flagged arguments:
-   *   -h          help
-   *   --emphasize be enthusiastic: default=false
-   *   -a=A        the addend: default=0
+   *           -h          help
+   *   boolean --emphasize be enthusiastic: default=false
+   *   int     -a=A        the addend: default=0
    * </pre>
    *
    * The synopsis names the flags before the positional arguments, since a
    * flag may be written anywhere on the command line, and each list is in
-   * declaration order.  The two lists share one column width so that they
-   * line up with each other.
+   * declaration order.  Each argument is prefixed with its declared type,
+   * and the two lists share both the type column and the one after it, so
+   * that the whole message reads as three columns.  Only -h has a blank
+   * type, having never been declared.
    */
   private static String render(Usage usage) {
     StringBuilder sb = new StringBuilder();
@@ -777,19 +788,20 @@ public class Arguments {
       sb.append('\n').append(usage.description).append('\n');
     }
 
-    int width = labelWidth(usage);
+    int typeWidth = typeWidth(usage);
+    int width = labelWidth(usage, typeWidth);
     if (!usage.positional.isEmpty()) {
       sb.append("\npositional arguments:\n");
       for (ArgDoc arg: usage.positional) {
-        entry(sb, arg.listLabel(), arg.listText(), width);
+        entry(sb, arg.listLabel(typeWidth), arg.listText(), width);
       }
     }
 
     // Always present: every program with declared arguments accepts -h
     sb.append("\nflagged arguments:\n");
-    entry(sb, HELP_LABEL, HELP_DOC, width);
+    entry(sb, helpLabel(typeWidth), HELP_DOC, width);
     for (ArgDoc arg: usage.flagged) {
-      entry(sb, arg.listLabel(), arg.listText(), width);
+      entry(sb, arg.listLabel(typeWidth), arg.listText(), width);
     }
 
     return sb.toString();
@@ -812,14 +824,48 @@ public class Arguments {
     return "[" + label + "]";
   }
 
-  /** Width of the label column, shared by both lists so that they align */
-  private static int labelWidth(Usage usage) {
-    int width = HELP_LABEL.length();
+  /** Left-justify s in a column of the given width */
+  private static String pad(String s, int width) {
+    StringBuilder sb = new StringBuilder(s);
+    for (int i = s.length(); i < width; i++) {
+      sb.append(' ');
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Width of the type column, shared by both lists.  Zero if no argument was
+   * declared at all, so that a program whose only flag is -h -- which has no
+   * declared type -- is not indented past an empty column.
+   */
+  private static int typeWidth(Usage usage) {
+    int width = 0;
     for (ArgDoc arg: usage.positional) {
-      width = Math.max(width, arg.listLabel().length());
+      width = Math.max(width, arg.type.length());
     }
     for (ArgDoc arg: usage.flagged) {
-      width = Math.max(width, arg.listLabel().length());
+      width = Math.max(width, arg.type.length());
+    }
+    // At least one space between the widest type and the name it qualifies
+    return (width == 0) ? 0 : width + 1;
+  }
+
+  /**
+   * How -h is named in the flag list: it has no declared type, so its type
+   * column is blank
+   */
+  private static String helpLabel(int typeWidth) {
+    return pad("", typeWidth) + HELP_LABEL;
+  }
+
+  /** Width of the label column, shared by both lists so that they align */
+  private static int labelWidth(Usage usage, int typeWidth) {
+    int width = helpLabel(typeWidth).length();
+    for (ArgDoc arg: usage.positional) {
+      width = Math.max(width, arg.listLabel(typeWidth).length());
+    }
+    for (ArgDoc arg: usage.flagged) {
+      width = Math.max(width, arg.listLabel(typeWidth).length());
     }
     // At least one space between the widest label and its documentation
     return width + 1;
