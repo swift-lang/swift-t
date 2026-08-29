@@ -53,4 +53,5 @@ log "CONDA_PREFIX: $CONDA_PREFIX"
   Rscript dev/conda/install-RInside.R
 }
 
-log OK
+STOP=$SECONDS
+log OK: TIME: $[ STOP - START ]
