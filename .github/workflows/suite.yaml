@@ -1,4 +1,4 @@
-name: STC Test Suite with Valgrind 🧪
+name: Swift/T Test Suite 🧪
 
 on:
   # Schedule and workflow_dispatch (manual) only work on default branch
@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   stc_test_suite_valgrind:
-    name: STC Tests O${{ matrix.opt-level }} Valgrind
+    name: Suite O${{ matrix.opt-level }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -37,7 +37,7 @@ jobs:
           - "3.10"
 
         mpi:
-          - mpich
+          - openmpi
 
     steps:
       - name: Checkout
@@ -62,14 +62,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y valgrind
 
-      - name: Setup R
-        run: |
-          dev/github-actions/install-R.sh ${{ matrix.os }}
-
       - name: Initialize swift-t settings
         run: |
           dev/build/init-settings.sh
-          dev/github-actions/edit-settings.sh -r
+          dev/github-actions/edit-settings.sh
 
       - name: build swift-t
         run: |
@@ -84,4 +80,4 @@ jobs:
           export TURBINE_HOME=/tmp/swift-t-install/turbine
           export VALGRIND=$(which valgrind)
           cd stc/tests
-          ./run-tests.zsh -O${{ matrix.opt-level }} -c -e
+          ./run-tests.zsh -O${{ matrix.opt-level }} -e
