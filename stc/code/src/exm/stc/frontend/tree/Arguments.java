@@ -237,15 +237,6 @@ public class Arguments {
   }
 
   /**
-   * bool is accepted as a synonym for boolean within arguments() and
-   * flags() only.  It is deliberately not a global type alias: the synonym
-   * is confined to these two constructs.
-   */
-  private static String canonicalType(String typeName) {
-    return typeName.equals("bool") ? "boolean" : typeName;
-  }
-
-  /**
    * The Swift type of the variable the declaration binds, which is not
    * always the word the user wrote: input and output are argument types
    * rather than Swift types, and both bind an ordinary file.
@@ -298,7 +289,7 @@ public class Arguments {
   }
 
   private static final String SUPPORTED_TYPES =
-      "string, int, float, boolean (or bool), file (or output), input, url";
+      "string, int, float, boolean, file (or output), input, url";
 
   /**
    * Replace the module's arguments() declaration, or the parameters of its
@@ -600,15 +591,14 @@ public class Arguments {
       // e.g. a parameterized type such as set<int>
       throw badType(context, construct, varName);
     }
-    String typeName = canonicalType(typeT.getText());
+    String typeName = typeT.getText();
     if (!supportedType(typeName)) {
       throw new UserException(context, construct + ": unsupported type '" +
           typeT.getText() + "' for argument '" + varName + "'." +
           "  Supported types are: " + SUPPORTED_TYPES);
     }
-    // Emit the Swift type: the canonical spelling, so that "bool" becomes
-    // "boolean", and the bound type rather than the argument type, so that
-    // "input" becomes "file"
+    // Emit the bound type rather than the argument type, so that "input"
+    // and "output" become "file"
     typeT = node(pos, ExMParser.ID, swiftType(typeName));
 
     // Any remaining child is a VARARGS marker, a documentation string, or
