@@ -83,6 +83,38 @@ import exm.stc.frontend.Context;
  * flag that was not given; argv_accept() reports a flag that was given but
  * not declared.
  *
+ * A file argument names a file the program writes.  It becomes the mapping
+ * of an unassigned file variable, so that nothing is read from the command
+ * line but the name:
+ *
+ * <pre>
+ *   arguments(file result);
+ * </pre>
+ *
+ * becomes
+ *
+ * <pre>
+ *   file result &lt;argp(1)&gt;;
+ * </pre>
+ *
+ * A file the program reads is declared input instead, which binds an
+ * ordinary file read through input():
+ *
+ * <pre>
+ *   arguments(input data);
+ * </pre>
+ *
+ * becomes
+ *
+ * <pre>
+ *   file data = input(argp(1));
+ * </pre>
+ *
+ * so that a file named on the command line but not actually present is
+ * reported by input() rather than by whatever first tries to read it.
+ * output is accepted as a synonym for file, for symmetry with input where
+ * naming the direction reads better than leaving it implied.
+ *
  * Each declaration may carry a documentation string, and arguments() may
  * carry a description of the program as a whole:
  *
@@ -214,8 +246,31 @@ public class Arguments {
   }
 
   /**
+   * The Swift type of the variable the declaration binds, which is not
+   * always the word the user wrote: input and output are argument types
+   * rather than Swift types, and both bind an ordinary file.
+   */
+  private static String swiftType(String typeName) {
+    if (typeName.equals("input") || typeName.equals("output")) {
+      return "file";
+    }
+    return typeName;
+  }
+
+  /**
+   * Whether the argument names a file for the program to write rather than
+   * a value for it to read.  Such an argument becomes the mapping of an
+   * unassigned file variable: nothing is read from the command line but the
+   * name, and the program itself supplies the contents.
+   */
+  private static boolean mappedType(String typeName) {
+    return typeName.equals("file") || typeName.equals("output");
+  }
+
+  /**
    * The builtin that converts the string returned by argp() or argv() to
    * the declared type.  A null conversion means the argument is used as-is.
+   * Not consulted for a mapped type, which reads no value at all.
    */
   private static String conversionFunction(String typeName) {
     if (typeName.equals("string")) {
@@ -226,7 +281,7 @@ public class Arguments {
       return "string2float";
     } else if (typeName.equals("boolean")) {
       return "string2bool";
-    } else if (typeName.equals("file")) {
+    } else if (typeName.equals("input")) {
       return "input";
     } else if (typeName.equals("url")) {
       return "input_url";
@@ -238,11 +293,12 @@ public class Arguments {
   private static boolean supportedType(String typeName) {
     return typeName.equals("string") || typeName.equals("int") ||
            typeName.equals("float") || typeName.equals("boolean") ||
-           typeName.equals("file") || typeName.equals("url");
+           typeName.equals("input") || typeName.equals("url") ||
+           mappedType(typeName);
   }
 
   private static final String SUPPORTED_TYPES =
-      "string, int, float, boolean (or bool), file, url";
+      "string, int, float, boolean (or bool), file (or output), input, url";
 
   /**
    * Replace the module's arguments() declaration, or the parameters of its
@@ -550,8 +606,10 @@ public class Arguments {
           typeT.getText() + "' for argument '" + varName + "'." +
           "  Supported types are: " + SUPPORTED_TYPES);
     }
-    // Emit the canonical spelling, so that "bool" becomes "boolean"
-    typeT = node(pos, ExMParser.ID, typeName);
+    // Emit the Swift type: the canonical spelling, so that "bool" becomes
+    // "boolean", and the bound type rather than the argument type, so that
+    // "input" becomes "file"
+    typeT = node(pos, ExMParser.ID, swiftType(typeName));
 
     // Any remaining child is a VARARGS marker, a documentation string, or
     // a default value
@@ -589,12 +647,10 @@ public class Arguments {
 
     usage.add(new ArgDoc(varName, flagged, boolFlag, doc, defaultVal));
 
-    SwiftAST init;
-    if (boolFlag) {
-      init = call(pos, ARGV_CONTAINS, stringLit(pos, varName));
-    } else {
-      // argp(position) / argv("name"), with the default as a second argument
-      SwiftAST fetch;
+    // argp(position) / argv("name"), with the default as a second argument.
+    // A boolean flag has no such call: it is read by its presence alone
+    SwiftAST fetch = null;
+    if (!boolFlag) {
       SwiftAST key = flagged ? stringLit(pos, varName) : intLit(pos, position);
       String getter = flagged ? ARGV : ARGP;
       if (defaultVal != null) {
@@ -602,7 +658,24 @@ public class Arguments {
       } else {
         fetch = call(pos, getter, key);
       }
+    }
 
+    SwiftAST result = node(pos, ExMParser.DECLARATION, "DECLARATION");
+    result.addChild(typeT);
+
+    if (mappedType(typeName)) {
+      // ^( DECLARATION type ^( DECLARE_VARIABLE_REST v ^( MAPPING e ) ) ),
+      // an unassigned mapped file: the command line names it, the program
+      // writes it
+      restT.addChild(mapping(pos, fetch));
+      result.addChild(restT);
+      return result;
+    }
+
+    SwiftAST init;
+    if (boolFlag) {
+      init = call(pos, ARGV_CONTAINS, stringLit(pos, varName));
+    } else {
       // Convert from string to the declared type, if needed
       String conv = conversionFunction(typeName);
       init = (conv == null) ? fetch : call(pos, conv, fetch);
@@ -612,9 +685,6 @@ public class Arguments {
     SwiftAST assign = node(pos, ExMParser.DECLARE_ASSIGN, "DECLARE_ASSIGN");
     assign.addChild(restT);
     assign.addChild(init);
-
-    SwiftAST result = node(pos, ExMParser.DECLARATION, "DECLARATION");
-    result.addChild(typeT);
     result.addChild(assign);
     return result;
   }
@@ -660,7 +730,7 @@ public class Arguments {
         }
         return Literals.extractBoolLit(context, tree);
       } else {
-        // string, file and url all take a plain string
+        // string, file, output, input and url all take a plain string
         String v = Literals.extractStringLit(context, tree);
         if (v == null) {
           throw new UserException(context, construct + ": default value for" +
@@ -805,6 +875,13 @@ public class Arguments {
     SwiftAST result = node(pos, ExMParser.CALL_FUNCTION, "CALL_FUNCTION");
     result.addChild(node(pos, ExMParser.ID, name));
     result.addChild(argList);
+    return result;
+  }
+
+  /** ^( MAPPING expr ): the filename a file variable is mapped to */
+  private static SwiftAST mapping(Token pos, SwiftAST expr) {
+    SwiftAST result = node(pos, ExMParser.MAPPING, "MAPPING");
+    result.addChild(expr);
     return result;
   }
 
