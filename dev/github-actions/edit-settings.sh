@@ -27,7 +27,7 @@ cp -v $SETTINGS_SH $SETTINGS_ORIG
 log $SETTINGS_SH ...
 sed -i -f github-actions/settings.sed $SETTINGS_SH
 
-if [[ "$1" == "-r" ]]
+if [[ "${1:-EMPTY}" == "-r" ]]
 then
   RHOME=$( R RHOME )
   log "RHOME=$RHOME"
