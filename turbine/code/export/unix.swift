@@ -42,6 +42,11 @@ app app_catp(file f[])
   "cat" f;
 }
 
+cat1(file f)
+{
+  app_catp([f]);
+}
+
 /*
   We fail if given an array of size 0 - /bin/cat will hang on no inputs.
   Cf. #145
