@@ -1719,7 +1719,7 @@ $ swift-t -n 3 program.swift -v -a=file1.txt file2.txt
                --exec="prog thing1 thing2" --help file4.txt
 ----
 
-The arguments to +program.tic+ are just the tokens after +program.tic+
+The arguments to +program.swift+ are just the tokens after +program.swift+
 
 This command line can be handled with the following library functions:
 
