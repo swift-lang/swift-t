@@ -1535,15 +1535,17 @@ which reports:
 trace: hello justin, the value is ,13
 ----
 
-The supported types are +string+, +int+, +float+, +boolean+,
-+input+ +file+, +output+, and +url+, with +bool+ accepted as a synonym for
-+boolean+ and +output+ as a synonym for +file+.  +bool+, +input+ and
-+output+ are recognized only inside these declarations and remain
-ordinary identifiers everywhere else.
+The supported types are
++string+, +int+, +float+, +boolean+, +input+, +output+, +file+,
+and +url+, and +file+ as a synonym for +output+
+(because the +file+ type in Swift/T is always an output
+unless assigned with something like +input()+).
++input+ and +output+ are recognized only inside these declarations
+and remain ordinary identifiers everywhere else.
 
 +input+ and +output+ are not Swift/T types: both declare an ordinary
-+file+, and which one you write says whether the workflow reads that
-file or writes it.
++file+, and which one you write says whether the overall  workflow
+reads that file as input or writes it as output.
 
 An +input+ argument names a file the workflow reads.  It is bound
 through <<library_files,+input()+>>, so that the named file is checked
