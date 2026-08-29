@@ -2784,9 +2784,18 @@ trace("hello " + username, " the value is ", v+1);</code></pre>
 <div class="content">
 <pre><code>trace: hello justin, the value is ,13</code></pre>
 </div></div>
-<div class="paragraph"><p>The supported types are <code>string</code>, <code>int</code>, <code>float</code>, <code>boolean</code>, <code>file</code>
-and <code>url</code>, with <code>bool</code> accepted as a synonym for <code>boolean</code>.
-An argument may be given a default value, which must be a literal of
+<div class="paragraph"><p>The supported types are <code>string</code>, <code>int</code>, <code>float</code>, <code>boolean</code>,
+<code>input</code> <code>file</code>, <code>output</code>, and <code>url</code>, with <code>bool</code> accepted as a synonym for
+<code>boolean</code> and <code>output</code> as a synonym for <code>file</code>.  <code>bool</code>, <code>input</code> and
+<code>output</code> are recognized only inside these declarations and remain
+ordinary identifiers everywhere else.</p></div>
+<div class="paragraph"><p><code>input</code> and <code>output</code> are not Swift/T types: both declare an ordinary
+<code>file</code>, and which one you write says whether the workflow reads that
+file or writes it.</p></div>
+<div class="paragraph"><p>An <code>input</code> argument names a file the workflow reads.  It is bound
+through <a href="#library_files"><code>input()</code></a>, so that the named file is checked
+to exist as soon as the argument is bound.</p></div>
+<div class="paragraph"><p>An argument may be given a default value, which must be a literal of
 the declared type:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3940,6 +3949,14 @@ be easily copied out and extended to serve other purposes.</p></div>
 <dd>
 <p>
 Copy file to file (via <code>cp</code>).
+</p>
+</dd>
+<dt class="hdlist1">
+<code>cat1(file f)</code>
+</dt>
+<dd>
+<p>
+(<em>cat-print-1</em>) Print file to standard output (via <code>cat</code>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -7457,7 +7474,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-27 15:01:57 CDT
+ 2026-08-29 15:47:17 CDT
 </div>
 </div>
 
