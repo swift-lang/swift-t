@@ -1535,8 +1535,20 @@ which reports:
 trace: hello justin, the value is ,13
 ----
 
-The supported types are +string+, +int+, +float+, +boolean+, +file+
-and +url+, with +bool+ accepted as a synonym for +boolean+.
+The supported types are +string+, +int+, +float+, +boolean+,
++input+ +file+, +output+, and +url+, with +bool+ accepted as a synonym for
++boolean+ and +output+ as a synonym for +file+.  +bool+, +input+ and
++output+ are recognized only inside these declarations and remain
+ordinary identifiers everywhere else.
+
++input+ and +output+ are not Swift/T types: both declare an ordinary
++file+, and which one you write says whether the workflow reads that
+file or writes it.
+
+An +input+ argument names a file the workflow reads.  It is bound
+through <<library_files,+input()+>>, so that the named file is checked
+to exist as soon as the argument is bound.
+
 An argument may be given a default value, which must be a literal of
 the declared type:
 
@@ -2243,6 +2255,8 @@ be easily copied out and extended to serve other purposes.
 *Import:* +unix+
 
 +cp(file) -> file+:: Copy file to file (via +cp+).
+
++cat1(file f)+:: (_cat-print-1_) Print file to standard output (via +cat+).
 
 +catp(file f[])+:: (_cat-print_) Print files to standard output (via +cat+).
 
