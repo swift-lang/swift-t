@@ -2927,14 +2927,11 @@ flagged arguments:
   int     -a=A        the addend: default=0</code></pre>
 </div></div>
 <div class="paragraph"><p>The synopsis lists positional arguments and the flags, both in
-declaration order.  An argument that may be omitted&#8201;&#8212;&#8201;a positional
+declaration order, prefixed by their required types.
+An argument that may be omitted&#8201;&#8212;&#8201;a positional
 argument with a default, a flag with a default, or a <code>boolean</code> flag&#8201;&#8212;&#8201;is shown in brackets; one that is required is not.</p></div>
-<div class="paragraph"><p>Each argument is listed with its declared type, in a column of its own
-so that the names line up under each other.  Both lists share that
-column and the one after it, so that the whole message reads as three
-columns.  Only <code>-h</code> has a blank type, having never been declared.</p></div>
 <div class="paragraph"><p>The documentation strings are optional.  With none at all the usage
-message still reports the shape of the command line and the default
+message still reports the signature of the command line and the default
 values, which is usually enough to run the program.</p></div>
 <div class="paragraph"><p><code>description</code> is not a reserved word: it introduces the program
 description only when it is written immediately before a colon inside
@@ -2945,8 +2942,8 @@ ordinary variable.</p></div>
 <td class="icon">
 <div class="title">Note</div>
 </td>
-<td class="content"><code>-h</code> is handled before any workflow code runs, and the program
-then exits.</td>
+<td class="content"><code>-h</code> is handled before any workflow code runs,
+then the program exits.</td>
 </tr></table>
 </div>
 </div>
@@ -7480,7 +7477,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-29 16:29:53 CDT
+ 2026-08-29 16:31:36 CDT
 </div>
 </div>
 
