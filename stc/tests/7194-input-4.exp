@@ -2,7 +2,7 @@ workflow usage:
 swift-t 7194-input-4.swift .-h. .-extra=EXTRA. data
 print the name of a file named on the command line
 positional arguments:
-data:        the file to read
+input data:        the file to read
 flagged arguments:
 h           help
-extra=EXTRA another file to read: default=extra.txt
+input -extra=EXTRA another file to read: default=extra.txt

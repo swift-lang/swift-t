@@ -2,9 +2,9 @@ workflow usage:
 swift-t 7181-usage-1.swift .-h. .--emphasize. .-a=A. username v
 increment the value for the user
 positional arguments:
-username:   your name here
-v:          the value to increment
+string  username:   your name here
+int     v:          the value to increment
 flagged arguments:
 h          help
-emphasize be enthusiastic: default=false
-a=A        the addend: default=0
+boolean --emphasize be enthusiastic: default=false
+int     -a=A        the addend: default=0

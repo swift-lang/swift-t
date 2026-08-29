@@ -1,7 +1,7 @@
 workflow usage:
 swift-t 7186-usage-6.swift .-h. -a=A username
 positional arguments:
-username: your name here
+string username: your name here
 flagged arguments:
 h        help
-a=A      the addend
+int    -a=A      the addend

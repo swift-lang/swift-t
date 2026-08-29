@@ -2,7 +2,7 @@ workflow usage:
 swift-t 7187-usage-7.swift .-h. username v
 increment the value for the user
 positional arguments:
-username:
-v:
+string username:
+int    v:
 flagged arguments:
 h        help

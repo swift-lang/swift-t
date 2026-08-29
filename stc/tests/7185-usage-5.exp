@@ -1,7 +1,7 @@
 workflow usage:
 swift-t 7185-usage-5.swift .-h. name n
 positional arguments:
-name: who to greet
-n:    how many times
+string name: who to greet
+int    n:    how many times
 flagged arguments:
 h    help
