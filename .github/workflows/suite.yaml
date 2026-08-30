@@ -76,8 +76,9 @@ jobs:
 
       - name: Run STC Test Suite at O${{ matrix.opt-level }} under Valgrind
         run: |
-          export STC=/tmp/swift-t-install/stc/bin/swift-t
+          export STC=/tmp/swift-t-install/stc/bin/stc
           export TURBINE_HOME=/tmp/swift-t-install/turbine
           export VALGRIND=$(which valgrind)
           cd stc/tests
+          set -x
           ./run-tests.zsh -O${{ matrix.opt-level }} -e
