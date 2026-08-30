@@ -35,9 +35,12 @@ then
   sed -i "s@# R_INSTALL=.*@R_INSTALL=$RHOME@" $SETTINGS_SH
 fi
 
-log "settings changed:"
-# There will be changes, so the diff exit code will be 1:
-set +e
-set -x
-diff $SETTINGS_ORIG $SETTINGS_SH
+(
+  log "settings changed:"
+  # There will be changes, so the diff exit code will be 1:
+  set +e
+  set -x
+  diff $SETTINGS_ORIG $SETTINGS_SH
+)
+
 log "SUCCESS"
