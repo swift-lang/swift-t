@@ -3819,7 +3819,7 @@ Provide other arguments to +mpiexec+.
 If unset or empty, the random number generator seed will be set to the
 process rank for each process, giving reproducible results.  If set to
 an integer +seed+, the random number generator seed for each process
-will be set to +seed+{nbsp}+{nbsp}+rank+.
+will be set to +(seed{nbsp}{plus}{nbsp}rank)+.
 +
 For non-reproducible random results, use the following shell commands:
 +
