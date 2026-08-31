@@ -115,6 +115,9 @@ import exm.stc.frontend.Context;
  * output is accepted as a synonym for file, for symmetry with input where
  * naming the direction reads better than leaving it implied.
  *
+ * directory is input for a directory: it binds a file through directory(),
+ * which checks that the path is there and that it is a directory.
+ *
  * Each declaration may carry a documentation string, and arguments() may
  * carry a description of the program as a whole:
  *
@@ -246,11 +249,12 @@ public class Arguments {
 
   /**
    * The Swift type of the variable the declaration binds, which is not
-   * always the word the user wrote: input and output are argument types
-   * rather than Swift types, and both bind an ordinary file.
+   * always the word the user wrote: input, output and directory are argument
+   * types rather than Swift types, and all three bind an ordinary file.
    */
   private static String swiftType(String typeName) {
-    if (typeName.equals("input") || typeName.equals("output")) {
+    if (typeName.equals("input") || typeName.equals("output") ||
+        typeName.equals("directory")) {
       return "file";
     }
     return typeName;
@@ -282,6 +286,8 @@ public class Arguments {
       return "string2bool";
     } else if (typeName.equals("input")) {
       return "input";
+    } else if (typeName.equals("directory")) {
+      return "directory";
     } else if (typeName.equals("url")) {
       return "input_url";
     } else {
@@ -292,12 +298,12 @@ public class Arguments {
   private static boolean supportedType(String typeName) {
     return typeName.equals("string") || typeName.equals("int") ||
            typeName.equals("float") || typeName.equals("boolean") ||
-           typeName.equals("input") || typeName.equals("url") ||
-           mappedType(typeName);
+           typeName.equals("input") || typeName.equals("directory") ||
+           typeName.equals("url") || mappedType(typeName);
   }
 
   private static final String SUPPORTED_TYPES =
-      "string, int, float, boolean, file (or output), input, url";
+      "string, int, float, boolean, file (or output), input, directory, url";
 
   /**
    * Replace the module's arguments() declaration, or the parameters of its
@@ -729,7 +735,8 @@ public class Arguments {
         }
         return Literals.extractBoolLit(context, tree);
       } else {
-        // string, file, output, input and url all take a plain string
+        // string, file, output, input, directory and url all take a plain
+        // string
         String v = Literals.extractStringLit(context, tree);
         if (v == null) {
           throw new UserException(context, construct + ": default value for" +

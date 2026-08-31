@@ -280,14 +280,26 @@ argp_check(int max)
 @pure @stc_intrinsic=FILENAME
 (string n) filename(file x) "turbine" "0.0.2" "";
 
-@pure @implements=input_file
+// None of the three is @pure, and deliberately so.  A pure call may be
+// eliminated once its result is unused, and the result of these is unused
+// more often than it looks: they promise that the output file has the
+// filename of the input string, so a result that only ever reaches
+// filename() folds away to that string, taking the run time check on the
+// path with it.  Checking the path is the whole point of calling them
+@implements=input_file
 (file f) input(string filename) "turbine" "0.0.2" "input_file" [
   "turbine::input_file_local <<f>> <<filename>>"
 ];
 
-@pure @implements=input_file
+@implements=input_file
 (file f) input_file(string filename) "turbine" "0.0.2" "input_file" [
   "turbine::input_file_local <<f>> <<filename>>"
+];
+
+// As input(), but the path must be a directory, not an ordinary file
+@implements=input_file
+(file d) directory(string dirname) "turbine" "0.0.2" "input_directory" [
+  "turbine::input_directory_local <<d>> <<dirname>>"
 ];
 
 @pure @implements=input_url
