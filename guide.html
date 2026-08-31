@@ -2785,18 +2785,22 @@ trace("hello " + username, " the value is ", v+1);</code></pre>
 <pre><code>trace: hello justin, the value is ,13</code></pre>
 </div></div>
 <div class="paragraph"><p>The supported types are
-<code>string</code>, <code>int</code>, <code>float</code>, <code>boolean</code>, <code>input</code>, <code>output</code>, <code>file</code>,
-and <code>url</code>, and <code>file</code> as a synonym for <code>output</code>
+<code>string</code>, <code>int</code>, <code>float</code>, <code>boolean</code>, <code>input</code>, <code>directory</code>, <code>output</code>,
+<code>file</code>, and <code>url</code>, and <code>file</code> as a synonym for <code>output</code>
 (because the <code>file</code> type in Swift/T is always an output
 unless assigned with something like <code>input()</code>).
-<code>input</code> and <code>output</code> are recognized only inside these declarations
-and remain ordinary identifiers everywhere else.</p></div>
-<div class="paragraph"><p><code>input</code> and <code>output</code> are not Swift/T types: both declare an ordinary
-<code>file</code>, and which one you write says whether the overall  workflow
-reads that file as input or writes it as output.</p></div>
+<code>input</code>, <code>directory</code> and <code>output</code> are recognized only inside these
+declarations and remain ordinary identifiers everywhere else.</p></div>
+<div class="paragraph"><p><code>input</code>, <code>directory</code> and <code>output</code> are not Swift/T types: all three
+declare an ordinary <code>file</code>, and which one you write says whether the
+overall workflow reads that file as input or writes it as output.</p></div>
 <div class="paragraph"><p>An <code>input</code> argument names a file the workflow reads.  It is bound
 through <a href="#library_files"><code>input()</code></a>, so that the named file is checked
 to exist as soon as the argument is bound.</p></div>
+<div class="paragraph"><p>A <code>directory</code> argument names a directory the workflow reads.  It is
+bound through <a href="#library_files"><code>directory()</code></a>, which makes the same
+existence check and additionally requires the name to be a directory
+rather than an ordinary file.</p></div>
 <div class="paragraph"><p>An argument may be given a default value, which must be a literal of
 the declared type:</p></div>
 <div class="listingblock">
@@ -2955,7 +2959,7 @@ then the program exits.</td>
 <pre><code>$ swift-t -n 3 program.swift -v -a=file1.txt file2.txt
                --exec="prog thing1 thing2" --help file4.txt</code></pre>
 </div></div>
-<div class="paragraph"><p>The arguments to <code>program.tic</code> are just the tokens after <code>program.tic</code></p></div>
+<div class="paragraph"><p>The arguments to <code>program.swift</code> are just the tokens after <code>program.swift</code></p></div>
 <div class="paragraph"><p>This command line can be handled with the following library functions:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -3421,6 +3425,18 @@ At run time, the filesystem is checked for the given file name.
 <dd>
 <p>
 Alias for <code>input()</code>.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>directory(string) &#8594; file</code>
+</dt>
+<dd>
+<p>
+Obtain a directory as a <code>file</code>.
+At run time the filesystem is checked as for <code>input()</code>, and the name is
+additionally required to be a directory rather than an ordinary file.
+The directory is bound where it stands and is never copied, so its
+result may not be assigned to a mapped <code>file</code>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -7477,7 +7493,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-08-29 16:31:36 CDT
+ 2026-08-30 11:22:47 CDT
 </div>
 </div>
 
