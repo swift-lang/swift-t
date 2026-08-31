@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.6, May 2026
+v1.6.6, August 2026
 
 
 == How to use this guide
@@ -86,6 +86,7 @@ To report a problem, simply email swift-t-user@googlegroups.com .
 
 * See the link:./guide.html[Swift/T Guide] for more information about Swift/T.
 * Join the https://groups.google.com/forum/#!forum/swift-t-user[+swift-user+ mailing list].
+* See <<troubleshooting,Troubleshooting>> for common issues
 
 == Quickstart
 
@@ -1761,6 +1762,19 @@ Open MPI developer):
   --> Returned value -1 instead of OPAL_SUCCESS
 
 ----
+
+[[troubleshooting]]
+== Troubleshooting
+
+* +An unrecognized option was included on the mpiexec command line+
++
+Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
++mpiexec+ command picking up later arguments used to launch
++turbine+ or the user workflow flags.  To diagnose more fully, inspect
+the generated Turbine scheduler script (e.g., +turbine-pbs.sh+).  A
+workaround is to set environment variable
++TURBINE_LAUNCH_OPTIONS="--"+, which will insert the separator in a
+place to prevent this interference.
 
 == Archive
 
