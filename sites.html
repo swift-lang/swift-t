@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.6,</span>
-<span id="revdate">May 2026</span>
+<span id="revdate">August 2026</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -816,6 +816,11 @@ See the <a href="./guide.html">Swift/T Guide</a> for more information about Swif
 <li>
 <p>
 Join the <a href="https://groups.google.com/forum/#!forum/swift-t-user"><code>swift-user</code> mailing list</a>.
+</p>
+</li>
+<li>
+<p>
+See <a href="#troubleshooting">Troubleshooting</a> for common issues
 </p>
 </li>
 </ul></div>
@@ -3237,6 +3242,25 @@ Open MPI developer):
 </div>
 </div>
 <div class="sect1">
+<h2 id="troubleshooting">Troubleshooting</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+<code>An unrecognized option was included on the mpiexec command line</code>
+</p>
+<div class="paragraph"><p>Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
+<code>mpiexec</code> command picking up later arguments used to launch
+<code>turbine</code> or the user workflow flags.  To diagnose more fully, inspect
+the generated Turbine scheduler script (e.g., <code>turbine-pbs.sh</code>).  A
+workaround is to set environment variable
+<code>TURBINE_LAUNCH_OPTIONS="--"</code>, which will insert the separator in a
+place to prevent this interference.</p></div>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_archive">Archive</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>These notes are for historical value.</p></div>
@@ -4545,7 +4569,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2026-05-12 10:32:22 CDT
+ 2026-08-31 14:47:20 CDT
 </div>
 </div>
 </body>
