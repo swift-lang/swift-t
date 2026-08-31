@@ -321,6 +321,72 @@ namespace eval turbine {
       }
     }
 
+    # directory() is input() with a stricter check: the path must not only
+    # exist but be a directory.  A directory is bound where it stands and is
+    # never copied, so a mapped output is an error rather than a deep copy
+    # of the tree.
+    proc input_directory { out dirpath } {
+      set outfile [ lindex $out 0 ]
+
+      set mapped [ is_file_mapped $outfile ]
+      if { $mapped } {
+        set outfile_path [ get_file_path $outfile ]
+        rule "$outfile_path $dirpath" \
+          [ list input_directory_error_body $outfile_path $dirpath ] \
+          name "input_directory_error-$outfile-$dirpath"
+      } else {
+        rule "$dirpath" [ list input_directory_body $outfile $dirpath ] \
+          name "input_directory-$outfile-$dirpath"
+      }
+    }
+
+    proc input_directory_body { outfile dirpath } {
+      set dirpath_val [ retrieve_decr_string $dirpath ]
+      input_directory_impl $outfile $dirpath_val
+    }
+
+    proc input_directory_error_body { out_dir_path in_dir_path } {
+      set in_dir_path_val [ retrieve_decr_string $in_dir_path ]
+      set out_dir_path_val [ retrieve_string $out_dir_path ]
+      input_directory_mapped_error $out_dir_path_val $in_dir_path_val
+    }
+
+    proc input_directory_impl { outfile dirpath_val } {
+      check_directory $dirpath_val
+      # Set filename and close
+      set_filename_val $outfile $dirpath_val 1
+    }
+
+    proc input_directory_mapped_error { out_dir in_dir } {
+        turbine_error "directory: cannot bind directory '$in_dir' to mapped\
+                       file '$out_dir': a directory is never copied"
+    }
+
+    # dname: directory name as tcl string
+    # return: local file handle
+    proc input_directory_local { outf_varname dname } {
+      upvar 1 $outf_varname outf
+
+      if { [ local_file_mapped $outf ] } {
+        input_directory_mapped_error [ local_file_path $outf ] $dname
+      }
+      check_directory $dname
+
+      # Create local file ref with extra refcount so that it is never deleted
+      set outf [ create_local_file_ref $dname 100 ]
+    }
+
+    # The check that distinguishes directory() from input(): the path must
+    # exist, as for any input, and must be a directory rather than a file
+    proc check_directory { dname } {
+      if { ! [ file exists $dname ] } {
+          turbine_error "directory: '$dname' does not exist"
+      }
+      if { ! [ file isdirectory $dname ] } {
+          turbine_error "directory: '$dname' is not a directory"
+      }
+    }
+
     proc input_url { out filepath } {
       set outfile [ lindex $out 0 ]
 
