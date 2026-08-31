@@ -1536,20 +1536,25 @@ trace: hello justin, the value is ,13
 ----
 
 The supported types are
-+string+, +int+, +float+, +boolean+, +input+, +output+, +file+,
-and +url+, and +file+ as a synonym for +output+
++string+, +int+, +float+, +boolean+, +input+, +directory+, +output+,
++file+, and +url+, and +file+ as a synonym for +output+
 (because the +file+ type in Swift/T is always an output
 unless assigned with something like +input()+).
-+input+ and +output+ are recognized only inside these declarations
-and remain ordinary identifiers everywhere else.
++input+, +directory+ and +output+ are recognized only inside these
+declarations and remain ordinary identifiers everywhere else.
 
-+input+ and +output+ are not Swift/T types: both declare an ordinary
-+file+, and which one you write says whether the overall  workflow
-reads that file as input or writes it as output.
++input+, +directory+ and +output+ are not Swift/T types: all three
+declare an ordinary +file+, and which one you write says whether the
+overall workflow reads that file as input or writes it as output.
 
 An +input+ argument names a file the workflow reads.  It is bound
 through <<library_files,+input()+>>, so that the named file is checked
 to exist as soon as the argument is bound.
+
+A +directory+ argument names a directory the workflow reads.  It is
+bound through <<library_files,+directory()+>>, which makes the same
+existence check and additionally requires the name to be a directory
+rather than an ordinary file.
 
 An argument may be given a default value, which must be a literal of
 the declared type:
@@ -1948,6 +1953,13 @@ At run time, the filesystem is checked for the given file name.
 
 +input_file(string) -> file+::
 Alias for +input()+.
+
++directory(string) -> file+::
+Obtain a directory as a +file+.
+At run time the filesystem is checked as for +input()+, and the name is
+additionally required to be a directory rather than an ordinary file.
+The directory is bound where it stands and is never copied, so its
+result may not be assigned to a mapped +file+.
 
 +input_url(string) -> url+::
 Obtain a <<section_urls,+url+>>.  Unlike +input()+, the filesystem is
