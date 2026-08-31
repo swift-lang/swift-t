@@ -1711,10 +1711,22 @@ of 2023-12-21), so install Ant via Homebrew or a manual download/unzip
 (Ant has pre-compiled binary packages).
 . Build with the Mac SDK settings above.
 
-== Miscellaneous notes
+[[troubleshooting]]
+== Troubleshooting
 
-This section contains miscellaneous notes about compiling and running
-Swift/T.
+=== OpenMPI command line
+
+----
+An unrecognized option was included on the mpiexec command line
+----
+
+Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
++mpiexec+ command picking up later arguments used to launch
++turbine+ or the user workflow flags.  To diagnose more fully, inspect
+the generated Turbine scheduler script (e.g., +turbine-pbs.sh+).  A
+workaround is to set environment variable
++TURBINE_LAUNCH_OPTIONS="--"+, which will insert the separator in a
+place to prevent this interference.
 
 [[rtld_global]]
 === RTLD_GLOBAL
@@ -1762,19 +1774,6 @@ Open MPI developer):
   --> Returned value -1 instead of OPAL_SUCCESS
 
 ----
-
-[[troubleshooting]]
-== Troubleshooting
-
-* +An unrecognized option was included on the mpiexec command line+
-+
-Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
-+mpiexec+ command picking up later arguments used to launch
-+turbine+ or the user workflow flags.  To diagnose more fully, inspect
-the generated Turbine scheduler script (e.g., +turbine-pbs.sh+).  A
-workaround is to set environment variable
-+TURBINE_LAUNCH_OPTIONS="--"+, which will insert the separator in a
-place to prevent this interference.
 
 == Archive
 
