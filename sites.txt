@@ -1714,6 +1714,7 @@ of 2023-12-21), so install Ant via Homebrew or a manual download/unzip
 [[troubleshooting]]
 == Troubleshooting
 
+[[ompi_cmd_line]]
 === OpenMPI command line
 
 ----
