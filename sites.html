@@ -3190,10 +3190,22 @@ Build with the Mac SDK settings above.
 </div>
 </div>
 <div class="sect1">
-<h2 id="_miscellaneous_notes">Miscellaneous notes</h2>
+<h2 id="troubleshooting">Troubleshooting</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>This section contains miscellaneous notes about compiling and running
-Swift/T.</p></div>
+<div class="sect2">
+<h3 id="_openmpi_command_line">OpenMPI command line</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>An unrecognized option was included on the mpiexec command line</code></pre>
+</div></div>
+<div class="paragraph"><p>Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
+<code>mpiexec</code> command picking up later arguments used to launch
+<code>turbine</code> or the user workflow flags.  To diagnose more fully, inspect
+the generated Turbine scheduler script (e.g., <code>turbine-pbs.sh</code>).  A
+workaround is to set environment variable
+<code>TURBINE_LAUNCH_OPTIONS="--"</code>, which will insert the separator in a
+place to prevent this interference.</p></div>
+</div>
 <div class="sect2">
 <h3 id="rtld_global">RTLD_GLOBAL</h3>
 <div class="paragraph"><p>Some Python compiled packages including Numpy do not immediately work
@@ -3239,25 +3251,6 @@ Open MPI developer):
   --&gt; Returned value -1 instead of OPAL_SUCCESS</code></pre>
 </div></div>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="troubleshooting">Troubleshooting</h2>
-<div class="sectionbody">
-<div class="ulist"><ul>
-<li>
-<p>
-<code>An unrecognized option was included on the mpiexec command line</code>
-</p>
-<div class="paragraph"><p>Seen in OpenMPI 5.0.2 2026-08-31.  This is due to the OpenMPI
-<code>mpiexec</code> command picking up later arguments used to launch
-<code>turbine</code> or the user workflow flags.  To diagnose more fully, inspect
-the generated Turbine scheduler script (e.g., <code>turbine-pbs.sh</code>).  A
-workaround is to set environment variable
-<code>TURBINE_LAUNCH_OPTIONS="--"</code>, which will insert the separator in a
-place to prevent this interference.</p></div>
-</li>
-</ul></div>
 </div>
 </div>
 <div class="sect1">
@@ -4569,7 +4562,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2026-08-31 14:47:20 CDT
+ 2026-08-31 14:51:35 CDT
 </div>
 </div>
 </body>
