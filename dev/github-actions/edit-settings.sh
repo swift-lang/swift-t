@@ -41,6 +41,8 @@ fi
   set +e
   set -x
   diff $SETTINGS_ORIG $SETTINGS_SH
+  # Don't let exit code from diff win:
+  exit 0
 )
 
 log "SUCCESS"
