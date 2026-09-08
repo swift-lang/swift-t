@@ -40,7 +40,8 @@ USE_SOLVER=""
 # The command line of this script can override this timestamp.
 typeset -A CONDA_TIMESTAMPS
 CONDA_TIMESTAMPS=(
-  310 24.9.2-0
+  # 310 24.9.2-0
+  310 26.07.1-0  #  Try: 2026-09-08
   311 26.1.1-1
   312 24.11.1-0
   313 25.3.1-1
