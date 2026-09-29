@@ -216,7 +216,7 @@ run_test()
   SETUP_OUTPUT=${TCL_FILE%.tic}.setup.out
   CHECK_OUTPUT=${TCL_FILE%.tic}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
-  TURBINE_OUTPUT=${TEST_OUT_PATH}.out
+  TURBINE_OUTFILE=${TEST_OUT_PATH}.out
   TURBINE_XPT_RELOAD_OUTPUT=${TEST_OUT_PATH}.reload.out
   export TURBINE_XPT_RELOAD_OUTPUT
 
@@ -224,7 +224,7 @@ run_test()
   ARGS_FILE=${TEST_PATH}.args
 
   # Export output filenames for check script
-  export TURBINE_OUTPUT STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
+  export TURBINE_OUTFILE STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
 
   # Get test command-line arguments
   if [[ -r ${ARGS_FILE} ]]
@@ -236,7 +236,7 @@ run_test()
   pushd $STC_TESTS_DIR
 
   local V=""
-  (( VERBOSE )) && V="-V"
+  if (( VERBOSE )) V="-V"
 
   # Run in subshell to allow setting environment variables without
   # affecting other tests.
@@ -253,7 +253,7 @@ run_test()
 
     # RUN IT
     print "running:   $( basename ${TCL_FILE} )"
-    if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
+    if ${RUN_TEST} ${V} ${TCL_FILE} ${TURBINE_OUTFILE} ${ARGS}
     then
       CODE=${TEST_OK}
     else
@@ -261,7 +261,12 @@ run_test()
     fi
     if (( CODE != TEST_OK ))
     then
-      (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
+      if (( REPORT_ERRORS ))
+      then
+        print "REPORT ERRORS START:"
+        cat ${TURBINE_OUTFILE}
+        print "REPORT ERRORS STOP."
+      fi
       return ${TEST_TRUE_FAIL}
     fi
 
@@ -286,7 +291,7 @@ run_test()
   if (( EXIT_CODE == TEST_SETUP_FAIL ))
   then
     echo "Setup script failed"
-    return $EXIT_CODE
+    return ${EXIT_CODE}
   fi
 
   if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
@@ -301,7 +306,7 @@ run_test()
     fi
   else
     # Check for unexecuted transforms
-    grep -F -q "WAITING WORK" ${TURBINE_OUTPUT}
+    grep -F -q "WAITING WORK" ${TURBINE_OUTFILE}
     # This is 0 if nothing was found
     WAITING_WORK=$(( ! ${?} ))
     if (( WAITING_WORK ))
@@ -313,12 +318,12 @@ run_test()
     LEAK_FOUND=0
 
     # Check for leaks
-    if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTPUT}
+    if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTFILE}
     then
       LEAK_FOUND=1
     fi
 
-    if grep -F -q "UNSET VARIABLE DETECTED:" ${TURBINE_OUTPUT}
+    if grep -F -q "UNSET VARIABLE DETECTED:" ${TURBINE_OUTFILE}
     then
       # Some tests may expect unset variables
       if ! grep -F -q "UNSET-VARIABLE-EXPECTED" ${SWIFT_FILE}
@@ -367,7 +372,7 @@ run_test()
       # Strip carriage returns: some MPI launchers forward rank stdout
       # over a pty, turning each "\n" into "\r\n", which defeats any
       # "$" anchor in the expected line.
-      if ! tr -d '\r' < "${TURBINE_OUTPUT}" | grep -q "${line}"
+      if ! tr -d '\r' < "${TURBINE_OUTFILE}" | grep -q "${line}"
       then
         print "'${line}' wasn't present in output"
         LINE_MISSING=true
