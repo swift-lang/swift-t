@@ -9,7 +9,7 @@ STATUS=0
 # pty, turning each "\n" into "\r\n", which defeats the "$" anchor below.
 CLEAN=$( mktemp )
 trap 'rm -f "${CLEAN}"' EXIT
-tr -d '\r' < "$TURBINE_OUTPUT" > "${CLEAN}"
+tr -d '\r' < "$TURBINE_OUTFILE" > "${CLEAN}"
 
 for row in `seq 0 $(($ROWS - 1))`
 do
@@ -19,7 +19,7 @@ do
   then
     :
   else
-    echo "row ${row}, ${matches} !=1 matches in ${TURBINE_OUTPUT}"
+    echo "row ${row}, ${matches} !=1 matches in ${TURBINE_OUTFILE}"
     STATUS=1
   fi
 done

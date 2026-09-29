@@ -1,12 +1,12 @@
 #!/bin/sh -e
 
-if ! grep s:a:bc:d:e:f:g ${TURBINE_OUTPUT}
+if ! grep s:a:bc:d:e:f:g ${TURBINE_OUTFILE}
 then
   echo "Correct output string not found!"
   exit 1
 fi
 
-if ! grep fs:1.0,2.5,3.25 ${TURBINE_OUTPUT}
+if ! grep fs:1.0,2.5,3.25 ${TURBINE_OUTFILE}
 then
   echo "Correct output string not found!"
   exit 1

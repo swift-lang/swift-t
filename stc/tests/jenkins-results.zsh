@@ -112,11 +112,11 @@ do
     print
 
     # stdout from failed run
-    TURBINE_OUTPUT=${T}${O_PART}.out
-    if [[ -f ${TURBINE_OUTPUT} ]]
+    TURBINE_OUTFILE=${T}${O_PART}.out
+    if [[ -f ${TURBINE_OUTFILE} ]]
     then
       print "Turbine output from ${T_name}:"
-      xml_escape ${TURBINE_OUTPUT}
+      xml_escape ${TURBINE_OUTFILE}
     fi
 
     # All output from failed run check

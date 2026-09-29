@@ -6,8 +6,8 @@ do
            "f2( $i ) ran on a_new_work_type" \
            "f3( $i ) ran on WORK"
   do
-    if ! grep -q -F "$s" $TURBINE_OUTPUT ; then
-      echo "Could not find string \"$s\" in $TURBINE_OUTPUT"
+    if ! grep -q -F "$s" $TURBINE_OUTFILE ; then
+      echo "Could not find string \"$s\" in $TURBINE_OUTFILE"
       exit 1
     fi
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Strip carriage returns: some MPI launchers forward rank stdout over a
-# pty, turning each "\n" into "\r\n", which defeats the "$" anchor below.
-COUNT=$( tr -d '\r' < "${TURBINE_OUTPUT}" | \
-         grep -c -E '(\[[0-9]*\])? trace: [0-9]+$' )
+# No end-of-line anchor: some MPI launchers forward rank stdout over a
+# pty, turning each "\n" into "\r\n", and a trailing "$" would then match
+# nothing.
+COUNT=$( grep -c -E 'trace: [0-9]+' "${TURBINE_OUTFILE}" )
 if [ ${COUNT} -ne 100 ]; then
-    echo "Expected 100 trace statements in ${TURBINE_OUTPUT}, but only saw ${COUNT}"
+    echo "Expected 100 trace, saw ${COUNT} : in ${TURBINE_OUTFILE}"
     exit 1
 fi
 exit 0

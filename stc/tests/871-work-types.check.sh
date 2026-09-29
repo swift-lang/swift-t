@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-grep -q "Custom work" ${TURBINE_OUTPUT}
-if grep -q "while executing" ${TURBINE_OUTPUT}
+grep -q "Custom work" ${TURBINE_OUTFILE}
+if grep -q "while executing" ${TURBINE_OUTFILE}
 then
   echo "Output should not contain Tcl stack trace."
   exit 1

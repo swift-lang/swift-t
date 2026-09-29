@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-grep -q 1969 $TURBINE_OUTPUT
+grep -q 1969 $TURBINE_OUTFILE
