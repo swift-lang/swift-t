@@ -29,7 +29,7 @@ set -eu
 # GITHUB_ACTIONS: Set by GitHub to "true",  else unset or "false"
 
 # Defaults:
-PYTHON_VERSION="310"
+PYTHON_VERSION="311"
 # Disable R: May become "-r":
 USE_R=""
 # Use the default conda solver:
@@ -40,20 +40,20 @@ USE_SOLVER=""
 # The command line of this script can override this timestamp.
 typeset -A CONDA_TIMESTAMPS
 CONDA_TIMESTAMPS=(
-  # 310 24.9.2-0
-  310 26.7.1-0  #  Try: 2026-09-08
   311 26.1.1-1
   312 24.11.1-0
   313 25.3.1-1
+  314 26.7.1-1
 )
 
 # Some Python versions require us to force the older solver "classic":
 # If default, we allow conda to select its default.
+# TODO: Remove this after removal of Python 310: 2026-09-29
 typeset -A CONDA_SOLVER=(
-  310 classic
   311 default
   312 default
   313 default
+  314 default
 )
 
 # For set -x (includes newline):

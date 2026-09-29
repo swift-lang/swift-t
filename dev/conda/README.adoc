@@ -45,8 +45,6 @@ These are standard directory names:
 This plaform skips Ant, the C compiler, and ZSH, and assumes they are on the user system:
 * `aarch64`:   "Linux on ARM": Works
 
-Python versions 3.8, 3.9, 3.10, and 3.11 are supported.
-
 == Definitions
 
 PKG::
