@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -eu
 
-tmpfile=`grep -o 'TMP FILENAME:.*$' "${TURBINE_OUTPUT}"`
+# Strip carriage returns: some MPI launchers forward rank stdout over a
+# pty, turning each "\n" into "\r\n", which ".*$" would capture into the
+# filename below.
+tmpfile=$( tr -d '\r' < "${TURBINE_OUTPUT}" | grep -o 'TMP FILENAME:.*$' )
 tmpfile=`echo $tmpfile | sed 's/TMP FILENAME://'`
 if [ -f "$tmpfile" ]; then
   echo "Temporary file $tmpfile not deleted!"

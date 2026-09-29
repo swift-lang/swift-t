@@ -364,7 +364,10 @@ run_test()
     local LINE_MISSING=false
     while read line
     do
-      if ! grep -q "${line}" "${TURBINE_OUTPUT}"
+      # Strip carriage returns: some MPI launchers forward rank stdout
+      # over a pty, turning each "\n" into "\r\n", which defeats any
+      # "$" anchor in the expected line.
+      if ! tr -d '\r' < "${TURBINE_OUTPUT}" | grep -q "${line}"
       then
         print "'${line}' wasn't present in output"
         LINE_MISSING=true
