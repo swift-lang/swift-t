@@ -119,6 +119,11 @@ SPEC_MPICH="mpich"
 SPEC_PYTHON="python"
 export SPEC_TK=""
 
+if [[ $PLATFORM == "linux-64" ]] && [[ $PYTHON_VERSION == 3.14* ]] {
+  # Apparently must force this: 2026-09-30
+  SPEC_TK="tk"
+}
+
 # Load platform-specific settings:
 if ! source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 then
