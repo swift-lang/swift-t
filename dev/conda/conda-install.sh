@@ -122,7 +122,9 @@ export SPEC_TK=""
 if [[ $CONDA_PLATFORM == "linux-64" ]] && \
    [[ $PYTHON_VERSION == 3.14*      ]]    {
   # Apparently must force this: 2026-09-30
-  SPEC_TK="tk"
+  # Python 3.14 on linux wants to bump Tcl to 9.0
+  # only at install time (not build time)
+  SPEC_TK="tk=8.6.13"
 }
 
 # Load platform-specific settings:
