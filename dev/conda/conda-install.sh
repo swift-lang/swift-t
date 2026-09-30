@@ -52,9 +52,28 @@ if (( ${#S} )) SOLVER=( --solver ${S[2]} )
 if (( ${#*} != 1 )) abort "conda-install.sh: Provide PKG!"
 PKG=$1
 
+msg()
+{
+  print "conda-install.sh:" ${*}
+}
+msgf()
+{
+  printf "conda-install.sh: "
+  printf "${*}"
+}
+fail()
+{
+  abort "conda-install.sh:" ${*}
+}
+failf()
+{
+  printf "conda-install.sh: "
+  abortf "${*}"
+}
+
 # Report information about given PKG:
 print
-print "CONDA INSTALL: PKG=$PKG"
+msg PKG=$PKG
 # PKG is of form
 # ANACONDA/conda-bld/PLATFORM/swift-t-V.V.V-pyVVV.tar.bz2
 if (( ${#P} )) {
@@ -65,27 +84,26 @@ if (( ${#P} )) {
 }
 
 # Echo back platform and package statistics to the user
-print "CONDA_PLATFORM=$CONDA_PLATFORM"
+msg "CONDA_PLATFORM=$CONDA_PLATFORM"
 zmodload zsh/stat zsh/mathfunc
 zstat -H A -F "%Y-%m-%d %H:%M" $PKG
-printf "PKG: timestamp: %s size: %.1f MB\n" \
-       ${A[mtime]} $(( float(${A[size]}) / (1024*1024) ))
-printf "md5sum: "
+msgf "PKG: timestamp: %s size: %.1f MB\n" \
+     ${A[mtime]} $(( float(${A[size]}) / (1024*1024) ))
+msgf "md5sum: "
 # In DEV_CONDA/helpers.zsh:
 checksum $PKG
 print
 
 # Report information about active Python/Conda:
-if ! which conda >& /dev/null
+if ! which conda > /dev/null
 then
-  print "No conda!"
-  return 1
+  fail "no conda!"
 fi
 
 source $DEV_CONDA/get-python-version.sh
 
-print "using python:" $( which python ) $PYTHON_VERSION
-print "using conda: " $( which conda )
+msg "using python:" $( which python ) $PYTHON_VERSION
+msg "using conda: " $( which conda )
 
 # conda env list
 
@@ -104,8 +122,8 @@ export SPEC_TK=""
 # Load platform-specific settings:
 if ! source $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 then
-  abortf "conda-install.sh: failed during source %s\n" \
-         $DEV_CONDA/$CONDA_PLATFORM/deps.sh
+  failf "failed during: source %s\n" \
+        $DEV_CONDA/$CONDA_PLATFORM/deps.sh
 fi
 
 # Build dependency list:
@@ -142,8 +160,8 @@ if (( USE_R )) {
 CONDA_FLAGS=( --yes --quiet $SOLVER )
 
 if (( ${#C:-} )) {
-  print "conda install: $CONDA_FLAGS $LIST"
-  print "conda-install.sh: configure-only: exit"
+  msg "flags: $CONDA_FLAGS $LIST"
+  msg "configure-only: exit"
   exit
 }
 
