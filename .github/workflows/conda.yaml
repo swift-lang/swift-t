@@ -28,6 +28,7 @@ jobs:
     name: OS=${{ matrix.os }} PY=${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
