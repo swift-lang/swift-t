@@ -443,9 +443,12 @@ public class ICContinuations {
    * Style of variable passing.
    */
   public static enum VarPassing {
-    AUTOMATIC /** Automatically inherit vars from parent */,
-    MANUAL_LOCAL /** Must manually pass vars, but runs in same context */,
-    MANUAL_NONLOCAL /** Cannot assume runs in same context */,
+    /** Automatically inherit vars from parent */
+    AUTOMATIC,
+    /** Must manually pass vars, but runs in same context */
+    MANUAL_LOCAL,
+    /** Cannot assume runs in same context */
+    MANUAL_NONLOCAL,
     ;
 
     public boolean isManual() {

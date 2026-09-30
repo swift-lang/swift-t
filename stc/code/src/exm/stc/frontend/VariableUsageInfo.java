@@ -356,7 +356,8 @@ public class VariableUsageInfo {
     private final boolean declaredInCurrentScope;
     private final String name;
     private Ternary assigned;
-    private Ternary partAssigned; /** If array is only partially assigned */
+    /** If array is only partially assigned */
+    private Ternary partAssigned;
     private Ternary appended;
     private Ternary read;
     private boolean readOnly;

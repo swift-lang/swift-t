@@ -165,8 +165,10 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static class Result {
-    final Set<Var> read; /** Variables that were read */
-    final Set<Var> written; /** Variables that were written (de-aliased) */
+    /** Variables that were read */
+    final Set<Var> read;
+    /** Variables that were written (de-aliased) */
+    final Set<Var> written;
     /** Original aliases for write variables, to make sure that redundant
      * aliases are passed correctly in case of suboptimal code */
     final Set<Var> aliasWritten;

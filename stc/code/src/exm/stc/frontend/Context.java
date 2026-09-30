@@ -604,10 +604,14 @@ public abstract class Context {
     APP, COMPOSITE,
     BUILTIN, SYNC,
     WRAPPED_BUILTIN,
-    PARALLEL, /** if this is a parallel task */
-    TARGETABLE, /** if this is targetable */
-    DEPRECATED, /** Warn if user uses function */
-    CHECKPOINTED, /** Whether results should be checkpointed */
+    /** if this is a parallel task */
+    PARALLEL,
+    /** if this is targetable */
+    TARGETABLE,
+    /** Warn if user uses function */
+    DEPRECATED,
+    /** Whether results should be checkpointed */
+    CHECKPOINTED,
   }
 
   /**

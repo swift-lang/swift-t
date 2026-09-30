@@ -13,11 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-/**
- * This module handles the higher-level logic of generating Turbine
- * code. More mechanical aspects of code generation are handled in
- * the classes in the exm.tclbackend.tree module
- */
 package exm.stc.tclbackend;
 
 import java.io.File;
@@ -117,6 +112,11 @@ import exm.stc.tclbackend.tree.Value;
 import exm.stc.tclbackend.tree.WhileLoop;
 import exm.stc.ui.ExitCode;
 
+/**
+ * This module handles the higher-level logic of generating Turbine
+ * code. More mechanical aspects of code generation are handled in
+ * the classes in the exm.tclbackend.tree module
+ */
 public class TurbineGenerator implements CompilerBackend {
 
   /**

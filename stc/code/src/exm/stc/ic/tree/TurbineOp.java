@@ -90,8 +90,10 @@ public class TurbineOp extends Instruction {
     this(op, outputs, Arrays.asList(inputs));
   }
 
-  private List<Var> outputs; /** Variables that are modified by this instruction */
-  private List<Arg> inputs; /** Variables that are read-only */
+  /** Variables that are modified by this instruction */
+  private List<Var> outputs;
+  /** Variables that are read-only */
+  private List<Arg> inputs;
 
   @Override
   public String toString() {
