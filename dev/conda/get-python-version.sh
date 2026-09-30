@@ -1,5 +1,11 @@
 
 # GET PYTHON VERSION
+# Versions reported with dots like "3.13.2"
+# Sets (examples):
+#        PYTHON_VERSION="3.13.2"
+#        PYTHON_VERSION_MM="3.13"
+#        PYTHON_NEXT_MM="3.14"
+#        PYTHON_SERIES=">=3.13,<3.14"
 
 T=( $( python --version ) )
 
