@@ -1,5 +1,13 @@
 import io;
 
+// NOTE: Tcl's exec raises an error if the command writes ANYTHING to
+// stderr, even on success.  So this test fails on output that has
+// nothing to do with the task script, such as a dynamic loader warning
+// from the shell (e.g. an LD_LIBRARY_PATH holding a mismatched
+// libtinfo makes /bin/bash warn on every invocation).  If this test
+// starts failing, check the run's stderr before suspecting the test
+// logic.  Adding 2>@1 or -ignorestderr to the exec would tolerate it.
+
 (file o[]) task(file i, int n) "turbine" "0.1"
 [
 """

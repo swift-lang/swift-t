@@ -1,5 +1,6 @@
 import files;
 import assert;
+import string;
 
 // Test redirection
 
@@ -20,6 +21,9 @@ main () {
   // Also write out to file for external checking
   file f<"6390.txt"> = echo(msg);
 
+  // Unlike stdout above, stderr can also carry output we did not write,
+  // such as dynamic loader warnings from the shell running the app.  So
+  // require that the message is present, not that it is the whole file.
   file tmp2 = echostderr(msg);
-  assertEqual(read(tmp2), msg + "\n", "contents of tmp2");
+  assert(find(read(tmp2), msg + "\n", 0, -1) >= 0, "contents of tmp2");
 }
