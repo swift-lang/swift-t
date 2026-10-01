@@ -157,7 +157,7 @@ mkdir -p ${STC_TESTS_OUT_DIR}
 export SWIFT_PATH=${STC_TESTS_DIR}
 
 which tclsh > /dev/null
-if [[ ${?} != 0 ]]
+if (( ${?} != 0 ))
 then
   print "Could not find tclsh!"
   exit 1
