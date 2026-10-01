@@ -24,7 +24,7 @@ proc rules { } {
     }
     
     for { set i 10 } { $i < 20 } { incr i } {
-      turbine::rule "" "helloworld $i" type $::turbine::CONTROL
+      turbine::rule "" "helloworld $i" type $::turbine::WORK
     }
 }
 

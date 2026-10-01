@@ -182,7 +182,7 @@ namespace eval turbine {
   proc turbine_run_output_blob { outputs b } {
 
       rule [ list $b ] "turbine_run_output_blob_body $b" \
-          target 0 type $turbine::CONTROL
+          target 0 type $::turbine::WORK
   }
   proc turbine_run_output_blob_body { b } {
 

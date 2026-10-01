@@ -29,7 +29,7 @@ proc worker_fn { x } {
     rule [ list ] "puts \"RAN RULE LOCAL\"" \
          name "local" type $turbine::LOCAL 
     rule [ list ] "puts \"RAN RULE ON ENGINE\"" \
-         name "engine" type $turbine::CONTROL 
+         name "engine" type $::turbine::WORK 
 }
 
 proc rules { } {

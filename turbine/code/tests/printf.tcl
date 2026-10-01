@@ -44,7 +44,7 @@ proc rules { } {
     turbine::printf [ list 16 ] [ list 17 ]
 
     # Check void was set
-    turbine::c::rule "17" "puts {Void was set}" type $turbine::CONTROL
+    turbine::c::rule "17" "puts {Void was set}" type $::turbine::WORK
 }
 
 turbine::defaults

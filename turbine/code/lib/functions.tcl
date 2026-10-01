@@ -97,7 +97,7 @@ namespace eval turbine {
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         rule [ list $start $end ] "range_body $result $start $end" \
-              type $turbine::CONTROL name "range-$result"
+              type $::turbine::WORK name "range-$result"
     }
 
     proc range_body { result start end } {
@@ -112,7 +112,7 @@ namespace eval turbine {
         set start [ lindex $inputs 0 ]
         set end [ lindex $inputs 1 ]
         rule [ list $start $end ] "range_float_body $result $start $end" \
-              type $turbine::CONTROL name "range_float-$result"
+              type $::turbine::WORK name "range_float-$result"
     }
 
     proc range_float_body { result start end } {
@@ -130,7 +130,7 @@ namespace eval turbine {
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
         rule [ list $start $end $step ] \
-            "range_step_body $result $start $end $step" type $turbine::CONTROL
+            "range_step_body $result $start $end $step" type $::turbine::WORK
     }
 
     proc range_step_body { result start end step } {
@@ -149,7 +149,7 @@ namespace eval turbine {
         set end [ lindex $inputs 1 ]
         set step [ lindex $inputs 2 ]
         rule [ list $start $end $step ] \
-            "range_float_step_body $result $start $end $step" type $turbine::CONTROL
+            "range_float_step_body $result $start $end $step" type $::turbine::WORK
     }
 
     proc range_float_step_body { result start end step } {
@@ -205,7 +205,7 @@ namespace eval turbine {
     # Construct a distributed container of sequential integers
     proc drange { result start end parts } {
         rule "$start $end" "drange_body $result $start $end $parts" \
-            type $turbine::CONTROL name "drange-$result"
+            type $::turbine::WORK name "drange-$result"
     }
 
     proc drange_body { result start end parts } {
@@ -240,7 +240,7 @@ namespace eval turbine {
     proc dloop { loop_body stack container } {
         c::log "log_dloop:"
         rule $container "dloop_body $loop_body $stack $container" \
-                         name $turbine::CONTROL
+                         name $::turbine::WORK
     }
 
     proc dloop_body { loop_body stack container } {
@@ -257,7 +257,7 @@ namespace eval turbine {
 
     proc readdata { result filename } {
         rule $filename "readdata_body $result $filename" \
-              type $turbine::CONTROL
+              type $::turbine::WORK
     }
 
     proc readdata_body { result filename } {
@@ -280,7 +280,7 @@ namespace eval turbine {
     # User function
     proc loop { stmts stack container } {
         rule $container "loop_body $stmts $stack $container" \
-              type $turbine::CONTROL name "loop-$container"
+              type $::turbine::WORK name "loop-$container"
     }
 
     proc loop_body { stmts stack container } {

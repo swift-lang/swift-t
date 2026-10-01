@@ -10,7 +10,7 @@ namespace eval bench {
     # usage: set1_float no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1_float { stack result delay } {
-        turbine::rule "set1-$result" $delay $turbine::WORK \
+        turbine::rule "set1-$result" $delay $::turbine::WORK \
             "bench::set1_float_body $result $delay"
     }
 
@@ -29,7 +29,7 @@ namespace eval bench {
     # usage: set1_integer no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1_integer { stack result delay } {
-        turbine::rule "set1-$result" $delay $turbine::WORK \
+        turbine::rule "set1-$result" $delay $::turbine::WORK \
             "bench::set1_integer_body $result $delay"
     }
 
@@ -42,7 +42,7 @@ namespace eval bench {
     # usage: set1_integer no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1rA_integer { stack result delay } {
-        turbine::rule "set1r-$result" $delay $turbine::WORK \
+        turbine::rule "set1r-$result" $delay $::turbine::WORK \
             "bench::set1rA_integer_body $result $delay"
     }
 
@@ -64,7 +64,7 @@ namespace eval bench {
     # usage: set1_integer no_stack result delay
     # delay in milliseconds: rounded to nearest whole millisecond
     proc set1rB_integer { stack result delay } {
-        turbine::rule "set1r-$result" $delay $turbine::WORK \
+        turbine::rule "set1r-$result" $delay $::turbine::WORK \
             "bench::set1rB_integer_body $result $delay"
     }
 
@@ -89,7 +89,7 @@ namespace eval bench {
         set x [ lindex $inputs 1 ]
         set y [ lindex $inputs 2 ]
         set z [ lindex $inputs 3 ]
-        turbine::rule "add4-$result" "$w $x $y $z" $turbine::WORK \
+        turbine::rule "add4-$result" "$w $x $y $z" $::turbine::WORK \
             "bench::add4_body $result $w $x $y $z"
     }
 
@@ -113,7 +113,7 @@ namespace eval bench {
         mpe_setup
         variable event
         mpe::log $event(start_sum)
-        turbine::rule "sum-$container" $container $turbine::LOCAL \
+        turbine::rule "sum-$container" $container $::turbine::LOCAL \
             "bench::bench_sum_integer_body $stack $container $result 0 0 -1"
     }
 
@@ -142,7 +142,7 @@ namespace eval bench {
             } else {
                 # block until the next turbine id is finished,
                 #   then continue running
-                turbine::rule "sum-$container" $turbine_id $turbine::LOCAL \
+                turbine::rule "sum-$container" $turbine_id $::turbine::LOCAL \
                     "bench::bench_sum_integer_body $stack $container $result $accum $i $n"
                 # return immediately without setting result
                 return

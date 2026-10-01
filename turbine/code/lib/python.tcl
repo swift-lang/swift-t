@@ -6,7 +6,7 @@ namespace eval turbine {
     lassign $inputs code expr
     rule $inputs \
         "turbine::python_parallel_tcl_body $result $code $expr" \
-        {*}$args type $turbine::WORK
+        {*}$args type $::turbine::WORK
   }
 
   proc python_parallel_tcl_body { result code expr } {

@@ -34,41 +34,41 @@ proc main {  } {
 
     # Check that rules fire after container entries closed
     turbine::rule [ list "$C.3" ] "one_closed $C 3" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
 
     turbine::rule [ list "$C.2" ] "one_closed $C 2" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
     
     turbine::rule [ list "$C.1" ] "one_closed $C 1" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
 
     # Wait on both
     turbine::rule [ list $C "$C.3" ] "all_closed $C A" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
 
     # Wait on just ID
-    turbine::rule [ list $C ] "all_closed $C B" type $turbine::CONTROL
+    turbine::rule [ list $C ] "all_closed $C B" type $::turbine::WORK
     
     # Wait on all
     turbine::rule [ list "$C.1" "$C.3" "$C.2" $C ] \
-                    "all_closed $C C" type $turbine::CONTROL
+                    "all_closed $C C" type $::turbine::WORK
 
     # Deferred insert
     turbine::rule [ list "$C.1" ] "container_insert $C 2 \"brown\" string ; \
                                 adlb::write_refcount_decr $C" \
-                                type $turbine::CONTROL
+                                type $::turbine::WORK
     container_insert $C 1 "quick" string
     
     
     # Also check that rules fire when container assigned all at once
     allocate_container C2 integer string
     turbine::rule [ list "$C2.0" ] "one_closed $C2 0" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
     
     turbine::array_build $C2 [ list one two ] 1 string
     
     turbine::rule [ list "$C2.1" ] "one_closed $C2 1" \
-                  type $turbine::CONTROL
+                  type $::turbine::WORK
 }
 
 proc echo { stack args } {

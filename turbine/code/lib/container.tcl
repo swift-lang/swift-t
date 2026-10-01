@@ -267,7 +267,7 @@ namespace eval turbine {
           ref -
           file_ref {
             set create_type [ type_create_slice $field_type 1 ]
-            set val_id [ adlb::create $adlb::NULL_ID {*}$create_type ]
+            set val_id [ adlb::create $::adlb::NULL_ID {*}$create_type ]
             if { $field_type == "file_ref" } {
               set val_id [ file_handle_from_td $val_id 0 ]
             }

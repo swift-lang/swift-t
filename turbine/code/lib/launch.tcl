@@ -20,7 +20,7 @@ namespace eval turbine {
   proc launch_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
     rule $inputs "turbine::launch_tcl_body $exit_code $inputs" \
-        {*}$args type $turbine::WORK
+        {*}$args type $::turbine::WORK
   }
   proc launch_tcl_body { exit_code args } {
     # Unpack args TDs
@@ -49,7 +49,7 @@ namespace eval turbine {
   proc launch_envs_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
     rule $inputs "turbine::launch_envs_tcl_body $exit_code $inputs" \
-        {*}$args type $turbine::WORK
+        {*}$args type $::turbine::WORK
   }
   proc launch_envs_tcl_body { exit_code args } {
     # Unpack args TDs
@@ -84,7 +84,7 @@ namespace eval turbine {
   proc launch_turbine_tcl { outputs inputs args } {
     set exit_code [ lindex $outputs 0 ]
     rule $inputs "turbine::launch_turbine_tcl_body $exit_code $inputs" \
-        {*}$args type $turbine::WORK
+        {*}$args type $::turbine::WORK
   }
   proc launch_turbine_tcl_body { exit_code args } {
     # Unpack args TDs
@@ -109,7 +109,7 @@ namespace eval turbine {
   proc launch_multi_tcl { outputs inputs args } {
 	set exit_code [ lindex $outputs 0 ]
     rule $inputs "turbine::launch_multi_tcl_body $exit_code $inputs" \
-        {*}$args type $turbine::WORK
+        {*}$args type $::turbine::WORK
   }
   proc launch_multi_tcl_body { exit_code args } {
     # Unpack args TDs

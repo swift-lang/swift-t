@@ -202,11 +202,11 @@ namespace eval turbine {
     lappend payload $stdin_src $stdout_dst $stderr_dst
     lappend payload $cmd {*}$args
     global WORK_TYPE
-    adlb::put $adlb::RANK_ANY $WORK_TYPE(WORK) $payload 1 1
+    adlb::put $::adlb::RANK_ANY $WORK_TYPE(WORK) $payload 1 1
 
     # Wait for response from the receiving worker
     set msg [ adlb::get $WORK_TYPE(REPUT) answer_rank ]
-    if { $answer_rank == $adlb::RANK_NULL } {
+    if { $answer_rank == $::adlb::RANK_NULL } {
       app_log "received SHUTDOWN while waiting for reput reply"
       return
     }

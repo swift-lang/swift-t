@@ -44,8 +44,8 @@ proc rules { } {
     turbine::allocate t1 integer
     turbine::allocate t2 integer
 
-    turbine::rule "$i1" "f $t1 $i1" type $turbine::CONTROL
-    turbine::rule "$i1" "f $t2 $i2" type $turbine::CONTROL
+    turbine::rule "$i1" "f $t1 $i1" type $::turbine::WORK
+    turbine::rule "$i1" "f $t2 $i2" type $::turbine::WORK
 
     turbine::c_f_insert $c $i1 $t1 ref
     turbine::c_f_insert $c $i2 $t2 ref

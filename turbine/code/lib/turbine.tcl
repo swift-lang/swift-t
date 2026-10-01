@@ -493,7 +493,7 @@ namespace eval turbine {
 
     proc turbine_fail { args } {
         if { [ adlb::comm_rank ] == 0 } {
-            puts* $turbine::language ": " {*}$args
+            puts* $::turbine::language ": " {*}$args
         }
         exit 1
     }

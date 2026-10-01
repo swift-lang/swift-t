@@ -412,7 +412,7 @@ namespace eval turbine {
     # Sleep for given time in seconds.  Return void
     proc sleep { outputs inputs } {
         rule $inputs "turbine::sleep_body $outputs $inputs" \
-            name "sleep-$outputs-$inputs" type $turbine::WORK
+            name "sleep-$outputs-$inputs" type $::turbine::WORK
     }
     proc sleep_body { output secs } {
         set secs_val [ retrieve_decr_float $secs ]

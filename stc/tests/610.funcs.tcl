@@ -16,7 +16,7 @@ namespace eval funcs_610 {
     }
 
     rule $inputs "funcs_610::f_body $outputs $inputs" \
-        type $turbine::WORK {*}$par_arg
+        type $::turbine::WORK {*}$par_arg
   }
 
   proc f_body { outputs inputs } {

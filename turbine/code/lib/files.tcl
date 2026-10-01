@@ -243,7 +243,7 @@ namespace eval turbine {
     # waitfor: list of regular inputs
     # outfiles: output files, will wait correctly for these
     # infiles: input files, will wait correctly for these
-    # target: Where to send work e.g. $turbine::WORK
+    # target: Where to send work e.g. $::turbine::WORK
     # cmd: command to execute when closed
     proc rule_file_helper { msg waitfor outfiles infiles target cmd } {
 

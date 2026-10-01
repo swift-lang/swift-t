@@ -51,7 +51,7 @@ namespace eval turbine {
     proc reduce_sum_integer { result A } {
         deeprule $A 2 [ list false false ] \
             "reduce_sum_integer_body $result $A" \
-            name "reduce_sum_integer" type $::turbine::CONTROL
+            name "reduce_sum_integer" type $::turbine::WORK
     }
     proc reduce_sum_integer_body { result A } {
         set R [ dict create ]
@@ -77,7 +77,7 @@ namespace eval turbine {
     proc reduce_splice_string { result S } {
         deeprule $S 2 [ list false false ] \
             "reduce_splice_string_body $result $S" \
-            name "reduce_splice_string" type $::turbine::CONTROL
+            name "reduce_splice_string" type $::turbine::WORK
     }
     proc reduce_splice_string_body { result S } {
         log "reduce_splice_string_body: $result <- $S"
