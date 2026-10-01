@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   stc_test_suite_valgrind:
-    name: Suite O${{ matrix.opt-level }}
+    name: Suite O${{ matrix.opt-level }} VG=${{ matrix.valgrind }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
