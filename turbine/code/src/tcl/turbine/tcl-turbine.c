@@ -998,29 +998,25 @@ Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-static void
-redirect_error_exit(const char *file, const char *purpose)
-{
-  fprintf(stderr, "error opening %s for %s: %s\n", file, purpose,
-          strerror(errno));
-  exit(1);
-}
+/**
+   Report a failure in the forked child of sync_exec() and terminate it.
 
-static void
-dup2_error_exit(const char *purpose)
-{
-  fprintf(stderr, "error duplicating file for %s: %s\n", purpose,
-          strerror(errno));
-  exit(1);
-}
+   Everything between fork() and a successful execvp() runs in the
+   child, and must never return into the Tcl interpreter: the child
+   would run on as a duplicate worker and call MPI from a forked copy
+   of the parent's MPI state, which hangs under some MPI
+   implementations.
 
+   Appends strerror(errno) to the given printf-style message.  Uses
+   _exit() so that atexit() handlers inherited from the parent (MPI
+   registers some) do not run here, and flushes stderr first because
+   _exit() does not.
+
+   @param format A printf-style format string for an error message
+ */
 static void
-close_error_exit(const char *purpose)
-{
-  fprintf(stderr, "error closing file for %s: %s\n", purpose,
-          strerror(errno));
-  exit(1);
-}
+child_error_exit(const char *format, ...)
+  __attribute__((format(printf, 1, 2), noreturn));
 
 static int pid_status(Tcl_Interp* interp, pid_t child);
 
@@ -1062,42 +1058,53 @@ Sync_Exec_Cmd(ClientData cdata, Tcl_Interp* interp,
     if (stdin_file[0] != '\0')
     {
       int in_fd = open(stdin_file, O_RDONLY);
-      if (in_fd == -1) redirect_error_exit(stdin_file, "input redirection");
+      if (in_fd == -1)
+        child_error_exit("error opening %s for input redirection", stdin_file);
 
       rc = dup2(in_fd, 0);
-      if (rc == -1) dup2_error_exit("input redirection");
+      if (rc == -1)
+        child_error_exit("error duplicating file for input redirection");
 
       rc = close(in_fd);
-      if (rc == -1) close_error_exit("input redirection");
+      if (rc == -1)
+        child_error_exit("error closing file for input redirection");
     }
 
     if (stdout_file[0] != '\0')
     {
       int out_fd = open(stdout_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
-      if (out_fd == -1) redirect_error_exit(stdin_file, "output redirection");
+      if (out_fd == -1)
+        child_error_exit("error opening %s for output redirection",
+                         stdout_file);
 
       rc = dup2(out_fd, 1);
-      if (rc == -1) dup2_error_exit("output redirection");
+      if (rc == -1)
+        child_error_exit("error duplicating file for output redirection");
 
       rc = close(out_fd);
-      if (rc == -1) close_error_exit("output redirection");
+      if (rc == -1)
+        child_error_exit("error closing file for output redirection");
     }
 
     if (stderr_file[0] != '\0')
     {
       int err_fd = open(stderr_file, O_WRONLY | O_TRUNC | O_CREAT, 0666);
-      if (err_fd == -1) redirect_error_exit(stdin_file, "output redirection");
+      if (err_fd == -1)
+        child_error_exit("error opening %s for error redirection",
+                         stderr_file);
 
       rc = dup2(err_fd, 2);
-      if (rc == -1) dup2_error_exit("output redirection");
+      if (rc == -1)
+        child_error_exit("error duplicating file for error redirection");
 
       rc = close(err_fd);
-      if (rc == -1) close_error_exit("output redirection");
+      if (rc == -1)
+        child_error_exit("error closing file for error redirection");
     }
 
     rc = execvp(cmd, cmd_argv);
-    TCL_CONDITION(rc != -1, "Error exec()ing command %s: %s", cmd,
-                  strerror(errno));
+    // execvp() only returns on failure, and we are in the child here
+    if (rc == -1) child_error_exit("error exec()ing command %s", cmd);
   }
 
   rc = pid_status(interp, child);
@@ -1163,6 +1170,18 @@ static int child_error(Tcl_Interp* interp, const char* message)
     Tcl_AddErrorInfo(interp, message);
     return TCL_ERROR;
   }
+}
+
+static void
+child_error_exit(const char *format, ...)
+{
+  va_list ap;
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  fprintf(stderr, ": %s\n", strerror(errno));
+  fflush(stderr);
+  _exit(1);
 }
 
 /*
