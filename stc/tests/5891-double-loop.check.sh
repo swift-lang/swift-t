@@ -11,11 +11,11 @@ CLEAN=$( mktemp )
 trap 'rm -f "${CLEAN}"' EXIT
 tr -d '\r' < "$TURBINE_OUTFILE" > "${CLEAN}"
 
-for row in `seq 0 $(($ROWS - 1))`
+for row in $( seq 0 $[ ROWS - 1 ] )
 do
-  ROW_REGEX=' row '"${row}"':  0.0000( 1.0000){'"$COLS"'}$'
-  matches=`grep -c -E "$ROW_REGEX" "${CLEAN}"`
-  if [ "$matches" -eq 1 ]
+  ROW_REGEX=' row '"${row}"':  0.0000( 1.0000){'"$COLS"'}'
+  matches=$( grep -c -E "$ROW_REGEX" "${CLEAN}" )
+  if (( $matches == 1 ))
   then
     :
   else
