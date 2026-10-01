@@ -747,7 +747,7 @@ asciidoc.install(2);
 <span id="author">Justin M. Wozniak</span><br />
 <span id="email"><code>&lt;<a href="mailto:woz@anl.gov">woz@anl.gov</a>&gt;</code></span><br />
 <span id="revnumber">version 1.6.6,</span>
-<span id="revdate">August 2026</span>
+<span id="revdate">October 2026</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -810,7 +810,9 @@ each system.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-See the <a href="./guide.html">Swift/T Guide</a> for more information about Swift/T.
+See the <a href="./guide.html">Swift/T Guide</a> for more information about
+  Swift/T.  Use the information in the main Swift/T Guide for
+  additional information, as well as how to get support.
 </p>
 </li>
 <li>
@@ -2074,14 +2076,53 @@ Enable additional debug messages to view what is happening.
 </div>
 </div>
 <div class="sect1">
-<h2 id="_hpe_cray">HPE Cray</h2>
+<h2 id="_hpe_cray_supercomputers">HPE Cray Supercomputers</h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_aurora">Aurora</h3>
+<div class="paragraph"><p><a href="https://docs.alcf.anl.gov/aurora">Aurora</a>
+is an HPE Cray supercomputer at <a href="https://www.alcf.anl.gov">ALCF</a>.</p></div>
+<div class="sect3">
+<h4 id="_build_instructions_5">Build instructions</h4>
+<div class="paragraph"><p><strong>As of:</strong> 2026-10-01</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Use the <code>dev/build/build-swift-t.sh</code> method as described in the
+<a href="./guide.html">Swift/T Guide</a>.
+</p>
+</li>
+<li>
+<p>
+Edit <code>swift-t-settings.sh</code>:
+</p>
+<div class="olist loweralpha"><ol class="loweralpha">
+<li>
+<p>
+Load modules <code>oneapi mpich swig</code>
+</p>
+</li>
+<li>
+<p>
+Add a Tcl and JDK 21+ to <code>PATH</code>, such as from Anaconda.
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+Then build with <code>build-swift-t.sh</code> .
+</p>
+</li>
+</ol></div>
+</div>
+</div>
 <div class="sect2">
 <h3 id="_frontier">Frontier</h3>
 <div class="paragraph"><p><a href="https://www.olcf.ornl.gov/frontier">Frontier</a>
 is an HPE Cray supercomputer at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_5">Build instructions</h4>
+<h4 id="_build_instructions_6">Build instructions</h4>
 <div class="paragraph"><p>Thanks to Ketan Maheshwari for these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2026-04-17</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2137,7 +2178,7 @@ $ swift-t -m slurm workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_6">Build instructions</h4>
+<h4 id="_build_instructions_7">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2025-08-14</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2205,7 +2246,7 @@ $ swift-t -m pbs workflow.swift ...</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_7">Build instructions</h4>
+<h4 id="_build_instructions_8">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2024-05-02</p></div>
 <div class="paragraph"><p>Building Tcl:</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2248,7 +2289,7 @@ described here: <a href="https://docs.alcf.anl.gov/polaris/data-science-workflow
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/crusher_quick_start_guide.html">Crusher</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_8">Build instructions</h4>
+<h4 id="_build_instructions_9">Build instructions</h4>
 <div class="paragraph"><p>Thanks to John Gounley for prototyping these instructions.</p></div>
 <div class="paragraph"><p><strong>As of:</strong> 2022-08-10</p></div>
 <div class="olist arabic"><ol class="arabic">
@@ -2310,7 +2351,7 @@ Then build with <code>build-swift-t.sh</code>.
 <div class="paragraph"><p><a href="https://docs.olcf.ornl.gov/systems/spock_quick_start_guide.html">Spock</a>
 is a Cray/AMD system at OLCF.</p></div>
 <div class="sect3">
-<h4 id="_build_instructions_9">Build instructions</h4>
+<h4 id="_build_instructions_10">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-03-16</p></div>
 <div class="olist arabic"><ol class="arabic">
 <li>
@@ -2385,7 +2426,7 @@ KNL-based system at TACC.</p></div>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_10">Build instructions</h4>
+<h4 id="_build_instructions_11">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2022-05-02</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="paragraph"><p><code>/work2/01163/wozniak/stampede2/Public/sfw/stampede2/tcl-8.6.6</code></p></div>
@@ -2449,7 +2490,7 @@ trace: 42</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_11">Build instructions</h4>
+<h4 id="_build_instructions_12">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-03-10</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2555,7 +2596,7 @@ export PMI_NO_PREINITIALIZE=1</code></pre>
 <div class="paragraph"><p><code>/projects/Swift-T/public/sfw/thetagpu/swift-t/2021-04-21/stc/bin</code></p></div>
 </div>
 <div class="sect4">
-<h5 id="_build_instructions_12">Build instructions</h5>
+<h5 id="_build_instructions_13">Build instructions</h5>
 <div class="paragraph"><p><strong>As of:</strong> 2021-05-13</p></div>
 <div class="paragraph"><p>Dependencies are installed in:</p></div>
 <div class="listingblock">
@@ -2629,7 +2670,7 @@ $ swift-t -m slurm workflow.swift</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_13">Build instructions</h4>
+<h4 id="_build_instructions_14">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2019-07-14</p></div>
 <div class="paragraph"><p>Use</p></div>
 <div class="listingblock">
@@ -2858,7 +2899,7 @@ $ swift-t -m lsf workflow.swift</code></pre>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_14">Build instructions</h4>
+<h4 id="_build_instructions_15">Build instructions</h4>
 <div class="paragraph"><p><strong>As of:</strong> 2020-02-24</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
 <div class="listingblock">
@@ -2899,7 +2940,7 @@ It uses LSF.</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_15">Build instructions</h4>
+<h4 id="_build_instructions_16">Build instructions</h4>
 <div class="paragraph"><p>First, apply the <a href="#rtld_global">RTLD_GLOBAL</a> fix to Tcl,
 or use the dependency below.</p></div>
 <div class="paragraph"><p>Dependencies are in:</p></div>
@@ -4376,7 +4417,7 @@ processors();</code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_build_instructions_16">Build instructions</h4>
+<h4 id="_build_instructions_17">Build instructions</h4>
 <div class="paragraph"><p>Apply</p></div>
 <div class="listingblock">
 <div class="content">
@@ -4562,7 +4603,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2026-08-31 14:52:52 CDT
+ 2026-10-01 11:03:41 CDT
 </div>
 </div>
 </body>
