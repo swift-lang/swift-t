@@ -44,7 +44,7 @@ static bool dsyms_init = false;
  */
 static struct table_lp dsyms;
 
-static void dsym_free_cb(unused int64_t key, void *data)
+static void dsym_free_cb(CUTILS_UNUSED int64_t key, void *data)
 {
   symbol_table_entry *entry = data;
   free(entry->name);

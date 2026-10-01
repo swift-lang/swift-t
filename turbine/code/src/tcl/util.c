@@ -78,9 +78,12 @@ turbine_tcl_long_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
                       int64_t* output, int* count)
 {
   Tcl_Obj** entry;
-  int code = Tcl_ListObjGetElements(interp, list, count, &entry);
+  // Tcl 9 reports list length as Tcl_Size: keep the int* API for callers
+  Tcl_Size n;
+  int code = Tcl_ListObjGetElements(interp, list, &n, &entry);
   assert(code == TCL_OK);
-  assert(*count < max);
+  assert(n < max);
+  *count = (int) n;
   assert(sizeof(Tcl_WideInt) == sizeof(int64_t));
   for (int i = 0; i < *count; i++)
   {
@@ -96,9 +99,12 @@ turbine_tcl_string_array(Tcl_Interp* interp, Tcl_Obj* list, int max,
                          char** output, int* count)
 {
   Tcl_Obj** entry;
-  int code = Tcl_ListObjGetElements(interp, list, count, &entry);
+  // Tcl 9 reports list length as Tcl_Size: keep the int* API for callers
+  Tcl_Size n;
+  int code = Tcl_ListObjGetElements(interp, list, &n, &entry);
   assert(code == TCL_OK);
-  assert(*count < max);
+  assert(n < max);
+  *count = (int) n;
   for (int i = 0; i < *count; i++)
   {
     char* t = Tcl_GetStringFromObj(entry[i], NULL);

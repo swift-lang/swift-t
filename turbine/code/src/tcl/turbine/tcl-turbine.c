@@ -337,7 +337,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   char name_buffer[TURBINE_NAME_MAX];
 
   // Get the action string
-  int action_len;
+  Tcl_Size action_len;
   char* action = Tcl_GetStringFromObj(objv[2], &action_len);
   assert(action);
   action_len++; // Include null terminator
@@ -369,7 +369,7 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   rule_log(inputs, input_list, action);
 
-  adlb_code ac = ADLB_Dput(action, action_len, opts.target,
+  adlb_code ac = ADLB_Dput(action, (int) action_len, opts.target,
         adlb_comm_rank, opts.work_type, opts.opts, opts.name,
         input_list, inputs, input_pair_list, input_pairs);
   TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
@@ -887,7 +887,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (turbine_debug_enabled)
   {
-    unused char* msg = Tcl_GetString(objv[1]);
+    CUTILS_UNUSED char* msg = Tcl_GetString(objv[1]);
     DEBUG_TCL_TURBINE("%s", msg);
   }
   return TCL_OK;
@@ -929,7 +929,7 @@ static int
 Turbine_ParseInt_Impl(ClientData cdata, Tcl_Interp *interp,
                   Tcl_Obj *const objv[], Tcl_Obj *obj, int base)
 {
-  int len;
+  Tcl_Size len;
   const char* str = Tcl_GetStringFromObj(obj, &len);
 
   errno = 0; // Reset so we can detect errors
@@ -1181,11 +1181,11 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             adlb_datum_id_sub* id_subs, int* id_sub_count)
 {
   Tcl_Obj** entry;
-  int n;
+  Tcl_Size n;
   int code = Tcl_ListObjGetElements(interp, list, &n, &entry);
   assert(code == TCL_OK);
   TCL_CONDITION(n < max, "Rule IDs exceed supported max: %i > %i",
-                n, max);
+                (int) n, max);
   for (int i = 0; i < n; i++)
   {
     Tcl_Obj *obj = entry[i];
@@ -1339,7 +1339,7 @@ Async_Exec_Configure_Cmd(ClientData cdata, Tcl_Interp* interp,
   turbine_code tc;
 
   const char *exec_name = Tcl_GetString(objv[1]);
-  int config_len;
+  Tcl_Size config_len;
   const char *config = Tcl_GetStringFromObj(objv[2], &config_len);
 
   turbine_executor *exec = turbine_get_async_exec(exec_name, NULL);
@@ -1472,7 +1472,7 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(started, "Noop executor not started");
 
   char *str;
-  int len;
+  Tcl_Size len;
   str = Tcl_GetStringFromObj(objv[1], &len);
 
   turbine_task_callbacks callbacks;
@@ -1489,7 +1489,7 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
     callbacks.failure.code = objv[3];
   }
 
-  tc = noop_execute(interp, noop_exec, str, len, callbacks);
+  tc = noop_execute(interp, noop_exec, str, (int) len, callbacks);
   TCL_CONDITION(tc == TURBINE_SUCCESS, "Error executing noop task");
 
   return TCL_OK;
@@ -1617,8 +1617,11 @@ int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
 
   Tcl_Obj **objs;
-  rc = Tcl_ListObjGetElements(interp, list, count, &objs);
+  // Tcl 9 reports list length as Tcl_Size: keep the int* API for callers
+  Tcl_Size n;
+  rc = Tcl_ListObjGetElements(interp, list, &n, &objs);
   TCL_CHECK(rc);
+  *count = (int) n;
 
   if (*count > 0)
   {
@@ -1629,7 +1632,7 @@ int turbine_tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     for (int i = 0; i < *count; i++)
     {
-      int tmp_len;
+      Tcl_Size tmp_len;
       (*strs)[i] = Tcl_GetStringFromObj(objs[i], &tmp_len);
       (*str_lens)[i] = (size_t)tmp_len;
     }
@@ -1650,8 +1653,11 @@ static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
 
   Tcl_Obj **objs;
-  rc = Tcl_ListObjGetElements(interp, list, count, &objs);
+  // Tcl 9 reports list length as Tcl_Size: keep the int* API for callers
+  Tcl_Size n;
+  rc = Tcl_ListObjGetElements(interp, list, &n, &objs);
   TCL_CHECK(rc);
+  *count = (int) n;
 
   if (*count > 0)
   {
@@ -1661,7 +1667,7 @@ static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
     for (int i = 0; i < *count; i++)
     {
       coaster_stage_entry *e = &(*stages)[i];
-      int tmp_len;
+      Tcl_Size tmp_len;
       e->src = Tcl_GetStringFromObj(objs[i], &tmp_len);
       e->src_len = (size_t)tmp_len;
       e->dst = e->src;
@@ -1699,7 +1705,7 @@ static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
   for (; !done ; Tcl_DictObjNext(&search, &key, &value, &done)) {
     const char *key_s;
     int key_len;
-    int tmp_len;
+    Tcl_Size tmp_len;
 
     key_s = Tcl_GetStringFromObj(key, &key_len);
 

@@ -265,7 +265,7 @@ static inline void HEAP_DEL_ENTRY(HEAP_T *heap, heap_idx_t i)
 }
 
 #define HEAP_POP_VAL HEAP_NAME(pop_val)
-unused
+CUTILS_UNUSED
 static bool HEAP_POP_VAL(HEAP_T *heap, HEAP_VAL_T *result)
 {
   if (HEAP_SIZE(heap) == 0) {

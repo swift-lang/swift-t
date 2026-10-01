@@ -226,11 +226,11 @@ xlb_setup_layout(MPI_Comm comm, int nservers)
 
   DEBUG("ADLB: RANK: %i/%i", comm_rank, comm_size);
 
-  double unused t0 = MPI_Wtime();
+  double CUTILS_UNUSED t0 = MPI_Wtime();
   struct xlb_hostnames hostnames;
   code = xlb_hostnames_gather(comm, &hostnames);
   ADLB_CHECK(code);
-  double unused t1 = MPI_Wtime();
+  double CUTILS_UNUSED t1 = MPI_Wtime();
   if (xlb_s.layout.am_server)
     DEBUG("hostnames_gather: %i %8.5f", comm_rank, t1 - t0);
 
@@ -1698,7 +1698,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                adlb_retrieve_refc refcounts, adlb_data_type* type,
                void* data, size_t* length)
 {
-  double unused t0 = MPI_Wtime();
+  double CUTILS_UNUSED t0 = MPI_Wtime();
   MPI_Status status;
   MPI_Request request;
 
@@ -1749,7 +1749,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                                               to_server_rank);
   ADLB_CHECK(ac);
 
-  double unused t1 = MPI_Wtime();
+  double CUTILS_UNUSED t1 = MPI_Wtime();
   DEBUG("ADLB_Retrieve: rank=%i svr=%i id=%"PRId64" %8.5f",
         xlb_s.layout.rank, to_server_rank, id, t1-t0);
 

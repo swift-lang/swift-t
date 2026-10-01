@@ -24,6 +24,19 @@
 
 #include <tcl.h>
 
+/**
+   Tcl 9 widened string and list lengths from int to Tcl_Size.
+   Tcl 8.6 has no such type, so define it there, letting one
+   source tree build against Tcl 8.6 and 9.0.
+   TCL_SIZE_MAX is defined only by Tcl 9, so it guards the shim.
+ */
+#ifndef TCL_SIZE_MAX
+#include <limits.h>
+typedef int Tcl_Size;
+#define TCL_SIZE_MAX INT_MAX
+#define TCL_SIZE_MODIFIER ""
+#endif
+
 #include <stdint.h>
 
 #include "src/turbine/turbine.h"
@@ -301,7 +314,7 @@ static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
  */
 static inline int Tcl_GetADLB_Subscript(Tcl_Obj* objPtr, adlb_subscript* sub)
 {
-  int keylen;
+  Tcl_Size keylen;
   sub->key = Tcl_GetStringFromObj(objPtr, &keylen);
   if (sub->key == NULL)
   {

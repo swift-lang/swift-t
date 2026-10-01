@@ -416,7 +416,7 @@ static adlb_code xlb_process_ready_work(void)
   adlb_code rc;
   bool ready = false;
 
-  unused double t0, t1;
+  CUTILS_UNUSED double t0, t1;
   if (xlb_server_ready_work.count > 0)
   {
     t0 = MPI_Wtime();

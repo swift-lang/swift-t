@@ -421,7 +421,7 @@ get_parallel_workers_ordered(int count, int parallelism,
   int flat[count];
   extract_worker_ranks(L, flat);
   // Timing data: only used by logging
-  unused double t1, t2, t3, t4, duration;
+  CUTILS_UNUSED double t1, t2, t3, t4, duration;
   t1 = MPI_Wtime();
   // INFO("qsort: %i", count);
   quicksort_ints(flat, 0, count-1);

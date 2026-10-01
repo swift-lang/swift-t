@@ -31,10 +31,13 @@
 
 // This only works in GCC:
 #ifdef __GNUC__
-/** Ease suppression of unused variable warnings */
-#define unused __attribute__ ((unused))
+/** Ease suppression of unused variable warnings.
+    NOTE: Do not name this macro "unused": this is an installed header,
+    and a bare lowercase "unused" rewrites the token inside other
+    headers' own __attribute__((unused)), e.g. Tcl 9's TCLBOOLWARNING. */
+#define CUTILS_UNUSED __attribute__ ((unused))
 #else
-#define unused
+#define CUTILS_UNUSED
 #endif
 
 /**

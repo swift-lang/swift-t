@@ -549,7 +549,7 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
   type_name = Tcl_GetString(objv[2]);
 
   Tcl_Obj **field_list;
-  int field_list_len;
+  Tcl_Size field_list_len;
   rc = Tcl_ListObjGetElements(interp, objv[3], &field_list_len, &field_list);
   TCL_CHECK(rc);
   int max_field_count = field_list_len / 2;
@@ -1043,7 +1043,7 @@ ADLB_Put_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
   Tcl_GetIntFromObj(interp, objv[1], &target_rank);
   Tcl_GetIntFromObj(interp, objv[2], &work_type);
-  int cmd_len;
+  Tcl_Size cmd_len;
   char* cmd = Tcl_GetStringFromObj(objv[3], &cmd_len);
   Tcl_GetIntFromObj(interp, objv[4], &opts.priority);
   Tcl_GetIntFromObj(interp, objv[5], &opts.parallelism);
@@ -1088,7 +1088,7 @@ ADLB_Spawn_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int work_type;
   Tcl_GetIntFromObj(interp, objv[1], &work_type);
-  int cmd_len;
+  Tcl_Size cmd_len;
   char* cmd = Tcl_GetStringFromObj(objv[2], &cmd_len);
 
   adlb_put_opts opts = ADLB_DEFAULT_PUT_OPTS;
@@ -1623,7 +1623,7 @@ parse_variable_spec_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *list, ADLB_create_spec *spec)
 {
   int rc;
-  int n;
+  Tcl_Size n;
   Tcl_Obj **elems;
   rc = Tcl_ListObjGetElements(interp, list, &n, &elems);
   TCL_CONDITION(rc == TCL_OK, "arg must be list: %s", Tcl_GetString(list));
@@ -1803,7 +1803,7 @@ adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_datum_storage *result, bool *alloced)
 {
   int rc;
-  int length;
+  Tcl_Size length;
   *alloced = false; // Most don't allocate data
   switch (type)
   {
@@ -2129,7 +2129,7 @@ tcl_append_key_val(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_data_code dc;
   int rc;
 
-  int tmplen;
+  Tcl_Size tmplen;
   const char* key_data = Tcl_GetStringFromObj(key, &tmplen);
   size_t key_strlen = (size_t) tmplen;
 
@@ -2158,7 +2158,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
   adlb_data_code dc;
 
-  int entries;
+  Tcl_Size entries;
   rc = Tcl_DictObjSize(interp, dict, &entries);
   TCL_CHECK(rc);
 
@@ -2215,7 +2215,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_ResetResult(interp);
 
     Tcl_Obj **dict_keysv;
-    int dict_keysc;
+    Tcl_Size dict_keysc;
     rc = Tcl_ListObjGetElements(interp, dict_keys, &dict_keysc,
                                 &dict_keysv);
     TCL_CHECK(rc);
@@ -2290,7 +2290,7 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_IncrRefCount(list);
     Tcl_ResetResult(interp);
   }
-  int listc;
+  Tcl_Size listc;
   Tcl_Obj **listv;
   rc = Tcl_ListObjGetElements(interp, list, &listc, &listv);
   TCL_CHECK(rc);
@@ -3467,7 +3467,7 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   int rc;
   Tcl_Obj **elems;
-  int elem_count;
+  Tcl_Size elem_count;
   rc = Tcl_ListObjGetElements(interp, obj, &elem_count, &elems);
   TCL_CONDITION(rc == TCL_OK && (elem_count == 2 || elem_count == 3),
                 "Error interpreting %s as blob list", Tcl_GetString(obj));
@@ -3690,7 +3690,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[1], &id);
   TCL_CHECK_MSG(rc, "requires id!");
 
-  int length;
+  Tcl_Size length;
   Tcl_Obj** objs;
   rc = Tcl_ListObjGetElements(interp, objv[2], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
@@ -3734,7 +3734,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[1], &id);
   TCL_CHECK_MSG(rc, "requires id!");
 
-  int length;
+  Tcl_Size length;
   Tcl_Obj** objs;
   rc = Tcl_ListObjGetElements(interp, objv[2], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
@@ -3772,7 +3772,7 @@ ADLB_Blob_From_Int_List_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(objc == 2, "Expected 1 arg");
   int rc;
 
-  int length;
+  Tcl_Size length;
   Tcl_Obj** objs;
   rc = Tcl_ListObjGetElements(interp, objv[1], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
@@ -3803,7 +3803,7 @@ ADLB_Blob_From_Float_List_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(objc == 2, "Expected 1 arg");
   int rc;
 
-  int length;
+  Tcl_Size length;
   Tcl_Obj** objs;
   rc = Tcl_ListObjGetElements(interp, objv[1], &length, &objs);
   TCL_CHECK_MSG(rc, "requires list!");
@@ -3834,7 +3834,7 @@ ADLB_String2Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
                            int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  int length;
+  Tcl_Size length;
   char *data = Tcl_GetStringFromObj(objv[1], &length);
   assert(length >= 0);
 
@@ -5289,7 +5289,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
   int argpos = 1;
-  unused int field = 0;
+  CUTILS_UNUSED int field = 0;
   while (argpos < objc)
   {
     // We might need to pack compound types
@@ -5511,7 +5511,7 @@ ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
     return TCL_OK;
   }
 
-  int tmp_len;
+  Tcl_Size tmp_len;
   const char *str_handle = Tcl_GetStringFromObj(obj, &tmp_len);
   size_t str_handle_len = (size_t) tmp_len;
   TCL_CONDITION(str_handle != NULL, "Error getting string handle");
@@ -5575,7 +5575,7 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
   else
   {
     assert(sub_kind == ADLB_SUB_STRUCT);
-    int tmp_len;
+    Tcl_Size tmp_len;
     char *subscript = Tcl_GetStringFromObj(obj, &tmp_len);
     size_t subscript_len = (size_t) tmp_len;
     TCL_CONDITION(subscript != NULL, "Could not extract string for "
@@ -5783,7 +5783,7 @@ ADLB_Subscript_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(objc >= 2, "Must have at least one argument");
 
   int rc;
-  int old_handle_len;
+  Tcl_Size old_handle_len;
   char *old_handle = Tcl_GetStringFromObj(objv[1], &old_handle_len);
   assert(old_handle != NULL);
 
@@ -5803,7 +5803,7 @@ ADLB_Subscript_Impl(ClientData cdata, Tcl_Interp *interp,
   int new_handle_len = old_handle_len;
   for (int i = 0; i < subscripts; i++)
   {
-    int sub_len;
+    Tcl_Size sub_len;
     char *sub = Tcl_GetStringFromObj(objv[i + 2], &sub_len);
     assert(sub != NULL);
     new_handle_len += sub_len + 1;  // subscript plus "." separator
@@ -5824,7 +5824,7 @@ ADLB_Subscript_Impl(ClientData cdata, Tcl_Interp *interp,
 
   for (int i = 0; i < subscripts; i++)
   {
-    int sub_len;
+    Tcl_Size sub_len;
     char *sub = Tcl_GetStringFromObj(objv[i + 2], &sub_len);
     assert(sub != NULL);
 
