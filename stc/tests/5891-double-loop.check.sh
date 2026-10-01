@@ -6,7 +6,7 @@ COLS=20
 STATUS=0
 
 # Strip carriage returns: some MPI launchers forward rank stdout over a
-# pty, turning each "\n" into "\r\n", which defeats the "$" anchor below.
+# pty, turning each "\n" into "\r\n"
 CLEAN=$( mktemp )
 trap 'rm -f "${CLEAN}"' EXIT
 tr -d '\r' < "$TURBINE_OUTFILE" > "${CLEAN}"
@@ -19,8 +19,14 @@ do
   then
     :
   else
-    echo "row ${row}, ${matches} !=1 matches in ${TURBINE_OUTFILE}"
+    echo "row ${row}, ${matches} != 1 matches in ${TURBINE_OUTFILE}"
+    echo
+    echo "output is:"
+    cat $CLEAN
+    echo "output done."
     STATUS=1
+    break
   fi
 done
+
 exit $STATUS
