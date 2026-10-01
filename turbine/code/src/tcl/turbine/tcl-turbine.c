@@ -1157,19 +1157,11 @@ pid_status(Tcl_Interp* interp, pid_t child)
   return TCL_OK;
 }
 
-static int child_error(Tcl_Interp* interp, const char* message)
+static int
+child_error(Tcl_Interp* interp, const char* message)
 {
-  if (tcl_version > 8.5)
-  {
-    // printf("child_error: \n");
-    Tcl_Obj *msgs[1] = { Tcl_ObjPrintf("%s", message) };
-    return turbine_user_error(interp, 1, msgs);
-  }
-  else // Tcl 8.5
-  {
-    Tcl_AddErrorInfo(interp, message);
-    return TCL_ERROR;
-  }
+  Tcl_Obj* msgs[1] = { Tcl_ObjPrintf("%s", message) };
+  return turbine_user_error(interp, 1, msgs);
 }
 
 static void
