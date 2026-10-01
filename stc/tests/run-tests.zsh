@@ -139,7 +139,9 @@ then
   STC=$( which stc 2> /dev/null )
   if (( ${#STC} == 0 )) crash "Put stc in your PATH or set STC."
 fi
-print "using stc: '${STC}'\n"
+print "using stc:      '${STC}'"
+print "using valgrind: '${VALGRIND:-}'"
+print
 
 STC_HOME="$(dirname $(dirname ${STC} ))"
 STC_ENV="${STC_HOME}/etc/stc-config.sh"
