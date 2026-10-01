@@ -21,6 +21,7 @@ jobs:
     name: Suite O${{ matrix.opt-level }} VG=${{ matrix.valgrind }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - ubuntu-latest
