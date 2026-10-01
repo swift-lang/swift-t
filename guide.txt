@@ -145,7 +145,8 @@ package manager for your system.
 ** Other MPI implementations are <<Build_configuration, supported>> as well.
 +
 2. Ensure you have these software development tools:
-   SWIG, ZSH, Apache Ant, a Java Development Kit, Autotools/Make, and GCC for C.
+   SWIG, ZSH, Apache Ant, a Java Development Kit (JDK) 21+,
+   Autotools/Make, and GCC for C.
    You can use your system package manager, or even put them in a user
    Anaconda installation.
 .. On Ubuntu/Debian, install these with:
