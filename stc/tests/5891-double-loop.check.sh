@@ -13,7 +13,9 @@ tr -d '\r' < "$TURBINE_OUTFILE" > "${CLEAN}"
 
 for row in $( seq 0 $[ ROWS - 1 ] )
 do
-  ROW_REGEX=' row '"${row}"':  0.0000( 1.0000){'"$COLS"'}'
+  # No leading space: launchers prefix the line differently, e.g. MPICH
+  # gives "[0] row 0:" but OpenMPI gives "[1,0]<stdout>:row 0:"
+  ROW_REGEX='row '"${row}"':  0.0000( 1.0000){'"$COLS"'}'
   matches=$( grep -c -E "$ROW_REGEX" "${CLEAN}" )
   if (( $matches == 1 ))
   then
