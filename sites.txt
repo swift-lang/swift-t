@@ -22,7 +22,7 @@ Settings:
 Swift/T Sites Guide
 ===================
 Justin M. Wozniak <woz@anl.gov>
-v1.6.6, August 2026
+v1.6.6, October 2026
 
 
 == How to use this guide
@@ -84,7 +84,9 @@ To report a problem, simply email swift-t-user@googlegroups.com .
 
 === For more information
 
-* See the link:./guide.html[Swift/T Guide] for more information about Swift/T.
+* See the link:./guide.html[Swift/T Guide] for more information about
+  Swift/T.  Use the information in the main Swift/T Guide for
+  additional information, as well as how to get support.
 * Join the https://groups.google.com/forum/#!forum/swift-t-user[+swift-user+ mailing list].
 * See <<troubleshooting,Troubleshooting>> for common issues
 
@@ -916,7 +918,23 @@ Enable additional debug messages to view what is happening.
 
 Other <<variables,Turbine scheduler variables>> are recognized automatically.
 
-== HPE Cray
+== HPE Cray Supercomputers
+
+=== Aurora
+
+https://docs.alcf.anl.gov/aurora[Aurora]
+is an HPE Cray supercomputer at https://www.alcf.anl.gov[ALCF].
+
+==== Build instructions
+
+*As of:* 2026-10-01
+
+. Use the +dev/build/build-swift-t.sh+ method as described in the
+link:./guide.html[Swift/T Guide].
+. Edit +swift-t-settings.sh+:
+.. Load modules +oneapi mpich swig+
+.. Add a Tcl and JDK 21+ to +PATH+, such as from Anaconda.
+. Then build with +build-swift-t.sh+ .
 
 === Frontier
 
@@ -934,7 +952,6 @@ link:./guide.html[Swift/T Guide].
 . Edit +swift-t-settings.sh+:
 .. Load modules +PrgEnv-gnu cray-mpich+
 . Then build with +build-swift-t.sh+ .
-
 
 === Perlmutter
 
