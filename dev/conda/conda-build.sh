@@ -120,22 +120,6 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
 export CONDA_PREFIX=${PYTHON_BIN:h}
 log "CONDA_PREFIX: $CONDA_PREFIX"
 
-# Check if a package with this BUILD_NUMBER already exists locally.
-BLD_DIR=$CONDA_PREFIX/conda-bld/$CONDA_PLATFORM
-if [[ -d $BLD_DIR ]] {
-  EXISTING_PKGS=( $BLD_DIR/*_${BUILD_NUMBER}.conda(N) )
-  if (( ${#EXISTING_PKGS} > 0 )) {
-    log "ERROR: BUILD_NUMBER=$BUILD_NUMBER found in $BLD_DIR:"
-    for f in $EXISTING_PKGS
-    do
-      log "  package: ${f:t}"
-    done
-    log "You must bump the build number."
-    log "This avoids cache hits and package reuse on GitHub."
-    return 1
-  }
-}
-
 COMMON_M4=common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml
 SETTINGS_SED=$DEV_CONDA/settings.sed
@@ -149,6 +133,23 @@ if (( ! ${#R} )) {
 }
 log "PKG_NAME: $PKG_NAME"
 if (( ${#R} )) log "WITH R:" $R_VERSION
+
+# Check if a package with this BUILD_NUMBER already exists locally.
+BLD_DIR=$CONDA_PREFIX/conda-bld/$CONDA_PLATFORM
+if [[ -d $BLD_DIR ]] {
+  FILENAME=${PKG_NAME}-${SWIFT_T_VERSION}
+  EXISTING_PKGS=( $BLD_DIR/${FILENAME}*_${BUILD_NUMBER}.conda(N) )
+  if (( ${#EXISTING_PKGS} > 0 )) {
+    log "ERROR: BUILD_NUMBER=$BUILD_NUMBER found in $BLD_DIR:"
+    for f in $EXISTING_PKGS
+    do
+      log "  package: ${f:t}"
+    done
+    log "You must bump the build number."
+    log "This avoids cache hits and package reuse on GitHub."
+    return 1
+  }
+}
 
 # Default dependencies:
 export USE_ANT=1
