@@ -22,11 +22,12 @@ help()
   cat <<END
 
 Options:
-   conda-build.sh [-Cv] [-r RV] PLATFORM
-   -C    : configure-only-
-           generate meta.yaml and settings.sed, then stop
-   -r RV : enable R version RV
-   -v    : verbose (show meta.yaml and settings.sed)
+   conda-build.sh [-Cv] [-r RV] PLATFORM BUILD_NUMBER
+   -C           : configure-only-
+                  generate meta.yaml and settings.sed, then stop
+   -r RV        : enable R version RV
+   -v           : verbose (show meta.yaml and settings.sed)
+   BUILD_NUMBER : the conda build number (integer)
 
 END
   exit
@@ -36,10 +37,6 @@ C="" R="" R_VERSION=""
 zparseopts -D -E -F h=HELP C=C r:=R v=VERBOSE
 
 if (( ${#HELP} )) help
-if (( ${#*} != 1 )) abort "conda-build.sh: Provide CONDA_PLATFORM!"
-
-# The PLATFORM under Anaconda naming conventions:
-export CONDA_PLATFORM=$1
 
 # The Swift/T Conda script directory (absolute):
 DEV_CONDA=${0:A:h}
@@ -48,13 +45,29 @@ DEV_CONDA=${0:A:h}
 SWIFT_T_TOP=${DEV_CONDA:h:h}
 TMP=${TMP:-/tmp}
 
+# Source helpers first so abort()/abortf()/log() are available
+#        for the argument checks below:
 source $DEV_CONDA/helpers.zsh
 source $SWIFT_T_TOP/turbine/code/scripts/helpers.zsh
 
 # For log():
 LOG_LABEL="conda-build.sh:"
 
+if (( ${#*} != 2 )) \
+  abort "conda-build.sh: Provide CONDA_PLATFORM and BUILD_NUMBER!"
+
+# The PLATFORM under Anaconda naming conventions:
+export CONDA_PLATFORM=$1
+
+# The conda build number (substituted into meta.yaml):
+export BUILD_NUMBER=$2
+# Must be a non-negative integer: catches swapped arguments, etc.
+if [[ $BUILD_NUMBER != <-> ]] \
+  abortf "conda-build.sh: invalid BUILD_NUMBER, got: '%s'\n" \
+         $BUILD_NUMBER
+
 log "CONDA_PLATFORM:  $CONDA_PLATFORM ${*}"
+log "BUILD_NUMBER:    $BUILD_NUMBER"
 
 # Sets SWIFT_T_VERSION:
 source $SWIFT_T_TOP/dev/get-versions.sh
@@ -106,6 +119,22 @@ if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
 # https://github.com/ContinuumIO/anaconda-issues/issues/10156
 export CONDA_PREFIX=${PYTHON_BIN:h}
 log "CONDA_PREFIX: $CONDA_PREFIX"
+
+# Check if a package with this BUILD_NUMBER already exists locally.
+BLD_DIR=$CONDA_PREFIX/conda-bld/$CONDA_PLATFORM
+if [[ -d $BLD_DIR ]] {
+  EXISTING_PKGS=( $BLD_DIR/*_${BUILD_NUMBER}.conda(N) )
+  if (( ${#EXISTING_PKGS} > 0 )) {
+    log "ERROR: BUILD_NUMBER=$BUILD_NUMBER found in $BLD_DIR:"
+    for f in $EXISTING_PKGS
+    do
+      log "  package: ${f:t}"
+    done
+    log "You must bump the build number."
+    log "This avoids cache hits and package reuse on GitHub."
+    return 1
+  }
+}
 
 COMMON_M4=common.m4
 META_TEMPLATE=$DEV_CONDA/meta-template.yaml

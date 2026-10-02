@@ -336,10 +336,46 @@ check-pkg()
   print
 }
 
+report-lib()
+{
+  # Report identifying info for the installed tclturbine library.
+  # On Mac the UUID is the exact string printed by dyld in a
+  # "Symbol not found" load error; on Linux the ELF build-id is the
+  # analogous identity. Either lets us confirm whether a consumer
+  # environment loaded THIS binary or a stale cached one.
+  local LIBDIR=$WORKSPACE/sfw/Miniconda-install/swift-t/turbine/lib
+  local LIB
+  if [[ $CONDA_PLATFORM =~ osx-* ]] {
+    LIB=$LIBDIR/libtclturbine.dylib
+  } else {
+    LIB=$LIBDIR/libtclturbine.so
+  }
+  log "LIB: $LIB"
+  if [[ ! -f $LIB ]] {
+    log "LIB: NOT FOUND"
+    return
+  }
+  log "LIB MD5:"
+  checksum $LIB
+  if [[ $CONDA_PLATFORM =~ osx-* ]] {
+    log "LIB UUID:"
+    dwarfdump --uuid $LIB 2>/dev/null || otool -l $LIB | grep -A1 LC_UUID
+    log "LIB Tcl linkage:"
+    otool -L $LIB 2>/dev/null | grep -i tcl
+  } else {
+    log "LIB build-id:"
+    readelf -n $LIB 2>/dev/null | grep -i "build id"
+    log "LIB Tcl linkage:"
+    ldd $LIB 2>/dev/null | grep -i tcl
+  }
+  print
+}
+
 try-swift-t()
 {
   log "TRY SWIFT/T..."
   PATH=$WORKSPACE/sfw/Miniconda-install/bin:$PATH
+  report-lib
   () {
     set -x
     which swift-t
@@ -385,8 +421,13 @@ do-activate $WORKSPACE/sfw/Miniconda-build
 task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
+# The conda build number: overridable via environment, else defaults.
+# In CI, use the monotonic GITHUB_RUN_NUMBER so each run has a
+#        distinct package identity that defeats stale conda caches.
+BUILD_NUMBER=${BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-1}}
+log "BUILD_NUMBER: $BUILD_NUMBER"
 # Build the Swift/T package!
-task $SWIFT_T/dev/conda/conda-build.sh $R $CONDA_PLATFORM $VERBOSE
+task $SWIFT_T/dev/conda/conda-build.sh $R $CONDA_PLATFORM $BUILD_NUMBER $VERBOSE
 
 # Check that the PKG was built
 check-pkg

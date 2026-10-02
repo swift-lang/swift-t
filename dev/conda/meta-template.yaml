@@ -19,7 +19,7 @@ source:
   path: m4_getenv(DISTRO)/swift-t-{{ version }}/swift-t-{{ version }}
 
 build:
-  number: 1
+  number: m4_getenv(BUILD_NUMBER)
   # Environment variables for build.sh must be listed here,
   # normal environment inheritance does not happen!
   script_env:
