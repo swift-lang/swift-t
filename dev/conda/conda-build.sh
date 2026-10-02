@@ -219,7 +219,11 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   #     token injection collides with the CEP-16 shard fetch path),
   #     which aborts the whole build.  Fall back to classic
   #     repodata.json, which works fine.
-  export CONDA_PLUGINS_USE_SHARDED_REPODATA=false
+  # The knob is conda's repodata_use_shards parameter, so the
+  #     env var must be CONDA_REPODATA_USE_SHARDS.  The old
+  #     CONDA_PLUGINS_USE_SHARDED_REPODATA is not a recognized
+  #     conda parameter and had no effect.
+  export CONDA_REPODATA_USE_SHARDS=false
 }
 
 {
