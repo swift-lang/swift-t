@@ -210,6 +210,17 @@ if (( ENABLE_R )) && [[ $CONDA_PLATFORM == "osx-arm64" ]] {
 # "UserWarning: The environment variable 'X' is being passed through"
 export PYTHONWARNINGS="ignore::UserWarning"
 
+if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
+  # Claude 2026-07-30:
+  # Disable experimental sharded repodata:
+  # conda_libmamba_solver's shard fetcher hits 404s on some
+  #     tokenized conda.anaconda.org URLs (anaconda-anon-usage
+  #     token injection collides with the CEP-16 shard fetch path),
+  #     which aborts the whole build.  Fall back to classic
+  #     repodata.json, which works fine.
+  export CONDA_PLUGINS_USE_SHARDED_REPODATA=false
+}
+
 {
   log "BUILD: START"
   print
