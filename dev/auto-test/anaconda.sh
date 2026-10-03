@@ -350,7 +350,7 @@ report-lib()
   } else {
     LIB=$LIBDIR/libtclturbine.so
   }
-  log "LIB: $LIB"
+  log "report-lib(): LIB: $LIB"
   if [[ ! -f $LIB ]] {
     log "LIB: NOT FOUND"
     return
@@ -359,15 +359,16 @@ report-lib()
   checksum $LIB
   if [[ $CONDA_PLATFORM =~ osx-* ]] {
     log "LIB UUID:"
-    dwarfdump --uuid $LIB 2>/dev/null || otool -l $LIB | grep -A1 LC_UUID
+    dwarfdump --uuid $LIB 2>/dev/null || otool -l $LIB | grep -A1 LC_UUID || true
     log "LIB Tcl linkage:"
-    otool -L $LIB 2>/dev/null | grep -i tcl
+    otool -L $LIB 2>/dev/null | grep -i tcl || true
   } else {
     log "LIB build-id:"
-    readelf -n $LIB 2>/dev/null | grep -i "build id"
+    readelf -n $LIB 2>/dev/null | grep -i "build id" || true
     log "LIB Tcl linkage:"
-    ldd $LIB 2>/dev/null | grep -i tcl
+    ldd $LIB 2>/dev/null | grep -i tcl || true
   }
+  log "report-lib(): done."
   print
 }
 
