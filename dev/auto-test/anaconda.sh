@@ -85,6 +85,9 @@ abort()
 if [[ ${GITHUB_ACTIONS:-false} == true ]] {
   log "Start..." >> anaconda.log
   WORKSPACE=$RUNNER_TEMP
+  # Setting to avoid MPID_Init() issues with MANA on GitHub Azure system
+  # From Claude: 2026-10-04
+  export UCX_TLS=sm,self
 }
 
 if [[ ${WORKSPACE:-0} == 0 ]] abort "Set WORKSPACE!"
