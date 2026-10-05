@@ -5,8 +5,10 @@ COMMENT(          custom-built emews-r                      )m4_dnl
 COMMENT( Note that we now simply install r or emews-r       )m4_dnl
 COMMENT(      and build RInside inside build-generic.sh     )m4_dnl
 COMMENT( Retain indentation                                 )m4_dnl
+COMMENT( emews-r>=9 ensures the gfortran/FLIBS fix (pinned gcc lib dir)  )m4_dnl
+COMMENT( so R package builds do not fail with '-lemutls_w'.              )m4_dnl
 m4_ifelse(m4_getenv(CONDA_PLATFORM),`osx-arm64',
-`    - emews-r',
+`    - emews-r>=9',
 `    - r=m4_getenv(R_VERSION)')
 # pkgs-R.yaml: STOP
 m4_dnl Local Variables:
