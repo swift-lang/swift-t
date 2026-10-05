@@ -11,30 +11,33 @@ Usage:
     conda-deps.py --json PACKAGE.conda
 """
 
-import argparse
 import io
 import json
+import os
 import sys
 import tarfile
 import zipfile
 
 
 def main():
+    args = parse_args()
+    for i, pkg in enumerate(args.packages):
+        if i and not args.json:
+            print()
+        dump(pkg, as_json=args.json)
+
+def parse_args():
+    import argparse
     parser = argparse.ArgumentParser(
         description="Print dependency rules from a conda package file.")
     parser.add_argument("packages", nargs="+", metavar="PACKAGE",
                         help=".conda package file(s)")
     parser.add_argument("--json", action="store_true",
                         help="emit JSON instead of text")
-    args = parser.parse_args()
-
-    for i, pkg in enumerate(args.packages):
-        if i and not args.json:
-            print()
-        dump(pkg, as_json=args.json)
+    return parser.parse_args()
 
 
-def _zstd_decompress(data):
+def zstd_decompress(data):
     """Decompress zstd bytes, trying the stdlib (3.14+), then the
     `zstandard` package, then the `zstd` command-line tool."""
     try:
@@ -56,7 +59,7 @@ def _zstd_decompress(data):
                           stdout=subprocess.PIPE, check=True).stdout
 
 
-def _index_from_tar(raw):
+def index_from_tar(raw):
     """Extract and parse info/index.json from tar bytes."""
     with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
         member = tar.extractfile("info/index.json")
@@ -69,14 +72,16 @@ def read_index(path):
     """Return the parsed index.json dict for a .conda package."""
     if not path.endswith(".conda"):
         sys.exit(f"error: not a .conda package: {path}")
+    if not os.path.isfile(path):
+        sys.exit(f"error: no such file: {path}")
     with zipfile.ZipFile(path) as z:
         # The metadata lives in the info-*.tar.zst component.
         info_names = [n for n in z.namelist()
                       if n.startswith("info-") and n.endswith(".tar.zst")]
         if not info_names:
             sys.exit(f"error: no info-*.tar.zst found in {path}")
-        raw = _zstd_decompress(z.read(info_names[0]))
-        return _index_from_tar(raw)
+        raw = zstd_decompress(z.read(info_names[0]))
+        return index_from_tar(raw)
 
 
 def dump(path, as_json=False):
