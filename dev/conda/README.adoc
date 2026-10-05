@@ -152,6 +152,8 @@ This package does not exist for `linux-aarch-64`
 This fixes the libtinfow warning from ZSH on:
 . Linux Python 3.8
 
+Use `conda-deps.py` to debug dependencies.
+
 == M4 usage
 
 We use M4 to preprocess `meta.yaml` and `settings.sed`.
@@ -190,3 +192,8 @@ $(warning SDK $(SDK))
 CPPFLAGS = -I$(SDK)/usr/include/c++/v1 -I$(SDK)/usr/include
 LDFLAGS = -L$(SDK)/usr/lib -lSystem -F$(SDK)/System/Library/Frameworks
 ----
+
+== Tools
+
+`conda-deps.py PKG.conda`::
+Report deps for given PKG.
