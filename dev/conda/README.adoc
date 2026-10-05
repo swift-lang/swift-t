@@ -145,6 +145,8 @@ Use `dev/conda/upload.sh` to automate this.
 
 == Dependencies
 
+Use `conda-deps.py` to debug dependencies.
+
 `r-rinside`::
 This package does not exist for `linux-aarch-64`
 
@@ -152,7 +154,24 @@ This package does not exist for `linux-aarch-64`
 This fixes the libtinfow warning from ZSH on:
 . Linux Python 3.8
 
-Use `conda-deps.py` to debug dependencies.
+`tk`::
+Pinned to `tk>=8.6.15` via `SPEC_TK` in `<platform>/deps.sh`, which flows
+through `pkgs-tk.yaml` into `meta.yaml`. The pin works around a `strstr`
+two-level-namespace symbol bug in some `tk==8.6.13` builds (see the comments
+in `deps.sh`). Note that `tk>=8.6.15` currently resolves only from the
+`defaults` channel: conda-forge has no `tk 8.6.15` (it jumps `8.6.13` ->
+`9.0.4`), so the build environment legitimately mixes channels here.
++
+Installing `tk` alongside `xorg-xorgproto` produces `ClobberError`s for the
+shared `include/X11/*.h` headers (e.g. `X.h`, `Xlib.h`, `keysym.h`). Both
+packages ship these headers, and this overlap exists *within* conda-forge too
+(tk and xorg-xorgproto both from conda-forge still clobber), so it is not a
+channel-mixing artifact. Conda's default `path_conflict` policy treats these
+as warnings and picks a winner (last writer wins), so the build/install
+succeeds. The clobbers are only fatal when they land inside an already-broken
+transaction, e.g. a corrupted package cache (see the install README,
+"Corrupted conda cache (macOS)"). They are otherwise harmless noise and can be
+ignored.
 
 == M4 usage
 
