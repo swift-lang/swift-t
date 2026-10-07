@@ -50,7 +50,8 @@ CONDA_TIMESTAMPS=(
 # If default, we allow conda to select its default.
 # TODO: Remove this after removal of Python 310: 2026-09-29
 typeset -A CONDA_SOLVER=(
-  311 default
+  # Jenkins cannot fall back to mamba here:  2026-10-07
+  311 classic
   312 default
   313 default
   314 default
