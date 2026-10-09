@@ -137,7 +137,16 @@ fi
 # Build dependency list:
 LIST=()
 if (( USE_ANT     )) LIST+=ant
-if (( USE_GCC     )) LIST+=gcc
+if (( USE_GCC     )) {
+  # Needed for libstdc++ GLIBCXX version issue on GCE Jenkins:
+  # if [[ ${JENKINS_HOME:-} != "" ]] {
+  #   LIST+=( "gcc=14" )
+  # } else {
+  #   LIST+=(  gcc     )
+  # }
+  # Try plain GCC on Jenkins: 2026-10-09
+  LIST+=(  gcc     )
+}
 if (( USE_NCURSES )) LIST+=ncurses
 if (( USE_ZSH     )) LIST+=zsh
 LIST+=(
@@ -151,9 +160,6 @@ LIST+=(
   swig
   $SPEC_TK
 )
-
-# Needed for libstdc++ GLIBCXX version issue on GCE Jenkins:
-if [[ ${JENKINS_HOME:-} != "" ]] LIST+=( "gcc=14" )
 
 # R switch
 if (( USE_R )) {

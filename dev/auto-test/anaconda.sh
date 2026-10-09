@@ -312,8 +312,13 @@ do-activate()
   #             Note the dependencies in CONDA_TIMESTAMPS above
   # 2026-03-03: Trying update again to fix 3.10
   # 2026-03-04: Didn't help
-  # conda update --quiet --yes $USE_SOLVER conda
-  log "SKIPPED!"
+  #          ^: Not sure which system
+  if [[ ${JENKINS_HOME:-0} != 0 ]] {
+    conda update --quiet --yes $USE_SOLVER conda
+    conda list
+  } else {
+    log "SKIPPED!"
+  }
   log "CONDA UPDATE: OK: $PY"
   set -eu
   print
