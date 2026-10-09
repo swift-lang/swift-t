@@ -208,6 +208,9 @@ ENABLE_MKSTATIC_CRC=0
 # Any Cray:
 # export CRAYPE_LINK_TYPE=dynamic
 
+# Aurora:
+# module load oneapi mpich swig
+
 # Cori:
 # module swap PrgEnv-intel PrgEnv-gnu
 
