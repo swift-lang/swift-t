@@ -1,0 +1,6 @@
+# pkgs-zlib.yaml: START
+# zlib is a real library dependency (needed at both build and run time).
+# It is not reliably pulled in transitively on linux-64 - see
+# linux-64/deps.sh - so it is listed explicitly, gated by USE_ZLIB.
+    - zlib
+# pkgs-zlib.yaml: STOP

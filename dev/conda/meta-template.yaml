@@ -42,6 +42,7 @@ requirements:
 m4_ifelse(m4_getenv(USE_ANT),     `1', m4_include(pkgs-ant.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_CLANG),   `1', m4_include(pkgs-clang.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_GCC),     `1', m4_include(pkgs-gcc.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_ZLIB),    `1', m4_include(pkgs-zlib.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_NCURSES), `1', m4_include(pkgs-ncurses.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_TK),      `1', m4_include(pkgs-tk.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_ZSH),     `1', m4_include(pkgs-zsh.yaml))m4_dnl
@@ -52,7 +53,7 @@ m4_ifelse(m4_getenv(ENABLE_R),    `1', m4_include(pkgs-R.yaml))m4_dnl
     - m4_getenv(SPEC_MPICH)
     - swig
 m4_ifelse(m4_getenv(USE_CLANG),   `1', m4_include(pkgs-clang.yaml))m4_dnl
-m4_ifelse(m4_getenv(USE_GCC),     `1', m4_include(pkgs-gcc.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_ZLIB),    `1', m4_include(pkgs-zlib.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_NCURSES), `1', m4_include(pkgs-ncurses.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_TK),      `1', m4_include(pkgs-tk.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_ZSH),     `1', m4_include(pkgs-zsh.yaml))m4_dnl

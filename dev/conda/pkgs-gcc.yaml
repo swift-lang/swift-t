@@ -1,7 +1,11 @@
 # pkgs-gcc.yaml: START
-# Extra packages for gcc
-    - gcc
-m4_ifelse(m4_getenv(USE_ZLIB),1,
-`    - zlib'
-)
+# Compilers for the gcc platforms (linux-64). Build-only.
+# Use the conda compiler functions rather than the bare gcc metapackage:
+# they pull in sysroot_linux-64, which pins the glibc floor (cos7 / 2.17)
+# so shared libs do not link against the build host newer glibc.
+# NOTE: double quotes around the lang - single quotes are m4 quote chars.
+# Runtime libs (libgcc-ng / libstdcxx-ng) come via the compiler run-exports,
+# so there is no corresponding run: entry.
+    - {{ compiler("c") }}
+    - {{ compiler("cxx") }}
 # pkgs-gcc.yaml: STOP
