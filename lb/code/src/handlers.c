@@ -814,7 +814,9 @@ process_get_request(int caller, int type, int count, bool blocking)
     // Try to initiate a steal to see if we can get work to the worker
     // immediately
     stealing = true;
+    XLB_PROF_ENTER(XLB_PROF_STEAL_THIEF);
     adlb_code rc = xlb_try_steal();
+    XLB_PROF_EXIT();
     ADLB_CHECK(rc);
     stealing = false;
   }

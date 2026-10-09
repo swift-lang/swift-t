@@ -30,6 +30,7 @@
 #include <stdbool.h>
 
 #include "messaging.h"
+#include "server-prof.h"
 
 void xlb_handlers_init(void);
 
@@ -109,8 +110,14 @@ xlb_handle(adlb_tag tag, int caller)
     xlb_handler_counters[tag]++;
   }
 
+  // Charge the handler's time to its category.  Safe to index
+  // unchecked: xlb_handler_valid() bounded tag above
+  XLB_PROF_ENTER_TAG(tag);
+
   // Call handler:
   adlb_code result = xlb_handlers[tag](caller);
+
+  XLB_PROF_EXIT();
 
   MPE_LOG(xlb_mpe_svr_busy_end);
 

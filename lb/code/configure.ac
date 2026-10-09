@@ -224,6 +224,16 @@ AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE, [${ENABLE_LOG_TRACE}],
 AC_DEFINE_UNQUOTED(ENABLE_LOG_TRACE_MPI, [${ENABLE_LOG_TRACE_MPI}],
                    [Whether to trace MPI calls])
 
+dnl Server time profiling.  See src/server-prof.h
+dnl Also requires ADLB_SERVER_PROFILE=1 in the environment at run time
+ENABLE_SERVER_PROFILE=0
+AC_ARG_ENABLE(server-profile,
+  AS_HELP_STRING([--enable-server-profile],
+                 [enable ADLB server wall-clock profiling]),
+  ENABLE_SERVER_PROFILE=1)
+AC_DEFINE_UNQUOTED(XLB_ENABLE_SERVER_PROFILE, [${ENABLE_SERVER_PROFILE}],
+                   [Whether to profile server time by category])
+
 ADLB_MPI_VERSION=3
 AC_ARG_ENABLE(mpi-2,
   AS_HELP_STRING([--enable-mpi-2],

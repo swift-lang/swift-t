@@ -32,6 +32,7 @@
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "refcount.h"
+#include "server-prof.h"
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
@@ -779,7 +780,9 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       }
       else
       {
+        XLB_PROF_ENTER(XLB_PROF_STEAL_TARGET);
         code = xlb_handle_steal_probe(rank);
+        XLB_PROF_EXIT();
       }
       break;
 
@@ -791,13 +794,17 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       else
       {
         // Steal from other rank if appropriate
+        XLB_PROF_ENTER(XLB_PROF_STEAL_THIEF);
         code = xlb_handle_steal_probe_resp(rank, hdr);
+        XLB_PROF_EXIT();
       }
       break;
 
     case ADLB_SYNC_STEAL:
       // Respond to steal
+      XLB_PROF_ENTER(XLB_PROF_STEAL_TARGET);
       code = xlb_handle_steal(rank, &hdr->steal, (int*)hdr->sync_data);
+      XLB_PROF_EXIT();
       break;
 
     case ADLB_SYNC_REFCOUNT:
@@ -900,11 +907,15 @@ adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
       ADLB_CHECK(rc);
       break;
     case DEFERRED_STEAL_PROBE:
+      XLB_PROF_ENTER(XLB_PROF_STEAL_TARGET);
       rc = xlb_handle_steal_probe(rank);
+      XLB_PROF_EXIT();
       ADLB_CHECK(rc);
       break;
     case DEFERRED_STEAL_PROBE_RESP:
+      XLB_PROF_ENTER(XLB_PROF_STEAL_THIEF);
       rc = xlb_handle_steal_probe_resp(rank, hdr);
+      XLB_PROF_EXIT();
       ADLB_CHECK(rc);
       break;
     default:

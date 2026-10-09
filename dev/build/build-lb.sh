@@ -33,6 +33,12 @@ if (( SWIFT_T_TRACE_BUILD )); then
     EXTRA_ARGS+=" --enable-log-trace"
 fi
 
+# Also requires ADLB_SERVER_PROFILE=1 in the environment at run time.
+# Defaulted so that settings files predating this option still work.
+if (( ${SWIFT_T_SERVER_PROFILE:-0} )); then
+    EXTRA_ARGS+=" --enable-server-profile"
+fi
+
 if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe=${MPE_INSTALL}"
 fi

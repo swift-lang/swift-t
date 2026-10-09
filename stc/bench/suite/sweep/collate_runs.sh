@@ -15,9 +15,11 @@ do
   procs=$(echo $params | grep -o -E "${PROC_REGEX}")
   echo -n "$opt	$procs	"
 
-  ELAPSED_STR="ADLB Total Elapsed Time: "
-  elapsed=$(grep -o -E "${ELAPSED_STR}[0-9.]+" $f | head -n1 | 
-            grep -o -E "[0-9.]+")
+  # The server prints its rank in brackets:
+  #   "ADLB Total Elapsed Time[4]: 1.234"
+  ELAPSED_STR="ADLB Total Elapsed Time\\[[0-9]+\\]: "
+  elapsed=$(grep -o -E "${ELAPSED_STR}[0-9.]+" $f | head -n1 |
+            grep -o -E "[0-9.]+$")
   echo -n "$elapsed"
   echo
 done

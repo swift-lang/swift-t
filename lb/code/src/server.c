@@ -41,6 +41,7 @@
 #include "mpe-tools.h"
 #include "refcount.h"
 #include "requestqueue.h"
+#include "server-prof.h"
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
@@ -171,6 +172,10 @@ xlb_server_init(const struct xlb_state *state)
   // Set a default value for now:
   mm_set_max(mm_default, 10*MB);
   xlb_handlers_init();
+
+  code = xlb_prof_init();
+  ADLB_CHECK(code);
+
   xlb_time_last_action = MPI_Wtime();
   xlb_last_servers_idle_check = MPI_Wtime();
 
@@ -224,9 +229,14 @@ ADLB_Server(long max_memory)
   DEBUG("ADLB_Server(): %i entering server loop", xlb_s.layout.rank);
 
   update_cached_time(); // Initial timestamp
+  xlb_prof_start();       // Start charging time to the server
 
   while (true)
   {
+    // Close any region left open by an error path, so that a missed
+    // exit costs one iteration of misattribution and is reported
+    XLB_PROF_UNWIND();
+
     if (xlb_server_shutting_down)
       break;
     if (master_server() && check_idle())
@@ -280,7 +290,9 @@ serve_several()
       code = xlb_check_sync_msgs(&sync_rank);
       if (code == ADLB_SUCCESS)
       {
+        XLB_PROF_ENTER(XLB_PROF_OTHER);
         code = xlb_handle_next_sync_msg(sync_rank);
+        XLB_PROF_EXIT();
         ADLB_CHECK(code);
 
         handled = true;
@@ -308,13 +320,19 @@ serve_several()
 
     if (handled)
     {
+      XLB_PROF_ENTER(XLB_PROF_OTHER);
+
       // Previous request may have resulted in pending sync requests
       code = xlb_handle_pending_syncs();
+      if (code != ADLB_SUCCESS) XLB_PROF_EXIT();
       ADLB_CHECK(code);
 
       // Previous request may have resulted in pending work
       code = xlb_handle_ready_work();
+      if (code != ADLB_SUCCESS) XLB_PROF_EXIT();
       ADLB_CHECK(code);
+
+      XLB_PROF_EXIT();
 
       // Back off less on each successful request
       curr_server_backoff /= 2;
@@ -506,7 +524,9 @@ check_steal(void)
 
   // Initiate steal...
   TRACE_START;
+  XLB_PROF_ENTER(XLB_PROF_STEAL_THIEF);
   adlb_code rc = xlb_try_steal();
+  XLB_PROF_EXIT();
   TRACE_END;
   return rc;
 }
@@ -907,8 +927,11 @@ static inline void print_final_stats()
   {
     double xlb_end_time = MPI_Wtime();
     double xlb_elapsed_time = xlb_end_time - xlb_s.start_time;
-    printf("ADLB Total Elapsed Time: %.3lf\n", xlb_elapsed_time);
+    printf("ADLB Total Elapsed Time[%i]: %.3lf\n",
+           xlb_s.layout.rank, xlb_elapsed_time);
   }
+
+  xlb_prof_print();
 
   // Print other performance counters
   xlb_print_handler_counters();

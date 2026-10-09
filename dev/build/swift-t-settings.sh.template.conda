@@ -93,6 +93,10 @@ SWIFT_T_OPT_BUILD=0
 SWIFT_T_DEBUG_BUILD=0
 # Trace build (set to 1 to enable): Enables trace logging
 SWIFT_T_TRACE_BUILD=0
+# Server profiling (set to 1 to enable): accumulate the time each ADLB
+# server spends idle, stealing, handling tasks and handling data.
+# Also requires ADLB_SERVER_PROFILE=1 in the environment at run time.
+SWIFT_T_SERVER_PROFILE=0
 
 # NOTE: Python detection may require PYTHONPATH and PYTHONHOME
 # in the environment
