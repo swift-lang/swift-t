@@ -105,6 +105,8 @@ PYTHON_EXE=( =python )
 # Get its directory:
 PYTHON_BIN=${PYTHON_EXE:h}
 if [[ ${TOOLDIR} != ${PYTHON_BIN} ]] {
+  print
+  log "ERROR:"
   log "conda-build is not in your python directory!"
   log "            this is probably wrong!"
   log "            run ./setup-conda.sh"
