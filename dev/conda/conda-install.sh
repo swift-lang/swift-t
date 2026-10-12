@@ -59,7 +59,7 @@ msg()
 msgf()
 {
   printf "conda-install.sh: "
-  printf "${*}"
+  printf "${@}"
 }
 fail()
 {
@@ -68,7 +68,7 @@ fail()
 failf()
 {
   printf "conda-install.sh: "
-  abortf "${*}"
+  abortf "${@}"
 }
 
 # Report information about given PKG:

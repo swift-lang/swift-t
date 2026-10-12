@@ -46,8 +46,9 @@ abort()
 
 abortf()
 {
-  local MSG=( ${*} )
-  printf ${MSG}
+  # "$@" (not "${*}"): keeps the format string and each value as
+  # separate printf arguments.
+  printf "${@}"
   exit 1
 }
 
