@@ -7,6 +7,8 @@ COMMENT(
 # Date that this meta.yaml was filtered from meta-template.yaml:
 # DATE: m4_getenv(DATE)
 
+# These set blocks result in an erroneous warning about
+# Jinja blocks at during conda-build
 {% set name    = "m4_getenv(PKG_NAME)" %}
 {% set version = "m4_getenv(SWIFT_T_VERSION)" %}
 {% set major   = version.rpartition('.')[0] %}

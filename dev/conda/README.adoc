@@ -125,6 +125,9 @@ We call `conda build` inside our `conda-build.sh`
 .. Performs path string renaming for libraries and scripts
 .. Copies everything into the target Conda environment
 
+NOTE: The errors about Jinja blocks are a known Anaconda bug
+(according to Claude Haiku 2026-07-30).
+
 === Speed
 
 It is best to create a Miniconda installation in RAM disk on your system
