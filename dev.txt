@@ -1662,6 +1662,14 @@ https://github.com/swift-lang/swift-t
 git clone git@github.com:swift-lang/swift-t.git
 ----
 
+== Shell scripting
+
+Top-level user-facing scripts (+bin/swift-t+, +bin/stc+, +bin/turbine+)
+use +#!/usr/bin/env -S zsh -f+, not plain +#!/usr/bin/env zsh+.  The +-f+
+disables sourcing the invoking user's +~/.zshenv+/+~/.zshrc+.  Without it, a
+developer's personal zsh functions/aliases/traps leak into these scripts'
+environment.
+
 == Release procedure
 
 === Source release
