@@ -14,7 +14,7 @@ Settings:
 
 = Swift/T Developers' Guide
 Justin M. Wozniak
-March 2023
+October 2026
 
 This document is for developers interested in modifying or extending
 the Swift/T codebase.
