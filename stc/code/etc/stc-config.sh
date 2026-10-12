@@ -33,25 +33,46 @@ then
 fi
 if (( CONDA_BUILD ))
 then
-  if [[ ! -f ${JVM:-0} ]]
+  # The build-time USE_JAVA points into the Conda build environment,
+  # which is not where stc runs: it is absent in a normal install, and
+  # under 'conda build --dirty' it still exists on disk but its Java is
+  # not runnable in the install/test env.  So under Conda always resolve
+  # Java from the *active* environment, trying, in order:
+  #   1. $CONDA_PREFIX/bin/java - the activated env (install and test)
+  #   2. java on $PATH          - the activated env is on PATH
+  #   3. the base env via CONDA_EXE, including its openjdk package cache
+  # Only if all of these fail do we keep the build-time path (which
+  # lookup_java will then report as unusable).
+  # (Previously this used only the CONDA_EXE-derived base prefix and was
+  #  gated on the baked path being missing, which --dirty defeated.)
+  CONDA_JVM=""
+  if [[ -n ${CONDA_PREFIX:-} && -x ${CONDA_PREFIX}/bin/java ]]
   then
-    # Get CONDA_PREFIX from parent-parent of CONDA_EXE
-    if (( ${#CONDA_EXE:-} == 0 )) {
-      echo "stc: CONDA_EXE is not set"
-      echo "stc: The conda environment is broken!"
-      exit ${EXIT_ERROR_SCRIPT}
-    }
-    CONDA_PREFIX=${CONDA_EXE:h:h}
-    if [[ -x ${CONDA_PREFIX}/bin/java ]]
+    CONDA_JVM=${CONDA_PREFIX}/bin/java
+  else
+    PATH_JAVA=$( command -v java 2> /dev/null )
+    if [[ -n ${PATH_JAVA} ]]
     then
-      JVM=${CONDA_PREFIX}/bin/java
-    else
-      JDKS=( ${CONDA_PREFIX}/pkgs/openjdk-* )
-      if (( ${#JDKS} ))
+      CONDA_JVM=${PATH_JAVA}
+    elif (( ${#CONDA_EXE:-} > 0 ))
+    then
+      # Get the base env from parent-parent of CONDA_EXE
+      CONDA_ROOT=${CONDA_EXE:h:h}
+      if [[ -x ${CONDA_ROOT}/bin/java ]]
       then
-        JVM=${JDKS[1]}/bin/java
+        CONDA_JVM=${CONDA_ROOT}/bin/java
+      else
+        JDKS=( ${CONDA_ROOT}/pkgs/openjdk-*(N) )
+        if (( ${#JDKS} ))
+        then
+          CONDA_JVM=${JDKS[1]}/bin/java
+        fi
       fi
     fi
+  fi
+  if [[ -n ${CONDA_JVM} ]]
+  then
+    JVM=${CONDA_JVM}
   fi
 fi
 
