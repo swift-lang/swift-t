@@ -47,6 +47,20 @@ m4_ifelse(m4_getenv(USE_NCURSES), `1', m4_include(pkgs-ncurses.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_TK),      `1', m4_include(pkgs-tk.yaml))m4_dnl
 m4_ifelse(m4_getenv(USE_ZSH),     `1', m4_include(pkgs-zsh.yaml))m4_dnl
 m4_ifelse(m4_getenv(ENABLE_R),    `1', m4_include(pkgs-R.yaml))m4_dnl
+
+  # HOST: the libraries/tools Swift/T links and runs against.  They are
+  # installed into $PREFIX at build time (so Turbine/STC configure find
+  # relocatable $PREFIX paths, not build-env paths) and Conda relocates
+  # them into the install environment.  See settings.sed (LAUNCHER/TCLSH).
+  host:
+    - python m4_getenv(PYTHON_SERIES)
+    - openjdk>=17  # Security issue in Java < 11.72.19
+    - m4_getenv(SPEC_MPICH)
+m4_ifelse(m4_getenv(USE_ZLIB),    `1', m4_include(pkgs-zlib.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_NCURSES), `1', m4_include(pkgs-ncurses.yaml))m4_dnl
+m4_ifelse(m4_getenv(USE_TK),      `1', m4_include(pkgs-tk.yaml))m4_dnl
+m4_ifelse(m4_getenv(ENABLE_R),    `1', m4_include(pkgs-R.yaml))m4_dnl
+
   run:
     - python m4_getenv(PYTHON_SERIES)
     - openjdk>=17

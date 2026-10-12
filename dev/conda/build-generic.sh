@@ -71,6 +71,13 @@ else
   NULL="--null"
   ZT="--zero-terminated"
   export ENABLE_CONDA_LINUX=1
+  # Point the mpicc/mpicxx wrappers at the conda sysroot compilers.
+  # With {{ compiler('c') }} the installed backend is
+  # x86_64-conda-linux-gnu-{cc,c++}, but the mpich-mpicc wrapper defaults
+  # to the stale x86_64-conda_cos6-linux-gnu-cc name (not installed),
+  # which fails with exit 127. CC/CXX are set by the compiler activation.
+  export MPICH_CC=${CC}
+  export MPICH_CXX=${CXX}
 fi
 printenv ${NULL} | sort ${ZT} | tr '\0' '\n' > \
                                    $RECIPE_DIR/build-env.log
@@ -110,21 +117,28 @@ if (( ENABLE_R == 1 ))
 then
   # For the R-enabled installer, we build/install RInside into our
   #     Anaconda R installation, and install [de]activate scripts.
+  # Use $PREFIX/bin/R explicitly, NOT "which R": r=VERSION is also a
+  #     build: dependency (needed as a build tool), so plain "which R"
+  #     can resolve to $BUILD_PREFIX/bin/R ahead of the host R on PATH.
+  #     That installs RInside into the ephemeral $BUILD_PREFIX/lib/R,
+  #     which is discarded after the build and never packaged, leaving
+  #     libtclturbine.so (linked against it) unable to find libRInside.so
+  #     at install/test time.
   echo
   log "Checking R ..."
-  if ! which R
+  if [[ ! -x $PREFIX/bin/R ]]
   then
-    log "Could not find R!"
+    log "Could not find $PREFIX/bin/R!"
     exit 1
   fi
-  export R_HOME=$( R RHOME )
+  export R_HOME=$( $PREFIX/bin/R RHOME )
 
   log "Installing RInside into $R_HOME ..."
   (
     # Allow pipe errors here:
     #       we put token "Swift-RInside-SUCCESS" in the log:
     set +o pipefail
-    Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
+    $PREFIX/bin/Rscript $DEV_CONDA/install-RInside.R 2>&1 | \
       tee $RECIPE_DIR/install-RInside.log
   )
   if ! grep -q "Swift-RInside-SUCCESS" $RECIPE_DIR/install-RInside.log

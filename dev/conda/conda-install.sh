@@ -83,6 +83,23 @@ if (( ${#P} )) {
   CONDA_PLATFORM=${PKG:h:t}
 }
 
+# Catch the common mistake early: pointing PKG at a copy left in
+# conda-bld/broken/ (or any other non-platform directory) auto-detects
+# CONDA_PLATFORM from that directory name instead of the real platform,
+# which otherwise fails much later with a confusing
+# "no such file or directory: .../CONDA_PLATFORM/deps.sh" from `source`.
+if [[ ! -f $DEV_CONDA/$CONDA_PLATFORM/deps.sh ]] {
+  if [[ $CONDA_PLATFORM == "broken" ]] {
+    fail "PKG is under conda-bld/broken/, so CONDA_PLATFORM auto-detected" \
+         "as 'broken', not a real platform.  Provide the real platform" \
+         "with -P, e.g. -P linux-64"
+  } else {
+    fail "No such CONDA_PLATFORM: '$CONDA_PLATFORM'" \
+         "(expected $DEV_CONDA/$CONDA_PLATFORM/deps.sh to exist)." \
+         "Provide the real platform with -P, e.g. -P linux-64"
+  }
+}
+
 # Echo back platform and package statistics to the user
 msg "CONDA_PLATFORM=$CONDA_PLATFORM"
 zmodload zsh/stat zsh/mathfunc
@@ -116,7 +133,19 @@ USE_NCURSES=0
 USE_ZSH=1
 SPEC_CLANG=""
 SPEC_MPICH="mpich"
+# Pin Python to the PKG's ABI tag: 2026-10-09
+# The PKG name carries the Python ABI, e.g. swift-t-...-py311..._3.conda.
+# libtclturbine.so links libpythonX.Y.so, but 'conda install <file.conda>'
+# does NOT enforce the package's own python pin, so an unpinned "python"
+# lets the solver install a mismatched interpreter (e.g. 3.15) and the
+# library fails to load (libpython3.11.so.1.0 not found).  Derive X.Y from
+# the PKG name so the install env matches the compiled ABI.
 SPEC_PYTHON="python"
+PY_TAG=${${PKG:t}##*-py}      # e.g. 311h3fd9d12_3.conda
+PY_NUM=${PY_TAG%%[!0-9]*}     # e.g. 311
+if [[ -n $PY_NUM && $PY_NUM != $PY_TAG ]] {
+  SPEC_PYTHON="python=${PY_NUM[1]}.${PY_NUM[2,-1]}"
+}
 export SPEC_TK=""
 
 if [[ $CONDA_PLATFORM == "linux-64" ]] && \
