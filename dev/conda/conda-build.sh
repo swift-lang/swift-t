@@ -231,7 +231,12 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
   export CONDA_REPODATA_USE_SHARDS=false
 }
 
-{
+# set +e/-e bracketing is required here: if the pipeline below were used
+#     as an `if'/`while' condition instead, zsh disables errexit for
+#     everything inside it (including the nested conda build), so a real
+#     build failure would go undetected and BUILD: STOP would still log.
+set +e
+(
   log "BUILD: START"
   print
   (
@@ -256,10 +261,40 @@ if [[ $CONDA_PLATFORM == "osx-arm64" ]] {
 
     # Build the package!
     conda build $BUILD_ARGS
+    # Return exit code from conda build...
   )
-  log "BUILD: STOP"
-} |& tee $LOG
+) |& tee $LOG
+BUILD_STATUS=$pipestatus[1]
+set -e
+
+# Error analysis:
+if (( BUILD_STATUS != 0 ))
+then
+  print
+  # conda's own network client can die mid-solve
+  # (fetching repodata/channel notices while solving _h_env)
+  # with a bare BrokenPipeError and no traceback:
+  # a transient connection reset, not a recipe/script bug.
+  # Flag it clearly instead of just reporting
+  # "Command exited with non-zero status 1" .
+  PATTERNS=( BrokenPipeError
+             "Connection broken"
+             ConnectionError
+             ReadTimeoutError )
+  PATTERN=${(j:\|:)PATTERNS}
+  if grep -q "$PATTERN" $LOG
+  then
+    log "BUILD FAILED: conda lost its network connection "        \
+        "(repodata/notices fetch) while solving the environment." \
+        "This is usually transient -- re-run the build."          \
+        "See $LOG for the exact exception."
+    print
+  fi
+  abort "conda build failed; see $LOG"
+fi
 print
+
+log "BUILD: SUCCESS"
 
 # Find the "upload" text for the PKG in the LOG,
 #      this will give us the PKG file name
