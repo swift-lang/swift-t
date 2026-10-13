@@ -1,6 +1,72 @@
 = Swift-T Conda glibc Fix — Session Transcript
 :date: 2026-10-09
 
+== STANDING RULE: put scratch/tmp files in PWD, not bare /tmp (2026-10-13)
+
+This session repeatedly wrote ad hoc test/log files directly under `/tmp/`
+(`/tmp/tk9-build-*.log`, `/tmp/settings-filtered*.sed`,
+`/tmp/test-settings*.sh`, ...). Put these under the current working
+directory instead (e.g. a scratch subdirectory, or just the repo's own
+working dir) so they are easy to find again, do not collide with other
+sessions'/users' same-named files in shared `/tmp`, and get cleaned up
+along with the rest of the session's work rather than lingering in `/tmp`
+indefinitely. Note this is distinct from genuine build scratch that
+intentionally lives under `$TMP` by convention (e.g. `/tmp/distro`,
+`/tmp/woz/*-B` conda roots per `dev/conda/*.sh`'s own `TMP=${TMP:-/tmp}`) --
+those stay where the project's own scripts expect them.
+
+== STANDING RULE: use conda-build.sh -C before a full build (2026-10-13)
+
+`conda-build.sh -C` (configure-only) generates `meta.yaml` and
+`settings.sed` and then stops -- no `conda build` invocation, no package
+solve/download/compile/test. It is seconds instead of minutes.
+
+Whenever iterating on `dev/conda/` files that affect `meta.yaml` or
+`settings.sed` generation (SPEC_TK, deps.sh, settings.sed itself,
+meta-template.yaml, pkgs-*.yaml, common.m4), run
+`conda-build.sh -C [-r RV] PLATFORM BUILD_NUMBER` first and inspect the
+generated `PLATFORM/settings.sed` -- and, critically, actually APPLY it
+with `sed -f PLATFORM/settings.sed dev/build/swift-t-settings.sh.template`
+and grep the result for the variables being changed (LAUNCHER, TCLSH, ...).
+Generating the sed script is not enough to catch a bug: the 2026-10-13
+LAUNCHER regression (`s@.*LAUNCHER=.*@&LAUNCHER=...@` silently landing
+inside a `#`-commented line, so LAUNCHER was never actually set) only
+showed up when the generated sed was actually run against the real
+template, not just eyeballed or m4-filtered.
+
+Only after that check looks right is a real `conda-build.sh PLATFORM N`
+(no `-C`) worth spending the minutes on.
+
+== STANDING RULE: always consider both platforms (2026-10-13)
+
+`dev/conda/` supports exactly two platforms, `linux-64` and `osx-arm64`,
+and several files are SHARED between them (`settings.sed`, `settings-R.sed`,
+`meta-template.yaml`, `common.m4`, `conda-build.sh`, `conda-install.sh`).
+A fix aimed at one platform's bug can silently change behavior, or crash
+outright (e.g. zsh's NOMATCH-on-unmatched-glob), on the other.
+
+Whenever proposing or making a change under `dev/conda/` (or anything else
+that affects the conda build/install path, e.g. `turbine/code/configure.ac`,
+shebangs, settings sed scripts), explicitly check its effect on BOTH
+platforms before considering the change done:
+
+* Is the touched file shared (`settings.sed`, `meta-template.yaml`, ...) or
+  platform-specific (`linux-64/deps.sh`, `osx-arm64/deps.sh`, ...)?
+* If shared: does the change rely on an assumption (a binary name, a glob
+  match, a shell builtin's availability, GNU vs BSD tool flags) that may
+  not hold on the other platform?
+* osx-arm64 has its own accumulated tuning (`clang==18.1.8` pin, the
+  tk strstr two-level-namespace bug/build-string pin, `USE_GCC=0`,
+  `SPEC_MPICH='mpich==4.1.2'`) that a linux-focused fix must not regress.
+* When unsure whether a shared-file change is safe on the other platform,
+  say so explicitly rather than assuming "it probably also works there".
+
+See the `TCLSH` glob fix (2026-10-13 section below) for a concrete example:
+the first draft used `$(ls $PREFIX/bin/tclsh[0-9]*)`, which would hard-crash
+under zsh (not just error) if the glob ever failed to match on EITHER
+platform; the `(N)` zsh glob qualifier was added specifically to make that
+failure mode safe cross-platform.
+
 == Problem
 
 Jenkins build failed at the `swift-t -E 'trace(42);'` test with:
@@ -580,3 +646,333 @@ install step is broken.
 Files changed this session:
 * (none -- scratch-directory-only fix: regenerated /tmp/distro, cleared
   stale /usb3/woz/conda-cache entries, rebuilt as BUILD_NUMBER=6)
+
+== gh-error-01.txt: PY=3.14 linux CI failure -- SPEC_TK pin clobbered (2026-10-13)
+
+A GitHub Actions run (`gh-error-01.txt`, OS=ubuntu-latest PY=3.14) failed at
+the `anaconda.sh` install/test step:
+
+----
+[proxy:...] HYDU_create_process: execvp error on file
+  .../Miniconda-install/bin/tclsh8.6 (No such file or directory)
+CHECK FAILED: anaconda.sh -av -p 3.14
+----
+
+=== Root cause
+
+`dev/conda/conda-install.sh:149-157` intentionally pins
+`SPEC_TK="tk=8.6.13"` for linux-64 + Python 3.14 (Python 3.14 otherwise
+pulls Tcl/Tk 9.0, but the package was built against 8.6 and Turbine's
+`turbine-config.sh` hardcodes `TCLSH=$PREFIX/bin/tclsh8.6` via
+`settings.sed`). But `conda-install.sh` then sources
+`dev/conda/linux-64/deps.sh`, which did `export SPEC_TK='tk'`
+unconditionally -- silently overwriting the 8.6.13 pin. The solver then
+picked `tk-9.0.4` (confirmed in the log's install package-plan), whose
+shell binary is `tclsh9.0`, not `tclsh8.6` -- the missing-file error above.
+
+Same anchor/override-ordering footgun as notes 9/9b above (a later,
+more-general step clobbering an earlier, more-specific one).
+
+=== Fix 1: stop deps.sh from clobbering a caller-set pin
+
+`dev/conda/linux-64/deps.sh`: `export SPEC_TK='tk'` ->
+`export SPEC_TK=${SPEC_TK:-tk}`. Falls back to the old unpinned default
+everywhere `SPEC_TK` isn't already set (`conda-build.sh`'s build-time path,
+which never pre-sets it), but preserves `conda-install.sh`'s Python-3.14
+pin instead of overwriting it.
+
+=== Packaging fix, part 2: make TCLSH version-agnostic (towards allowing Tcl 9)
+
+Turbine's own `configure.ac:845` already derives the Tcl shell name from
+`tclConfig.sh`'s `$TCL_VERSION` (`tclsh$TCL_VERSION`) -- it is NOT hardcoded
+to 8.6. The 8.6 pin is purely a conda-packaging workaround. To stop forcing
+8.6 forever (and make a future Tcl 9 package "just work" once verified):
+
+* `dev/conda/settings.sed`: `TCLSH=$PREFIX/bin/tclsh8.6` (hardcoded) ->
+  derived at build time from whatever `tclshN.N` the host `tk` package
+  actually provides:
+----
+s@^MPI_VERSION=.*@&\nLAUNCHER=$PREFIX/bin/mpiexec@
+s@^LAUNCHER=.*@&\nTCLSH=$PREFIX/bin/tclsh[0-9]*(N)@
+----
+  (Split into two single-variable `s@@` commands, each anchored off the
+  previous inserted line -- same style as the existing `ENABLE_PYTHON` ->
+  `PYTHON_EXE` anchor trick in the same file. A plain zsh glob is used
+  instead of `ls`/`sort`/`tail`, since only one `tk` package/version is
+  ever installed into host: at once; the `(N)` ("nullglob") qualifier is
+  REQUIRED because this file is sourced by zsh, which by default aborts
+  the whole build with "no matches found" on an unmatched glob -- without
+  it, a glob miss on EITHER platform would be a hard crash instead of an
+  empty `TCLSH`. This file is shared by linux-64 AND osx-arm64 -- see the
+  standing cross-platform rule at the top of this document.)
+
+* `dev/conda/pkgs-tk-run.yaml` (NEW) + `dev/conda/meta-template.yaml`:
+  the `run:` section's `tk` requirement now uses
+  `{{ pin_compatible("tk") }}` instead of including the plain
+  `pkgs-tk.yaml` (bare `- m4_getenv(SPEC_TK)`). `build:`/`host:` still use
+  `pkgs-tk.yaml` unchanged. Rationale: an unpinned `tk` in `run:` is a
+  SEPARATE solve from `host:` at install/test time and can drift to a
+  newer `tk` than what was actually linked into `libtclturbine.so` --
+  exactly how the install step above independently got `tk-9.0.4` while
+  the build got `tk==8.6.13`. `pin_compatible("tk")` ties `run:` to the
+  version conda-build actually resolved into `host:`, whatever that
+  version is (8.6 or a future 9.0).
+
+Together these two changes make the TCLSH/tk plumbing version-agnostic:
+whichever `tk` `SPEC_TK` resolves to, `TCLSH` and the run pin follow it
+automatically, instead of three separate hardcoded/independently-solved
+8.6 references needing to be kept in sync by hand.
+
+=== Settings.sed cleanup: each sed rewrites its OWN variable's line
+
+First draft of the `TCLSH` fix chained two `s@@` commands: insert `LAUNCHER`
+right after the `MPI_VERSION=` line, then insert `TCLSH` right after that
+newly-inserted `LAUNCHER` line (via `&\n...` append). This works but is
+needlessly confusing -- it reads as "replacing MPI_VERSION with LAUNCHER".
+Checked `dev/build/swift-t-settings.sh.template.conda` and found it already
+has real, UNCOMMENTED default lines for both ("For Anaconda, use ... from
+PATH"): `TCLSH=tclsh8.6` and `LAUNCHER=mpiexec`. So the append/chain trick
+(needed for `PYTHON_EXE`/`R_INSTALL`, which have no uncommented anchor) was
+never needed here. Simplified to two independent, self-anchored rewrites:
+----
+s@^LAUNCHER=.*@LAUNCHER=$PREFIX/bin/mpiexec@
+s@^TCLSH=.*@TCLSH=$PREFIX/bin/tclsh[0-9]*(N)@
+----
+Each line now does exactly one thing: rewrite the value already assigned to
+that variable. Lesson: before reaching for the append-after-anchor trick
+(justified for `PYTHON_EXE`/`R_INSTALL`/`ENABLE_*`), check whether the
+target template already has an uncommented default line to rewrite
+directly -- simpler and far less confusing to read.
+
+=== Part B: tk=9.0 test build -- BLOCKED upstream in SWIG, not fixable here
+
+With the packaging fix in place, tested by actually forcing Tcl 9 through
+a real build: `SPEC_TK='tk=9.0.4' ./conda-build.sh linux-64 1 -v` (no file
+edits needed -- this alone proves fix 1 above works: the override survived
+`deps.sh` and `libtcl-9.0.4`/`tk-9.0.4` were solved into the build env).
+
+Compilation of the SWIG-generated Tcl bindings
+(`turbine/code/src/tcl/blob/blob_wrap.c`) then failed with swig==4.4.0 (the
+newest available on conda-forge -- confirmed via `swig -version` and the
+build log's resolved package list, so this is not an old-swig problem):
+
+----
+error: 'SWIG_Tcl_MethodCommand' undeclared (first use in this function);
+  did you mean 'SWIG_MethodCommand'?
+error: passing argument 2 of 'Tcl_GetStringFromObj' from incompatible
+  pointer type [-Wincompatible-pointer-types]
+error: expected ';', ',' or ')' before 'objv'
+----
+
+Root cause (verified by reading the generated wrapper, same codegen
+pattern found in several other local swift-t checkouts' stale
+`blob_wrap.c`, e.g. `/usb3/woz/proj/swift-t/...`): SWIG's bundled Tcl
+runtime (`tclrun.swg`) guards Tcl-8.5+-only codegen with:
+----
+#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 5
+----
+This assumes minor-version numbers only climb within major version 8. For
+Tcl 9.0, `TCL_MAJOR_VERSION=9` but `TCL_MINOR_VERSION` resets to `0`, so
+`0 >= 5` is false and the whole guard is false -- SWIG silently falls back
+to its pre-8.5 Tcl codegen path. `SWIG_Tcl_MethodCommand`'s definition
+lives behind that same guard, so it goes undeclared even though a macro
+alias to it is emitted unconditionally. Separately, `Tcl_GetStringFromObj`
+changed its 2nd parameter from `int *` to `Tcl_Size *` in the real Tcl 9
+headers, which SWIG's pre-8.5 fallback path still calls with the old `int *`
+signature -> the incompatible-pointer-type errors.
+
+This is entirely inside SWIG-generated/runtime code, NOT in Turbine's own
+hand-written Tcl C sources (`turbine/code/src/tcl/util.c` etc. were never
+reached -- the build failed compiling the generated wrapper first). No
+packaging change can work around this; it needs either an upstream SWIG
+fix (tracked as a SWIG issue, not a swift-t one) or a swift-t-side patch to
+regenerate/post-process the wrapper, which is a separate, larger effort.
+
+CONCLUSION (RETRACTED -- see below): initially concluded Tcl 9 was blocked
+upstream in SWIG. That conclusion was WRONG, caused by testing a stale
+generated artifact rather than a real SWIG run. See
+"Tcl 9 test build: retraction + real root causes" below for what actually
+happened and the final, verified-working result.
+
+Files changed this session (superseded by the final file list at the
+bottom of the next section):
+* dev/conda/linux-64/deps.sh      (SPEC_TK=${SPEC_TK:-tk}, don't clobber)
+* dev/conda/settings.sed          (TCLSH/LAUNCHER: version-derived, each
+                                   sed rewrites its own variable's line)
+* dev/conda/pkgs-tk-run.yaml      (new; run: uses pin_compatible("tk"))
+* dev/conda/meta-template.yaml    (run: includes pkgs-tk-run.yaml)
+(gh-error-01.txt is the CI log that surfaced this; not a source change.)
+
+== Tcl 9 test build: retraction + real root causes, SUCCESS (2026-10-13)
+
+The "blocked upstream in SWIG" conclusion above was WRONG. Four separate,
+unrelated bugs were chained together across several retest cycles; each
+produced a failure that looked like it could be the Tcl 9 story, until
+verified individually. Final result: Tcl 9 (`tk=9.0.4`) builds, links, and
+passes `swift-t -E 'trace(42);'` cleanly. Package:
+`swift-t-1.6.9-py314h3fd9d12_6.conda` (8.1 MB), build 6, in
+`/tmp/woz/314-B/conda-bld/linux-64/` (not a real release build -- a local
+build-number series used purely to validate the fix; see cleanup note at
+the end).
+
+=== Bug 1 (false alarm): stale pre-generated *_wrap.c, not a SWIG bug
+
+First `tk=9.0.4` test build (`SPEC_TK='tk=9.0.4' ./conda-build.sh linux-64
+1 -v`) failed compiling `turbine/code/src/tcl/blob/blob_wrap.c` with
+`SWIG_Tcl_MethodCommand` undeclared and `Tcl_GetStringFromObj` pointer-type
+errors. Diagnosed (wrongly, at first) as SWIG's `tclrun.swg` guarding
+Tcl-8.5+ codegen with `TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 5`,
+which misfires for Tcl 9.0 (minor version resets to 0). This was
+challenged (user: "Google says SWIG 4.4.0 already fixed that guard") and
+verified directly against the real installed file:
+`_build_env/share/swig/4.4.0/tcl/tclrun.swg:70` actually reads
+`TCL_MAJOR_VERSION > 8 || (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION >= 5)`
+-- already correct. The user was right; the earlier "verified" diagnosis
+was built on inspecting a STALE `blob_wrap.c` sitting in the project's own
+working tree (leftover from an old local `./configure && make`, with the
+OLD buggy guard baked in from whatever SWIG generated it originally).
+
+Confirmed by `grep -c "swig -tcl" build.log` = 0: swig never ran in that
+build at all. `dev/release/make-release-pkg.zsh -b -T`'s file-copy step
+(`turbine/code/maint/file-list.zsh`'s `**/*.[cChi]` glob, see Bug 2)
+carried the stale `*_wrap.c` into `/tmp/distro`, and `make` considered it
+already up to date, so it was compiled as-is -- pre-Tcl-9 code, now linked
+against real Tcl 9 headers, hence the errors.
+
+FIX: manually removed the untracked/gitignored stale wrap files
+(`turbine/code/src/tcl/{blob,launch,python}/*_wrap.{c,d,o}`), regenerated
+`/tmp/distro` fresh, and confirmed `swig -tcl` actually ran (log showed
+the 3 `swig -tcl -outdir tests ...` invocations) before retesting.
+
+=== Bug 2 (recurrence prevention): file-list.zsh swept up generated files
+
+Root-caused WHY the stale `blob_wrap.c` got packaged at all:
+`turbine/code/maint/file-list.zsh` had
+`print **/*.[cChi] **/*.{tcl,swift}` -- a glob with no way to distinguish
+real source from a leftover SWIG-generated `.c` output sitting in the
+working tree. Any developer with stale local build artifacts would hit
+this same silent-staleness bug.
+
+FIX (`turbine/code/maint/file-list.zsh`): added `setopt extendedglob` and
+changed the line to
+`print **/*.[cChi]~**/*_wrap.[ch] **/*.{tcl,swift}` -- the `~` zsh
+extended-glob exclusion operator excludes any `*_wrap.c`/`*_wrap.h` from
+the packaged file list, so a stale generated wrapper can never be
+packaged, forcing a fresh `swig` run at build time instead. Verified with
+a synthetic `touch .../blob_wrap.c; file-list.zsh | grep wrap` -> no
+match.
+
+=== Bug 3 (my own regression): rewrote the wrong template's lines
+
+After Bug 1/2 fixes, "simplified" `settings.sed`'s `TCLSH`/`LAUNCHER`
+handling from an append-after-`MPI_VERSION` anchor to direct in-place
+rewrites (`s@^LAUNCHER=.*@LAUNCHER=...@`), reasoning that
+`dev/build/swift-t-settings.sh.template.conda` already has uncommented
+default lines for both. WRONG: `init-settings.sh` actually copies
+`swift-t-settings.sh.template` (no `.conda` suffix) -- the `.conda` file
+is unused/dead and happens to look similar. The real template has NO
+uncommented `LAUNCHER=`/`TCLSH=` line (only commented examples, and
+`TCLSH_LOCAL=`, a DIFFERENT variable name than the `TCLSH` that
+`build-turbine.sh` actually checks), so the anchored rewrite matched
+nothing and both variables silently stayed unset.
+
+LESSON: before rewriting a sed anchor, verify which template file is
+actually consumed at runtime (`grep -rn template dev/build/init-settings.sh`),
+not just "a file that looks like the right one".
+
+Reverted to append-after-anchor, which surfaced a second, independent sed
+subtlety: two separate `s@^LAUNCHER=.*@&\n...@` / `s@^TCLSH=.*@&\n...@`
+commands CANNOT be chained (anchoring the second on the line the first one
+just inserted) -- sed's `^`/`.*` anchor to the start of the whole pattern
+space and do not cross an embedded `\n` inserted earlier in the SAME
+cycle, so the second command never matches and silently appends nothing.
+Verified empirically with a real `sed -f` test rather than reasoning about
+it abstractly. FIX: anchor both independently on the same original
+`MPI_VERSION=3` line (each re-matches the still-intact original text,
+since `.*` does not cross the newline the other command inserted).
+
+=== Bug 4 (my own regression): assumed the wrong shell
+
+Also assumed `swift-t-settings.sh` is sourced by zsh (since it lives under
+`dev/conda/` next to zsh scripts) and used a zsh glob qualifier,
+`TCLSH=$PREFIX/bin/tclsh[0-9]*(N)`. WRONG: it is actually sourced by
+`dev/build/build-swift-t.sh`, which is BASH (`#!/usr/bin/env bash`,
+`set -eu`). `(N)` is a bash syntax error
+(`syntax error near unexpected token '('`) -- confirmed directly in a
+build log, not assumed. Also, bash does not glob-expand the right-hand
+side of a plain variable assignment at all (unlike zsh), so even a bare
+`tclsh[0-9]*` would not dynamically resolve a binary in bash -- it needs a
+command substitution so the glob expands as a command ARGUMENT. FIX: use
+`TCLSH=$(ls $PREFIX/bin/tclsh[0-9]* 2>/dev/null | head -n1)`, with
+`head -n1` deliberately as the pipeline's LAST stage so a glob miss (`ls`
+exits non-zero) still leaves the overall substitution's exit status at 0
+under `set -e` (this bash script has no `pipefail`, unlike the zsh caller
+that generates it, so only the last pipeline stage's exit status counts).
+Verified by actually sourcing the generated file under real bash with
+`set -eu` before re-running the conda build.
+
+LESSON (both bugs 3 and 4): do not assume a script's shell/behavior from
+its directory or neighboring files -- trace the actual invocation chain
+(`grep` for what sources/copies what) and verify fixes by actually
+running them (m4-filter the real file, apply the real sed to the real
+template, source the result under the real shell) BEFORE spending minutes
+on a full conda-build cycle. This is also why `conda-build.sh -C`
+(configure-only; generates `meta.yaml`/`settings.sed` and stops, seconds
+instead of minutes) became a standing habit this session -- see the
+dedicated standing-rule note above.
+
+=== USE_TCLSH indirection (final design, user-driven)
+
+The final design moved the TCLSH-resolution snippet out of `settings.sed`
+and into `conda-build.sh`, exported as a shell variable consumed via
+`m4_getenv`:
+* `dev/conda/conda-build.sh`: `export USE_TCLSH='TCLSH=$(ls $PREFIX/bin/tclsh[0-9]* 2>/dev/null | head -n1)'`
+  (single-quoted in zsh so `$PREFIX`/`$(...)`/the glob stay LITERAL text at
+  export time -- they are only meant to execute later, when bash actually
+  sources the generated `swift-t-settings.sh` at build time).
+* `dev/conda/settings.sed`: `s@.*TCLSH=.*@m4_getenv(USE_TCLSH)@` -- matches
+  the (user-added) commented template line `# TCLSH=/usr/bin/tclsh8.6` and
+  replaces the WHOLE line (no `&`, so the `#` is discarded) with whatever
+  `USE_TCLSH` holds, verbatim.
+* `dev/conda/settings.sed`: `s@.*LAUNCHER=.*@LAUNCHER=$PREFIX/bin/mpiexec@`
+  and `s@.*PYTHON_EXE.*@PYTHON_EXE="$PREFIX/bin/python"@` -- same
+  whole-line-replacement pattern (leading `.*` consumes the `# ` prefix
+  too), fixing two more silent-no-op bugs found via the same "apply the
+  sed to the real template" verification step: an earlier draft used `&`
+  (preserving the matched `#...` text) or an anchor without a leading
+  `.*`, both of which left the `#` intact so the variable was never
+  actually uncommented/set.
+
+=== Concurrent-build collision (process hygiene, not a swift-t bug)
+
+While iterating, an earlier background `conda-build.sh linux-64 5` was
+never stopped before a new `conda-build.sh linux-64 6` was launched --
+`conda-build.sh`'s own header comment warns "You can only run 1 job
+concurrently per Anaconda installation because of the log and because of
+meta.yaml" (both runs share the same `linux-64/meta.yaml`,
+`linux-64/settings.sed`, `linux-64/conda-build.log`). Caught via `ps`
+showing both process trees alive simultaneously; killed the stale build 5
+tree (`pkill`/`kill` on its zsh PIDs and the `conda build` subprocess it
+had spawned) before trusting build 6's result. LESSON: when relaunching a
+background build after edits, confirm the previous one actually exited
+(check `ps`, not just that a monitor stopped reporting) before starting a
+new one against the same shared scratch files.
+
+Final files changed this session:
+* dev/conda/linux-64/deps.sh      (SPEC_TK=${SPEC_TK:-tk}, don't clobber)
+* dev/conda/pkgs-tk-run.yaml      (new; run: uses pin_compatible("tk"))
+* dev/conda/meta-template.yaml    (run: includes pkgs-tk-run.yaml)
+* dev/conda/conda-build.sh        (USE_TCLSH exported for settings.sed)
+* dev/conda/settings.sed          (TCLSH/LAUNCHER/PYTHON_EXE: whole-line
+                                   replacement anchored on real template
+                                   lines; see Bugs 3/4 above)
+* turbine/code/maint/file-list.zsh (exclude stale *_wrap.[ch] from
+                                    packaging)
+* dev/build/swift-t-settings.sh.template (user added an uncommented
+                                    `# TCLSH=/usr/bin/tclsh8.6` anchor
+                                    line for settings.sed to target)
+(gh-error-01.txt is the CI log that originally surfaced the SPEC_TK bug;
+ not a source change. Verified end-to-end with
+ `SPEC_TK='tk=9.0.4' ./conda-build.sh linux-64 6 -v`:
+ `swift-t-1.6.9-py314h3fd9d12_6.conda` built, linked against
+ `libtcl9.0.so`, `swift-t -E 'trace(42);'` -> `trace: 42`, no errors.)

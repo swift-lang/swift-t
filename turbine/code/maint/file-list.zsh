@@ -5,6 +5,9 @@ set -eu
 # Produces list of files for make-release-pkg and mk-upstream-tgz
 # Also makes a soft link to the Debian package files
 
+# Required for the *_wrap.[ch] glob exclusion below:
+setopt extendedglob
+
 print bootstrap config.h.in configure configure.ac
 print config.guess config.sub
 print version.txt README.txt
@@ -14,7 +17,9 @@ print maint/*.sh
 print m4/*.m4
 print bin/{turbine.in,turbine-pilot.in,mpi-cp.in}
 print bin/turbine-{read,write}-doubles
-print **/*.[cChi] **/*.{tcl,swift}
+# Exclude *_wrap.[ch]: these are SWIG-generated outputs:
+print **/*.[cChi]~**/*_wrap.[ch]
+print **/*.{tcl,swift}
 print tests/{runbin.zsh.in,run-mpi.zsh}
 print tests/{*.manifest,*.sh,*.data,*.txt}
 print src/util/debug-tokens.tcl.in

@@ -177,6 +177,9 @@ export DATE=${(%)DATE_FMT_S}
 log "writing ${PWD#${SWIFT_T_TOP}/}/meta.yaml"
 m4 -P -I $DEV_CONDA $COMMON_M4 $META_TEMPLATE > meta.yaml
 log "writing ${PWD#${SWIFT_T_TOP}/}/settings.sed"
+# This complicated expression expands during build-swift-t.sh
+# It finds the actual tclsh installed in the Anaconda environment.
+export USE_TCLSH='TCLSH=$(ls $PREFIX/bin/tclsh[0-9]* 2>/dev/null | head -n1)'
 m4 -P -I $DEV_CONDA $COMMON_M4 $SETTINGS_SED  > settings.sed
 
 if (( ${#VERBOSE} )) {

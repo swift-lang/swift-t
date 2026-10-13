@@ -1,0 +1,11 @@
+# pkgs-tk-run.yaml: START
+# Runtime pin for tk.
+# Uses pin_compatible() instead of the bare SPEC_TK spec (pkgs-tk.yaml) so
+# the run requirement always matches the ACTUAL tk version resolved into
+# host: at build time -- not a fresh independent solve. An unpinned "tk" in
+# run: let the install-time solver pick a newer tk (e.g. 9.0) than the one
+# linked into libtclturbine.so at build time (e.g. 8.6.13) producing a
+# missing tclsh / libtcl mismatch at test/install time: 2026-10-13
+# NOTE: no commas in this snippet -- see common.m4 m4_ifelse comma gotcha.
+    - {{ pin_compatible("tk") }}
+# pkgs-tk-run.yaml: STOP

@@ -53,6 +53,11 @@ COMPILER=GCC
 # This is the directory containing tclConfig.sh
 # TCL_INSTALL=${EXM_PREFIX}/tcl/lib
 
+# Location of tclsh executable.
+# These normally have the version number, like:
+# /path/to/bin/tclsh8.6 or /path/to/bin/tclsh9.0
+# TCLSH=/usr/bin/tclsh8.6
+
 # Path to tclsh runnable on build system
 # TCLSH_LOCAL=/usr/bin/tclsh
 

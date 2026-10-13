@@ -14,7 +14,10 @@ export USE_ZLIB=1
 # libtcl8.6.so; with it in the host: section they land in $PREFIX (see
 # settings.sed TCLSH) and Conda relocates them.
 export USE_TK=1
-export SPEC_TK='tk'
+# Do not clobber a caller-set pin (e.g. conda-install.sh pins
+# SPEC_TK="tk=8.6.13" for Python 3.14, which needs Tcl/Tk 8.6, not the
+# default 9.0): 2026-10-13
+export SPEC_TK=${SPEC_TK:-tk}
 
 # Pin a modern MPICH: 2026-10-09
 # The unpinned default (mpich-mpicc) let the solver pull an ancient
