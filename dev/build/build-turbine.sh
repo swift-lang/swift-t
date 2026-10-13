@@ -98,10 +98,6 @@ if [[ "${TCLSH_LOCAL:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tclsh-local=${TCLSH_LOCAL}"
 fi
 
-if [[ "${TCLSH:-}" != "" ]]; then
-  EXTRA_ARGS+=" --with-tclsh=${TCLSH}"
-fi
-
 if [[ "${TCL_LIB_DIR:-}" != "" ]]; then
   EXTRA_ARGS+=" --with-tcl-lib-dir=${TCL_LIB_DIR}"
 fi
