@@ -976,3 +976,36 @@ Final files changed this session:
  `SPEC_TK='tk=9.0.4' ./conda-build.sh linux-64 6 -v`:
  `swift-t-1.6.9-py314h3fd9d12_6.conda` built, linked against
  `libtcl9.0.so`, `swift-t -E 'trace(42);'` -> `trace: 42`, no errors.)
+
+== Scratch/log files belong under PWD, never under /tmp or dotfiles (ongoing convention)
+
+Repeated requirement across this session's build/install/regenerate steps:
+any throwaway file this work produces -- build logs, install logs, one-off
+test scripts -- goes into a plain, non-hidden subdirectory under the current
+working directory (e.g. `dev/conda/tmp-logs/`, `dev/release/tmp-logs/`), never
+under `/tmp` directly and never under a dot-prefixed directory.
+
+Why this matters here specifically (not just a style preference):
+
+* `/tmp` is shared, system-wide scratch space already used for OTHER
+  purposes in this project's own workflow (the conda build root, the distro
+  export snapshot -- see the note above). Dropping ad hoc log/test files
+  there risks colliding with or being mistaken for those real build
+  artifacts, and makes it easy to lose track of what is safe to delete.
+* Logs and intermediate files kept under the repo's working directory (in a
+  plainly-named, gitignore-able subdirectory) stay visible in normal
+  directory listings and are easy for a reviewer -- human or otherwise -- to
+  find later, unlike files tucked into `/tmp` or a dotfile that most tools
+  and casual `ls` will not surface.
+* This mirrors a mistake pattern seen elsewhere this session (note 11a/11b
+  and the distro-snapshot note above): state living outside the obviously
+  inspected locations is exactly what made two different staleness bugs hard
+  to diagnose. Keeping scratch output in an obvious, PWD-relative spot keeps
+  the same failure mode from recurring for logs themselves.
+
+Applied this session: `dev/conda/tmp-logs/conda-build{5,6}.out`,
+`dev/conda/tmp-logs/conda-install{5,6}.out`, and
+`dev/release/tmp-logs/make-release-pkg*.out` were all written under their
+respective command's own working directory rather than to `/tmp` or a
+dotfile, including after an explicit correction mid-session when a command
+was first drafted to log to `/tmp`.
