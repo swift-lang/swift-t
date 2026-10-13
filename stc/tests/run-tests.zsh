@@ -350,14 +350,19 @@ run_test()
   fi
 
   # Check the test output with the test-specific check script
-  if [ -x ${STC_TESTS_DIR}/${CHECK_SCRIPT} ]
+  if [[ -x ${STC_TESTS_DIR}/${CHECK_SCRIPT} ]]
   then
-    print "executing: $( basename ${CHECK_SCRIPT} )"
+    print "executing:" $( basename ${CHECK_SCRIPT} )
     pushd $STC_TESTS_DIR
-    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT}
-    CHECK_CODE=$?
-    if [ ${CHECK_CODE} != 0 ]
+    if ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT}
     then
+      CHECK_CODE=0
+    else
+      CHECK_CODE=${?}
+    fi
+    if (( CHECK_CODE != 0 ))
+    then
+      print "check script failed!"
       cat ${CHECK_OUTPUT}
       return $TEST_TRUE_FAIL
     fi
@@ -365,10 +370,10 @@ run_test()
   fi
 
   # Check the output for expected lines
-  if [ -f ${EXP_OUTPUT} ]
+  if [[ -f ${EXP_OUTPUT} ]]
   then
-    print "checking expected: $( basename ${EXP_OUTPUT} )"
-    local LINE_MISSING=false
+    print "checking expected:" $( basename ${EXP_OUTPUT} )
+    local LINE_MISSING=0
     while read line
     do
       # Strip carriage returns: some MPI launchers forward rank stdout
@@ -376,11 +381,16 @@ run_test()
       # "$" anchor in the expected line.
       if ! tr -d '\r' < "${TURBINE_OUTFILE}" | grep -q "${line}"
       then
-        print "'${line}' wasn't present in output"
-        LINE_MISSING=true
+        print "wasn't present in output: '${line}'"
+        LINE_MISSING=1
       fi
     done < ${EXP_OUTPUT}
-    if [[ $LINE_MISSING == "true" ]]; then
+    if (( LINE_MISSING ))
+    then
+      print "check expected failed!"
+      print "contents:"
+      cat ${TURBINE_OUTFILE}
+      print "contents done."
       return $TEST_TRUE_FAIL
     fi
   fi
