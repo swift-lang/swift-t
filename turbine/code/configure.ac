@@ -57,11 +57,17 @@ then
   AC_MSG_ERROR([Your --prefix should not be the same as PWD: $PWD])
 fi
 
+# If this is running under 'conda build' then CONDA_BUILD=1
 : ${CONDA_BUILD:=0}
 if (( CONDA_BUILD ))
 then
-  DATE=$( date "+%Y-%m-%d_%H-%M" )
-  echo "Anaconda-${CONDA_PY}_$DATE" > source.txt
+  # Provenance of the make-release-pkg.zsh tarball this package was
+  #     built from (required to exist by conda-build.sh):
+  #     These env vars are set by conda-build.sh
+  TOKEN="Anaconda_${CONDA_PY}_${CONDA_RELEASE_TIMESTAMP}_${CONDA_RELEASE_HASH}"
+  echo $TOKEN > source.txt
+  AC_MSG_NOTICE([CONDA_RELEASE_HASH:      ${CONDA_RELEASE_HASH}])
+  AC_MSG_NOTICE([CONDA_RELEASE_TIMESTAMP: ${CONDA_RELEASE_TIMESTAMP}])
 else
   echo ${PWD} > source.txt
 fi

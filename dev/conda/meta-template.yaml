@@ -27,6 +27,8 @@ build:
   script_env:
     - CONDA_PLATFORM=m4_getenv(CONDA_PLATFORM)
     - GITHUB_ACTIONS=m4_getenv(GITHUB_ACTIONS)
+    - CONDA_RELEASE_HASH=m4_getenv(CONDA_RELEASE_HASH)
+    - CONDA_RELEASE_TIMESTAMP=m4_getenv(CONDA_RELEASE_TIMESTAMP)
 m4_ifelse(m4_getenv(ENABLE_R),`1',m4_include(env-R.yaml))
 
 # Remember to sync any dependency changes here with conda-install.sh

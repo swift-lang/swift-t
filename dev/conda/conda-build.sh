@@ -88,6 +88,21 @@ cd $DEV_CONDA/$CONDA_PLATFORM
 export DISTRO=$TMP/distro
 if [[ ! -d $DISTRO ]] abort "Swift/T source not found at: $DISTRO"
 
+# The release tarball from make-release-pkg.zsh must exist:
+#     We make a hash of exactly what source went into this package:
+RELEASE_TGZ=$DISTRO/swift-t-$SWIFT_T_VERSION/swift-t-$SWIFT_T_VERSION.tar.gz
+if [[ ! -f $RELEASE_TGZ ]] \
+  abort "Release tarball not found: $RELEASE_TGZ" \
+        "Run dev/release/make-release-pkg.zsh first!"
+# These are passed into meta.yaml, then into the build sandbox, then
+#     reported by 'swift-t -v' (see turbine/code/configure.ac):
+export CONDA_RELEASE_HASH=$( checksum $RELEASE_TGZ )
+zmodload zsh/stat
+zstat -H RELEASE_STAT -F "%Y-%m-%d_%H:%M" $RELEASE_TGZ
+export CONDA_RELEASE_TIMESTAMP=$RELEASE_STAT[mtime]
+log "CONDA_RELEASE_HASH:      $CONDA_RELEASE_HASH"
+log "CONDA_RELEASE_TIMESTAMP: $CONDA_RELEASE_TIMESTAMP"
+
 # Check that the conda-build tool in use is in the
 #       selected Python installation
 if ! which conda-build >& /dev/null

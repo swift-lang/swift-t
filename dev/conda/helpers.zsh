@@ -5,10 +5,13 @@
 checksum()
 {
   # Use redirection to suppress filename in program output
+  # Emits only the hash.
   local PKG=$1
+  local OUT
   if [[ $CONDA_PLATFORM =~ osx-* ]] {
-    md5 -r < $PKG
+    OUT=$( md5 -r < $PKG )
   } else {
-    md5sum < $PKG
+    OUT=$( md5sum < $PKG )
   }
+  print ${OUT%% *}
 }
