@@ -1009,3 +1009,211 @@ Applied this session: `dev/conda/tmp-logs/conda-build{5,6}.out`,
 respective command's own working directory rather than to `/tmp` or a
 dotfile, including after an explicit correction mid-session when a command
 was first drafted to log to `/tmp`.
+
+== EMEWS end-to-end install/test debugging (2026-10-14)
+
+This session started from an EMEWS tutorial install
+(`emews-tutorial/code/install/install_emews.sh -k 3.13 ~/DB`) that printed
+`INSTALL SUCCESS` but was actually broken, and worked back through a chain of
+distinct root causes.  Notes below are roughly in discovery order.
+
+PLATFORM SCOPE -- READ FIRST.  Almost everything in this section is specific
+to *macOS / osx-arm64*; a reader on Linux should NOT chase most of it.  Each
+note carries a `Platform:` tag.  Quick map:
+
+* osx-arm64 ONLY (root cause is our custom `emews-r`, which is built only for
+  osx-arm64 -- every other platform uses the community `r`):
+  notes 12, 13, 14, 17.
+* macOS ONLY (BSD userland / Mach-O / `~/.R` on the dev's Mac), independent
+  of emews-r: notes 15, 18.
+* CROSS-PLATFORM / affects Linux too: note 16 (the *reason* postgres is
+  pinned is a linux-aarch64 crash; the fix keeps that pin on Linux and only
+  diverges on osx-arm64).  Also the general shared-cache concurrency hazard
+  discussed under note 12.
+
+Why "osx-arm64" keeps recurring: `emews-r` exists only on osx-arm64 (see
+`dev/conda/pkgs-R.yaml` -- it emits `emews-r` on osx-arm64 and
+`r=R_VERSION` elsewhere), so any bug rooted in emews-r cannot occur on
+Linux builds.
+
+=== 12. Corrupt conda package cache: R rewrites packages.html through the hardlink
+
+Platform: osx-arm64 only (trigger is our `emews-r` package's R regenerating
+`packages.html`).  The shared-cache *concurrency* amplifier below is a
+general conda hazard, but the packages.html trigger itself is emews-r/mac.
+
+`install_emews.sh` reported success, but the final "Installing R package
+dependencies" step had crashed and none of the R packages
+(`coro jsonlite purrr logger remotes`) were installed.  Verify R packages
+directly (`Rscript -e 'rownames(installed.packages())'` or `LOAD OK: [N/N]`
+in the log) rather than trusting the banner.
+
+Root cause: conda installs cache files into the env as *hardlinks* (shared
+inode).  R regenerates `lib/R/doc/html/packages.html` at runtime when
+packages are installed, and that write propagates back through the hardlink
+and mutates the integrity-tracked copy in the conda cache
+(`~/conda-cache`).  The next conda transaction then trips
+`SafetyError: ... emews-r ... appears to be corrupted` on `packages.html`,
+and the broken/partial transaction leaves `libomp.dylib` misplaced, so R
+dies at load with `dyld: Library not loaded: @rpath/libomp.dylib` and the
+R-package step never runs.  The ~20 `ClobberError`s (tk vs xorg, see note
+13) are collateral from the same broken transaction.
+
+Fix: a helper, `emews-tutorial/code/install/clean_conda_cache.py`, scans the
+cache and removes any extracted package whose files no longer match its
+`info/paths.json` (the same size/sha256 data conda's SafetyError uses).
+Important: it content-verifies `path_type: hardlink` entries only; softlink
+entries store the size/sha of their *target* (may be absent in a bare
+cache), so it only checks the link exists via `os.path.lexists` -- a naive
+`os.path.exists` follows the link and yields hundreds of false positives on
+normal packages.  Safe to delete cache copies hardlinked into a live env:
+the env keeps its own inode; conda re-downloads a clean copy.  This bug
+*recurred* later in the session on `emews-r-9` during the swift-t build
+(same packages.html size mismatch); same fix.
+
+Shared-cache concurrency amplifier (general conda hazard, not mac-specific
+by itself, but it is what makes the mac/emews-r trigger bite repeatedly):
+`~/.condarc` sets a single global `pkgs_dirs` (`/Users/woz/conda-cache`)
+shared by all ~11 Miniconda roots on this machine
+(`/private/tmp/woz/3NN-{B,T,R}`, `~/sfw/Miniconda-313-Main`).  conda assumes
+one transaction at a time per `pkgs_dirs`; its locks are per-root, not
+per-cache, so they do NOT coordinate across installations.  Running builds
+from different Minicondas *concurrently* against the one cache can therefore
+(a) corrupt via the shared hardlinked inode -- one build's R rewrites
+`packages.html` while another is verifying that same cache entry -- and
+(b) hit extract/verify races.  A build that is itself correct can fail this
+way.  If concurrent builds are needed, give each root its own cache via
+`CONDA_PKGS_DIRS` (e.g. `$ROOT/pkgs`) instead of the global `pkgs_dirs`;
+otherwise serialize the builds.
+
+=== 13. tk vs xorg-xorgproto ClobberErrors are expected, not corruption
+
+Platform: osx-arm64 only (seen during `emews-r` transactions).
+
+Separately from note 12, every emews-r transaction logs ClobberErrors for
+shared `include/X11/*.h` headers (`X.h`, `Xlib.h`, `keysym.h`, ...).  Both
+`tk` and `xorg-xorgproto` ship these headers.  This overlap exists *within*
+conda-forge too (tk and xorg-xorgproto both from conda-forge still clobber),
+so it is NOT a channel-mixing artifact.  conda's default `path_conflict`
+policy treats these as warnings and picks a winner (last writer wins), so
+the transaction succeeds.  They are only fatal when they land inside an
+already-broken transaction (note 12).  Otherwise ignore them.
+
+Also note: on osx-arm64 `tk>=8.6.15` resolves only from `defaults`
+(conda-forge jumps 8.6.13 -> 9.0.4, no 8.6.15), so the env legitimately
+mixes channels.  Documented in `dev/conda/README.adoc` (Dependencies: tk).
+
+=== 14. emews-r FLIBS baked a stale gfortran version -> -lemutls_w
+
+Platform: osx-arm64 only (FLIBS is baked into our `emews-r`; Linux uses the
+community `r` with its own consistent toolchain).
+
+`test-swift-t.sh 3.13` failed compiling R graphics packages (`nlme`,
+`Matrix`, `mgcv`) with:
+----
+ld: warning: directory not found for option '-L.../lib/gcc/.../15.1.0'
+ld: library not found for -lemutls_w
+----
+Root cause: R's `lib/R/etc/Makeconf` records `FLIBS` with an absolute,
+version-pinned gcc lib dir detected at emews-r build time
+(`.../lib/gcc/arm64-apple-darwin20.0.0/15.1.0`).  emews-r's recipe left
+`gfortran` *unpinned*, so a later install pulled gfortran 16.2.0 while FLIBS
+still pointed at the nonexistent 15.1.0 dir.
+
+Fix: pin `gfortran 16.2.*` in both `build:` and `run:` in emews-r's
+`meta.yaml`, bump emews-r 8 -> 9, rebuild.  emews-r is python-independent
+(no python in depends, build string is just the build number), so ONE
+osx-arm64 build serves Python 3.11-3.14; the real drift axis is time (conda-
+forge bumping gfortran), not Python.  Verified: the rebuilt package's
+Makeconf FLIBS reads 16.2.0 with zero 15.1.0.
+
+Related: Python does NOT require gcc compatibility -- conda Python is a clang
+world (CC=clang, links libSystem, no libgfortran).  gfortran only matters
+for Fortran code (R's numeric packages; numpy/scipy if present), and conda
+coordinates that via libgfortran5 run_exports, independent of Python.
+HOWEVER swift-t (Turbine) DOES embed a specific `libpython3.XY.dylib`, so
+swift-t itself is python-tagged and needs a build per Python minor -- unlike
+emews-r.
+
+=== 15. Stale ~/.R/Makevars from the test harness (-M) accumulated dead -L paths
+
+Platform: macOS only.  `setup_mac_makevars` runs only on macOS (via `-M`, or
+historically auto-enabled on GitHub macOS runners); `~/.R/Makevars` and the
+Mach-O `libtapi`/`ld64` details are mac-specific.
+
+Before the FLIBS fix, the first `test-swift-t.sh` run also failed via a
+different path: `setup_mac_makevars` in `emews-tutorial/tests/test-swift-t.sh`
+hard-coded `GCC_VERSION=...15.2.0` and *appended* (`>>`) to `~/.R/Makevars`,
+so repeated runs piled up `-L` paths to long-gone envs (`311-test`,
+`312-E`), plus a broken cached `ld64` whose `libtapi.dylib` was missing.
+
+Fixes in `test-swift-t.sh`: auto-detect the gcc version
+(`ls -d $CONDA_PREFIX/lib/gcc/arm64-*/`) instead of hard-coding; overwrite
+(`>`) instead of append; and stop auto-enabling Makevars on GitHub macOS
+(it exists only as an explicit `-M` escape hatch now).  As of emews-r 9 the
+Makevars workaround is no longer needed at all -- FLIBS is correct -- so the
+tutorial docs (`src/emews_install.adoc`) note this.
+
+=== 16. emews-r 9 cairo floor conflicts with pinned postgresql 14.12 (icu)
+
+Platform: CROSS-PLATFORM concern.  The conflict itself is triggered on
+osx-arm64 (emews-r 9's cairo floor), but the fix touches the shared
+`postgresql==14.12` pin whose *reason* is a linux-aarch64 crash -- so the fix
+must stay correct on Linux.  The chosen fix diverges only on osx-arm64 and
+leaves Linux's 14.12 pin intact.
+
+Upgrading an existing env to emews-r 9 failed to solve:
+----
+emews-r 9 -> cairo >=1.18.6 -> icu >=78
+postgresql ==14.12 -> libxml2 -> icu <=75
+----
+emews-r 7's cairo floor was 1.18.4 (icu 75 OK); rebuilding picked up a newer
+conda-forge cairo whose run_exports recorded `cairo >=1.18.6`.  The
+`postgresql==14.12` pin (in `install_emews.sh`, there because later postgres
+crashes on linux-aarch64) caps icu<=75, so the two cannot coexist.
+
+Fix: make the postgres spec platform-conditional in `install_emews.sh`
+(keyed on `conda info` subdir): `postgresql>=17,<18` on osx-arm64 (the only
+platform with custom emews-r / the newer cairo), `postgresql==14.12`
+elsewhere (preserves the linux-aarch64 workaround).  postgresql is
+python-independent, so this covers all Pythons.  Documented in
+`code/install/README.adoc`.
+
+=== 17. eq-r pulls emews-r unpinned -> GitHub installed the OLD broken emews-r 7
+
+Platform: osx-arm64 only (emews-r exists only there; the fix is
+platform-guarded and a no-op on Linux, which gets community `r`).
+
+A GitHub run still failed with the note-14 `-lemutls_w`/15.1.0 error even
+after emews-r 9 was uploaded.  Cause: `install_emews.sh` installs
+`eq-r=1.3`, and emews-r arrives *transitively and unpinned*
+(eq-r -> swift-t-r -> emews-r), so the solver was free to pick the old,
+cached emews-r 7.  (The published `swift-t-r 1.6.9` has builds both with and
+without an `emews-r >=9` pin; the solver chose a `_2` build without it.)
+
+Fix: add an explicit `emews-r>=9` to the EQ/R install line in
+`install_emews.sh`, platform-guarded to osx-arm64 (emews-r does not exist
+elsewhere).  `CONDA_SUBDIR` is computed once and reused for both the emews-r
+and postgres specs.  The longer-term fix (reflected in `pkgs-R.yaml` ->
+`emews-r>=9`) is that future swift-t-r builds require `>=9`.
+
+=== 18. grep -P in java_version.sh is GNU-only -> swift-t build fails on macOS
+
+Platform: macOS only (BSD grep has no `-P`).  Not emews-r-related -- a
+general swift-t source portability bug that happens to surface on any macOS
+build.  Note the dual gotcha: the fix lives in the working tree but the build
+compiles from the `/tmp/distro` release tarball, so `make-release-pkg.zsh`
+must be re-run before `conda-build.sh` or the stale snapshot masks the fix
+(same staleness pattern as the 2026-10-12 distro-snapshot note above).
+
+A fresh swift-t `conda-build.sh -r 4.4 osx-arm64` failed with
+`grep: invalid option -- P` (twice), during the Java version check under
+`-vv`.  `dev/build/java_version.sh` used `grep -oP "...\K..."` (Perl mode +
+`\K`), a GNU extension absent from the BSD grep shipped on macOS.
+
+Fix: replace both calls with portable `sed -E -n` (POSIX extended regex,
+identical on BSD and GNU), preserving the same extraction (major version
+from `java/openjdk version "NN..."` and from newer `javac NN...`).  Verified
+against the real openjdk 25 output and the older formats.  One more latent
+`grep -vP` exists at `dev/m4/syslibs.m4:24` but it is inside a Linux-only
+`ldconfig` branch; left as-is per maintainer direction.
