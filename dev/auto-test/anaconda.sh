@@ -428,7 +428,7 @@ do-activate $WORKSPACE/sfw/Miniconda-build
 
 # Build the PKG!
 # Create the Swift/T source release export in $TMP/distro
-task $SWIFT_T/dev/release/make-release-pkg.zsh $B -T
+task $SWIFT_T/dev/release/make-release-pkg.zsh $B
 # Set up the build environment in Miniconda-build
 task $SWIFT_T/dev/conda/setup-conda.sh
 # The conda build number: overridable via environment, else defaults.
