@@ -1217,3 +1217,207 @@ from `java/openjdk version "NN..."` and from newer `javac NN...`).  Verified
 against the real openjdk 25 output and the older formats.  One more latent
 `grep -vP` exists at `dev/m4/syslibs.m4:24` but it is inside a Linux-only
 `ldconfig` branch; left as-is per maintainer direction.
+
+=== 19. eq-r's unpinned tk -> solver downgrades swift-t-r -> _strstr crash
+
+Platform: osx-arm64 only (the bad `tk 8.6.13` strstr build and our custom
+swift-t-r/eq-r builds are osx-arm64; the fix is in eq-r's osx-arm64 recipe).
+
+A GitHub run (`gh.txt`, osx-arm64 PY=3.13) pulled the RIGHT emews-r
+(`emews-r-9-1` -- note 17's fix worked) but still crashed at
+`swift-t -E 'trace(...)'`:
+----
+dlopen(.../turbine/lib/libtclturbine.dylib): Symbol not found: _strstr
+  Expected in: .../lib/libtcl8.6.dylib
+----
+This is the `tk==8.6.13` two-level-namespace `strstr` bug already known from
+swift-t's build (see notes at lines ~59/134 and `dev/conda/osx-arm64/deps.sh`,
+which pins `tk>=8.6.15` for exactly this reason).  Here it reappeared at
+INSTALL time, from a different layer.
+
+Root cause (a build-number DOWNGRADE trap, distinct from notes 16/17's
+version pins): GitHub installs `eq-r=1.3`, whose recipe
+(`EQ-R/<pyver>/conda/pkgs-tk.yaml`) declares a bare, unpinned `- tk`, and
+whose `meta-template.yaml` pins only `swift-t-r==<version>` (no build
+number).  With tk free to be `8.6.13`, conda finds a self-consistent
+LOWER-build solution -- `swift-t-r-1.6.9-py313_3` (which itself requires
+`tk 8.6.13`) + `tk-8.6.13` -- instead of climbing to the newest
+`swift-t-r py313_6` (which requires `tk>=8.6.15`).  `tk 8.6.13` is the
+strstr-poisoned build, hence the runtime crash.  Reproduced deterministically
+off-CI: `conda create ... eq-r=1.3 emews-r>=9` resolves to
+`swift-t-r py313_3 + tk-8.6.13`; adding `tk>=8.6.15` flips it to
+`swift-t-r py313_6 + tk-8.6.15` and the crash goes away.
+
+Note the three published swift-t-r 1.6.9 osx-arm64 builds and their tk pins:
+`_1.._3` -> `tk 8.6.13` (bad); `_4` -> `emews-r`, `tk>=8.6.15`;
+`_5` -> `emews-r>=9`, `tk>=8.6.15`; `_6` -> `emews-r>=9`,
+`tk>=8.6.15,<9.0a0`.  The solver will keep choosing an old `_3` as long as
+anything upstream permits `tk 8.6.13`.
+
+Fix (at the source, since we own eq-r): pin tk in eq-r's recipe
+`EQ-R/<pyver>/conda/pkgs-tk.yaml`, `- tk` -> `- tk>=8.6.15` (floor only, NO
+upper bound -- tk 9.0 is known to work per the 2026-10-13 Tcl 9 note above,
+so we only need to exclude the broken 8.6.13), across the per-Python recipe
+dirs (311-314; 310 was removed).  ALSO include `pkgs-tk.yaml` in the `run:`
+section of each `meta-template.yaml`, not just `build:` -- it was build-only,
+and the GitHub failure was an install-time (run:) solve.  A build-only pin
+would rely on tk's `run_exports` to carry the floor into run deps; adding tk
+explicitly to `run:` makes installed eq-r declare `tk>=8.6.15` directly, which
+is what stops the install-time solver from picking tk 8.6.13 (matches the
+"run: is a separate solve" lesson from the 2026-10-13 notes above).  Then
+rebuild/upload eq-r.  This forces the solver onto a fixed swift-t-r build for
+every consumer -- not just our installer.  (An installer-only stopgap is
+adding `tk>=8.6.15` to the `conda install` line in `install_emews.sh`
+alongside the note-17 `emews-r>=9` guard; the eq-r recipe fix is the real
+one.)  EQ-R lives in a separate repo (`/Users/woz/proj/EQ-R`, outside this
+working tree; per-Python recipe dirs 311-314).
+
+=== 19a. m4 ate the tk pin: a comma in a comment is an arg separator
+
+Platform: build-tooling (EQ-R m4 recipe); surfaces on any platform that
+builds eq-r.
+
+First attempt at note 19's fix silently failed: the rebuilt eq-r
+(`py313_2`) shipped with NO tk dependency at all (not even the old
+`tk >=8.6.13,<8.7.0a0`).  The `conda search --info` for `py313_2` listed
+only `python`, `python_abi`, `swift-t-r 1.6.9`.
+
+Root cause: `EQ-R/<pyver>/conda/common.m4` runs `m4_changecom(\`dnl')`, so
+`#` is NOT an m4 comment -- `#` lines pass through as literal text but their
+CONTENT is still live m4.  `pkgs-tk.yaml` is pulled in as the third argument
+of `m4_ifelse(m4_getenv(USE_TK),\`1',m4_include(pkgs-tk.yaml))`.  A comment
+line I added ended in a comma (`...version-agnostic),`).  m4 read that comma
+as an ARGUMENT SEPARATOR inside `m4_ifelse(...)`, so everything after it --
+the next comment line AND the actual `- tk>=8.6.15` line -- became a spurious
+4th+ argument that `ifelse` discarded.  The include rendered as comments-only
+with the pin gone (and no `pkgs-tk.yaml: STOP`, the tell-tale that m4
+truncated the file mid-stream).
+
+Debugged with `conda-build.sh -C` (configure-only: render meta.yaml and
+stop) plus minimal m4 repro files kept in PWD (`313/conda/tmp-debug/`).
+Bisection: each comment line passed alone, but the multi-line block with the
+trailing comma dropped the tail -- confirming the comma, not any single word,
+was the trigger.
+
+Fix: remove ALL commas from the comments in `pkgs-tk.yaml` (all four recipe
+dirs) and add an inline NOTE warning future editors.  Re-verified with
+`conda-build.sh -C` that meta.yaml now renders `- tk>=8.6.15` in BOTH
+`build:` and `run:`, each closed by `pkgs-tk.yaml: STOP`.  General rule for
+these m4-included snippets: no commas (and mind parentheses) in `#` comments.
+
+Caveat on the earlier "verification passed" (note 19): the dry-run solves
+looked correct only because `swift-t-r py313_6` independently requires
+`tk>=8.6.15`; the broken `eq-r py313_2` was contributing nothing.  Lesson:
+verify the artifact's OWN metadata (`conda search --info` depends list), not
+just the aggregate solve.
+
+=== 19b. TODO: run: renders malformed "python==>=3.13,<3.14"
+
+Platform: build-tooling (EQ-R m4 recipe); pre-existing, not from the tk work.
+
+In `EQ-R/<pyver>/conda/meta-template.yaml`, `PYTHON_SERIES` (from
+`get-python-version.sh`) is already `>=3.13,<3.14` -- it carries its own
+operator.  The `build:` line `- python m4_getenv(PYTHON_SERIES)` renders
+correctly as `python >=3.13,<3.14` (a SPACE between name and spec is valid
+conda match-spec syntax -- the space after `python` is fine).  But the
+`run:` line hardcodes `==`: `- python==m4_getenv(PYTHON_SERIES)` ->
+`python==>=3.13,<3.14`, a malformed `==>=`.  (The sibling
+`swift-t-r==<VERSION>` is fine because that var is a bare version with no
+operator.)
+
+TODO (not yet applied -- deferred so it does not ride along with the tk
+rebuild): change the `run:` line to match `build:` (drop `==`, use a space):
+`- python m4_getenv(PYTHON_SERIES)`, across all four recipe dirs.
+
+=== 19c. swift-t-r's tk `<9.0a0` ceiling is CORRECT -- do not loosen it
+
+Platform: osx-arm64 (applies anywhere Turbine links Tcl; the ABI point is
+general).
+
+Question raised: now that eq-r allows tk 9.0 (note 19's floor-only pin), can
+a user pin tcl/tk 9.0 on top of an installed eq-r stack?  Answer: NO, and
+that is correct behavior.  A dry-run of
+`eq-r=1.3 emews-r>=9 tk=9.0` fails to solve:
+----
+tk >=9 is not installable because it conflicts ...
+  tk 9.0.4 conflicts with any installable versions previously reported
+----
+The wall is NOT eq-r (its new pin is `tk >=8.6.15`, no ceiling).  It is
+`swift-t-r py313_6`, which pins `tk >=8.6.15,<9.0a0`.  The effective stack tk
+range is the intersection of all pins, so the `<9.0a0` ceiling wins.
+
+Why the ceiling is right (first-reaction was wrong -- I called it
+over-tightening; a user correction prompted this check): Swift/T's Turbine is
+COMPILED and dynamically linked against a specific Tcl at build time.  The
+published `libtclturbine.dylib` carries a load-time dependency on the exact
+SONAME it was linked against -- `libtcl8.6.dylib` (confirmed in `gh.txt`:
+`Symbol not found: _strstr ... Expected in: .../lib/libtcl8.6.dylib`).  Tcl 9
+ships `libtcl9.0.dylib` (different SONAME) and `tclsh9.0`.  So dropping the
+ceiling would let the solver install tcl 9.0 under a Turbine linked for 8.6
+-> `dlopen` fails at load (Library not loaded), a different missing-lib but
+the same class of crash as the strstr bug.  The `<9.0a0` pin enforces the
+ABI contract between the installed tk and the tk that Turbine was built
+against.
+
+Reconciling with the "Tcl 9 works" note (2026-10-13): both are true.  Tcl 9
+works IF Swift/T is BUILT against tcl 9 (`SPEC_TK=tk=9.0.4`, with the
+version-agnostic TCLSH plumbing from that note).  It does NOT work by pinning
+tcl 9 AFTER installing a swift-t-r that was built against 8.6 -- the link is
+baked in.  The path to a Tcl-9 EMEWS stack is a MATCHED rebuild of swift-t-r
+(and eq-r) against tcl 9, whose `run:` pin would then naturally be `tk >=9`;
+NOT a user post-install pin against today's 8.6-linked builds.  Same
+build-time-coupling principle as swift-t embedding `libpython3.XY` (note 14).
+
+=== 19d. Enforcing the Tcl 9 exclusion in the recipes -- m4 comma handling
+
+Platform: build-tooling (swift-t + eq-r m4 recipes); the Tcl-9 bound itself
+is osx-arm64 (that is where SPEC_TK is set and where Turbine links libtcl8.6).
+
+Acting on note 19c: added the `<9.0a0` upper bound to the tk spec at BOTH
+layers so the exclusion is enforced by the recipes themselves, not left to a
+coincidental swift-t-r pin.
+
+Problem: the bound requires a comma (`tk>=8.6.15,<9.0a0`), which is exactly
+the m4 argument-separator trap from note 19a.  Two layers needed different
+handling because they source the tk spec differently:
+
+* eq-r: `pkgs-tk.yaml` hardcodes the spec literally (no SPEC_TK var).  Fix is
+  just to m4-quote the literal line: `` `    - tk>=8.6.15,<9.0a0' `` so the
+  comma is inside one quote level.  Verified by `conda-build.sh -C` render in
+  all four dirs (311-314).  No `common.m4` change -- the macro below is NOT
+  needed in eq-r and was reverted there to avoid dead code.
+
+* swift-t: `pkgs-tk.yaml` pulls the spec from an env var:
+  `- m4_getenv(SPEC_TK)`.  Here the comma arrives only AFTER `m4_getenv`
+  expands, so quoting the source line does not help -- the expansion happens
+  inside the enclosing `m4_ifelse(...m4_include(pkgs-tk.yaml))` and the
+  resulting comma splits that call's arguments.  Fix: a new comma-safe
+  wrapper in `dev/conda/common.m4`:
+----
+m4_define(`_requote', ``$*'')dnl
+m4_define(`m4_getenv_commas', `_requote(m4_esyscmd(printf -- "$`$1'"))')dnl
+----
+  m4 splits the expanded value on its comma into `$1,$2,...`, then `_requote`
+  rejoins them with `` `$*' `` INSIDE one quote level, so the comma becomes
+  literal text that the outer `m4_ifelse` does not see as a separator.
+  `pkgs-tk.yaml` now calls `m4_getenv_commas(SPEC_TK)`, and
+  `osx-arm64/deps.sh` sets `SPEC_TK='tk>=8.6.15,<9.0a0'`.
+
+Why this macro and not m4 builtins: GNU M4 1.4.6 (the macOS `gm4`) in `-P`
+mode does NOT expose `m4_dquote`/`m4_quote` as builtins -- they render
+literally -- so the self-defined `_requote` is required.  Only the comma
+needs handling; every other character valid in an Anaconda match-spec
+(`> < = . | *` and digits) is m4-safe, so the wrapper deliberately does no
+other escaping (user guidance).
+
+Keep comment lines in these m4-included snippets comma-free AND free of macro
+names: `#` is not an m4 comment here (changecom is `dnl`), so a word like
+`m4_getenv` in a `#` line still expands (seen as a stray `$` in a first
+render of the swift-t comment; reworded to avoid macro names).
+
+Verified with `conda-build.sh -C`: osx-arm64 renders
+`- tk>=8.6.15,<9.0a0` in `build:` and `host:` (run: inherits via
+`pkgs-tk-run.yaml`'s `pin_compatible("tk")`); linux-64 (SPEC_TK defaults to
+plain `tk`, no comma) still renders `- tk` correctly -- the wrapper is
+backward-compatible with comma-free values.  Rebuild/upload swift-t to
+publish the bound; eq-r is already fixed and published (note 19/19a).
