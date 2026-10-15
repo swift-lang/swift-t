@@ -46,11 +46,14 @@ CONDA_TIMESTAMPS=(
   314 26.7.1-1
 )
 
-# Some Python versions require us to force the older solver "classic":
+# Some Python versions require us to force the older solver "classic",
+#       but ONLY on Jenkins: Jenkins cannot fall back to mamba there
+#       (2026-10-07). GitHub Actions runners support libmamba fine, and
+#       forcing classic there just made the solve hang for hours on a
+#       huge conda-forge repodata.json with no actual conflict: 2026-10-15
 # If default, we allow conda to select its default.
 # TODO: Remove this after removal of Python 310: 2026-09-29
 typeset -A CONDA_SOLVER=(
-  # Jenkins cannot fall back to mamba here:  2026-10-07
   311 classic
   312 default
   313 default
@@ -141,7 +144,8 @@ if (( ${#R}  )) USE_R="-r"
 
 log "CONDA_TIMESTAMP: $CONDA_TIMESTAMP"
 
-if [[ ${CONDA_SOLVER[$PYTHON_VERSION]} != "default" ]] \
+if [[ ${GITHUB_ACTIONS:-false} == false &&
+      ${CONDA_SOLVER[$PYTHON_VERSION]} != "default" ]] \
   USE_SOLVER=( -s ${CONDA_SOLVER[$PYTHON_VERSION]} )
 
 # Force Conda packages to be cached here so they are separate

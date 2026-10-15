@@ -1421,3 +1421,92 @@ Verified with `conda-build.sh -C`: osx-arm64 renders
 plain `tk`, no comma) still renders `- tk` correctly -- the wrapper is
 backward-compatible with comma-free values.  Rebuild/upload swift-t to
 publish the bound; eq-r is already fixed and published (note 19/19a).
+
+== conda-build.sh provenance (CONDA_RELEASE_HASH/TIMESTAMP) and a forced
+   "classic" solver hanging on GitHub Actions (2026-10-15)
+
+=== 20. New feature: swift-t -v reports the release tarball's hash/timestamp
+
+`conda-build.sh` now REQUIRES the `make-release-pkg.zsh` tarball
+(`$DISTRO/swift-t-$SWIFT_T_VERSION/swift-t-$SWIFT_T_VERSION.tar.gz`) to exist
+before building, aborting with "Run dev/release/make-release-pkg.zsh first!"
+if not.  It md5sums that tarball and `zstat`s its mtime, exporting
+`CONDA_RELEASE_HASH`/`CONDA_RELEASE_TIMESTAMP`, forwarded into the conda-build
+sandbox via `meta-template.yaml`'s `script_env:` (plain env inheritance does
+not happen for conda-build scripts).  `turbine/code/configure.ac`'s existing
+`CONDA_BUILD` branch (the same mechanism that already produced the
+`Anaconda-${CONDA_PY}_$DATE` `source.txt` token) now folds both values into
+that single token instead of writing separate files:
+`Anaconda_${CONDA_PY}_${CONDA_RELEASE_TIMESTAMP}_${CONDA_RELEASE_HASH}`, also
+echoed via `AC_MSG_NOTICE` so it lands in `conda-build.log` too (`configure`
+runs inside the `|& tee $LOG` block).  `turbine.in`'s `report_version()` was
+NOT changed -- it already `cat`s `source.txt` for the `source:` line, so
+`swift-t -v` picks up the new token for free.
+
+Bug caught mid-edit: an earlier version of this change wrote the two values
+to separate `conda-release-hash.txt`/`conda-release-timestamp.txt` files and
+listed them in `turbine/code/Makefile.in`'s `PROVENANCE` var for
+`install-etc` to `cp`.  When the session simplified to the single-token
+`source.txt` approach, `configure.ac` stopped writing those two files but
+`PROVENANCE` still named them -- `make install` would have failed on every
+build (conda or not) with `cp: cannot stat 'conda-release-hash.txt'`.  Fixed
+by reverting `PROVENANCE` to just `version.txt source.txt config.log`.
+Lesson: when collapsing N generated files into fewer, grep every consumer
+(here, the Makefile install rule) before trusting the simplification is
+complete.
+
+`checksum()` (`dev/conda/helpers.zsh`) was also tightened to match its actual
+contract ("emit only the hash"): it used to pass through raw `md5sum`/`md5 -r`
+output (`<hash>  -` on Linux, since it's fed via `<` redirection to suppress
+the filename), which forced one caller
+(`CONDA_RELEASE_HASH=${${(z)$(checksum ...)}[1]}`) to manually word-split and
+take the first field.  Fixed `checksum()` itself to strip everything after
+the first space (`${OUT%% *}`) before returning, so every caller (including
+the pre-existing `conda-install.sh`/`conda-build.sh` PKG-metadata callers) now
+gets a clean hash and the `(z)`-splitting workaround was removed.  The same
+`${OUT%% *}` strip is applied uniformly after either branch (`md5 -r` on
+`osx-*`, `md5sum` elsewhere), so it needs no platform-specific logic to also
+cover macOS.
+
+Verified end-to-end: ran `make-release-pkg.zsh` (full bootstrap, since
+`configure.ac` changed) then `conda-build.sh linux-64 101`; `conda-build.log`
+shows both the `meta.yaml` substitution and the `configure: CONDA_RELEASE_*`
+`AC_MSG_NOTICE` lines, and the test-phase `swift-t -v` printed
+`source:       Anaconda_311_2026-10-14_14:25_1d37c5e46627225e5f10a73fcc89035a`
+-- the hash matches exactly what `make-release-pkg.zsh` printed for that
+tarball.
+
+=== 21. GitHub Actions PY=3.11 job hung ~4.5h solving the install env, then
+    got killed by a runner shutdown -- not an unsatisfiable dependency set
+
+`gh.txt` (OS=ubuntu-latest PY=3.11) showed `conda-install.sh`'s
+`conda install --solver classic -c conda-forge ant gcc ncurses zsh autoconf
+make mpich-mpicc=4.3.2 openjdk python=3.11 swig tk` fail both its fast
+attempts (frozen solve, then `current_repodata.json`), fall back to solving
+against the full `repodata.json`, and then sit at
+`Solving environment: ...working...` for over 4 hours until
+`##[error]The runner has received a shutdown signal` killed it.  No
+`UnsatisfiableError`/`PackagesNotFoundError` ever appeared, and
+`api.anaconda.org/package/conda-forge/mpich-mpicc/files` confirms
+`mpich-mpicc=4.3.2` exists for `linux-64` -- so this was a solver
+*performance* hang under the old SAT-based `classic` solver against the full
+conda-forge index, not an infeasible spec.
+
+Root cause: `dev/auto-test/anaconda.sh`'s `CONDA_SOLVER` map forces
+`-s classic` for PYTHON_VERSION=311 unconditionally, with the comment
+"Jenkins cannot fall back to mamba here" -- a Jenkins-specific workaround
+that was being applied to GitHub Actions too, even though GitHub Actions
+runners support `libmamba` (conda's modern default) fine.
+
+Fix: gate the `CONDA_SOLVER` lookup on `${GITHUB_ACTIONS:-false} == false`,
+so Jenkins still forces `classic` for 311 but GitHub Actions lets conda pick
+its own (libmamba) default:
+----
+if [[ ${GITHUB_ACTIONS:-false} == false &&
+      ${CONDA_SOLVER[$PYTHON_VERSION]} != "default" ]] \
+  USE_SOLVER=( -s ${CONDA_SOLVER[$PYTHON_VERSION]} )
+----
+Verified the gating logic in isolation (`zsh -c '...'` with
+`GITHUB_ACTIONS=true` vs unset) picks the right branch in both cases.  Not
+yet verified against a real GitHub Actions run (next PY=3.11 CI run should
+confirm the install step no longer hangs).
