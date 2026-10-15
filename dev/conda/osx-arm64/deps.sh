@@ -20,7 +20,11 @@ export SPEC_CLANG='clang==18.1.8'
 export SPEC_MPICH='mpich==4.1.2'
 # Fix for strstr issue- there is bad behavior by package tk-8.6.13-*
 #     in the Anaconda repos.  See below.
-export SPEC_TK='tk>=8.6.15'
+# Floor >=8.6.15 excludes the broken tk 8.6.13.  Upper bound <9.0a0
+#     excludes Tcl/Tk 9: Turbine links libtcl8.6 at build time, so a
+#     runtime tcl 9 (libtcl9.0) would fail to load.  The comma in this
+#     spec is handled by m4_getenv_commas in pkgs-tk.yaml / common.m4.
+export SPEC_TK='tk>=8.6.15,<9.0a0'
 
 # This is a macOS two-level-namespace symbol-binding bug, triggered by a bad tk==8.6.13 conda build.
 

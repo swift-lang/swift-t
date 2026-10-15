@@ -1,4 +1,8 @@
 # pkgs-tk.yaml: START
 # Extra packages for tk
-    - m4_getenv(SPEC_TK)
+# The spec is pulled from SPEC_TK via the comma-safe getenv wrapper
+# defined in common.m4.  SPEC_TK may carry a comma such as an upper
+# bound (tk floor plus a Tcl 9 exclusion); a plain getenv would let
+# that comma break this include.  See common.m4 for details.
+    - m4_getenv_commas(SPEC_TK)
 # pkgs-tk.yaml: STOP
