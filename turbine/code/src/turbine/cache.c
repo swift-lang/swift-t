@@ -142,7 +142,12 @@ turbine_cache_store(turbine_datum_id td, turbine_type type,
   DEBUG_CACHE("store: <%li> size: %i counter: %li",
               td, size, counter);
   assert(entries.size <= max_entries);
-  if (max_entries - entries.size == 1)
+  // Replace only when the cache is actually full.  Testing for a
+  // single free slot instead both capped the cache one entry below
+  // max_entries and, when max_entries was 1, sent the very first
+  // store into cache_replace() with an empty LRU tree, where
+  // rbtree_leftmost() returns NULL and is dereferenced.
+  if (entries.size >= max_entries)
   {
     cache_replace(td, type, data, size);
   }
@@ -237,9 +242,19 @@ cache_shrink(void)
   {
     int64_t stamp;
     void* v;
-    rbtree_pop(&lru, &stamp, &v);
+    if (!rbtree_pop(&lru, &stamp, &v))
+      // Nothing left to evict.  Happens when a single datum is
+      // larger than the whole budget; without this the loop would
+      // spin forever on an uninitialized victim pointer.
+      break;
     struct entry* e = (struct entry*) v;
     DEBUG_CACHE("cache_shrink(): LRU victim: <%li>", e->td);
+    // Drop the victim from the lookup table as well as the LRU
+    // tree.  Freeing it while leaving it in entries would make
+    // turbine_cache_check() report a hit and
+    // turbine_cache_retrieve() hand back freed memory.
+    void* tmp;
+    table_lp_remove(&entries, e->td, &tmp);
     memory += (unsigned long)e->length;
     free(e->data);
     free(e);
