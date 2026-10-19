@@ -78,11 +78,9 @@ turbine_cache_init(int size, unsigned long max_memory)
   initialized = true;
   max_entries = size;
   memory = max_memory;
-  if (max_entries == 0)
-    return;
+  if (max_entries == 0) return;
   table_lp_init(&entries, size);
   rbtree_init(&lru);
-
 }
 
 bool
@@ -196,7 +194,7 @@ cache_add(turbine_datum_id td, turbine_type type,
   table_lp_add(&entries, td, e);
   rbtree_add(&lru, counter, e);
   counter++;
-  memory -= (unsigned long)length;
+  memory -= (unsigned long) length;
   cache_shrink();
 }
 
@@ -215,11 +213,11 @@ cache_replace(turbine_datum_id td, turbine_type type,
   // Remove the victim from cache data structures
   rbtree_remove_node(&lru, node);
 
-  void *tmp;
+  void* tmp;
   table_lp_remove(&entries, e->td, &tmp);
   assert(tmp == e);
 
-  memory += (unsigned long)e->length;
+  memory += (unsigned long) e->length;
   free(e->data);
   // Replace the entry with the new data
   entry_init(e, td, type, data, length, counter);
