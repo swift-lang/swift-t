@@ -55,7 +55,22 @@ adlb_code
 xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames *hostnames);
 
 /**
-  Fill hostnames structure with hostname per rank
+  Fill hostnames structure with hostname per rank.
+
+  The non-MPI counterpart to xlb_hostnames_gather(): the caller
+  supplies the names outright instead of each rank contributing its
+  own through an Allgather.  This lets a single process fabricate an
+  arbitrary topology, say eight ranks spread over two hosts, so that
+  layout and hostmap code can be tested without launching a
+  multi-node job.  Used by the queue tests via qs_init() in
+  tests/common/qtests.c.
+
+  There is deliberately no MPI_Comm parameter here, and helpers
+  called from this path must not require one.
+
+  @param names    hostname per rank, nranks entries
+  @param nranks   number of ranks in the fabricated layout
+  @param my_rank  which of those ranks this process plays
  */
 adlb_code
 xlb_hostnames_fill(struct xlb_hostnames *hostnames,

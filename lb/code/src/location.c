@@ -47,7 +47,7 @@ report_ranks(MPI_Comm comm)
 }
 
 static adlb_code hostnames_alloc(struct xlb_hostnames *hostnames,
-				 MPI_Comm comm,
+				 int comm_size, int comm_rank,
 				 size_t name_length);
 
 adlb_code
@@ -60,7 +60,12 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames* hostnames)
 
   report_ranks(comm);
 
-  adlb_code ac = hostnames_alloc(hostnames, comm, 1024);
+  int comm_rank, comm_size;
+  MPI_Comm_rank(comm, &comm_rank);
+  MPI_Comm_size(comm, &comm_size);
+
+  adlb_code ac = hostnames_alloc(hostnames, comm_size, comm_rank,
+                                 1024);
 
   ADLB_CHECK(ac);
 
@@ -74,15 +79,21 @@ xlb_hostnames_gather(MPI_Comm comm, struct xlb_hostnames* hostnames)
   return ADLB_SUCCESS;
 }
 
-/** Helper to allocate right size of buffers for name length */
-static adlb_code
-hostnames_alloc(struct xlb_hostnames* hostnames, MPI_Comm comm,
-                size_t name_length)
-{
-  int comm_rank, comm_size;
-  MPI_Comm_rank(comm, &comm_rank);
-  MPI_Comm_size(comm, &comm_size);
+/**
+   Helper to allocate right size of buffers for name length.
 
+   Takes the rank count and rank number rather than a communicator,
+   because xlb_hostnames_fill() has no communicator to give: it
+   fabricates a layout for the tests.  This previously took an
+   MPI_Comm, and that caller passed its int rank count into the
+   slot.  Under MPICH that is silently valid, since MPI_Comm is an
+   int there; under Open MPI, where MPI_Comm is a pointer, it is a
+   pointer-from-integer error.
+ */
+static adlb_code
+hostnames_alloc(struct xlb_hostnames* hostnames, int comm_size,
+                int comm_rank, size_t name_length)
+{
   // Length of nodenames
   hostnames->name_length = name_length;
 
@@ -115,7 +126,7 @@ xlb_hostnames_fill(struct xlb_hostnames *hostnames,
   }
 
   size_t length_with_term = max_name_length + 1;
-  adlb_code ac = hostnames_alloc(hostnames, nranks,
+  adlb_code ac = hostnames_alloc(hostnames, nranks, my_rank,
                                  length_with_term);
   ADLB_CHECK(ac);
 
