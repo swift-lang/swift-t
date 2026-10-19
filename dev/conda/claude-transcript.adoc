@@ -1510,3 +1510,102 @@ Verified the gating logic in isolation (`zsh -c '...'` with
 `GITHUB_ACTIONS=true` vs unset) picks the right branch in both cases.  Not
 yet verified against a real GitHub Actions run (next PY=3.11 CI run should
 confirm the install step no longer hangs).
+
+=== 22. Rebuilt/republished eq-r with the tk `<9.0a0` ceiling -- but old
+    broken builds stayed solvable, so a GitHub re-run still hit `_strstr`
+
+Platform: osx-arm64 only (the `_strstr`/tk-8.6.13 bug and the tk ceiling are
+both osx-arm64-specific; linux-64/aarch64 are unaffected).
+
+2026-10-15/2026-10-17: rebuilt and uploaded all four `eq-r-1.3-pyNNN_4`
+osx-arm64 builds (311/312/313/314) with the hand-quoted
+`tk>=8.6.15,<9.0a0` ceiling from note 19d already sitting uncommitted in
+each EQ-R repo.  `conda-build.sh -C` rendered all four `meta.yaml`s cleanly
+(the m4 comma bug from note 19a did NOT recur -- confirmed the full file,
+including everything after the tk include, survived intact), and each
+uploaded `.conda`'s `info/index.json` showed the correct
+`"tk >=8.6.15,<9.0a0"` depends line.  `inspect_hosted_packages.sh` (see
+note 23) confirmed ALL PASS against the live channel immediately after.
+
+But re-triggering the `test-curl.yaml` GitHub workflow (`gh workflow run`)
+over an hour later still failed on OS=macOS-14 PY=3.13 with the exact same
+`_strstr` `dlopen` crash from note 19, resolving to the OLD
+`eq-r-1.3-py313_2` + `swift-t-r-1.6.9-py313_3` + `tk-8.6.13-hbeba79b_4`.
+
+Root cause (NOT a repodata/CDN propagation delay -- that was checked and
+ruled out; `repodata.json` already listed `py313_4`/`py313_7` well before
+this run): every old build of `eq-r-1.3-pyNNN_{1,2,3}` and
+`swift-t-r-1.6.9-pyNNN_{1,2,3}` is STILL published and STILL independently
+satisfiable.  `eq-r-1.3-py313_2`'s own `depends` only says bare
+`swift-t-r 1.6.9` (no build-number floor, added before the tk pin existed
+at all), and `swift-t-r-1.6.9-py313_3` depends on exactly `tk 8.6.13`
+(hard pin, the broken build).  Conda's solver does prefer the highest
+build number *among otherwise-equal candidates*, but it is not required to
+-- `eq-r_2 + swift-t-r_3 + tk-8.6.13` is a perfectly valid, fully
+self-consistent solution to `eq-r=1.3, emews-r>=9`, so libmamba is free to
+land on it instead of `eq-r_4 + swift-t-r_7`.  Confirmed empirically: in
+the SAME workflow run, OS=macOS-14 PY=3.11 passed while resolving to the
+similarly-old `swift-t-r-1.6.9-py311_2` (also a bare `tk 8.6.13` pin) --
+that particular tk-8.6.13 build hash happens not to trigger the `_strstr`
+link bug (see the per-build-hash table in `osx-arm64/deps.sh`), so passing
+is not proof of a clean resolve, and failing on py313 specifically is not
+proof the fix didn't take -- both outcomes are solver-nondeterminism
+artifacts of old builds remaining live.
+
+Verified via direct artifact inspection (not just the solve): extracted
+`swift-t/turbine/etc/{version,source}.txt` from the downloaded
+`swift-t-r-1.6.9-py313_3.conda` and it matches EXACTLY what the failing
+CI job's `swift-t -v` printed (`Turbine 1.5.2`, `source:
+Anaconda-313_2026-10-04_15-31`) -- so `swift-t -v`'s reporting itself is
+accurate; it genuinely had the old broken build installed, there is no
+metadata/hash corruption in play.
+
+Lesson: publishing a fixed build number does not retroactively invalidate
+older build numbers of the same version.  A spec like `eq-r=1.3` (version
+only, no build floor) remains satisfiable by ANY build of that version
+forever, including ones published before a known-bad dependency was
+fixed.  Durable fix requires one of: (a) removing/yanking the broken old
+builds from the channel (`anaconda remove`) -- done 2026-10-18, see
+note 23; (b) tightening `install_emews.sh`'s install spec with an
+explicit `tk>=8.6.15` floor so the solver can't reach the old
+combination even if the old builds stay published; (c) bumping the
+package *version* (not just build number) for fixes like this, so a
+version floor in dependents structurally excludes old builds.  (a) was
+chosen here as the immediate fix since it also cleans up the channel for
+any pre-existing environments doing a fresh solve.
+
+=== 23. Removed broken osx-arm64 eq-r/swift-t-r builds from the swift-t
+    channel
+
+Platform: osx-arm64 only.
+
+Following note 22, removed every osx-arm64 build of `eq-r` and
+`swift-t-r` whose recorded `tk` dependency could resolve to the broken
+tk-8.6.13 build (i.e. everything before the `tk>=8.6.15` floor was
+introduced), via `anaconda remove swift-t/PACKAGE/VERSION/FILENAME`:
+
+----
+eq-r 1.3:       py311_1, py311_2, py312_1, py312_2,
+                py313_1, py313_2, py314_1, py314_2
+swift-t-r 1.6.9: py310_1, py311_1, py311_2, py312_1, py312_2,
+                 py313_1, py313_2, py313_3, py314_1
+----
+
+Kept every build whose `depends` already carries at least the
+`tk>=8.6.15` floor (even without the `<9.0a0` ceiling), since those
+cannot resolve to the broken tk-8.6.13 build regardless of what else the
+solver picks.  After removal, re-ran `inspect_hosted_packages.sh` and
+re-triggered the `test-curl.yaml` GitHub workflow for all four Python
+versions to confirm the solver can no longer reach the old combination.
+
+CONFIRMED: `gh workflow run "Test from Curl"` (run 39172741301,
+2026-10-18 22:33 UTC) passed all 8 matrix legs (ubuntu-latest and
+macOS-14, PY 3.11-3.14), including OS=macOS-14 PY=3.13 -- the leg that
+had failed identically in both prior runs (39094332250, 39095402729,
+39098216319).  Verified it is a genuine fix, not a lucky old-build
+coincidence like the PY=3.11 leg was in note 22: this run's log shows
+`eq-r-1.3-py313_4`, `swift-t-r-1.6.9-py313_7`, and
+`tk-8.6.15-hcd8a7d5_0` resolved (the fixed, non-broken tk build), and
+both `swift-t -E 'trace("SUCCESS SWIFT/T");'` and
+`swift-t -i EQR -E 'trace("SUCCESS EQ/R   ");'` printed their SUCCESS
+traces with no `_strstr` `dlopen` error.
