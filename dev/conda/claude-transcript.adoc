@@ -1609,3 +1609,60 @@ coincidence like the PY=3.11 leg was in note 22: this run's log shows
 both `swift-t -E 'trace("SUCCESS SWIFT/T");'` and
 `swift-t -i EQR -E 'trace("SUCCESS EQ/R   ");'` printed their SUCCESS
 traces with no `_strstr` `dlopen` error.
+
+=== 24. Local install verification across all 4 Python versions,
+    including `swift-t -v` provenance-hash cross-check
+
+Platform: osx-arm64.
+
+2026-10-19: ran `install_emews.sh -q -t -v <pyver> $PWD/DB` locally
+against four separate, clean conda base prefixes
+(`/tmp/woz/{311,312,313,314}-T`), one at a time -- NOT concurrently.
+First attempt ran two installs in parallel and both silently stalled
+after creating the bare python env: `install_emews.sh` resolves
+`THIS=$(cd $(dirname $0); pwd)` from the SCRIPT's location, so
+`EMEWS_INSTALL_LOG="$THIS/emews_install.log"` is the same fixed path
+regardless of which conda prefix is active -- two concurrent runs
+clobber each other's log (and likely other fixed-path scratch state),
+exactly the "you can only run 1 job concurrently" constraint already
+documented for `conda-build.sh`.  Re-ran sequentially with no issue.
+
+Second gotcha: `install_emews.sh` picks `CONDA_BIN_DIR` from
+`dirname $(which conda)` (for non-GitHub runs), so `conda` must resolve
+to `<prefix>/bin/conda`, NOT `<prefix>/condabin/conda` -- the latter has
+no sibling `activate` script, so `source $CONDA_BIN_DIR/activate`
+fails with "File not found: '.../condabin/activate'".  Fix: put
+`<prefix>/bin` ahead of `<prefix>/condabin` on PATH (or omit condabin
+entirely) for a local test run.
+
+All four installs then succeeded (`INSTALL SUCCESS.`), each resolving
+the fixed packages confirmed on the channel in note 23:
+
+----
+         eq-r        swift-t-r      tk
+3.11     py311_4     py311_5        8.6.15
+3.12     py312_4     py312_5        8.6.15
+3.13     py313_4     py313_7        8.6.15
+3.14     py314_4     py314_4        8.6.15
+----
+
+Also cross-checked `swift-t -v`'s `source:` provenance token (the
+mechanism from note 20) against the actual release tarball it claims
+to come from, not just that the string looks well-formed: all four
+installs printed
+`source: Anaconda_<PY>_2026-10-14_16:01_5fb3a46c85a2ecdad4c779f74f834b30`
+(same hash/timestamp across all four, since one release tarball builds
+all four Python variants), and independently computing
+`md5 -r /tmp/distro/swift-t-1.6.9/swift-t-1.6.9.tar.gz` gives
+`5fb3a46c85a2ecdad4c779f74f834b30` with mtime `2026-10-14_16:01` --
+an exact match.  Confirms the provenance chain is not just
+well-formatted but factually correct: the installed binaries really do
+trace back to that exact source tarball.
+
+Also re-triggered the `test-clone.yaml` ("Test from Clone") GitHub
+workflow (run 39186180491, 2026-10-19 01:37 UTC) as a second,
+independent confirmation alongside note 23's `test-curl.yaml` run --
+this workflow clones the full swift-t repo rather than curl'ing just
+the install scripts, exercising a different code path.  ALL 8 matrix
+legs passed (ubuntu-latest and macOS-14, PY 3.11-3.14), including
+OS=macOS-14 PY=3.13.
