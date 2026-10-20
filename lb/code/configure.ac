@@ -230,7 +230,9 @@ ENABLE_SERVER_PROFILE=0
 AC_ARG_ENABLE(server-profile,
   AS_HELP_STRING([--enable-server-profile],
                  [enable ADLB server wall-clock profiling]),
-  ENABLE_SERVER_PROFILE=1)
+  ENABLE_SERVER_PROFILE=1
+  AC_MSG_RESULT([server profiling enabled.])
+  )
 AC_DEFINE_UNQUOTED(XLB_ENABLE_SERVER_PROFILE, [${ENABLE_SERVER_PROFILE}],
                    [Whether to profile server time by category])
 
