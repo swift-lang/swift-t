@@ -93,8 +93,8 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 # Evaluate any user turbine -e K=V settings here
 export getenv(USER_ENV_CODE)
 
-log_path LD_LIBRARY_PATH
-echo
+# log_path LD_LIBRARY_PATH
+# echo
 
 if (
   turbine_log_start | tee -a turbine.log
