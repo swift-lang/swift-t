@@ -33,44 +33,50 @@ then
 fi
 if (( CONDA_BUILD ))
 then
-  # The build-time USE_JAVA points into the Conda build environment,
-  # which is not where stc runs: it is absent in a normal install, and
-  # under 'conda build --dirty' it still exists on disk but its Java is
-  # not runnable in the install/test env.  So under Conda always resolve
-  # Java from the *active* environment, trying, in order:
-  #   1. $CONDA_PREFIX/bin/java - the activated env (install and test)
-  #   2. java on $PATH          - the activated env is on PATH
-  #   3. the base env via CONDA_EXE, including its openjdk package cache
-  # Only if all of these fail do we keep the build-time path (which
-  # lookup_java will then report as unusable).
-  # (Previously this used only the CONDA_EXE-derived base prefix and was
-  #  gated on the baked path being missing, which --dirty defeated.)
-  CONDA_JVM=""
-  if [[ -n ${CONDA_PREFIX:-} && -x ${CONDA_PREFIX}/bin/java ]]
+  # The build-time USE_JAVA is in the Conda build environment, which
+  # may be absent or not runnable at run time, so look for Java at
+  # run time.  Use the first executable candidate, in this order:
+  #   1. $JAVA_HOME/bin/java
+  #   2. $CONDA_PREFIX/bin/java, then $CONDA_PREFIX/lib/jvm/bin/java
+  #   3. java on $PATH (any source, not only Conda)
+  #   4. base env from CONDA_EXE, same two layouts
+  #   5. openjdk-* directories in the base env package cache
+  # Layout differs between openjdk packages, so check both.
+  # Otherwise keep the build-time path; lookup_java reports it.
+  JVM_CANDIDATES=()
+  if [[ ${JAVA_HOME:-} != "" ]]
   then
-    CONDA_JVM=${CONDA_PREFIX}/bin/java
-  else
-    PATH_JAVA=$( command -v java 2> /dev/null )
-    if [[ -n ${PATH_JAVA} ]]
-    then
-      CONDA_JVM=${PATH_JAVA}
-    elif (( ${#CONDA_EXE:-} > 0 ))
-    then
-      # Get the base env from parent-parent of CONDA_EXE
-      CONDA_ROOT=${CONDA_EXE:h:h}
-      if [[ -x ${CONDA_ROOT}/bin/java ]]
-      then
-        CONDA_JVM=${CONDA_ROOT}/bin/java
-      else
-        JDKS=( ${CONDA_ROOT}/pkgs/openjdk-*(N) )
-        if (( ${#JDKS} ))
-        then
-          CONDA_JVM=${JDKS[1]}/bin/java
-        fi
-      fi
-    fi
+    JVM_CANDIDATES+=( ${JAVA_HOME}/bin/java )
   fi
-  if [[ -n ${CONDA_JVM} ]]
+  if [[ ${CONDA_PREFIX:-} != "" ]]
+  then
+    JVM_CANDIDATES+=( ${CONDA_PREFIX}/bin/java
+                      ${CONDA_PREFIX}/lib/jvm/bin/java )
+  fi
+  PATH_JAVA=$( command -v java 2> /dev/null )
+  if [[ ${PATH_JAVA} != "" ]]
+  then
+    JVM_CANDIDATES+=( ${PATH_JAVA} )
+  fi
+  if (( ${#CONDA_EXE:-} > 0 ))
+  then
+    # Get the base env from parent-parent of CONDA_EXE
+    CONDA_ROOT=${CONDA_EXE:h:h}
+    JVM_CANDIDATES+=( ${CONDA_ROOT}/bin/java
+                      ${CONDA_ROOT}/lib/jvm/bin/java
+                      ${CONDA_ROOT}/pkgs/openjdk-*/bin/java(N)
+                      ${CONDA_ROOT}/pkgs/openjdk-*/lib/jvm/bin/java(N) )
+  fi
+  CONDA_JVM=""
+  for JVM_CANDIDATE in ${JVM_CANDIDATES[@]}
+  do
+    if [[ -x ${JVM_CANDIDATE} ]]
+    then
+      CONDA_JVM=${JVM_CANDIDATE}
+      break
+    fi
+  done
+  if [[ ${CONDA_JVM} != "" ]]
   then
     JVM=${CONDA_JVM}
   fi
