@@ -580,3 +580,7 @@ if (( ${STC_AUTODELETE:-1} && DELETE_INPUT )) {
 }
 
 return ${EXITCODE}
+
+# Local Variables:
+# mode: sh
+# End:
