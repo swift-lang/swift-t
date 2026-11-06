@@ -41,7 +41,7 @@ fi
   set +e
   set -x
   diff $SETTINGS_ORIG $SETTINGS_SH
-  # Don't let exit code from diff win:
+  # Do not let exit code from diff escape:
   exit 0
 )
 
