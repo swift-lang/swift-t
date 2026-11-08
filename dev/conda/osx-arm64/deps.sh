@@ -18,13 +18,12 @@ if [[ ${PYTHON_VERSION} == 3.13.* ]] {
 # SPEC_CLANG='clang==16.0.6'
 export SPEC_CLANG='clang==18.1.8'
 export SPEC_MPICH='mpich==4.1.2'
-# Fix for strstr issue- there is bad behavior by package tk-8.6.13-*
-#     in the Anaconda repos.  See below.
-# Floor >=8.6.15 excludes the broken tk 8.6.13.  Upper bound <9.0a0
-#     excludes Tcl/Tk 9: Turbine links libtcl8.6 at build time, so a
-#     runtime tcl 9 (libtcl9.0) would fail to load.  The comma in this
-#     spec is handled by m4_getenv_commas in pkgs-tk.yaml / common.m4.
-export SPEC_TK='tk>=8.6.15,<9.0a0'
+# Fix for strstr issue: tk-8.6.13 builds h892fb3f_3, hd3d0363_3, and
+#     h010d191_3 export strstr and break Turbine on macOS.  See below.
+# Pin the one known-good conda-forge build.  This is exact, so the
+#     solver cannot pick a bad _3 build.  Only conda-forge provides it,
+#     so the build must not use defaults.
+export SPEC_TK='tk==8.6.13=hbeba79b_4'
 
 # This is a macOS two-level-namespace symbol-binding bug, triggered by a bad tk==8.6.13 conda build.
 
