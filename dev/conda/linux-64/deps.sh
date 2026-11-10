@@ -17,7 +17,8 @@ export USE_TK=1
 # Do not clobber a caller-set pin (e.g. conda-install.sh pins
 # SPEC_TK="tk=8.6.13" for Python 3.14, which needs Tcl/Tk 8.6, not the
 # default 9.0): 2026-10-13
-export SPEC_TK=${SPEC_TK:-tk}
+# tk=8.6 keeps Tcl/Tk on the 8.6 series (not 9.0 or 8.5).
+export SPEC_TK=${SPEC_TK:-tk=8.6}
 
 # Pin a modern MPICH: 2026-10-09
 # The unpinned default (mpich-mpicc) let the solver pull an ancient

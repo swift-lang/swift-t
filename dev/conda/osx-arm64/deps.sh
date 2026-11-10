@@ -20,11 +20,11 @@ export SPEC_CLANG='clang==18.1.8'
 export SPEC_MPICH='mpich==4.1.2'
 # Fix for strstr issue- there is bad behavior by package tk-8.6.13-*
 #     in the Anaconda repos.  See below.
-# Floor >=8.6.15 excludes the broken tk 8.6.13.  Upper bound <9.0a0
-#     excludes Tcl/Tk 9: Turbine links libtcl8.6 at build time, so a
-#     runtime tcl 9 (libtcl9.0) would fail to load.  The comma in this
-#     spec is handled by m4_getenv_commas in pkgs-tk.yaml / common.m4.
-export SPEC_TK='tk>=8.6.15,<9.0a0'
+# Pin the one good tk 8.6.13 build (hbeba79b_4), which conda-forge has
+#     for osx-arm64.  tk 8.6.15 is only on the defaults channel, so
+#     pinning it here keeps Miniforge (conda-forge only) solvable.
+# Tcl 9 is excluded implicitly: an exact 8.6.13 pin is below 9.0a0.
+export SPEC_TK='tk==8.6.13=hbeba79b_4'
 
 # This is a macOS two-level-namespace symbol-binding bug, triggered by a bad tk==8.6.13 conda build.
 
