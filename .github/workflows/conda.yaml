@@ -34,7 +34,6 @@ jobs:
           - ubuntu-latest
           # - macos-13
           - macos-15  # This is ARM64
-          # - macos-14-arm64
 
         # List of python versions to test
         python-version:

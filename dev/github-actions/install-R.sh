@@ -16,7 +16,7 @@ log()
 
 case $MATRIX_OS {
   "ubuntu-latest") PKG="r"       ;;
-  "macos-14")      PKG="emews-r" ;;
+  "macos-15")      PKG="emews-r" ;;
   *) log "unknown OS=$MATRIX_OS"
      exit 1 ;;
 }

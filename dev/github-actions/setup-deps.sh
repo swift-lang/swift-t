@@ -35,21 +35,7 @@ then
     tcl-dev
     zsh
   )
-elif [[ $MATRIX_OS == "macos-14" ]]
-then
-  TOOL=( brew install )
-  PKGS=(
-    autoconf
-    automake
-    # To resolve the sed -i problem on Mac
-    gnu-sed
-    make
-    mpich
-    swig
-    tcl-tk
-  )
-  brew update >& tool.log
-elif [[ $MATRIX_OS == "macos-14-arm64" ]]
+elif [[ $MATRIX_OS == "macos-15" ]]
 then
   TOOL=( brew install )
   PKGS=(

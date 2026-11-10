@@ -59,12 +59,7 @@ case $MATRIX_OS in
     # macos-13 already has autoconf
     PKGS=( ${PKGS_MAC[@]} )
     ;;
-  "macos-14" | "macos-15")
-    PKGS=( ${PKGS_MAC[@]}
-           autoconf
-         )
-    ;;
-  "macos-14-arm64")
+  "macos-15")
     PKGS=( ${PKGS_MAC[@]}
            autoconf
          )

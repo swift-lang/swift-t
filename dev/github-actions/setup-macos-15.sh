@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# SETUP for matrix.os == macos-14
+# SETUP for matrix.os == macos-15
 
 START=$SECONDS
 
 log()
 {
-  printf "setup-macos-14.sh: %s\n" "$*"
+  printf "setup-macos-15.sh: %s\n" "$*"
 }
 
 log "Installing Homebrew packages..."
