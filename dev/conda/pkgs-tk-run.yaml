@@ -7,5 +7,5 @@
 # linked into libtclturbine.so at build time (e.g. 8.6.13) producing a
 # missing tclsh / libtcl mismatch at test/install time: 2026-10-13
 # NOTE: no commas in this snippet -- see common.m4 m4_ifelse comma gotcha.
-    - {{ pin_compatible("tk") }}
+    - {{ pin_compatible("tk", exact=True) }}
 # pkgs-tk-run.yaml: STOP
