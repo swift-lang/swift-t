@@ -362,3 +362,7 @@ fi
 ${TURBINE_LAUNCHER} ${LAUNCH_OPTIONS} ${=TURBINE_INTERPOSER} \
                     ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
+
+# Local Variables:
+# mode: sh
+# End:

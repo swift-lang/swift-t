@@ -271,3 +271,7 @@ then
 fi
 
 return ${EXITCODE}
+
+# Local Variables:
+# mode: sh
+# End:
