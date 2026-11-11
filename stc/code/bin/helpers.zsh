@@ -12,18 +12,18 @@ make_temp()
   local MKTEMP_TYPE=""
   local SUFFIX_ARG=""
 
-  # Attempt to determine mktemp version
+  # Probe for --suffix support rather than parsing the version:
+  # version strings vary (GNU "9.4", uutils "0.10.0"),
+  # and "0.10.0" is not a number zsh can compare.
+  # -u only prints a name, so the probe creates no file.
   # Mac mktemp does not support -V
-  if mktemp -V >& /dev/null
+  if mktemp -u --suffix=.x >& /dev/null
   then
-    # Linux:
-    MKTEMP_VERSION=$( mktemp -V | awk '{print $NF;exit}' )
-    if (( ${MKTEMP_VERSION} > 2 ))
-    then
-      MKTEMP_TYPE="Linux"
-    else
-      MKTEMP_TYPE="BSD"
-    fi
+    # GNU or uutils coreutils:
+    MKTEMP_TYPE="Linux"
+  elif mktemp -V >& /dev/null
+  then
+    MKTEMP_TYPE="BSD"
   else
     MKTEMP_TYPE="Mac"
   fi
