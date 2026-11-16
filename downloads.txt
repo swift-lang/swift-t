@@ -51,7 +51,7 @@ WIP
 ** New +cat1()+
 * Task priority now works for +app+ functions
 * New link:guide.html#app_env[+TURBINE_APP_LABEL+, +TURBINE_APP_DEBUG+]
-* New link:guide.html#turbine_postlaunch[+TURBINE_POSTLAUNCH+]
+* New link:sites.html#turbine_postlaunch[+TURBINE_POSTLAUNCH+]
 * Enabling fixes for link:guide.html#turbine_cache[Turbine data caching]
 * New link:guide.html#server_profiling[ADLB server profiling] feature
 * Improvements for Anaconda packages and testing
