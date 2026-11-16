@@ -242,9 +242,9 @@ $ PATH=${PATH}:/path/to/swift-t-install/stc/bin
 == Usage
 
 Swift code is conventionally written in +\*.swift+ files.  Turbine
-code is stored in Tcl files with extension +*.tic+ (for Turbine
-Intermediate Code).  After writing the Swift program
-+program.swift+, run:
+code is stored in Tcl files with extension +*.tic+
+(for Turbine Intermediate Code).
+After writing the Swift program +program.swift+, run:
 ----
 stc program.swift
 ----
@@ -3966,6 +3966,9 @@ Set +TURBINE_LOG=1+ to see cache activity in the log.
 
 These variables may be accessed by code called from Swift/T.  They may
 also be accessed by <<hooks,hooks>>.
+
++TURBINE_APP_LABEL+::
+See <<app_env,Environment for +app+ functions>>.
 
 +ADLB_RANK_SELF+::
 The current MPI rank, unique across all ranks in the run.
