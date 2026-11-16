@@ -3797,42 +3797,6 @@ export TURBINE_STDOUT="out-@r.txt"
 This will create output files in the +TURBINE_OUTPUT+ directory named +
 +out-0.txt+, +out-1.txt+, etc.
 
-++++
-<a name="turbine_cache"></a>
-++++
-
-+TURBINE_CACHE_SIZE+::
-Maximum number of data items held in the Turbine local cache.  The
-cache is disabled when this is 0 or unset.  Default: disabled.
-+
-Each process keeps its own cache of recently retrieved data items,
-so repeated reads of the same closed datum can be served locally
-without a round trip to the ADLB data store.  When the cache is full,
-the least recently used entry is evicted.  The Turbine data cache can
-accelerate workflows that reuse Swift/T variables that are re-read
-repeatedly by worker processes.
-+
-----
-export TURBINE_CACHE_SIZE=1024
-----
-
-+TURBINE_CACHE_MAX+::
-Memory budget for the Turbine local cache, in bytes.  Entries are
-evicted when the budget is exceeded, in addition to the entry limit
-set by +TURBINE_CACHE_SIZE+.  Default: 10485760 (10 MiB), but is
-dependent on also enabling +TURBINE_CACHE_SIZE+.
-+
-----
-export TURBINE_CACHE_SIZE=1024
-export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))
-----
-+
-Set +TURBINE_LOG=1+ to see cache activity in the log.
-
-++++
-<a name="swift_path"></a>
-++++
-
 +SWIFT_PATH+::
 +TURBINE_PATH+::
 Space-separated list of Swift/T extension (Tcl) package locations.
@@ -3960,6 +3924,42 @@ anchor:env_mpi_thread[]
 +TURBINE_MPI_THREAD=1+::
 Enables +MPI_THREAD_MULTIPLE+.  Allows exotic user tasks that use MPI
 functions while using threads.
+
+++++
+<a name="turbine_cache"></a>
+++++
+
++TURBINE_CACHE_SIZE+::
+Maximum number of data items held in the Turbine local cache.  The
+cache is disabled when this is 0 or unset.  Default: disabled.
++
+Each process keeps its own cache of recently retrieved data items,
+so repeated reads of the same closed datum can be served locally
+without a round trip to the ADLB data store.  When the cache is full,
+the least recently used entry is evicted.  The Turbine data cache can
+accelerate workflows that reuse Swift/T variables that are re-read
+repeatedly by worker processes.
++
+----
+export TURBINE_CACHE_SIZE=1024
+----
+
++TURBINE_CACHE_MAX+::
+Memory budget for the Turbine local cache, in bytes.  Entries are
+evicted when the budget is exceeded, in addition to the entry limit
+set by +TURBINE_CACHE_SIZE+.  Default: 10485760 (10 MiB), but is
+dependent on also enabling +TURBINE_CACHE_SIZE+.
++
+----
+export TURBINE_CACHE_SIZE=1024
+export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))
+----
++
+Set +TURBINE_LOG=1+ to see cache activity in the log.
+
+++++
+<a name="swift_path"></a>
+++++
 
 [[turbine_env2]]
 ==== Environment variables set by Swift/T
