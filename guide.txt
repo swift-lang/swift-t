@@ -3968,6 +3968,7 @@ These variables may be accessed by code called from Swift/T.  They may
 also be accessed by <<hooks,hooks>>.
 
 +TURBINE_APP_LABEL+::
+A unique value for each +app+ task.
 See <<app_env,Environment for +app+ functions>>.
 
 +ADLB_RANK_SELF+::
