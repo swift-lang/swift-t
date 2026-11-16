@@ -7,7 +7,7 @@ set -eu
 # either for the Debian bin or dev package
 
 print bootstrap configure configure.ac Makefile.in install-sh
-print config.h.in
+print config.h.in config.{guess,sub}
 print maint/*.sh maint/*.c
 print maint/{debian,version}.mkf
 print m4/*.m4

@@ -6,7 +6,9 @@ set -eu
 # Also makes a soft link to the Debian package files,
 # either for the bin or dev package
 
-print c-utils-config.h.in configure configure.ac README.txt
+print README.txt
+print c-utils-config.h.in configure configure.ac
+print config.{guess,sub}
 print bootstrap Makefile.in src/module.mk.in
 print maint/*sh maint/*.mkf
 print src/*.[ch] src/c-utils.h.in

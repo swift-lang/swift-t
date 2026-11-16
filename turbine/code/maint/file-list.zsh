@@ -8,9 +8,9 @@ set -eu
 # Required for the *_wrap.[ch] glob exclusion below:
 setopt extendedglob
 
-print bootstrap config.h.in configure configure.ac
-print config.guess config.sub
 print version.txt README.txt
+print bootstrap config.h.in configure configure.ac
+print config.{guess,sub}
 print Makefile.in **/*.mk.in
 print maint/{debian.mkf,version.mkf,file-list.zsh}
 print maint/*.sh
