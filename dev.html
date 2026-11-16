@@ -745,7 +745,7 @@ asciidoc.install(2);
 <div id="header">
 <h1>Swift/T Developers' Guide</h1>
 <span id="author">Justin M. Wozniak</span><br />
-<span id="revdate">March 2023</span>
+<span id="revdate">October 2026</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -3592,12 +3592,22 @@ for macros/constants.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_release_procedure">14. Release procedure</h2>
+<h2 id="_shell_scripting">14. Shell scripting</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Top-level user-facing scripts (<code>bin/swift-t</code>, <code>bin/stc</code>, <code>bin/turbine</code>)
+use <code>!/usr/bin/env -S zsh -f</code>, not plain <code>!/usr/bin/env zsh</code>.  The <code>-f</code>
+disables sourcing the invoking user&#8217;s <code><sub>/.zshenv</code>/<code></sub>/.zshrc</code>.  Without it, a
+developer&#8217;s personal zsh functions/aliases/traps leak into these scripts'
+environment.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_release_procedure">15. Release procedure</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_source_release">14.1. Source release</h3>
+<h3 id="_source_release">15.1. Source release</h3>
 <div class="sect3">
-<h4 id="_procedure">14.1.1. Procedure</h4>
+<h4 id="_procedure">15.1.1. Procedure</h4>
 <div class="paragraph"><p>The Swift/T maintainer does this for each Swift/T release.</p></div>
 <div class="ulist"><ul>
 <li>
@@ -3688,6 +3698,11 @@ Edit <code>guide.txt</code>: update version number for download and date
 </li>
 </ul></div>
 </li>
+<li>
+<p>
+Edit <code>dev/get-versions.sh</code> to set the Swift/T version
+</p>
+</li>
 </ul></div>
 </li>
 </ul></div>
@@ -3707,11 +3722,6 @@ Apply <code>git tag release-x.y.z</code>
 Build release packages
 </p>
 <div class="ulist"><ul>
-<li>
-<p>
-Edit <code>dev/get-versions.sh</code> to set the Swift/T version
-</p>
-</li>
 <li>
 <p>
 Use <code>dev/release/make-release-pkg.zsh</code> to make the release package
@@ -3762,11 +3772,11 @@ Update installation instructions in guide.txt with version numbers
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="_release_tester">14.1.2. Release tester</h4>
+<h4 id="_release_tester">15.1.2. Release tester</h4>
 <div class="paragraph"><p>If these instructions do not work exactly as written, that is a bug.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_anaconda_package">14.1.3. Anaconda package</h4>
+<h4 id="_anaconda_package">15.1.3. Anaconda package</h4>
 <div class="paragraph"><p>See:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -3860,7 +3870,7 @@ trace: 42</code></pre>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2024-08-22 15:46:44 CDT
+ 2026-11-16 14:34:48 CST
 </div>
 </div>
 </body>

@@ -2751,10 +2751,10 @@ Concatenate arguments with <code>/</code> as separator.  Cf. <a href="#String op
 </div>
 <div class="sect2">
 <h3 id="cmd_line">13.5. Command line arguments</h3>
-<div class="paragraph"><p>A powerful pair of command line processing features are available: one
-that allows you to use a type signature-like approach to starting a
-Swift/T workflow, and one that allows you to handle arguments more
-manually.</p></div>
+<div class="paragraph"><p>A powerful pair of command line processing features are available:
+one that allows you to use a type function signature-like approach
+to starting a Swift/T workflow,
+and one that allows you to handle arguments more manually.</p></div>
 <div class="sect3">
 <h4 id="cmd_signature">13.5.1. Type signature approach</h4>
 <div class="sect4">
@@ -4760,10 +4760,52 @@ foreach time in [1:5]
 be blocked and would all run at the beginning of the workflow.</p></div>
 <div class="paragraph"><p>As shown, <code>void</code> variables may be added to the output list of any
 <code>app</code> function.  They are set automatically when the <code>app</code> completes.</p></div>
-<div class="paragraph"><p><code>app</code> function executions can be debugged by setting environment
-variable <code>TURBINE_APP_DEBUG=1</code>.</p></div>
 <div class="sect3">
-<h4 id="_app_retry">14.3.1. App retry</h4>
+<h4 id="app_env">14.3.1. Environment for <code>app</code> functions</h4>
+<div class="paragraph"><p><code>app</code> function executions can be debugged by setting environment
+variable <code>TURBINE_APP_DEBUG=1</code>.  For a workflow that runs one app
+<code>echo hello</code>, the output looks like this:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>$ TURBINE_APP_DEBUG=1 swift-t -n 2 test.swift
+TURBINE_APP_DEBUG enabled
+2026-11-16 15:58:28 app:      0:000001 hostname: MY_HOSTNAME
+2026-11-16 15:58:28 app:      0:000001 io=default : echo hello
+2026-11-16 15:58:28 app:      0:000001 exec: echo hello
+hello
+2026-11-16 15:58:28 app:      0:000001 duration: 0.004</code></pre>
+</div></div>
+<div class="paragraph"><p>Each <code>app</code> execution is assigned a label of the form <code>rank:counter</code>,
+for example <code>13:000042</code>.  The rank is the Turbine process that
+launched the app, and the counter is the number of apps that process
+has launched so far.  The label is:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Placed in the environment of the app command as
+  <code>TURBINE_APP_LABEL</code>, so that the command itself can use it, for
+  example to name output files.
+</p>
+</li>
+<li>
+<p>
+Included in the Turbine log (see <code>TURBINE_LOG=1</code>) for each app
+  event, so that log lines for one app execution can be matched up.
+</p>
+</li>
+</ul></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The label is padded with spaces, which can be replaced as needed
+by the application.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_app_retry">14.3.2. App retry</h4>
 <div class="sect4">
 <h5 id="_retry_local">Retry local</h5>
 <div class="paragraph"><p>Some user application codes fail for non-deterministic reasons.
@@ -5112,9 +5154,48 @@ code argument and worse in the expression argument.</td>
 </div>
 </div>
 <div class="sect4">
-<h5 id="_python_shutdown">Python shutdown</h5>
-<div class="paragraph"><p>Use normal Python <code>@atexit.register</code> functions to clean up when
-Swift/T shuts down.</p></div>
+<h5 id="python_shutdown">Python shutdown</h5>
+<div class="paragraph"><p>When the Python interpreter is finalized, Python runs any functions
+registered with <code>@atexit.register</code>.  When this happens depends on
+which function you used:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+With <code>python()</code>, the interpreter is finalized after every call.
+  <code>@atexit</code> functions therefore run at the end of each task, not at
+  the end of the workflow.  Use this for per-task cleanup.
+</p>
+</li>
+<li>
+<p>
+With <code>python_persist()</code>, the interpreter stays in memory across
+  tasks.  Swift/T finalizes it once, when the process exits normally,
+  so <code>@atexit</code> functions run once, at the end of the workflow.
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>import python;
+
+string s = python_persist("""
+import atexit
+log = open("results.log", "w")
+atexit.register(log.close)
+""", "'ready'");</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The <code>@atexit</code> functions are not guaranteed to run if the process
+is terminated abnormally, for example after a Swift/T abort.  Do not
+rely on them to flush output that the workflow needs.  Write results
+through Swift/T <code>file</code> values or other explicit flushed outputs
+instead by using Python features to flush.</td>
+</tr></table>
+</div>
 </div>
 </div>
 <div class="sect3">
@@ -5994,6 +6075,45 @@ eases debugging in many cases.  For example, set:
 <code>out-0.txt</code>, <code>out-1.txt</code>, etc.</p></div>
 </dd>
 </dl></div>
+<a name="turbine_cache"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_CACHE_SIZE</code>
+</dt>
+<dd>
+<p>
+Maximum number of data items held in the Turbine local cache.  The
+cache is disabled when this is 0 or unset.  Default: disabled.
+</p>
+<div class="paragraph"><p>Each process keeps its own cache of recently retrieved data items,
+so repeated reads of the same closed datum can be served locally
+without a round trip to the ADLB data store.  When the cache is full,
+the least recently used entry is evicted.  The Turbine data cache can
+accelerate workflows that reuse Swift/T variables that are re-read
+repeatedly by worker processes.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_CACHE_SIZE=1024</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_CACHE_MAX</code>
+</dt>
+<dd>
+<p>
+Memory budget for the Turbine local cache, in bytes.  Entries are
+evicted when the budget is exceeded, in addition to the entry limit
+set by <code>TURBINE_CACHE_SIZE</code>.  Default: 10485760 (10 MiB), but is
+dependent on also enabling <code>TURBINE_CACHE_SIZE</code>.
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_CACHE_SIZE=1024
+export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))</code></pre>
+</div></div>
+<div class="paragraph"><p>Set <code>TURBINE_LOG=1</code> to see cache activity in the log.</p></div>
+</dd>
+</dl></div>
 <a name="swift_path"></a>
 <div class="dlist"><dl>
 <dt class="hdlist1">
@@ -6749,11 +6869,95 @@ and
 </div>
 </div>
 <div class="sect2">
-<h3 id="hooks">17.8. Startup/shutdown hooks</h3>
+<h3 id="server_profiling">17.8. Server profiling</h3>
+<div class="paragraph"><p>ADLB servers can report how their wall-clock time was spent.  This
+is a lighter-weight, dependency-free alternative to our MPE support
+when you only need to know whether the servers are busy,
+stealing work, or handling data requests.</p></div>
+<div class="paragraph"><p>This feature is compiled out by default.  To build it, set this in
+your <code>swift-t-settings.sh</code>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>SWIFT_T_SERVER_PROFILE=1</code></pre>
+</div></div>
+<div class="paragraph"><p>Or, when configuring ADLB directly, pass
+<code>--enable-server-profile</code> to <code>configure</code>.</p></div>
+<div class="paragraph"><p>Profiling is then enabled at run time by setting:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export ADLB_SERVER_PROFILE=1</code></pre>
+</div></div>
+<div class="paragraph"><p>At shutdown, each server prints one line to standard output:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>ADLB Server Profile[2]: idle=12.345678 steal_thief=0.120000 steal_target=0.003100 task=1.200000 data=0.450000 other=0.010000 total=14.129778</code></pre>
+</div></div>
+<div class="paragraph"><p>The values are seconds of wall-clock time, accumulated per category.
+Time is charged to the innermost active category only.  The categories
+are:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>idle</code>
+</dt>
+<dd>
+<p>
+Time not attributed to any other category, including
+polling and backoff in the server loop.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>steal_thief</code>
+</dt>
+<dd>
+<p>
+Time spent initiating work steals from other servers.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>steal_target</code>
+</dt>
+<dd>
+<p>
+Time spent serving steal requests from other servers.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>task</code>
+</dt>
+<dd>
+<p>
+Time handling task requests: puts, gets, and iget/amget.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>data</code>
+</dt>
+<dd>
+<p>
+Time handling data requests, such as create, store,
+retrieve, subscribe, and refcount operations.
+</p>
+</dd>
+<dt class="hdlist1">
+<code>other</code>
+</dt>
+<dd>
+<p>
+Time handling all remaining messages, including sync
+messages and any tag not listed above.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>If the line contains <code>leaks=N</code> or <code>overflows=N</code>, the profile
+bookkeeping hit an unexpected region nesting or an error path, and the
+per-category values are approximate.</p></div>
+</div>
+<div class="sect2">
+<h3 id="hooks">17.9. Startup/shutdown hooks</h3>
 <div class="paragraph"><p>Turbine has hooks that can be accessed to execute shell scripts, Tcl
 code, or C/C++ code on each node at startup and shutdown.</p></div>
 <div class="sect3">
-<h4 id="_shell_or_tcl_hooks">17.8.1. Shell or Tcl hooks</h4>
+<h4 id="_shell_or_tcl_hooks">17.9.1. Shell or Tcl hooks</h4>
 <div class="paragraph"><p>By simply setting environment variables, you can trigger fragments of
 Tcl or shell code to execute on each node of the Swift/T run at
 startup and/or shutdown.  The variables and their execution order are:</p></div>
@@ -6815,7 +7019,7 @@ puts CUDA_VISIBLE_DEVICES=$env(CUDA_VISIBLE_DEVICES)
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_c_c_hooks">17.8.2. C/C++ hooks</h4>
+<h4 id="_c_c_hooks">17.9.2. C/C++ hooks</h4>
 <div class="paragraph"><p>If you are calling C/C++ native code from Swift/T, you can use the
 provided C/C++ shutdown hook to clean up at the end of the workflow.
 The function signature is in <code>turbine-finalizers.h</code>:</p></div>
@@ -7494,7 +7698,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-10-01 10:39:08 CDT
+ 2026-11-16 16:15:00 CST
 </div>
 </div>
 

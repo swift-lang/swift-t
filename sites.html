@@ -1220,12 +1220,20 @@ launched via <code>mpiexec</code>, <code>aprun</code>, or equivalent.
 </dt>
 <dd>
 <p>
-Paste the given text into the submit script.
+(Currently supported on Slurm.)
+Paste the given text into the submit script at the end.
 Allows users to insert, e.g., commands that shutdown services or
 free storage space into the script.
-These shell commands will be inserted just after the execution is
-launched via <code>mpiexec</code>, <code>aprun</code>, or equivalent.
+These shell commands are inserted after the launcher (<code>srun</code>,
+<code>mpiexec</code>, <code>aprun</code>, or equivalent) returns.
+They run once the workflow job processes have exited,
+whether or not the run succeeded.
+For example:
 </p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_POSTLAUNCH='echo "finished" &gt;&gt; $TURBINE_OUTPUT/status.log'</code></pre>
+</div></div>
 </dd>
 </dl></div>
 <div class="sect3">
@@ -4603,7 +4611,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2026-10-01 11:03:41 CDT
+ 2026-11-16 16:11:36 CST
 </div>
 </div>
 </body>
