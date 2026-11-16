@@ -6074,48 +6074,6 @@ eases debugging in many cases.  For example, set:
 <div class="paragraph"><p>This will create output files in the <code>TURBINE_OUTPUT</code> directory named<br />
 <code>out-0.txt</code>, <code>out-1.txt</code>, etc.</p></div>
 </dd>
-</dl></div>
-<a name="turbine_cache"></a>
-<div class="dlist"><dl>
-<dt class="hdlist1">
-<code>TURBINE_CACHE_SIZE</code>
-</dt>
-<dd>
-<p>
-Maximum number of data items held in the Turbine local cache.  The
-cache is disabled when this is 0 or unset.  Default: disabled.
-</p>
-<div class="paragraph"><p>Each process keeps its own cache of recently retrieved data items,
-so repeated reads of the same closed datum can be served locally
-without a round trip to the ADLB data store.  When the cache is full,
-the least recently used entry is evicted.  The Turbine data cache can
-accelerate workflows that reuse Swift/T variables that are re-read
-repeatedly by worker processes.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>export TURBINE_CACHE_SIZE=1024</code></pre>
-</div></div>
-</dd>
-<dt class="hdlist1">
-<code>TURBINE_CACHE_MAX</code>
-</dt>
-<dd>
-<p>
-Memory budget for the Turbine local cache, in bytes.  Entries are
-evicted when the budget is exceeded, in addition to the entry limit
-set by <code>TURBINE_CACHE_SIZE</code>.  Default: 10485760 (10 MiB), but is
-dependent on also enabling <code>TURBINE_CACHE_SIZE</code>.
-</p>
-<div class="listingblock">
-<div class="content">
-<pre><code>export TURBINE_CACHE_SIZE=1024
-export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))</code></pre>
-</div></div>
-<div class="paragraph"><p>Set <code>TURBINE_LOG=1</code> to see cache activity in the log.</p></div>
-</dd>
-</dl></div>
-<a name="swift_path"></a>
-<div class="dlist"><dl>
 <dt class="hdlist1">
 <code>SWIFT_PATH</code>
 </dt>
@@ -6378,6 +6336,46 @@ functions while using threads.
 </p>
 </dd>
 </dl></div>
+<a name="turbine_cache"></a>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<code>TURBINE_CACHE_SIZE</code>
+</dt>
+<dd>
+<p>
+Maximum number of data items held in the Turbine local cache.  The
+cache is disabled when this is 0 or unset.  Default: disabled.
+</p>
+<div class="paragraph"><p>Each process keeps its own cache of recently retrieved data items,
+so repeated reads of the same closed datum can be served locally
+without a round trip to the ADLB data store.  When the cache is full,
+the least recently used entry is evicted.  The Turbine data cache can
+accelerate workflows that reuse Swift/T variables that are re-read
+repeatedly by worker processes.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_CACHE_SIZE=1024</code></pre>
+</div></div>
+</dd>
+<dt class="hdlist1">
+<code>TURBINE_CACHE_MAX</code>
+</dt>
+<dd>
+<p>
+Memory budget for the Turbine local cache, in bytes.  Entries are
+evicted when the budget is exceeded, in addition to the entry limit
+set by <code>TURBINE_CACHE_SIZE</code>.  Default: 10485760 (10 MiB), but is
+dependent on also enabling <code>TURBINE_CACHE_SIZE</code>.
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_CACHE_SIZE=1024
+export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))</code></pre>
+</div></div>
+<div class="paragraph"><p>Set <code>TURBINE_LOG=1</code> to see cache activity in the log.</p></div>
+</dd>
+</dl></div>
+<a name="swift_path"></a>
 </div>
 <div class="sect3">
 <h4 id="turbine_env2">17.3.2. Environment variables set by Swift/T</h4>
@@ -7698,7 +7696,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-11-16 16:15:00 CST
+ 2026-11-16 16:33:57 CST
 </div>
 </div>
 
