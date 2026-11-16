@@ -1033,9 +1033,9 @@ $ PATH=${PATH}:/path/to/swift-t-install/stc/bin</code></pre>
 <h2 id="_usage">3. Usage</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Swift code is conventionally written in <code>*.swift</code> files.  Turbine
-code is stored in Tcl files with extension <code>*.tic</code> (for Turbine
-Intermediate Code).  After writing the Swift program
-<code>program.swift</code>, run:</p></div>
+code is stored in Tcl files with extension <code>*.tic</code>
+(for Turbine Intermediate Code).
+After writing the Swift program <code>program.swift</code>, run:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>stc program.swift</code></pre>
@@ -6383,6 +6383,14 @@ export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))</code></pre>
 also be accessed by <a href="#hooks">hooks</a>.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
+<code>TURBINE_APP_LABEL</code>
+</dt>
+<dd>
+<p>
+See <a href="#app_env">Environment for <code>app</code> functions</a>.
+</p>
+</dd>
+<dt class="hdlist1">
 <code>ADLB_RANK_SELF</code>
 </dt>
 <dd>
@@ -7696,7 +7704,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-11-16 16:33:57 CST
+ 2026-11-16 16:39:15 CST
 </div>
 </div>
 
