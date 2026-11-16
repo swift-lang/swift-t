@@ -26,22 +26,41 @@ the +minor+ version number.
 link:guide.html[installation instructions].
 
 [[stable]]
-== Current/stable: Series 1.6
+== Current/stable: Series 1.7
 
-=== 1.6.8
+=== 1.7.0
 
-* http://swift-lang.github.io/swift-t-downloads/1.6/swift-t-1.6.8.tar.gz[swift-t-1.6.8.tar.gz] (11 MB)
+WIP
 
-* 2026-04-06
+* http://swift-lang.github.io/swift-t-downloads/1.7/swift-t-1.7.0.tar.gz[swift-t-1.7.0.tar.gz] (11 MB)
 
-* ExM c-utils 0.6.5
-* ADLB/X      1.0.7
-* Turbine     1.5.1
-* STC         1.0.7
+* 2026-11-17
+
+* ExM c-utils 0.7.0
+* ADLB/X      1.1.0
+* Turbine     1.6.0
+* STC         1.1.0
 
 *Changes:*
 
-* Version bump for Slack
+* New link:guide.html#cmd_signature[+arguments()+ and +flags+] features
+* New link:guide.html#library_files[+files+ library] functions:
+** New +ready()+ and +emit()+
+** New +file_size()+ and +file_size0()+
+** Better +dircat()+ support
+** New +cat1()+
+* Task priority now works for +app+ functions
+* New link:guide.html#app_env[+TURBINE_APP_LABEL+, +TURBINE_APP_DEBUG+]
+* New link:guide.html#turbine_postlaunch[+TURBINE_POSTLAUNCH+]
+* Enabling fixes for link:guide.html#turbine_cache[Turbine data caching]
+* New link:guide.html#server_profiling[ADLB server profiling] feature
+* Improvements for Anaconda packages and testing
+* Support for macos-15
+* Drop support for Tcl 8.5
+* Add support for Tcl 9.0
+* Drop support for Python 3.10
+* Add support for Python 3.14, 3.15
+* Better Python module cleanup via +atexit()+
 
 === 1.6.7
 

@@ -337,11 +337,19 @@ launched via +mpiexec+, +aprun+, or equivalent.
 <a name="turbine_postlaunch"></a>
 ++++
 +TURBINE_POSTLAUNCH+::
-Paste the given text into the submit script.
+(Currently supported on Slurm.)
+Paste the given text into the submit script at the end.
 Allows users to insert, e.g., commands that shutdown services or
 free storage space into the script.
-These shell commands will be inserted just after the execution is
-launched via +mpiexec+, +aprun+, or equivalent.
+These shell commands are inserted after the launcher (+srun+,
++mpiexec+, +aprun+, or equivalent) returns.
+They run once the workflow job processes have exited,
+whether or not the run succeeded.
+For example:
++
+----
+export TURBINE_POSTLAUNCH='echo "finished" >> $TURBINE_OUTPUT/status.log'
+----
 
 ==== Limited support
 

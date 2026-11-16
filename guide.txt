@@ -1494,10 +1494,10 @@ Concatenate arguments with +/+ as separator.  Cf. <<String operators>>.
 [[cmd_line]]
 === Command line arguments
 
-A powerful pair of command line processing features are available: one
-that allows you to use a type signature-like approach to starting a
-Swift/T workflow, and one that allows you to handle arguments more
-manually.
+A powerful pair of command line processing features are available:
+one that allows you to use a type function signature-like approach
+to starting a Swift/T workflow,
+and one that allows you to handle arguments more manually.
 
 [[cmd_signature]]
 ==== Type signature approach
@@ -2800,8 +2800,36 @@ be blocked and would all run at the beginning of the workflow.
 As shown, +void+ variables may be added to the output list of any
 +app+ function.  They are set automatically when the +app+ completes.
 
+[[app_env]]
+==== Environment for +app+ functions
+
 +app+ function executions can be debugged by setting environment
-variable +TURBINE_APP_DEBUG=1+.
+variable +TURBINE_APP_DEBUG=1+.  For a workflow that runs one app
++echo hello+, the output looks like this:
+
+----
+$ TURBINE_APP_DEBUG=1 swift-t -n 2 test.swift
+TURBINE_APP_DEBUG enabled
+2026-11-16 15:58:28 app:      0:000001 hostname: MY_HOSTNAME
+2026-11-16 15:58:28 app:      0:000001 io=default : echo hello
+2026-11-16 15:58:28 app:      0:000001 exec: echo hello
+hello
+2026-11-16 15:58:28 app:      0:000001 duration: 0.004
+----
+
+Each +app+ execution is assigned a label of the form +rank:counter+,
+for example +13:000042+.  The rank is the Turbine process that
+launched the app, and the counter is the number of apps that process
+has launched so far.  The label is:
+
+* Placed in the environment of the app command as
+  +TURBINE_APP_LABEL+, so that the command itself can use it, for
+  example to name output files.
+* Included in the Turbine log (see +TURBINE_LOG=1+) for each app
+  event, so that log lines for one app execution can be matched up.
+
+NOTE: The label is padded with spaces, which can be replaced as needed
+by the application.
 
 ==== App retry
 
@@ -3067,10 +3095,35 @@ Python symbols- refer to the first error in the Python stack trace.
 Due to the Python C API, error reports may be slightly better for the
 code argument and worse in the expression argument.
 
+[[python_shutdown]]
 ===== Python shutdown
 
-Use normal Python +@atexit.register+ functions to clean up when
-Swift/T shuts down.
+When the Python interpreter is finalized, Python runs any functions
+registered with +@atexit.register+.  When this happens depends on
+which function you used:
+
+* With +python()+, the interpreter is finalized after every call.
+  +@atexit+ functions therefore run at the end of each task, not at
+  the end of the workflow.  Use this for per-task cleanup.
+* With +python_persist()+, the interpreter stays in memory across
+  tasks.  Swift/T finalizes it once, when the process exits normally,
+  so +@atexit+ functions run once, at the end of the workflow.
+
+----
+import python;
+
+string s = python_persist("""
+import atexit
+log = open("results.log", "w")
+atexit.register(log.close)
+""", "'ready'");
+----
+
+NOTE: The +@atexit+ functions are not guaranteed to run if the process
+is terminated abnormally, for example after a Swift/T abort.  Do not
+rely on them to flush output that the workflow needs.  Write results
+through Swift/T +file+ values or other explicit flushed outputs
+instead by using Python features to flush.
 
 [[leaf_r]]
 ==== Calling R
@@ -3745,6 +3798,38 @@ This will create output files in the +TURBINE_OUTPUT+ directory named +
 +out-0.txt+, +out-1.txt+, etc.
 
 ++++
+<a name="turbine_cache"></a>
+++++
+
++TURBINE_CACHE_SIZE+::
+Maximum number of data items held in the Turbine local cache.  The
+cache is disabled when this is 0 or unset.  Default: disabled.
++
+Each process keeps its own cache of recently retrieved data items,
+so repeated reads of the same closed datum can be served locally
+without a round trip to the ADLB data store.  When the cache is full,
+the least recently used entry is evicted.  The Turbine data cache can
+accelerate workflows that reuse Swift/T variables that are re-read
+repeatedly by worker processes.
++
+----
+export TURBINE_CACHE_SIZE=1024
+----
+
++TURBINE_CACHE_MAX+::
+Memory budget for the Turbine local cache, in bytes.  Entries are
+evicted when the budget is exceeded, in addition to the entry limit
+set by +TURBINE_CACHE_SIZE+.  Default: 10485760 (10 MiB), but is
+dependent on also enabling +TURBINE_CACHE_SIZE+.
++
+----
+export TURBINE_CACHE_SIZE=1024
+export TURBINE_CACHE_MAX=$(( 64 * 1024 * 1024 ))
+----
++
+Set +TURBINE_LOG=1+ to see cache activity in the log.
+
+++++
 <a name="swift_path"></a>
 ++++
 
@@ -4212,6 +4297,54 @@ Swift/T provides some tools to process MPE logs.  They are available
 and
 https://github.com/swift-lang/swift-t/tree/master/mpe[documented here].  See also
 http://swift-lang.github.io/swift-t/pubs.html#Swift_MPE_2013[this paper].
+
+[[server_profiling]]
+=== Server profiling
+
+ADLB servers can report how their wall-clock time was spent.  This
+is a lighter-weight, dependency-free alternative to our MPE support
+when you only need to know whether the servers are busy,
+stealing work, or handling data requests.
+
+This feature is compiled out by default.  To build it, set this in
+your +swift-t-settings.sh+:
+
+----
+SWIFT_T_SERVER_PROFILE=1
+----
+
+Or, when configuring ADLB directly, pass
++--enable-server-profile+ to +configure+.
+
+Profiling is then enabled at run time by setting:
+
+----
+export ADLB_SERVER_PROFILE=1
+----
+
+At shutdown, each server prints one line to standard output:
+
+----
+ADLB Server Profile[2]: idle=12.345678 steal_thief=0.120000 steal_target=0.003100 task=1.200000 data=0.450000 other=0.010000 total=14.129778
+----
+
+The values are seconds of wall-clock time, accumulated per category.
+Time is charged to the innermost active category only.  The categories
+are:
+
++idle+:: Time not attributed to any other category, including
+polling and backoff in the server loop.
++steal_thief+:: Time spent initiating work steals from other servers.
++steal_target+:: Time spent serving steal requests from other servers.
++task+:: Time handling task requests: puts, gets, and iget/amget.
++data+:: Time handling data requests, such as create, store,
+retrieve, subscribe, and refcount operations.
++other+:: Time handling all remaining messages, including sync
+messages and any tag not listed above.
+
+If the line contains +leaks=N+ or +overflows=N+, the profile
+bookkeeping hit an unexpected region nesting or an error path, and the
+per-category values are approximate.
 
 [[hooks]]
 === Startup/shutdown hooks
