@@ -527,10 +527,13 @@ route_stmt:
               route_output route_branch* )
     ;
 
+// The output is a new declaration, or an existing variable
 route_output:
         /* empty */ -> ^( ROUTE_OUTPUT )
     |   COMMA t=type_prefix d=declare_rest
         -> ^( ROUTE_OUTPUT ^( DECLARATION $t $d ) )
+    |   COMMA v=var_name
+        -> ^( ROUTE_OUTPUT $v )
     ;
 
 // "match" is recognized only here, so it is not a reserved word

@@ -42,7 +42,9 @@ import exm.stc.frontend.Context;
  *   }
  * </pre>
  * t is bound to the matched key.  Every matching branch runs.  B is
- * optional, declared in the enclosing scope.
+ * optional, declared in the enclosing scope.  B may instead name an
+ * existing variable, as in route (string t, A, B): that generates no
+ * code, but some branch must use B.
  *
  * Before analysis, each route is rewritten into ordinary statements:
  * <pre>
@@ -137,8 +139,15 @@ public class Route {
     String t = keyTree.child(1).getText();
     String a = route.child(1).getText();
     SwiftAST output = route.child(2);
-    SwiftAST outputDecl =
-        (output.getChildCount() > 0) ? output.child(0) : null;
+    SwiftAST outputDecl = null;
+    String existingOutput = null;
+    if (output.getChildCount() > 0) {
+      if (output.child(0).getType() == ExMParser.DECLARATION) {
+        outputDecl = output.child(0);
+      } else {
+        existingOutput = output.child(0).getText();
+      }
+    }
 
     if (!keyType.equals("string")) {
       throw new UserException(context, CONSTRUCT + ": key variable '" + t +
@@ -150,6 +159,12 @@ public class Route {
     }
     if (outputDecl != null) {
       checkOutput(outputDecl, t, a);
+    }
+    if (existingOutput != null &&
+        (existingOutput.equals(t) || existingOutput.equals(a))) {
+      throw new UserException(context, CONSTRUCT + ": output variable '" +
+          existingOutput +
+          "' must not have the same name as the key or input array");
     }
 
     List<Branch> cases = new ArrayList<Branch>();
@@ -197,6 +212,18 @@ public class Route {
     }
     for (Branch b: all) {
       checkNoWrite(b.body, a);
+    }
+    if (existingOutput != null) {
+      // Naming an existing output generates no code, so require a use:
+      // otherwise a misspelled name would go unnoticed
+      boolean used = false;
+      for (Branch b: all) {
+        used = used || mentions(b.body, existingOutput);
+      }
+      if (!used) {
+        throw new UserException(context, CONSTRUCT + ": output variable '" +
+            existingOutput + "' is not used in any branch");
+      }
     }
 
     SwiftAST result = nil();
