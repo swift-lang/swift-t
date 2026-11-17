@@ -912,3 +912,100 @@ After reinstalling Turbine into the scratch build:
 
 So the new code is clean under valgrind on this machine, with no
 reports left at all.
+
+== route-loop-1.swift, and existing output variables (2026-11-17 16:17:39)
+
+=== route-loop-1.swift
+
+This example runs a `route` in a `foreach` loop over a nested array
+`string A[int][string]`, with each stage writing the next.  It had
+several problems:
+
+* It did not parse: the header named an existing variable,
+  `route (string t, A0, A1)`, but only a new declaration was allowed.
+  That is now supported; see below.
+* With that fixed, it runs the `pattern` branch for `k1`, `k2`, and
+  `k3`, then hangs.  Only `A[0]` is ever written, while the loop also
+  reads `A[1]` to `A[4]`, so those copies wait forever.  The branch
+  also reads `A1[t]`, probably meant to be `A0[t]`.  `A1` is assigned
+  whole and then by key, which Swift/T normally rejects; STC did not
+  report it here, which is worth checking separately.
+* Writing the next stage directly, `A[i+1][t + i] = A0[t]`, deadlocks
+  before any branch runs.  `pattern`, `match`, and `default` branches
+  wait for their input to be closed, and `A[i]` does not close while
+  the loop is still writing `A[i+1]` into the same `A`.  Chains like
+  this need `case` branches, a separate array per stage, or branches
+  that fire per key as keys arrive (the larger ADLB change).
+
+=== Existing output variables
+
+The header's third element may now be an existing variable, written
+without a type: `route (string t, A, B)`.
+
+* Grammar: `route_output` accepts a bare name as well as a
+  declaration.
+* `Route.java` generates no code for it, since branches can already
+  write any variable in scope.  It checks that the name differs from
+  the key and input, and that some branch uses it.  The second check
+  matters because, with no generated code, a misspelled name would
+  otherwise be silently accepted.
+* Tests: `25191-route-10` uses an existing output; `25192-route-11`
+  must fail to compile because the named output is unused.  The names
+  keep them after `2519-route-9` and before `252-swift-err`.  All 11
+  route tests pass.
+* Guide: the route section shows the new form and explains it.
+
+== route-loop-1.swift now works; chaining documented (2026-11-17 16:40:21)
+
+This supersedes the "route-loop-1.swift" part of the previous
+section, which described earlier versions of the file.
+
+=== What changed in the example
+
+After several revisions, `route-loop-1.swift` runs correctly: four
+stages, no waiting work.  Each `k` key passes through every stage
+(`k1` becomes `k1,0`, then `k1,0,1`, and so on), and `xy` is dropped
+at the first stage.
+
+The fix was in the program, not the compiler.  Each loop iteration now
+declares a fresh output array, fills it from the `route` branch, and
+assigns it whole afterward:
+
+----
+string A1[string];
+route (string t, A0, A1) { pattern "k+": A1[...] = A0[t] ...; }
+A[i+1] = A1;
+----
+
+`A1` is closed as soon as its own branches finish, so the next
+iteration, which copies `A[i+1]` and waits for it to be closed, can
+proceed.  The versions that failed either copied an `A[i+1]` that
+nothing ever wrote, or wrote `A[i+1][...]` from inside the branch,
+which deadlocks because `A[i]` cannot be closed while the loop is
+still writing into the same nested `A`.
+
+A recursive version also works, with each call declaring a new output
+array (`route-build/route-loop-2.swift`).
+
+=== Running it
+
+The `swift-t` first in the user's PATH is the regular install in
+`~/sfw/swift-t`, which does not have `route` yet.  To use the scratch
+build:
+
+----
+export PATH=$HOME/proj/swift-t/route-build/install/stc/bin:$PATH
+swift-t -n 3 route-loop-1.swift
+----
+
+A rebuild with `dev/build/build-swift-t.sh` would install `route` into
+`~/sfw/swift-t` permanently.
+
+=== Guide
+
+The route section has a new "Chaining routes" part with this pattern,
+tested exactly as shown (it prints `A[4]`, with a comment that
+`[0:3]` is inclusive, so the last stage writes `A[4]`).  It shows the
+expected output, notes that key order may vary, and explains why
+writing the next stage directly deadlocks.  Swift/T arrays have no
+fixed bounds, so `A[4]` is valid once the last stage assigns it.
