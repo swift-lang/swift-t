@@ -87,11 +87,15 @@ fi
 # 2. TURBINE_DEFAULT_HOME - the build-time setting
 TURBINE_HOME=${TURBINE_HOME:-${TURBINE_DEFAULT_HOME}}
 
-if (( DEBIAN_BUILD ))
+# TURBINE_TOP holds export/ (the standard library) and etc/help/.
+# The Debian layout applies only to the packaged Turbine:
+# a user-set TURBINE_HOME is a normal installation or source tree.
+if (( DEBIAN_BUILD )) &&
+   [[ ${TURBINE_HOME} == "${TURBINE_DEFAULT_HOME}" ]]
 then
-  TURBINE_TOP=${TURBINE_DEFAULT_HOME}/lib/turbine
+  TURBINE_TOP=${TURBINE_HOME}/lib/turbine
 else
-  TURBINE_TOP=${TURBINE_DEFAULT_HOME}
+  TURBINE_TOP=${TURBINE_HOME}
 fi
 
 if [[ ! -x "${TURBINE_HOME}/bin/turbine" ]]

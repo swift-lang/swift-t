@@ -235,7 +235,7 @@ argp_check(int max)
 (float res[]) range_float_step(float start, float end, float step) "turbine" "0.0.2" "range_float_step"
   [ "set <<res>> [ turbine::build_range_float_dict <<start>> <<end>> <<step>> ]" ];
 @pure @implements=size
-<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
+<K, V> (int n) size(V A[K]) "turbine" "0.0.5" "container_size";
 @pure @implements=contains
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains";
 
@@ -329,13 +329,14 @@ argp_check(int max)
   "set <<o>> <<i>>" // Use Tcl string conversion
 ];
 
+// Keys are preserved, so any key type is accepted
 @pure
-<T> (string O[]) array_repr(T I[]) "turbine" "0.4.0" [
+<K, V> (string O[K]) array_repr(V I[K]) "turbine" "0.4.0" [
   "set <<O>> <<I>>" // Use Tcl string conversion
 ];
 
 @pure
-<T> (string O[]) keys_string (T I[]) "turbine" "0.4.0" [
+<K, V> (string O[]) keys_string (V I[K]) "turbine" "0.4.0" [
   "set <<O>> [ turbine::keys <<I>> ]" // Use Tcl string conversion
 ];
 

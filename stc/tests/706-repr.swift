@@ -20,6 +20,24 @@ main () {
   assertEqual(S[1], "2", "S[1]");
   assertEqual(S[2], "3", "S[2]");
 
+  // array_repr() preserves keys of any type
+  string D[string] = { "k1": "v1", "k2": "v2" };
+  string DR[string] = array_repr(D);
+  assertEqual(DR["k1"], "v1", "DR[k1]");
+  assertEqual(DR["k2"], "v2", "DR[k2]");
+
+  float FD[string] = { "pi": 3.14 };
+  string FR[string] = array_repr(FD);
+  assertEqual(FR["pi"], fromfloat(3.14), "FR[pi]");
+
+  int N[string][string] = { "outer": { "inner": 123 } };
+  string NR[string] = array_repr(N);
+  assertEqual(NR["outer"], "inner 123", "NR[outer]");
+
+  int E[];
+  string ER[] = array_repr(E);
+  assertEqual(size(ER), 0, "size(ER)");
+
   // Check we can convert to Tcl dict.  Order is undetermined
   string arrayRepr = repr(["quick", "brown", "fox"]);
   assert(find(arrayRepr, "0 quick", 0, -1) >= 0, "quick");

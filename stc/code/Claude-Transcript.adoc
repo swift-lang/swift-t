@@ -1,0 +1,112 @@
+= STC — Claude Session Notes
+:date: 2026-11-17
+
+Notes on STC and the Swift/T language and builtins.  Anaconda
+packaging issues are tracked separately in
+`dev/conda/claude-transcript.adoc`.
+
+== Array builtins now accept any key type (2026-11-17 11:41:11)
+
+=== What happened
+
+A small test program, `shunt-1.swift`, failed to compile.  It called
+`array_repr()` on a dictionary (an array with string keys), and STC
+rejected it: `array_repr()` only accepted arrays with integer keys.
+
+The `shunt` code in that file is commented out.  `shunt` is not a
+Swift/T feature yet, so it was not part of the problem.
+
+=== Why array_repr exists at all
+
+`repr()` turns anything, including a whole array, into a single
+string.  `array_repr()` is different: it converts each element to a
+string but keeps the array, so you can still index it, loop over it,
+or join it with a separator of your choice.
+
+The integer-key limit was never a real requirement.  The function
+just copies the array and lets Tcl turn the values into strings,
+which works for any keys.  Only its declared type was too narrow.
+
+=== What changed
+
+* `array_repr()` now accepts arrays with any key type and returns an
+  array with the same keys.
+* The STC test for it (`706-repr`) gained cases for string keys,
+  float values, a nested dictionary, and an empty array.
+* The guide entry was rewritten to explain the difference from
+  `repr()` and to note that older releases (up to v1.7.0) only
+  accept integer keys.
+
+== size(), keys_string(), and TURBINE_HOME (2026-11-17 11:54:03)
+
+=== Two more functions had the same limit
+
+While testing, `size()` turned out to have the same problem: you
+could not get the size of a dictionary.  `keys_string()` did too,
+which made it nearly useless, since its whole purpose is to return
+the keys of an array, and string keys are the common case.
+
+Both now accept any key type.  Neither implementation needed to
+change, only the declarations.  `keys_integer()` was left alone,
+because it returns integers and only makes sense for integer keys.
+
+=== TURBINE_HOME did not affect STC
+
+Setting `TURBINE_HOME` is supposed to tell STC which Turbine to use,
+including where to find the standard library.  STC's own help text
+says so.  In practice STC always used the Turbine it was built
+against and ignored the setting.  That made it impossible to test
+standard-library changes without reinstalling.
+
+This is fixed in `stc/code/etc/stc-config.sh`.  STC now follows
+`TURBINE_HOME`.  When it is not set, nothing changes.  Debian
+package installs keep their special directory layout unless the
+user points `TURBINE_HOME` somewhere else.
+
+=== Testing standard-library changes without reinstalling
+
+With the fix, you can try edits to the Swift files under
+`turbine/code/export/` like this:
+
+----
+TURBINE_HOME=$PWD/turbine/code stc test.swift test.tic
+turbine -n 2 test.tic
+----
+
+The first line compiles against the source tree's standard library.
+The second runs the result with your installed Turbine.  This works
+as long as the change only affects declarations, as here, and not
+the Tcl runtime code.
+
+=== Tests
+
+All three tests were run this way and pass:
+
+* `706-repr`: `array_repr()` with the new key types.
+* `480-size`: `size()` of dictionaries, including an empty one.
+* `708-keys`: new; there were no tests of `keys_string()` or
+  `keys_integer()` before.  The checks accept the keys in any order,
+  since the order is not guaranteed.
+
+Each new test fails to compile against the old installed Swift/T,
+so it really covers the change.  Deliberately breaking one
+assertion made the test fail, which confirms the checks run.
+
+Test files are ordered by name, not by number.  A four-digit name
+such as `7061-keys` sorts right after `706-repr`, which is useful for
+keeping related tests together.
+
+=== Docs
+
+The guide entries for `size()` and `keys_string()` now say they
+accept any key type, with the same note about older releases.
+`size()` also says that it waits until the array is complete, and
+both keys functions say that the key order is not guaranteed.
+
+=== Still to do
+
+* Rebuild and install Swift/T so the installed copy has the new
+  declarations and the config fix.
+* `shunt-1.swift` still will not compile, for a separate reason:
+  line 20 passes an array to `trace()`, which only accepts single
+  values.

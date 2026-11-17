@@ -18,4 +18,14 @@ main
   assertEqual(1, size([3:5:3]), "test step 1");
   assertEqual(2, size([3:6:3]), "test step 2");
   assertEqual(2, size([3:7:3]), "test step 3");
+
+  // Keys and elements of any type
+  string D[string] = { "a": "x", "b": "y", "c": "z" };
+  assertEqual(3, size(D), "size(D)");
+
+  float F[string] = { "pi": 3.14 };
+  assertEqual(1, size(F), "size(F)");
+
+  string E[string];
+  assertEqual(0, size(E), "size(E)");
 }
