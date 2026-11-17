@@ -84,7 +84,19 @@ jobs:
           export STC=/tmp/swift-t-install/stc/bin/stc
           export TURBINE_HOME=/tmp/swift-t-install/turbine
           export VALGRIND=$(which valgrind)
-          if [[ ${{ matrix.valgrind }} == no ]] ; then VALGRIND="" ; fi
+          SAMPLE=()
+          if [[ ${{ matrix.valgrind }} == no ]]
+          then
+            VALGRIND=""
+          else
+            # Valgrind is slow: run a sample of 5 consecutive tests,
+            # from a random starting offset
+            COUNT=5
+            TOTAL=$( ls stc/tests/*.swift | wc -l )
+            OFFSET=$(( RANDOM % (TOTAL - COUNT + 1) ))
+            echo "Valgrind sample: ${COUNT} tests from offset ${OFFSET} of ${TOTAL}"
+            SAMPLE=( -k ${OFFSET} -n ${COUNT} )
+          fi
           cd stc/tests
           set -x
-          ./run-tests.zsh -O${{ matrix.opt-level }} -e
+          ./run-tests.zsh -O${{ matrix.opt-level }} -e ${SAMPLE[@]}
