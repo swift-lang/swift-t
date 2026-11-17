@@ -868,6 +868,7 @@ Arrays may be used as inputs or outputs of functions.
 
 Arrays are part of Swift dataflow semantics. An array is closed
 when all possible insertions to it are complete.
+
 ----
 (int B[]) f(int j)
 {
@@ -900,7 +901,8 @@ int C[] = [4,5,6];
 ----
 
 === Nested arrays
-Swift allows arrays of arrays: nested arrays.  They can be declared and
+
+Swift/T allows arrays of arrays: nested arrays.  They can be declared and
 assigned as follows:
 
 ----
@@ -3230,6 +3232,16 @@ to Julia as a shared library, enabling better performance than calling
 the +julia+ program (which may be done by using a normal Swift
 <<app_functions,app function>>).
 
+By default the Julia interpreter is initialized once per process and
+kept for later calls.  To reinitialize it before every call, set:
+
+----
+export TURBINE_JL_RESTART=1
+----
+
+This clears any Julia state left by earlier calls, at the cost of
+restarting the interpreter each time.
+
 [[leaf_jvm]]
 ==== Calling JVM languages
 
@@ -4878,7 +4890,8 @@ For more information, see the link:pubs.html[Swift/T Publications].
 [[citing]]
 == Citing Swift/T
 
-If you are using Swift/T as a computer science reference, please cite:
+If you are using Swift/T as a computer science reference,
+or in an application study, please cite:
 
 *Compiler techniques for massively scalable implicit task parallelism* +
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster. +
