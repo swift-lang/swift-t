@@ -1091,6 +1091,132 @@ printf("b: %i\n", b);
 
 *Note:* there is no fall-through between cases in switch statements.
 
+[[route]]
+==== Route statement
+
+The +route+ statement runs code for the keys of a string-keyed array,
+choosing branches by key.  It is available after v1.7.0.
+
+----
+string A[string];
+A["k1"] = "v1";
+A["k2"] = "v2";
+A["k3"] = "v3";
+A["xy"] = "vxy";
+
+route (string t, A, string B[string]) {
+  case "k1":
+    trace("k1:", t, A[t]);
+    B["k5"] = t + "b";
+  case "k2":
+    trace("k2:", t);
+  pattern "[kj]+":
+    trace("pattern:", t);
+  match "k*":
+    trace("match:", t);
+  default:
+    trace("default:", t);
+}
+trace(repr(B));
+----
+
+The header names the key variable (+t+, which must be a +string+),
+the input array (+A+), and optionally an output variable (+B+).  In
+each branch, +t+ is the key that the branch matched; use +A[t]+ for
+the value.
+
+Every branch that matches a key runs for that key, in parallel.  In
+the example, +k1+ runs its +case+ branch and both the +pattern+ and
++match+ branches, while +xy+ runs only +default+.  There are four
+kinds of branch:
+
++case "_key_":+:: Runs when +_key_+ is inserted into +A+, without
+waiting for the rest of +A+.  If +A+ is closed without +_key_+, the
+branch does not run.
+
++pattern "_regexp_":+:: Runs once for each key that the regular
+expression matches, after +A+ is closed.  The match is partial, as
+with Tcl +regexp+: +[kj]&#43;+ matches any key containing +k+ or +j+.
+Add anchors to match a whole key: +&#94;[kj]&#43;$+.  The syntax is that of
+https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm[Tcl regular
+expressions].
+
++match "_glob_":+:: Runs once for each key that the shell-style
+pattern matches, after +A+ is closed.  The pattern must match the
+whole key, as with Tcl +string match+: +&#42;+ matches any characters,
++?+ any one character, and +[...]+ a set of characters.
+
++default:+:: Runs once for each key that no other branch matched,
+including +case+ branches, after +A+ is closed.
+
+A branch runs until the next branch label or the closing brace.  At
+most one +default+ is allowed, and +case+ labels must be distinct.
+
+The output variable +B+ is declared in the enclosing scope, so it is
+visible after the +route+ statement.  Branches may write to it.  It
+is closed once every branch has run or been skipped, so it cannot be
+closed before +A+ is.  A branch may not write to +A+ itself.
+
+The output may instead be an existing variable, named without a type:
+
+----
+string B[string];
+route (string t, A, B) {
+  case "k1":
+    B[t] = A[t] + "!";
+}
+----
+
+Branches can write any variable in scope, so naming an existing
+output only documents which variable the branches fill in.  At least
+one branch must use it, so that a misspelled name is reported.
+
+===== Chaining routes
+
+To pass keys through several stages, where each stage's output is the
+next stage's input, give each stage its own output array and assign
+it whole when the stage is done:
+
+----
+string A[int][string];
+A[0]["k1"] = "v1";
+A[0]["k2"] = "v2";
+A[0]["xy"] = "vxy";
+
+// [0:3] is inclusive: stages 0 to 3 write A[1] to A[4]
+foreach i in [0:3]
+{
+  string A0[string] = A[i];
+  string A1[string];
+  route (string t, A0, A1)
+  {
+    pattern "k+":
+      A1[t + "," + i] = A0[t] + ",v" + i;
+  }
+  A[i+1] = A1;
+}
+trace(repr(A[4]));
+----
+
+This prints the last stage, in which each key has passed through all
+four stages (the order of the keys may vary):
+
+----
+trace: k1,0,1,2,3 v1,v0,v1,v2,v3 k2,0,1,2,3 v2,v0,v1,v2,v3
+----
+
+Each +A1+ is closed as soon as its stage's branches finish, so the
+next stage can start.  Do not write the next stage directly, as in
++A[i+1][...] = ...+ inside a branch: +pattern+, +match+, and
++default+ branches wait for their input to be closed, and +A[i]+
+cannot be closed while the loop is still writing into +A+, so the
+program deadlocks.  A recursive function that declares a new output
+array in each call also works.
+
++match+ is only a label inside a +route+ body; it may still be used
+as an ordinary name.  +route+ and +pattern+ are
+<<reserved_words,reserved words>>.
+
 === Iteration
 
 Iteration is performed with the +foreach+ and +for+ statements.
@@ -1318,6 +1444,12 @@ Obtain the number of entries in array +A+.  Blocks until +A+ is
 closed.  The key type +K+ may be any type, e.g. +string[string]+.
 (Releases up to v1.7.0 accept only integer-indexed arrays.)
 
++route_arrives(A[string], string key) -> boolean+::
+Returns +true+ when +A[key]+ is inserted, or +false+ if +A+ is
+closed without it.  Does not wait for +A+ to be closed if the key is
+inserted.  The <<route,route statement>> uses this for its +case+
+branches.  Available after v1.7.0.
+
 +contains(A[], key) -> boolean+::
 Test that future +A[key]+ exists.  This function blocks until +A+ is
 closed.  Consumers of +A[key]+ may block again until +A[key]+ is
@@ -1421,6 +1553,19 @@ Equivalent to the Swift/T plus (+++) operator.
 
 +length(string) -> int+::
 Obtain length of string.
+
++regexp_test(string regexp, string s) -> boolean+::
+Returns +true+ if the regular expression matches any part of +s+.
+Add anchors (+&#94;+ and +$+) to match all of +s+.
+(This function is implemented with the Tcl regular expressions
+https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm[documented here].)
+Available after v1.7.0.
+
++glob_test(string glob, string s) -> boolean+::
+Returns +true+ if the shell-style glob pattern matches all of +s+:
++&#42;+ matches any characters, +?+ any one character, and +[...]+ a
+set of characters.  (Implemented with Tcl +string match+.)
+Available after v1.7.0.
 
 *Import:* +string+
 
@@ -4897,17 +5042,59 @@ names of variables, functions, types, or struct fields:
 app       builtin   case      const     deep      default
 else      false     for       foreach   global    if
 import    in        inf       iterate   NaN       pattern
-pragma    stderr    stdin     stdout    switch    true
-type      typedef   until     wait
+pragma    route     stderr    stdin     stdout    switch
+true      type      typedef   until     wait
 ----
 
-+pattern+ is reserved for future use, after v1.7.0.  Programs that
-use it as a name must rename it.
++pattern+ and +route+ are reserved after v1.7.0, for the
+<<route,route statement>>.  Programs that use them as names must
+rename them.
 
 Some words are recognized specially only in particular statements,
 and remain ordinary names everywhere else:
-<<arguments,+arguments+>>, <<flags,+flags+>>, and
-<<cmd_usage,+description+>>.
+<<arguments,+arguments+>>, <<flags,+flags+>>,
+<<cmd_usage,+description+>>, and +match+ (a branch label inside a
+<<route,+route+>> statement).
+
+[[editor_support]]
+== Editor support
+
+The Swift/T source tree provides syntax highlighting for Vim and
+Emacs, in +stc/code/etc/+.  They are not installed with Swift/T: copy
+them from a source package or the
+https://github.com/swift-lang/swift-t/tree/master/stc/code/etc[GitHub
+repository].
+
+=== Vim
+
+Highlighting for Swift/T files (+*.swift+).  Copy the files to your
++.vim+ directory:
+
+----
+$ mkdir -p ~/.vim/syntax ~/.vim/ftdetect
+$ cp stc/code/etc/vim/syntax/swift.vim  ~/.vim/syntax
+$ cp stc/code/etc/vim/ftdetect/swift.vim ~/.vim/ftdetect
+----
+
+=== Emacs
+
++swift-t-mode+ provides highlighting and indentation, including for
++switch+ and +route+ branch bodies.  It is named +swift-t-mode+ so
+that it does not clash with +swift-mode+, the Emacs package for
+Apple's Swift language.
+
+Copy +stc/code/etc/emacs/swift-t-mode.el+ to a directory on your
+Emacs load path, then add to your Emacs init file:
+
+----
+(add-to-list 'load-path "~/.emacs.d/lisp")
+(autoload 'swift-t-mode "swift-t-mode" "Swift/T mode" t)
+(add-to-list 'auto-mode-alist '("\\.swift\\'" . swift-t-mode))
+----
+
+If you also edit Apple Swift, leave out the +auto-mode-alist+ line,
+and use +M-x swift-t-mode+ or a first line of
++// -&#42;- mode: swift-t -&#42;-+ in each Swift/T file.  See +stc/code/etc/emacs/README.adoc+ for more.
 
 == Model exploration workflows
 
