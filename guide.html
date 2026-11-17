@@ -1355,6 +1355,7 @@ type of the variable is omitted and there was no prior declaration of
 the variable, then the type of the variable is automatically inferred
 based on the type of the expression on the right hand side of the
 assignment.</p></div>
+<div class="paragraph"><p>A variable name may not be one of the <a href="#reserved_words">reserved words</a>.</p></div>
 <div class="paragraph"><p>The scope of a variable is limited to the code block in which the
 declaration appears.  Two variables with the same name cannot be
 declared in the same block.  <strong>Shadowing</strong> of variables, where a
@@ -1941,7 +1942,7 @@ int B[] = [start:stop-1:step];</code></pre>
 </div>
 <div class="sect2">
 <h3 id="_nested_arrays">10.6. Nested arrays</h3>
-<div class="paragraph"><p>Swift allows arrays of arrays: nested arrays.  They can be declared and
+<div class="paragraph"><p>Swift/T allows arrays of arrays: nested arrays.  They can be declared and
 assigned as follows:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -2363,11 +2364,13 @@ where there is no natural dataflow progress.
 aliases for this function.)</p></div>
 </dd>
 <dt class="hdlist1">
-<code>size(A[]) &#8594; int</code>
+<code>size(A[K]) &#8594; int</code>
 </dt>
 <dd>
 <p>
-Obtain the size of array <code>A</code>
+Obtain the number of entries in array <code>A</code>.  Blocks until <code>A</code> is
+closed.  The key type <code>K</code> may be any type, e.g. <code>string[string]</code>.
+(Releases up to v1.7.0 accept only integer-indexed arrays.)
 </p>
 </dd>
 <dt class="hdlist1">
@@ -2386,16 +2389,19 @@ stored.
 <dd>
 <p>
 Returns a contiguous integer-indexed array, starting from 0, that maps to the
-integer keys in <code>A</code>.
+integer keys in <code>A</code>.  The order of the keys is not specified.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>keys_string(A[]) &#8594; string[]</code>
+<code>keys_string(A[K]) &#8594; string[]</code>
 </dt>
 <dd>
 <p>
 Returns a contiguous integer-indexed array, starting from 0, that maps to the
-string keys in <code>A</code>.
+keys in <code>A</code>, as strings.  The key type <code>K</code> may be any type; for example,
+integer keys are returned as <code>"0"</code>, <code>"1"</code>, &#8230;.
+The order of the keys is not specified.
+(Releases up to v1.7.0 accept only integer-indexed arrays.)
 </p>
 </dd>
 </dl></div>
@@ -2440,11 +2446,11 @@ The ordering of <code>result</code> will be the same as in <code>A</code>.
 </p>
 </dd>
 <dt class="hdlist1">
-<code>pick_regexp(string pattern, string A[]) &#8594; string result[]</code>
+<code>pick_regexp(string regexp, string A[]) &#8594; string result[]</code>
 </dt>
 <dd>
 <p>
-Select strings from <code>A</code> matching regular expression <code>pattern</code>.
+Select strings from <code>A</code> matching regular expression <code>regexp</code>.
 (This function is implemented with the Tcl regular expressions
 <a href="https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm">documented here</a>.)
 </p>
@@ -2543,13 +2549,19 @@ Convert any type to internal
 </p>
 </dd>
 <dt class="hdlist1">
-<code>array_repr(*[])  &#8594; string[]</code>
+<code>array_repr(A[K]) &#8594; string[K]</code>
 </dt>
 <dd>
 <p>
-Convert array of any type to internal
-          string representation (exact format not guaranteed
-          to be consistent, even from call to call)
+Convert each element of array <code>A</code>
+          to internal string representation (exact format not
+          guaranteed to be consistent, even from call to call).
+          Unlike <code>repr()</code>, which returns one string for the whole
+          array, the result is an array with the same keys as <code>A</code>,
+          so it can be indexed, iterated, or joined.
+          The key type <code>K</code> and the element type may be any type,
+          e.g. <code>string[string]</code> or <code>float[string]</code>.
+          (Releases up to v1.7.0 accept only integer-indexed arrays.)
 </p>
 </dd>
 </dl></div>
@@ -2881,7 +2893,7 @@ it is given a literal default:</p></div>
 </div></div>
 <div class="paragraph"><p><code>flags()</code> may be combined with <code>arguments()</code> or with <code>main()</code>
 parameters.</p></div>
-<div class="paragraph"><p><code>arguments</code> and <code>flags</code> are not reserved words.  They are recognized
+<div class="paragraph"><p><code>arguments</code> and <code>flags</code> are not <a href="#reserved_words">reserved words</a>.  They are recognized
 only as a statement introducing one of these declarations, and remain
 ordinary identifiers everywhere else, so existing programs that use
 either as a variable, parameter or function name still compile.</p></div>
@@ -2938,7 +2950,7 @@ argument with a default, a flag with a default, or a <code>boolean</code> flag&#
 <div class="paragraph"><p>The documentation strings are optional.  With none at all the usage
 message still reports the signature of the command line and the default
 values, which is usually enough to run the program.</p></div>
-<div class="paragraph"><p><code>description</code> is not a reserved word: it introduces the program
+<div class="paragraph"><p><code>description</code> is not a <a href="#reserved_words">reserved word</a>: it introduces the program
 description only when it is written immediately before a colon inside
 <code>arguments()</code>, so <code>arguments(string description)</code> still declares an
 ordinary variable.</p></div>
@@ -5307,6 +5319,14 @@ the <code>julia</code> program (which may be done by using a normal Swift
 <a href="#app_functions">app function</a>).</td>
 </tr></table>
 </div>
+<div class="paragraph"><p>By default the Julia interpreter is initialized once per process and
+kept for later calls.  To reinitialize it before every call, set:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>export TURBINE_JL_RESTART=1</code></pre>
+</div></div>
+<div class="paragraph"><p>This clears any Julia state left by earlier calls, at the cost of
+restarting the interpreter each time.</p></div>
 </div>
 <div class="sect3">
 <h4 id="leaf_jvm">14.6.4. Calling JVM languages</h4>
@@ -6387,6 +6407,7 @@ also be accessed by <a href="#hooks">hooks</a>.</p></div>
 </dt>
 <dd>
 <p>
+A unique value for each <code>app</code> task.
 See <a href="#app_env">Environment for <code>app</code> functions</a>.
 </p>
 </dd>
@@ -7661,28 +7682,50 @@ language-specific package installers (Python <code>pip</code>, R
 </div>
 </div>
 <div class="sect1">
-<h2 id="_model_exploration_workflows">19. Model exploration workflows</h2>
+<h2 id="reserved_words">19. Reserved words</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>These words are reserved in Swift/T.  They cannot be used as the
+names of variables, functions, types, or struct fields:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>app       builtin   case      const     deep      default
+else      false     for       foreach   global    if
+import    in        inf       iterate   NaN       pattern
+pragma    stderr    stdin     stdout    switch    true
+type      typedef   until     wait</code></pre>
+</div></div>
+<div class="paragraph"><p><code>pattern</code> is reserved for future use, after v1.7.0.  Programs that
+use it as a name must rename it.</p></div>
+<div class="paragraph"><p>Some words are recognized specially only in particular statements,
+and remain ordinary names everywhere else:
+<a href="#arguments"><code>arguments</code></a>, <a href="#flags"><code>flags</code></a>, and
+<a href="#cmd_usage"><code>description</code></a>.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_model_exploration_workflows">20. Model exploration workflows</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The <a href="http://www.mcs.anl.gov/~emews/tutorial">EMEWS Tutorial</a> covers
 building and running advanced model exploration workflows in Swift/T.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_developers_guide">20. Developers' guide</h2>
+<h2 id="_developers_guide">21. Developers' guide</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>For more information, see the <a href="dev.html">Developers' Guide</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_publications">21. Publications</h2>
+<h2 id="_publications">22. Publications</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>For more information, see the <a href="pubs.html">Swift/T Publications</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="citing">22. Citing Swift/T</h2>
+<h2 id="citing">23. Citing Swift/T</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>If you are using Swift/T as a computer science reference, please cite:</p></div>
+<div class="paragraph"><p>If you are using Swift/T as a computer science reference,
+or in an application study, please cite:</p></div>
 <div class="paragraph"><p><strong>Compiler techniques for massively scalable implicit task parallelism</strong><br />
 Timothy G. Armstrong, Justin M. Wozniak, Michael Wilde, and Ian T. Foster.<br />
 Proc. SC 2014. <br />
@@ -7704,7 +7747,7 @@ Technical Report ANL/DSL-TM-377, 2018.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2026-11-16 16:39:15 CST
+ 2026-11-17 13:33:22 CST
 </div>
 </div>
 

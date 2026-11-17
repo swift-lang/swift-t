@@ -1268,6 +1268,55 @@ environment variable</a> <code>TURBINE_LAUNCH_OPTIONS</code> will be applied to
 <code>mpiexec</code>, <code>srun</code>, or <code>aprun</code> as appropriate.</p></div>
 </div>
 <div class="sect3">
+<h4 id="mpi_cp">Copying files to all nodes: mpi-cp</h4>
+<div class="paragraph"><p>Turbine installs <code>mpi-cp</code> in <code>turbine/bin</code>.  It copies one or more
+files into a destination directory, using MPI.  The last argument is
+the destination directory; all earlier arguments are source files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec -n 4 --ppn 1 mpi-cp input.dat config.txt /tmp/local</code></pre>
+</div></div>
+<div class="paragraph"><p>Launch it with <code>mpiexec</code> and one process per node, so that each node
+receives a copy.  For example, one site copies a conda environment
+tarball to <code>/tmp</code> on every node of a job, then extracts it in place
+with a second <code>mpiexec</code> run:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>mpiexec -n $NODES --ppn 1 mpi-cp $ENVIRONMENT_TAR /tmp
+mpiexec -n $NODES --ppn 1 tar xf $ENVIRONMENT_FILE</code></pre>
+</div></div>
+<div class="paragraph"><p>The destination directory is created if it does not exist.  Rank 0
+prints the destination, each file as it is copied, and the elapsed
+time in seconds.  If it is given fewer than two arguments, it prints
+a usage error and exits.</p></div>
+<div class="paragraph"><p>The same copy is available from Tcl as <code>turbine::c::copy_to</code>.  A
+common use is to stage input files to node-local storage when the
+job starts, from a leader startup hook (see
+<a href="#hooks">Startup/shutdown hooks</a>).  This example is a generic pattern;
+replace the file names and directory with your own:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code># Runs once per node, on the leader rank
+set comm [ adlb::comm_get leaders ]
+set rank [ adlb::comm_rank $comm ]
+
+# Rank 0 chooses the files; all leaders receive the list
+if { $rank == 0 } {
+  set files [ list /path/to/input.dat /path/to/params.txt ]
+}
+turbine::c::bcast $comm 0 files
+
+set local_dir /tmp/$env(USER)/myjob
+file mkdir $local_dir
+
+foreach f $files {
+  turbine::c::copy_to $comm $f $local_dir
+}</code></pre>
+</div></div>
+<div class="paragraph"><p>Use absolute paths for the source files, so that they resolve the
+same way on every node.</p></div>
+</div>
+<div class="sect3">
 <h4 id="automatic_env">Automatic environment variables</h4>
 <div class="paragraph"><p>These variables are automatically passed to the job, and are available
 in Swift/T via <code>getenv()</code>.</p></div>
@@ -4611,7 +4660,7 @@ Run with:
 <div id="footer-text">
 Version 1.6.6<br />
 Last updated
- 2026-11-16 16:11:36 CST
+ 2026-11-17 13:33:22 CST
 </div>
 </div>
 </body>
