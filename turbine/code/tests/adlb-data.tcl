@@ -39,7 +39,7 @@ if { ! [ adlb::amserver ] } {
     if { $rank == 0 } {
 	puts "iterations: $iterations"
     }
-        puts "workers:    $workers"
+    puts "workers:    $workers"
 
     for { set i 1 } { $i <= $iterations } { incr i } {
         set id [ expr $rank + $i * ($workers + 1) ]
