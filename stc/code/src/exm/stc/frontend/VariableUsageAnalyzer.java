@@ -57,6 +57,7 @@ import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.If;
 import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
+import exm.stc.frontend.tree.Route;
 import exm.stc.frontend.tree.Switch;
 import exm.stc.frontend.tree.TopLevel;
 import exm.stc.frontend.tree.Update;
@@ -290,6 +291,10 @@ class VariableUsageAnalyzer {
       case ExMParser.FLAGS:
         throw new InvalidConstructException(context, Arguments.FLAGS_CONSTRUCT
             + " declarations are only allowed at top level of program");
+
+      case ExMParser.ROUTE_STATEMENT:
+        throw new STCRuntimeError(Route.CONSTRUCT +
+            " statement was not expanded");
 
       default:
         throw new STCRuntimeError

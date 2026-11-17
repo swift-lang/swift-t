@@ -34,12 +34,26 @@
  */
 void turbine_cache_init(int size, unsigned long max_memory);
 
+/** Set by turbine_cache_init() and turbine_cache_finalize() */
+extern bool turbine_cache_active;
+
+/** False if the cache is disabled (size 0) or not initialized */
+static inline bool
+turbine_cache_enabled(void)
+{
+  return turbine_cache_active;
+}
+
 bool turbine_cache_check(turbine_datum_id td);
 
 turbine_code turbine_cache_retrieve(turbine_datum_id td,
                                     turbine_type* type,
                                     void** result, size_t* length);
 
+/**
+   Takes ownership of data, which must be malloced: it is freed when
+   evicted, at finalize, or at once if the cache is disabled
+ */
 turbine_code turbine_cache_store(turbine_datum_id td,
                                  turbine_type type,
                                  void* data, size_t length);

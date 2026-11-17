@@ -52,6 +52,8 @@ public class TopLevel {
       // so that a stray node yields a user error rather than an internal one
       case ExMParser.ARGUMENTS:
       case ExMParser.FLAGS:
+      // Expanded away by Route before this is consulted
+      case ExMParser.ROUTE_STATEMENT:
         return true;
       default:
         return false;

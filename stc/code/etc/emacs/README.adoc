@@ -1,0 +1,64 @@
+= Swift/T mode for Emacs
+
+Syntax highlighting and indentation for Swift/T programs in Emacs.
+
+The mode is called +swift-t-mode+, so that it does not clash with
++swift-mode+, the Emacs package for Apple's Swift language.
+
+== Installation
+
+Copy +swift-t-mode.el+ to a directory on your Emacs load path:
+
+----
+$ mkdir -p ~/.emacs.d/lisp
+$ cp swift-t-mode.el ~/.emacs.d/lisp
+----
+
+Then add to your init file (+&#126;/.emacs+ or +&#126;/.emacs.d/init.el+):
+
+----
+(add-to-list 'load-path "~/.emacs.d/lisp")
+(autoload 'swift-t-mode "swift-t-mode" "Swift/T mode" t)
+(add-to-list 'auto-mode-alist '("\\.swift\\'" . swift-t-mode))
+----
+
+Optionally, byte-compile it for faster loading:
+
+----
+$ emacs --batch -f batch-byte-compile ~/.emacs.d/lisp/swift-t-mode.el
+----
+
+If you also edit Apple Swift, leave out the +auto-mode-alist+ line.
+Instead, use +M-x swift-t-mode+, or make this the first line of each
+Swift/T file:
+
+----
+// -*- mode: swift-t -*-
+----
+
+== Features
+
+* Highlights reserved words, types, constants, annotations such as
+  +@pure+, preprocessor directives, and the names of functions being
+  defined.
+* Highlights +match+, +arguments+, and +flags+ only where they are
+  special: +match+ as a +route+ branch label, and +arguments()+ and
+  +flags()+ at the start of a statement.  Elsewhere they are ordinary
+  names.
+* Indents by braces.  Branch bodies in +switch+ and +route+
+  statements are indented under their +case+, +pattern+, +match+, or
+  +default+ label.  +TAB+ indents the current line, +M-x indent-region+
+  indents a selection, and typing +}+ or +:+ re-indents the line.
+* Comments with +//+, using +M-;+.
+
+== Customization
+
++swift-t-indent-offset+:: Columns per indentation level.  Default: 2.
++
+----
+(setq swift-t-indent-offset 4)
+----
+
+The keyword lists in +swift-t-mode.el+ follow the "Reserved words"
+section of the Swift/T Guide.  Update them together when the language
+changes.

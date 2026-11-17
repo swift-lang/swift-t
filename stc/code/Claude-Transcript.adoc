@@ -107,6 +107,808 @@ both keys functions say that the key order is not guaranteed.
 
 * Rebuild and install Swift/T so the installed copy has the new
   declarations and the config fix.
-* `shunt-1.swift` still will not compile, for a separate reason:
-  line 20 passes an array to `trace()`, which only accepts single
-  values.
+* `shunt-1.swift` was later changed to use `repr()` and ran
+  cleanly with the `shunt` block commented out.  It now contains a
+  live `shunt` block, which STC does not support yet; see below.
+
+== Feasibility of the proposed shunt statement (2026-11-17 12:35:19)
+
+=== The example
+
+`shunt-1.swift` (as of 12:34) sketches a new statement:
+
+----
+string A[string];
+A["k1"] = "v1";
+A["k2"] = "v2";
+A["xy"] = "vxy";
+
+shunt (string t, A, string B[string]) {
+  case "k1":
+    trace("k1a: ", t, A[t]);
+    trace("k1b: ", t, A[t] + "b");
+    B["k5"] = t + "b";
+
+  case "k2":
+    trace("k2: ", t);
+  match "k*":
+    trace("match: ", t);
+    // regexp branches fire when A is closed
+
+  default:
+    trace("default: ", t);
+}
+
+trace(repr(A));
+trace(repr(B));
+----
+
+=== What it should do, as I understand it
+
+* `shunt` looks at the keys of the array `A` and runs a branch for
+  each key that matches one.  Matching branches run in parallel.
+* `t` is the matched key, not the value.  A branch reads the value
+  with `A[t]`.
+* A `case` branch runs as soon as its key appears in `A`, without
+  waiting for the rest of `A`.  If the key never appears, the branch
+  is skipped once `A` is complete.
+* A `match` branch runs for each key matching its pattern, but only
+  after `A` is complete, since only then are all keys known.
+* `default` handles keys that no other branch takes.
+* `B` is an optional output array declared in the header.  It is
+  visible after the `shunt`, and it is complete once every branch
+  has run or been skipped.
+
+Because skipped branches can only be ruled out once `A` is
+complete, `B` cannot be complete before `A`.  So the last line,
+`trace(repr(B))`, always waits for `A`, even though `case` branches
+run early.
+
+=== Open questions
+
+* *Can one key run more than one branch?*  `k1` and `k2` match both
+  their `case` and `match "k*"`.  If all matching branches run, the
+  example prints the `case` lines for `k1` and `k2`, `match:` for
+  both, and `default: xy`.  If only the first matching branch runs,
+  as in `switch`, the `match` branch never runs here.
+* *Is `"k*"` a glob or a regular expression?*  The comment says
+  regexp, but the pattern reads like a glob.  As an unanchored
+  regular expression, `k*` (zero or more `k`) matches every key,
+  including `xy`.  Swift/T's existing `pick_regexp()` uses Tcl
+  regular expressions.
+* *When does `default` run?*  Presumably when `A` is complete, like
+  `match`, since only then is it known that no other branch takes a
+  key.
+
+=== Syntax
+
+The syntax works as written, and branches need no semicolons.
+
+* `case` and `default` are already keywords, from `switch`.  Each
+  branch body runs until the next label or the closing brace, as in
+  `switch`.
+* `match` would be a new keyword.  In this repository it appears
+  only inside a string in one test, so reserving it is safe here.
+  To protect user programs, it could be recognized only inside a
+  `shunt` body, the way `arguments` and `flags` are recognized only
+  in their own statements.
+* `case` labels are strings here, while `switch` labels are
+  integers.  STC would check that `t` is declared with the same type
+  as the keys of `A`.
+
+=== Feasibility by branch type
+
+*`match` and `default` branches are straightforward.*  They run when
+`A` is complete, and everything they need already exists: wait for
+`A`, get its keys with `keys_string()` (which accepts string-keyed
+arrays as of today's change), test each key against the patterns,
+and run the branch for each key that matches.
+
+*`case` branches need one small runtime addition.*  They run when
+their key arrives, without waiting for `A`.  No existing primitive
+can wait for "this key arrives, or `A` is complete without it":
+
+* Waiting on `A["k2"]` is an error if `A` completes without that
+  key.  ADLB reports `UNFILLED SUBSCRIBE` when the array closes
+  (`lb/code/src/data.c`, around line 2053), the same error as
+  reading an array element that is never assigned.
+* `exists()` checks for the key once, right away.
+* `contains()` waits for `A` to be complete, which is what `case`
+  branches must avoid.
+
+The fix is an optional subscription in ADLB: when the array closes,
+it notifies the waiter instead of raising the error.  Turbine would
+wrap this as a builtin that gives `true` when the key arrives and
+`false` if `A` completes without it.
+
+*STC could then rewrite `shunt` into existing statements.*  Each
+`case` branch becomes roughly:
+
+----
+boolean p = arrives(A, "k1");
+wait (p) {
+  if (p) {
+    string t = "k1";
+    // branch body
+  }
+}
+----
+
+The `match` and `default` branches become a `wait (A)` with a loop
+over the keys.  Writes to `B` inside any branch are handled by STC's
+normal tracking of who still writes to an array, so `B` becomes
+complete when every branch finishes, with no special handling.  Most
+of the STC work is the grammar rule and the scoping: `B` belongs to
+the enclosing scope, and `t` to each branch.
+
+An earlier version of this design had `match` and `default` branches
+firing as keys arrived.  That would have needed a new kind of ADLB
+listener that matches many keys and fires repeatedly.  Firing them
+when `A` is complete, as the example now says, avoids that work.
+
+=== Rough effort
+
+* ADLB optional subscription and the Turbine builtin: small.
+* STC grammar, scoping, and rewriting: moderate.
+* `match` and `default`: small once the rewriting exists, since
+  they use only existing primitives.
+
+Two orders are possible.  The grammar, scoping, `match`, and
+`default` use only existing primitives, so they could be built and
+tested first, with `case` branches added once the ADLB change
+lands.  Or the ADLB change could come first, since it is small and
+the `case` branch is the main point of the feature.
+
+== Shunt design update (2026-11-17 12:41:16)
+
+The example was revised (as of 12:40) and two open questions were
+answered.
+
+=== Decisions
+
+* *One key can run several branches.*  Every branch that matches a
+  key runs for it.
+* *There are two kinds of pattern branch:*
+** `match "[kj]*":` uses a regular expression.
+** `glob "k*":` uses a shell-style glob, like file name patterns.
+* Both kinds run when `A` is complete, checking every key.
+* `default:` also runs when `A` is complete, for each key that no
+  other branch matched, `case` branches included.
+
+`A` now has four keys: `k1`, `k2`, `k3`, and `xy`.
+
+=== One issue to settle: does a regexp match the whole key?
+
+The comment says match branches "use regexp on the whole array
+keys".  That could mean the pattern is tested against all the keys,
+or that it must match an entire key.  The difference matters:
+
+* *Unanchored* (Tcl's usual `regexp`): the pattern may match any
+  part of the key.  `[kj]*` means "zero or more `k` or `j`", which
+  matches an empty part of any string, so it matches all four keys,
+  including `xy`.  `default` would then never run.
+* *Anchored* (the whole key must match): `[kj]*` matches only keys
+  made entirely of `k` and `j`, so it matches none of these keys,
+  and `xy` goes to `default`.
+
+The intent is probably "keys starting with `k` or `j`".  That would
+be `[kj].*` if anchored, or `^[kj]` if not.  Anchoring would make
+`match` behave like `glob`, which always matches the whole key, so
+anchoring seems like the less surprising choice.
+
+=== Expected output, assuming anchored `[kj].*`
+
+* `k1`: both `case "k1"` lines, then `match:` and `glob:` (currently
+  the glob branch also prints `match:`).  `B["k5"]` is set to `"k1b"`,
+  since `t` is the key `"k1"`, not the value.
+* `k2`: `k2:`, then `match:` and `glob:`.
+* `k3`: `match:` and `glob:` only.
+* `xy`: `default:` only.
+* `B` ends up as `{ "k5": "k1b" }`.
+
+The `case` lines can appear early, as each key arrives.  The `match`,
+`glob`, and `default` lines appear after `A` is complete.
+
+=== Small things in the example
+
+* The `glob` branch prints `"match: "`, probably a copy from the
+  branch above.
+* The comment after `glob` ends mid-sentence ("checking the whole
+  array keys and").
+
+=== Syntax: glob must not become a reserved word
+
+`glob()` is already a library function (`files.swift`, for file name
+patterns), so making `glob` a keyword would break programs that call
+it.  The grammar already has a way around this: `arguments` and
+`flags` are matched as ordinary names, with a check on the name's
+text, so they are not reserved (`ExM.g`, around lines 373 and 428).
+A `shunt` branch label can do the same.  Inside a `shunt` body,
+`glob` followed by a string and a colon is a label, while `glob(`
+is still a function call, so the two never conflict.  `match` should
+get the same treatment, even though nothing in this repository uses
+it as a name.
+
+=== Effect on feasibility
+
+None of this adds runtime work.  When `A` is complete, one step
+walks the keys and, for each key, runs every `match` and `glob`
+branch it fits, then runs `default` if no branch fit, counting
+`case` labels as fits.  Tcl already provides both tests (`regexp`
+and `string match`), and STC knows all the labels and patterns at
+compile time.  The only new runtime piece is still the ADLB optional
+subscription for `case` branches.
+
+== Shunt keywords settled; pattern reserved (2026-11-17 12:57:21)
+
+The example went through several revisions (last saved 12:51).  The
+earlier sections above describe intermediate versions; this section
+records where the design ended up.
+
+=== Branch kinds, final
+
+----
+case "k1":       exact key; runs as soon as the key arrives
+pattern "[kj]+": regular expression; runs when A is complete
+match "k*":      shell-style glob; runs when A is complete
+default:         keys no other branch took; runs when A is complete
+----
+
+* One key can run several branches.
+* A `pattern` regexp is a partial match: `[kj]+` matches any key
+  containing a `k` or `j`.  To match a whole key, write the anchors:
+  `^[kj]+$`.  A `match` glob always matches the whole key, as in the
+  shell.
+* For the example's keys (`k1`, `k2`, `k3`, `xy`): `k1` and `k2` run
+  their `case` branch plus `pattern` and `match`; `k3` runs `pattern`
+  and `match`; `xy` runs only `default`.  `B` ends up as
+  `{ "k5": "k1b" }`.
+
+=== Why these names
+
+Along the way the glob branch was called `glob`, then `pattern`,
+and the two names were finally swapped.  `glob` was dropped because
+`glob()` is already a library function for file names.
+
+The final choice lines up with existing conventions better than the
+alternatives:
+
+* In Tcl, Swift/T's runtime language, `string match` is glob
+  matching, so `match` for globs fits.
+* In Java (`java.util.regex.Pattern`) and Python (the `pattern`
+  argument of the `re` functions), "pattern" means a regular
+  expression.
+
+It is not perfect.  Shells call globs "patterns", and Perl,
+JavaScript, and Ruby use "match" for regular expressions.  In Rust,
+Scala, OCaml, and Python 3.10, `match` means something else
+entirely: matching the structure of a value.  The closest existing
+feature is Tcl's `switch -glob` and `switch -regexp`.
+
+=== pattern is now a reserved word
+
+Done now, ahead of the `shunt` statement itself:
+
+* *Grammar:* `stc/code/src/exm/stc/ast/ExM.g` has a new token,
+  `PATTERN: 'pattern'`, next to `case` and `default`.  Nothing uses
+  it yet; it only stops `pattern` from being used as a name.
+* *Library:* the one place the standard library used `pattern` as a
+  name was the first parameter of `pick_regexp()` in
+  `turbine/code/export/string.swift`.  It is now called `regexp`, in
+  both the declaration and the Tcl template.
+* *Impact:* no other Swift code in this repository uses `pattern` as
+  a name; the other hits are inside comments or strings.  Neither
+  EMERGE-WF nor uni-impecc uses it either.  Programs elsewhere that
+  name a variable `pattern` will need to rename it.
+
+`match` was not reserved.  When `shunt` is implemented, it can be
+recognized only inside a `shunt` body, the way `arguments` and
+`flags` are recognized only in their own statements.  Those two are
+read as ordinary names, with a check on the text, so they never
+became reserved words (`ExM.g`, around lines 373 and 428).
+
+=== How it was tested
+
+STC was rebuilt from the edited grammar with `ant` in `stc/code`.
+The build writes only files that git ignores (the generated parser
+under `src/exm/stc/ast/antlr/`, `classes/`, and `lib/stc.jar`).
+
+Then a copy of the installed STC was made in a scratch directory,
+given the new `stc.jar`, and configured from the edited
+`stc-config.sh`, so that `TURBINE_HOME` could point it at the source
+tree's standard library.  With that copy:
+
+* `string pattern = "x";` now fails to parse.  The installed STC
+  still accepts it.  The error, `mismatched input 'pattern'
+  expecting LT`, is cryptic, but it is the same message as for
+  existing reserved words such as `case`.
+* These tests compile and pass with the installed Turbine runtime:
+  `707-pick-regexp` (including its check script), `563-glob`
+  (`pattern` inside a string), `980-wavefront-1` (`pattern` inside a
+  comment), and today's `706-repr`, `480-size`, and `708-keys`.
+
+The scratch copy was deleted afterward.
+
+=== Guide changes
+
+* `pick_regexp()` now shows its parameter as `regexp`.
+* New section, "Reserved words", near the end of the guide.  It
+  lists all 26 reserved words plus the literals `NaN` and `inf`,
+  notes that `pattern` is reserved after v1.7.0, and points to
+  `arguments`, `flags`, and `description` as words that are special
+  only in their own statements.
+* Links to the new section from "Variable declarations" and from the
+  notes that `arguments`, `flags`, and `description` are not
+  reserved.
+* Rendered with `asciidoc` to a scratch file to check that the new
+  section and all its links resolve.  The scratch file was deleted.
+
+== Related constructs in other languages (2026-11-17 13:00:35)
+
+Question: what other languages have something like `shunt`?
+
+No language I know has a direct equivalent.  `shunt` combines three
+features that usually appear separately:
+
+. Every matching branch runs, not just the first.
+. Branches can be exact keys, regular expressions, or globs.
+. Exact branches fire as data arrives, without waiting for the
+  whole array.
+
+These notes are from general knowledge, not checked against each
+language's current documentation.
+
+=== Every matching branch runs
+
+* *awk* is the closest match for this rule.  A program is a list of
+  `pattern { action }` rules, and every rule whose pattern matches a
+  line runs.  Patterns can be regular expressions.  `shunt` is
+  roughly awk over an array's keys, with dataflow timing added.
+* *Bash `case` with `;;&`* (Bash 4) keeps testing later patterns
+  after a match.  Plain `;;` stops at the first match.
+
+=== Exact, regexp, and glob branches in one construct
+
+* *Tcl `switch -exact`, `-glob`, and `-regexp`* is the nearest
+  syntax, in Swift/T's own runtime language.  But it takes one mode
+  per `switch`, runs only the first match, and is sequential.
+* *Shell `case`* uses glob patterns, with `*)` as the default.
+
+=== Branches fire as data arrives
+
+* *Linda tuple spaces* (`in` and `rd`) block until a tuple matching
+  a template appears.  This is the classic parallel-computing analog
+  of a `case` branch waiting for its key.
+* *Erlang and Elixir `receive`* dispatches messages to pattern
+  clauses as they arrive.  *Polyphonic C#*, a research language, had
+  "chords" that fire when matching messages are present.
+* *Go `select`* and *Occam `ALT`* fire on whichever channel is
+  ready first, but only one branch runs.
+
+=== Routing in workflow and streaming systems
+
+These are the closest in purpose.
+
+* *Nextflow's `branch` operator* is the closest peer among
+  scientific workflow systems.  It routes each item of a channel, as
+  it arrives, to the first matching condition, and `other: true`
+  acts as a default.  Its `multiMap` operator sends items to several
+  outputs.
+* *Kafka Streams `split()`*, *Apache Beam `Partition`*, and *Apache
+  Camel's `choice()`/`when()`/`otherwise()`* route records by
+  predicate, mostly first-match.
+* In Enterprise Integration Patterns terms, `shunt` is a
+  "content-based router" combined with a "recipient list", the
+  pattern for sending one message to several destinations.
+
+=== What seems new in shunt
+
+The mixed timing.  `case` branches fire as keys arrive, while
+`pattern`, `match`, and `default` wait for the array to complete,
+because only then is the full set of keys known.  `shunt` then
+guarantees that its output array `B` is complete after both.  Most
+stream routers either never see an end of input or, like awk,
+process one record at a time.
+
+=== Worth reading as prior art
+
+Nextflow's `branch` and awk's rule semantics, especially how each
+documents first-match versus all-match behavior.
+
+== Comparison with Nextflow (2026-11-17 13:23:51)
+
+Two questions: how Nextflow handles keyed data like this, and
+whether it scales like ADLB and MPI.  The details of `branch`,
+`multiMap`, `filter`, `collect`, `toList`, and `groupTuple`, and the
+executor defaults below, were checked against the Nextflow docs
+(https://docs.seqera.io/nextflow/reference/operator and
+https://docs.seqera.io/nextflow/reference/config/executor).  The
+rest is from general knowledge.
+
+=== Keyed data
+
+Nextflow has nothing like Swift/T's arrays, which are filled in key
+by key while other code waits on them.  A Groovy map is an ordinary
+value.  Keyed data in Nextflow is a channel, a stream of items, where
+each item is usually a `[key, value]` pair with the key first.
+`groupTuple` uses that convention by default.
+
+=== Branching
+
+* `branch` sends each item to the first matching condition only.
+  `other: true` as the last condition acts as the default.
+* `multiMap` sends every item to every output, with no condition per
+  output.
+* To run every matching branch, as `route` does, you apply one
+  `filter` per branch to the same channel.  There is no built-in
+  default in that case; you write it as the negation of every other
+  condition:
+
+----
+A = [k1: 'v1', k2: 'v2', k3: 'v3', xy: 'vxy']
+keys = channel.fromList(A.collect { k, v -> [k, v] })
+
+k1   = keys.filter { k, v -> k == 'k1' }
+k2   = keys.filter { k, v -> k == 'k2' }
+pat  = keys.filter { k, v -> k =~ /[kj]+/ }   // partial match
+glob = keys.filter { k, v -> k ==~ /k.*/ }    // glob rewritten as a regexp
+dflt = keys.filter { k, v ->
+  !(k in ['k1', 'k2']) && !(k =~ /[kj]+/) && !(k ==~ /k.*/) }
+----
+
+Groovy's `=~` is a partial match and `==~` matches the whole string,
+which mirrors the choice made for `pattern`.  Groovy has no glob
+operator, so a glob has to be rewritten as a regexp.
+
+=== Timing: an important correction
+
+In Nextflow, every operator sees each item when it arrives, so all
+of these filters, the default included, fire per key immediately.
+That works because each decision depends only on the key itself, and
+the conditions are fixed.
+
+The same is true for `route`.  Whether a key fits any `case`,
+`pattern`, or `match` branch, and therefore whether `default`
+applies, can be decided the moment the key arrives, since all the
+labels and patterns are known at compile time.  The earlier sections
+say these branches wait for `A` to be complete "since only then are
+all keys known", but no branch actually needs to know all the keys.
+
+The real reason they wait is ADLB.  It can wait for a known key, but
+it cannot report "some new key arrived".  With that kind of listener
+(the larger ADLB change mentioned earlier), every branch could fire
+on arrival.  Waiting for `A` to be complete is an implementation
+choice that keeps the first version simple, not part of the meaning
+of `route`.
+
+=== Completion and output
+
+* Nextflow channels do have an end.  `collect` and `toList` produce
+  a single value, so they wait for the whole channel.  `groupTuple`
+  produces nothing until all input arrives, unless you give an
+  expected group size, or `groupKey()` with a size per key.  That is
+  similar to `route` waiting for `A`, and `groupKey()` is like
+  knowing in advance when each key is complete.
+* There is no shared output array like `B`.  Each branch produces a
+  new channel, and you combine them with `mix` (order not kept), then
+  `collect` if you need one map.  The docs recommend keeping the key
+  in each item so channels can be merged correctly later.
+
+=== Scaling
+
+The two systems are built for different scales.
+
+*Nextflow* runs the dataflow logic in one central program (a JVM),
+which routes every channel item.  Each task is typically a separate
+job submitted to a scheduler such as Slurm, PBS, or Kubernetes, or a
+cloud batch service, and tasks pass data through files.  By default,
+cluster executors run 100 tasks at a time and check for finished
+tasks every 5 seconds (the local executor checks every 100 ms).
+These limits can be raised, but every task pays for submission,
+polling, and file staging, typically seconds.  That suits tasks of
+minutes to hours.
+
+*Swift/T* runs the whole workflow inside one MPI job, and the
+dataflow engine itself is spread across many processes: Turbine
+engines evaluate the rules, ADLB servers hold the task queues and
+the data, and work stealing balances the load.  Nothing is submitted
+per task; tasks run in-process, and data stays in memory.  The
+Swift/T home page claims 1.5 billion tasks per second.
+
+Nextflow's advantages are portability across clusters, clouds, and
+containers, resources chosen per task, resuming from cached results,
+and retrying individual tasks.  Swift/T runs in a fixed-size
+allocation, and losing an MPI process generally ends the run.  Its
+retry settings cover failed app commands, not lost processes.
+
+For `route`, ADLB and MPI is the much stronger base for fast,
+fine-grained dispatch.  One design caution: each Swift/T array lives
+on a single ADLB server, which sends all the notifications for its
+keys.  A `route` over one very large or very busy array would be
+limited by that one server.
+
+== Renamed: shunt becomes route (2026-11-17 13:23:51)
+
+The statement is now called `route`.  The example is now
+`route-1.txt`, which is identical to the last `shunt-1.swift` except
+for the keyword.  Read `shunt` in the earlier sections as `route`.
+
+=== The new name
+
+* It reads well: "route each key to the branches it matches".  It is
+  the same vocabulary used by stream processing tools and by
+  Enterprise Integration Patterns, which calls this a "content-based
+  router".
+* It is safe to reserve.  No Swift code in this repository,
+  EMERGE-WF, or uni-impecc uses `route` as a name, and neither does
+  the guide.
+* Reserving it, as was done for `pattern`, is better than the trick
+  used for `arguments`.  That trick would work, since
+  `route (...)` has the same shape as `arguments(...)`, but a program
+  calling its own function named `route(...)` as a statement would
+  then be misread.  When `route` is reserved, the guide's list of
+  reserved words should gain it.  (Not done yet.)
+* Web developers know the word from URL routing, such as Flask's
+  `@app.route` or Express's `app.route()`.  That is also dispatching
+  keys to handlers, so the association fits.
+
+=== Git branch
+
+The working branch was `shunt`, tracking `origin/shunt`.  Commands
+to rename it locally and on the remote (to be run by hand):
+
+----
+git branch -m shunt route
+git push -u origin route
+git push origin --delete shunt
+----
+
+Anyone else with the branch checked out:
+
+----
+git fetch --prune
+git branch -m shunt route
+git branch -u origin/route
+----
+
+The untracked `shunt-1.swift` is superseded by `route-1.txt`.
+
+=== Other systems that use "route"
+
+The Vector and Fluent Bit details were checked against their
+documentation
+(https://vector.dev/docs/reference/configuration/transforms/route/
+and https://docs.fluentbit.io/manual/data-pipeline/router).  The
+others are from general knowledge.
+
+* *Vector* (a log and metrics pipeline tool) is the closest match,
+  and uses the same word.  Its `route` transform checks each
+  condition separately against every event, so one event can go to
+  several routes.  Events that match no route go to a built-in
+  `_unmatched` output, whose name is reserved, much like `default`.
+  A separate `exclusive_route` transform sends each event to one
+  route only.  Together these are almost exactly `route` with its
+  all-matching branches and `default`.
+* *Fluent Bit* calls this "routing".  `Match` takes wildcard
+  patterns such as `my_*`, and `Match_Regex` takes regular
+  expressions.  This supports using `match` for globs.  A record can
+  go to several outputs, but data that matches nothing is dropped,
+  so there is no default.
+* *Apache Camel* uses "route" for a whole pipeline, from a source to
+  destinations.  Its conditional part is `choice()`, `when()`, and
+  `otherwise()`, which takes the first match.
+* *Apache NiFi*'s `RouteOnAttribute` can send a record to every
+  matching output, with an "unmatched" output for the rest.
+* *Web frameworks* use `route` as a function or decorator for URL
+  dispatch, not as a keyword.
+* As far as I know, no mainstream programming language reserves
+  `route` as a keyword.
+
+== Implementing route (2026-11-17 14:48:41)
+
+The `route` statement is now implemented across all three layers.
+Decisions made before starting: `case` branches fire as soon as their
+key arrives, which needs a runtime change; `route` is a reserved word
+and `match` is a label only inside a `route` body; only string keys
+are supported.
+
+=== The runtime piece: optional subscriptions
+
+A `case` branch has to wait for "this key is inserted, or the array
+closes without it".  Nothing could wait for that before: a rule
+waiting on a key that never arrives made ADLB report
+`UNFILLED SUBSCRIBE` when the array closed, which ends the run.
+
+The fix is an "optional" flag on a task's subscript inputs.  When the
+array closes without the key, an optional input is released like any
+other, and the task checks for the key itself.
+
+* *ADLB* (`lb/code/src`): the flag travels in `adlb_put_opts`, which
+  already goes with every task through the DPUT message and the
+  engine, so the `ADLB_Dput()` signature did not change.  The engine
+  passes it to the data layer, locally or through the server-to-server
+  subscribe message.  Listeners record it, and the close-time error is
+  skipped for optional listeners.  An optional subscription to a key
+  of an already closed array returns at once.
+* *Turbine*: `turbine::c::rule` takes a new option, `optional 1`.
+  `turbine::route_arrives` uses it to produce a boolean: true when the
+  key arrives, false if the array closes without it.
+
+=== Builtins
+
+Declared in `turbine/code/export/builtins.swift`, so they need no
+import:
+
+* `route_arrives(A, key)`: as above.
+* `regexp_test(re, s)`: true if a regular expression matches part of
+  `s`.  Implemented by `turbine::regexp_test`, which reports bad
+  expressions through `turbine_error`.
+* `glob_test(glob, s)`: true if a shell-style pattern matches all of
+  `s`, using Tcl `string match`.
+
+These were first named `route_regexp` and `route_glob`.  They were
+renamed so they read as general string functions, and are documented
+in the guide's String functions section.  The Tcl proc is not named
+`turbine::regexp`, because that would hide Tcl's own `regexp` command
+from every proc in the `turbine` namespace.
+
+=== The compiler: rewriting route
+
+The grammar (`ExM.g`) parses `route` into its own tree, and a new
+class, `frontend/tree/Route.java`, rewrites that tree into ordinary
+statements before any analysis, the same way `arguments()` is
+handled.  So the rest of STC never sees a `route`.  For the example,
+the rewrite is roughly:
+
+----
+string B[string];
+if (route_arrives(A, "k1")) { string t = "k1"; ... }
+if (route_arrives(A, "k2")) { string t = "k2"; ... }
+wait (A) {
+  foreach k in keys_string(A) {
+    boolean p = regexp_test("[kj]+", k);
+    boolean g = glob_test("k*", k);
+    if (p) { string t = k; ... }
+    if (g) { string t = k; ... }
+    if (!(k == "k1" || k == "k2" || p || g)) { string t = k; ... }
+  }
+}
+----
+
+* `string t = ...` is added only to branches that use `t`, to avoid
+  unused-variable warnings.
+* Nested routes are rewritten innermost first.
+* Errors are reported at the right line: duplicate `case` labels,
+  more than one `default`, a key variable that is not a string, an
+  output variable assigned or mapped in the header, and any branch
+  that writes to the input array (which could deadlock).
+
+The AST-building helpers that `Arguments.java` already had were moved
+into a shared class, `frontend/tree/AstBuild.java`, used by both.
+
+=== Tests
+
+* Turbine: `tests/route-arrives.tcl` drives `rule ... optional 1`
+  directly, and `tests/route-arrives-2.tcl` drives
+  `turbine::route_arrives`.  Both cover a key inserted before the
+  wait, a key inserted later, a key never inserted, and a wait
+  started after the array closed.  Both pass with one and two ADLB
+  servers (two servers exercises the server-to-server path).
+  Without `optional 1` the old `UNFILLED SUBSCRIBE` error still
+  occurs, so the test really covers the new path.
+* STC: `2511` to `2515` run and check their output; `2516` to `2519`
+  must fail to compile.  They sort right after `250-switch-1` and
+  `251-switch-2`:
+** `2511-route-1`: the full example, including how many times each
+   branch runs.
+** `2512-route-2`: a `case` branch fires before its array is closed
+   (the array's last key depends on the branch, so waiting would
+   deadlock), and a `case` for an absent key is skipped.
+** `2513-route-3`: a route inside a function, and nested routes.
+** `2514-route-4`: no output array, branches that ignore the key,
+   and patterns with spaces and brackets.
+** `2515-route-5`: `match` still works as an ordinary name.
+** `2516` to `2519`: duplicate case, writing the input array,
+   non-string key, and `route` used as a name.
+* All nine passed with leak checking, against a scratch build.
+
+All building and testing used a scratch install in `route-build/`
+(a copy of `dev/build` with its prefix changed), so
+`~/sfw/swift-t` was not touched.
+
+=== Docs and editors
+
+* Guide: a "Route statement" section next to `switch`; `route_arrives`
+  with the array functions; `regexp_test` and `glob_test` with the
+  string functions; `route` added to the reserved words; and a new
+  "Editor support" section.
+* Vim: `route` and `pattern` added to `swift.vim`.
+* Emacs: a new `swift-t-mode` in `stc/code/etc/emacs/`, with a
+  `README.adoc`.  It highlights the language and indents it,
+  including `switch` and `route` branch bodies.  It is not called
+  `swift-mode`, because that is the Emacs package for Apple's Swift.
+  Re-indenting the route tests and several other test files with it
+  left them unchanged.
+
+== Testing route, and valgrind fixes (2026-11-17 15:43:49)
+
+=== Full STC suite
+
+The whole suite ran against the scratch build with leak checking
+(`run-tests.zsh -c -l`): 536 tests, no failures, no leaks, and the
+usual 26 disabled tests.  No baseline run was needed.  After later
+changes (the `regexp_test`/`glob_test` renames and the cache fixes
+below), the nine route tests and the two Turbine `route-arrives`
+tests were run again and passed.
+
+=== The test suite had not been running valgrind
+
+`run-test.zsh` used `VALGRIND` only to scan the output for valgrind
+errors.  Valgrind itself is started by the Turbine launcher, which
+has read `TURBINE_INTERPOSER` instead of `VALGRIND` since 2018-11-14
+(commit `88e0248bf`).  The GitHub workflow `suite.yaml`, whose
+valgrind jobs date from 2026-08-27 and 2026-10-01, sets only
+`VALGRIND`, so those jobs never ran valgrind.
+
+Fixed in `stc/tests/run-test.zsh`: when `VALGRIND` names an
+executable, the script sets `TURBINE_INTERPOSER` to run it with
+Turbine's suppressions file, unless `TURBINE_INTERPOSER` is already
+set.  A bad `VALGRIND` is an error.  `About.txt` documents this.  The
+GitHub valgrind jobs will now really run valgrind, which may make them
+too slow; that will be handled later by running a sample of tests.
+
+`valgrind-patterns.grep` only recognized leaks from valgrind's summary
+line, which `-q` (set in a local `~/.valgrindrc`) suppresses.  It now
+also matches the per-leak line, "are definitely lost in loss record".
+
+=== A leak in the Turbine cache
+
+The first real valgrind run found a leak in the Turbine cache.  With
+the cache disabled, which is the default, every scalar store or read
+still serialized the value into a new buffer and passed it to
+`turbine_cache_store()`, which returned without freeing it.
+
+Fixed in `turbine/code/src/turbine/cache.c` and `cache.h`:
+
+* `Turbine_Cache_Store_Cmd` now returns before serializing anything
+  when the cache is disabled, using a new inline
+  `turbine_cache_enabled()`.  It reads a flag set by
+  `turbine_cache_init()` (only when the cache has entries) and cleared
+  by `turbine_cache_finalize()`.
+* `turbine_cache_store()` takes ownership of its buffer, as `cache.h`
+  now says, and frees it if the cache is disabled.
+
+=== Valgrind results for the new tests
+
+* STC route tests `2511` to `2515`: no invalid reads or writes, no
+  uninitialized values, and no leaks from Swift/T.  The one remaining
+  report is a single block that MPICH 4.3.0 allocates inside
+  `MPI_Init` (`MPIDIU_avt_init`) and never frees.
+* Turbine `route-arrives` and `route-arrives-2`: clean with one ADLB
+  server.  With two servers (which uses the new server-to-server
+  subscribe message), the only report is the same MPICH block, once
+  per server.
+
+That MPICH report made every test fail under valgrind on this
+machine.  CI uses OpenMPI, so it would not be affected either way.
+
+== MPICH suppression added (2026-11-17 15:52:28)
+
+`turbine/code/etc/turbine.supp` has a new entry, `mpich-avt-init`,
+next to the other `MPI_Init` suppressions.  Following the file's own
+convention, its comment gives the MPICH version (4.3.0) and the date,
+so it can be removed once MPICH fixes the leak.  It matches only
+definite leaks allocated directly in `MPIDIU_avt_init`, so it cannot
+hide leaks in Swift/T code.
+
+After reinstalling Turbine into the scratch build:
+
+* All nine STC route tests pass with `VALGRIND=valgrind` and leak
+  checking.  For `2511` to `2515`, the output shows valgrind ran on
+  both processes, with no definite leaks.
+* The Turbine `route-arrives` test with two ADLB servers under
+  valgrind no longer matches any pattern in `valgrind-patterns.grep`.
+  Before, each server reported the MPICH block.
+
+So the new code is clean under valgrind on this machine, with no
+reports left at all.

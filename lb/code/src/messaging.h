@@ -519,6 +519,8 @@ struct packed_subscribe_sync
 {
   adlb_datum_id id;
   size_t subscript_len;
+  /** Subscribe only: see xlb_data_subscribe() */
+  bool optional;
 };
 
 /**

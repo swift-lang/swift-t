@@ -380,6 +380,17 @@ namespace eval turbine {
         return [ join $A $separator ]
     }
 
+    # Swift regexp_test(): 1 if regexp re matches part of s
+    proc regexp_test { re s } {
+        try {
+            return [ regexp -- $re $s ]
+        } on error e {
+            turbine_error "error in regexp_test(): " \
+                          "regexp='$re' string='$s'\n" \
+                          "details: $e"
+        }
+    }
+
     proc pick_regexp { pattern L } {
         set result [ dict create ]
         dict for { k v } $L {

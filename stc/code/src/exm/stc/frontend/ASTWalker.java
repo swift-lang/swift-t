@@ -101,6 +101,7 @@ import exm.stc.frontend.tree.InlineCode;
 import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
+import exm.stc.frontend.tree.Route;
 import exm.stc.frontend.tree.Switch;
 import exm.stc.frontend.tree.TopLevel;
 import exm.stc.frontend.tree.TypeTree;
@@ -265,6 +266,8 @@ public class ASTWalker {
       Arguments.expandTopLevel(context, parsed.ast, module.canonicalName,
                                lineMap(),
                                module.filePath.equals(mainFilePath));
+      // Rewrite route statements into wait/foreach/if statements
+      Route.expand(context, parsed.ast, module.canonicalName, lineMap());
     }
     walkTopLevel(context, topLevelContext, parsed, pass);
     modules.exitModule();
@@ -719,6 +722,10 @@ public class ASTWalker {
           throw new InvalidConstructException(context,
               Arguments.FLAGS_CONSTRUCT
               + " declarations are only allowed at top level of program");
+
+        case ExMParser.ROUTE_STATEMENT:
+          throw new STCRuntimeError(Route.CONSTRUCT +
+              " statement was not expanded");
 
         case ExMParser.PRAGMA:
           throw new InvalidConstructException(context, "No pragmas"

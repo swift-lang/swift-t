@@ -80,7 +80,8 @@ adlb_code xlb_sync_shutdown(int target);
   Subscribe to a datum on another server
  */
 adlb_code xlb_sync_subscribe(int target, adlb_datum_id id,
-                             adlb_subscript sub, bool *subscribed);
+                             adlb_subscript sub, bool optional,
+                             bool *subscribed);
 
 adlb_code xlb_sync_notify(int target, adlb_datum_id id,
                           adlb_subscript sub);

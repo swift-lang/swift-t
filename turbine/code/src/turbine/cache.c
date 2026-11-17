@@ -40,6 +40,8 @@ static int max_entries;
 
 static bool initialized = false;
 
+bool turbine_cache_active = false;
+
 /** Avoid relying on clock for LRU */
 static long counter = 0;
 
@@ -81,6 +83,7 @@ turbine_cache_init(int size, unsigned long max_memory)
   if (max_entries == 0) return;
   table_lp_init(&entries, size);
   rbtree_init(&lru);
+  turbine_cache_active = true;
 }
 
 bool
@@ -135,7 +138,11 @@ turbine_cache_store(turbine_datum_id td, turbine_type type,
                     void* data, size_t size)
 {
   if (max_entries == 0)
+  {
+    // Disabled: we still own data
+    free(data);
     return TURBINE_SUCCESS;
+  }
 
   DEBUG_CACHE("store: <%li> size: %i counter: %li",
               td, size, counter);
@@ -273,8 +280,10 @@ turbine_cache_finalize()
     struct entry* e = (struct entry*) item->data;
     free(e->data);
   }
+  // Frees each struct entry
   table_lp_delete(&entries);
   table_lp_release(&entries);
   rbtree_clear(&lru);
   initialized = false;
+  turbine_cache_active = false;
 }

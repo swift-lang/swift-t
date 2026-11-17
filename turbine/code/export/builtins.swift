@@ -241,6 +241,19 @@ argp_check(int max)
 
 <K, V> (boolean o) exists(V A[K], K key) "turbine" "0.7.0" "exists";
 
+// Support for the route statement:
+// true when A[key] is inserted, false if A closes without it
+<V> (boolean o) route_arrives(V A[string], string key)
+  "turbine" "1.0" "route_arrives";
+// true if regular expression re matches any part of s
+@pure
+(boolean o) regexp_test(string re, string s) "turbine" "1.0"
+  [ "set <<o>> [ turbine::regexp_test <<re>> <<s>> ]" ];
+// true if glob pattern pat matches all of s
+@pure
+(boolean o) glob_test(string pat, string s) "turbine" "1.0"
+  [ "set <<o>> [ string match <<pat>> <<s>> ]" ];
+
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
   [ "set <<n>> [ turbine::container_size_local <<B>> 1 ]" ];

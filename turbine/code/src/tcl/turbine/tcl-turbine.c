@@ -513,6 +513,18 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         // printf("name: %s\n", opts->name);
       }
       break;
+    case 'o':
+      // Release the rule when a container closes without a
+      // subscript input, instead of failing
+      if (strcmp(k, "optional") == 0)
+      {
+        int b;
+        rc = Tcl_GetBooleanFromObj(interp, val, &b);
+        TCL_CHECK_MSG(rc, "optional argument must be boolean");
+        opts->opts.optional_subs = b;
+        return TCL_OK;
+      }
+      break;
     case 'p':
       if (strcmp(k, "parallelism") == 0)
       {
@@ -679,6 +691,10 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
                 int objc, Tcl_Obj *const objv[])
 {
   TCL_CONDITION(objc >= 4, "requires >= 4 args");
+
+  // Skip serializing the value if it would be discarded
+  if (!turbine_cache_enabled())
+    return TCL_OK;
 
   turbine_datum_id td;
   void* data = NULL;

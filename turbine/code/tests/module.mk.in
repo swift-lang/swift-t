@@ -50,6 +50,8 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/container-serialize.tcl \
                 $(DIR)/container-sum.tcl       \
                 $(DIR)/container-sum2.tcl      \
+                $(DIR)/route-arrives.tcl       \
+                $(DIR)/route-arrives-2.tcl     \
                 $(DIR)/string_split.tcl        \
                 $(DIR)/enumerate-1.tcl         \
                 $(DIR)/enumerate-2.tcl         \

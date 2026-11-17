@@ -24,7 +24,7 @@ syn keyword	swiftPrimitiveType	int float string boolean file
 syn keyword	swiftConstant		stdout stderr
 syn region	swiftString		start=+L\="+ skip=+\\\\\|\\"+ end=+"+
 
-syn keyword	swiftStatement		foreach if in switch case default iterate until else for wait
+syn keyword	swiftStatement		foreach if in switch case default iterate until else for wait route pattern
 syn keyword	swiftMapper		single_file_mapper simple_mapper concurrent_mapper filesys_mapper fixed_array_mapper array_mapper regexp_mapper csv_mapper ext
 
 syn keyword	swiftProcedure		readData readdata2 trace writeData

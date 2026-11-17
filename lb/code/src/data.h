@@ -61,8 +61,13 @@ adlb_data_code xlb_data_lock(adlb_datum_id id, int rank, bool* result);
 
 adlb_data_code xlb_data_unlock(adlb_datum_id id);
 
+/**
+   optional: for a subscript, notify when the container closes even
+             if the subscript was never set
+ */
 adlb_data_code xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
-                              int rank, int work_type, bool* subscribed);
+                              int rank, int work_type, bool optional,
+                              bool* subscribed);
 
 /**
  * If data at id[subscript] is already set:

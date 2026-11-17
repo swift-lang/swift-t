@@ -42,6 +42,10 @@ Environment variables are generally passed to subprocesses: stc, turbine, etc.
 Some useful ones are:
 
 +STC_LOG_TRACE+:: if set to true, produce trace-level log output from STC (default is debug-level
++VALGRIND+:: path or name of a valgrind executable, e.g. +VALGRIND=valgrind+.
+Runs Turbine under valgrind with Turbine's suppressions file, by setting
++TURBINE_INTERPOSER+ unless it is already set, and fails a test if its
+output matches +valgrind-patterns.grep+.
 
 == Supporting files
 

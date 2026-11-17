@@ -1378,7 +1378,7 @@ handle_subscribe(int caller)
     DEBUG("subscribe: "ADLB_PRID, ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
   }
   struct pack_sub_resp resp;
-  resp.dc = xlb_data_subscribe(id, subscript, caller, work_type,
+  resp.dc = xlb_data_subscribe(id, subscript, caller, work_type, false,
                               &resp.subscribed);
   if (resp.dc != ADLB_DATA_SUCCESS)
     resp.subscribed = false;

@@ -724,6 +724,30 @@ namespace eval turbine {
         store_integer $result [ adlb::exists_sub $c $i_val 1 ]
     }
 
+    # For the route statement: when string key i is closed, wait
+    # until c[i] is inserted or c is closed without it.
+    # Does not wait for c to be closed if c[i] is inserted.
+    # result: a turbine integer, 1 if c[i] was inserted, else 0
+    proc route_arrives { result inputs } {
+        set c [ lindex $inputs 0 ]
+        set i [ lindex $inputs 1 ]
+        rule "$i" "route_arrives_key $result $c $i" \
+            name "route_arrives-$result-$c-$i"
+    }
+
+    proc route_arrives_key { result c i } {
+        set k [ turbine::retrieve_decr_string $i ]
+        # The key may contain spaces: build the handle and action
+        # as lists.  Keep the read reference on c for the body.
+        rule [ list [ adlb::subscript_container $c $k ] ] \
+            [ list turbine::route_arrives_body $result $c $k ] \
+            name "route_arrives_body-$result" optional 1
+    }
+
+    proc route_arrives_body { result c k } {
+        store_integer $result [ adlb::exists_sub $c $k 1 ]
+    }
+
     # Dereference a struct reference, then copy out a struct member
     proc structref_reference { structr subscript result type \
       {write_decr 1} {read_transfer 1} {write_transfer 0}} {

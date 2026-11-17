@@ -1,0 +1,11 @@
+trace: k1a:,k1,v1
+trace: k1b:,k1,v1b
+trace: k2:,k2
+trace: pattern:,k1
+trace: pattern:,k2
+trace: pattern:,k3
+trace: match:,k1
+trace: match:,k2
+trace: match:,k3
+trace: default:,xy
+trace: k5 k1b

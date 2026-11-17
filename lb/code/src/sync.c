@@ -497,13 +497,14 @@ adlb_code xlb_sync_shutdown(int target)
 
 static adlb_code
 send_subscribe_sync(adlb_sync_mode mode,
-      int target, adlb_datum_id id, adlb_subscript sub)
+      int target, adlb_datum_id id, adlb_subscript sub, bool optional)
 {
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
   struct packed_sync *req = (struct packed_sync *)req_storage;
   req->mode = mode;
   req->subscribe.id = id;
   req->subscribe.subscript_len = sub.length;
+  req->subscribe.optional = optional;
 
   bool inlined_subscript;
   if (sub.length <= SYNC_DATA_SIZE)
@@ -536,9 +537,10 @@ send_subscribe_sync(adlb_sync_mode mode,
 
 adlb_code
 xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
-                   bool *subscribed)
+                   bool optional, bool *subscribed)
 {
-  adlb_code ac = send_subscribe_sync(ADLB_SYNC_SUBSCRIBE, target, id, sub);
+  adlb_code ac = send_subscribe_sync(ADLB_SYNC_SUBSCRIBE, target, id, sub,
+                                     optional);
   ADLB_CHECK(ac);
 
   // We will get notification later
@@ -550,7 +552,8 @@ adlb_code
 xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub)
 {
   // Send notification
-  adlb_code ac = send_subscribe_sync(ADLB_SYNC_NOTIFY, target, id, sub);
+  adlb_code ac = send_subscribe_sync(ADLB_SYNC_NOTIFY, target, id, sub,
+                                     false);
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
@@ -968,7 +971,8 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
 
   // call data module to subscribe
   bool subscribed;
-  dc = xlb_data_subscribe(sub_hdr->id, sub, rank, 0, &subscribed);
+  dc = xlb_data_subscribe(sub_hdr->id, sub, rank, 0, sub_hdr->optional,
+                          &subscribed);
   ADLB_DATA_CHECK(dc);
 
   if (!subscribed)

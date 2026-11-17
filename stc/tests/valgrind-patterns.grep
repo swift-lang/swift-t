@@ -5,3 +5,4 @@ Invalid read
 Invalid write
 Source and destination
 definitely lost: [^0]
+are definitely lost in loss record

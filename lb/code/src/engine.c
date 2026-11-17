@@ -147,7 +147,8 @@ static xlb_engine_code
 subscribe_td(adlb_datum_id id, bool *subscribed);
 static xlb_engine_code
 subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
-     const void *id_sub_key, size_t id_sub_key_len, bool *subscribed);
+     const void *id_sub_key, size_t id_sub_key_len, bool optional,
+     bool *subscribed);
 
 static xlb_engine_code init_closed_caches(void);
 static void finalize_closed_caches(void);
@@ -574,7 +575,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
     if (server == xlb_s.layout.rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                               xlb_s.layout.rank, 0, subscribed);
+                               xlb_s.layout.rank, 0, false, subscribed);
       TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
@@ -596,7 +597,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
       else
       {
         adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
-                                          subscribed);
+                                          false, subscribed);
         ENGINE_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
         INCR_COUNTER(id_subscribe_remote);
       }
@@ -625,7 +626,8 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
  */
 static xlb_engine_code
 subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
-     const void *id_sub_key, size_t id_sub_key_len, bool *subscribed)
+     const void *id_sub_key, size_t id_sub_key_len, bool optional,
+     bool *subscribed)
 {
   ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
                     "Null ID provided to to data-dependent task");
@@ -636,7 +638,10 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
   DEBUG_ENGINE("Engine subscribe to <%"PRId64">[%.*s]", id,
                (int)subscript.length, (const char*)subscript.key);
 
-  // Avoid multiple subscriptions for same data
+  // Avoid multiple subscriptions for same data.  Only the first
+  // subscription's optional flag reaches the data module: if a
+  // required and an optional subscription share a subscript that is
+  // never set, the required reader is a program error regardless.
   void *tmp;
   if (table_bp_search(&id_sub_subscribed, id_sub_key, id_sub_key_len,
                       &tmp))
@@ -652,7 +657,8 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
     if (server == xlb_s.layout.rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                            xlb_s.layout.rank, 0, subscribed);
+                                            xlb_s.layout.rank, 0, optional,
+                                            subscribed);
       TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
@@ -675,7 +681,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
       else
       {
         adlb_code ac = xlb_sync_subscribe(server, id,
-                            sub_convert(subscript), subscribed);
+                            sub_convert(subscript), optional, subscribed);
         ENGINE_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
 
         INCR_COUNTER(id_sub_subscribe_remote);
@@ -823,7 +829,8 @@ init_inputs(transform* T)
 
     bool subscribed;
     tc = subscribe_id_sub(id_sub->td, id_sub->subscript,
-                     id_sub_key, id_sub_keylen, &subscribed);
+                     id_sub_key, id_sub_keylen,
+                     T->work->opts.optional_subs, &subscribed);
     ENGINE_CHECK(tc);
 
     if (subscribed)

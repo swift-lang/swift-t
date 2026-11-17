@@ -1,0 +1,4 @@
+trace: case e
+trace: space:,a b
+trace: bracket:,c.d.
+trace: glob:,c.d.

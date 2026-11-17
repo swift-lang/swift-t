@@ -111,6 +111,13 @@ tokens {
     FLAGS;
     ARG_DOC;
     ARG_DESCRIPTION;
+    ROUTE_STATEMENT;
+    ROUTE_KEY;
+    ROUTE_OUTPUT;
+    ROUTE_CASE;
+    ROUTE_PATTERN;
+    ROUTE_MATCH;
+    ROUTE_DEFAULT;
 }
 
 @parser::header {
@@ -203,6 +210,7 @@ real_stmt:
     |   (stmt_chain)
     |   (if_stmt)
     |   (switch_stmt)
+    |   (route_stmt)
     |   (block)
     |   (foreach_loop)
     |   (for_loop)
@@ -508,6 +516,35 @@ switch_case:
         -> ^( CASE integer ^( BLOCK stmt* ) )
     |   DEFAULT COLON stmt*
         -> ^( DEFAULT ^( BLOCK stmt* ) )
+    ;
+
+// route (string t, A, string B[string]) { case "k": ... }
+// Rewritten into other statements by frontend/tree/Route.java
+route_stmt:
+        kw=ROUTE LPAREN kt=type_name kv=var_name COMMA a=var_name
+        route_output RPAREN LBRACE route_branch* RBRACE
+        -> ^( ROUTE_STATEMENT[$kw] ^( ROUTE_KEY $kt $kv ) $a
+              route_output route_branch* )
+    ;
+
+route_output:
+        /* empty */ -> ^( ROUTE_OUTPUT )
+    |   COMMA t=type_prefix d=declare_rest
+        -> ^( ROUTE_OUTPUT ^( DECLARATION $t $d ) )
+    ;
+
+// "match" is recognized only here, so it is not a reserved word
+route_branch:
+        CASE s=STRING COLON stmt*
+        -> ^( ROUTE_CASE $s ^( BLOCK stmt* ) )
+    |   PATTERN s=STRING COLON stmt*
+        -> ^( ROUTE_PATTERN $s ^( BLOCK stmt* ) )
+    |   {input.LT(1).getText().equals("match") &&
+         input.LA(2) == STRING}?=>
+        ID s=STRING COLON stmt*
+        -> ^( ROUTE_MATCH $s ^( BLOCK stmt* ) )
+    |   DEFAULT COLON stmt*
+        -> ^( ROUTE_DEFAULT ^( BLOCK stmt* ) )
     ;
 
 foreach_loop:
@@ -904,6 +941,9 @@ ELSE: 'else';
 SWITCH: 'switch';
 CASE: 'case';
 DEFAULT: 'default';
+// The route statement and its regexp branches
+ROUTE: 'route';
+PATTERN: 'pattern';
 FOREACH: 'foreach';
 IN: 'in';
 FOR: 'for';

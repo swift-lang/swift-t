@@ -71,6 +71,8 @@ typedef enum {
 typedef struct {
   int rank;
   int work_type;
+  /** Notify at close even if the subscript was never set */
+  bool optional;
 } xlb_listener_notif;
 
 typedef struct {

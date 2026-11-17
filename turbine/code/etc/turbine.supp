@@ -274,6 +274,16 @@
   fun:MPID_VCRT_Create
 }
 
+# MPICH 4.3.0, 2026-11-17: one block allocated during MPI_Init,
+#     never freed
+{
+  mpich-avt-init
+  Memcheck:Leak
+  match-leak-kinds: definite
+  fun:malloc
+  fun:MPIDIU_avt_init
+}
+
 # The following Param suppressions are unnecessary when using
 #     MPICH's meminit...
 

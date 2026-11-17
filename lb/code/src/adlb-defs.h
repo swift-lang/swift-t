@@ -105,6 +105,10 @@ typedef struct {
     int parallelism; // Task parallelism
     adlb_target_strictness strictness;
     adlb_target_accuracy accuracy;
+    /** For Dput: release the task when a subscript input is set
+        or when its container closes without it, instead of
+        reporting an unfilled subscribe at close */
+    bool optional_subs;
   } adlb_put_opts;
 
   static const adlb_put_opts ADLB_DEFAULT_PUT_OPTS = {
@@ -112,6 +116,7 @@ typedef struct {
       1, /* parallelism */
       ADLB_TGT_STRICT_HARD, /* strictness */
       ADLB_TGT_ACCRY_RANK, /* accuracy */
+      false, /* optional_subs */
   };
 
   /**

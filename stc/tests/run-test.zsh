@@ -4,7 +4,10 @@ set -eu
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
 # TURBINE_HOME must be set to a valid Turbine install, or turbine must be
 # in the path
-# Set VALGRIND=/path/to/valgrind to run valgrind (Turbine feature)
+# Set VALGRIND=/path/to/valgrind (or VALGRIND=valgrind) to run Turbine
+#     under valgrind, with Turbine's suppressions file, and fail the
+#     test on valgrind errors.  This sets TURBINE_INTERPOSER unless it
+#     is already set; a custom TURBINE_INTERPOSER should run valgrind.
 
 # Defaults:
 VERBOSE=0
@@ -83,12 +86,33 @@ fi
 export ADLB_PERF_COUNTERS=${ADLB_PERF_COUNTERS:-true}
 export ADLB_PRINT_TIME=true
 
+# Valgrind setup: the Turbine launcher runs TURBINE_INTERPOSER
+VALGRIND=${VALGRIND:-}
+if (( ${#VALGRIND} ))
+then
+  if ! VALGRIND_EXE=$( which ${VALGRIND} 2> /dev/null ) ||
+     [[ ! -x ${VALGRIND_EXE} ]]
+  then
+    print "run-test: VALGRIND is not an executable: '${VALGRIND}'"
+    exit 1
+  fi
+  if (( ! ${+TURBINE_INTERPOSER} ))
+  then
+    SUPP=${TURBINE:h:h}/etc/turbine.supp
+    if [[ -f ${SUPP} ]]
+    then
+      export TURBINE_INTERPOSER="${VALGRIND_EXE} --suppressions=${SUPP}"
+    else
+      export TURBINE_INTERPOSER=${VALGRIND_EXE}
+    fi
+  fi
+fi
+
 # Run Turbine:
 TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
 
 # Valgrind-related checks:
-VALGRIND=${VALGRIND:-}
 if (( ${#VALGRIND} ))
 then
   if grep -f ${STC_TESTS_DIR}/valgrind-patterns.grep ${OUTPUT}

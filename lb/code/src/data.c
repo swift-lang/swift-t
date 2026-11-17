@@ -598,7 +598,7 @@ xlb_data_unlock(adlb_datum_id id)
  */
 adlb_data_code
 xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
-              int rank, int work_type, bool* subscribed)
+              int rank, int work_type, bool optional, bool* subscribed)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
@@ -623,7 +623,12 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     dc = subscript_is_set(id, d, subscript, &found);
     ADLB_DATA_CHECK_CODE(dc);
 
-    if (!found)
+    if (!found && optional && d->write_refcount == 0)
+    {
+      // Closed without the subscript: it can never be set
+      *subscribed = false;
+    }
+    else if (!found)
     {
       DEBUG("Subscribe to "ADLB_PRIDSUB,
         ADLB_PRIDSUB_ARGS(id, d->symbol, subscript));
@@ -636,6 +641,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       listener->tag = LISTENER_NOTIF;
       listener->notif.rank = rank;
       listener->notif.work_type = work_type;
+      listener->notif.optional = optional;
 
       bool ok = rbtree_bp_add(&d->listeners, key, listener);
       ADLB_CHECK_MSG_CODE(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
@@ -670,6 +676,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       listener->tag = LISTENER_NOTIF;
       listener->notif.rank = rank;
       listener->notif.work_type = work_type;
+      listener->notif.optional = false;
       binkey_packed_t key;
       binkey_packed_set_unsafe(&key, NULL, 0);
 
@@ -2041,7 +2048,9 @@ adlb_data_code append_notifs(adlb_datum_id id, adlb_datum *d,
       ac = xlb_notifs_expand(&notifs->notify, 1);
       ADLB_DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
-      if (node_sub.length != sub.length)
+      // An optional listener is notified even if never set:
+      //      the task checks for the subscript itself
+      if (node_sub.length != sub.length && !listener->notif.optional)
       {
         /* TODO: flag notificationas invalid if subscript wasn't assigned
          * so that more meaningful error related to rule is possible */

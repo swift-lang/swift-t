@@ -15,11 +15,12 @@
  */
 package exm.stc.frontend.tree;
 
+import static exm.stc.frontend.tree.AstBuild.*;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.antlr.runtime.CommonToken;
 import org.antlr.runtime.Token;
 
 import exm.stc.ast.FilePosition.LineMapping;
@@ -891,83 +892,9 @@ public class Arguments {
     sb.append('\n');
   }
 
-  /*
-   * AST construction helpers.  Every synthesized node carries the line and
-   * column of the arguments() keyword so that errors and syncFilePos() point
-   * somewhere the user can see.
-   */
-
-  private static SwiftAST node(Token pos, int type, String text) {
-    CommonToken tok = new CommonToken(type, text);
-    tok.setLine(pos.getLine());
-    tok.setCharPositionInLine(pos.getCharPositionInLine());
-    return new SwiftAST(tok);
-  }
-
-  /** Nil-rooted list node: ANTLR splices its children into the parent */
-  private static SwiftAST nil() {
-    return new SwiftAST(null);
-  }
-
-  /** ^( CALL_FUNCTION ID[name] ^( ARGUMENT_LIST args... ) ) */
-  private static SwiftAST call(Token pos, String name, SwiftAST... args) {
-    SwiftAST argList = node(pos, ExMParser.ARGUMENT_LIST, "ARGUMENT_LIST");
-    for (SwiftAST arg: args) {
-      argList.addChild(arg);
-    }
-    SwiftAST result = node(pos, ExMParser.CALL_FUNCTION, "CALL_FUNCTION");
-    result.addChild(node(pos, ExMParser.ID, name));
-    result.addChild(argList);
-    return result;
-  }
-
   /** ^( MAPPING expr ): the filename a file variable is mapped to */
   private static SwiftAST mapping(Token pos, SwiftAST expr) {
-    SwiftAST result = node(pos, ExMParser.MAPPING, "MAPPING");
-    result.addChild(expr);
-    return result;
-  }
-
-  /** ^( EXPR_STMT expr ) */
-  private static SwiftAST stmt(Token pos, SwiftAST expr) {
-    SwiftAST result = node(pos, ExMParser.EXPR_STMT, "EXPR_STMT");
-    result.addChild(expr);
-    return result;
-  }
-
-  /** ^( INT_LITERAL DECIMAL_INT[n] ) */
-  private static SwiftAST intLit(Token pos, long n) {
-    SwiftAST result = node(pos, ExMParser.INT_LITERAL, "INT_LITERAL");
-    result.addChild(node(pos, ExMParser.DECIMAL_INT, Long.toString(n)));
-    return result;
-  }
-
-  /** ^( STRING_LITERAL STRING["\"...\""] ) */
-  private static SwiftAST stringLit(Token pos, String s) {
-    SwiftAST result = node(pos, ExMParser.STRING_LITERAL, "STRING_LITERAL");
-    result.addChild(node(pos, ExMParser.STRING, quote(s)));
-    return result;
-  }
-
-  /**
-   * Re-escape a string so that Literals.unescapeString() recovers it.
-   */
-  private static String quote(String s) {
-    StringBuilder sb = new StringBuilder(s.length() + 2);
-    sb.append('"');
-    for (int i = 0; i < s.length(); i++) {
-      char c = s.charAt(i);
-      switch (c) {
-        case '"':  sb.append("\\\""); break;
-        case '\\': sb.append("\\\\"); break;
-        case '\n': sb.append("\\n");  break;
-        case '\r': sb.append("\\r");  break;
-        case '\t': sb.append("\\t");  break;
-        default:   sb.append(c);      break;
-      }
-    }
-    sb.append('"');
-    return sb.toString();
+    return node(pos, ExMParser.MAPPING, "MAPPING", expr);
   }
 
   private Arguments() {
