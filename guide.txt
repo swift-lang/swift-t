@@ -442,6 +442,8 @@ the variable, then the type of the variable is automatically inferred
 based on the type of the expression on the right hand side of the
 assignment.
 
+A variable name may not be one of the <<reserved_words,reserved words>>.
+
 The scope of a variable is limited to the code block in which the
 declaration appears.  Two variables with the same name cannot be
 declared in the same block.  *Shadowing* of variables, where a
@@ -1311,8 +1313,10 @@ where there is no natural dataflow progress.
 (+make_void()+ and +makeVoid()+ are deprecated
 aliases for this function.)
 
-+size(A[]) -> int+::
-Obtain the size of array +A+
++size(A[K]) -> int+::
+Obtain the number of entries in array +A+.  Blocks until +A+ is
+closed.  The key type +K+ may be any type, e.g. +string[string]+.
+(Releases up to v1.7.0 accept only integer-indexed arrays.)
 
 +contains(A[], key) -> boolean+::
 Test that future +A[key]+ exists.  This function blocks until +A+ is
@@ -1321,11 +1325,14 @@ stored.
 
 +keys_integer(A[]) -> int[]+::
 Returns a contiguous integer-indexed array, starting from 0, that maps to the
-integer keys in +A+.
+integer keys in +A+.  The order of the keys is not specified.
 
-+keys_string(A[]) -> string[]+::
++keys_string(A[K]) -> string[]+::
 Returns a contiguous integer-indexed array, starting from 0, that maps to the
-string keys in +A+.
+keys in +A+, as strings.  The key type +K+ may be any type; for example,
+integer keys are returned as +"0"+, +"1"+, ....
+The order of the keys is not specified.
+(Releases up to v1.7.0 accept only integer-indexed arrays.)
 
 The following functions are available after v1.4.3 .
 
@@ -1347,8 +1354,8 @@ Select the +indices+ from +A+.  The +result+ may be reordered.
 Select the +indices+ from +A+.
 The ordering of +result+ will be the same as in +A+.
 
-+pick_regexp(string pattern, string A[]) -> string result[]+::
-Select strings from +A+ matching regular expression +pattern+.
++pick_regexp(string regexp, string A[]) -> string result[]+::
+Select strings from +A+ matching regular expression +regexp+.
 (This function is implemented with the Tcl regular expressions
 https://www.tcl.tk/man/tcl8.6/TclCmd/re_syntax.htm[documented here].)
 
@@ -1387,9 +1394,15 @@ Accepts for +false+: +"false"+, +"no"+, +"n"+, +"0"+.
 +repr(*)            -> string+:: Convert any type to internal
           string representation (exact format not guaranteed
           to be consistent, even from call to call)
-+array_repr(*[])  -> string[]+:: Convert array of any type to internal
-          string representation (exact format not guaranteed
-          to be consistent, even from call to call)
++array_repr(A[K]) -> string[K]+:: Convert each element of array +A+
+          to internal string representation (exact format not
+          guaranteed to be consistent, even from call to call).
+          Unlike +repr()+, which returns one string for the whole
+          array, the result is an array with the same keys as +A+,
+          so it can be indexed, iterated, or joined.
+          The key type +K+ and the element type may be any type,
+          e.g. +string[string]+ or +float[string]+.
+          (Releases up to v1.7.0 accept only integer-indexed arrays.)
 
 === Output
 
@@ -1644,7 +1657,7 @@ flags(string mode = "fast", int count = 10, float epsilon = 1e-6);
 +flags()+ may be combined with +arguments()+ or with +main()+
 parameters.
 
-+arguments+ and +flags+ are not reserved words.  They are recognized
++arguments+ and +flags+ are not <<reserved_words,reserved words>>.  They are recognized
 only as a statement introducing one of these declarations, and remain
 ordinary identifiers everywhere else, so existing programs that use
 either as a variable, parameter or function name still compile.
@@ -1709,7 +1722,7 @@ The documentation strings are optional.  With none at all the usage
 message still reports the signature of the command line and the default
 values, which is usually enough to run the program.
 
-+description+ is not a reserved word: it introduces the program
++description+ is not a <<reserved_words,reserved word>>: it introduces the program
 description only when it is written immediately before a colon inside
 +arguments()+, so +arguments(string description)+ still declares an
 ordinary variable.
@@ -4873,6 +4886,28 @@ affect your +python+ or +r+ installations).
 Additional Python or R packages may be installed using Spack or the
 language-specific package installers (Python +pip+, R
 +install.packages+) as desired.
+
+[[reserved_words]]
+== Reserved words
+
+These words are reserved in Swift/T.  They cannot be used as the
+names of variables, functions, types, or struct fields:
+
+----
+app       builtin   case      const     deep      default
+else      false     for       foreach   global    if
+import    in        inf       iterate   NaN       pattern
+pragma    stderr    stdin     stdout    switch    true
+type      typedef   until     wait
+----
+
++pattern+ is reserved for future use, after v1.7.0.  Programs that
+use it as a name must rename it.
+
+Some words are recognized specially only in particular statements,
+and remain ordinary names everywhere else:
+<<arguments,+arguments+>>, <<flags,+flags+>>, and
+<<cmd_usage,+description+>>.
 
 == Model exploration workflows
 
