@@ -14,13 +14,27 @@ cat("install-RInside.R: starting...\n")
 r_lib <- R.home("library")
 cat("install-RInside.R: installing into", r_lib, "\n")
 
-install.packages("RInside",
-                 lib=r_lib,
-                 # repos="http://cran.us.r-project.org",
-                 repos="https://cran.case.edu",
-                 verbose=TRUE)
-if (! library("RInside", lib.loc=r_lib,
-    character.only=TRUE, logical.return=TRUE)) {
-    quit(status=1)
+# Try several mirrors: a single mirror being briefly
+# unreachable from CI failed the R legs intermittently.
+repos <- c("https://cloud.r-project.org",
+           "https://cran.case.edu",
+           "https://cran.rstudio.com")
+success <- FALSE
+for (repo in repos)
+{
+  cat("install-RInside.R: trying", repo, "\n")
+  install.packages("RInside", lib=r_lib, repos=repo,
+                   verbose=TRUE)
+  if (library("RInside", lib.loc=r_lib,
+              character.only=TRUE, logical.return=TRUE))
+  {
+    success <- TRUE
+    break
+  }
+}
+if (! success)
+{
+  cat("install-RInside.R: Swift-RInside-FAILED\n")
+  quit(status=1)
 }
 cat("install-RInside.R: Swift-RInside-SUCCESS\n")
