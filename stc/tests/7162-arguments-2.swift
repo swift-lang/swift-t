@@ -5,7 +5,8 @@
 import io;
 import files;
 
-arguments(float x, boolean flag, input data, url u);
+arguments(float x=4.2 : "NUMBER",
+          boolean flag, input data, url u);
 
 printf("x=%.1f flag=%s data=%s u=%s",
        x, flag, filename(data), urlname(u));
