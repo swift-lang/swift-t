@@ -5,12 +5,15 @@
 
 cat("install-RInside.R: starting...\n")
 
-# Install explicitly into R.home("library"): without lib=, install.packages()
-# can resolve .libPaths()[1] to $BUILD_PREFIX/lib/R/library (e.g. via
-# R_LIBS_USER/R_LIBS_SITE set in the build environment), even though this
-# script itself is run via $PREFIX/bin/Rscript. That leaves RInside installed
-# only in the ephemeral build prefix, so libtclturbine links against a
-# libRInside.dylib that is never packaged. See build-generic.sh.
+# Install explicitly into R.home("library"):
+#   Without lib=, install.packages()
+#   can resolve .libPaths()[1] to $BUILD_PREFIX/lib/R/library
+#   (e.g. via R_LIBS_USER/R_LIBS_SITE set in the build environment),
+#   even though this script itself is run via $PREFIX/bin/Rscript.
+# That leaves RInside installed only in the ephemeral build prefix,
+# so libtclturbine links against a libRInside.dylib
+# that is never packaged. See build-generic.sh.
+
 r_lib <- R.home("library")
 cat("install-RInside.R: installing into", r_lib, "\n")
 
@@ -22,19 +25,23 @@ repos <- c("https://cloud.r-project.org",
 success <- FALSE
 for (repo in repos)
 {
-  cat("install-RInside.R: trying", repo, "\n")
+  cat("install-RInside.R: try repo:", repo, "\n")
+
+  # This function does not check for errors:
   install.packages("RInside", lib=r_lib, repos=repo,
                    verbose=TRUE)
-  if (library("RInside", lib.loc=r_lib,
-              character.only=TRUE, logical.return=TRUE))
-  {
-    success <- TRUE
-    break
-  }
+  # Try to load the library:
+  success <- library("RInside", lib.loc=r_lib,
+                     character.only=TRUE, logical.return=TRUE)
+
+  if (success) break
 }
 if (! success)
 {
+  # No repo worked:
   cat("install-RInside.R: Swift-RInside-FAILED\n")
   quit(status=1)
 }
+
+# Success:
 cat("install-RInside.R: Swift-RInside-SUCCESS\n")
